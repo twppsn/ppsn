@@ -233,6 +233,9 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary>Execute a commmand.</summary>
+		/// <param name="ctx"></param>
+		/// <param name="id"></param>
 		[
 		DEConfigHttpAction("execute", IsSafeCall = true)
 		]

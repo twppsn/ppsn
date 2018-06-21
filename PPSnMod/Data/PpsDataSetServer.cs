@@ -31,29 +31,32 @@ using static TecWare.PPSn.Server.PpsStuff;
 
 namespace TecWare.PPSn.Server.Data
 {
-	#region -- enum PpsDataColumnParentRelationType -------------------------------------
+	#region -- enum PpsDataColumnParentRelationType -----------------------------------
 
+	/// <summary>Server site relation types.</summary>
 	public enum PpsDataColumnParentRelationType
 	{
+		/// <summary>Not defined.</summary>
 		None,
+		/// <summary>Direct direction to root.</summary>
 		Root,
+		/// <summary>Delete and update cascade.</summary>
 		Cascade,
+		/// <summary>Delete and update restrict.</summary>
 		Restricted,
+		/// <summary>Set null</summary>
 		SetNull
 	} // enum PpsDataColumnParentRelationType
 
 	#endregion
 
-	#region -- class PpsDataValueColumnServerDefinition ---------------------------------
+	#region -- class PpsDataValueColumnServerDefinition -------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Column description of the dataset for the server implementation.</summary>
 	public sealed class PpsDataColumnServerDefinition : PpsDataColumnDefinition, IPpsColumnDescription
 	{
-		#region -- class PpsDataColumnMetaCollectionServer --------------------------------
+		#region -- class PpsDataColumnMetaCollectionServer ----------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataColumnMetaCollectionServer : PpsDataColumnMetaCollection
 		{
 			public PpsDataColumnMetaCollectionServer(PpsDataColumnDefinition column, XElement xColumnDefinition)
@@ -121,6 +124,11 @@ namespace TecWare.PPSn.Server.Data
 			this.metaInfo = new PpsDataColumnMetaCollectionServer(this, config);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="tableDefinition"></param>
+		/// <param name="createRelationColumn"></param>
+		/// <param name="config"></param>
+		/// <returns></returns>
 		public static PpsDataColumnServerDefinition Create(PpsDataTableDefinition tableDefinition, bool createRelationColumn, XElement config)
 		{
 			var columnName = config.GetAttribute("name", (string)null);
@@ -137,9 +145,13 @@ namespace TecWare.PPSn.Server.Data
 			return new PpsDataColumnServerDefinition(tableDefinition, fieldName, columnName, isPrimary, isIdentity, createRelationColumn, config);
 		} // func Create
 
+		/// <summary></summary>
+		/// <param name="tableOwner"></param>
+		/// <returns></returns>
 		public override PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner)
 			=> new PpsDataColumnServerDefinition(tableOwner, this);
 
+		/// <summary></summary>
 		public override void EndInit()
 		{
 			// update the relation
@@ -182,6 +194,8 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // func GetClientRelationFromServerRelation
 
+		/// <summary></summary>
+		/// <param name="xTable"></param>
 		public void WriteSchema(XElement xTable)
 		{
 			var clientDataType = Meta.GetProperty<string>("clientDataType", null);
@@ -209,12 +223,18 @@ namespace TecWare.PPSn.Server.Data
 			PpsDataSetServerDefinition.WriteSchemaMetaInfo(xColumn, metaInfo);
 		} // proc WriteSchema
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
 		public T GetColumnDescription<T>() where T : IPpsColumnDescription
 			=> this.GetColumnDescriptionParentImplementation<T>(fieldDescription);
 
+		/// <summary></summary>
+		/// <returns></returns>
 		protected override Type GetDataType()
 			=> fieldDescription?.DataType ?? typeof(object);
 
+		/// <summary></summary>
 		public override PpsDataColumnMetaCollection Meta => metaInfo;
 
 		/// <summary>Field, that descripse format and behaviour of the column.</summary>
@@ -229,18 +249,15 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- class PpsDataTableServerDefinition ---------------------------------------
+	#region -- class PpsDataTableServerDefinition -------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataTableServerDefinition : PpsDataTableDefinition
 	{
 		private static readonly Dictionary<string, Type> wellknownMetaTypes = new Dictionary<string, Type>();
 
-		#region -- class PpsDataTableMetaCollectionServer ---------------------------------
+		#region -- class PpsDataTableMetaCollectionServer -----------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataTableMetaCollectionServer : PpsDataTableMetaCollection
 		{
 			public PpsDataTableMetaCollectionServer()
@@ -253,23 +270,28 @@ namespace TecWare.PPSn.Server.Data
 			} // ctor
 
 			public void Add(XElement xMeta)
-			{
-				PpsDataSetServerDefinition.AddMetaFromElement(xMeta, WellknownMetaTypes, Add);
-			} // proc Add
+				=> PpsDataSetServerDefinition.AddMetaFromElement(xMeta, WellknownMetaTypes, Add);
 		} // class PPSnDataTableMetaCollectionServer
 
 		#endregion
 
 		private readonly PpsDataTableMetaCollectionServer metaInfo = new PpsDataTableMetaCollectionServer();
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <param name="clone"></param>
 		protected PpsDataTableServerDefinition(PpsDataSetServerDefinition dataset, PpsDataTableServerDefinition clone)
 			: base(dataset, clone)
 		{
 			this.metaInfo = new PpsDataTableMetaCollectionServer(clone.metaInfo);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <param name="tableName"></param>
+		/// <param name="xTable"></param>
 		public PpsDataTableServerDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement xTable)
 			: base(dataset, tableName)
 		{
@@ -286,9 +308,13 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <returns></returns>
 		public override PpsDataTableDefinition Clone(PpsDataSetDefinition dataset)
 			=> new PpsDataTableServerDefinition((PpsDataSetServerDefinition)dataset, this);
 
+		/// <summary></summary>
 		protected override void EndInit()
 		{
 			// fetch column information
@@ -298,6 +324,8 @@ namespace TecWare.PPSn.Server.Data
 			base.EndInit();
 		} // proc EndInit
 
+		/// <summary></summary>
+		/// <param name="t"></param>
 		public void Merge(PpsDataTableDefinition t)
 		{
 			if (IsInitialized)
@@ -313,6 +341,8 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 		
+		/// <summary></summary>
+		/// <param name="xSchema"></param>
 		public void WriteSchema(XElement xSchema)
 		{
 			var xTable = new XElement("table");
@@ -328,21 +358,19 @@ namespace TecWare.PPSn.Server.Data
 			xSchema.Add(xTable);
 		} // proc WriteSchema
 
+		/// <summary></summary>
 		public override PpsDataTableMetaCollection Meta => metaInfo;
 	} // class PpsDataTableServerDefinition
 
 	#endregion
 	
-	#region -- class PpsDataSetServerDefinition -----------------------------------------
+	#region -- class PpsDataSetServerDefinition ---------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Definiert eine Datenklasse aus der Sicht des Servers heraus.</summary>
+	/// <summary>Dataset implementation for the server.</summary>
 	public sealed class PpsDataSetServerDefinition : PpsDataSetDefinition, IServiceProvider
 	{
-		#region -- class PpsDataSetMetaCollectionServerDefinition -------------------------
+		#region -- class PpsDataSetMetaCollectionServerDefinition ---------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataSetMetaCollectionServerDefinition : PpsDataSetMetaCollection
 		{
 			public void Add(XElement xMeta)
@@ -368,8 +396,13 @@ namespace TecWare.PPSn.Server.Data
 
 		private PpsDataSetMetaCollectionServerDefinition metaInfo = new PpsDataSetMetaCollectionServerDefinition();
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="dataSource"></param>
+		/// <param name="name"></param>
+		/// <param name="config"></param>
+		/// <param name="configurationStamp"></param>
 		public PpsDataSetServerDefinition(PpsDataSource dataSource, string name, XElement config, DateTime configurationStamp)
 		{
 			this.dataSource = dataSource;
@@ -429,9 +462,12 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // func CreateTableDefinition
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public Task InitializeAsync()
 			=> Task.Run(new Action(EndInit));
 
+		/// <summary></summary>
 		public override void EndInit()
 		{
 			// embed inherited
@@ -494,9 +530,14 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
+		/// <summary></summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
 		public object GetService(Type serviceType)
 			=> application.GetService(serviceType);
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetServer(this);
 		
@@ -510,6 +551,8 @@ namespace TecWare.PPSn.Server.Data
 			);
 		} // func CreateTagSchema
 
+		/// <summary></summary>
+		/// <param name="xSchema"></param>
 		public void WriteSchema(XElement xSchema)
 		{
 			// write the meta data for the dataset
@@ -534,6 +577,9 @@ namespace TecWare.PPSn.Server.Data
 				t.WriteSchema(xSchema);
 		} // func WriteSchema
 
+		/// <summary></summary>
+		/// <param name="r"></param>
+		/// <param name="cacheId"></param>
 		public void WriteToDEContext(IDEWebRequestScope r, string cacheId)
 		{
 			r.SetLastModified(ConfigurationStamp);
@@ -556,20 +602,33 @@ namespace TecWare.PPSn.Server.Data
 			);
 		} // proc WriteToDEContext
 		
+		/// <summary>Name of the dataset</summary>
 		public string Name => name;
+		/// <summary></summary>
 		public override PpsDataSetMetaCollection Meta => metaInfo;
+		/// <summary>Main datasource of the dataset.</summary>
 		public PpsDataSource DataSource => dataSource;
+		/// <summary></summary>
 		public PpsApplication Application => application;
+		/// <summary></summary>
 		public override Lua Lua => lua;
 
+		/// <summary>Key type to use for auto increment columns.</summary>
 		public override PpsTablePrimaryKeyType KeyType => PpsTablePrimaryKeyType.Server;
 
+		/// <summary></summary>
 		public DateTime ConfigurationStamp => configurationStamp;
+		/// <summary></summary>
 		public string[] ClientScripts => clientScripts;
+		/// <summary></summary>
 		public string[] ServerScripts => serverScripts;
 
-		// -- Static --------------------------------------------------------------
+		// -- Static ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="xMeta"></param>
+		/// <param name="wellknownTypes"></param>
+		/// <param name="add"></param>
 		public static void AddMetaFromElement(XElement xMeta, IReadOnlyDictionary<string, Type> wellknownTypes, Action<string, Func<Type>, object> add)
 		{
 			if (xMeta == null)
@@ -589,6 +648,9 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // proc AddMetaFromElement
 
+		/// <summary></summary>
+		/// <param name="xParent"></param>
+		/// <param name="metaInfo"></param>
 		public static void WriteSchemaMetaInfo(XElement xParent, PpsMetaCollection metaInfo)
 		{
 			if (metaInfo.Count > 0)
@@ -611,17 +673,19 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- class PpsDataSetServer ---------------------------------------------------
+	#region -- class PpsDataSetServer -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Serverseitige Implementierung des DataSets</summary>
+	/// <summary>Server site implementation of the dataset.</summary>
 	public class PpsDataSetServer : PpsDataSet
 	{
+		/// <summary></summary>
+		/// <param name="datasetClass"></param>
 		public PpsDataSetServer(PpsDataSetServerDefinition datasetClass)
 			: base(datasetClass)
 		{
 		} // ctor
 
+		/// <summary></summary>
 		public new PpsDataSetServerDefinition DataSetDefinition => (PpsDataSetServerDefinition)base.DataSetDefinition;
 	} // class PpsDataSetServer
 

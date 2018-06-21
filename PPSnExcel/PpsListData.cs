@@ -89,17 +89,17 @@ namespace PPSnExcel
 		private const string columnsTag = "columns";
 
 		private readonly PpsEnvironment environment;            // attached environment
-		private readonly string viewId;                         // view or views
+		private readonly string select;                         // view or views
 		private readonly string filterExpr;                     // uses placeholder for cells
 		private readonly PpsDataColumnExpression[] columns;     // columns to fetch
 		private readonly PpsDataOrderExpression[] orders;       // fetch sorting of the rows
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsListMapping(PpsEnvironment environment, string viewId, PpsDataColumnExpression[] columns, string filterExpr, PpsDataOrderExpression[] orders)
+		public PpsListMapping(PpsEnvironment environment, string select, PpsDataColumnExpression[] columns, string filterExpr, PpsDataOrderExpression[] orders)
 		{
 			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
-			this.viewId = viewId ?? throw new ArgumentNullException(nameof(viewId));
+			this.select = select ?? throw new ArgumentNullException(nameof(select));
 			this.filterExpr = filterExpr ?? String.Empty;
 			this.columns = columns ?? Array.Empty<PpsDataColumnExpression>();
 			this.orders = orders ?? Array.Empty<PpsDataOrderExpression>();
@@ -114,7 +114,7 @@ namespace PPSnExcel
 
 		public IEnumerator<IDataRow> GetViewData(Worksheet current, SynchronizationContext context = null, bool headerOnly = false)
 		{
-			var request = new PpsShellGetList(viewId)
+			var request = new PpsShellGetList(select)
 			{
 				Columns = columns,
 				Filter = PpsDataFilterExpression.Parse(filterExpr, GetVariables(current, context)),
@@ -157,7 +157,7 @@ namespace PPSnExcel
 			var annotation = XlProcs.UpdateProperties(String.Empty,
 				new KeyValuePair<string, string>(environmentNameTag, environment.Info.Name),
 				new KeyValuePair<string, string>(environmentUriTag, environment.Info.Uri.ToString()),
-				new KeyValuePair<string, string>(viewTag, viewId),
+				new KeyValuePair<string, string>(viewTag, select),
 				new KeyValuePair<string, string>(filterTag, filterExpr),
 				new KeyValuePair<string, string>(ordersTag, PpsDataOrderExpression.ToString(orders)),
 				new KeyValuePair<string, string>(columnsTag, PpsDataColumnExpression.ToString(columns))
@@ -333,7 +333,7 @@ namespace PPSnExcel
 		#endregion
 
 		public PpsEnvironment Environment => environment;
-		public string ViewId => viewId;
+		public string Select => select;
 		public string Filter => filterExpr;
 		public PpsDataOrderExpression[] Orders => orders;
 		public PpsDataColumnExpression[] Columns => columns;

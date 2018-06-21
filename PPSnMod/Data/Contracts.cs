@@ -458,7 +458,7 @@ namespace TecWare.PPSn.Server.Data
 	/// <summary></summary>
 	public static class PpsColumnDescriptionHelper
 	{
-		#region -- class PpsColumnDescriptionAttributes ---------------------------------
+		#region -- class PpsColumnDescriptionAttributes -------------------------------
 
 		private sealed class PpsColumnDescriptionAttributes : IPropertyEnumerableDictionary
 		{
@@ -516,7 +516,7 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
-		#region -- class PpsDataColumnDescription ---------------------------------------
+		#region -- class PpsDataColumnDescription -------------------------------------
 
 		private sealed class PpsDataColumnDescription : IPpsColumnDescription
 		{
@@ -542,9 +542,18 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
+		/// <summary></summary>
+		/// <param name="properties"></param>
+		/// <param name="parent"></param>
+		/// <returns></returns>
 		public static IPropertyEnumerableDictionary GetColumnDescriptionParentAttributes(IPropertyEnumerableDictionary properties, IPpsColumnDescription parent)
 			=> new PpsColumnDescriptionAttributes(properties, parent?.Attributes);
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="this"></param>
+		/// <param name="parent"></param>
+		/// <returns></returns>
 		public static T GetColumnDescriptionParentImplementation<T>(this IPpsColumnDescription @this, IPpsColumnDescription parent)
 			where T : IPpsColumnDescription
 		{
@@ -556,10 +565,19 @@ namespace TecWare.PPSn.Server.Data
 				return default(T);
 		} // func GetColumnDescriptionParentImplementation
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="columnDescription"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool TryGetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription, out T value)
 			where T : IPpsColumnDescription
 			=> (value = columnDescription.GetColumnDescription<T>()) != null;
 
+		/// <summary></summary>
+		/// <param name="column"></param>
+		/// <param name="parent"></param>
+		/// <returns></returns>
 		public static IPpsColumnDescription ToColumnDescription(this IDataColumn column, IPpsColumnDescription parent = null)
 			=> new PpsDataColumnDescription(parent, column);
 	} // class PpsColumnDescriptionHelper

@@ -22,7 +22,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using TecWare.DE.Data;
 using TecWare.PPSn;
+using TecWare.PPSn.Data;
 
 namespace PPSnExcel
 {
@@ -33,7 +35,38 @@ namespace PPSnExcel
 			InitializeComponent();
 		} // ctor
 
+		private Task RefreshAvailableTablesAsync()
+			=> Task.CompletedTask;
+
 		public string ReportName { get; private set; } = null;
 		public PpsListMapping ReportSource { get; private set; } = null;
 	} // class TableInsertForm
+
+	#region -- class TableInfo --------------------------------------------------------
+
+	internal class TableInfo : IDataColumns
+	{
+		private readonly string viewId;
+		private readonly string displayName;
+		private readonly List<SimpleDataColumn> columns = new List<SimpleDataColumn>();
+
+		public IReadOnlyList<IDataColumn> Columns => columns;
+	} // class TableInfo
+
+	#endregion
+
+	internal sealed class TableSelect
+	{
+		private readonly TableInfo table;
+		private string onStatement;
+	}
+
+	internal class TableJoinExpression : PpsDataJoinExpression<TableInfo>
+	{
+		protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right) => throw new NotImplementedException();
+		protected override TableInfo ResolveTable(string tableName) => throw new NotImplementedException();
+	}
+
+
+
 }

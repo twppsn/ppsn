@@ -387,6 +387,7 @@ namespace TecWare.PPSn.Server
 				if (String.IsNullOrEmpty(select))
 					throw new ArgumentNullException(nameof(select));
 
+				//PpsCombineViewDefinition
 				// todo: build a joined selector, doppelte spalten müssten entfernt werden, wenn man es machen will
 				var viewInfo = Application.GetViewDefinition(select, throwException);
 				if (viewInfo == null)

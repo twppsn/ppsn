@@ -19,12 +19,17 @@ namespace TecWare.PPSn.Server
 {
 	#region -- class PpsApplicationFileItem -------------------------------------------
 
+	/// <summary>Application item description.</summary>
 	public sealed class PpsApplicationFileItem
 	{
 		private readonly string path;
 		private readonly long length;
 		private readonly DateTime lastWriteTime;
 
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="length"></param>
+		/// <param name="lastWriteTime"></param>
 		public PpsApplicationFileItem(string path, long length, DateTime lastWriteTime)
 		{
 			this.path = path;
@@ -32,8 +37,11 @@ namespace TecWare.PPSn.Server
 			this.lastWriteTime = lastWriteTime.Ticks == 0 ? lastWriteTime : new DateTime(lastWriteTime.Ticks - (lastWriteTime.Ticks % TimeSpan.TicksPerSecond), lastWriteTime.Kind);
 		} // ctor
 
+		/// <summary>Path of the item.</summary>
 		public string Path => path;
+		/// <summary>Length in bytes.</summary>
 		public long Length => length;
+		/// <summary>Last write time stamp.</summary>
 		public DateTime LastWriteTime => lastWriteTime;
 	} // class PpsApplicationFileItem
 

@@ -29,6 +29,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.Reporting
 {
@@ -150,6 +151,7 @@ namespace TecWare.PPSn.Reporting
 	public abstract class PpsReportValueEmitter : IPpsReportValueEmitter
 	{
 		private readonly int columnIndex;
+		private readonly string format;
 
 		/// <summary></summary>
 		/// <param name="columnName"></param>
@@ -158,13 +160,24 @@ namespace TecWare.PPSn.Reporting
 		{
 			this.ElementName = columnName;
 			this.columnIndex = columns.FindColumnIndex(columnName, true);
+
+			// get format definition
+			var column = columns.Columns[this.columnIndex];
+			if (column.Attributes.TryGetProperty<string>("format", out var fmt))
+				format = fmt;
 		} // ctor
 
-		/// <summary></summary>
+		/// <summary>Get raw value.</summary>
 		/// <param name="row"></param>
 		/// <returns></returns>
 		protected object GetValue(IDataRow row)
 			=> row[columnIndex];
+
+		/// <summary>Get formatted value.</summary>
+		/// <param name="row"></param>
+		/// <returns></returns>
+		protected string GetTextValue(IDataRow row)
+			=> ProcsPps.ToString(GetValue(row), format);
 
 		/// <summary></summary>
 		/// <param name="xml"></param>
@@ -193,7 +206,7 @@ namespace TecWare.PPSn.Reporting
 			} // ctor
 
 			public override Task WriteAsync(XmlWriter xml, IDataRow row)
-				=> xml.WriteStringAsync(GetValue(row).ChangeType<string>());
+				=> xml.WriteStringAsync(GetTextValue(row));
 		} // class SimpleValueEmitter
 
 		#endregion
@@ -257,20 +270,20 @@ namespace TecWare.PPSn.Reporting
 		} // func CreateTempFile
 
 		/// <summary></summary>
-		/// <param name="argument"></param>
+		/// <param name="converter"></param>
 		/// <param name="columnName"></param>
 		/// <param name="columns"></param>
 		/// <returns></returns>
-		public virtual IPpsReportValueEmitter CreateColumnEmitter(string argument, string columnName, IDataColumns columns)
+		public virtual IPpsReportValueEmitter CreateColumnEmitter(string converter, string columnName, IDataColumns columns)
 		{
-			if (argument == null && columnName != null)
+			if (converter == null && columnName != null)
 				return new SimpleValueEmitter(columnName, columns);
-			else if (argument == "markdown" && columnName != null)
+			else if (converter == "markdown" && columnName != null)
 				return new MarkdownValueEmitter(columnName, columns, Markdown.SpeeDataRenderer.DefaultPipeLine);
 			else
 				throw new ArgumentException("Emitter not defined.");
 		} // func CreateColumnEmitter
-	} // class PpsReportSession
+	} // class PpsReportSessionBase
 
 	#endregion
 

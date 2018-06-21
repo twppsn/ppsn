@@ -14,17 +14,18 @@
 //
 #endregion
 using System;
-using System.Linq;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security;
-using System.Security.Cryptography;
-using System.Text;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Stuff
 {
 	/// <summary></summary>
 	public static partial class ProcsPps
 	{
+		#region -- SecureStringCompare ------------------------------------------------
+
 		/// <summary></summary>
 		/// <param name="ss1"></param>
 		/// <param name="ss2"></param>
@@ -71,5 +72,67 @@ namespace TecWare.PPSn.Stuff
 					Marshal.ZeroFreeBSTR(bstr1);
 			}
 		} // func SecureStringCompare
+
+		#endregion
+
+		#region -- ToString -----------------------------------------------------------
+
+		private static string ReplaceNewLine(string fmt)
+			=> fmt.Replace("\\n", Environment.NewLine);
+
+		/// <summary>Format to an string.</summary>
+		/// <param name="value"></param>
+		/// <param name="fmt"></param>
+		/// <returns></returns>
+		public static string ToString(this object value, string fmt)
+			=> ToString(value, fmt, CultureInfo.CurrentCulture);
+
+		/// <summary>Format to an string.</summary>
+		/// <param name="value"></param>
+		/// <param name="fmt"></param>
+		/// <param name="cultureInfo"></param>
+		/// <returns></returns>
+		public static string ToString(this object value, string fmt, CultureInfo cultureInfo)
+		{
+			if (value == null)
+				return null;
+			else if (fmt == null)
+				return Convert.ToString(value, cultureInfo);
+			else
+			{
+				if (fmt.StartsWith("{}"))
+					return String.Format(ReplaceNewLine(fmt.Substring(2)), value);
+				else
+				{
+					switch (Type.GetTypeCode(value.GetType()))
+					{
+						case TypeCode.SByte:
+						case TypeCode.Byte:
+						case TypeCode.Int16:
+						case TypeCode.UInt16:
+						case TypeCode.Int32:
+						case TypeCode.UInt32:
+						case TypeCode.Int64:
+						case TypeCode.UInt64:
+							return value.ChangeType<long>().ToString(fmt, cultureInfo);
+						case TypeCode.DateTime:
+							return ((DateTime)value).ToString(fmt, cultureInfo);
+						case TypeCode.Decimal:
+							return ((decimal)value).ToString(fmt, cultureInfo);
+						case TypeCode.Double:
+							return ((double)value).ToString(fmt, cultureInfo);
+						case TypeCode.Single:
+							return ((float)value).ToString(fmt, cultureInfo);
+
+						default:
+							return value is IFormattable f
+								? f.ToString(fmt, cultureInfo)
+								: value.ToString();
+					}
+				}
+			}
+		} // func ToString
+
+		#endregion
 	} // class ProcsPps
 }

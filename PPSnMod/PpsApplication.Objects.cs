@@ -137,6 +137,7 @@ namespace TecWare.PPSn.Server
 
 	#region -- class PpsObjectLinkAccess ------------------------------------------------
 
+	/// <summary></summary>
 	public sealed class PpsObjectLinkAccess
 	{
 		private readonly PpsObjectAccess obj;
@@ -162,15 +163,20 @@ namespace TecWare.PPSn.Server
 		{
 		} // ctor
 
+		/// <summary></summary>
 		public void Reset()
 			=> isDirty = id < 0;
 
+		/// <summary></summary>
 		public void Remove()
 		{
 			isDirty = true;
 			isRemoved = true;
 		} // proc Remove
 
+		/// <summary></summary>
+		/// <param name="elementName"></param>
+		/// <returns></returns>
 		public XElement ToXml(string elementName)
 			=> new XElement(elementName,
 				new XAttribute("linkId", linkId),
@@ -208,8 +214,9 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- enum PpsObjectUpdateFlag -------------------------------------------------
+	#region -- enum PpsObjectUpdateFlag -----------------------------------------------
 
+	/// <summary></summary>
 	[Flags]
 	public enum PpsObjectUpdateFlag
 	{
@@ -924,14 +931,24 @@ namespace TecWare.PPSn.Server
 			);
 		} // func FindLink
 
+		/// <summary></summary>
+		/// <param name="linkId"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsObjectLinkAccess FindLinkTo(long linkId)
 			=> GetLinks(true, ref linksTo).FirstOrDefault(l => l.LinkId == linkId);
 
+		/// <summary></summary>
+		/// <param name="linkId"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsObjectLinkAccess FindLinkFrom(long linkId)
 			=> GetLinks(true, ref linksFrom).FirstOrDefault(l => l.LinkId == linkId);
 
+		/// <summary></summary>
+		/// <param name="linkId"></param>
+		/// <param name="refCount"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsObjectLinkAccess AddLinkTo(long linkId, int refCount = -1)
 		{
@@ -948,6 +965,9 @@ namespace TecWare.PPSn.Server
 			return link;
 		} // proc AddLink
 
+		/// <summary></summary>
+		/// <param name="x"></param>
+		/// <returns></returns>
 		public PpsObjectLinkAccess AddLinkTo(XElement x)
 			=> AddLinkTo(x.GetAttribute("linkId", -1L), x.GetAttribute("refCount", -1));
 
@@ -1756,6 +1776,9 @@ namespace TecWare.PPSn.Server
 
 			#region -- Object Item --------------------------------------------------------
 
+			/// <summary>Return the object description of the object type.</summary>
+			/// <param name="objectType"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public IPpsObjectItem GetObjectItem(string objectType)
 			{

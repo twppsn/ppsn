@@ -28,29 +28,29 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.listBox1 = new System.Windows.Forms.ListBox();
+			this.availTablesList = new System.Windows.Forms.ListBox();
 			this.textBox1 = new System.Windows.Forms.TextBox();
-			this.listBox2 = new System.Windows.Forms.ListBox();
-			this.listBox3 = new System.Windows.Forms.ListBox();
+			this.availableColumns = new System.Windows.Forms.ListBox();
+			this.selectedColumns = new System.Windows.Forms.ListBox();
 			this.button1 = new System.Windows.Forms.Button();
 			this.button2 = new System.Windows.Forms.Button();
-			this.listBox4 = new System.Windows.Forms.ListBox();
+			this.selectedTables = new System.Windows.Forms.ListBox();
 			this.textBox2 = new System.Windows.Forms.TextBox();
 			this.label1 = new System.Windows.Forms.Label();
 			this.label2 = new System.Windows.Forms.Label();
 			this.label3 = new System.Windows.Forms.Label();
-			this.textBox3 = new System.Windows.Forms.TextBox();
+			this.conditionExpression = new System.Windows.Forms.TextBox();
 			this.cmdInsert = new System.Windows.Forms.Button();
 			this.cmdClose = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
-			// listBox1
+			// availTablesList
 			// 
-			this.listBox1.FormattingEnabled = true;
-			this.listBox1.Location = new System.Drawing.Point(27, 25);
-			this.listBox1.Name = "listBox1";
-			this.listBox1.Size = new System.Drawing.Size(253, 446);
-			this.listBox1.TabIndex = 0;
+			this.availTablesList.FormattingEnabled = true;
+			this.availTablesList.Location = new System.Drawing.Point(27, 25);
+			this.availTablesList.Name = "availTablesList";
+			this.availTablesList.Size = new System.Drawing.Size(253, 446);
+			this.availTablesList.TabIndex = 0;
 			// 
 			// textBox1
 			// 
@@ -59,21 +59,21 @@
 			this.textBox1.Size = new System.Drawing.Size(159, 20);
 			this.textBox1.TabIndex = 1;
 			// 
-			// listBox2
+			// availableColumns
 			// 
-			this.listBox2.FormattingEnabled = true;
-			this.listBox2.Location = new System.Drawing.Point(331, 198);
-			this.listBox2.Name = "listBox2";
-			this.listBox2.Size = new System.Drawing.Size(187, 199);
-			this.listBox2.TabIndex = 2;
+			this.availableColumns.FormattingEnabled = true;
+			this.availableColumns.Location = new System.Drawing.Point(331, 198);
+			this.availableColumns.Name = "availableColumns";
+			this.availableColumns.Size = new System.Drawing.Size(187, 199);
+			this.availableColumns.TabIndex = 2;
 			// 
-			// listBox3
+			// selectedColumns
 			// 
-			this.listBox3.FormattingEnabled = true;
-			this.listBox3.Location = new System.Drawing.Point(586, 181);
-			this.listBox3.Name = "listBox3";
-			this.listBox3.Size = new System.Drawing.Size(203, 199);
-			this.listBox3.TabIndex = 3;
+			this.selectedColumns.FormattingEnabled = true;
+			this.selectedColumns.Location = new System.Drawing.Point(586, 181);
+			this.selectedColumns.Name = "selectedColumns";
+			this.selectedColumns.Size = new System.Drawing.Size(203, 199);
+			this.selectedColumns.TabIndex = 3;
 			// 
 			// button1
 			// 
@@ -93,13 +93,13 @@
 			this.button2.Text = ">";
 			this.button2.UseVisualStyleBackColor = true;
 			// 
-			// listBox4
+			// selectedTables
 			// 
-			this.listBox4.FormattingEnabled = true;
-			this.listBox4.Location = new System.Drawing.Point(322, 40);
-			this.listBox4.Name = "listBox4";
-			this.listBox4.Size = new System.Drawing.Size(458, 56);
-			this.listBox4.TabIndex = 5;
+			this.selectedTables.FormattingEnabled = true;
+			this.selectedTables.Location = new System.Drawing.Point(322, 40);
+			this.selectedTables.Name = "selectedTables";
+			this.selectedTables.Size = new System.Drawing.Size(458, 56);
+			this.selectedTables.TabIndex = 5;
 			// 
 			// textBox2
 			// 
@@ -135,13 +135,13 @@
 			this.label3.TabIndex = 8;
 			this.label3.Text = "Bedingungen:";
 			// 
-			// textBox3
+			// conditionExpression
 			// 
-			this.textBox3.Location = new System.Drawing.Point(385, 409);
-			this.textBox3.Multiline = true;
-			this.textBox3.Name = "textBox3";
-			this.textBox3.Size = new System.Drawing.Size(379, 62);
-			this.textBox3.TabIndex = 6;
+			this.conditionExpression.Location = new System.Drawing.Point(385, 409);
+			this.conditionExpression.Multiline = true;
+			this.conditionExpression.Name = "conditionExpression";
+			this.conditionExpression.Size = new System.Drawing.Size(379, 62);
+			this.conditionExpression.TabIndex = 6;
 			// 
 			// cmdInsert
 			// 
@@ -176,15 +176,15 @@
 			this.Controls.Add(this.label3);
 			this.Controls.Add(this.label2);
 			this.Controls.Add(this.label1);
-			this.Controls.Add(this.textBox3);
+			this.Controls.Add(this.conditionExpression);
 			this.Controls.Add(this.textBox2);
-			this.Controls.Add(this.listBox4);
+			this.Controls.Add(this.selectedTables);
 			this.Controls.Add(this.button2);
 			this.Controls.Add(this.button1);
-			this.Controls.Add(this.listBox3);
-			this.Controls.Add(this.listBox2);
+			this.Controls.Add(this.selectedColumns);
+			this.Controls.Add(this.availableColumns);
 			this.Controls.Add(this.textBox1);
-			this.Controls.Add(this.listBox1);
+			this.Controls.Add(this.availTablesList);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.MaximizeBox = false;
 			this.MinimizeBox = false;
@@ -201,18 +201,18 @@
 
 		#endregion
 
-		private System.Windows.Forms.ListBox listBox1;
+		private System.Windows.Forms.ListBox availTablesList;
 		private System.Windows.Forms.TextBox textBox1;
-		private System.Windows.Forms.ListBox listBox2;
-		private System.Windows.Forms.ListBox listBox3;
+		private System.Windows.Forms.ListBox availableColumns;
+		private System.Windows.Forms.ListBox selectedColumns;
 		private System.Windows.Forms.Button button1;
 		private System.Windows.Forms.Button button2;
-		private System.Windows.Forms.ListBox listBox4;
+		private System.Windows.Forms.ListBox selectedTables;
 		private System.Windows.Forms.TextBox textBox2;
 		private System.Windows.Forms.Label label1;
 		private System.Windows.Forms.Label label2;
 		private System.Windows.Forms.Label label3;
-		private System.Windows.Forms.TextBox textBox3;
+		private System.Windows.Forms.TextBox conditionExpression;
 		private System.Windows.Forms.Button cmdInsert;
 		private System.Windows.Forms.Button cmdClose;
 	}

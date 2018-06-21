@@ -95,11 +95,12 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlJoinExpression ----------------------------------------------
+		#region -- class SqlJoinExpression --------------------------------------------
 
+		/// <summary>Implementation of the join expression for SQL.</summary>
 		public sealed class SqlJoinExpression : PpsDataJoinExpression<PpsSqlTableInfo>
 		{
-			#region -- class SqlEmitVisitor ---------------------------------------------
+			#region -- class SqlEmitVisitor -------------------------------------------
 
 			private sealed class SqlEmitVisitor : PpsJoinVisitor<string>
 			{
@@ -107,7 +108,7 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					string GetJoinExpr()
 					{
-						switch(type)
+						switch (type)
 						{
 							case PpsDataJoinType.Inner:
 								return " INNER JOIN ";
@@ -124,26 +125,33 @@ namespace TecWare.PPSn.Server.Sql
 				} // func CreateJoinStatement
 
 				public override string CreateTableStatement(PpsSqlTableInfo table, string alias)
-				{
-					if (String.IsNullOrEmpty(alias))
-						return table.SqlQualifiedName;
-					else
-						return table.SqlQualifiedName + " AS " + alias;
-				} // func CreateTableStatement
+					=> String.IsNullOrEmpty(alias)
+						? table.SqlQualifiedName
+						: table.SqlQualifiedName + " AS " + alias;
 			} // class SqlEmitVisitor
 
 			#endregion
 
 			private readonly PpsSqlExDataSource dataSource;
 
+			/// <summary></summary>
+			/// <param name="dataSource"></param>
 			public SqlJoinExpression(PpsSqlExDataSource dataSource)
 			{
-				this.dataSource = dataSource;
+				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
 			} // ctor
 
+			/// <summary></summary>
+			/// <param name="tableName"></param>
+			/// <returns></returns>
 			protected override PpsSqlTableInfo ResolveTable(string tableName)
 				=> dataSource.ResolveTableByName<SqlTableInfo>(tableName, true);
 
+			/// <summary></summary>
+			/// <param name="left"></param>
+			/// <param name="joinOp"></param>
+			/// <param name="right"></param>
+			/// <returns></returns>
 			protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
 			{
 				foreach (var r in right.Table.RelationInfo)
@@ -175,6 +183,10 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // func SplitColumnName
 
+			/// <summary></summary>
+			/// <param name="ppsColumn"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
 			public (PpsTableExpression, PpsSqlColumnInfo) FindColumn(IPpsColumnDescription ppsColumn, bool throwException)
 			{
 				foreach (var t in GetTables())
@@ -189,6 +201,10 @@ namespace TecWare.PPSn.Server.Sql
 				return (null, null);
 			} // func FindColumn
 
+			/// <summary></summary>
+			/// <param name="name"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
 			public (PpsTableExpression, PpsSqlColumnInfo) FindColumn(string name, bool throwException)
 			{
 				SplitColumnName(name, out var alias, out var columnName);
@@ -213,11 +229,18 @@ namespace TecWare.PPSn.Server.Sql
 				return (null, null);
 			} // func FindColumn
 
+			/// <summary></summary>
+			/// <param name="commandText"></param>
+			/// <param name="table"></param>
+			/// <param name="column"></param>
+			/// <returns></returns>
 			public StringBuilder AppendColumn(StringBuilder commandText, PpsTableExpression table, PpsSqlColumnInfo column)
 				=> String.IsNullOrEmpty(table.Alias)
 					? column.AppendAsColumn(commandText, true)
 					: column.AppendAsColumn(commandText, table.Alias);
 
+			/// <summary></summary>
+			/// <returns></returns>
 			public string EmitJoin()
 				=> new SqlEmitVisitor().Visit(this);
 		} // class SqlJoinExpression

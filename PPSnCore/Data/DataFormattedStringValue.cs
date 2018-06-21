@@ -15,12 +15,12 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.Data
 {
@@ -165,55 +165,6 @@ namespace TecWare.PPSn.Data
 			public sealed override string ToString()
 				=> GetType().Name;
 
-			private static string ReplaceNewLine(string fmt)
-				=> fmt.Replace("\\n", Environment.NewLine);
-
-			/// <summary></summary>
-			/// <param name="r"></param>
-			/// <param name="fmt"></param>
-			/// <returns></returns>
-			protected static string ConvertToText(object r, string fmt)
-			{
-				if (r == null)
-					return String.Empty;
-				else if (fmt == null)
-					return r.ToString();
-				else
-				{
-					if (fmt.StartsWith("{}"))
-						return String.Format(ReplaceNewLine(fmt.Substring(2)), r);
-					else
-					{
-						switch (Type.GetTypeCode(r.GetType()))
-						{
-							case TypeCode.SByte:
-							case TypeCode.Byte:
-							case TypeCode.Int16:
-							case TypeCode.UInt16:
-							case TypeCode.Int32:
-							case TypeCode.UInt32:
-							case TypeCode.Int64:
-							case TypeCode.UInt64:
-								return r.ChangeType<long>().ToString(fmt);
-							case TypeCode.DateTime:
-								return ((DateTime)r).ToString(fmt);
-							case TypeCode.Decimal:
-								return ((decimal)r).ToString(fmt);
-							case TypeCode.Double:
-								return ((double)r).ToString(fmt);
-							case TypeCode.Single:
-								return ((float)r).ToString(fmt);
-
-							default:
-								if (r is IFormattable f)
-									return f.ToString(fmt, CultureInfo.CurrentCulture);
-								else
-									return r.ToString();
-						}
-					}
-				}
-			} // func ConvertToText
-
 			/// <summary>Get the content of the current block.</summary>
 			/// <param name="env"></param>
 			/// <returns></returns>
@@ -284,7 +235,7 @@ namespace TecWare.PPSn.Data
 			{
 				try
 				{
-					return ConvertToText(GetNextMember(env.Row, 0), fmt);
+					return ProcsPps.ToString(GetNextMember(env.Row, 0), fmt) ?? String.Empty;
 				}
 				catch (Exception e)
 				{
@@ -312,7 +263,7 @@ namespace TecWare.PPSn.Data
 			{
 				try
 				{
-					return ConvertToText(chunk.Run(env)[0], fmt);
+					return ProcsPps.ToString(chunk.Run(env)[0], fmt) ?? String.Empty;
 				}
 				catch (LuaRuntimeException e)
 				{

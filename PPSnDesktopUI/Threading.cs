@@ -257,7 +257,7 @@ namespace TecWare.PPSn
 	/// <summary>Thread helper.</summary>
 	public static class StuffThreading
 	{
-		private static void AwaitTaskInternal(INotifyCompletion awaiter)
+		private static void AwaitTaskInternal(TaskAwaiter awaiter)
 		{
 			if (SynchronizationContext.Current is DispatcherSynchronizationContext)
 			{
@@ -272,6 +272,10 @@ namespace TecWare.PPSn
 			}
 			else if (SynchronizationContext.Current is PpsSynchronizationContext ctx)
 				ctx.ProcessMessageLoop(awaiter);
+
+			// thread is cancelled, do not wait for finish
+			if (!awaiter.IsCompleted)
+				throw new OperationCanceledException();
 		} // func RunTaskSyncInternal
 
 		/// <summary>Check if the current synchronization context has a message loop.</summary>
@@ -291,7 +295,7 @@ namespace TecWare.PPSn
 		public static void AwaitTask(this Task task)
 		{
 			if (!task.IsCompleted)
-				AwaitTaskInternal(task.GetAwaiter());
+				AwaitTaskInternal(task);
 			task.Wait();
 		} // proc AwaitTask
 
@@ -303,6 +307,7 @@ namespace TecWare.PPSn
 		{
 			if (!task.IsCompleted)
 				AwaitTaskInternal(task.GetAwaiter());
+
 			return task.Result;
 		} // proc AwaitTask	
 	} // class StuffThreading

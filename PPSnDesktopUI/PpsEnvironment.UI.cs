@@ -367,7 +367,8 @@ namespace TecWare.PPSn
 			Traces.AppendException(exception, alternativeMessage);
 
 			// show the exception if it is not marked as background
-			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background)
+			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background
+				&& Application.Current != null)
 			{
 				var dialogOwner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
 

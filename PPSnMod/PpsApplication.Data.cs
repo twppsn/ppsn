@@ -32,9 +32,10 @@ using static TecWare.PPSn.Server.PpsStuff;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsFieldDescription ------------------------------------------------
+	#region -- class PpsFieldDescription ----------------------------------------------
 
-	/// <summary>Description of a field.</summary>
+	/// <summary>Description of a field. Extent a column, field or result value with 
+	/// custom attributes.</summary>
 	public sealed class PpsFieldDescription : IPpsColumnDescription
 	{
 		private const string displayNameAttributeString = "displayName";
@@ -377,8 +378,8 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc GetAttributesConverted
 
-		/// <summary></summary>
-		/// <param name="attributeSelector"></param>
+		/// <summary>Get attributes of this field.</summary>
+		/// <param name="attributeSelector">String selector for attribute names.</param>
 		/// <returns></returns>
 		public IEnumerable<PropertyValue> GetAttributes(string attributeSelector)
 			=> attributeSelector == "*"
@@ -421,14 +422,19 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- class PpsViewParameterDefinition -----------------------------------------
+	#region -- class PpsViewParameterDefinition ---------------------------------------
 
+	/// <summary>Defines a parameter for a view, order or filter expression.</summary>
 	public sealed class PpsViewParameterDefinition
 	{
 		private readonly string name;
 		private readonly string displayName;
 		private readonly string parameter;
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="displayName"></param>
+		/// <param name="parameter"></param>
 		public PpsViewParameterDefinition(string name, string displayName, string parameter)
 		{
 			if (String.IsNullOrEmpty(name))
@@ -439,6 +445,8 @@ namespace TecWare.PPSn.Server
 			this.parameter = parameter;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		public PpsViewParameterDefinition(XElement x)
 		{
 			this.name = x.GetAttribute<string>("name", null);
@@ -457,19 +465,25 @@ namespace TecWare.PPSn.Server
 			xml.WriteEndElement();
 		} // proc WriteElement
 
+		/// <summary>Internal name of the parameter</summary>
 		public string Name => name;
+		/// <summary>Display name of the parameter for the user.</summary>
 		public string DisplayName => displayName ?? name;
+		/// <summary>Parameter content.</summary>
 		public string Parameter => parameter;
 
+		/// <summary>Is this parameter visible for the user.</summary>
 		public bool IsVisible => displayName != null;
 
-		public static PpsViewParameterDefinition[] EmptyArray { get; } = new PpsViewParameterDefinition[0];
+		/// <summary>Empty parameter array.</summary>
+		public static PpsViewParameterDefinition[] EmptyArray { get; } = Array.Empty<PpsViewParameterDefinition>();
 	} // class PpsViewParameterDefinition
 
 	#endregion
 
-	#region -- class PpsViewDefinition --------------------------------------------------
+	#region -- class PpsViewDefinition ------------------------------------------------
 
+	/// <summary>View description to manage request to the system.</summary>
 	public sealed class PpsViewDescription
 	{
 		private readonly IPpsSelectorToken selectorToken;
@@ -480,6 +494,12 @@ namespace TecWare.PPSn.Server
 
 		private readonly IPropertyReadOnlyDictionary attributes;
 
+		/// <summary></summary>
+		/// <param name="selectorToken"></param>
+		/// <param name="displayName"></param>
+		/// <param name="filter"></param>
+		/// <param name="order"></param>
+		/// <param name="attributes"></param>
 		public PpsViewDescription(IPpsSelectorToken selectorToken, string displayName, PpsViewParameterDefinition[] filter, PpsViewParameterDefinition[] order, IPropertyReadOnlyDictionary attributes)
 		{
 			this.selectorToken = selectorToken;
@@ -491,25 +511,66 @@ namespace TecWare.PPSn.Server
 			this.attributes = attributes ?? new PropertyDictionary();
 		} // ctor
 
+		/// <summary>Lookup a order parameter to retrieve a native order expression.</summary>
+		/// <param name="orderName"></param>
+		/// <returns></returns>
 		public string LookupOrder(string orderName)
 			=> order.FirstOrDefault(c => String.Compare(orderName, c.Name, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter;
 
+		/// <summary>Lookup a filter parameter to retrieve a native filter expression.</summary>
+		/// <param name="filterName"></param>
+		/// <returns></returns>
 		public string LookupFilter(string filterName)
 			=> filter.FirstOrDefault(c => String.Compare(filterName, c.Name, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter;
 
+		/// <summary>Name of the view.</summary>
 		public string Name => selectorToken.Name;
+		/// <summary>Name of the view for the user.</summary>
 		public string DisplayName => displayName ?? selectorToken.Name;
+		/// <summary>Access token to the view.</summary>
 		public string SecurityToken => null;
 
+		/// <summary>Predefined filter expressions.</summary>
 		public PpsViewParameterDefinition[] Filter => filter;
+		/// <summary>Predefined order expressions,</summary>
 		public PpsViewParameterDefinition[] Order => order;
 
+		/// <summary>Extented attributes of the view.</summary>
 		public IPropertyReadOnlyDictionary Attributes => attributes;
 
+		/// <summary>Selector token to execute the view.</summary>
 		public IPpsSelectorToken SelectorToken => selectorToken;
 
+		/// <summary>Is this view visible for the user.</summary>
 		public bool IsVisible => displayName != null;
 	} // class PpsViewDefinition
+
+	#endregion
+
+	#region -- class PpsCombineViewDefinition -----------------------------------------
+
+	///// <summary></summary>
+	//public sealed class PpsCombineViewDefinition : PpsDataJoinExpression<PpsViewDescription>
+	//{
+	//	/// <summary></summary>
+	//	public PpsCombineViewDefinition()
+	//	{
+	//	}
+
+	//	/// <summary></summary>
+	//	/// <param name="left"></param>
+	//	/// <param name="joinOp"></param>
+	//	/// <param name="right"></param>
+	//	/// <returns></returns>
+	//	protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right) 
+	//		=> throw new NotImplementedException();
+
+	//	/// <summary></summary>
+	//	/// <param name="tableName"></param>
+	//	/// <returns></returns>
+	//	protected override PpsViewDescription ResolveTable(string tableName) 
+	//		=> throw new NotImplementedException();
+	//} // class PpsCombineViewDefinition
 
 	#endregion
 
@@ -741,18 +802,19 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 		
-		/// <summary></summary>
+		/// <summary>Find a data source by name.</summary>
 		/// <param name="name"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public PpsDataSource GetDataSource(string name, bool throwException)
+		public PpsDataSource GetDataSource(string name, bool throwException = true)
 		{
 			using (EnterReadLock())
-				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
+					?? (throwException ? throw new ArgumentOutOfRangeException(nameof(name), name, $"Data source is not defined ('{name}').") : (PpsDataSource)null);
 		} // func GetDataSource
 
-		/// <summary></summary>
+		/// <summary>Find a field description.</summary>
 		/// <param name="name"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
@@ -762,7 +824,7 @@ namespace TecWare.PPSn.Server
 			if (fieldDescription.TryGetValue(name, out var fieldInfo))
 				return fieldInfo;
 			else if (throwException)
-				throw new ArgumentOutOfRangeException("fieldName", String.Format("Field is not defined ({0}).", name));
+				throw new ArgumentOutOfRangeException(nameof(name), name, $"Field is not defined ({name}).");
 			else
 				return null;
 		} // func GetFieldDescription
@@ -779,7 +841,7 @@ namespace TecWare.PPSn.Server
 				if (viewController.TryGetValue(name, out var viewInfo))
 					return viewInfo;
 				else if (throwException)
-					throw new ArgumentOutOfRangeException(nameof(name), $"Could not locate view definition: '{name}'");
+					throw new ArgumentOutOfRangeException(nameof(name), $"View definition is not defined ('{name}').");
 				else
 					return null;
 			}
@@ -839,10 +901,6 @@ namespace TecWare.PPSn.Server
 		private void HttpViewGetAction(IDEWebRequestScope r)
 		{
 			// v=views,...&f={filterList}&o={orderList}&s={startAt]&c={count}&a={attributeSelector}
-			// ???views => view,join syntax?
-			// sort: +FIELD,-FIELD,:DEF
-			// ???filter: :DEF-and-not-or-xor-contains-
-
 			var startAt = r.GetProperty("s", 0);
 			var count = r.GetProperty("c", Int32.MaxValue);
 			

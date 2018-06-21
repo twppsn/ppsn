@@ -1394,7 +1394,7 @@ namespace TecWare.PPSn
 		/// <summary>Get the Environment, that is attached to the current application.</summary>
 		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment()
-			=> (PpsEnvironment)Application.Current.FindResource(EnvironmentService);
+			=> (PpsEnvironment)Application.Current?.FindResource(EnvironmentService);
 
 		private static IPpsWindowPane GetCurrentPaneCore(FrameworkElement ui)
 			=> (IPpsWindowPane)ui.TryFindResource(WindowPaneService);
