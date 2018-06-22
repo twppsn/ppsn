@@ -490,6 +490,8 @@ namespace TecWare.PPSn.Data
 		public PpsDataSetDefinition DataSet => dataset;
 		/// <summary>Name of the table.</summary>
 		public string Name => name;
+		/// <summary>User name for table.</summary>
+		public string DisplayName => Meta.TryGetProperty<string>("displayName", out var tmp) ? tmp : name;
 		/// <summary>Is the table initialized.</summary>
 		public bool IsInitialized => dataset.IsInitialized;
 		/// <summary>Column definition</summary>

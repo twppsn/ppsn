@@ -29,17 +29,15 @@ using System.Windows.Shapes;
 
 namespace TecWare.PPSn.UI
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	internal partial class PpsExceptionDialog : Window
+	internal partial class PpsMessageDialog : Window
 	{
-		public readonly static DependencyProperty MessageTypeProperty = DependencyProperty.Register(nameof(MessageType), typeof(PpsTraceItemType), typeof(PpsExceptionDialog));
-		public readonly static DependencyProperty MessageTextProperty = DependencyProperty.Register(nameof(MessageText), typeof(object), typeof(PpsExceptionDialog));
-		public readonly static DependencyProperty SkipVisibleProperty = DependencyProperty.Register(nameof(SkipVisible), typeof(bool), typeof(PpsExceptionDialog));
-		public readonly static DependencyProperty SkipCheckedProperty = DependencyProperty.Register(nameof(SkipChecked), typeof(bool), typeof(PpsExceptionDialog));
-		public readonly static DependencyProperty DetailsVisibleProperty = DependencyProperty.Register(nameof(DetailsVisible), typeof(bool), typeof(PpsExceptionDialog));
+		public readonly static DependencyProperty MessageTypeProperty = DependencyProperty.Register(nameof(MessageType), typeof(PpsTraceItemType), typeof(PpsMessageDialog));
+		public readonly static DependencyProperty MessageTextProperty = DependencyProperty.Register(nameof(MessageText), typeof(object), typeof(PpsMessageDialog));
+		public readonly static DependencyProperty SkipVisibleProperty = DependencyProperty.Register(nameof(SkipVisible), typeof(bool), typeof(PpsMessageDialog));
+		public readonly static DependencyProperty SkipCheckedProperty = DependencyProperty.Register(nameof(SkipChecked), typeof(bool), typeof(PpsMessageDialog));
+		public readonly static DependencyProperty DetailsVisibleProperty = DependencyProperty.Register(nameof(DetailsVisible), typeof(bool), typeof(PpsMessageDialog));
 
-		public PpsExceptionDialog()
+		public PpsMessageDialog()
 		{
 			InitializeComponent();
 

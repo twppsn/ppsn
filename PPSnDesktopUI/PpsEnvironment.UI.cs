@@ -335,6 +335,11 @@ namespace TecWare.PPSn
 		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func)
 			=> await Dispatcher.InvokeAsync<T>(func);
 
+		private static Exception UnpackException(Exception exception)
+			=> exception is AggregateException agg
+				? UnpackException(agg.InnerException)
+				: exception;
+
 		/// <summary>Append a exception to the log.</summary>
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
@@ -363,16 +368,17 @@ namespace TecWare.PPSn
 		/// <param name="alternativeMessage"></param>
 		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
+			var exceptionToShow = UnpackException(exception);
+
 			// always add the exception to the list
-			Traces.AppendException(exception, alternativeMessage);
+			Traces.AppendException(exception, alternativeMessage ?? exceptionToShow.ToString());
 
 			// show the exception if it is not marked as background
 			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background
 				&& Application.Current != null)
 			{
 				var dialogOwner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-
-				if (ShowExceptionDialog(dialogOwner, flags, exception, alternativeMessage)) // should follow a detailed dialog
+				if (ShowExceptionDialog(dialogOwner, flags, exceptionToShow, alternativeMessage)) // should follow a detailed dialog
 					ShowTrace(dialogOwner);
 
 				if ((flags & ExceptionShowFlags.Shutown) != 0) // close application
@@ -400,16 +406,28 @@ namespace TecWare.PPSn
 			{
 				case PpsEnvironmentOnlineFailedException ex:
 					return MsgBox(ex.Message, MessageBoxButton.OK, MessageBoxImage.Information) != MessageBoxResult.OK;
+				case IPpsUserRuntimeException urex:
+					return MsgBox(urex.Message, MessageBoxButton.OK, MessageBoxImage.Information) != MessageBoxResult.OK;
 				default:
 					var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;
 
-					var dialog = new PpsExceptionDialog();
-					dialog.MessageType = shutDown ? PpsTraceItemType.Fail : PpsTraceItemType.Exception;
-					dialog.MessageText = alternativeMessage ?? exception.Message;
-					dialog.SkipVisible = !shutDown;
+					if (!shutDown && alternativeMessage != null)
+					{
+						MsgBox(alternativeMessage, MessageBoxButton.OK, MessageBoxImage.Information);
+						return false;
+					}
+					else
+					{
+						var dialog = new PpsMessageDialog
+						{
+							MessageType = shutDown ? PpsTraceItemType.Fail : PpsTraceItemType.Exception,
+							MessageText = alternativeMessage ?? exception.Message,
+							SkipVisible = !shutDown,
 
-					dialog.Owner = dialogOwner;
-					return dialog.ShowDialog() ?? false; // show the dialog
+							Owner = dialogOwner
+						};
+						return dialog.ShowDialog() ?? false; // show the dialog
+					}
 			}
 		} // func ShowExceptionDialog
 

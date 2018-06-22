@@ -1519,11 +1519,12 @@ namespace TecWare.PPSn
 			/// <summary></summary>
 			public sealed class PpsTagChangedProperties : IPpsTagChangedProperties
 			{
-				private long oldId;
-				private object[] values = null;
+				private readonly long oldId;
+				private readonly object[] values;
 
 				public PpsTagChangedProperties(long oldId, string[] parameterValues)
 				{
+					this.oldId = oldId;
 					if (parameterValues != null)
 					{
 						values = new object[]
@@ -3242,7 +3243,7 @@ namespace TecWare.PPSn
 				this.rowId = rowId;
 				this.rowChangedEvent = rowChangedEvent;
 			} // ctor
-
+			
 			public void Invoke(object sender, PpsDataRowChangedEventArgs e)
 			{
 				if (rowId.HasValue)
@@ -3317,13 +3318,13 @@ namespace TecWare.PPSn
 		/// <param name="tableName"></param>
 		/// <param name="rowId"></param>
 		/// <param name="handler"></param>
-		public void RegisterWeakDataRowChanged(string tableName, long? rowId, PpsDataRowChangedEventHandler handler)
+		public object RegisterWeakDataRowChanged(string tableName, long? rowId, PpsDataRowChangedEventHandler handler)
 		{
 			var table = FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Table '{tableName}' not found.");
 
-			weakDataRowEvents.Add(new WeakReference<DataRowChangedEventItem>(
-				new DataRowChangedEventItem(table, rowId, handler)
-			));
+			var token = new DataRowChangedEventItem(table, rowId, handler);
+			weakDataRowEvents.Add(new WeakReference<DataRowChangedEventItem>(token));
+			return token;
 		} // proc RegisterWeakDataRowChanged
 
 		private void OnMasterDataRowChanged(PpsDataChangeOperation operation, PpsDataTableDefinition table, long rowId, IPropertyReadOnlyDictionary arguments)

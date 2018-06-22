@@ -75,9 +75,10 @@ namespace TecWare.PPSn
 		private int refCount = 0;                   // how often is this link used within the object
 
 		private WeakReference<PpsObject> linkTo;    // weak ref to the actual object
+		private object masterDataRowEvent = null;
 
 		private bool isDirty;   // is the link changed
-
+		
 		#region -- Ctor/Dtor/AddRef/DecRef/Dirty --------------------------------------
 
 		internal PpsObjectLink(PpsObjectLinks parent, long? id, long linkToId, int refCount)
@@ -90,7 +91,7 @@ namespace TecWare.PPSn
 			this.isDirty = !id.HasValue;
 
 			if (id.HasValue)
-				parent.Parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectLinks", id, OnLinkChanged);
+				masterDataRowEvent = parent.Parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectLinks", id, OnLinkChanged);
 		} // ctor
 
 		private void OnLinkChanged(object sender, PpsDataRowChangedEventArgs e)
@@ -163,7 +164,7 @@ namespace TecWare.PPSn
 			set
 			{
 				if (!id.HasValue && value.HasValue)
-					parent.Parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectLinks", id, OnLinkChanged);
+					masterDataRowEvent = parent.Parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectLinks", id, OnLinkChanged);
 				id = value;
 			}
 		} // prop Id
@@ -958,6 +959,7 @@ namespace TecWare.PPSn
 		private readonly List<PpsObjectTagView> deletedTags;
 
 		private PpsObjectTagLoadState state = PpsObjectTagLoadState.None;
+		private object masterDataRowEvent = null;
 		private bool isDirty = false;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -969,7 +971,7 @@ namespace TecWare.PPSn
 			this.tags = new List<PpsObjectTagView>();
 			this.deletedTags = new List<PpsObjectTagView>();
 
-			parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectTags", null, OnTagsChanged);
+			masterDataRowEvent = parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectTags", null, OnTagsChanged);
 		} // ctor
 
 		internal void SetDirty()
@@ -1163,8 +1165,13 @@ namespace TecWare.PPSn
 					var tag = tags.Find(t => t.IsRev && String.Compare(t.Name, key, StringComparison.OrdinalIgnoreCase) == 0);
 
 					if (tag != null)
-						tag.Update(tagClass, value);
-					else
+					{
+						if (value == null)
+							tag.Update(tagClass, value);
+						else
+							tag.Remove();
+					}
+					else if (value != null)
 					{
 						tag = new PpsObjectTagView(this, null, key, true, tagClass, value, userId, DateTime.UtcNow, false);
 					}
@@ -2577,6 +2584,7 @@ namespace TecWare.PPSn
 		private readonly PpsObjectLinks links;              // linked objects
 
 		private bool isDirty = false;
+		private object masterRowEvent = null;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -2594,7 +2602,7 @@ namespace TecWare.PPSn
 			this.tags = new PpsObjectTags(this);
 			this.links = new PpsObjectLinks(this);
 
-			environment.MasterData.RegisterWeakDataRowChanged("Objects", objectId, OnObjectDataChanged);
+			masterRowEvent = environment.MasterData.RegisterWeakDataRowChanged("Objects", objectId, OnObjectDataChanged);
 
 			ReadObjectInfo(r);
 		} // ctor

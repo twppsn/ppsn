@@ -865,4 +865,81 @@ namespace TecWare.PPSn
 	} // class WebRequestHelper
 
 	#endregion
+
+	#region -- class IPpsUserRuntimeException -----------------------------------------
+
+	/// <summary>Marks a exception as a friendly exception for the user.</summary>
+	public interface IPpsUserRuntimeException
+	{
+		/// <summary></summary>
+		string Message { get; }
+	} // interface IPpsUserRuntimeException
+
+	#endregion
+
+	#region -- class LuaUserRuntimeException ------------------------------------------
+
+	/// <summary></summary>
+	public sealed class LuaUserRuntimeException : LuaRuntimeException, IPpsUserRuntimeException
+	{
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		public LuaUserRuntimeException(string message, Exception innerException) 
+			: base(message, innerException)
+		{
+		}
+
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="level"></param>
+		/// <param name="skipClrFrames"></param>
+		public LuaUserRuntimeException(string message, int level, bool skipClrFrames) 
+			: base(message, level, skipClrFrames)
+		{
+		}
+	} // class LuaUserRuntimeException
+
+	#endregion
+
+	#region -- class LuaAssertRuntimeException ----------------------------------------
+
+	/// <summary></summary>
+	public sealed class LuaAssertRuntimeException : LuaRuntimeException
+	{
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		public LuaAssertRuntimeException(string message, Exception innerException)
+			: base(message, innerException)
+		{
+		}
+
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="level"></param>
+		/// <param name="skipClrFrames"></param>
+		public LuaAssertRuntimeException(string message, int level, bool skipClrFrames)
+			: base(message, level, skipClrFrames)
+		{
+		}
+	} // class LuaAssertRuntimeException
+
+	#endregion
+
+	#region -- class PpsUserException -------------------------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsUserException : Exception, IPpsUserRuntimeException
+	{
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <param name="innerException"></param>
+		public PpsUserException(string message, Exception innerException)
+			: base(message, innerException)
+		{
+		}
+	} // class PpsUserException
+
+	#endregion
 }

@@ -35,7 +35,6 @@ namespace TecWare.PPSn.Server
 {
 	#region -- interface IPpsApplicationInitialization --------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsApplicationInitialization : IDEConfigItem
 	{
@@ -388,7 +387,9 @@ namespace TecWare.PPSn.Server
 
 					// test if the object is an image
 					var obj = session.application.Objects.GetObject(objkId);
-					if (!obj.MimeType.StartsWith("image/"))
+					if (obj.MimeType != MimeTypes.Image.Jpeg
+						&& obj.MimeType != MimeTypes.Image.Png
+						&& obj.MimeType != MimeTypes.Application.Pdf)
 						return;
 
 					// write object to disc
