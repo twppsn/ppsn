@@ -384,12 +384,14 @@ namespace TecWare.PPSn.Data
 					Row.Table.DataSet.UndoSink?.Append(
 						new PpsTemplateUndoItem(this, oldValue, newValue)
 					);
+					Row.SetChanged();
 					undo?.Commit();
 				}
 			}
 
 			// refresh values
 			OnPropertyChanged(nameof(Value), oldValue, currentTemplate, true);
+
 			if (firePropertyChanged && valueChanged)
 				UpdateFormattedValue();
 		} // proc SetValue
@@ -665,7 +667,14 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Calculated value of the template.</summary>
 		public string FormattedValue
-			=> formattedValue;
+		{
+			get
+			{
+				if (parsedValue == null)
+					UpdateFormattedValue();
+				return formattedValue;
+			}
+		} // prop FormattedValue
 
 		/// <summary>Value of the template.</summary>
 		public string Value
