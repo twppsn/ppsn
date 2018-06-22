@@ -55,7 +55,7 @@
       <HintPath>..\packages\AForge.Video.DirectShow.2.2.5\lib\AForge.Video.DirectShow.dll</HintPath>
     </Reference>
     <Reference Include="DES.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\TecWare.DES.Core.3.4.15\lib\net47\DES.Core.dll</HintPath>
+      <HintPath>..\packages\TecWare.DES.Core.3.4.16\lib\net47\DES.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Dynamic, Version=1.2.0.0, Culture=neutral, PublicKeyToken=7f709c5b713576e1, processorArchitecture=MSIL">
       <HintPath>..\packages\DynamicLanguageRuntime.1.2.1\lib\net45\Microsoft.Dynamic.dll</HintPath>
