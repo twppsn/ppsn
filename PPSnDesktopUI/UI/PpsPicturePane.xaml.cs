@@ -663,13 +663,12 @@ namespace TecWare.PPSn.UI
 		#region -- UnDo/ReDo ------------------------------------------------------------
 
 		/// <summary>This StrokeCollection owns a property if ChangedActions should be traced (ref: https://msdn.microsoft.com/en-US/library/aa972158.aspx )</summary>
-		private class PpsDetraceableStrokeCollection : StrokeCollection
+		public class PpsDetraceableStrokeCollection : StrokeCollection
 		{
 			private bool disableTracing = false;
 
 			public PpsDetraceableStrokeCollection(StrokeCollection strokes) : base(strokes)
 			{
-
 			}
 
 			/// <summary>If true item changes should not be passed to a UndoManager</summary>
@@ -793,6 +792,7 @@ namespace TecWare.PPSn.UI
 		}
 
 		#endregion
+
 		#region -- Fields -------------------------------------------------------------
 		private readonly PpsEnvironment environment;
 
@@ -1386,12 +1386,12 @@ namespace TecWare.PPSn.UI
 				{
 					case MessageBoxResult.Yes:
 						ApplicationCommands.Save.Execute(null, null);
-						SetValue(SelectedAttachmentProperty, null); ;
+						SetValue(selectedAttachmentPropertyKey, null); ;
 						return true;
 					case MessageBoxResult.No:
 						while (strokeUndoManager.CanUndo)
 							strokeUndoManager.Undo();
-						SetValue(SelectedAttachmentProperty, null); ;
+						SetValue(selectedAttachmentPropertyKey, null); ;
 						return true;
 					default:
 						return false;
@@ -1439,19 +1439,13 @@ namespace TecWare.PPSn.UI
 		public IEnumerable<object> UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index descending select un).ToArray();
 		/// <summary>Property for the ToolBar which references the available Redo items</summary>
 		public IEnumerable<object> RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
-
 		/// <summary>Binding Point for caller to set the shown attachments</summary>
-		public IPpsAttachments Attachments
-		{
-			get { return (IPpsAttachments)GetValue(AttachmentsProperty); }
-			set { SetValue(AttachmentsProperty, value); }
-		}
-
+		public IPpsAttachments Attachments { get => (IPpsAttachments)GetValue(AttachmentsProperty); set => SetValue(AttachmentsProperty, value); }
 		/// <summary>The Attachmnet which is shown in the editor</summary>
-		private IPpsAttachmentItem SelectedAttachment
+		public IPpsAttachmentItem SelectedAttachment
 		{
 			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
-			set
+			private set
 			{
 				if (value != null && !LeaveCurrentImage())
 					return;
@@ -1460,17 +1454,16 @@ namespace TecWare.PPSn.UI
 					AddToolbarCommands();
 				else
 					RemoveToolbarCommands();
-
-				SetValue(SelectedAttachmentProperty, value);
+				SetValue(selectedAttachmentPropertyKey, value);
 				SelectedCamera = null;
 			}
-		}
+		} // prop SelectedAttachment
 
 		/// <summary>The camera which is shown in the editor</summary>
-		private PpsAforgeCamera SelectedCamera
+		public PpsAforgeCamera SelectedCamera
 		{
-			get { return (PpsAforgeCamera)GetValue(SelectedCameraProperty); }
-			set
+			get => (PpsAforgeCamera)GetValue(SelectedCameraProperty);
+			private set
 			{
 				if (value != null)
 				{
@@ -1478,37 +1471,30 @@ namespace TecWare.PPSn.UI
 						return;
 					SelectedAttachment = null;
 				}
-				SetValue(SelectedCameraProperty, value);
+				SetValue(selectedCameraPropertyKey, value);
 			}
-		}
+		} // prop SelectedCamera
 
-		private PpsObject LastSnapshot
-		{
-			get { return (PpsObject)GetValue(LastSnapshotProperty); }
-			set { SetValue(LastSnapshotProperty, value); }
-		}
+		/// <summary></summary>
+		public PpsObject LastSnapshot { get => (PpsObject)GetValue(LastSnapshotProperty); private set => SetValue(lastSnapshotPropertyKey, value); }
 
 		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
-		private PpsCameraHandler CameraEnum
-		{
-			get { return (PpsCameraHandler)GetValue(CameraEnumProperty); }
-			set { SetValue(CameraEnumProperty, value); }
-		}
+		public PpsCameraHandler CameraEnum { get => (PpsCameraHandler)GetValue(CameraEnumProperty); private set => SetValue(cameraEnumPropertyKey, value); }
 
 		/// <summary>The Strokes made on the shown Image</summary>
-		private PpsDetraceableStrokeCollection InkStrokes
+		public PpsDetraceableStrokeCollection InkStrokes
 		{
-			get { return (PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty); }
-			set { SetValue(InkStrokesProperty, value); }
+			get => (PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty);
+			private set => SetValue(inkStrokesPropertyKey, value);
 		}
 
 		/// <summary>The state of the Editor</summary>
-		private InkCanvasEditingMode InkEditMode
+		public InkCanvasEditingMode InkEditMode
 		{
-			get { return (InkCanvasEditingMode)GetValue(InkEditModeProperty); }
-			set
+			get => (InkCanvasEditingMode)GetValue(InkEditModeProperty);
+			private set
 			{
-				SetValue(InkEditModeProperty, value);
+				SetValue(inkEditModePropertyKey, value);
 				var t = (InkCanvas)FindChildElement(typeof(InkCanvas), this);
 				switch ((InkCanvasEditingMode)value)
 				{
@@ -1526,47 +1512,56 @@ namespace TecWare.PPSn.UI
 						break;
 				}
 			}
-		}
+		} // prop InkEditMode
 
 		/// <summary>Binding for the Cursor used by the Editor</summary>
-		private Cursor InkEditCursor
-		{
-			get { return (Cursor)GetValue(InkEditCursorProperty); }
-			set { SetValue(InkEditCursorProperty, value); }
-		}
+		public Cursor InkEditCursor { get => (Cursor)GetValue(InkEditCursorProperty); private set => SetValue(inkEditCursorPropertyKey, value); }
 
 		/// <summary>The Binding point for Color and Thickness for the Pen</summary>
-		private DrawingAttributes InkDrawingAttributes
-		{
-			get { return (DrawingAttributes)GetValue(InkDrawingAttributesProperty); }
-			set { SetValue(InkDrawingAttributesProperty, value); }
-		}
+		public DrawingAttributes InkDrawingAttributes { get => (DrawingAttributes)GetValue(InkDrawingAttributesProperty); private set => SetValue(inkDrawingAttributesPropertyKey, value); }
 
 		/// <summary>The Binding point for Color and Thickness possibilities for the Settings Control</summary>
-		private PpsPecStrokeSettings StrokeSettings
-		{
-			get { return (PpsPecStrokeSettings)GetValue(StrokeSettingsProperty); }
-			set { SetValue(StrokeSettingsProperty, value); }
-		}
+		public PpsPecStrokeSettings StrokeSettings { get => (PpsPecStrokeSettings)GetValue(StrokeSettingsProperty); private set => SetValue(strokeSettingsPropertyKey, value); }
+
+		/// <summary></summary>
+		public PpsPecStrokeColor CurrentStrokeColor => (PpsPecStrokeColor)GetValue(CurrentStrokeColorProperty);
+
+		/// <summary></summary>
+		public PpsPecStrokeThickness CurrentStrokeThickness => (PpsPecStrokeThickness)GetValue(CurrentStrokeThicknessProperty);
 
 		#region DependencyPropertys
 
 		/// <summary>Files attached to the parent object</summary>
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
-		/// <summary></summary>
-		public PpsPecStrokeColor CurrentStrokeColor => (PpsPecStrokeColor)GetValue(CurrentStrokeColorProperty);
-		/// <summary></summary>
-		public PpsPecStrokeThickness CurrentStrokeThickness => (PpsPecStrokeThickness)GetValue(CurrentStrokeThicknessProperty);
 
-		private readonly static DependencyProperty LastSnapshotProperty = DependencyProperty.Register(nameof(LastSnapshot), typeof(PpsObject), typeof(PpsPicturePane));
-		private readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
-		private readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(PpsAforgeCamera), typeof(PpsPicturePane));
-		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(PpsCameraHandler), typeof(PpsPicturePane));
-		private readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
-		private readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(PpsDetraceableStrokeCollection), typeof(PpsPicturePane));
-		private readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
-		private readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
-		private readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		private static readonly DependencyPropertyKey selectedCameraPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedCamera), typeof(PpsAforgeCamera), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsAforgeCamera)null));
+		public static readonly DependencyProperty SelectedCameraProperty = selectedCameraPropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey lastSnapshotPropertyKey = DependencyProperty.RegisterReadOnly(nameof(LastSnapshot), typeof(PpsObject), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsObject)null));
+		public static readonly DependencyProperty LastSnapshotProperty = lastSnapshotPropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey selectedAttachmentPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane), new FrameworkPropertyMetadata((IPpsAttachmentItem)null));
+		public static readonly DependencyProperty SelectedAttachmentProperty = selectedAttachmentPropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey cameraEnumPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CameraEnum), typeof(PpsCameraHandler), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsCameraHandler)null));
+		public static readonly DependencyProperty CameraEnumProperty = cameraEnumPropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey inkDrawingAttributesPropertyKey = DependencyProperty.RegisterReadOnly(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane), new FrameworkPropertyMetadata((DrawingAttributes)null));
+		public static readonly DependencyProperty InkDrawingAttributesProperty = inkDrawingAttributesPropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey inkStrokesPropertyKey = DependencyProperty.RegisterReadOnly(nameof(InkStrokes), typeof(PpsDetraceableStrokeCollection), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsDetraceableStrokeCollection)null));
+		public static readonly DependencyProperty InkStrokesProperty = inkStrokesPropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey inkEditModePropertyKey = DependencyProperty.RegisterReadOnly(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane), new FrameworkPropertyMetadata(InkCanvasEditingMode.None));
+		public static readonly DependencyProperty InkEditModeProperty = inkEditModePropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey inkEditCursorPropertyKey = DependencyProperty.RegisterReadOnly(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane), new FrameworkPropertyMetadata(Cursors.Arrow));
+		public static readonly DependencyProperty InkEditCursorProperty = inkEditCursorPropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey strokeSettingsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsPecStrokeSettings)null));
+		public static readonly DependencyProperty StrokeSettingsProperty = strokeSettingsPropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		#endregion
 
@@ -1578,5 +1573,6 @@ namespace TecWare.PPSn.UI
 		bool IPpsWindowPane.HasSideBar => false;
 
 		#endregion
+
 	} // class PpsPicturePane
 }
