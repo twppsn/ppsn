@@ -603,58 +603,42 @@ specific language governing permissions and limitations under the Licence.
 
 			<ToggleButton.Template>
 				<ControlTemplate TargetType="{x:Type ToggleButton}">
-					<Border BorderBrush="{StaticResource PpsPicturePaneBorderBrush}" BorderThickness="1,1,1,1"
+					<Border x:Name="RootBorder" BorderBrush="{StaticResource PpsPicturePaneBorderBrush}" BorderThickness="1,1,1,1"
 							Background="{StaticResource PpsPicturePaneBackgroundBrush}"
 							SnapsToDevicePixels="True"
 							CornerRadius="15,15,0,0">
-						<Grid Margin="12,0">
+						<Grid Margin="3,0">
 							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="20"/>
+								<ColumnDefinition Width="32"/>
 								<ColumnDefinition/>
-								<ColumnDefinition Width="20"/>
+								<ColumnDefinition Width="32"/>
 							</Grid.ColumnDefinitions>
-							<Image x:Name="chevronLeft" Grid.Column="0" Height="20" Opacity=".65">
-								<Image.Source>
-									<DrawingImage>
-										<DrawingImage.Drawing>
-											<GeometryDrawing Geometry="{StaticResource goBackPathGeometry}" Brush="{StaticResource PPSnActionButtonBrush}" />
-										</DrawingImage.Drawing>
-									</DrawingImage>
-								</Image.Source>
-								<Image.RenderTransform>
+							<uiC:PpsGeometryImage x:Name="chevronLeft"
+												  GeometryName="goBack" GeometryCircled="false"
+												  Foreground="{StaticResource PPSnActionButtonBrush}" Opacity=".65">
+								<uiC:PpsGeometryImage.RenderTransform>
 									<RotateTransform Angle="-90"/>
-								</Image.RenderTransform>
-								<Image.RenderTransformOrigin>
+								</uiC:PpsGeometryImage.RenderTransform>
+								<uiC:PpsGeometryImage.RenderTransformOrigin>
 									<Point X="0.5" Y="0.5"/>
-								</Image.RenderTransformOrigin>
-							</Image>
+								</uiC:PpsGeometryImage.RenderTransformOrigin>
+							</uiC:PpsGeometryImage>
 							<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-								<Image Grid.Column="1" Width="16" Height="16" Opacity=".65">
-									<Image.Source>
-										<DrawingImage>
-											<DrawingImage.Drawing>
-												<GeometryDrawing Geometry="{StaticResource imageGalleryGeometry}" Brush="{StaticResource PPSnActionButtonBrush}" />
-											</DrawingImage.Drawing>
-										</DrawingImage>
-									</Image.Source>
-								</Image>
+								<uiC:PpsGeometryImage GeometryName="imageMultiple" GeometryCircled="false"
+													  Foreground="{StaticResource PPSnActionButtonBrush}" Opacity=".65"
+													  Width="20" Height="20" />
 								<TextBlock Text="Bilderliste" Margin="4,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource PPSnActionButtonBrush}"/>
 							</StackPanel>
-							<Image x:Name="chevronRight" Grid.Column="2" Height="20" Opacity=".65">
-								<Image.Source>
-									<DrawingImage>
-										<DrawingImage.Drawing>
-											<GeometryDrawing Geometry="{StaticResource goBackPathGeometry}" Brush="{StaticResource PPSnActionButtonBrush}" />
-										</DrawingImage.Drawing>
-									</DrawingImage>
-								</Image.Source>
-								<Image.RenderTransform>
+							<uiC:PpsGeometryImage x:Name="chevronRight" Grid.Column="2"
+												  GeometryName="goBack" GeometryCircled="false"
+												  Foreground="{StaticResource PPSnActionButtonBrush}" Opacity=".65">
+								<uiC:PpsGeometryImage.RenderTransform>
 									<RotateTransform Angle="-90"/>
-								</Image.RenderTransform>
-								<Image.RenderTransformOrigin>
+								</uiC:PpsGeometryImage.RenderTransform>
+								<uiC:PpsGeometryImage.RenderTransformOrigin>
 									<Point X="0.5" Y="0.5"/>
-								</Image.RenderTransformOrigin>
-							</Image>
+								</uiC:PpsGeometryImage.RenderTransformOrigin>
+							</uiC:PpsGeometryImage>
 						</Grid>
 					</Border>
 					<ControlTemplate.Triggers>
@@ -669,6 +653,10 @@ specific language governing permissions and limitations under the Licence.
 									<RotateTransform Angle="180"/>
 								</Setter.Value>
 							</Setter>
+						</Trigger>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter TargetName="RootBorder" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}" />
+							<Setter TargetName="RootBorder" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
