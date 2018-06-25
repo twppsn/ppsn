@@ -1166,7 +1166,7 @@ namespace TecWare.PPSn
 
 					if (tag != null)
 					{
-						if (value == null)
+						if (value != null)
 							tag.Update(tagClass, value);
 						else
 							tag.Remove();
