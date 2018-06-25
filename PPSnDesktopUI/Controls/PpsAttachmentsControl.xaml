@@ -42,6 +42,7 @@ specific language governing permissions and limitations under the Licence.
 								   DisplayMode="Image"
 								   GeometryName="{Binding Image}"
 								   GeometrySize="24"
+								   Foreground="{StaticResource PPSnActionButtonBrush}"
 								   Width="38" Height="38" Margin="0,0,6,0" />
 					<DataTemplate.Triggers>
 						<Trigger Property="uiL:PpsReadOnlyPaneBehavior.IsReadOnly">
