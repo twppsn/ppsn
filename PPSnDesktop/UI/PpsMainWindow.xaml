@@ -5,7 +5,6 @@
 			  xmlns:ui="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
               xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
               xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
-              xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			  Style="{StaticResource PpsWindow}"
               MinHeight="600"
               MinWidth="800"
@@ -374,7 +373,7 @@
 
 		<ToolBar Grid.Column="1" Grid.Row="1" ItemsSource="{Binding CurrentPaneHost.Commands}">
 			<ToolBar.Style>
-				<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
+				<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PpsPaneToolBarStyle}" >
 					<Setter Property="Visibility" Value="Collapsed"/>
 					<Style.Triggers>
 						<Trigger Property="HasItems" Value="true">
