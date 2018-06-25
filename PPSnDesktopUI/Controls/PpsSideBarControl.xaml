@@ -33,7 +33,7 @@ specific language governing permissions and limitations under the Licence.
 							<ColumnDefinition Width="auto" />
 							<ColumnDefinition />
 						</Grid.ColumnDefinitions>
-						<Border	Width="{DynamicResource PPSnSideBarIncreasedWidth}">
+						<Border	Width="{DynamicResource PPSnSideBarIncreasedWidth}" Margin="0,20,0,0">
 							<ItemsPresenter />
 						</Border>
 						<ContentPresenter Grid.Column="1"

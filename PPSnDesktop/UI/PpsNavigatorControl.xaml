@@ -135,11 +135,11 @@ specific language governing permissions and limitations under the Licence.
 								<RowDefinition Height="Auto"/>
 								<RowDefinition Height="*"/>
 							</Grid.RowDefinitions>
-							<ToggleButton x:Name="viewsToggleButton" Grid.Row="0" Width="30" Height="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="11,0,0,8" 
+							<ToggleButton x:Name="viewsToggleButton" Grid.Row="0" Width="30" Height="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="11,0,0,4" 
 										  Command="{Binding ToggleShowViewDescription}"
 										  Style="{StaticResource PPSnShrinkButtonStyle}"/>
-							<TextBlock x:Name="headerBorder" Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="46,0,0,10"
-										   FontSize="15" FontWeight="SemiBold" />
+							<TextBlock x:Name="headerBorder" Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="46,0,0,6"
+									   FontSize="15" FontWeight="SemiBold" />
 							<ScrollViewer Grid.Row="1" Focusable="false" Padding="0" Style="{StaticResource PPSnScrollViewerStyle}" HorizontalScrollBarVisibility="Disabled">
 								<ItemsPresenter SnapsToDevicePixels="True"/>
 							</ScrollViewer>
@@ -459,6 +459,34 @@ specific language governing permissions and limitations under the Licence.
 				</Setter.Value>
 			</Setter>
 		</Style>
+
+		<Style x:Key="NavigatorFilterButtonStyle" TargetType="{x:Type ToggleButton}">
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}" />
+			<Setter Property="BorderThickness" Value="0,0,0,4" />
+			<Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}" />
+			<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+			<Setter Property="Focusable" Value="False" />
+			<Setter Property="IsTabStop" Value="False" />
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+							<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,2,1"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsChecked" Value="True">
+								<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnMarkerBrush}"/>
+							</Trigger>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
 	</UserControl.Resources>
 
 	<Grid x:Name="PART_NavigatorGrid">
@@ -468,9 +496,9 @@ specific language governing permissions and limitations under the Licence.
 			<ColumnDefinition/>
 		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
-			<RowDefinition Height="30"/>
-			<RowDefinition Height="24"/>
-			<RowDefinition Height="16"/>
+			<RowDefinition Height="28"/>
+			<RowDefinition Height="26"/>
+			<RowDefinition Height="14"/>
 			<RowDefinition Height="*" />
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
@@ -483,8 +511,8 @@ specific language governing permissions and limitations under the Licence.
 			</ItemsControl.ItemsPanel>
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
-					<ToggleButton Content="{Binding DisplayName}" IsChecked="{Binding IsSelected, Mode=OneWay}" Command="{Binding}" Margin="0,0,18,0"
-								  Style="{StaticResource PPSnSelectionToggleButtonStyle}" FontSize="14" />
+					<ToggleButton Content="{Binding DisplayName}" IsChecked="{Binding IsSelected, Mode=OneWay}" Command="{Binding}" Margin="0,0,18,0" FontSize="14"
+								  Style="{StaticResource NavigatorFilterButtonStyle}" />
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 		</ItemsControl>
@@ -525,7 +553,7 @@ specific language governing permissions and limitations under the Licence.
 		<TextBox x:Name="PART_SearchBox" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Right" Width="340" Margin="0,12,0,8"
 				 Style="{StaticResource NavigatorSearchBoxStyle}"
 				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown"/>
-		<ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="1" Grid.RowSpan="3"
+		<ListBox x:Name="PART_Views" Grid.Row="0" Grid.RowSpan="4" Margin="0,20,0,0"
 				 ItemsSource="{Binding VisibleViews}"
 				 IsSynchronizedWithCurrentItem="True"
 				 Style="{StaticResource NavigatorViewsListBoxStyle}"/>
