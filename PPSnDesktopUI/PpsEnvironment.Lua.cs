@@ -860,6 +860,95 @@ namespace TecWare.PPSn
 			}
 		} // proc LuaRequire
 
+		/// <summary>Throw a exception.</summary>
+		/// <param name="value"></param>
+		/// <param name="message"></param>
+		/// <returns></returns>
+		[LuaMember("assert")]
+		private object LuaAssert(object value, string message)
+		{
+			if (!value.ChangeType<bool>())
+				throw new LuaAssertRuntimeException(message ?? "Assertion failed!", 1, true);
+			return value;
+		} // func LuaAssert
+
+		/// <summary>Throw a user error.</summary>
+		/// <param name="message"></param>
+		/// <param name="arg1"></param>
+		[LuaMember("error")]
+		private static void LuaError(object message, object arg1)
+		{
+			var level = 1;
+
+			if (arg1 is int i && i > 1)  // validate stack trace level
+				level = i;
+
+			if (message is Exception ex) // throw exception
+			{
+				if (arg1 is string text)
+					throw new LuaUserRuntimeException(text, ex);
+				else
+					throw ex;
+			}
+			else if (message is string text) // generate exception with message
+			{
+				if (arg1 is Exception innerException)
+					throw new LuaUserRuntimeException(text, innerException);
+				else
+					throw new LuaUserRuntimeException(text, level, true);
+			}
+			else
+			{
+				var messageText = message?.ToString() ?? "Internal error.";
+				if (arg1 is Exception innerException)
+					throw new LuaRuntimeException(messageText, innerException);
+				else
+					throw new LuaRuntimeException(messageText, level, true);
+			}
+		} // proc LuaError
+
+		/// <summary>Show a exception for a remove operation.</summary>
+		/// <param name="e"></param>
+		/// <param name="objectName"></param>
+		[LuaMember]
+		public void HandleDataRemoveException(Exception e, object objectName)
+		{
+			string GetRowHint(PpsDataRow row)
+			{
+				if (row.TryGetProperty<string>("Name", out var t1))
+					return " (" + t1 + ")";
+				else if (row.TryGetProperty<string>("Nr", out var t2))
+					return " (" + t2 + ")";
+				return String.Empty;
+			} // func GetRowHint
+
+			var alternativeMessage = (string)null;
+			if (e is PpsDataTableForeignKeyRestrictionException foreignKeyRestrictionException)
+			{
+				alternativeMessage = String.Format("{0} konnte nicht gelöscht werden.\nWird noch verwendet von {1}{2}.",
+					foreignKeyRestrictionException.ParentRow.Table.TableDefinition.DisplayName,
+					foreignKeyRestrictionException.ChildRow.Table.TableDefinition.DisplayName,
+					GetRowHint(foreignKeyRestrictionException.ChildRow)
+				);
+			}
+			else
+			{
+				string tableName;
+				if (objectName is PpsDataRow row)
+					tableName = row.Table.TableDefinition.DisplayName;
+				else if (objectName is PpsDataTable dt)
+					tableName = dt.TableDefinition.DisplayName;
+				else if (objectName is PpsDataTableDefinition df)
+					tableName = df.DisplayName;
+				else
+					tableName = objectName?.ToString() ?? "unknown";
+
+				alternativeMessage = String.Format("{0} konnte nicht gelöscht werden.", objectName);
+			}
+
+			ShowException(ExceptionShowFlags.None, e, alternativeMessage);
+		} // proc HandleDataRemoveException
+
 		/// <summary></summary>
 		/// <param name="request"></param>
 		/// <param name="arguments"></param>
@@ -1107,6 +1196,10 @@ namespace TecWare.PPSn
 		private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
 			=> new LuaDataTemplateSelector(func);
 
+		/// <summary>Find the resource.</summary>
+		/// <param name="key"></param>
+		/// <param name="dependencyObject"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public object GetResource(object key, DependencyObject dependencyObject)
 		{
@@ -1159,7 +1252,7 @@ namespace TecWare.PPSn
 		/// <summary>Lua ui-wpf framwework.</summary>
 		[LuaMember("UI")]
 		public LuaUI LuaUI { get; } = new LuaUI();
-		/// <summary></summary>
+		/// <summary>Field factory for controls</summary>
 		[LuaMember]
 		public LuaTable FieldFactory => fieldFactory;
 

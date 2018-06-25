@@ -273,13 +273,19 @@ namespace TecWare.PPSn
 				// block ui for the task
 				using (PpsEnvironment.GetEnvironment().BlockAllUI(frame))
 					Dispatcher.PushFrame(frame);
+
+				// thread is cancelled, do not wait for finish
+				if (!task.IsCompleted)
+					throw new OperationCanceledException();
 			}
 			else if (SynchronizationContext.Current is PpsSynchronizationContext ctx)
+			{
 				ctx.ProcessMessageLoop(task.GetAwaiter());
 
-			// thread is cancelled, do not wait for finish
-			if (!task.IsCompleted)
-				throw new OperationCanceledException();
+				// thread is cancelled, do not wait for finish
+				if (!task.IsCompleted)
+					throw new OperationCanceledException();
+			}
 		} // func RunTaskSyncInternal
 
 		/// <summary>Check if the current synchronization context has a message loop.</summary>

@@ -201,9 +201,12 @@ namespace TecWare.PPSn.Data
 		/// <param name="firePropertyChanged"></param>
 		protected virtual void OnPropertyChanged(string propertyName, object oldValue, object newValue, bool firePropertyChanged)
 		{
+			// mark row as modified
+			Row.SetChanged();
+
 			if (firePropertyChanged)
 			{
-				// mark row as modified
+				// Fire row modified event
 				Row.Table.OnRowModified(Row, Column.Index, oldValue, newValue);
 
 				// raise event

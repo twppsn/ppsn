@@ -896,18 +896,27 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc SetCurrentValue
 
+		/// <summary></summary>
+		public void SetChanged()
+		{
+			if (RowState == PpsDataRowState.Unchanged)
+			{
+				var sink = GetUndoSink();
+				if (sink?.InTransaction ?? false)
+					sink.Append(new PpsDataRowStateChangedItem(this, PpsDataRowState.Unchanged, PpsDataRowState.Modified));
+
+				RowState = PpsDataRowState.Modified;
+			}
+		} // proc SetChanged
+
 		/// <summary>If the value of the row gets changed, this method is called.</summary>
 		/// <param name="columnIndex"></param>
 		/// <param name="oldValue"></param>
 		/// <param name="value"></param>
 		public virtual void OnValueChanged(int columnIndex, object oldValue, object value)
 		{
-			if (RowState == PpsDataRowState.Unchanged)
-			{
-				GetUndoSink()?.Append(new PpsDataRowStateChangedItem(this, PpsDataRowState.Unchanged, PpsDataRowState.Modified));
-				RowState = PpsDataRowState.Modified;
-			}
-
+			SetChanged();
+			
 			// notify the change
 			OnPropertyChanged(columnIndex, table.Columns[columnIndex].Name, oldValue, value);
 		} // proc OnValueChanged
