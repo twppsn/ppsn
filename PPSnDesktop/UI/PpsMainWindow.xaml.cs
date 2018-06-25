@@ -143,7 +143,7 @@ namespace TecWare.PPSn.UI
 						if (e.Parameter is PpsWindowPaneHost paneHost)
 							UnloadPaneHostAsync(paneHost, null).AwaitTask();
 					},
-					(sender, e) => e.CanExecute = e.Parameter is PpsWindowPaneHost paneHost ? !paneHost.PaneProgress.IsActive : false
+					(sender, e) => e.CanExecute =  e.Parameter is PpsWindowPaneHost paneHost ? !paneHost.PaneProgress.IsActive : false
 				)
 			);
 
