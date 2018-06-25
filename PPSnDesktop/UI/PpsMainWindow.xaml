@@ -74,17 +74,16 @@
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="Auto" />
 			<ColumnDefinition Width="*" />
-			<ColumnDefinition Width="34" />
-			<ColumnDefinition Width="34" />
-			<ColumnDefinition Width="34" />
+			<ColumnDefinition Width="Auto" />
 		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
-			<RowDefinition Height="60" />
+			<RowDefinition Height="26" />
+			<RowDefinition Height="36" />
 			<RowDefinition Height="*" />
 			<RowDefinition Height="25" />
 		</Grid.RowDefinitions>
 
-		<Rectangle Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" HorizontalAlignment="Left" Fill="{StaticResource PPSnSideBarBackgroundBrush}">
+		<Rectangle Grid.RowSpan="3" HorizontalAlignment="Left" Fill="{StaticResource PPSnSideBarBackgroundBrush}">
 			<Rectangle.Style>
 				<Style TargetType="Rectangle">
 					<Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}" />
@@ -123,7 +122,7 @@
 			</Rectangle.Style>
 		</Rectangle>
 
-		<Grid Grid.Column="0" Grid.Row="0" Width="{StaticResource PPSnSideBarIncreasedWidth}">
+		<Grid Grid.RowSpan="2" Width="{StaticResource PPSnSideBarIncreasedWidth}">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="54" />
 				<ColumnDefinition />
@@ -132,7 +131,7 @@
 					Style="{StaticResource NavigatorToggleButtonStyle}"
 					Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" />
 			<TextBlock x:Name="PART_Title" Grid.Column="1" Text="{StaticResource PPSnApplicationTitle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="18" />
-			<StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,24,0,0" Width="144">
+			<StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,26,0,0" Width="144">
 				<StackPanel.Style>
 					<Style TargetType="{x:Type StackPanel}">
 						<Style.Triggers>
@@ -165,7 +164,7 @@
 							  Width="36" />
 				<ui:PpsSplitButton Mode="Dropdown" DisplayMode="Image" GeometryName="gotoPane" GeometrySize="24" ImageOpacity="1" Width="36">
 					<ui:PpsSplitButton.Popup>
-						<ui:PpsPopup x:Name="PART_PaneListPopUp" StaysOpen="False" Placement="Bottom" MaxWidth="600">
+						<Popup x:Name="PART_PaneListPopUp" StaysOpen="False" Placement="Bottom" MaxWidth="600">
 							<ListBox ItemsSource="{Binding PaneHosts}"
 									 Background="{StaticResource PPSnPopUpBackgroundBrush}"
 									 BorderBrush="{StaticResource PPSnPopUpBorderBrush}"
@@ -262,7 +261,7 @@
 									</Style>
 								</ListBox.ItemContainerStyle>
 							</ListBox>
-						</ui:PpsPopup>
+						</Popup>
 					</ui:PpsSplitButton.Popup>
 					<ui:PpsSplitButton.Style>
 						<Style TargetType="{x:Type ui:PpsSplitButton}" BasedOn="{StaticResource {x:Type ui:PpsButton}}">
@@ -284,7 +283,7 @@
 			</StackPanel>
 		</Grid>
 
-		<TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="24,2,0,0" VerticalAlignment="Top" Height="32" FontSize="16">
+		<TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="24,2,0,0" FontSize="16">
 			<Run Text="{Binding CurrentPaneHost.Title, Mode=OneWay,Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
 			<Run Text=" "/>
 			<Run Text="{Binding CurrentPaneHost.SubTitle, Mode=OneWay, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
@@ -300,15 +299,19 @@
 					  GeometrySize="24"
 					  ImageOpacity="1"
 					  Grid.Column="2"
-					  VerticalAlignment="Top"
-					  Height="26" />
+					  HorizontalAlignment="Right"
+					  Height="26"
+					  Width="34"
+					  Margin="0,0,68,0" />
 		<ui:PpsButton Command="{x:Static ui:PpsWindow.MaximizeCommand}"
 					  DisplayMode="Image"
 					  GeometrySize="24"
 					  ImageOpacity="1"
-					  Grid.Column="3"
-					  VerticalAlignment="Top"
-					  Height="26">
+					  Grid.Column="2"
+					  HorizontalAlignment="Right"
+					  Height="26"
+					  Width="34"
+					  Margin="0,0,34,0">
 			<ui:PpsButton.Style>
 				<Style TargetType="{x:Type ui:PpsButton}" BasedOn="{StaticResource {x:Type ui:PpsButton}}">
 					<Setter Property="GeometryName" Value="windowMaximize" />
@@ -328,11 +331,11 @@
 					  GeometryName="windowClose"
 					  GeometrySize="16"
 					  ImageOpacity="1"
-					  Grid.Column="4"
-					  VerticalAlignment="Top"
-					  Height="26" />
-		
-		<Label x:Name="PART_User" Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="4" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Top" Height="18" Margin="0,32,24,0" Padding="0"
+					  Grid.Column="2"
+					  HorizontalAlignment="Right"
+					  Height="26"
+					  Width="34" />
+		<Label x:Name="PART_User" Grid.Column="2" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Height="18" Margin="0,6,24,0"
 			   VerticalContentAlignment="Center" Cursor="Hand"
 			   Content="{Binding Environment.UsernameDisplay}"
 			   Foreground="{StaticResource PPSnWindowForegroundBrush}"
@@ -349,7 +352,7 @@
 			</Label.ContextMenu>
 		</Label>
 
-		<uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,32,16">
+		<uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,32,16">
 			<uiL:PpsNavigatorControl.Style>
 				<Style TargetType="{x:Type UserControl}">
 					<Style.Triggers>
@@ -369,7 +372,34 @@
 			</uiL:PpsNavigatorControl.Style>
 		</uiL:PpsNavigatorControl>
 
-		<Grid Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,0,16">
+		<ToolBar Grid.Column="1" Grid.Row="1" ItemsSource="{Binding CurrentPaneHost.Commands}">
+			<ToolBar.Style>
+				<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
+					<Setter Property="Visibility" Value="Collapsed"/>
+					<Style.Triggers>
+						<Trigger Property="HasItems" Value="true">
+							<Setter Property="Visibility" Value="Visible"/>
+						</Trigger>
+						<DataTrigger Binding="{Binding Path=IsPaneVisible}">
+							<DataTrigger.Value>
+								<sys:Boolean>false</sys:Boolean>
+							</DataTrigger.Value>
+							<DataTrigger.EnterActions>
+								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
+							</DataTrigger.ExitActions>
+						</DataTrigger>
+						<DataTrigger Binding="{Binding Path=CurrentPaneHost.PaneProgress.IsActive}" Value="True">
+							<Setter Property="IsEnabled" Value="False"/>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</ToolBar.Style>
+		</ToolBar>
+
+		<Grid Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,0,16">
 			<Grid.Style>
 				<Style TargetType="{x:Type Grid}">
 					<Style.Triggers>
@@ -400,39 +430,6 @@
 				<RowDefinition Height="*"/>
 			</Grid.RowDefinitions>
 
-			<!--center toolbar, with or without sideBar-->
-			<Border DataContext="{Binding CurrentPaneHost}">
-				<Border.Style>
-					<Style TargetType="{x:Type Border}">
-						<Setter Property="Padding" Value="0"/>
-						<Style.Triggers>
-							<DataTrigger Binding="{Binding Path=HasPaneSideBar}">
-								<DataTrigger.Value>
-									<sys:Boolean>true</sys:Boolean>
-								</DataTrigger.Value>
-								<Setter Property="Padding">
-									<Setter.Value>
-										<Thickness Left="{StaticResource PPSnSideBarIncreasedWidth}" Top="0" Right="0" Bottom="0"/>
-									</Setter.Value>
-								</Setter>
-							</DataTrigger>
-						</Style.Triggers>
-					</Style>
-				</Border.Style>
-				<ToolBar MaxWidth="{StaticResource PPSnPaneMaxGridWidth}" Height="{StaticResource PPSnPaneToolBarHeight}" ItemsSource="{Binding Commands}">
-					<ToolBar.Style>
-						<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
-							<Setter Property="Visibility" Value="Collapsed"/>
-							<Style.Triggers>
-								<Trigger Property="HasItems" Value="true">
-									<Setter Property="Visibility" Value="Visible"/>
-								</Trigger>
-							</Style.Triggers>
-						</Style>
-					</ToolBar.Style>
-				</ToolBar>
-			</Border>
-
 			<ContentPresenter Grid.Row="1" Content="{Binding CurrentPaneHost, Mode=OneWay}"/>
 
 			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" Grid.RowSpan="2" DataContext="{Binding CharmObject}">
@@ -451,7 +448,7 @@
 			</uiL:PpsCharmbarControl>
 		</Grid>
 
-		<Grid Grid.Row="2" Grid.ColumnSpan="5" Background="{StaticResource PPSnWindowFooterBrush}">
+		<Grid Grid.Row="3" Grid.ColumnSpan="3" Background="{StaticResource PPSnWindowFooterBrush}">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="2*"/>
 				<ColumnDefinition Width="1*"/>
