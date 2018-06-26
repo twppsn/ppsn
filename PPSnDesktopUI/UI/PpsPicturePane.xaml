@@ -382,12 +382,16 @@ specific language governing permissions and limitations under the Licence.
 					<ContentControl.Template>
 						<ControlTemplate>
 							<ControlTemplate.Resources>
-								<Style TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnImageButtonStyle}">
-									<Setter Property="BorderThickness" Value="1"/>
-									<Setter Property="Padding" Value="1"/>
-									<Setter Property="Width" Value="30"/>
-									<Setter Property="Height" Value="30"/>
-									<Setter Property="Margin" Value="3"/>
+								<Style TargetType="{x:Type uiC:PpsButton}" >
+									<Setter Property="Foreground" Value="{StaticResource PPSnActionButtonBrush}" />
+									<Setter Property="BorderThickness" Value="1" />
+									<Setter Property="BorderBrush" Value="Transparent" />
+									<Setter Property="Padding" Value="1" />
+									<Setter Property="Margin" Value="3" />
+									<Setter Property="Width" Value="30" />
+									<Setter Property="Height" Value="30" />
+									<Setter Property="DisplayMode" Value="Image" />
+									<Setter Property="GeometrySize" Value="24" />
 								</Style>
 							</ControlTemplate.Resources>
 							<Grid Margin="0,0,0,4">
@@ -396,33 +400,28 @@ specific language governing permissions and limitations under the Licence.
 									<ColumnDefinition />
 									<ColumnDefinition />
 								</Grid.ColumnDefinitions>
-								<Button x:Name="editButton"
-										Grid.Column="0"
-										Command="{x:Static local:PpsPicturePane.OverlayEditFreehandCommand}"
-										Content="{StaticResource editPathGeometry}">
-								</Button>
-								<Button x:Name="cancelButton"
-										Padding="2"
-										Grid.Column="1"
-										Command="{x:Static local:PpsPicturePane.OverlayCancelEditModeCommand}"
-										Content="{StaticResource cursorPathGeometry}">
-								</Button>
-								<Button x:Name="removeButton"
-										Grid.Column="2"
-										Command="{x:Static local:PpsPicturePane.OverlayRemoveStrokeCommand}"
-										Content="{StaticResource eraserPathGeometry}">
-								</Button>
+								<uiC:PpsButton x:Name="editButton"
+											   Command="{x:Static local:PpsPicturePane.OverlayEditFreehandCommand}"
+											   GeometryName="edit" />
+								<uiC:PpsButton x:Name="cancelButton"
+											   Command="{x:Static local:PpsPicturePane.OverlayCancelEditModeCommand}"
+											   Grid.Column="1"
+											   GeometryName="cursor" />
+								<uiC:PpsButton x:Name="removeButton"
+											   Command="{x:Static local:PpsPicturePane.OverlayRemoveStrokeCommand}"
+											   Grid.Column="2"
+											   GeometryName="eraser" />
 							</Grid>
 							<ControlTemplate.Triggers>
 								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkEditMode}" Value="{x:Static InkCanvasEditingMode.Ink}">
-									<Setter TargetName="editButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
-									<Setter TargetName="editButton" Property="BorderThickness" Value="2"/>
-									<Setter TargetName="editButton" Property="Padding" Value="0"/>
+									<Setter TargetName="editButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}" />
+									<Setter TargetName="editButton" Property="BorderThickness" Value="2" />
+									<Setter TargetName="editButton" Property="Padding" Value="0" />
 								</DataTrigger>
 								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkEditMode}" Value="{x:Static InkCanvasEditingMode.EraseByStroke}">
-									<Setter TargetName="removeButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
-									<Setter TargetName="removeButton" Property="BorderThickness" Value="2"/>
-									<Setter TargetName="removeButton" Property="Padding" Value="0"/>
+									<Setter TargetName="removeButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}" />
+									<Setter TargetName="removeButton" Property="BorderThickness" Value="2" />
+									<Setter TargetName="removeButton" Property="Padding" Value="0" />
 								</DataTrigger>
 							</ControlTemplate.Triggers>
 						</ControlTemplate>
