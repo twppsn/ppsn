@@ -14,12 +14,11 @@
 //
 #endregion
 using System;
-using System.Globalization;
-using System.Linq;
+using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -32,23 +31,24 @@ namespace TecWare.PPSn.Controls
 	{
 		/// <summary>Input is not checked</summary>
 		None = 0,
-		/// <summary>Single Line of unformatted Text is allowed</summary>
-		SingleLine = 1,
 		/// <summary>Multiple Lines of unformatted Text are allowed</summary>
-		MultiLine = 2,
+		MultiLine,
 		/// <summary>Input mask for integer values.</summary>
-		Integer = 3,
+		Integer,
 		/// <summary>Input mask for decimal/float values.</summary>
-		Decimal = 4,
+		Decimal,
 		/// <summary>Integers, including negative Values</summary>
-		IntegerNegative = 5,
+		IntegerNegative,
 		/// <summary>Decimals, includíng negative Values</summary>
-		DecimalNegative = 6,
-		/// <summary>any Text consisting of Numbers</summary>
-		Number = 7
+		DecimalNegative,
 
-		///// <summary>Defined input mask e.g. special text numbers.</summary>
-		//Formatted = 3
+		/// <summary>Input a date.</summary>
+		Date,
+		/// <summary>Input a time.</summary>
+		Time,
+
+		/// <summary>Defined input mask e.g. special text numbers.</summary>
+		Formatted
 	} // enum PpsTextBoxInputType
 
 	#endregion enum PpsTextBoxInputType
@@ -58,426 +58,1001 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Extends Textbox for Number input and a clear button.</summary>
 	public class PpsTextBox : TextBox, IPpsNullableControl
 	{
-		#region ---- Globals ------------------------------------------------------------
+		private IPpsTextBoxInputManager inputManager = null;
+		private object textEditor = null;
 
-		private const bool negativeToggling = false;
-		private static readonly string noNegativeNumbersMessage = "Negative Eingaben sind nicht erlaubt.";
-		private static readonly string onlyIntegerMessage = "Gebrochene Zahlen sind nicht erlaubt.";
-		private static readonly string colonMovedMessage = "Das Komma wurde verschoben.";
-		private static readonly string tooMuchLinesMessage = "Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
-		private static readonly string invalidCharsMessage = "Dieses Eingabefeld unterstützt nur Zahlen.";
-		private static readonly string capsLockMessage = "Die Feststelltaste is aktiv.";
-		private static readonly string numLockDisabledMessage = "Der numerische Tastenblock ist deaktiviert.";
-		private static readonly char carriageReturnChar = '\r';
-		private static readonly char lineFeedChar = '\n';
-
-		/// <summary>Legal chars which can be in a Number</summary>
-		public const string LegalIntegers = "0123456789";
-
-		/// <summary>Legal chars which can be in a Integer</summary>
-		/// <param name="includeNegative">is the minus sign legal</param>
-		/// <returns></returns>
-		public static string LegalIntegerChars(bool includeNegative = false)
-			=> LegalIntegers +
-			   CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator +
-			   (includeNegative ? CultureInfo.CurrentCulture.NumberFormat.NegativeSign : String.Empty);
-
-		/// <summary>Legal chars which can be in a Decimal</summary>
-		/// <param name="includeNegative">is the minus sign legal</param>
-		/// <returns></returns>
-		public static string LegalDecimalChars(bool includeNegative = false)
-			=> LegalIntegerChars(includeNegative) +
-			   CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
-
-		#endregion Globals
-
-		#region ---- DependencyProperties -----------------------------------------------
-
-		/// <summary>Selects the valid input for the Textbox</summary>
-		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.SingleLine, new PropertyChangedCallback(OnInputTypeChangedCallback)));
-		/// <summary>Is the field nullable.</summary>
-		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(true));
-		/// <summary>The message presented to the user if the data was invalid</summary>
-		public static readonly DependencyProperty ErrorMessageProperty = DependencyProperty.Register(nameof(ErrorMessage), typeof(string), typeof(PpsTextBox));
-		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
-		public static readonly DependencyProperty HasErrorProperty = DependencyProperty.Register(nameof(HasError), typeof(bool), typeof(PpsTextBox), new PropertyMetadata(false));
-		/// <summary>Sets the allowed Lines for this Textbox</summary>
-		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(Int32.MaxValue));
-		/// <summary>The Time in Seconds an Information is shown.</summary>
-		public static readonly DependencyProperty ErrorVisibleTimeProperty = DependencyProperty.Register(nameof(ErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5));
-		/// <summary>Binding Point for formatted value</summary>
-		public static readonly DependencyProperty FormattedValueProperty = DependencyProperty.Register(nameof(FormattedValue), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnFormattedValueChangedCallback)));
-
-		private static readonly DependencyPropertyKey hasFormattedValuePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasFormattedValue), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(BooleanBox.False));
-		/// <summary>True if FormattedValue is not null</summary>
-		public static readonly DependencyProperty HasFormattedValueProperty = hasFormattedValuePropertyKey.DependencyProperty;
-
-		/// <summary>Defines the input mask for the textbox.</summary>
-		public PpsTextBoxInputType InputType { get => (PpsTextBoxInputType)GetValue(InputTypeProperty); set => SetValue(InputTypeProperty, value); }
-		/// <summary>Is the field nullable.</summary>
-		public bool IsNullable { get => BooleanBox.GetBool(GetValue(IsNullableProperty)); set => SetValue(IsNullableProperty, BooleanBox.GetObject(value)); }
-		/// <summary>Sets the allowed Lines for this Textbox</summary>
-		public int AllowedLineCount { get => (int)GetValue(AllowedLineCountProperty); set => SetValue(AllowedLineCountProperty, value); }
-		/// <summary>The message presented to the user if the data was invalid</summary>
-		public string ErrorMessage { get => (string)GetValue(ErrorMessageProperty); set => SetValue(ErrorMessageProperty, value); }
-		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
-		public bool HasError { get => BooleanBox.GetBool(GetValue(HasErrorProperty)); set => SetValue(HasErrorProperty, value); }
-		/// <summary>The Time in Milliseconds an Information is shown.</summary>
-		public int ErrorVisibleTime { get => (int)GetValue(ErrorVisibleTimeProperty); set => SetValue(ErrorVisibleTimeProperty, value); }
-		/// <summary>Binding Point for formatted value</summary>
-		public object FormattedValue { get => GetValue(FormattedValueProperty); set => SetValue(FormattedValueProperty, value); }
-		/// <summary>True if FormattedValue is not null</summary>
-		public bool HasFormattedValue { get => BooleanBox.GetBool(GetValue(HasFormattedValueProperty)); private set => SetValue(hasFormattedValuePropertyKey, BooleanBox.GetObject(value)); }
-
-		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
-
-		private static void OnFormattedValueChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsTextBox)d).HasFormattedValue = e.NewValue != null;
-
-
-		#endregion DependencyProperties
-
-		#region ---- Error Handling -----------------------------------------------------
-
-		private DispatcherTimer fadeTimer;
-
-		private void SetError(string message)
-		{
-			if (String.IsNullOrWhiteSpace(message))
-			{
-				HasError = false;
-				ErrorMessage = message;
-				return;
-			}
-
-			if (fadeTimer == null)
-			{
-				fadeTimer = new DispatcherTimer(new TimeSpan(0, 0, ErrorVisibleTime), DispatcherPriority.Background, ResetError, Dispatcher);
-			}
-
-			HasError = true;
-			ErrorMessage = message;
-			fadeTimer.Start();
-		} // proc SetError
-
-		private void ResetError(object sender, EventArgs e)
-		{
-			HasError = false;
-			ErrorMessage = String.Empty;
-			fadeTimer?.Stop();
-		}
-
-		#endregion Error Handling
-
-		#region ---- Handling of Input --------------------------------------------------
-
-		private void NeatlyReplaceText(string newText)
-		{
-			var curPos = this.CaretIndex;
-			var curLen = Text.Length;
-			//Text = newText;
-			curPos -= curLen - Text.Length;
-			this.CaretIndex = Math.Max(0, curPos);
-		} // proc NeatlyReplaceText
-
-		internal static string NeatlyCleanText(PpsTextBoxInputType inputType, string text, int allowedLineCount, out string error)
-		{
-			error = String.Empty;
-
-			if (inputType == PpsTextBoxInputType.None || text.Length < 1)
-				return text;
-
-			var cleanText = String.Empty;
-
-			var newText = new StringBuilder();
-			var negative = false;
-			var firstColonIndex = -1;
-			var remainingLines = allowedLineCount - 1;
-			var lastWasNewline = false;
-			var lastWasCarriageReturn = false;
-
-			// while checking the input, the Text is only parsed once
-			foreach (var c in text)
-			{
-				if (IsTextualInput(inputType))
-				{
-					if (c != '\n' && c != '\r')
-					{
-						newText.Append(c);
-						continue;
-					}
-					else
-					{
-						if (c == lineFeedChar)
-						{
-							if (lastWasCarriageReturn)
-								if (remainingLines > 0)
-								{
-									newText.Append(c);
-									lastWasCarriageReturn = false;
-									remainingLines--;
-									continue;
-								}
-								else
-								{
-									lastWasCarriageReturn = false;
-									newText.Remove(newText.Length - 1, 1);
-									error = tooMuchLinesMessage;
-									continue;
-								}
-							else
-							{
-								if (remainingLines > 0)
-								{
-									newText.Append(c);
-									lastWasNewline = true;
-									remainingLines--;
-									continue;
-								}
-								else
-								{
-									error = tooMuchLinesMessage;
-									continue;
-								}
-							}
-						}
-						if (c == carriageReturnChar)
-						{
-							if (lastWasNewline)
-							{
-								newText.Append(c);
-								lastWasNewline = false;
-								continue;
-							}
-							if (remainingLines < 1)
-								continue;
-							else
-							{
-								newText.Append(c);
-								lastWasCarriageReturn = true;
-								continue;
-							}
-						}
-					}
-				} // if(IsTextualInput)
-
-				lastWasCarriageReturn = false;
-				lastWasNewline = false;
-
-				if (LegalIntegers.Contains(c) || c == CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator[0])
-				{
-					if (inputType != PpsTextBoxInputType.Number)
-						if (newText.Length == 0)
-							if (c == '0')
-								continue;
-					newText.Append(c);
-					continue;
-				}
-
-				if (c == CultureInfo.CurrentCulture.NumberFormat.NegativeSign[0])
-				{
-					if (IsNegativeAllowed(inputType))
-					{
-						negative = negativeToggling ? !negative : true;
-						continue;
-					}
-					else
-					{
-						error = noNegativeNumbersMessage;
-						continue;
-					}
-				}
-
-				if (c == CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator[0])
-				{
-					if (IsDecimalAllowed(inputType))
-					{
-						if (firstColonIndex < 0)
-						{
-							newText.Append(c);
-							firstColonIndex = newText.Length - 1;
-							continue;
-						}
-						else
-						{
-							newText.Remove(firstColonIndex, 1);
-							newText.Append(c);
-							firstColonIndex = newText.Length - 1;
-							error = colonMovedMessage;
-							continue;
-						}
-					}
-					else
-					{
-						error = onlyIntegerMessage;
-						continue;
-					}
-				}
-
-				error = invalidCharsMessage;
-			} // foreach(var c in Text)
-
-			if (IsTextualInput(inputType))
-			{
-				return newText.ToString();
-			}
-
-			if (firstColonIndex == 0)
-				newText.Insert(0, '0');
-
-			if (negative)
-				newText.Insert(0, CultureInfo.CurrentCulture.NumberFormat.NegativeSign);
-
-			if (!IsTextualInput(inputType) && newText.Length == 0)
-				newText.Append('0');
-
-			return newText.ToString();
-		} // proc NeatlyCleanText
-
-		#endregion Handling of Input
-
-		#region ---- Helper Functions ---------------------------------------------------
-
-		private static bool IsMultiLineInput(PpsTextBoxInputType inputType)
-			=> inputType == PpsTextBoxInputType.MultiLine;
-
-		private static bool IsTextualInput(PpsTextBoxInputType inputType)
-			=> inputType == PpsTextBoxInputType.None
-			|| inputType == PpsTextBoxInputType.SingleLine
-			|| inputType == PpsTextBoxInputType.MultiLine;
-
-		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType)
-			=> inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
-
-		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType)
-			=> inputType == PpsTextBoxInputType.IntegerNegative || inputType == PpsTextBoxInputType.DecimalNegative;
-
-		#endregion Helper Functions
-
-		#region ---- Event Handlers -----------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
-		/// <param name="newValue"></param>
-		/// <param name="oldValue"></param>
-		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
+		public PpsTextBox()
 		{
-			this.AcceptsReturn = IsMultiLineInput(newValue);
-
-			var error = String.Empty;
-			NeatlyReplaceText(NeatlyCleanText(InputType, Text, AllowedLineCount, out error));
-			SetError(error);
-		} // proc OnInputTypeChanged
-
-		/// <summary>Overridden to catch the Keys pressed on NumBlock without NumLock</summary>
+			inputErrorTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+			{
+				IsEnabled = false
+			};
+			inputErrorTimer.Tick += InputTimerCallback;
+		} // ctor
+				
+		/// <summary></summary>
 		/// <param name="e"></param>
-		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		protected override void OnInitialized(EventArgs e)
 		{
-			base.OnPreviewKeyDown(e);
+			base.OnInitialized(e);
 
-			if (!IsTextualInput(InputType))
-				if (!Keyboard.IsKeyToggled(Key.NumLock))
-					SetError(numLockDisabledMessage);
-		}
+			// add "paste" event handler
+			DataObject.AddPastingHandler(this, OnPasteTextInput);
 
-		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>
-		/// <param name="e"></param>
-		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
-		{
-			if (!IsTextualInput(InputType))
-			{
-				if (!Keyboard.IsKeyToggled(Key.NumLock))
-					SetError(numLockDisabledMessage);
-				if (!IsNegativeAllowed(InputType))
-				{
-					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NegativeSign))
-					{
-						e.Handled = true;
-						SetError(noNegativeNumbersMessage);
-					}
-				}
-
-				if (!IsDecimalAllowed(InputType))
-				{
-					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
-					{
-						e.Handled = true;
-						SetError(onlyIntegerMessage);
-					}
-				}
-				if (!LegalDecimalChars(true).Contains(e.Text))
-				{
-					e.Handled = true;
-					SetError(invalidCharsMessage);
-				}
-			}
-			else
-			{
-				if (Keyboard.IsKeyToggled(Key.CapsLock))
-					SetError(capsLockMessage);
-			}
-			if (!e.Handled)
-				base.OnPreviewTextInput(e);
-		} // func OnPreviewTextInput
-
-		private bool retriggerHold = false;
-
-		/// <summary>Cleans the Text if it was pasted and in cases of contextual plausibility (p.e. only one minus sign)</summary>
-		/// <param name="e"></param>
-		protected override void OnTextChanged(TextChangedEventArgs e)
-		{
-			base.OnTextChanged(e);
-			if (neatlyReplaceTextTimer == null)
-				neatlyReplaceTextTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(750), DispatcherPriority.ApplicationIdle, (s, ea) => CleanText((DispatcherTimer)s), Dispatcher);
-
-			if (!retriggerHold)
-			{
-				neatlyReplaceTextTimer.Stop();
-				neatlyReplaceTextTimer.Start();
-			}
-		} // proc OnTextChanged
-
-		private void CleanText(DispatcherTimer dt)
-		{
-			if (retriggerHold || InputType == PpsTextBoxInputType.None)
-				return;
-
-			dt.Stop();
-
-			retriggerHold = true;
-			try
-			{
-				var error = String.Empty;
-				NeatlyReplaceText(NeatlyCleanText(InputType, Text, AllowedLineCount, out error));
-				SetError(error);
-			}
-			finally
-			{
-				retriggerHold = false;
-			}
-		}
-
-		private DispatcherTimer neatlyReplaceTextTimer;
+			// get text editor
+			textEditor = textEditorPropertyInfo.GetValue(this, null)
+				?? throw new ArgumentNullException(nameof(textEditor), "TextEditor not located?");
+		} // proc OnInitialized
 
 		/// <summary>Hides the ErrorTip if the Textbox is not focused</summary>
 		/// <param name="e">unused</param>
 		protected override void OnLostFocus(RoutedEventArgs e)
 		{
 			base.OnLostFocus(e);
-			ResetError(null, null);
+			ClearInputError();
 		} // proc OnLostFocus
 
-		#endregion Event Handlers
+		#endregion
 
+		#region -- IsNullable Property ------------------------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(true));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		void IPpsNullableControl.Clear() => Clear();
 		bool IPpsNullableControl.CanClear => IsEnabled && !IsReadOnly && !String.IsNullOrEmpty(Text);
+
+		/// <summary>Is the field nullable.</summary>
+		public bool IsNullable { get => BooleanBox.GetBool(GetValue(IsNullableProperty)); set => SetValue(IsNullableProperty, BooleanBox.GetObject(value)); }
+
+		#endregion
+
+		#region -- FormattedValue Property --------------------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty FormattedValueProperty = DependencyProperty.Register(nameof(FormattedValue), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnFormattedValueChanged)));
+
+		private static readonly DependencyPropertyKey hasFormattedValuePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasFormattedValue), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty HasFormattedValueProperty = hasFormattedValuePropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		private static void OnFormattedValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsTextBox)d).OnFormattedValueChanged(e.NewValue, e.OldValue);
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnFormattedValueChanged(object newValue, object oldValue)
+			=> HasFormattedValue = newValue != null;
+
+		/// <summary>Binding Point for formatted value</summary>
+		public object FormattedValue { get => GetValue(FormattedValueProperty); set => SetValue(FormattedValueProperty, value); }
+		/// <summary>True if FormattedValue is not null</summary>
+		public bool HasFormattedValue { get => BooleanBox.GetBool(GetValue(HasFormattedValueProperty)); private set => SetValue(hasFormattedValuePropertyKey, BooleanBox.GetObject(value)); }
+
+		#endregion
+
+		#region -- InputType Properties -----------------------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.None, new PropertyChangedCallback(OnInputTypeChanged)));
+		public static readonly DependencyProperty InputMaskProperty = DependencyProperty.Register(nameof(InputMask), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.None, new PropertyChangedCallback(OnInputMaskChanged)));
+		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(0, new PropertyChangedCallback(OnAllowedLineCountChanged)));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		private static void OnInputTypeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
+		{
+			var acceptReturn = false;
+			var newInputManager = (IPpsTextBoxInputManager)null;
+
+			switch (newValue)
+			{
+				case PpsTextBoxInputType.Decimal:
+					newInputManager = new PpsRegExInputManager(this, @"^(?<num>(\d+\.?)*)\,?\d*$", "Zahl erwartet.");
+					break;
+				case PpsTextBoxInputType.DecimalNegative:
+					newInputManager = new PpsRegExInputManager(this, @"^\-?(?<num>(\d+\.?)*)\,?\d*$", "Zahl erwartet.");
+					break;
+				case PpsTextBoxInputType.Integer:
+					newInputManager = new PpsRegExInputManager(this, @"^(?<num>(\d+\.?)+)$", "Positive Zahl erwartet.");
+					break;
+				case PpsTextBoxInputType.IntegerNegative:
+					newInputManager = new PpsRegExInputManager(this, @"^\-?(?<num>(\d+\.?)+)$", "Zahl erwartet.");
+					break;
+
+				case PpsTextBoxInputType.Date:
+					newInputManager = new PpsDateInputManager(this);
+					break;
+				case PpsTextBoxInputType.Time:
+					newInputManager = new PpsTimeInputManager(this);
+					break;
+
+				case PpsTextBoxInputType.MultiLine:
+					acceptReturn = true;
+					if (AllowedLineCount > 0)
+						newInputManager = new PpsMultiLineInputManager(this, AllowedLineCount);
+					break;
+
+				case PpsTextBoxInputType.Formatted:
+					newInputManager = new PpsMaskInputManager(this, String.Empty);
+					break;
+			}
+
+			// set dependen properties
+			AcceptsReturn = acceptReturn;
+			inputManager = newInputManager;
+		} // proc OnInputTypeChanged
+
+		private static void OnInputMaskChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsTextBox)d).OnInputMaskChanged((string)e.NewValue, (string)e.OldValue);
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnInputMaskChanged(string newValue, string oldValue)
+		{
+			InputType = PpsTextBoxInputType.Formatted;
+			inputManager = new PpsMaskInputManager(this, newValue);
+		} // proc OnInputMaskChanged
+
+		private static void OnAllowedLineCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsTextBox)d).OnAllowedLineCountChanged((int)e.NewValue, (int)e.OldValue);
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnAllowedLineCountChanged(int newValue, int oldValue)
+		{
+			InputType = PpsTextBoxInputType.MultiLine;
+			if (newValue > 0 && newValue < Int32.MaxValue)
+				inputManager = new PpsMultiLineInputManager(this, newValue);
+		} // proc OnAllowedLineCountChanged
+
+		/// <summary>Defines the predefined input type for the textbox.</summary>
+		public PpsTextBoxInputType InputType { get => (PpsTextBoxInputType)GetValue(InputTypeProperty); set => SetValue(InputTypeProperty, value); }
+		/// <summary>Defines the input mask for the textbox.</summary>
+		public string InputMask { get => (string)GetValue(InputMaskProperty); set => SetValue(InputMaskProperty, value); }
+		/// <summary>Sets the allowed Lines for this Textbox</summary>
+		public int AllowedLineCount { get => (int)GetValue(AllowedLineCountProperty); set => SetValue(AllowedLineCountProperty, value); }
+
+		#endregion
+
+		#region -- Keyboard events ----------------------------------------------------
+
+		private bool OnPreviewTextChanged(RoutedEventArgs e, string newText)
+		{
+			if (inputManager != null)
+			{
+				var r = inputManager.PreviewTextChanged(newText);
+				UpdateInputError(r, true);
+				e.Handled = !r.IsValid;
+				return r.IsValid;
+			}
+			else
+				return false;
+		} // func OnPreviewTextChanged
+
+		private void OnPasteTextInput(object sender, DataObjectPastingEventArgs e)
+		{
+			if (e.DataObject.GetData("Text") is string inputText)
+			{
+				if (!OnPreviewTextChanged(e, inputText))
+					e.CancelCommand();
+			}
+			else
+				e.CancelCommand();
+		} // proc OnPasteTextInput
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
+		{
+			// filter input, test the new resulting text
+			OnPreviewTextChanged(e, e.Text);
+
+			base.OnPreviewTextInput(e);
+		} // proc OnPreviewTextInput
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnTextChanged(TextChangedEventArgs e)
+		{
+			base.OnTextChanged(e);
+
+			// update all part information
+			if (inputManager != null)
+				UpdateInputError(inputManager.TextChanged(), false);
+		} // proc OnTextChanged
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		{
+			switch (e.Key)
+			{
+				case Key.Space: // space is not part of TextInput
+					OnPreviewTextChanged(e, " "); // Space
+					break;
+				case Key.Back:
+					OnPreviewTextChanged(e, "\b"); // Backspace
+					break;
+				case Key.Delete:
+					OnPreviewTextChanged(e, "\x7F"); // Delete
+					break;
+				default:
+					inputManager.PreviewKeyDown(e);
+					break;
+			}
+
+			base.OnPreviewKeyDown(e);
+		} // proc OnPreviewKeyDown
+
+		#endregion
+
+		#region -- Input Error Properties ---------------------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		private static readonly DependencyPropertyKey inputErrorMessagePropertyKey = DependencyProperty.RegisterReadOnly(nameof(InputErrorMessage), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty InputErrorMessageProperty = inputErrorMessagePropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey hasInputErrorPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasInputError), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(false));
+		public static readonly DependencyProperty HasInputErrorProperty = hasInputErrorPropertyKey.DependencyProperty;
+
+		public static readonly DependencyProperty InputErrorVisibleTimeProperty = DependencyProperty.Register(nameof(InputErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		private readonly DispatcherTimer inputErrorTimer;
+
+		private void ClearInputError()
+		{
+			inputErrorTimer.Stop();
+			InputErrorMessage = null;
+			HasInputError = false;
+		} // proc ClearError
+
+		private void UpdateInputError(ValidationResult r, bool preview)
+			=> UpdateInputError(r.IsValid ? null : r.ErrorContent);
+
+		/// <summary></summary>
+		/// <param name="errorMessage"></param>
+		public void UpdateInputError(object errorMessage)
+		{
+			if (!IsKeyboardFocusWithin) // update error only with containing focus
+				return;
+
+			if (errorMessage == null)
+				ClearInputError();
+			else
+			{
+				// set input error
+				InputErrorMessage = errorMessage;
+				HasInputError = true;
+
+				// restart timer
+				inputErrorTimer.Stop();
+				inputErrorTimer.Interval = new TimeSpan(0, 0, InputErrorVisibleTime);
+				inputErrorTimer.Start();
+			}
+		} // proc UpdateInputError
+
+		private void InputTimerCallback(object sender, EventArgs e) 
+			=> ClearInputError();
+		
+		/// <summary>The message presented to the user if the data was invalid</summary>
+		public object InputErrorMessage { get => GetValue(InputErrorMessageProperty); private set => SetValue(inputErrorMessagePropertyKey, value); }
+		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
+		public bool HasInputError { get => BooleanBox.GetBool(GetValue(HasInputErrorProperty)); private set => SetValue(hasInputErrorPropertyKey, BooleanBox.GetObject(value)); }
+		/// <summary>The Time in Milliseconds an Information is shown.</summary>
+		public int InputErrorVisibleTime { get => (int)GetValue(InputErrorVisibleTimeProperty); set => SetValue(InputErrorVisibleTimeProperty, value); }
+		
+		#endregion
+
+		/// <summary>Get internal overwrite</summary>
+		public bool IsOverwriteMode => BooleanBox.GetBool(overwriteModePropertyInfo.GetValue(textEditor, null));
+
+		// -- Static ----------------------------------------------------------
+
+		private static readonly PropertyInfo textEditorPropertyInfo;
+		private static readonly PropertyInfo overwriteModePropertyInfo;
 
 		static PpsTextBox()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsTextBox), new FrameworkPropertyMetadata(typeof(PpsTextBox)));
-
 			PpsControlCommands.RegisterClearCommand(typeof(PpsTextBox));
+
+			textEditorPropertyInfo = typeof(TextBox).GetProperty("TextEditor", BindingFlags.NonPublic | BindingFlags.Instance)
+				?? throw new ArgumentNullException("TextEditor");
+
+			overwriteModePropertyInfo = textEditorPropertyInfo.PropertyType.GetProperty("_OvertypeMode", BindingFlags.NonPublic | BindingFlags.Instance)
+				?? throw new ArgumentNullException("_OvertypeMode");
 		} // sctor
 	} // class PpsTextBox
 
-	#endregion class PpsTextBox
+	#endregion
+
+	#region -- interface IPpsTextBoxInputManager --------------------------------------
+
+	/// <summary>Defines a interface to the input manager</summary>
+	public interface IPpsTextBoxInputManager
+	{
+		/// <summary>Is called before text is inserted.</summary>
+		/// <param name="newText"></param>
+		/// <returns></returns>
+		ValidationResult PreviewTextChanged(string newText);
+		/// <summary></summary>
+		/// <param name="keyEvent"></param>
+		void PreviewKeyDown(KeyEventArgs keyEvent);
+		/// <summary>Validate current text.</summary>
+		/// <returns></returns>
+		ValidationResult TextChanged();
+	} // interface IPpsTextBoxInputManager
+
+	#endregion
+
+	#region -- interface IPpsTextBoxDropManager ---------------------------------------
+
+	/// <summary>Defines a interface for the drop down box of the text box.</summary>
+	public interface IPpsTextBoxDropManager
+	{
+
+	} // interface IPpsTextBoxDropManager
+
+	#endregion
+
+	#region -- class PpsTextBoxInputManager -------------------------------------------
+
+	/// <summary>Base class for the input manager</summary>
+	public abstract class PpsTextBoxInputManager : IPpsTextBoxInputManager
+	{
+		private readonly PpsTextBox textBox;
+
+		/// <summary></summary>
+		/// <param name="textBox"></param>
+		public PpsTextBoxInputManager(PpsTextBox textBox)
+			=> this.textBox = textBox;
+
+		#region -- UpdateText, TryInsertText ------------------------------------------
+
+		/// <summary>Get text from text box.</summary>
+		/// <returns></returns>
+		protected string GetText()
+			=> textBox.Text;
+
+		/// <summary>Replace complete text.</summary>
+		/// <param name="newText"></param>
+		protected void ClearText(string newText)
+		{
+			textBox.SelectionStart = 0;
+			textBox.SelectionLength = textBox.Text.Length;
+			textBox.SelectedText = newText;
+		} // proc ClearText
+
+		/// <summary>Update a part of the textbox. Simulate normal TextInput, no binding events should</summary>
+		/// <param name="newPartText"></param>
+		/// <param name="startAt"></param>
+		/// <param name="length"></param>
+		protected void UpdateText(string newPartText, int startAt, int length)
+		{
+			var oldSelectionStart = textBox.SelectionStart;
+			var oldSelectionLength = textBox.SelectionLength;
+			try
+			{
+				if (newPartText.Length != length) // we need to move selection
+				{
+					if (oldSelectionStart > startAt + length) // current selection is after the replaced block
+					{
+						oldSelectionStart += length - newPartText.Length;
+					}
+					else if (oldSelectionStart > startAt) // current selection is within the replaced block
+					{
+						var oldSelectionEnd = oldSelectionStart + oldSelectionLength;
+						if (oldSelectionStart - startAt > newPartText.Length) // move to the end of the replaced block
+							oldSelectionStart = startAt + newPartText.Length;
+
+						// todo: test cases?
+						if (oldSelectionEnd > startAt + length) // let selection end behind the block
+						{
+							oldSelectionEnd = startAt + 2 * length - newPartText.Length;
+						}
+						else
+						{
+							oldSelectionEnd = startAt + newPartText.Length;
+						}
+
+						oldSelectionLength = oldSelectionEnd - oldSelectionStart;
+					}
+				}
+
+				// update text
+				textBox.SelectionStart = startAt;
+				textBox.SelectionLength = length;
+				textBox.SelectedText = newPartText;
+			}
+			finally
+			{
+				textBox.SelectionStart = oldSelectionStart;
+				textBox.SelectionLength = oldSelectionLength;
+			}
+		} // proc UpdateText
+
+		/// <summary>Create a result text from the input.</summary>
+		/// <param name="inputText"></param>
+		/// <param name="newText"></param>
+		/// <returns></returns>
+		protected bool TryInsertText(string inputText, out string newText)
+		{
+			var selectionStart = textBox.SelectionStart;
+			var selectionLength = textBox.SelectionLength;
+			newText = textBox.Text;
+
+			// remove char, on backspace or delete
+			if (inputText.Length == 1)
+			{
+				switch (inputText[0])
+				{
+					case '\b':// back space
+						if (selectionLength > 0)
+						{
+							newText = newText.Remove(selectionStart, selectionLength);
+							return true;
+						}
+						else if (selectionStart > 0)
+						{
+							newText = newText.Remove(selectionStart - 1, 1);
+							return true;
+						}
+						else
+							return false;
+					case '\x7F':
+						if (selectionLength > 0)
+						{
+							newText = newText.Remove(selectionStart, selectionLength);
+							return true;
+						}
+						else if (selectionStart + 1 <= newText.Length)
+						{
+							newText = newText.Remove(selectionStart, 1);
+							return true;
+						}
+						else
+							return false;
+				}
+			}
+
+			// on overwrite mode, replace next char
+			if (selectionLength == 0 // only if nothing is selected
+				&& selectionStart < newText.Length // and on end
+				&& textBox.IsOverwriteMode)
+			{
+				selectionLength = inputText.Length;
+			}
+
+			// remove marked text
+			if (selectionLength > 0)
+			{
+				// ensure length
+				if (newText.Length < selectionStart + selectionLength)
+					selectionLength = newText.Length - selectionStart;
+
+				if (selectionStart >= 0)
+					newText = newText.Remove(selectionStart, selectionLength);
+				else
+					return false;
+			}
+
+			// insert the new text
+			newText = newText.Insert(selectionStart, inputText);
+			return true;
+		} // func TryInsertText
+
+		#endregion
+
+		ValidationResult IPpsTextBoxInputManager.PreviewTextChanged(string newText)
+			=> OnPreviewTextChanged(newText);
+
+		/// <summary></summary>
+		/// <param name="newText"></param>
+		/// <returns></returns>
+		protected abstract ValidationResult OnPreviewTextChanged(string newText);
+
+		void IPpsTextBoxInputManager.PreviewKeyDown(KeyEventArgs keyEvent)
+			=> OnPreviewKeyDown(keyEvent);
+
+		/// <summary></summary>
+		/// <param name="keyEvent"></param>
+		protected virtual void OnPreviewKeyDown(KeyEventArgs keyEvent)
+			=> GenerateLockKeyErrors();
+		
+		/// <summary>Num/Caps-Lock checks</summary>
+		protected void GenerateLockKeyErrors()
+		{
+			if (!Keyboard.IsKeyToggled(Key.NumLock))
+				textBox.UpdateInputError("Num-Taste ist nicht aktiviert.");
+			else if (Keyboard.IsKeyToggled(Key.CapsLock))
+				textBox.UpdateInputError("Feststelltaste ist aktiviert.");
+		} // proc GenerateLockKeyErrors
+
+		ValidationResult IPpsTextBoxInputManager.TextChanged()
+			=> OnTextChanged();
+
+		/// <summary></summary>
+		/// <returns></returns>
+		protected abstract ValidationResult OnTextChanged();
+
+		/// <summary>Access textbox.</summary>
+		protected PpsTextBox TextBox => textBox;
+
+		/// <summary></summary>
+		public static ValidationResult ValidResult { get; } = new ValidationResult(true, null);
+	} // class PpsTextBoxInputManager
+
+	#endregion
+
+	#region -- class PpsMultiLineInputManager -----------------------------------------
+
+	/// <summary>Regex based input manager.</summary>
+	public sealed class PpsMultiLineInputManager : PpsTextBoxInputManager
+	{
+		/// <summary>Initalize regex input manager.</summary>
+		/// <param name="textBox"></param>
+		/// <param name="maxLines"></param>
+		public PpsMultiLineInputManager(PpsTextBox textBox, int maxLines)
+			: base(textBox)
+		{
+			if (maxLines <= 0)
+				throw new ArgumentOutOfRangeException(nameof(maxLines), maxLines, "Only values greate zero allowed.");
+		} // ctor
+
+		/// <summary>Handle preview text change event.</summary>
+		/// <param name="newText"></param>
+		/// <returns></returns>
+		protected override ValidationResult OnPreviewTextChanged(string newText)
+		{
+			// todo: Count Lines
+			return ValidResult;
+		} // proc OnPreviewTextChanged
+
+		/// <summary>Handle text change event.</summary>
+		/// <returns></returns>
+		protected override ValidationResult OnTextChanged()
+			=> ValidResult;
+
+		/// <summary></summary>
+		/// <param name="keyEvent"></param>
+		protected override void OnPreviewKeyDown(KeyEventArgs keyEvent) { }
+	} // class PpsMultiLineInputManager
+
+	#endregion
+
+	#region -- class PpsRegExInputManager ---------------------------------------------
+
+	/// <summary>Regex based input manager.</summary>
+	public sealed class PpsRegExInputManager : PpsTextBoxInputManager
+	{
+		private readonly Regex regex;
+		private readonly object errorMessage;
+
+		/// <summary>Initalize regex input manager.</summary>
+		/// <param name="textBox"></param>
+		/// <param name="regex"></param>
+		/// <param name="errorMessage"></param>
+		public PpsRegExInputManager(PpsTextBox textBox, string regex, object errorMessage)
+			: base(textBox)
+		{
+			this.regex = new Regex(regex, RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+			this.errorMessage = errorMessage;
+		} // ctor
+
+		private ValidationResult TryParse(string text, bool preview)
+		{
+			if (String.IsNullOrEmpty(text))
+				return ValidResult;
+
+			var m = regex.Match(text);
+			return m.Success
+				? ValidResult
+				: new ValidationResult(false, errorMessage);
+		} // func TryParse
+
+		/// <summary>Handle preview text change event.</summary>
+		/// <param name="newText"></param>
+		/// <returns></returns>
+		protected override ValidationResult OnPreviewTextChanged(string newText)
+			=> TryInsertText(newText, out var text)
+				? TryParse(text, true)
+				: new ValidationResult(false, "Could not insert text.");
+
+		/// <summary>Handle text change event.</summary>
+		/// <returns></returns>
+		protected override ValidationResult OnTextChanged()
+			=> TryParse(GetText(), false);
+	} // class PpsRegExInputManager
+
+	#endregion
+
+	#region -- class PpsMaskInputManagerBase ------------------------------------------
+
+	/// <summary>Base implementation for the mask input manager.</summary>
+	public abstract class PpsMaskInputManagerBase : PpsTextBoxInputManager
+	{
+		#region -- class PartBase -----------------------------------------------------
+
+		/// <summary>Mask part definition</summary>
+		protected abstract class PartBase
+		{
+			/// <summary>Part</summary>
+			/// <param name="startAt"></param>
+			/// <param name="endAt"></param>
+			public PartBase(int startAt, int endAt)
+			{
+				this.StartAt = startAt;
+				this.EndAt = endAt;
+			} // ctor
+
+			/// <summary></summary>
+			/// <param name="offset"></param>
+			/// <param name="text"></param>
+			/// <returns></returns>
+			public abstract bool Reset(int offset, StringBuilder text);
+
+			/// <summary></summary>
+			/// <param name="offset"></param>
+			/// <param name="c"></param>
+			/// <param name="text"></param>
+			/// <returns></returns>
+			public abstract (bool nextChar, ValidationResult result) Insert(int offset, char c, StringBuilder text);
+
+			/// <summary>Part starts at.</summary>
+			public int StartAt { get; }
+			/// <summary>Part ends et.</summary>
+			public int EndAt { get; }
+		} // class PartBase
+
+		#endregion
+
+		#region -- class StaticPart ---------------------------------------------------
+
+		private sealed class StaticPart : PartBase
+		{
+			private readonly char staticChar;
+
+			public StaticPart(int startAt, int endAt, char c)
+				: base(startAt, endAt)
+				=> this.staticChar = c;
+
+			public override bool Reset(int offset, StringBuilder text)
+			{
+				text[offset] = staticChar;
+				return true;
+			}
+
+			public override (bool nextChar, ValidationResult result) Insert(int offset, char c, StringBuilder text)
+			{
+				if (offset < text.Length)
+					text[offset] = staticChar;
+				else
+					text.Append(staticChar);
+				return (
+					c == this.staticChar, // is the same as static
+					ValidResult
+				);
+			}
+		} // class StaticPart
+
+		#endregion
+
+		#region -- class NumberPart ---------------------------------------------------
+
+		private sealed class NumberPart : PartBase
+		{
+			public NumberPart(int startAt, int endAt)
+				: base(startAt, endAt)
+			{
+			} // ctor
+
+			public override bool Reset(int offset, StringBuilder text)
+			{
+				text[offset] = '0';
+				return true;
+			}
+
+			public override (bool nextChar, ValidationResult result) Insert(int offset, char c, StringBuilder text)
+			{
+				if (!Char.IsDigit(c))
+					return (false, new ValidationResult(false, "Zahl erwartet."));
+				else
+				{
+					if (offset < text.Length)
+						text[offset] = c;
+					else
+						text.Append(c);
+					return (true, ValidResult);
+				}
+			} // func Insert
+		} // class NumberPart
+
+		#endregion
+
+		#region -- class WordPart -----------------------------------------------------
+
+		private sealed class WordPart : PartBase
+		{
+			private readonly bool upperCase;
+			private readonly bool allowDigits;
+			private readonly bool allowAny;
+
+			private readonly object errorMesage;
+
+			public WordPart(int startAt, int endAt, bool upperCase, bool allowDigits, bool allowAny, object errorMessage) 
+				: base(startAt, endAt)
+			{
+				this.upperCase = upperCase;
+				this.allowDigits = allowDigits;
+				this.allowAny = allowAny;
+
+				this.errorMesage = errorMessage;
+			} // ctor
+
+			public override bool Reset(int offset, StringBuilder text)
+			{
+				text[offset] = ' ';
+				return true;
+			} // func Reset
+
+			public override (bool nextChar, ValidationResult result) Insert(int offset, char c, StringBuilder text)
+			{
+				if (Char.IsLetter(c))
+				{
+					if (upperCase)
+					{
+						c = Char.ToUpper(c);
+						text[offset] = c;
+					}
+					return (true, ValidResult);
+				}
+				else if (allowDigits && Char.IsDigit(c))
+					return (true, ValidResult);
+				else if (allowAny && !Char.IsWhiteSpace(c))
+					return (true, ValidResult);
+				else
+					return (false, new ValidationResult(false, errorMesage));
+			} // func Insert
+		} // class WordPart
+
+		#endregion
+		
+		private readonly PartBase[] mask;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="textBox"></param>
+		/// <param name="mask"></param>
+		protected PpsMaskInputManagerBase(PpsTextBox textBox, params PartBase[] mask)
+			: base(textBox)
+		{
+			this.mask = mask;
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="startAt"></param>
+		/// <param name="endAt"></param>
+		/// <param name="c"></param>
+		/// <returns></returns>
+		protected static PartBase CreateStatic(int startAt, int endAt, char c)
+			=> new StaticPart(startAt, endAt, c);
+
+		/// <summary></summary>
+		/// <param name="startAt"></param>
+		/// <param name="endAt"></param>
+		/// <returns></returns>
+		protected static PartBase CreateNumber(int startAt, int endAt)
+			=> new NumberPart(startAt, endAt);
+
+		/// <summary></summary>
+		/// <param name="startAt"></param>
+		/// <param name="endAt"></param>
+		/// <param name="upperCase"></param>
+		/// <param name="allowDigits"></param>
+		/// <param name="allowAny"></param>
+		/// <param name="errorMesage"></param>
+		/// <returns></returns>
+		protected static PartBase CreateWord(int startAt, int endAt, bool upperCase, bool allowDigits, bool allowAny, object errorMesage)
+			=> new WordPart(startAt, endAt, upperCase, allowDigits, allowAny, errorMesage);
+
+		#endregion
+
+		#region -- GetPartFromOffset --------------------------------------------------
+
+		private PartBase GetPartFromOffset(int offset)
+		{
+			foreach (var m in mask)
+			{
+				if (offset >= m.StartAt && offset <= m.EndAt)
+					return m;
+			}
+			return null;
+		} // func GetPartFromOffset
+
+		#endregion
+
+		#region -- OnPreviewTextChanged, OnTextChanged --------------------------------
+
+		/// <summary></summary>
+		/// <param name="newText"></param>
+		/// <returns></returns>
+		protected override ValidationResult OnPreviewTextChanged(string newText)
+		{
+			int i;
+
+			var selectionLength = TextBox.SelectionLength;
+			var selectionStart = TextBox.SelectionStart;
+			var text = new StringBuilder(GetText());
+
+			// clear all chars to default
+			if (selectionLength > 0)
+			{
+				var endAt = selectionStart + selectionLength;
+				if (endAt == text.Length)
+					text.Remove(selectionStart, selectionLength);
+				else
+				{
+					for (i = selectionStart; i < endAt; i++)
+					{
+						var p = GetPartFromOffset(i);
+						if (p == null) // over eof
+						{
+							text.Remove(i, text.Length - i);
+							break;
+						}
+						else
+							p.Reset(i, text);
+					}
+				}
+
+				selectionLength = 0;
+
+				if (newText.Length == 1 && (newText[0] == '\b' || newText[0] == '\x7F'))
+					goto UpdateFullText;
+			}
+			else if (newText.Length == 1)
+			{
+				switch (newText[0])
+				{
+					case '\b':
+						if (selectionStart == 0)
+							return new ValidationResult(false, null);
+
+						if (selectionStart == text.Length)
+						{
+							text.Remove(selectionStart - 1, 1);
+							selectionStart--;
+						}
+						else
+						{
+							selectionStart--;
+							GetPartFromOffset(selectionStart)?.Reset(selectionStart, text);
+						}
+						goto UpdateFullText;
+					case '\x7F':
+						if (selectionStart == 0 && text.Length == 0)
+							goto UpdateNothing;
+						else if (selectionStart >= text.Length - 1)
+						{
+							text.Remove(text.Length - 1, 1);
+							selectionStart = text.Length;
+						}
+						else
+							GetPartFromOffset(selectionStart)?.Reset(selectionStart, text);
+						goto UpdateFullText;
+				}
+			}
+
+			// simulate insert of new chars
+			i = 0;
+			while (i < newText.Length)
+			{
+				var p = GetPartFromOffset(selectionStart);
+				if (p != null)
+				{
+					var (nextChar, result) = p.Insert(selectionStart, newText[i], text);
+					if (!result.IsValid)
+						return result;
+					selectionStart++;
+					if (nextChar)
+						i++;
+				}
+				else
+					i++;
+			}
+
+			// replace full text
+			UpdateFullText:
+			TextBox.BeginChange();
+			try
+			{
+				ClearText(text.ToString());
+				TextBox.SelectionStart = selectionStart;
+				TextBox.SelectionLength = 0;
+			}
+			finally
+			{
+				TextBox.EndChange();
+			}
+			UpdateNothing:
+			// always cancel input, write our result
+			return new ValidationResult(false, null);
+		} // func OnPreviewTextChanged
+
+		/// <summary></summary>
+		/// <returns></returns>
+		protected override ValidationResult OnTextChanged()
+			=> ValidResult;
+
+		#endregion
+	} // class PpsMaskInputManagerBase
+
+	#endregion
+
+	#region -- class PpsMaskInputManager ----------------------------------------------
+
+	/// <summary>Implementation for the mask input manager.</summary>
+	public sealed class PpsMaskInputManager : PpsMaskInputManagerBase
+	{
+		/// <summary></summary>
+		/// <param name="textBox"></param>
+		/// <param name="mask"></param>
+		public PpsMaskInputManager(PpsTextBox textBox, string mask) 
+			: base(textBox, ParseMask(mask))
+		{
+		}
+
+		private static PartBase[] ParseMask(string mask)
+			=> throw new NotImplementedException();
+	} // class PpsMaskInputManager
+
+	#endregion
+
+	#region -- class PpsDateInputManager ----------------------------------------------
+
+	internal sealed class PpsDateInputManager : PpsMaskInputManagerBase, IPpsTextBoxDropManager
+	{
+		public PpsDateInputManager(PpsTextBox textBox)
+			: base(textBox,
+				  CreateNumber(0, 1),
+				  CreateStatic(2, 2, '.'),
+				  CreateNumber(3, 4),
+				  CreateStatic(5, 5, '.'),
+				  CreateNumber(6, 9)
+			)
+		{
+		} // ctor
+	} // class PpsDateInputManager
+
+	#endregion
+
+	#region -- class PpsTimeInputManager ----------------------------------------------
+
+	internal sealed class PpsTimeInputManager : PpsMaskInputManagerBase, IPpsTextBoxDropManager
+	{
+		public PpsTimeInputManager(PpsTextBox textBox)
+			: base(textBox,
+				  CreateNumber(0, 1),
+				  CreateStatic(2, 2, ':'),
+				  CreateNumber(3, 4)
+			)
+		{
+		} // ctor
+	} // class PpsTimeInputManager
+
+	#endregion
 }
