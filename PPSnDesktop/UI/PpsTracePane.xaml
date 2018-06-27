@@ -352,7 +352,7 @@
 													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}"/>
 												</DataTrigger>
 												<DataTrigger Binding="{Binding Type}" Value="3">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource failPathGeometry}"/>
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource closeOctagonPathGeometry}"/>
 												</DataTrigger>
 												<DataTrigger Binding="{Binding Type}" Value="4">
 													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}"/>

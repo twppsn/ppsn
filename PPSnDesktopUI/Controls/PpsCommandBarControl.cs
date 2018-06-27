@@ -33,7 +33,9 @@ namespace TecWare.PPSn.Controls
 		/// <summary>this is for Round Buttons</summary>
 		Circle,
 		/// <summary>this is for Rectangular Buttons</summary>
-		Rectangle
+		Rectangle,
+		/// <summary>this is for Rectangular Buttons with transparent Background</summary>
+		TransparentRectangle
 	} // enum PpsCommandBarMode
 
 	#endregion

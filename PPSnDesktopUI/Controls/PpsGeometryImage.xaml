@@ -29,8 +29,7 @@ specific language governing permissions and limitations under the Licence.
 								 Margin="{TemplateBinding GeometrySpacing}">
 							<Canvas Width="24" Height="24" Margin="{TemplateBinding Padding}">
 								<Path Data="{TemplateBinding Geometry}"
-									  Fill="{TemplateBinding Foreground}"
-									  SnapsToDevicePixels="False" />
+									  Fill="{TemplateBinding Foreground}" />
 							</Canvas>
 						</Viewbox>
 					</Grid>

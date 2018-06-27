@@ -53,6 +53,8 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Rectangle));
 		/// <summary>The type of representation</summary>
 		public static readonly DependencyProperty ImageOpacityProperty = DependencyProperty.Register(nameof(ImageOpacity), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(0.65));
+		/// <summary>The property defines a transparent Background when DisplayMode is Rectangle</summary>
+		public static readonly DependencyProperty IsTransparentRectangleProperty = DependencyProperty.Register(nameof(IsTransparentRectangle), typeof(bool), typeof(PpsButton), new FrameworkPropertyMetadata(BooleanBox.False));
 
 		/// <summary>The property defines the resource to be loaded.</summary>
 		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
@@ -62,13 +64,15 @@ namespace TecWare.PPSn.Controls
 		public Brush Fill { get => (Brush)GetValue(FillProperty); set => SetValue(FillProperty, value); }
 		/// <summary>The property defines the type of representation</summary>
 		public PpsButtonDisplayType DisplayMode { get => (PpsButtonDisplayType)GetValue(DisplayModeProperty); set => SetValue(DisplayModeProperty, value); }
-		/// <summary>The property defines the diameter of the circle</summary>
+		/// <summary>The property defines the Opacity of the image</summary>
 		public double ImageOpacity { get => (double)GetValue(ImageOpacityProperty); set => SetValue(ImageOpacityProperty, value); }
+		/// <summary>Rectangle has an Transparent Background?</summary>
+		public bool IsTransparentRectangle { get => BooleanBox.GetBool(GetValue(IsTransparentRectangleProperty)); set => SetValue(IsTransparentRectangleProperty, BooleanBox.GetObject(value)); }
 
 		static PpsButton()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsButton), new FrameworkPropertyMetadata(typeof(PpsButton)));
-		}
+		} // sctor
 	} // class PpsButton
 
 	#endregion
