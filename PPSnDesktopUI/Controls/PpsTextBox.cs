@@ -14,11 +14,15 @@
 //
 #endregion
 using System;
+using System.Collections;
+using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -33,6 +37,8 @@ namespace TecWare.PPSn.Controls
 		None = 0,
 		/// <summary>Multiple Lines of unformatted Text are allowed</summary>
 		MultiLine,
+		/// <summary>Multiple Lines of unformatted Text are allowed</summary>
+		RichMultiLine,
 		/// <summary>Input mask for integer values.</summary>
 		Integer,
 		/// <summary>Input mask for decimal/float values.</summary>
@@ -58,6 +64,15 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Extends Textbox for Number input and a clear button.</summary>
 	public class PpsTextBox : TextBox, IPpsNullableControl
 	{
+		/// <summary>Show the drop down.</summary>
+		public static readonly RoutedCommand DropDownCommand = new RoutedCommand("DropDown", typeof(PpsTextBox));
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		private static readonly DependencyPropertyKey hasDropDownSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasDropDownSource), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty DropDownSourceProperty = DependencyProperty.Register(nameof(DropDownSource), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnDropDownSourceChanged)));
+		public static readonly DependencyProperty HasDropDownSourceProperty = hasDropDownSourcePropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
 		private IPpsTextBoxInputManager inputManager = null;
 		private object textEditor = null;
 
@@ -66,13 +81,18 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public PpsTextBox()
 		{
+			CommandBindings.Add(new CommandBinding(DropDownCommand, 
+				(sender, e) => OnDropDown(e),
+				(sender,e)=> { e.CanExecute = HasDropDownSource && IsEnabled && !IsReadOnly; e.Handled = true; }
+			));
+		
 			inputErrorTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
 			{
 				IsEnabled = false
 			};
 			inputErrorTimer.Tick += InputTimerCallback;
 		} // ctor
-				
+
 		/// <summary></summary>
 		/// <param name="e"></param>
 		protected override void OnInitialized(EventArgs e)
@@ -115,6 +135,7 @@ namespace TecWare.PPSn.Controls
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty FormattedValueProperty = DependencyProperty.Register(nameof(FormattedValue), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnFormattedValueChanged)));
+		public static readonly DependencyProperty IsFormatableTextProperty = DependencyProperty.Register(nameof(IsFormatableTextProperty), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(false));
 
 		private static readonly DependencyPropertyKey hasFormattedValuePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasFormattedValue), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasFormattedValueProperty = hasFormattedValuePropertyKey.DependencyProperty;
@@ -133,6 +154,8 @@ namespace TecWare.PPSn.Controls
 		public object FormattedValue { get => GetValue(FormattedValueProperty); set => SetValue(FormattedValueProperty, value); }
 		/// <summary>True if FormattedValue is not null</summary>
 		public bool HasFormattedValue { get => BooleanBox.GetBool(GetValue(HasFormattedValueProperty)); private set => SetValue(hasFormattedValuePropertyKey, BooleanBox.GetObject(value)); }
+		/// <summary>Is the text formatable with bold, italic, ...</summary>
+		public bool IsFormatableText { get => BooleanBox.GetBool(GetValue(IsFormatableTextProperty)); set => SetValue(IsFormatableTextProperty, BooleanBox.GetObject(value)); }
 
 		#endregion
 
@@ -147,12 +170,19 @@ namespace TecWare.PPSn.Controls
 		private static void OnInputTypeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
 
+		private void SetInputManager(IPpsTextBoxInputManager inputManager)
+		{
+			this.inputManager = inputManager;
+			DropDownSource = inputManager as IPpsTextBoxDropDownSource;
+		} // proc SetInputManager
+
 		/// <summary></summary>
 		/// <param name="newValue"></param>
 		/// <param name="oldValue"></param>
 		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
 		{
 			var acceptReturn = false;
+			var isFormatable = false;
 			var newInputManager = (IPpsTextBoxInputManager)null;
 
 			switch (newValue)
@@ -178,6 +208,8 @@ namespace TecWare.PPSn.Controls
 					break;
 
 				case PpsTextBoxInputType.MultiLine:
+				case PpsTextBoxInputType.RichMultiLine:
+					isFormatable = newValue == PpsTextBoxInputType.RichMultiLine;
 					acceptReturn = true;
 					if (AllowedLineCount > 0)
 						newInputManager = new PpsMultiLineInputManager(this, AllowedLineCount);
@@ -190,7 +222,8 @@ namespace TecWare.PPSn.Controls
 
 			// set dependen properties
 			AcceptsReturn = acceptReturn;
-			inputManager = newInputManager;
+			IsFormatableText = isFormatable;
+			SetInputManager(newInputManager);
 		} // proc OnInputTypeChanged
 
 		private static void OnInputMaskChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -202,7 +235,7 @@ namespace TecWare.PPSn.Controls
 		protected virtual void OnInputMaskChanged(string newValue, string oldValue)
 		{
 			InputType = PpsTextBoxInputType.Formatted;
-			inputManager = new PpsMaskInputManager(this, newValue);
+			SetInputManager(new PpsMaskInputManager(this, newValue));
 		} // proc OnInputMaskChanged
 
 		private static void OnAllowedLineCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -215,7 +248,7 @@ namespace TecWare.PPSn.Controls
 		{
 			InputType = PpsTextBoxInputType.MultiLine;
 			if (newValue > 0 && newValue < Int32.MaxValue)
-				inputManager = new PpsMultiLineInputManager(this, newValue);
+				SetInputManager(new PpsMultiLineInputManager(this, newValue));
 		} // proc OnAllowedLineCountChanged
 
 		/// <summary>Defines the predefined input type for the textbox.</summary>
@@ -353,9 +386,73 @@ namespace TecWare.PPSn.Controls
 		public bool HasInputError { get => BooleanBox.GetBool(GetValue(HasInputErrorProperty)); private set => SetValue(hasInputErrorPropertyKey, BooleanBox.GetObject(value)); }
 		/// <summary>The Time in Milliseconds an Information is shown.</summary>
 		public int InputErrorVisibleTime { get => (int)GetValue(InputErrorVisibleTimeProperty); set => SetValue(InputErrorVisibleTimeProperty, value); }
-		
+
 		#endregion
 
+		#region -- DropDown source ----------------------------------------------------
+
+		private static void OnDropDownSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsTextBox)d).OnDropDownSourceChanged(e.NewValue, e.OldValue);
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnDropDownSourceChanged(object newValue, object oldValue)
+			=> SetValue(hasDropDownSourcePropertyKey, newValue != null && (newValue is IPpsTextBoxDropDownSource || newValue is IList));
+
+		private void OnDropDown(ExecutedRoutedEventArgs e)
+		{
+			if (HasDropDownSource)
+			{
+				IPpsTextBoxDropDownSource dropDownSource;
+				if (DropDownSource is IPpsTextBoxDropDownSource src)
+					dropDownSource = src;
+				else if (DropDownSource is IList list)
+					dropDownSource = new SimpleTextBoxDropDownSource(this, list);
+				else
+					return;
+
+				var lists = dropDownSource.GetDropLists();
+				
+				var listControl = new PpsMultiCircularListBox
+				{
+					ListSource = lists
+				};
+
+				var selectedItems = dropDownSource.SelectedItems;
+				if (selectedItems != null)
+					listControl.SelectedItems = selectedItems;
+				if (dropDownSource is IPpsTextBoxDropDownSource2 dds2)
+					listControl.SelectedItemsChanged += (sender, e2) => dds2.OnSelectedItemsChanged(((PpsMultiCircularListBox)sender).SelectedItems);
+				
+				// create popup
+				var popup = new PpsPopup();
+				popup.CommandBindings.Add(
+					new CommandBinding(ApplicationCommands.Save,
+						(sender, e2) =>
+						{
+							dropDownSource.SelectedItems = listControl.SelectedItems;
+							e2.Handled = true;
+						}
+					)
+				);
+				popup.Child = listControl;
+
+				// show popup
+				popup.Placement = PlacementMode.Bottom;
+				popup.PlacementTarget = this;
+				popup.IsOpen = true;
+
+				e.Handled = true;
+			}
+		} // proc OnDropDown
+
+		/// <summary></summary>
+		public bool HasDropDownSource => BooleanBox.GetBool(GetValue(HasDropDownSourceProperty));
+		/// <summary></summary>
+		public object DropDownSource { get => GetValue(DropDownSourceProperty); set => SetValue(DropDownSourceProperty, value); }
+
+		#endregion
 		/// <summary>Get internal overwrite</summary>
 		public bool IsOverwriteMode => BooleanBox.GetBool(overwriteModePropertyInfo.GetValue(textEditor, null));
 
@@ -398,13 +495,63 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
-	#region -- interface IPpsTextBoxDropManager ---------------------------------------
+	#region -- interface IPpsTextBoxDropDownSource ------------------------------------
 
 	/// <summary>Defines a interface for the drop down box of the text box.</summary>
-	public interface IPpsTextBoxDropManager
+	public interface IPpsTextBoxDropDownSource
 	{
+		/// <summary>Return tdrop down list.</summary>
+		/// <returns></returns>
+		object[] GetDropLists();
 
-	} // interface IPpsTextBoxDropManager
+		/// <summary></summary>
+		/// <returns></returns>
+		object[] SelectedItems { get; set; }
+	} // interface IPpsTextBoxDropDownSource
+
+	/// <summary></summary>
+	public interface IPpsTextBoxDropDownSource2 : IPpsTextBoxDropDownSource
+	{
+		/// <summary></summary>
+		/// <param name="selectedItems"></param>
+		void OnSelectedItemsChanged(object[] selectedItems);
+	} // interface IPpsTextBoxDropDownSource2
+
+	internal sealed class SimpleTextBoxDropDownSource : IPpsTextBoxDropDownSource
+	{
+		private readonly PpsTextBox textBox;
+		private readonly IList baseList;
+
+		public SimpleTextBoxDropDownSource(PpsTextBox textBox, IList baseList)
+		{
+			this.textBox = textBox;
+			this.baseList = baseList;
+		} // ctor
+
+		public object[] GetDropLists()
+			=> new object[] { baseList };
+
+		public object[] SelectedItems
+		{
+			get => new object[] { textBox.Text };
+			set
+			{
+				textBox.BeginChange();
+				try
+				{
+					textBox.SelectAll();
+					if (value == null)
+						textBox.SelectedText = String.Empty;
+					else
+						textBox.SelectedText = value[0].ToString();
+				}
+				finally
+				{
+					textBox.EndChange();
+				}
+			}
+		} // prop SelectedItems
+	} // class SimpleTextBoxDropDownSource
 
 	#endregion
 
@@ -711,6 +858,14 @@ namespace TecWare.PPSn.Controls
 			/// <returns></returns>
 			public abstract (bool nextChar, ValidationResult result) Insert(int offset, char c, StringBuilder text);
 
+			/// <summary></summary>
+			/// <param name="text"></param>
+			/// <returns></returns>
+			public string GetTextPart(string text)
+				=> EndAt < text.Length
+					? text.Substring(StartAt, EndAt - StartAt + 1)
+					: null;
+
 			/// <summary>Part starts at.</summary>
 			public int StartAt { get; }
 			/// <summary>Part ends et.</summary>
@@ -999,6 +1154,9 @@ namespace TecWare.PPSn.Controls
 			=> ValidResult;
 
 		#endregion
+
+		/// <summary></summary>
+		protected PartBase[] Mask => mask;
 	} // class PpsMaskInputManagerBase
 
 	#endregion
@@ -1024,8 +1182,10 @@ namespace TecWare.PPSn.Controls
 
 	#region -- class PpsDateInputManager ----------------------------------------------
 
-	internal sealed class PpsDateInputManager : PpsMaskInputManagerBase, IPpsTextBoxDropManager
+	internal sealed class PpsDateInputManager : PpsMaskInputManagerBase, IPpsTextBoxDropDownSource2
 	{
+		private readonly ObservableCollection<string> dayList;
+
 		public PpsDateInputManager(PpsTextBox textBox)
 			: base(textBox,
 				  CreateNumber(0, 1),
@@ -1035,14 +1195,86 @@ namespace TecWare.PPSn.Controls
 				  CreateNumber(6, 9)
 			)
 		{
+			dayList = new ObservableCollection<string>(dayInput);
 		} // ctor
+
+		public void OnSelectedItemsChanged(object[] selectedItems)
+		{
+			var month = Int32.Parse((string)selectedItems[1]);
+			var year = Int32.Parse((string)selectedItems[2]);
+			var days = DateTime.DaysInMonth(year, month);
+
+			while (days > dayList.Count)
+				dayList.RemoveAt(dayList.Count - 1);
+			while (days < dayList.Count)
+				dayList.Add(dayInput[dayList.Count - 1]);
+		} // proc OnSelectedItems
+
+		public object[] GetDropLists()
+		{
+			return new object[]
+			{
+				dayList,
+				monthInput,
+				yearInput
+			};
+		} // func GetDropLists
+
+		public object[] SelectedItems
+		{
+			get
+			{
+				var t = GetText();
+				return new string[]
+				{
+					Mask[0].GetTextPart(t),
+					Mask[2].GetTextPart(t),
+					Mask[4].GetTextPart(t)
+				};
+			}
+			set
+			{
+				TextBox.BeginChange();
+				try
+				{
+					if (value != null)
+					{
+						ClearText(String.Format("{0}.{0}.{0}", value[0], value[1], value[1]));
+						TextBox.SelectAll();
+					}
+					else
+						ClearText(String.Empty);
+				}
+				finally
+				{
+					TextBox.EndChange();
+				}
+			}
+		} // prop SelectedItems
+
+		private static readonly string[] yearInput;
+		private static readonly string[] monthInput;
+		private static readonly string[] dayInput;
+
+		static PpsDateInputManager()
+		{
+			yearInput = new string[41];
+			for (var i = 0; i < 40; i++)
+				yearInput[i] = (1990 + i).ToString("0000");
+			monthInput = new string[12];
+			for (var i = 0; i < 12; i++)
+				monthInput[i] = (i + 1).ToString("00");
+			dayInput = new string[31];
+			for (var i = 0; i < 31; i++)
+				dayInput[i] = (i + 1).ToString("00");
+		}
 	} // class PpsDateInputManager
 
 	#endregion
 
 	#region -- class PpsTimeInputManager ----------------------------------------------
 
-	internal sealed class PpsTimeInputManager : PpsMaskInputManagerBase, IPpsTextBoxDropManager
+	internal sealed class PpsTimeInputManager : PpsMaskInputManagerBase, IPpsTextBoxDropDownSource
 	{
 		public PpsTimeInputManager(PpsTextBox textBox)
 			: base(textBox,
@@ -1052,6 +1284,58 @@ namespace TecWare.PPSn.Controls
 			)
 		{
 		} // ctor
+
+		public object[] GetDropLists()
+			=> new object[]
+			{
+				hourArray,
+				minutesArray
+			};
+
+		public object[] SelectedItems
+		{
+			get
+			{
+				var t = GetText();
+				return new string[]
+				{
+					Mask[0].GetTextPart(t),
+					Mask[2].GetTextPart(t)
+				};
+			}
+			set
+			{
+				TextBox.BeginChange();
+				try
+				{
+					if (value != null)
+					{
+						ClearText(String.Format("{0}:{1}", value[0], value[1]));
+						TextBox.SelectAll();
+					}
+					else
+						ClearText(String.Empty);
+				}
+				finally
+				{
+					TextBox.EndChange();
+				}
+			}
+		} // prop SelectedItems
+
+		private static readonly string[] hourArray;
+		private static readonly string[] minutesArray;
+
+		static PpsTimeInputManager()
+		{
+			hourArray = new string[24];
+			for (var i = 0; i < 24; i++)
+				minutesArray[i] = i.ToString("00");
+
+			minutesArray = new string[60];
+			for (var i = 0; i < 60; i++)
+				minutesArray[i] = i.ToString("00");
+		} // sctor
 	} // class PpsTimeInputManager
 
 	#endregion

@@ -27,6 +27,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -940,6 +941,211 @@ namespace TecWare.PPSn
 		{
 		}
 	} // class PpsUserException
+
+	#endregion
+
+	#region -- class PpsCircularView --------------------------------------------------
+
+	/// <summary>Ring list over a list.</summary>
+	public sealed class PpsCircularView : IList, INotifyCollectionChanged
+	{
+		/// <summary>Notify changed.</summary>
+		public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+		private readonly IList itemList;
+		private readonly int maxViewCount;
+
+		private int currentItemListCount = 0;
+		private int currentCount = 0;
+		private int currentMitte = 0;
+		private int currentPosition = 0;
+
+		/// <summary></summary>
+		/// <param name="itemList"></param>
+		/// <param name="maxViewCount"></param>
+		public PpsCircularView(IList itemList, int maxViewCount)
+		{
+			this.itemList = itemList;
+			this.maxViewCount = maxViewCount;
+			ResetList();
+
+			if (itemList is INotifyCollectionChanged collectionChanged)
+				collectionChanged.CollectionChanged += CollectionChanged_CollectionChanged;
+		} // ctor
+
+		private void CollectionChanged_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			switch (e.Action)
+			{
+				case NotifyCollectionChangedAction.Add:
+				case NotifyCollectionChangedAction.Remove:
+				case NotifyCollectionChangedAction.Reset:
+				case NotifyCollectionChangedAction.Move:
+					ResetList();
+					break;
+				case NotifyCollectionChangedAction.Replace:
+					var idx = GetRealIndex(e.NewStartingIndex);
+					if (idx >= 0 && idx < currentCount)
+						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, e.NewItems, e.OldItems, idx));
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		} // event CollectionChanged_CollectionChanged
+
+		private void ResetList()
+		{
+			currentItemListCount = itemList.Count;
+			currentCount = maxViewCount > currentItemListCount ? currentItemListCount : maxViewCount;
+			currentMitte = currentCount / 2;
+
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+		} // proc ResetList
+
+		/// <summary>Copy the items from the circular view.</summary>
+		/// <param name="array"></param>
+		/// <param name="index"></param>
+		public void CopyTo(Array array, int index)
+		{
+			var realIndex = GetRealIndex(0);
+			for (var i = 0; i < currentCount; i++)
+			{
+				array.SetValue(itemList[realIndex], index++);
+				if (realIndex >= currentItemListCount)
+					realIndex = 0;
+			}
+		} // proc CopyTo
+
+		/// <summary>Get the index in the circular view.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public int IndexOf(object value)
+		{
+			var virtualIndex = GetVirtualIndex(value);
+			return virtualIndex >= 0 && virtualIndex < currentCount
+				? virtualIndex
+				: -1;
+		} // func IndexOf
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int GetVirtualIndex(object value)
+		{
+			var realIndex = itemList.IndexOf(value);
+			var virtualIndex = realIndex - currentPosition + currentMitte;
+
+			if (virtualIndex < 0)
+				virtualIndex = currentItemListCount - virtualIndex;
+			else if (virtualIndex >= currentItemListCount)
+				virtualIndex = virtualIndex - currentItemListCount;
+			return virtualIndex;
+		} // func GetVirtualIndex
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int GetRealIndex(int virtualIndex)
+		{
+			var realIndex = currentPosition - currentMitte + virtualIndex;
+
+			if (realIndex < 0)
+				realIndex = currentItemListCount + realIndex;
+			else if (realIndex >= currentItemListCount)
+				realIndex = realIndex - currentItemListCount;
+			return realIndex;
+		} // func GetRealIndex
+
+		/// <summary>Is the item in the circular view.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public bool Contains(object value)
+			=> itemList.Contains(value);
+
+		/// <summary>Enumerate the visible items.</summary>
+		/// <returns></returns>
+		public IEnumerator GetEnumerator()
+		{
+			var realIndex = GetRealIndex(0);
+			for (var virtualIndex = 0; virtualIndex < currentCount; virtualIndex++)
+			{
+				yield return itemList[realIndex];
+
+				realIndex++;
+				if (realIndex >= currentItemListCount)
+					realIndex = 0;
+			}
+		} // func GetEnumerator
+
+		/// <summary>Move the view over the base list.</summary>
+		/// <param name="relative"></param>
+		public void Move(int relative)
+		{
+			var newPos = currentPosition + relative;
+
+			// move into view
+			while (newPos >= currentItemListCount)
+				newPos = newPos - currentItemListCount;
+			while (newPos < 0)
+				newPos = newPos + currentItemListCount;
+
+			// something changed
+			if (newPos == currentPosition)
+				return;
+
+			var oldIndex = GetRealIndex(0);
+			currentPosition = newPos;
+			var newIndex = GetRealIndex(0);
+
+			for (var i = 0; i < currentCount; i++)
+			{
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, itemList[newIndex], itemList[oldIndex], i));
+
+				if (++oldIndex >= currentItemListCount)
+					oldIndex = 0;
+				if (++newIndex >= currentItemListCount)
+					newIndex = 0;
+			}
+		} // proc Move
+
+		/// <summary>Move the base list to an object (the object will be the first).</summary>
+		/// <param name="value"></param>
+		public bool MoveTo(object value)
+		{
+			var realIndex = itemList.IndexOf(value);
+			if (realIndex > 0)
+			{
+				MoveTo(realIndex + currentMitte);
+				return true;
+			}
+			else
+				return false;
+		} // proc MoveTo
+
+		/// <summary>Make virtual index to the first.</summary>
+		/// <param name="virtualIndex"></param>
+		public void MoveTo(int virtualIndex)
+			=> Move(GetRealIndex(virtualIndex) - currentPosition);
+
+		int IList.Add(object value) => throw new NotSupportedException();
+		void IList.Clear() => throw new NotSupportedException();
+		void IList.Insert(int index, object value) => throw new NotSupportedException();
+		void IList.Remove(object value) => throw new NotSupportedException();
+		void IList.RemoveAt(int index) => throw new NotSupportedException();
+
+		/// <summary></summary>
+		public bool IsReadOnly => true;
+		/// <summary></summary>
+		public bool IsFixedSize => true;
+		/// <summary></summary>
+		public object SyncRoot => null;
+		/// <summary></summary>
+		public bool IsSynchronized => false;
+
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
+		public object this[int index] { get => itemList[GetRealIndex(index)]; set => throw new NotSupportedException(); }
+
+		/// <summary></summary>
+		public int Count => currentCount;
+	} // class PpsCircularView
 
 	#endregion
 }
