@@ -915,10 +915,9 @@ namespace TecWare.PPSn.Controls
 				|| properties.DataType == typeof(int)
 				|| properties.DataType == typeof(float)
 				|| properties.DataType == typeof(double)
-				|| properties.DataType == typeof(decimal))
+				|| properties.DataType == typeof(decimal)
+				|| properties.DataType == typeof(DateTime))
 				return CreateTextField(properties);
-			else if (properties.DataType == typeof(DateTime))
-				return CreateDateTimeField(properties);
 			else if (properties.DataType == typeof(bool))
 				return CreateCheckField(properties);
 			else if (properties.DataType == typeof(PpsMasterDataExtendedValue))
@@ -1029,6 +1028,10 @@ namespace TecWare.PPSn.Controls
 					PpsDataFieldFactory.SetNumericBinding(ui, txt, textBinding, false, 0);
 					inputType = PpsTextBoxInputType.Integer;
 					break;
+
+				case TypeCode.DateTime:
+					inputType = PpsTextBoxInputType.Date;
+					break;
 			}
 
 			if (properties.TryGetProperty<PpsTextBoxInputType>("InputType", out var tmpInputType))
@@ -1110,20 +1113,6 @@ namespace TecWare.PPSn.Controls
 
 			return combobox;
 		} // func CreateRelationField
-
-		[LuaMember]
-		private LuaWpfCreator CreateDateTimeField(IPpsDataFieldReadOnlyProperties properties)
-		{
-			dynamic ui = new LuaUI();
-			dynamic date = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.DatePicker));
-
-			date.SelectedDate = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
-			date.Style = Application.Current.TryFindResource("PpsDatePickerStyle");
-
-			SetTextFieldProperties((object)date, properties);
-
-			return date;
-		} // func CreateDateTimeField
 
 		[LuaMember]
 		private static LuaWpfCreator CreateComboField(IPpsDataFieldReadOnlyProperties properties)
