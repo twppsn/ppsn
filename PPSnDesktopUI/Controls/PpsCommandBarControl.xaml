@@ -73,9 +73,27 @@ specific language governing permissions and limitations under the Licence.
 							   Content="{Binding DisplayText}"
 							   ToolTip="{Binding Description}"
 							   GeometryName="{Binding Image}"
-							   Height="29"
+							   Height="27"
 							   Margin="12,0,0,0" />
 			</DataTemplate>
+
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey TransparentRectangle,{x:Null}}">
+				<Border Width="20" />
+			</DataTemplate>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey TransparentRectangle,{x:Type uiO:PpsUICommandButton}}">
+				<pps:PpsButton Command="{Binding Command}"
+							   CommandParameter="{Binding CommandParameter}"
+							   CommandTarget="{Binding CommandTarget}"
+							   Content="{Binding DisplayText}"
+							   ToolTip="{Binding Description}"
+							   GeometryName="{Binding Image}"
+							   IsTransparentRectangle="True"
+							   Height="27"
+							   Margin="12,0,0,0" />
+			</DataTemplate>
+
+
+
 		</Style.Resources>
 	</Style>
 </ResourceDictionary>

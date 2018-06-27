@@ -16,6 +16,7 @@ specific language governing permissions and limitations under the Licence.
  					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<SolidColorBrush x:Key="PpsButtonBackgroundBrush" Color="{DynamicResource PPSnAccentColor}" Opacity="0.11"/>
+	<SolidColorBrush x:Key="PpsButtonTransparentBorderBrush" Color="{DynamicResource PPSnActionButtonColor}" Opacity="0.4"/>
 
 	<Style TargetType="{x:Type pps:PpsButton}">
 		<Setter Property="Focusable" Value="False" />
@@ -26,7 +27,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="BorderBrush" Value="{StaticResource PpsButtonBackgroundBrush}" />
 		<Setter Property="HorizontalContentAlignment" Value="Center" />
 		<Setter Property="VerticalContentAlignment" Value="Center" />
-		<Setter Property="Padding" Value="6,0" />
+		<Setter Property="Padding" Value="3,0,6,0" />
 		<Setter Property="GeometrySize" Value="18" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="Template">
@@ -83,12 +84,30 @@ specific language governing permissions and limitations under the Licence.
 
 					<ControlTemplate.Triggers>
 						<Trigger Property="DisplayMode" Value="Rectangle">
-							<Setter Property="Focusable" Value="True" />
-							<Setter Property="Background" Value="{StaticResource PpsButtonBackgroundBrush}" />
 							<Setter Property="BorderThickness" Value="1" />
 							<Setter TargetName="InnerBorder" Property="Padding" Value="2,0,2,0" />
 							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="1" />
+							<Setter TargetName="ImageBox" Property="Margin" Value="3,0,0,0" />
 						</Trigger>
+
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="DisplayMode" Value="Rectangle" />
+								<Condition Property="IsTransparentRectangle" Value="False" />
+							</MultiTrigger.Conditions>
+							<Setter Property="Focusable" Value="True" />
+							<Setter Property="Background" Value="{StaticResource PpsButtonBackgroundBrush}" />
+						</MultiTrigger>
+
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="DisplayMode" Value="Rectangle" />
+								<Condition Property="IsTransparentRectangle" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter Property="Background" Value="Transparent" />
+							<Setter Property="BorderBrush" Value="{StaticResource PpsButtonTransparentBorderBrush}" />
+							<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}" />
+						</MultiTrigger>
 
 						<Trigger Property="DisplayMode" Value="Circle">
 							<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}"/>
@@ -105,6 +124,7 @@ specific language governing permissions and limitations under the Licence.
 
 						<Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
 							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
+							<Setter Property="Padding" Value="6,0" />
 						</Trigger>
 
 						<Trigger Property="IsEnabled" Value="False">
