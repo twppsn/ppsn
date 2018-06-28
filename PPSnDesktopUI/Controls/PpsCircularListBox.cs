@@ -47,14 +47,18 @@ namespace TecWare.PPSn.Controls
 		public PpsCircularListBox()
 		{
 			CommandBindings.Add(new CommandBinding(
-				ComponentCommands.ScrollByLine,
+				ComponentCommands.MoveDown,
 				(sender, e) =>
 				{
-					if (e.Parameter is int parm)
-					{
-						EnsureFocus();
-						circularListView.Move(parm);
-					}
+					circularListView.Move(1);
+				},
+				(sender, e) => e.CanExecute = circularListView != null)
+			);
+			CommandBindings.Add(new CommandBinding(
+				ComponentCommands.MoveUp,
+				(sender, e) =>
+				{
+					circularListView.Move(-1);
 				},
 				(sender, e) => e.CanExecute = circularListView != null)
 			);

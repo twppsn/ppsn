@@ -13,7 +13,6 @@ specific language governing permissions and limitations under the Licence.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					xmlns:sys="clr-namespace:System;assembly=mscorlib"
  					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style x:Key="PpsCircularListBoxItemStyle" TargetType="{x:Type ContentControl}">
@@ -75,20 +74,14 @@ specific language governing permissions and limitations under the Licence.
 						<Border x:Name="ItemsBorder" BorderBrush="{DynamicResource PPSnPopUpBorderBrush}" BorderThickness="1" SnapsToDevicePixels="True">
 							<ItemsPresenter x:Name="Items" VerticalAlignment="Center"/>
 						</Border>
-						<RepeatButton x:Name="PreviousButton" Command="{x:Static ComponentCommands.ScrollByLine}" Margin="1,1,1,0" VerticalAlignment="Top" Visibility="Collapsed">
-							<RepeatButton.CommandParameter>
-								<sys:Int32>-1</sys:Int32>
-							</RepeatButton.CommandParameter>
+						<RepeatButton x:Name="PreviousButton" Command="{x:Static ComponentCommands.MoveUp}" Margin="1,1,1,0" VerticalAlignment="Top" Visibility="Collapsed">
 							<RepeatButton.Content>
 								<pps:PpsGeometryImage GeometryName="chevronUpThin" GeometryCircled="False"
 													  Foreground="{TemplateBinding Foreground}"
 													  Width="16" Height="16" />
 							</RepeatButton.Content>
 						</RepeatButton>
-						<RepeatButton x:Name="NextButton" Command="{x:Static ComponentCommands.ScrollByLine}" Margin="1,0,1,1" VerticalAlignment="Bottom" Visibility="Collapsed">
-							<RepeatButton.CommandParameter>
-								<sys:Int32>1</sys:Int32>
-							</RepeatButton.CommandParameter>
+						<RepeatButton x:Name="NextButton" Command="{x:Static ComponentCommands.MoveDown}" Margin="1,0,1,1" VerticalAlignment="Bottom" Visibility="Collapsed">
 							<RepeatButton.Content>
 								<pps:PpsGeometryImage GeometryName="chevronDownThin" GeometryCircled="False"
 													  Foreground="{TemplateBinding Foreground}"
