@@ -50,7 +50,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsTextBox}">
-					<Border x:Name="border"
+					<Border x:Name="RootBorder"
 							BorderBrush="{TemplateBinding BorderBrush}"
 							BorderThickness="{TemplateBinding BorderThickness}"
 							Background="{TemplateBinding Background}"
@@ -58,26 +58,27 @@ specific language governing permissions and limitations under the Licence.
 						<Grid>
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition />
-								<ColumnDefinition Width="21" />
-								<ColumnDefinition Width="27" />
+								<ColumnDefinition Width="23" />
+								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 							<Button x:Name="ClearButton"
 									Grid.Column="1"
-									Height="21"
-									Padding="1"
+									Padding="1,1,1,1"
 									VerticalAlignment="Center"
 									Foreground="{TemplateBinding Foreground}"
 									Visibility="Collapsed"
 									Command="{x:Static pps:PpsControlCommands.ClearCommand}"
 									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
 							<pps:PpsButton x:Name="DropDownButton"
+										   Command="{x:Static pps:PpsTextBox.DropDownCommand}"
 										   DisplayMode="Image"
-										   GeometryName="image"
+										   GeometryName="comboxBoxChevron"
+										   GeometrySize="20"
 										   Grid.Column="2"
+										   Width="23"
+										   SnapsToDevicePixels="False"
 										   Foreground="{TemplateBinding Foreground}"
-										   Visibility="Collapsed"
-										   Command="{x:Static pps:PpsTextBox.DropDownCommand}" />
-
+										   Visibility="Collapsed" />
 							<ScrollViewer x:Name="PART_ContentHost"
 										  Focusable="False"
 										  HorizontalScrollBarVisibility="Hidden"
@@ -100,8 +101,18 @@ specific language governing permissions and limitations under the Licence.
 									 Cursor="IBeam"
 									 Visibility="Hidden"
 									 Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsMandatoryFieldInfoStyle}}" />
+
+							<Popup PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}" Placement="Bottom" VerticalOffset="4" HorizontalOffset="8"
+								   IsOpen="{Binding HasInputError, RelativeSource={RelativeSource TemplatedParent},Mode=OneWay}" StaysOpen="False"
+								   AllowsTransparency="True" PopupAnimation="Fade" Focusable="False">
+								<Border BorderThickness="1" BorderBrush="{x:Static SystemColors.InfoTextBrush}"
+										TextElement.Foreground="{x:Static SystemColors.InfoTextBrush}" Background="{x:Static SystemColors.InfoBrush}" Padding="8,4">
+									<ContentPresenter Content="{Binding InputErrorMessage,RelativeSource={RelativeSource TemplatedParent},Mode=OneWay}" />
+								</Border>
+							</Popup>
 						</Grid>
 					</Border>
+							
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsEnabled" Value="False">
 							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
@@ -114,12 +125,12 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="ClearButton" Property="VerticalAlignment" Value="Top"/>
 						</Trigger>
 
-						<Trigger Property="IsKeyboardFocused" Value="True">
-							<Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+						<Trigger Property="IsKeyboardFocusWithin" Value="True">
+							<Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 							<Setter Property="Validation.ErrorTemplate" Value="{x:Null}" />
 						</Trigger>
 
-						<Trigger Property="HasDropDownSource" Value="True">
+						<Trigger SourceName="DropDownButton" Property="IsEnabled" Value="True">
 							<Setter TargetName="DropDownButton" Property="Visibility" Value="Visible" />
 						</Trigger>
 
@@ -130,8 +141,6 @@ specific language governing permissions and limitations under the Licence.
 							</MultiTrigger.Conditions>
 							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible" />
 						</MultiTrigger>
-						
-						
 
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
@@ -161,17 +170,5 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
-
-	<!--ToDo-->
-	
-	<!--<Popup Width="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
-							   AllowsTransparency="True"
-							   Margin="0,-1,0,0"
-							   PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
-							   IsOpen="{Binding HasError, UpdateSourceTrigger=PropertyChanged, RelativeSource={RelativeSource TemplatedParent}}">
-		<Border BorderThickness="1 0 1 1" BorderBrush="Black">
-			<Label Padding="3,1,3,1" Background="AntiqueWhite" Content="{Binding ErrorMessage, RelativeSource={RelativeSource TemplatedParent}}"/>
-		</Border>
-	</Popup>-->
 
 </ResourceDictionary>
