@@ -1,0 +1,163 @@
+﻿<!--
+Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+European Commission - subsequent versions of the EUPL(the "Licence"); You may
+not use this work except in compliance with the Licence.
+
+You may obtain a copy of the Licence at:
+http://ec.europa.eu/idabc/eupl
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+specific language governing permissions and limitations under the Licence.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:sys="clr-namespace:System;assembly=mscorlib"
+ 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
+
+	<Style x:Key="PpsCircularListBoxItemStyle" TargetType="{x:Type ContentControl}">
+		<Setter Property="Focusable" Value="False" />
+		<Setter Property="FontSize" Value="16" />
+		<Setter Property="MinWidth" Value="120" />
+		<Setter Property="Height" Value="40" />
+		<Setter Property="Control.Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ContentControl}">
+					<Border x:Name="PART_ItemBorder" Background="Transparent" SnapsToDevicePixels="True">
+						<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="true">
+							<Setter Property="TextElement.Foreground" Value="{DynamicResource PPSnMarkerBrush}" />
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style TargetType="{x:Type pps:PpsCircularListBox}">
+		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsCircularListBoxItemStyle}" />
+		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type pps:PpsCircularListBox}">
+					<ControlTemplate.Resources>
+						<Style TargetType="{x:Type RepeatButton}">
+							<Setter Property="Background" Value="LightGray" />
+							<Setter Property="Height" Value="22" />
+							<Setter Property="Focusable" Value="False" />
+							<Setter Property="Template">
+								<Setter.Value>
+									<ControlTemplate TargetType="{x:Type RepeatButton}">
+										<Grid Background="{TemplateBinding Background}">
+											<Border x:Name="ContentBorder" Background="Transparent">
+												<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+											</Border>
+										</Grid>
+										<ControlTemplate.Triggers>
+											<Trigger Property="IsMouseOver" Value="True">
+												<Setter TargetName="ContentBorder" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+											</Trigger>
+											<Trigger Property="IsPressed" Value="True">
+												<Setter TargetName="ContentBorder" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}" />
+											</Trigger>
+										</ControlTemplate.Triggers>
+									</ControlTemplate>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</ControlTemplate.Resources>
+
+					<Grid>
+						<Border x:Name="ItemsBorder" BorderBrush="{DynamicResource PPSnPopUpBorderBrush}" BorderThickness="1" SnapsToDevicePixels="True">
+							<ItemsPresenter x:Name="Items" VerticalAlignment="Center"/>
+						</Border>
+						<RepeatButton x:Name="PreviousButton" Command="{x:Static ComponentCommands.ScrollByLine}" Margin="1,1,1,0" VerticalAlignment="Top" Visibility="Collapsed">
+							<RepeatButton.CommandParameter>
+								<sys:Int32>-1</sys:Int32>
+							</RepeatButton.CommandParameter>
+							<RepeatButton.Content>
+								<pps:PpsGeometryImage GeometryName="chevronUpThin" GeometryCircled="False"
+													  Foreground="{TemplateBinding Foreground}"
+													  Width="16" Height="16" />
+							</RepeatButton.Content>
+						</RepeatButton>
+						<RepeatButton x:Name="NextButton" Command="{x:Static ComponentCommands.ScrollByLine}" Margin="1,0,1,1" VerticalAlignment="Bottom" Visibility="Collapsed">
+							<RepeatButton.CommandParameter>
+								<sys:Int32>1</sys:Int32>
+							</RepeatButton.CommandParameter>
+							<RepeatButton.Content>
+								<pps:PpsGeometryImage GeometryName="chevronDownThin" GeometryCircled="False"
+													  Foreground="{TemplateBinding Foreground}"
+													  Width="16" Height="16" />
+							</RepeatButton.Content>
+						</RepeatButton>
+					</Grid>
+
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsFocused" Value="True">
+							<Setter TargetName="ItemsBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+						</Trigger>
+						<Trigger Property="HasTwoItems" Value="True">
+							<Setter TargetName="Items" Property="Margin" Value="0,0,0,40" />
+						</Trigger>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter TargetName="PreviousButton" Property="Visibility" Value="Visible" />
+							<Setter TargetName="NextButton" Property="Visibility" Value="Visible" />
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style TargetType="{x:Type pps:PpsMultiCircularListBox}">
+		<Setter Property="Focusable" Value="False" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type pps:PpsMultiCircularListBox}">
+					<Grid Background="{DynamicResource PPSnPopUpBackgroundBrush}">
+						<Grid.RowDefinitions>
+							<RowDefinition />
+							<RowDefinition Height="40" />
+						</Grid.RowDefinitions>
+						<ItemsControl ItemsSource="{Binding Parts, RelativeSource={RelativeSource TemplatedParent}}" Focusable="False">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<StackPanel IsItemsHost="True" Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<pps:PpsCircularListBox List="{Binding}" />
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+						<Border Height="40" Background="{TemplateBinding Foreground}" VerticalAlignment="Center" Opacity=".2" IsHitTestVisible="False" />
+						<Border Grid.Row="1" BorderThickness="1,0,1,1" BorderBrush="{DynamicResource PPSnPopUpBorderBrush}">
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition />
+									<ColumnDefinition />
+								</Grid.ColumnDefinitions>
+								<pps:PpsButton Grid.Column="0" Command="{x:Static ApplicationCommands.Save}"
+											   DisplayMode="Image" GeometryName="checked" Foreground="{TemplateBinding Foreground}" />
+								<pps:PpsButton Grid.Column="1" Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}"
+											   DisplayMode="Image" GeometryName="windowClose" Foreground="{TemplateBinding Foreground}" />
+							</Grid>
+						</Border>
+						<Grid.InputBindings>
+							<KeyBinding Key="Return" Command="{x:Static ApplicationCommands.Save}" />
+							<KeyBinding Key="Esc" Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}" />
+						</Grid.InputBindings>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+</ResourceDictionary>

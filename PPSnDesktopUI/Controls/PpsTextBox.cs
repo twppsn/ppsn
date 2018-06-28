@@ -323,7 +323,7 @@ namespace TecWare.PPSn.Controls
 					OnPreviewTextChanged(e, "\x7F"); // Delete
 					break;
 				default:
-					inputManager.PreviewKeyDown(e);
+					inputManager?.PreviewKeyDown(e);
 					break;
 			}
 
@@ -413,7 +413,7 @@ namespace TecWare.PPSn.Controls
 					return;
 
 				var lists = dropDownSource.GetDropLists();
-				
+
 				var listControl = new PpsMultiCircularListBox
 				{
 					ListSource = lists
@@ -441,6 +441,7 @@ namespace TecWare.PPSn.Controls
 				// show popup
 				popup.Placement = PlacementMode.Bottom;
 				popup.PlacementTarget = this;
+				popup.StaysOpen = false;
 				popup.IsOpen = true;
 
 				e.Handled = true;

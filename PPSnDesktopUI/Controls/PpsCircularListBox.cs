@@ -17,9 +17,11 @@ using System;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace TecWare.PPSn.Controls
@@ -45,7 +47,7 @@ namespace TecWare.PPSn.Controls
 		public PpsCircularListBox()
 		{
 			CommandBindings.Add(new CommandBinding(
-				ApplicationCommands.NotACommand,
+				ComponentCommands.ScrollByLine,
 				(sender, e) =>
 				{
 					if (e.Parameter is int parm)
@@ -214,10 +216,10 @@ namespace TecWare.PPSn.Controls
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary></summary>
-		public event EventHandler SelectedItemsChanged { add => AddHandler(SelectedItemsChangedEvent, value); remove => RemoveHandler(SelectedItemsChangedEvent, value); }
+		public event RoutedEventHandler SelectedItemsChanged { add => AddHandler(SelectedItemsChangedEvent, value); remove => RemoveHandler(SelectedItemsChangedEvent, value); }
 
 		private readonly ObservableCollection<IList> parts = new ObservableCollection<IList>();
-		
+
 		/// <summary></summary>
 		public PpsMultiCircularListBox()
 		{
@@ -233,9 +235,7 @@ namespace TecWare.PPSn.Controls
 		{
 			parts.Clear();
 
-			if (newValue is IList l)
-				parts.Add(l);
-			if(newValue is IEnumerable e)
+			if (newValue is IEnumerable e)
 			{
 				foreach (var c in e)
 					parts.Add((IList)c);
@@ -244,6 +244,28 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Access parts</summary>
 		public IList Parts => parts;
+
+		#region TEST
+
+		//private readonly ObservableCollection<PpsCircularListBox> parts = new ObservableCollection<PpsCircularListBox>();
+
+		///// <summary></summary>
+		//protected virtual void OnListSourceChanged(object newValue, object oldValue)
+		//{
+		//	if (newValue is IEnumerable e)
+		//	{
+		//		foreach (var c in e)
+		//		{
+		//			var ctl = new PpsCircularListBox();
+		//			ctl.Initialize((IList)c, ListViewCount);
+		//			parts.Add(ctl);
+		//		}
+		//	}
+		//}
+		///// <summary>Visible list items.</summary>
+		//public ObservableCollection<PpsCircularListBox> Parts => parts;
+
+		#endregion
 
 		/// <summary>Visible list items.</summary>
 		public int ListViewCount { get => (int)GetValue(ListViewCountProperty); set => SetValue(ListViewCountProperty, value); }

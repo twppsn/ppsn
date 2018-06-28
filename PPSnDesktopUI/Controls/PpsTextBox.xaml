@@ -59,6 +59,7 @@ specific language governing permissions and limitations under the Licence.
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition />
 								<ColumnDefinition Width="21" />
+								<ColumnDefinition Width="27" />
 							</Grid.ColumnDefinitions>
 							<Button x:Name="ClearButton"
 									Grid.Column="1"
@@ -69,6 +70,14 @@ specific language governing permissions and limitations under the Licence.
 									Visibility="Collapsed"
 									Command="{x:Static pps:PpsControlCommands.ClearCommand}"
 									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
+							<pps:PpsButton x:Name="DropDownButton"
+										   DisplayMode="Image"
+										   GeometryName="image"
+										   Grid.Column="2"
+										   Foreground="{TemplateBinding Foreground}"
+										   Visibility="Collapsed"
+										   Command="{x:Static pps:PpsTextBox.DropDownCommand}" />
+
 							<ScrollViewer x:Name="PART_ContentHost"
 										  Focusable="False"
 										  HorizontalScrollBarVisibility="Hidden"
@@ -110,6 +119,10 @@ specific language governing permissions and limitations under the Licence.
 							<Setter Property="Validation.ErrorTemplate" Value="{x:Null}" />
 						</Trigger>
 
+						<Trigger Property="HasDropDownSource" Value="True">
+							<Setter TargetName="DropDownButton" Property="Visibility" Value="Visible" />
+						</Trigger>
+
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="IsKeyboardFocused" Value="True" />
@@ -117,6 +130,8 @@ specific language governing permissions and limitations under the Licence.
 							</MultiTrigger.Conditions>
 							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible" />
 						</MultiTrigger>
+						
+						
 
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
