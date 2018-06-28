@@ -482,12 +482,13 @@ namespace TecWare.PPSn
 	/// <summary>Base class for application data. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
 	/// engine.</summary>
-	public partial class PpsEnvironment : LuaGlobalPortable, IPpsShell, IServiceProvider, IDisposable
+	public partial class PpsEnvironment : LuaTable, IPpsShell, IServiceProvider, IDisposable
 	{
 		private readonly int environmentId;             // unique id of the environment
 		private readonly PpsEnvironmentInfo info;       // source information of the environment
 		private readonly NetworkCredential userInfo;    // currently credentials of the user
 		private readonly CancellationTokenSource environmentDisposing;
+		private readonly LuaGlobalPortable luaGlobal;
 
 		private long userId = -1;
 		private readonly DirectoryInfo localDirectory = null;   // local directory for the user data
@@ -505,11 +506,11 @@ namespace TecWare.PPSn
 		/// <param name="userInfo"></param>
 		/// <param name="mainResources"></param>
 		public PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, ResourceDictionary mainResources)
-			: base(new Lua())
 		{
 			this.info = info ?? throw new ArgumentNullException("info");
 			this.userInfo = userInfo ?? throw new ArgumentNullException("userInfo");
 			this.environmentDisposing = new CancellationTokenSource();
+			this.luaGlobal = new LuaGlobalPortable(new Lua());
 
 			this.webProxy = new PpsWebProxy(this);
 

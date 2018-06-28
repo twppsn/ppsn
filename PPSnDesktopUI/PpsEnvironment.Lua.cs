@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -1235,7 +1236,47 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public Task<PpsObjectDataSet> PullRevisionAsync(PpsObject obj, long revId)
 			=> obj.PullRevisionAsync<PpsObjectDataSet>(revId);
-		
+
+		/// <summary></summary>
+		/// <param name="reportName"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public async Task<string> RunServerReportAsync(string reportName, LuaTable arguments)
+		{
+			var requestUrl = new StringBuilder("/?action=report&name=");
+			requestUrl.Append(Uri.EscapeUriString(reportName));
+
+			if (arguments != null)
+			{
+				foreach (var m in arguments.Members)
+				{
+					requestUrl.Append('&')
+						.Append(Uri.EscapeUriString(m.Key))
+						.Append('=')
+						.Append(Uri.EscapeUriString(m.Value.ChangeType<string>()));
+				}
+			}
+
+			string targetFileName;
+
+			using (var src = await Request.GetStreamAsync(requestUrl.ToString(), MimeTypes.Application.Pdf))
+			{
+				// download file
+				var tempFileName = Path.GetTempFileName();
+				targetFileName = Path.ChangeExtension(tempFileName, ".pdf");
+				using (var dst = new FileStream(targetFileName, FileMode.CreateNew))
+					await src.CopyToAsync(dst);
+
+				File.Delete(tempFileName);
+			}
+
+			// show file
+			Process.Start(targetFileName);
+
+			return targetFileName;
+		} // func RunServerReportAsync
+
 		/// <summary></summary>
 		/// <param name="frame"></param>
 		/// <param name="message"></param>
@@ -1249,12 +1290,21 @@ namespace TecWare.PPSn
 				return null;
 		} // proc BlockAllUI
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
+		protected override object OnIndex(object key) 
+			=> base.OnIndex(key) ?? luaGlobal.GetValue(key);
+
 		/// <summary>Lua ui-wpf framwework.</summary>
 		[LuaMember("UI")]
 		public LuaUI LuaUI { get; } = new LuaUI();
 		/// <summary>Field factory for controls</summary>
 		[LuaMember]
 		public LuaTable FieldFactory => fieldFactory;
+
+		/// <summary>Assess lua</summary>
+		public Lua Lua => luaGlobal.Lua;
 
 		#endregion
 	} // class PpsEnvironment

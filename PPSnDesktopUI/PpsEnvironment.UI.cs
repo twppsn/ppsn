@@ -70,13 +70,6 @@ namespace TecWare.PPSn
 		private readonly List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
 		private readonly PreProcessInputEventHandler preProcessInputEventHandler;
 
-		/// <summary></summary>
-		/// <param name="lua"></param>
-		public PpsEnvironment(Lua lua)
-			: base(lua)
-		{
-		} // ctor
-
 		private async Task<Tuple<XDocument, DateTime>> GetXmlDocumentAsync(string path, bool isXaml, bool isOptional)
 		{
 			try
