@@ -212,6 +212,7 @@ specific language governing permissions and limitations under the Licence.
 											  Foreground="{TemplateBinding Foreground}"
 											  Width="20"
 											  Padding="{TemplateBinding Padding}"
+											  SnapsToDevicePixels="False"
 											  Margin="0,0,1,0"
 											  Opacity=".5" />
 					</Grid>
