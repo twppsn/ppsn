@@ -126,7 +126,7 @@ specific language governing permissions and limitations under the Licence.
 							</ItemsControl.ItemsPanel>
 							<ItemsControl.ItemTemplate>
 								<DataTemplate>
-									<pps:PpsCircularListBox List="{Binding}" ListViewCount="{Binding ListViewCount,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsMultiCircularListBox}}}"/>
+									<pps:PpsCircularListBox List="{Binding List}" SelectedItem="{Binding SelectedItem,Mode=TwoWay}" ListViewCount="{Binding ListViewCount,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsMultiCircularListBox}}}"/>
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>

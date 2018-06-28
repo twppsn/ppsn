@@ -72,12 +72,12 @@ namespace TecWare.PPSn.UI
 
 			CommandBindings.Add(
 				new CommandBinding(ExecuteCommandCommand,
-					(sender, e) =>
+					async (sender, e) =>
 					{
 						try
 						{
-							var ret = Environment.DoChunk((string)e.Parameter, "DebugCommand", null);
-							if (String.IsNullOrEmpty(ret.ToString()))
+							var ret = (await Environment.CompileLambdaAsync<Func<LuaResult>>((string)e.Parameter, "DebugCommand.lua", true))();
+							if (ret.Count == 0)
 								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" executed without result.");
 							else
 								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" returned: \"{ret.ToString()}\".");
@@ -87,7 +87,7 @@ namespace TecWare.PPSn.UI
 							Environment.Traces.AppendException(ex, $"Command \"{(string)e.Parameter}\" threw an Exception.");
 						}
 					},
-					(sender, e)=>e.CanExecute=!String.IsNullOrWhiteSpace((string)e.Parameter)
+					(sender, e) => e.CanExecute = !String.IsNullOrWhiteSpace((string)e.Parameter)
 				)
 			);
 			CommandBindings.Add(

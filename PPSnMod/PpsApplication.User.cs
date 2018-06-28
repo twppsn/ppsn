@@ -350,8 +350,8 @@ namespace TecWare.PPSn.Server
 				if (!currentIdentity.IsAuthenticated)
 					throw new ArgumentException("Identity is not verified.", nameof(currentIdentity));
 
-				if (currentIdentity is ClaimsIdentity c) // create a copy
-					currentIdentity = c.Clone();
+				if (this.currentIdentity is ClaimsIdentity c) // create a copy
+					this.currentIdentity = c.Clone();
 			} // ctor
 
 			public void Dispose()

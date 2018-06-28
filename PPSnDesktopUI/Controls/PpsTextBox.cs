@@ -432,6 +432,7 @@ namespace TecWare.PPSn.Controls
 						(sender, e2) =>
 						{
 							dropDownSource.SelectedItems = listControl.SelectedItems;
+							popup.IsOpen = false;
 							e2.Handled = true;
 						}
 					)
@@ -1205,14 +1206,15 @@ namespace TecWare.PPSn.Controls
 			var year = Int32.Parse((string)selectedItems[2]);
 			var days = DateTime.DaysInMonth(year, month);
 
-			while (days > dayList.Count)
-				dayList.RemoveAt(dayList.Count - 1);
 			while (days < dayList.Count)
+				dayList.RemoveAt(dayList.Count - 1);
+			while (days >= dayList.Count)
 				dayList.Add(dayInput[dayList.Count - 1]);
 		} // proc OnSelectedItems
 
 		public object[] GetDropLists()
 		{
+			OnSelectedItemsChanged(SelectedItems);
 			return new object[]
 			{
 				dayList,
@@ -1240,7 +1242,7 @@ namespace TecWare.PPSn.Controls
 				{
 					if (value != null)
 					{
-						ClearText(String.Format("{0}.{0}.{0}", value[0], value[1], value[1]));
+						ClearText(String.Format("{0}.{1}.{2}", value[0], value[1], value[2]));
 						TextBox.SelectAll();
 					}
 					else
@@ -1260,7 +1262,7 @@ namespace TecWare.PPSn.Controls
 		static PpsDateInputManager()
 		{
 			yearInput = new string[41];
-			for (var i = 0; i < 40; i++)
+			for (var i = 0; i < 41; i++)
 				yearInput[i] = (1990 + i).ToString("0000");
 			monthInput = new string[12];
 			for (var i = 0; i < 12; i++)

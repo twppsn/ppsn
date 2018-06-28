@@ -995,9 +995,14 @@ namespace TecWare.PPSn
 
 		private void ResetList()
 		{
+			var oldSelectedIndex = GetRealIndex(currentMitte);
+
 			currentItemListCount = itemList.Count;
 			currentCount = maxViewCount > currentItemListCount ? currentItemListCount : maxViewCount;
 			currentMitte = currentCount / 2;
+
+			if (oldSelectedIndex >= currentItemListCount)
+				Move(currentItemListCount - oldSelectedIndex - 1);
 
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 		} // proc ResetList
@@ -1077,6 +1082,9 @@ namespace TecWare.PPSn
 		/// <param name="relative"></param>
 		public void Move(int relative)
 		{
+			if (relative == 0)
+				return;
+
 			var newPos = currentPosition + relative;
 
 			// move into view
@@ -1111,7 +1119,7 @@ namespace TecWare.PPSn
 			var realIndex = itemList.IndexOf(value);
 			if (realIndex > 0)
 			{
-				MoveTo(realIndex + currentMitte);
+				Move(realIndex - GetRealIndex(currentMitte));
 				return true;
 			}
 			else
@@ -1145,6 +1153,8 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		public int Count => currentCount;
+		/// <summary></summary>
+		public object CurrentItem => this[currentMitte];
 	} // class PpsCircularView
 
 	#endregion

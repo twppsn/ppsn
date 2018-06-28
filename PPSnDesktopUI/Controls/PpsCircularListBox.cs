@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -48,18 +49,12 @@ namespace TecWare.PPSn.Controls
 		{
 			CommandBindings.Add(new CommandBinding(
 				ComponentCommands.MoveDown,
-				(sender, e) =>
-				{
-					circularListView.Move(1);
-				},
+				(sender, e) => circularListView.Move(1),
 				(sender, e) => e.CanExecute = circularListView != null)
 			);
 			CommandBindings.Add(new CommandBinding(
 				ComponentCommands.MoveUp,
-				(sender, e) =>
-				{
-					circularListView.Move(-1);
-				},
+				(sender, e) => circularListView.Move(-1),
 				(sender, e) => e.CanExecute = circularListView != null)
 			);
 		} // ctor
@@ -79,8 +74,13 @@ namespace TecWare.PPSn.Controls
 		private void Initialize(IList items, int listViewCount)
 		{
 			circularListView = new PpsCircularView(items, listViewCount);
+			circularListView.CollectionChanged += CollectionChanged_CollectionChanged;
 			if (items.Count == 2)
 				HasTwoItems = true;
+
+			if (this.SelectedItem != null)
+				circularListView.MoveTo(this.SelectedItem);
+
 			ItemsSource = circularListView;
 		} // proc Initialize
 		
@@ -93,7 +93,8 @@ namespace TecWare.PPSn.Controls
 				case NotifyCollectionChangedAction.Reset:
 				case NotifyCollectionChangedAction.Move:
 				case NotifyCollectionChangedAction.Replace:
-					SelectedItem = circularListView.Count > 0 ? circularListView[0] : null;
+					if (e.NewStartingIndex == 0)
+						SelectedItem = circularListView.CurrentItem;
 					break;
 				default:
 					throw new ArgumentOutOfRangeException();
@@ -214,23 +215,110 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty ListViewCountProperty = PpsCircularListBox.ListViewCountProperty.AddOwner(typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(9));
 		public static readonly DependencyProperty ListSourceProperty = DependencyProperty.Register(nameof(ListSource), typeof(object), typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnListSourceChanged)));
-		public static readonly DependencyProperty SelectedItemsProperty = DependencyProperty.Register(nameof(SelectedItems), typeof(object[]), typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty SelectedItemsProperty = DependencyProperty.Register(nameof(SelectedItems), typeof(object[]), typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSelectedItemsChanged), new CoerceValueCallback(OnCoerceValue)));
 
 		public static readonly RoutedEvent SelectedItemsChangedEvent = EventManager.RegisterRoutedEvent(nameof(SelectedItemsChanged), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(PpsMultiCircularListBox));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		/// <summary></summary>
-		public event RoutedEventHandler SelectedItemsChanged { add => AddHandler(SelectedItemsChangedEvent, value); remove => RemoveHandler(SelectedItemsChangedEvent, value); }
+		#region -- class Item ---------------------------------------------------------
 
-		private readonly ObservableCollection<IList> parts = new ObservableCollection<IList>();
+		/// <summary></summary>
+		public sealed class Item : INotifyPropertyChanged
+		{
+			/// <summary></summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+
+			private readonly PpsMultiCircularListBox owner;
+			private readonly int index;
+
+			private readonly IList list;
+
+			internal Item(PpsMultiCircularListBox owner, int index, IList list)
+			{
+				this.owner = owner;
+				this.index = index;
+				this.list = list;
+			} // ctor
+
+			private void OnPropertyChanged(string propertyName)
+				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+			internal void RaiseSelectionChanged(object newValue, object oldValue)
+			{
+				if (!Object.Equals(newValue, oldValue))
+					OnPropertyChanged(nameof(SelectedItem));
+			} // proc RaiseSelectionChanged
+
+			/// <summary></summary>
+			public object SelectedItem
+			{
+				get => GetIndexSafe(owner.SelectedItems, index);
+				set => owner.UpdateSelectedItems(value, index);
+			} // prop SelectedItem
+			
+			/// <summary></summary>
+			public IList List => list;
+		} // class Item
+
+		#endregion
+		
+		private readonly ObservableCollection<Item> parts = new ObservableCollection<Item>();
 
 		/// <summary></summary>
 		public PpsMultiCircularListBox()
 		{
 		} // ctor
-		
+
 		private static void OnListSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsMultiCircularListBox)d).OnListSourceChanged(e.NewValue, e.OldValue);
+
+		private static object OnCoerceValue(DependencyObject d, object baseValue)
+			=> ((PpsMultiCircularListBox)d).OnCoerceValue(baseValue);
+
+		private static void OnSelectedItemsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsMultiCircularListBox)d).OnSelectedItemsChanged((object[])e.NewValue, (object[])e.OldValue);
+
+		private static object GetIndexSafe(object[] values, int index)
+			=> values != null && index >= 0 && index < values.Length ? values[index] : null;
+
+		private object OnCoerceValue(object baseValue)
+		{
+			if (baseValue != null && baseValue is object[] values)
+			{
+				if (values.Length == parts.Count)
+					return values;
+				else
+				{
+					var tmp = new object[parts.Count];
+					for (var i = 0; i < tmp.Length; i++)
+						tmp[i] = GetIndexSafe(values, i);
+					return tmp;
+				}
+			}
+			else
+				return new object[parts.Count];
+		} // func OnCoerceValue
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnSelectedItemsChanged(object[] newValue, object[] oldValue)
+		{
+			for (var i = 0; i < parts.Count; i++)
+				parts[i].RaiseSelectionChanged(GetIndexSafe(newValue, i), GetIndexSafe(oldValue, i));
+			
+			RaiseEvent(new RoutedEventArgs(SelectedItemsChangedEvent, this));
+		} // proc OnSelectedItems
+
+		private void UpdateSelectedItems(object newValue, int index)
+		{
+			var v = SelectedItems[index];
+			if (!Equals(v, newValue))
+			{
+				SelectedItems[index] = newValue;
+				RaiseEvent(new RoutedEventArgs(SelectedItemsChangedEvent, this));
+			}
+		} // proc UpdateSelectedItems
 
 		/// <summary></summary>
 		/// <param name="newValue"></param>
@@ -241,35 +329,14 @@ namespace TecWare.PPSn.Controls
 
 			if (newValue is IEnumerable e)
 			{
+				var i = 0;
 				foreach (var c in e)
-					parts.Add((IList)c);
+					parts.Add(new Item(this, i++, (IList)c));
 			}
 		} // proc OnListSourceChanged
 
 		/// <summary>Access parts</summary>
 		public IList Parts => parts;
-
-		#region TEST
-
-		//private readonly ObservableCollection<PpsCircularListBox> parts = new ObservableCollection<PpsCircularListBox>();
-
-		///// <summary></summary>
-		//protected virtual void OnListSourceChanged(object newValue, object oldValue)
-		//{
-		//	if (newValue is IEnumerable e)
-		//	{
-		//		foreach (var c in e)
-		//		{
-		//			var ctl = new PpsCircularListBox();
-		//			ctl.Initialize((IList)c, ListViewCount);
-		//			parts.Add(ctl);
-		//		}
-		//	}
-		//}
-		///// <summary>Visible list items.</summary>
-		//public ObservableCollection<PpsCircularListBox> Parts => parts;
-
-		#endregion
 
 		/// <summary>Visible list items.</summary>
 		public int ListViewCount { get => (int)GetValue(ListViewCountProperty); set => SetValue(ListViewCountProperty, value); }
@@ -277,6 +344,9 @@ namespace TecWare.PPSn.Controls
 		public object ListSource { get => GetValue(ListSourceProperty); set => SetValue(ListSourceProperty, value); }
 		/// <summary></summary>
 		public object[] SelectedItems { get => (object[])GetValue(SelectedItemsProperty); set => SetValue(SelectedItemsProperty, value); }
+
+		/// <summary></summary>
+		public event RoutedEventHandler SelectedItemsChanged { add => AddHandler(SelectedItemsChangedEvent, value); remove => RemoveHandler(SelectedItemsChangedEvent, value); }
 
 		static PpsMultiCircularListBox()
 		{

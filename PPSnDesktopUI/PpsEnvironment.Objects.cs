@@ -2584,7 +2584,7 @@ namespace TecWare.PPSn
 		private readonly PpsObjectLinks links;              // linked objects
 
 		private bool isDirty = false;
-		private object masterRowEvent = null;
+		private readonly object masterRowEvent = null;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
