@@ -1002,7 +1002,7 @@ namespace TecWare.PPSn
 			currentMitte = currentCount / 2;
 
 			if (oldSelectedIndex >= currentItemListCount)
-				Move(currentItemListCount - oldSelectedIndex - 1);
+				Move(currentItemListCount - oldSelectedIndex - 1, false);
 
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 		} // proc ResetList
