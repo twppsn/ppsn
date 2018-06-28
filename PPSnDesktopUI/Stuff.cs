@@ -1080,7 +1080,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Move the view over the base list.</summary>
 		/// <param name="relative"></param>
-		public void Move(int relative)
+		/// <param name="notifyChanges"></param>
+		public void Move(int relative, bool notifyChanges = true)
 		{
 			if (relative == 0)
 				return;
@@ -1103,7 +1104,8 @@ namespace TecWare.PPSn
 
 			for (var i = 0; i < currentCount; i++)
 			{
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, itemList[newIndex], itemList[oldIndex], i));
+				if (notifyChanges)
+					CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, itemList[newIndex], itemList[oldIndex], i));
 
 				if (++oldIndex >= currentItemListCount)
 					oldIndex = 0;
