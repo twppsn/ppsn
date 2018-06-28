@@ -214,7 +214,7 @@ namespace TecWare.PPSn.Controls
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty ListViewCountProperty = PpsCircularListBox.ListViewCountProperty.AddOwner(typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(9));
-		public static readonly DependencyProperty ListSourceProperty = DependencyProperty.Register(nameof(ListSource), typeof(object), typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnListSourceChanged)));
+		public static readonly DependencyProperty ListSourceProperty = DependencyProperty.Register(nameof(ListSource), typeof(IEnumerable), typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnListSourceChanged)));
 		public static readonly DependencyProperty SelectedItemsProperty = DependencyProperty.Register(nameof(SelectedItems), typeof(object[]), typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSelectedItemsChanged), new CoerceValueCallback(OnCoerceValue)));
 
 		public static readonly RoutedEvent SelectedItemsChangedEvent = EventManager.RegisterRoutedEvent(nameof(SelectedItemsChanged), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(PpsMultiCircularListBox));
@@ -341,7 +341,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Visible list items.</summary>
 		public int ListViewCount { get => (int)GetValue(ListViewCountProperty); set => SetValue(ListViewCountProperty, value); }
 		/// <summary></summary>
-		public object ListSource { get => GetValue(ListSourceProperty); set => SetValue(ListSourceProperty, value); }
+		public IEnumerable ListSource { get => (IEnumerable)GetValue(ListSourceProperty); set => SetValue(ListSourceProperty, value); }
 		/// <summary></summary>
 		public object[] SelectedItems { get => (object[])GetValue(SelectedItemsProperty); set => SetValue(SelectedItemsProperty, value); }
 

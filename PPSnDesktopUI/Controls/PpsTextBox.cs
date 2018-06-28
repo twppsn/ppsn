@@ -173,7 +173,8 @@ namespace TecWare.PPSn.Controls
 		private void SetInputManager(IPpsTextBoxInputManager inputManager)
 		{
 			this.inputManager = inputManager;
-			DropDownSource = inputManager as IPpsTextBoxDropDownSource;
+			if (inputManager is IPpsTextBoxDropDownSource dds)
+				DropDownSource = dds;
 		} // proc SetInputManager
 
 		/// <summary></summary>
@@ -184,6 +185,16 @@ namespace TecWare.PPSn.Controls
 			var acceptReturn = false;
 			var isFormatable = false;
 			var newInputManager = (IPpsTextBoxInputManager)null;
+
+			switch(oldValue)
+			{
+				case PpsTextBoxInputType.Date:
+					DropDownSource = null;
+					break;
+				case PpsTextBoxInputType.Time:
+					DropDownSource = null;
+					break;
+			}
 
 			switch (newValue)
 			{
@@ -197,7 +208,7 @@ namespace TecWare.PPSn.Controls
 					newInputManager = new PpsRegExInputManager(this, @"^(?<num>(\d+\.?)+)$", "Positive Zahl erwartet.");
 					break;
 				case PpsTextBoxInputType.IntegerNegative:
-					newInputManager = new PpsRegExInputManager(this, @"^\-?(?<num>(\d+\.?)+)$", "Zahl erwartet.");
+					newInputManager = new PpsRegExInputManager(this, @"^\-?(?<num>(\d+\.?)*)$", "Zahl erwartet.");
 					break;
 
 				case PpsTextBoxInputType.Date:
@@ -431,7 +442,11 @@ namespace TecWare.PPSn.Controls
 					new CommandBinding(ApplicationCommands.Save,
 						(sender, e2) =>
 						{
+							// update text
 							dropDownSource.SelectedItems = listControl.SelectedItems;
+							// update binding
+							GetBindingExpression(TextProperty)?.UpdateSource();
+							// close popup
 							popup.IsOpen = false;
 							e2.Handled = true;
 						}
@@ -1208,8 +1223,8 @@ namespace TecWare.PPSn.Controls
 
 			while (days < dayList.Count)
 				dayList.RemoveAt(dayList.Count - 1);
-			while (days >= dayList.Count)
-				dayList.Add(dayInput[dayList.Count - 1]);
+			while (days > dayList.Count)
+				dayList.Add(dayInput[dayList.Count]);
 		} // proc OnSelectedItems
 
 		public object[] GetDropLists()
@@ -1333,7 +1348,7 @@ namespace TecWare.PPSn.Controls
 		{
 			hourArray = new string[24];
 			for (var i = 0; i < 24; i++)
-				minutesArray[i] = i.ToString("00");
+				hourArray[i] = i.ToString("00");
 
 			minutesArray = new string[60];
 			for (var i = 0; i < 60; i++)

@@ -946,6 +946,12 @@ namespace TecWare.PPSn.Controls
 			textBinding.ConverterParameter = new NumericValueConverterParameter() { AllowNeg = allowNeg, FloatDigits = floatDigits };
 		} // proc SetNumericBinding
 
+		private static void SetDateBinding(dynamic ui, dynamic textBox, dynamic textBinding, bool allowNeg, int floatDigits)
+		{
+			textBinding.Converter = PpsConverter.DateValue;
+			textBinding.ConverterParameter = DateValueConverterParameter.Default;
+		} // proc SetNumericBinding
+
 		private void SetTextFieldProperties(dynamic ctrl, IPpsDataFieldReadOnlyProperties properties)
 		{
 			if (properties.TryGetProperty<double>("TextHeight", out var height))
@@ -1030,7 +1036,12 @@ namespace TecWare.PPSn.Controls
 					break;
 
 				case TypeCode.DateTime:
-					inputType = PpsTextBoxInputType.Date;
+					if (inputType != PpsTextBoxInputType.Date
+						&& inputType != PpsTextBoxInputType.Time)
+						inputType = PpsTextBoxInputType.Date;
+
+					if(inputType == PpsTextBoxInputType.Date) // we can set a binding converter
+						PpsDataFieldFactory.SetDateBinding(ui, txt, textBinding, false, 0);
 					break;
 			}
 

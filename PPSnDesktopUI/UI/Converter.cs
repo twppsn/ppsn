@@ -33,6 +33,8 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Wpf-Value Converter.</summary>
 		public static IValueConverter NumericValue => NumericValueConverter.Default;
+		/// <summary>Wpf-Value Converter.</summary>
+		public static IValueConverter DateValue => DateValueConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static IValueConverter Visibility => VisibilityConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
@@ -159,7 +161,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Default parameter</summary>
 		public static NumericValueConverterParameter Default { get; } = new NumericValueConverterParameter();
-	} // class FloatValueConverterParameter
+	} // class NumericValueConverterParameter
 
 	internal sealed class NumericValueConverter : IValueConverter
 	{
@@ -343,7 +345,7 @@ namespace TecWare.PPSn.UI
 		}
 
 		public static IValueConverter Default { get; } = new NumericValueConverter();
-	} // class FloatValueConverter
+	} // class NumericValueConverter
 
 	#endregion
 
@@ -783,6 +785,87 @@ namespace TecWare.PPSn.UI
 
 		public static NameConverter Default { get; } = new NameConverter();
 	} // class LuaTypeStringConverter
+
+	#endregion
+
+	#region -- class DateValueConverter -----------------------------------------------
+
+	/// <summary>Parameter for the DateValueConverter</summary>
+	public sealed class DateValueConverterParameter
+	{
+		/// <summary>Default parameter</summary>
+		public static DateValueConverterParameter Default { get; } = new DateValueConverterParameter();
+	} // class DateValueConverterParameter
+
+	internal sealed class DateValueConverter : IValueConverter
+	{
+		private DateValueConverter()
+		{
+		} // ctor
+
+		private static DateValueConverterParameter GetParameter(object parameter)
+			=> parameter is DateValueConverterParameter r ? r : DateValueConverterParameter.Default;
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (targetType == typeof(string))
+			{
+				if (value == null) // null is null
+					return null;
+				else if (value is DateTime dt)
+					return dt.ToString("dd.MM.yyyy"); // enforce german format, because the textbox does only support this format
+				else if (value is DateTimeOffset dto)
+					return dto.ToString("dd.MM.yyyy");
+				else
+					return DependencyProperty.UnsetValue;
+			}
+			else
+				return DependencyProperty.UnsetValue;
+		} // func Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var isNullable = targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>);
+			if (isNullable)
+				targetType = targetType.GetGenericArguments()[0];
+
+			try
+			{
+				if (targetType == typeof(DateTime))
+				{
+					if (value == null)
+					{
+						if (isNullable)
+							return new DateTime?();
+						else
+							return new ValidationResult(false, "Null is not allowed");
+					}
+					else
+						return DateTime.Parse((string)value);
+				}
+				else if (targetType == typeof(DateTimeOffset))
+				{
+					if (value == null)
+					{
+						if (isNullable)
+							return new DateTimeOffset?();
+						else
+							return new ValidationResult(false, "Null is not allowed");
+					}
+					else
+						return DateTime.Parse((string)value);
+				}
+				else
+					return DependencyProperty.UnsetValue;
+			}
+			catch (FormatException e)
+			{
+				return new ValidationResult(false, e);
+			}
+		} // func ConvertBack
+		
+		public static IValueConverter Default { get; } = new DateValueConverter();
+	} // class DateValueConverter
 
 	#endregion
 }
