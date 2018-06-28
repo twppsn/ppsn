@@ -83,7 +83,7 @@ namespace TecWare.PPSn.Controls
 		{
 			CommandBindings.Add(new CommandBinding(DropDownCommand, 
 				(sender, e) => OnDropDown(e),
-				(sender,e)=> { e.CanExecute = HasDropDownSource && IsEnabled && !IsReadOnly; e.Handled = true; }
+				(sender,e)=> { e.CanExecute = CanExecuteDropDownCommand; e.Handled = true; }
 			));
 		
 			inputErrorTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
@@ -333,6 +333,13 @@ namespace TecWare.PPSn.Controls
 				case Key.Delete:
 					OnPreviewTextChanged(e, "\x7F"); // Delete
 					break;
+				case Key.F4:
+					if(CanExecuteDropDownCommand)
+					{
+						e.Handled = true;
+						DropDownCommand.Execute(null,this);
+					}
+					break;
 				default:
 					inputManager?.PreviewKeyDown(e);
 					break;
@@ -413,7 +420,7 @@ namespace TecWare.PPSn.Controls
 
 		private void OnDropDown(ExecutedRoutedEventArgs e)
 		{
-			if (HasDropDownSource)
+			if (CanExecuteDropDownCommand)
 			{
 				IPpsTextBoxDropDownSource dropDownSource;
 				if (DropDownSource is IPpsTextBoxDropDownSource src)
@@ -435,7 +442,10 @@ namespace TecWare.PPSn.Controls
 					listControl.SelectedItems = selectedItems;
 				if (dropDownSource is IPpsTextBoxDropDownSource2 dds2)
 					listControl.SelectedItemsChanged += (sender, e2) => dds2.OnSelectedItemsChanged(((PpsMultiCircularListBox)sender).SelectedItems);
-				
+
+				// focus textbox
+				Keyboard.Focus(this);
+
 				// create popup
 				var popup = new PpsPopup();
 				popup.CommandBindings.Add(
@@ -455,14 +465,19 @@ namespace TecWare.PPSn.Controls
 				popup.Child = listControl;
 
 				// show popup
-				popup.Placement = PlacementMode.Bottom;
 				popup.PlacementTarget = this;
+				popup.Placement = PlacementMode.Bottom;
+				popup.MinWidth = ActualWidth;
+				popup.VerticalOffset = 1;
 				popup.StaysOpen = false;
 				popup.IsOpen = true;
 
 				e.Handled = true;
 			}
 		} // proc OnDropDown
+
+		private bool CanExecuteDropDownCommand 
+			=> HasDropDownSource && IsEnabled && !IsReadOnly;
 
 		/// <summary></summary>
 		public bool HasDropDownSource => BooleanBox.GetBool(GetValue(HasDropDownSourceProperty));
@@ -1243,6 +1258,9 @@ namespace TecWare.PPSn.Controls
 			get
 			{
 				var t = GetText();
+				if (String.IsNullOrEmpty(t))
+					t = String.Format("{0:d}", DateTime.Today);
+
 				return new string[]
 				{
 					Mask[0].GetTextPart(t),
