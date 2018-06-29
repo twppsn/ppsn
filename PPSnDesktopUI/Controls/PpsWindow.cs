@@ -105,7 +105,7 @@ namespace TecWare.PPSn.Controls
 	{
 		private PpsWindow owner;
 		private DispatcherTimer persistTimer;
-		private bool isResizeable;
+		private readonly bool isResizeable;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -126,10 +126,10 @@ namespace TecWare.PPSn.Controls
 
 			this.persistTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10000), DispatcherPriority.ApplicationIdle, (sender, e) => Save(), owner.Dispatcher);
 			this.owner.Closed += (sender, e) =>
-				{
-					if (persistTimer.IsEnabled) // force save on close
-						Save();
-				};
+			{
+				if (persistTimer.IsEnabled) // force save on close
+					Save();
+			};
 
 			InitWindowPlacement();
 		} // ctor
@@ -263,7 +263,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnSettingChanging(object sender, SettingChangingEventArgs e)
 		{
-			if (!Object.Equals(this[e.SettingName], e.NewValue))
+			if (!Equals(this[e.SettingName], e.NewValue))
 			{
 				if (persistTimer != null)
 				{

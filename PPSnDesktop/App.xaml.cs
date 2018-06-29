@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Threading;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Properties;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -155,7 +156,15 @@ namespace TecWare.PPSn
 
 		protected override void OnStartup(StartupEventArgs e)
 		{
+			// upgrade settings
+			if (Settings.Default.UpgradeSettings)
+			{
+				Settings.Default.Upgrade();
+				Settings.Default.UpgradeSettings = false;
+			}
+
 			ParseArguments(e, out var environment, out var userCred);
+			
 			StartApplicationAsync(environment, userCred)
 				.ContinueWith(t =>
 				{
@@ -184,7 +193,9 @@ namespace TecWare.PPSn
 			if (e.Args.Length == 0)
 				return;
 
-			var environmentsInfos = PpsEnvironmentInfo.GetLocalEnvironments().ToArray();
+			var environmentsInfos = new Lazy<PpsEnvironmentInfo[]>(PpsEnvironmentInfo.GetLocalEnvironments().ToArray);
+			
+			// first parse arguments for environment or user information
 			foreach (var arg in e.Args)
 			{
 				if (arg.Length > 1 && arg[0] == '-')
@@ -200,17 +211,20 @@ namespace TecWare.PPSn
 							break;
 						case 'a':
 							var environmentname = arg.Substring(2).Trim('\"', '\'');
-							environment = environmentsInfos.FirstOrDefault(c => String.Compare(c.Name, environmentname, StringComparison.OrdinalIgnoreCase) == 0);
-
-							// load user name
-							if (environment != null)
-								using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), environment.Name, false))
-									userCred = pcl.GetCredentials();
+							environment = environmentsInfos.Value.FirstOrDefault(c => String.Compare(c.Name, environmentname, StringComparison.OrdinalIgnoreCase) == 0);
 							break;
 					}
 				}
 			}
 
+			// load user name from environment
+			if (environment != null)
+			{
+				using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), environment.Name, false))
+					userCred = pcl.GetCredentials();
+			}
+
+			// set user credentials
 			if (userName != null && userCred == null)
 				userCred = new NetworkCredential(userName, userPass);
 		} // func ParseArguments

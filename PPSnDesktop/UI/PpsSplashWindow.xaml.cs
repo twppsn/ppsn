@@ -1,29 +1,55 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Net;
-using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using TecWare.DE.Data;
 using TecWare.PPSn.Data;
-
-// todo: designer find place for ErrorText in ui
+using TecWare.PPSn.Properties;
 
 namespace TecWare.PPSn.UI
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Login and loading dialog.</summary>
 	public partial class PpsSplashWindow : Window, IProgress<string>
 	{
-		#region -- class LoginState -------------------------------------------------------
+		#region -- enum StatePanes ----------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
+		private enum StatePanes : int
+		{
+			Status = 0,
+			NewEnvironment,
+			Login,
+			Error
+		} // prop Panse
+
+		#endregion
+
+		#region -- class LoginState ---------------------------------------------------
+
+		/// <summary>State of the login data.</summary>
 		public sealed class LoginStateData : INotifyPropertyChanged, IDisposable
 		{
+			/// <summary>Property changed event.</summary>
 			public event PropertyChangedEventHandler PropertyChanged;
 
 			private readonly PpsSplashWindow parent;
@@ -33,11 +59,14 @@ namespace TecWare.PPSn.UI
 			private PpsClientLogin currentLogin = null;
 			private bool passwordHasChanged = false;
 
-			public LoginStateData(PpsSplashWindow parent)
+			#region -- Ctor/Dtor ------------------------------------------------------
+
+			internal LoginStateData(PpsSplashWindow parent)
 			{
 				this.parent = parent;
 			} // ctor
 
+			/// <summary>Release system resources</summary>
 			public void Dispose()
 			{
 				currentLogin?.Dispose();
@@ -46,6 +75,10 @@ namespace TecWare.PPSn.UI
 			private void OnPropertyChanged(string propertyName)
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
+			#endregion
+
+			/// <summary>Get current selected credentials (login data)</summary>
+			/// <returns></returns>
 			public NetworkCredential GetCredentials()
 			{
 				if (currentLogin == null)
@@ -55,68 +88,68 @@ namespace TecWare.PPSn.UI
 				if (HasParentPassword && passwordHasChanged)
 					currentLogin.SetPassword(parent.pbPassword.SecurePassword);
 				currentLogin.Commit();
-
+				
 				return currentLogin.GetCredentials();
 			} // func GetCredentials
 
-			public void RefreshEnvironments(PpsEnvironmentInfo selectEnvironment)
+			/// <summary>Refresh environment list.</summary>
+			/// <param name="getCurrentEnvironment"></param>
+			/// <returns></returns>
+			public async Task RefreshEnvironmentsAsync(Func<PpsEnvironmentInfo[], PpsEnvironmentInfo> getCurrentEnvironment)
 			{
-				var tmp = PpsEnvironmentInfo.GetLocalEnvironments().ToArray();
-				parent.Dispatcher.Invoke(() =>
-					{
-						environments = tmp;
-						OnPropertyChanged(nameof(Environments));
+				// parse all environment
+				environments = await Task.Run(() => PpsEnvironmentInfo.GetLocalEnvironments().ToArray());
+				OnPropertyChanged(nameof(Environments));
 
-						if (environments.Contains(selectEnvironment))
-							CurrentEnvironment = selectEnvironment;
-						else if (environments.Length > 0)
-							CurrentEnvironment = environments[0];
-					}
-				);
+				// update current environment
+				if (environments.Length > 0)
+					CurrentEnvironment = getCurrentEnvironment?.Invoke(environments) ?? environments[0];
 			} // proc RefreshEnvironments
 
+			/// <summary>Access a environment list</summary>
 			public PpsEnvironmentInfo[] Environments => environments;
 
+			/// <summary>Current selected environment</summary>
 			public PpsEnvironmentInfo CurrentEnvironment
 			{
-				get { return currentEnvironment; }
+				get => currentEnvironment;
 				set
 				{
-					if (currentEnvironment != value)
+					if (currentEnvironment == value)
+						return;
+					currentEnvironment = value;
+
+					if (currentEnvironment?.Uri != null)
 					{
-						currentEnvironment = value;
+						// change login
+						currentLogin?.Dispose();
+						currentLogin = new PpsClientLogin("ppsn_env:" + currentEnvironment.Uri.ToString(), currentEnvironment.Name, false);
 
-						if (currentEnvironment?.Uri != null)
-						{
-							// change login
-							currentLogin?.Dispose();
-							currentLogin = new PpsClientLogin("ppsn_env:" + currentEnvironment.Uri.ToString(), currentEnvironment.Name, false);
+						// currect save options
+						if (currentLogin.SaveOptions == PpsClientLoginSaveOptions.None)
+							currentLogin.SaveOptions = PpsClientLoginSaveOptions.UserName; // at least write a username
 
-							// currect save options
-							if (currentLogin.SaveOptions == PpsClientLoginSaveOptions.None)
-								currentLogin.SaveOptions = PpsClientLoginSaveOptions.UserName; // at least write a username
-
-							// set dummy password
-							if (currentLogin.PasswordLength > 0)
-								parent.pbPassword.Password = new string('\x01', currentLogin.PasswordLength);
-							if (!IsPasswordEnabled)
-								parent.pbPassword.Password = String.Empty;
-							passwordHasChanged = false;
-						}
-
-						// mark properties as changed
-						OnPropertyChanged(nameof(CurrentEnvironment));
-						OnPropertyChanged(nameof(UserName));
-						OnPropertyChanged(nameof(SavePassword));
-
-						OnPropertyChanged(nameof(IsUserNameEnabled));
-						OnPropertyChanged(nameof(IsPasswordEnabled));
-						OnPropertyChanged(nameof(IsPasswordSaveEnabled));
-						OnPropertyChanged(nameof(IsValid));
+						// set dummy password
+						if (currentLogin.PasswordLength > 0)
+							parent.pbPassword.Password = new string('\x01', currentLogin.PasswordLength);
+						if (!IsPasswordEnabled)
+							parent.pbPassword.Password = String.Empty;
+						passwordHasChanged = false;
 					}
+
+					// mark properties as changed
+					OnPropertyChanged(nameof(CurrentEnvironment));
+					OnPropertyChanged(nameof(UserName));
+					OnPropertyChanged(nameof(SavePassword));
+
+					OnPropertyChanged(nameof(IsUserNameEnabled));
+					OnPropertyChanged(nameof(IsPasswordEnabled));
+					OnPropertyChanged(nameof(IsPasswordSaveEnabled));
+					OnPropertyChanged(nameof(IsValid));
 				}
 			} // prop CurrentEnvironment
 
+			/// <summary>Return user name</summary>
 			public string UserName
 			{
 				get => currentLogin?.UserName;
@@ -133,11 +166,14 @@ namespace TecWare.PPSn.UI
 						}
 						OnPropertyChanged(nameof(UserName));
 						OnPropertyChanged(nameof(IsPasswordEnabled));
+
 						Validate(false);
 					}
 				}
 			} // prop UserName
 
+			/// <summary>Validate input</summary>
+			/// <param name="passwordHasChanged"></param>
 			public void Validate(bool passwordHasChanged)
 			{
 				if (passwordHasChanged)
@@ -148,13 +184,19 @@ namespace TecWare.PPSn.UI
 				OnPropertyChanged(nameof(IsValid));
 			} // proc Validate
 
+			/// <summary>Is user name editable.</summary>
 			public bool IsUserNameEnabled => currentLogin != null;
+			/// <summary>Is password enabled</summary>
 			public bool IsPasswordEnabled => currentLogin != null && !currentLogin.IsDefaultUserName;
+			/// <summary>Is password save enabled</summary>
 			public bool IsPasswordSaveEnabled => currentLogin != null && !currentLogin.IsDefaultUserName && HasParentPassword;
+			/// <summary>Is current login data valid.</summary>
 			public bool IsValid => currentLogin != null && (currentLogin.IsDefaultUserName || HasParentPassword);
 
+			/// <summary>Has the password box a password.</summary>
 			public bool HasParentPassword => parent.pbPassword.SecurePassword != null && parent.pbPassword.SecurePassword.Length > 0;
 
+			/// <summary>Option if the password should be saved.</summary>
 			public bool SavePassword
 			{
 				get => currentLogin?.SaveOptions == PpsClientLoginSaveOptions.Password;
@@ -166,29 +208,51 @@ namespace TecWare.PPSn.UI
 							: PpsClientLoginSaveOptions.UserName;
 				}							
 			} // prop SavePassword
-
-			private string newEnvironmentName = String.Empty;
-			public string NewEnvironmentName { get { return newEnvironmentName; } set { this.newEnvironmentName = value; } }
-			private string newEnvironmentUri = String.Empty;
-			public string NewEnvironmentUri { get { return newEnvironmentUri; } set { this.newEnvironmentUri = value; } }
-			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);   //ToDo: check if that Environment already exists!
 		} // class LoginStateData
 
 		#endregion
 
-		private readonly static DependencyPropertyKey loginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new PropertyMetadata(null));
+		#region -- class EditLoginStateData -------------------------------------------
 
-		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow));
-		public readonly static DependencyProperty ErrorTextProperty = DependencyProperty.Register(nameof(ErrorText), typeof(string), typeof(PpsSplashWindow));
-		public readonly static DependencyProperty ActivePageNumProperty = DependencyProperty.Register(nameof(ActivePageNum), typeof(int), typeof(PpsSplashWindow));
+		/// <summary></summary>
+		public sealed class EditLoginStateData : ObservableObject
+		{
+			private string newEnvironmentName = String.Empty;
+			public string NewEnvironmentName { get => newEnvironmentName; set => Set(ref newEnvironmentName, value, nameof(NewEnvironmentName)); }
+			private string newEnvironmentUri = String.Empty;
+			public string NewEnvironmentUri { get => newEnvironmentUri; set => Set(ref newEnvironmentUri, value, nameof(NewEnvironmentUri)); }
+			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);   //ToDo: check if that Environment already exists!
+		} // class EditLoginStateData
+
+		#endregion
+
+		#region -- class ErrorStateData -----------------------------------------------
+
+		/// <summary></summary>
+		public sealed class ErrorStateData : ObservableObject
+		{
+			private string errorText = null;
+
+			/// <summary>Error Text</summary>
+			public string ErrorText { get => errorText; set => Set(ref errorText, value, nameof(ErrorText)); }
+		} // class EErrorStateDatarrorState
+
+		#endregion
+
+		private readonly static DependencyPropertyKey loginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		private readonly static DependencyPropertyKey errorStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(ErrorState), typeof(ErrorStateData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		private readonly static DependencyPropertyKey editLoginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(EditLoginState), typeof(EditLoginStateData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+
+		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
 		public readonly static DependencyProperty LoginStateProperty = loginStatePropertyKey.DependencyProperty;
+		public readonly static DependencyProperty ErrorStateProperty = errorStatePropertyKey.DependencyProperty;
+		public readonly static DependencyProperty EditLoginStateProperty = editLoginStatePropertyKey.DependencyProperty;
 
-		private readonly LoginStateData loginStateUnSafe;
+		public readonly static DependencyProperty ActivePageNumProperty = DependencyProperty.Register("ActivePageNum", typeof(int), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(0));
+
 		private bool dialogResult = false;
 		private DispatcherFrame loginFrame = null;
 		private bool allowClose = false;
-
-		public enum Panes : int { Status, NewEnvironment, Login, Error }
 
 		#region -- Ctor/Dtor ------------------------------------------------------------
 
@@ -203,38 +267,46 @@ namespace TecWare.PPSn.UI
 					new CommandBinding(ApplicationCommands.Save, ExecuteFrame,
 						(sender, e) =>
 						{
-							e.CanExecute = (ActivePage == Panes.NewEnvironment && loginStateUnSafe.NewEnvironmentIsValid)
-								|| (ActivePage == Panes.Login && loginStateUnSafe.IsValid); e.Handled = true;
+							e.CanExecute = (ActivateState == StatePanes.NewEnvironment && EditLoginState.NewEnvironmentIsValid)
+								|| (ActivateState == StatePanes.Login && LoginState.IsValid);
+							e.Handled = true;
 						}
 					),
 					new CommandBinding(ApplicationCommands.Close, CloseFrame, LoginFrameActive),
 					new CommandBinding(EnterKeyCommand,
-						(sender, e) => EnterKey(sender, e)
-					),
-					new CommandBinding(PressedKeyCommand,
-						(sender, e) => loginStateUnSafe.Validate(false)
+						(sender, e) =>
+						{
+							EnterKey(sender, e);
+							e.Handled = true;
+						}
 					),
 					new CommandBinding(ReStartCommand,
 						(sender, e) =>
 						{
-							ActivePage = Panes.Login;
+							ActivateState = StatePanes.Login;
+							e.Handled = true;
 						}
 					),
 					new CommandBinding(ShowErrorDetailsCommand,
 						(sender, e) =>
 						{
-							errorEnvironment.ShowTrace(this.Owner);
+							errorEnvironment.ShowTrace(Owner);
+							e.Handled = true;
 						},
 						(sender, e) =>
 						{
 							e.CanExecute = errorEnvironment != null;
+							e.Handled = true;
 						}
 					)
 				}
 			);
 
-			ActivePage = Panes.Status;
-			SetValue(loginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
+			ActivateState = StatePanes.Status;
+			SetValue(loginStatePropertyKey, new LoginStateData(this));
+			SetValue(errorStatePropertyKey, new ErrorStateData());
+			SetValue(editLoginStatePropertyKey, new EditLoginStateData());
+
 			this.DataContext = this;
 		} // ctor
 
@@ -242,20 +314,19 @@ namespace TecWare.PPSn.UI
 		{
 			if (loginFrame != null)
 			{
-				ApplicationCommands.Close.Execute(null, Keyboard.FocusedElement);
+				ApplicationCommands.Close.Execute(null, this);
 				e.Cancel = true;
 			}
 			else
 				e.Cancel = !allowClose;
-
-
+			
 			base.OnClosing(e);
 		} // proc OnClosing
 
 		protected override void OnClosed(EventArgs e)
 		{
 			base.OnClosed(e);
-			loginStateUnSafe?.Dispose();
+			LoginState?.Dispose();
 		} // proc Dispose
 
 		public void ForceClose()
@@ -263,6 +334,16 @@ namespace TecWare.PPSn.UI
 			allowClose = true;
 			Close();
 		} // proc ForceClose
+
+		protected override void OnMouseDown(MouseButtonEventArgs e)
+		{
+			base.OnMouseDown(e);
+			if (!e.Handled && e.ChangedButton == MouseButton.Left)
+			{
+				e.Handled = true;
+				DragMove();
+			}
+		} // proc OnMouseDown
 
 		#endregion
 
@@ -276,54 +357,55 @@ namespace TecWare.PPSn.UI
 
 		private void CreateNewEnvironment(object sender, ExecutedRoutedEventArgs e)
 		{
-			ActivePage = Panes.NewEnvironment;
+			ActivateState = StatePanes.NewEnvironment;
 			e.Handled = true;
 		} // proc CreateNewEnvironment
 
 		private void ExecuteFrame(object sender, ExecutedRoutedEventArgs e)
 		{
-			if (ActivePage == Panes.Login && loginStateUnSafe.IsValid)
+			if (ActivateState == StatePanes.Login && LoginState.IsValid)
 			{
 				loginFrame.Continue = false;
 				dialogResult = true;
 				e.Handled = true;
 			}
-			else if (ActivePage == Panes.NewEnvironment)
+			else if (ActivateState == StatePanes.NewEnvironment)
 			{
 				loginFrame.Continue = true;
 				e.Handled = true;
-				SaveEnvironment();
+				SaveEnvironmentAsync().AwaitTask();
 			}
 		} // proc ExecuteLoginFrame
 
-		private void SaveEnvironment()
+		private async Task SaveEnvironmentAsync()
 		{
-			var newEnv = new PpsEnvironmentInfo(loginStateUnSafe.NewEnvironmentName)
+			var newEnv = new PpsEnvironmentInfo(EditLoginState.NewEnvironmentName)
 			{
-				Uri = new Uri(loginStateUnSafe.NewEnvironmentUri)
+				Uri = new Uri(EditLoginState.NewEnvironmentUri)
 			};
-			newEnv.Save();
-			loginStateUnSafe.RefreshEnvironments(newEnv);
-			ActivePage = Panes.Login;
-		}
+			await Task.Run(new Action(newEnv.Save));
+			await LoginState.RefreshEnvironmentsAsync(l => l.Contains(newEnv) ? newEnv : null);
+
+			ActivateState = StatePanes.Login;
+		} // procSaveEnvironmentAsync
 
 		private void AbortEnvironment()
 		{
-			ActivePage = Panes.Login;
+			ActivateState = StatePanes.Login;
 		}
 
 		private void CloseFrame(object sender, ExecutedRoutedEventArgs e)
 		{
-			switch (ActivePage)
+			switch (ActivateState)
 			{
-				case Panes.Login:
+				case StatePanes.Login:
 					{
 						loginFrame.Continue = false;
 						dialogResult = false;
 						e.Handled = true;
 					}
 					break;
-				case Panes.NewEnvironment:
+				case StatePanes.NewEnvironment:
 					{
 						loginFrame.Continue = true;
 						e.Handled = true;
@@ -333,46 +415,66 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc CloseLoginFrame
 
-		private Tuple<PpsEnvironmentInfo, NetworkCredential> ShowLogin()
+		private Tuple<PpsEnvironmentInfo, NetworkCredential> ShowLogin(PpsEnvironmentInfo selectEnvironment, NetworkCredential userInfo = null)
 		{
-			if (ActivePage != Panes.Error && ActivePage != Panes.Login)
-				ActivePage = Panes.Login;
+			var loginState = LoginState;
+
+			// refresh environments
+			loginState.RefreshEnvironmentsAsync(envs =>
+				{
+					if (selectEnvironment != null && envs.Contains(selectEnvironment))
+						return selectEnvironment;
+					else
+					{
+						var name = Settings.Default.LastEnvironmentName;
+						return String.IsNullOrEmpty(name)
+							? null
+							: envs.FirstOrDefault(e => e.Name == name);
+					}
+				}
+			).AwaitTask();
+			if (userInfo != null)
+				loginState.UserName = userInfo.UserName;
+
+			// show login page only if there is no error page
+			if (ActivateState != StatePanes.Error)
+				ActivateState = StatePanes.Login;
 
 			try
 			{
-				if (loginFrame != null)
+				if (loginFrame != null) // we are within a login dialog
 					throw new InvalidOperationException();
 
 				// spawn new event loop
 				loginFrame = new DispatcherFrame();
 				CommandManager.InvalidateRequerySuggested();
 				Dispatcher.PushFrame(loginFrame);
-				loginFrame = null;
 
-				if (dialogResult && loginStateUnSafe.IsValid)
-					return new Tuple<PpsEnvironmentInfo, NetworkCredential>(loginStateUnSafe.CurrentEnvironment, loginStateUnSafe.GetCredentials());
+				// clear message loop and return result
+				loginFrame = null;
+				if (dialogResult && loginState.IsValid)
+				{
+					Settings.Default.LastEnvironmentName = loginState.CurrentEnvironment.Name;
+					Settings.Default.LastEnvironmentUri = loginState.CurrentEnvironment.Uri.ToString();
+					Settings.Default.Save();
+
+					return new Tuple<PpsEnvironmentInfo, NetworkCredential>(loginState.CurrentEnvironment, loginState.GetCredentials());
+				}
 				else
 					return null;
 			}
 			finally
 			{
-				ActivePage = Panes.Status;
+				ActivateState = StatePanes.Status;
 			}
 		} // proc ShowLogin
 
 		public async Task<Tuple<PpsEnvironmentInfo, NetworkCredential>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment, NetworkCredential userInfo = null)
-		{
-			loginStateUnSafe.RefreshEnvironments(selectEnvironment);
-
-			if (userInfo != null)
-				Dispatcher.Invoke(() => loginStateUnSafe.UserName = userInfo.UserName);
-
-			return await Dispatcher.InvokeAsync(ShowLogin);
-		} // func ShowLoginAsync
-
+			=> await Dispatcher.InvokeAsync(() => ShowLogin(selectEnvironment, userInfo));
+		
 		#endregion
 
-		#region -- Progress -------------------------------------------------------------
+		#region -- Progress -----------------------------------------------------------
 
 		public void SetProgressTextAsync(string text)
 			=> Dispatcher.BeginInvoke(new Action<string>(t => StatusText = t), DispatcherPriority.Normal, text);
@@ -382,66 +484,49 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- SetError -------------------------------------------------------------
+		#region -- SetError -----------------------------------------------------------
+
+		private PpsEnvironment errorEnvironment = null;
 
 		private void SetError(object errorInfo)
 		{
-			if (errorInfo is Exception) // show exception
-				errorInfo = ((Exception)errorInfo).Message;
-
-			SetValue(ErrorTextProperty, errorInfo);
-			ActivePage = Panes.Error;
+			if (errorInfo is Exception exceptionInfo) // show exception
+				errorInfo = exceptionInfo.Message;
+			
+			ErrorState.ErrorText = errorInfo is string s ? s: errorInfo?.ToString();
+			ActivateState = StatePanes.Error;
 		} // proc SetError
 
-		private PpsEnvironment errorEnvironment;
 		private void SetErrorEnvironment(PpsEnvironment environment)
-		{
-			errorEnvironment = environment;
-		}
+			=> errorEnvironment = environment;
 
 		public async Task SetErrorAsync(object errorInfo, PpsEnvironment environment)
-		{
-			if (Dispatcher.CheckAccess())
-			{
-				SetError(errorInfo);
-				SetErrorEnvironment(environment);
-			}
-			else
-			{
-				await Dispatcher.InvokeAsync(() => SetError(errorInfo));
-				await Dispatcher.InvokeAsync(() => SetErrorEnvironment(environment));
-			}
-		} // proc SetErrorAsync
+			=> await Dispatcher.InvokeAsync(
+				() =>
+				{
+					SetError(errorInfo);
+					SetErrorEnvironment(environment);
+				}
+			);
 
 		#endregion
 
-		public string StatusText
-		{
-			get { return (string)GetValue(StatusTextProperty); }
-			set { SetValue(StatusTextProperty, value); }
-		} // prop StatusText
+		/// <summary>Status text</summary>
+		public string StatusText { get => (string)GetValue(StatusTextProperty); set => SetValue(StatusTextProperty, value); }
 
-		public string ErrorText
-		{
-			get { return (string)GetValue(ErrorTextProperty); }
-			set { SetValue(ErrorTextProperty, value); }
-		} // prop ErrorText
-
+		/// <summary>Current login state</summary>
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
+		/// <summary>Current error state</summary>
+		public ErrorStateData ErrorState => (ErrorStateData)GetValue(ErrorStateProperty);
+		/// <summary>Current edit state</summary>
+		public EditLoginStateData EditLoginState => (EditLoginStateData)GetValue(EditLoginStateProperty);
 
-		public int ActivePageNum { get => (int)GetValue(ActivePageNumProperty); set => SetValue(ActivePageNumProperty, (int)value); }
-		public Panes ActivePage { get => (Panes)ActivePageNum; set => ActivePageNum = (int)value; }
-
-		private void Window_Drag(object sender, MouseButtonEventArgs e)
-		{
-			if (e.ChangedButton == MouseButton.Left)
-				DragMove();
-		} // event Window_Drag
+		/// <summary>Current active state.</summary>
+		private StatePanes ActivateState { get => (StatePanes)(int)GetValue(ActivePageNumProperty); set => SetValue(ActivePageNumProperty, (int)value); }
 
 		#region -- RoutedUICommand ------------------------------------------------------
 
 		public static RoutedUICommand EnterKeyCommand { get; } = new RoutedUICommand("EnterKey", "EnterKey", typeof(PpsSplashWindow));
-		public static RoutedUICommand PressedKeyCommand { get; } = new RoutedUICommand("PressedKey", "PressedKey", typeof(PpsSplashWindow));
 		public static RoutedUICommand ReStartCommand { get; } = new RoutedUICommand("ReStart", "ReStart", typeof(PpsSplashWindow));
 		public static RoutedUICommand ShowErrorDetailsCommand { get; } = new RoutedUICommand("ShowErrorDetails", "ShowErrorDetails", typeof(PpsSplashWindow));
 
@@ -455,7 +540,7 @@ namespace TecWare.PPSn.UI
 				if (bindingExpression == null)
 					ApplicationCommands.Save.Execute(null, null);
 				else if (bindingExpression.ResolvedSourcePropertyName == "UserName")
-					if (loginStateUnSafe.IsValid)
+					if (LoginState.IsValid)
 						ApplicationCommands.Save.Execute(null, null);
 					else
 						textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
@@ -465,8 +550,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		private void PasswordChanged(object sender, RoutedEventArgs e)
-			=> loginStateUnSafe.Validate(true);
+			=> LoginState.Validate(true);
 
 	} // class PpsSplashWindow
 }
-;

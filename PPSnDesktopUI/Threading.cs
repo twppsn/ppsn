@@ -271,7 +271,7 @@ namespace TecWare.PPSn
 				task.GetAwaiter().OnCompleted(() => frame.Continue = false);
 
 				// block ui for the task
-				using (PpsEnvironment.GetEnvironment().BlockAllUI(frame))
+				using (PpsEnvironment.GetEnvironment()?.BlockAllUI(frame))
 					Dispatcher.PushFrame(frame);
 
 				// thread is cancelled, do not wait for finish

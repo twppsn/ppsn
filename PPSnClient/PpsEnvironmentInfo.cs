@@ -225,7 +225,7 @@ namespace TecWare.PPSn
 		} // func GetLocalEnvironments
 
 		private static string GetDomainUserName(string domain, string userName)
-				=> String.IsNullOrEmpty(domain) ? userName : domain + "\\" + userName;
+			=> String.IsNullOrEmpty(domain) ? userName : domain + "\\" + userName;
 
 		/// <summary>Get the user name from the credentials.</summary>
 		/// <param name="userInfo"></param>
@@ -236,18 +236,16 @@ namespace TecWare.PPSn
 				return null;
 			else if (CredentialCache.DefaultCredentials == userInfo)
 				return GetDomainUserName(Environment.UserDomainName, Environment.UserName);
+			else if (userInfo is NetworkCredential networkCredential)
+				return GetDomainUserName(networkCredential.Domain, networkCredential.UserName);
 			else
-			{
-				var networkCredential = userInfo as NetworkCredential;
-				if (networkCredential != null)
-					return GetDomainUserName(networkCredential.Domain, networkCredential.UserName);
-				else
-					throw new ArgumentOutOfRangeException("Invalid userInfo.");
-			} // func GetUserNameFromCredentials
+				throw new ArgumentOutOfRangeException("Invalid userInfo.");
 		} // func GetUserNameFromCredentials
 
 		/// <summary>Application version.</summary>
 		public static Version AppVersion => appVersion.Value;
+		/// <summary>Returns the local environment path</summary>
+		public static string LocalEnvironmentsPath => localEnvironmentsPath;
 	} // class PpsEnvironmentInfo
 
 	#endregion

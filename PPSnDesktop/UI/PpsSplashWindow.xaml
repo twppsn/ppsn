@@ -8,7 +8,7 @@
 		xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
         mc:Ignorable="d"
 		x:Name="PPSnSplashWindow"
-        Title="PPSn" Height="400" Width="640" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag" WindowStartupLocation="CenterScreen">
+        Title="Anmelden PPSn" Height="400" Width="640" WindowStyle="None" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
 
 	<Window.InputBindings>
         <KeyBinding Key="Esc" Command="{x:Static ApplicationCommands.Close}"/>
@@ -188,6 +188,8 @@
 					<Image Width="152" Height="151" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SplashLogo.png"/>
 				</Viewbox>
 			</Border>
+			
+			<!-- Waiting view -->
 			<Grid Grid.Column="1" Margin="32,0">
 				<Grid.Style>
 					<Style TargetType="{x:Type Grid}">
@@ -210,7 +212,9 @@
 				<TextBlock Grid.Row="1" Text="{Binding StatusText, Mode=OneWay}" TextWrapping="Wrap" Foreground="{StaticResource SplashWindowControlForegroundBrush}"
 						   HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="20"/>
 			</Grid>
-			<Grid Grid.Column="1" DataContext="{Binding LoginState}" Width="300">
+			
+			<!-- New environment -->
+			<Grid Grid.Column="1" DataContext="{Binding EditLoginState}" Width="300">
 				<Grid.Style>
 					<Style TargetType="{x:Type Grid}">
 						<Setter Property="Visibility" Value="Hidden"/>
@@ -255,6 +259,7 @@
 				</StackPanel>
 			</Grid>
 
+			<!-- Login view -->
 			<Grid Grid.Column="1" DataContext="{Binding LoginState}" Width="300">
 				<Grid.Style>
 					<Style TargetType="{x:Type Grid}">
@@ -331,7 +336,8 @@
 				</StackPanel>
 			</Grid>
 
-			<Grid Grid.Column="1" Margin="32,0">
+			<!-- Error Message view -->
+			<Grid Grid.Column="1" Margin="32,0" DataContext="{Binding ErrorState}">
 				<Grid.Style>
 					<Style TargetType="{x:Type Grid}">
 						<Setter Property="Visibility" Value="Hidden"/>
