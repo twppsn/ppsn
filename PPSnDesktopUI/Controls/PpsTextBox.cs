@@ -81,11 +81,11 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public PpsTextBox()
 		{
-			CommandBindings.Add(new CommandBinding(DropDownCommand, 
+			CommandBindings.Add(new CommandBinding(DropDownCommand,
 				(sender, e) => OnDropDown(e),
-				(sender,e)=> { e.CanExecute = CanExecuteDropDownCommand; e.Handled = true; }
+				(sender, e) => { e.CanExecute = CanExecuteDropDownCommand; e.Handled = true; }
 			));
-		
+
 			inputErrorTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
 			{
 				IsEnabled = false
@@ -186,7 +186,7 @@ namespace TecWare.PPSn.Controls
 			var isFormatable = false;
 			var newInputManager = (IPpsTextBoxInputManager)null;
 
-			switch(oldValue)
+			switch (oldValue)
 			{
 				case PpsTextBoxInputType.Date:
 					DropDownSource = null;
@@ -334,10 +334,10 @@ namespace TecWare.PPSn.Controls
 					OnPreviewTextChanged(e, "\x7F"); // Delete
 					break;
 				case Key.F4:
-					if(CanExecuteDropDownCommand)
+					if (CanExecuteDropDownCommand)
 					{
 						e.Handled = true;
-						DropDownCommand.Execute(null,this);
+						DropDownCommand.Execute(null, this);
 					}
 					break;
 				default:
@@ -395,9 +395,9 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc UpdateInputError
 
-		private void InputTimerCallback(object sender, EventArgs e) 
+		private void InputTimerCallback(object sender, EventArgs e)
 			=> ClearInputError();
-		
+
 		/// <summary>The message presented to the user if the data was invalid</summary>
 		public object InputErrorMessage { get => GetValue(InputErrorMessageProperty); private set => SetValue(inputErrorMessagePropertyKey, value); }
 		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
@@ -476,7 +476,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc OnDropDown
 
-		private bool CanExecuteDropDownCommand 
+		private bool CanExecuteDropDownCommand
 			=> HasDropDownSource && IsEnabled && !IsReadOnly;
 
 		/// <summary></summary>
@@ -750,7 +750,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="keyEvent"></param>
 		protected virtual void OnPreviewKeyDown(KeyEventArgs keyEvent)
 			=> GenerateLockKeyErrors();
-		
+
 		/// <summary>Num/Caps-Lock checks</summary>
 		protected void GenerateLockKeyErrors()
 		{
@@ -979,7 +979,7 @@ namespace TecWare.PPSn.Controls
 
 			private readonly object errorMesage;
 
-			public WordPart(int startAt, int endAt, bool upperCase, bool allowDigits, bool allowAny, object errorMessage) 
+			public WordPart(int startAt, int endAt, bool upperCase, bool allowDigits, bool allowAny, object errorMessage)
 				: base(startAt, endAt)
 			{
 				this.upperCase = upperCase;
@@ -1016,7 +1016,7 @@ namespace TecWare.PPSn.Controls
 		} // class WordPart
 
 		#endregion
-		
+
 		private readonly PartBase[] mask;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -1201,7 +1201,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		/// <param name="textBox"></param>
 		/// <param name="mask"></param>
-		public PpsMaskInputManager(PpsTextBox textBox, string mask) 
+		public PpsMaskInputManager(PpsTextBox textBox, string mask)
 			: base(textBox, ParseMask(mask))
 		{
 		}
@@ -1259,7 +1259,7 @@ namespace TecWare.PPSn.Controls
 			{
 				var t = GetText();
 				if (String.IsNullOrEmpty(t))
-					t = String.Format("{0:d}", DateTime.Today);
+					t = DateTime.Today.ToString("dd.MM.yyyy");
 
 				return new string[]
 				{
