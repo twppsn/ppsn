@@ -434,7 +434,7 @@ namespace TecWare.PPSn.UI
 				}
 			).AwaitTask();
 			if (userInfo != null)
-				loginState.UserName = userInfo.UserName;
+				loginState.UserName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
 
 			// show login page only if there is no error page
 			if (ActivateState != StatePanes.Error)

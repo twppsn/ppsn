@@ -342,7 +342,7 @@
 					<Style TargetType="{x:Type Grid}">
 						<Setter Property="Visibility" Value="Hidden"/>
 						<Style.Triggers>
-							<DataTrigger Binding="{Binding ActivePageNum,Mode=OneWay}">
+							<DataTrigger Binding="{Binding ElementName=PPSnSplashWindow, Path=ActivePageNum, Mode=OneWay}">
 								<DataTrigger.Value>
 									<sys:Int32>3</sys:Int32>
 								</DataTrigger.Value>
