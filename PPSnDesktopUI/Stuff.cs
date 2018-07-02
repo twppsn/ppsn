@@ -1119,7 +1119,7 @@ namespace TecWare.PPSn
 		public bool MoveTo(object value)
 		{
 			var realIndex = itemList.IndexOf(value);
-			if (realIndex > 0)
+			if (realIndex >= 0)
 			{
 				Move(realIndex - GetRealIndex(currentMitte));
 				return true;

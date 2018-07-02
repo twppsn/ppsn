@@ -17,20 +17,38 @@ specific language governing permissions and limitations under the Licence.
 
 	<Style x:Key="PpsCircularListBoxItemStyle" TargetType="{x:Type ContentControl}">
 		<Setter Property="Focusable" Value="False" />
-		<Setter Property="FontSize" Value="16" />
-		<Setter Property="MinWidth" Value="86" />
-		<Setter Property="Height" Value="40" />
+		<Setter Property="MinWidth" Value="80" />
+		<Setter Property="Height" Value="{x:Static pps:PpsCircularListBox.ListViewItemHeight}" />
 		<Setter Property="Control.Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ContentControl}">
-					<Border x:Name="PART_ItemBorder" Background="Transparent" SnapsToDevicePixels="True">
-						<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
-					</Border>
-					<ControlTemplate.Triggers>
-						<Trigger Property="IsMouseOver" Value="true">
-							<Setter Property="TextElement.Foreground" Value="{DynamicResource PPSnMarkerBrush}" />
-						</Trigger>
-					</ControlTemplate.Triggers>
+					<Button Content="{Binding}" Command="{x:Static NavigationCommands.GoToPage}" CommandParameter="{Binding}">
+						<Button.Style>
+							<Style TargetType="{x:Type Button}">
+								<Setter Property="Focusable" Value="False" />
+								<Setter Property="TextElement.Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+								<Setter Property="TextElement.FontSize" Value="16" />
+								<Setter Property="Template">
+									<Setter.Value>
+										<ControlTemplate TargetType="{x:Type Button}">
+											<Border x:Name="PART_ItemBorder" Background="Transparent" >
+												<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="6,0" IsHitTestVisible="False" />
+											</Border>
+											<ControlTemplate.Triggers>
+												<MultiTrigger>
+													<MultiTrigger.Conditions>
+														<Condition Property="IsMouseOver" Value="True" />
+														<Condition Property="IsStylusOver" Value="False" />
+													</MultiTrigger.Conditions>
+													<Setter Property="TextElement.Foreground" Value="{DynamicResource PPSnMarkerBrush}" />
+												</MultiTrigger>
+											</ControlTemplate.Triggers>
+										</ControlTemplate>
+									</Setter.Value>
+								</Setter>
+							</Style>
+						</Button.Style>
+					</Button>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
@@ -39,7 +57,6 @@ specific language governing permissions and limitations under the Licence.
 	<Style TargetType="{x:Type pps:PpsCircularListBox}">
 		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsCircularListBoxItemStyle}" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
-		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsCircularListBox}">
@@ -69,10 +86,9 @@ specific language governing permissions and limitations under the Licence.
 							</Setter>
 						</Style>
 					</ControlTemplate.Resources>
-
-					<Grid>
+					<Grid Background="Transparent">
 						<Border x:Name="ItemsBorder" BorderBrush="{DynamicResource PPSnPopUpBorderBrush}" BorderThickness="1" SnapsToDevicePixels="True">
-							<ItemsPresenter x:Name="Items" VerticalAlignment="Center"/>
+							<ItemsPresenter x:Name="Items" VerticalAlignment="Center" /> 
 						</Border>
 						<RepeatButton x:Name="PreviousButton" Command="{x:Static ComponentCommands.MoveUp}" Margin="1,1,1,0" VerticalAlignment="Top" Visibility="Collapsed">
 							<RepeatButton.Content>
@@ -89,18 +105,27 @@ specific language governing permissions and limitations under the Licence.
 							</RepeatButton.Content>
 						</RepeatButton>
 					</Grid>
-
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsFocused" Value="True">
 							<Setter TargetName="ItemsBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 						</Trigger>
+
 						<Trigger Property="HasTwoItems" Value="True">
-							<Setter TargetName="Items" Property="Margin" Value="0,0,0,40" />
+							<Setter TargetName="Items" Property="Margin">
+								<Setter.Value>
+									<Thickness Left="0" Top="0" Right="0" Bottom="{x:Static pps:PpsCircularListBox.ListViewItemHeight}" />
+								</Setter.Value>
+							</Setter>
 						</Trigger>
-						<Trigger Property="IsMouseOver" Value="True">
+
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsMouseOver" Value="True" />
+								<Condition Property="IsStylusOver" Value="False" />
+							</MultiTrigger.Conditions>
 							<Setter TargetName="PreviousButton" Property="Visibility" Value="Visible" />
 							<Setter TargetName="NextButton" Property="Visibility" Value="Visible" />
-						</Trigger>
+						</MultiTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
@@ -121,16 +146,24 @@ specific language governing permissions and limitations under the Licence.
 						<ItemsControl ItemsSource="{Binding Parts, RelativeSource={RelativeSource TemplatedParent}}" Focusable="False">
 							<ItemsControl.ItemsPanel>
 								<ItemsPanelTemplate>
-									<StackPanel IsItemsHost="True" Orientation="Horizontal" />
+									<DockPanel IsItemsHost="True" />
 								</ItemsPanelTemplate>
 							</ItemsControl.ItemsPanel>
+							<ItemsControl.ItemContainerStyle>
+								<Style TargetType="ContentPresenter">
+									<Setter Property="DockPanel.Dock" Value="Left" />
+								</Style>
+							</ItemsControl.ItemContainerStyle>
 							<ItemsControl.ItemTemplate>
 								<DataTemplate>
-									<pps:PpsCircularListBox List="{Binding List}" SelectedItem="{Binding SelectedItem,Mode=TwoWay}" ListViewCount="{Binding ListViewCount,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsMultiCircularListBox}}}"/>
+									<pps:PpsCircularListBox List="{Binding List}"
+															SelectedItem="{Binding SelectedItem,Mode=TwoWay}"
+															ListViewCount="{Binding ListViewCount,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsMultiCircularListBox}}}" />
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
-						<Border Height="40" Background="{TemplateBinding Foreground}" VerticalAlignment="Center" Opacity=".2" IsHitTestVisible="False" />
+						<Border Height="{x:Static pps:PpsCircularListBox.ListViewItemHeight}" VerticalAlignment="Center"
+								Background="{TemplateBinding Foreground}" Opacity=".2" IsHitTestVisible="False" />
 						<Border Grid.Row="1" BorderThickness="1,0,1,1" BorderBrush="{DynamicResource PPSnPopUpBorderBrush}">
 							<Grid>
 								<Grid.ColumnDefinitions>
