@@ -24,6 +24,8 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Linq;
+
 
 namespace TecWare.PPSn.Controls
 {
@@ -32,8 +34,12 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsCircularListBox : ItemsControl
 	{
+		/// <summary>The height of an item.</summary>
+		public const double ListViewItemHeight = 40.0;
+
 		private const string partItemBorder = "PART_ItemBorder";
 		private PpsCircularView circularListView = null;
+		private double lastTouchPosition = 0.0;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey hasTwoItemsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasTwoItems), typeof(bool), typeof(PpsCircularListBox), new FrameworkPropertyMetadata(BooleanBox.False));
@@ -47,14 +53,32 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public PpsCircularListBox()
 		{
+
 			CommandBindings.Add(new CommandBinding(
 				ComponentCommands.MoveDown,
-				(sender, e) => circularListView.Move(1),
+				(sender, e) =>
+				{
+					EnsureFocus();
+					SelectNextItem();
+				},
 				(sender, e) => e.CanExecute = circularListView != null)
 			);
 			CommandBindings.Add(new CommandBinding(
 				ComponentCommands.MoveUp,
-				(sender, e) => circularListView.Move(-1),
+				(sender, e) =>
+				{
+					EnsureFocus();
+					SelectPreviousItem();
+				},
+				(sender, e) => e.CanExecute = circularListView != null)
+			);
+			CommandBindings.Add(new CommandBinding(
+				NavigationCommands.GoToPage,
+				(sender, e) =>
+				{
+					EnsureFocus();
+					SelectThisItem(e.Parameter);
+				},
 				(sender, e) => e.CanExecute = circularListView != null)
 			);
 		} // ctor
@@ -75,7 +99,8 @@ namespace TecWare.PPSn.Controls
 		{
 			circularListView = new PpsCircularView(items, listViewCount);
 			circularListView.CollectionChanged += CollectionChanged_CollectionChanged;
-			if (items.Count == 2)
+
+			if (items.Count < listViewCount && items.Count % 2 == 0)
 				HasTwoItems = true;
 
 			if (this.SelectedItem != null)
@@ -116,6 +141,9 @@ namespace TecWare.PPSn.Controls
 		private void SelectPreviousItem()
 			=> circularListView?.Move(-1);
 
+		private void SelectThisItem(object value)
+			=> circularListView?.MoveTo(value);
+
 		private void EnsureFocus()
 		{
 			if (IsFocused)
@@ -124,23 +152,6 @@ namespace TecWare.PPSn.Controls
 			FocusManager.SetFocusedElement(focusScope, this);
 			Keyboard.Focus(this);
 		} // proc EnsureFocus
-
-		private int CalculateItemIndex(double mouseY, double itemHeight)
-			=> (int)mouseY / (int)itemHeight;
-
-		/// <summary></summary>
-		/// <param name="e"></param>
-		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
-		{
-			e.Handled = true;
-			base.OnMouseLeftButtonDown(e);
-			EnsureFocus();
-			if (e.OriginalSource is Border border && String.Compare(border.Name, partItemBorder, false) == 0)
-			{
-				var idx = CalculateItemIndex(e.GetPosition(this).Y + (HasTwoItems ? border.ActualHeight : 0d), border.ActualHeight);
-				circularListView.MoveTo(idx);
-			}
-		} // proc OnMouseLeftButtonDown
 
 		/// <summary></summary>
 		/// <param name="e"></param>
@@ -179,6 +190,57 @@ namespace TecWare.PPSn.Controls
 			base.OnMouseWheel(e);
 		} // proc OnMouseWheel
 
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnTouchDown(TouchEventArgs e)
+		{
+			base.OnTouchDown(e);
+
+			if (e.Source is RepeatButton)
+				return;
+
+			if (e.OriginalSource is Border border && String.Compare(border.Name, partItemBorder, false) == 0 && TouchesCaptured.Count() == 0)
+			{
+				lastTouchPosition = e.GetTouchPoint(this).Position.Y;
+				EnsureFocus();
+				CaptureTouch(e.TouchDevice);
+			}
+		} // proc OnTouchDown
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnTouchMove(TouchEventArgs e)
+		{
+			base.OnTouchMove(e);
+
+			if (e.TouchDevice.Captured == this && e.TouchDevice.DirectlyOver == this)
+			{
+				var currentPosition = e.GetTouchPoint(this).Position.Y;
+				var delta = currentPosition - lastTouchPosition;
+				if (delta >= ListViewItemHeight)
+				{
+					lastTouchPosition = currentPosition;
+					SelectPreviousItem();
+				}
+				else if (delta <= -ListViewItemHeight)
+				{
+					lastTouchPosition = currentPosition;
+					SelectNextItem();
+				}
+			}
+		} // proc OnTouchMove
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnTouchUp(TouchEventArgs e)
+		{
+			base.OnTouchUp(e);
+
+			if (e.TouchDevice.Captured == this)
+				ReleaseTouchCapture(e.TouchDevice);
+		} // proc OnTouchUp
+
 		/// <summary></summary>
 		/// <param name="item"></param>
 		/// <returns></returns>
@@ -196,7 +258,7 @@ namespace TecWare.PPSn.Controls
 		public int ListViewCount { get => (int)GetValue(ListViewCountProperty); set => SetValue(ListViewCountProperty, value); }
 		/// <summary></summary>
 		public object SelectedItem { get => GetValue(SelectedItemProperty); set => SetValue(SelectedItemProperty, value); }
-		/// <summary>Has the base list only two items.</summary>
+		/// <summary>Has the base list only two items?</summary>
 		public bool HasTwoItems { get => BooleanBox.GetBool(GetValue(HasTowItemsProperty)); private set => SetValue(hasTwoItemsPropertyKey, BooleanBox.GetObject(value)); }
 
 		static PpsCircularListBox()
