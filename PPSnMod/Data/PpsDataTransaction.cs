@@ -149,7 +149,8 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="parameter"></param>
 		/// <param name="behavior"></param>
 		/// <returns></returns>
-		protected abstract IEnumerable<IEnumerable<IDataRow>> ExecuteResult(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior);
+		protected virtual IEnumerable<IEnumerable<IDataRow>> ExecuteResult(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
+			=> throw new NotImplementedException();
 		
 		/// <summary>DataSource of the transaction.</summary>
 		public PpsDataSource DataSource => dataSource;

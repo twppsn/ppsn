@@ -86,171 +86,11 @@ namespace TecWare.PPSn.Server.Sql
 		} // class SqlConnectionHandle
 
 		#endregion
-		
-		#region -- class SqlResultInfo ------------------------------------------------
-
-		private sealed class SqlResultInfo : List<Func<SqlDataReader, IEnumerable<IDataRow>>>
-		{
-		} // class SqlResultInfo
-
-		#endregion
-
-		#region -- class SqlJoinExpression --------------------------------------------
-
-		/// <summary>Implementation of the join expression for SQL.</summary>
-		public sealed class SqlJoinExpression : PpsDataJoinExpression<PpsSqlTableInfo>
-		{
-			#region -- class SqlEmitVisitor -------------------------------------------
-
-			private sealed class SqlEmitVisitor : PpsJoinVisitor<string>
-			{
-				public override string CreateJoinStatement(string leftExpression, PpsDataJoinType type, string rightExpression, string on)
-				{
-					string GetJoinExpr()
-					{
-						switch (type)
-						{
-							case PpsDataJoinType.Inner:
-								return " INNER JOIN ";
-							case PpsDataJoinType.Left:
-								return " LEFT OUTER JOIN ";
-							case PpsDataJoinType.Right:
-								return " RIGHT OUTER JOIN ";
-							default:
-								throw new ArgumentException(nameof(type));
-						}
-					} // func GetJoinExpr
-
-					return "(" + leftExpression + GetJoinExpr() + rightExpression + " ON (" + on + "))";
-				} // func CreateJoinStatement
-
-				public override string CreateTableStatement(PpsSqlTableInfo table, string alias)
-					=> String.IsNullOrEmpty(alias)
-						? table.SqlQualifiedName
-						: table.SqlQualifiedName + " AS " + alias;
-			} // class SqlEmitVisitor
-
-			#endregion
-
-			private readonly PpsSqlExDataSource dataSource;
-
-			/// <summary></summary>
-			/// <param name="dataSource"></param>
-			public SqlJoinExpression(PpsSqlExDataSource dataSource)
-			{
-				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-			} // ctor
-
-			/// <summary></summary>
-			/// <param name="tableName"></param>
-			/// <returns></returns>
-			protected override PpsSqlTableInfo ResolveTable(string tableName)
-				=> dataSource.ResolveTableByName<SqlTableInfo>(tableName, true);
-
-			/// <summary></summary>
-			/// <param name="left"></param>
-			/// <param name="joinOp"></param>
-			/// <param name="right"></param>
-			/// <returns></returns>
-			protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
-			{
-				foreach (var r in right.Table.RelationInfo)
-				{
-					if (r.ReferencedColumn.Table == left.Table)
-					{
-						var sb = new StringBuilder();
-						AppendColumn(sb, left, r.ReferencedColumn);
-						sb.Append(" = ");
-						AppendColumn(sb, right, r.ParentColumn);
-						return sb.ToString();
-					}
-				}
-				return null;
-			} // func CreateOnStatement
-
-			private void SplitColumnName(string name, out string alias, out string columnName)
-			{
-				var p = name.IndexOf('.'); // alias?
-				if (p >= 0)
-				{
-					alias = name.Substring(0, p);
-					columnName = name.Substring(p + 1);
-				}
-				else
-				{
-					alias = null;
-					columnName = name;
-				}
-			} // func SplitColumnName
-
-			/// <summary></summary>
-			/// <param name="ppsColumn"></param>
-			/// <param name="throwException"></param>
-			/// <returns></returns>
-			public (PpsTableExpression, PpsSqlColumnInfo) FindColumn(IPpsColumnDescription ppsColumn, bool throwException)
-			{
-				foreach (var t in GetTables())
-				{
-					if (ppsColumn.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn) && t.Table == sqlColumn.Table)
-						return (t, sqlColumn);
-				}
-
-				if (throwException)
-					throw new ArgumentException($"Column not found ({ppsColumn.Name}).");
-
-				return (null, null);
-			} // func FindColumn
-
-			/// <summary></summary>
-			/// <param name="name"></param>
-			/// <param name="throwException"></param>
-			/// <returns></returns>
-			public (PpsTableExpression, PpsSqlColumnInfo) FindColumn(string name, bool throwException)
-			{
-				SplitColumnName(name, out var alias, out var columnName);
-				foreach (var t in GetTables())
-				{
-					if (alias != null)
-					{
-						if (t.Alias != null && String.Compare(alias, t.Alias, StringComparison.OrdinalIgnoreCase) == 0)
-							return (t, t.Table.FindColumn(columnName, throwException));
-					}
-					else
-					{
-						var c = t.Table.FindColumn(columnName, false);
-						if (c != null)
-							return (t, c);
-					}
-				}
-
-				if (throwException)
-					throw new ArgumentException($"Column not found ({name}).");
-
-				return (null, null);
-			} // func FindColumn
-
-			/// <summary></summary>
-			/// <param name="commandText"></param>
-			/// <param name="table"></param>
-			/// <param name="column"></param>
-			/// <returns></returns>
-			public StringBuilder AppendColumn(StringBuilder commandText, PpsTableExpression table, PpsSqlColumnInfo column)
-				=> String.IsNullOrEmpty(table.Alias)
-					? column.AppendAsColumn(commandText, true)
-					: column.AppendAsColumn(commandText, table.Alias);
-
-			/// <summary></summary>
-			/// <returns></returns>
-			public string EmitJoin()
-				=> new SqlEmitVisitor().Visit(this);
-		} // class SqlJoinExpression
-
-		#endregion
 
 		#region -- class SqlDataTransaction -------------------------------------------
 
 		/// <summary></summary>
-		private sealed class SqlDataTransaction : PpsDataTransaction
+		private sealed class SqlDataTransaction : PpsSqlDataTransaction<SqlConnection, SqlTransaction, SqlCommand>
 		{
 			#region -- class PpsColumnMapping -------------------------------------------
 
@@ -300,167 +140,19 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			private readonly SqlConnection connection;
 			private readonly PpsCredentials credentials;
-			private readonly SqlTransaction transaction;
 
 			#region -- Ctor/Dtor --------------------------------------------------------
 
 			public SqlDataTransaction(PpsSqlDataSource dataSource, SqlConnectionHandle connectionHandle)
 				: base(dataSource, connectionHandle)
 			{
-				this.connection = connectionHandle.ForkConnectionAsync().AwaitTask();
 				this.credentials = connectionHandle.Credentials;
-
-				// create the sql transaction
-				this.transaction = connection.BeginTransaction(IsolationLevel.ReadUncommitted);
 			} // ctor
 
-			protected override void Dispose(bool disposing)
-			{
-				base.Dispose(disposing); // commit/rollback
-
-				if (disposing)
-				{
-					transaction.Dispose();
-					connection.Dispose();
-				}
-			} // proc Dispose
-
-			public override void Commit()
-			{
-				if (!IsCommited.HasValue)
-					transaction.Commit();
-				base.Commit();
-			} // proc Commit
-
-			public override void Rollback()
-			{
-				try
-				{
-					if (!IsCommited.HasValue)
-						transaction.Rollback();
-				}
-				finally
-				{
-					base.Rollback();
-				}
-			} // proc Rollback
-
 			#endregion
 
-			#region -- Execute Result ---------------------------------------------------
-
-			internal SqlCommand CreateCommand(CommandType commandType, bool noTransaction)
-			{
-				var cmd = connection.CreateCommand();
-				cmd.Connection = connection;
-				cmd.CommandTimeout = 7200;
-				cmd.Transaction = noTransaction ? null : transaction;
-				return cmd;
-			} // func CreateCommand
-
-			private SqlCommand CreateCommand(LuaTable parameter, CommandType commandType)
-				=> CreateCommand(commandType, parameter.GetOptionalValue("__notrans", false));
-
-			private SqlDataReader ExecuteReaderCommand(SqlCommand cmd, PpsDataTransactionExecuteBehavior behavior)
-			{
-				switch (behavior)
-				{
-					case PpsDataTransactionExecuteBehavior.NoResult:
-						cmd.ExecuteNonQuery();
-						return null;
-					case PpsDataTransactionExecuteBehavior.SingleRow:
-						return cmd.ExecuteReader(CommandBehavior.SingleRow);
-					case PpsDataTransactionExecuteBehavior.SingleResult:
-						return cmd.ExecuteReader(CommandBehavior.SingleResult);
-					default:
-						return cmd.ExecuteReader(CommandBehavior.Default);
-				}
-			} // func ExecuteReaderCommand
-
-			private LuaTable GetArguments(object value, bool throwException)
-			{
-				var args = value as LuaTable;
-				if (args == null && throwException)
-					throw new ArgumentNullException($"value", "No arguments defined.");
-				return args;
-			} // func GetArguments
-
-			private LuaTable GetArguments(LuaTable parameter, int index, bool throwException)
-			{
-				var args = GetArguments(parameter[index], false);
-				if (args == null && throwException)
-					throw new ArgumentNullException($"parameter[{index}]", "No arguments defined.");
-				return args;
-			} // func GetArguments
-
-			#region -- ExecuteCall ----------------------------------------------------------
-
-			private IEnumerable<IEnumerable<IDataRow>> ExecuteCall(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
-			{
-				using (var cmd = CreateCommand(parameter, CommandType.StoredProcedure))
-				{
-					cmd.CommandText = name;
-
-					// build argument list
-					SqlCommandBuilder.DeriveParameters(cmd);
-
-					// build parameter mapping
-					var parameterMapping = new Tuple<string, SqlParameter>[cmd.Parameters.Count];
-					var j = 0;
-					foreach (SqlParameter p in cmd.Parameters)
-					{
-						var parameterName = p.ParameterName;
-						if ((p.Direction & ParameterDirection.ReturnValue) == ParameterDirection.ReturnValue)
-							parameterName = null;
-						else if (parameterName.StartsWith("@"))
-							parameterName = parameterName.Substring(1);
-
-						parameterMapping[j++] = new Tuple<string, SqlParameter>(parameterName, p);
-					}
-
-					// copy arguments
-					for (var i = 1; i <= parameter.ArrayList.Count; i++)
-					{
-						var args = GetArguments(parameter, i, false);
-						if (args == null)
-							yield break;
-
-						// fill arguments
-						foreach (var p in parameterMapping)
-						{
-							var value = args?.GetMemberValue(p.Item1);
-							p.Item2.Value = value ?? DBNull.Value;
-						}
-
-						using (var r = ExecuteReaderCommand(cmd, behavior))
-						{
-							// copy arguments back
-							foreach (var p in parameterMapping)
-							{
-								if (p.Item1 == null)
-									args[1] = p.Item2.Value.NullIfDBNull();
-								else if ((p.Item2.Direction & ParameterDirection.Output) == ParameterDirection.Output)
-									args[p.Item1] = p.Item2.Value.NullIfDBNull();
-							}
-
-							// return results
-							if (r != null)
-							{
-								do
-								{
-									yield return new DbRowReaderEnumerable(r);
-									if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
-										break;
-								} while (r.NextResult());
-							}
-						} // using r
-					} // for (args)
-				} // using cmd
-			} // func ExecuteInsertResult
-
-			#endregion
+			#region -- Execute Result -------------------------------------------------
 
 			#region -- ExecuteUpdateRevisionData --------------------------------------
 
@@ -544,7 +236,7 @@ namespace TecWare.PPSn.Server.Sql
 								+ "OUTPUT inserted.Id, inserted.Data.PathName(), GET_FILESTREAM_TRANSACTION_CONTEXT() "
 								+ "VALUES ('SHA2_256', 0x, 0x);";
 
-							using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
+							using (var r = ExecuteReaderCommand<SqlDataReader>(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
 							{
 								if (r.Read())
 								{
@@ -573,7 +265,7 @@ namespace TecWare.PPSn.Server.Sql
 							cmd.Parameters.Add("@HashAlgo", SqlDbType.VarChar).Value = args["HashAlgo"];
 							cmd.Parameters.Add("@DocumentId", SqlDbType.BigInt).Value = documentId;
 
-							ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.NoResult);
+							ExecuteReaderCommand<SqlDataReader>(cmd, PpsDataTransactionExecuteBehavior.NoResult);
 						}
 						#endregion
 					}
@@ -595,7 +287,7 @@ namespace TecWare.PPSn.Server.Sql
 								cmd.Parameters.Add("@Data", SqlDbType.VarBinary).Value = dstMem.ToArray();
 							}
 							
-							using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleResult))
+							using (var r = ExecuteReaderCommand<SqlDataReader>(cmd, PpsDataTransactionExecuteBehavior.SingleResult))
 							{
 								if (r.Read())
 									documentId = r.GetInt64(0);
@@ -662,7 +354,7 @@ namespace TecWare.PPSn.Server.Sql
 					cmd.Parameters.Add("@CreateDate", SqlDbType.DateTime2).Value = createDate;
 					cmd.Parameters.Add("@CreateUserId", SqlDbType.BigInt).Value = createUserId;
 
-					using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
+					using (var r = ExecuteReaderCommand<SqlDataReader>(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
 					{
 						if (r.Read())
 						{
@@ -705,7 +397,7 @@ namespace TecWare.PPSn.Server.Sql
 
 					cmd.Parameters.Add("@Id", SqlDbType.BigInt).Value = revId > 0 ? revId : objkId;
 
-					using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
+					using (var r = ExecuteReaderCommand<SqlDataReader>(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
 					{
 						if (!r.Read())
 							yield break;
@@ -768,7 +460,24 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			#region -- ExecuteInsert --------------------------------------------------------
+			#region -- ExecuteCall ----------------------------------------------------
+
+			protected override void PrepareStoredProcedure(SqlCommand command)
+				=> SqlCommandBuilder.DeriveParameters(command);
+
+			protected override IEnumerable<IEnumerable<IDataRow>> ExecuteCall(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
+			{
+				if (name == "sys.UpdateRevisionData")
+					return ExecuteUpdateRevisionData(parameter, behavior);
+				else if (name == "sys.GetRevisionData")
+					return ExecuteGetRevisionData(parameter, behavior);
+				else
+					return base.ExecuteCall(parameter, name, behavior);
+			} // func ExecuteCall
+
+			#endregion
+
+			#region -- ExecuteInsert --------------------------------------------------
 
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteInsert(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
@@ -858,7 +567,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			#region -- ExecuteUpdate --------------------------------------------------------
+			#region -- ExecuteUpdate --------------------------------------------------
 
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteUpdate(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
@@ -946,7 +655,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			#region -- ExecuteUpsert --------------------------------------------------------
+			#region -- ExecuteUpsert --------------------------------------------------
 			
 			private (IEnumerator<object> rows, PpsColumnMapping[] mapping) PrepareColumnMapping(PpsSqlTableInfo tableInfo, LuaTable parameter)
 			{
@@ -1278,275 +987,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			#region -- ExecuteSimpleSelect --------------------------------------------------
-
-			#region -- class DefaultRowEnumerable -------------------------------------------
-
-			private sealed class DefaultRowEnumerable : IEnumerable<IDataRow>
-			{
-				private sealed class DefaultValueRow : DynamicDataRow
-				{
-					private readonly IDataRow current;
-					private readonly LuaTable defaults;
-
-					public DefaultValueRow(LuaTable defaults, IDataRow current)
-					{
-						this.defaults = defaults;
-						this.current = current;
-					} // ctor
-
-					private object GetDefaultValue(IDataRow current, int index)
-					{
-						var memberName = current.Columns[index].Name;
-						var value = defaults.GetMemberValue(memberName);
-
-						if (Lua.RtInvokeable(value))
-							return new LuaResult(Lua.RtInvoke(value, current))[0];
-						else
-							return value;
-					} // func GetDefaultValue
-
-					public override object this[int index] => current[index] ?? GetDefaultValue(current, index);
-
-					public override bool IsDataOwner => current.IsDataOwner;
-					public override IReadOnlyList<IDataColumn> Columns => current.Columns;
-				} // class DefaultValueRow
-
-				private sealed class DefaultRowEnumerator : IEnumerator<IDataRow>
-				{
-					private readonly LuaTable defaults;
-					private readonly IEnumerator<IDataRow> enumerator;
-
-					public DefaultRowEnumerator(LuaTable defaults, IEnumerator<IDataRow> enumerator)
-					{
-						this.defaults = defaults ?? throw new ArgumentNullException(nameof(defaults));
-						this.enumerator = enumerator ?? throw new ArgumentNullException(nameof(enumerator));
-					} // ctor
-
-					public void Dispose() 
-						=> enumerator.Dispose();
-
-					public bool MoveNext()
-						=> enumerator.MoveNext();
-
-					public void Reset()
-						=> enumerator.Reset();
-
-					public IDataRow Current => new DefaultValueRow(defaults, enumerator.Current);
-					object IEnumerator.Current => Current;
-				} // class DefaultRowEnumerator
-
-				private readonly LuaTable defaults;
-				private readonly IEnumerable<IDataRow> rowEnumerable;
-
-				public DefaultRowEnumerable(LuaTable defaults, IEnumerable<IDataRow> rowEnumerable)
-				{
-					this.defaults = defaults;
-					this.rowEnumerable = rowEnumerable;
-				} // ctor
-
-				public IEnumerator<IDataRow> GetEnumerator()
-					=> new DefaultRowEnumerator(defaults, rowEnumerable.GetEnumerator());
-
-				IEnumerator IEnumerable.GetEnumerator() 
-					=> GetEnumerator();
-			} // class DefaultRowEnumerable
-
-			#endregion
-
-			private IEnumerable<IEnumerable<IDataRow>> ExecuteSimpleSelect(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
-			{
-				/*
-				 * select @cols from @name where @args
-				 */
-
-				// collect tables
-				var tableInfos = new SqlJoinExpression(SqlDataSource);
-				tableInfos.Parse(name);
-
-				var defaults = GetArguments(parameter.GetMemberValue("defaults"), false);
-				
-				using (var cmd = CreateCommand(parameter, CommandType.Text))
-				{
-					var first = true;
-					var commandText = new StringBuilder("SELECT ");
-
-					#region -- select List --
-					var columnList = parameter.GetMemberValue("columnList");
-					if (columnList == null) // no columns, simulate a select *
-					{
-						#region -- append select * --
-						foreach (var table in tableInfos.GetTables())
-						{
-							foreach (var column in table.Table.Columns)
-							{
-								if (first)
-									first = false;
-								else
-									commandText.Append(", ");
-
-								tableInfos.AppendColumn(commandText, table, column);
-							}
-						}
-						#endregion
-					}
-					else if (columnList is LuaTable t) // columns are definied in a table
-					{
-						#region -- append select columns --
-						void AppendColumnFromTableKey(string columnName)
-						{
-							var (table, column) = tableInfos.FindColumn(columnName, defaults == null);
-							if (column != null) // append table column
-								tableInfos.AppendColumn(commandText, table, column);
-							else // try append empty DbNull column
-							{
-								var field = DataSource.Application.GetFieldDescription(columnName, true);
-								commandText.Append(PpsSqlColumnInfo.AppendSqlParameter(cmd, field).ParameterName);
-							}
-						} // proc AppendColumnFromTableKey
-
-						foreach (var item in t.ArrayList.OfType<string>())
-						{
-							if (first)
-								first = false;
-							else
-								commandText.Append(", ");
-							AppendColumnFromTableKey(item);
-						}
-
-						foreach (var m in t.Members)
-						{
-							if (first)
-								first = false;
-							else
-								commandText.Append(", ");
-
-							AppendColumnFromTableKey(m.Key);
-
-							commandText.Append(" AS [").Append(m.Value).Append(']');
-						}
-						#endregion
-					}
-					else if (columnList is IDataColumns forcedColumns) // column set is forced
-					{
-						#region -- append select columns --
-						foreach (var col in forcedColumns.Columns)
-						{
-							if (first)
-								first = false;
-							else
-								commandText.Append(", ");
-
-							var (table, column) = col is IPpsColumnDescription ppsColumn
-								? tableInfos.FindColumn(ppsColumn, defaults == null)
-								: tableInfos.FindColumn(col.Name, defaults == null);
-
-							if (column != null) // append table column
-								tableInfos.AppendColumn(commandText, table, column);
-							else // try append empty DbNull column
-								commandText.Append(PpsSqlColumnInfo.AppendSqlParameter(cmd, col).ParameterName);
-
-							commandText.Append(" AS [").Append(col.Name).Append(']');
-						}
-						#endregion
-					}
-					else
-						throw new ArgumentException("Unknown columnList definition.");
-					#endregion
-
-					// append from
-					commandText.Append(" FROM ");
-					commandText.Append(tableInfos.EmitJoin());
-
-					// get where arguments
-					var args = GetArguments(parameter, 1, false);
-					if (args != null)
-					{
-						commandText.Append(" WHERE ");
-						first = true;
-						foreach (var p in args.Members)
-						{
-							if (first)
-								first = false;
-							else
-								commandText.Append(" AND ");
-
-							var (table, column) = tableInfos.FindColumn((string)p.Key, true);
-							var parm = column.AppendSqlParameter(cmd, value: p.Value);
-							tableInfos.AppendColumn(commandText, table, column);
-							commandText.Append(" = ")
-								.Append(parm.ParameterName);
-						}
-					}
-					else if (parameter.GetMemberValue("where") is string sqlWhere)
-						commandText.Append(" WHERE ").Append(sqlWhere);
-
-					cmd.CommandText = commandText.ToString();
-
-					using (var r = ExecuteReaderCommand(cmd, behavior))
-					{
-						// return results
-						if (r != null)
-						{
-							do
-							{
-								if (defaults != null)
-									yield return new DefaultRowEnumerable(defaults, new DbRowReaderEnumerable(r));
-								else
-									yield return new DbRowReaderEnumerable(r);
-
-								if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
-									break;
-							} while (r.NextResult());
-						}
-					} // using r
-				}
-			} // proc ExecuteSimpleSelect
-
-			#endregion
-
-			#region -- ExecuteSql -----------------------------------------------------------
-
-			private static Regex regExSqlParameter = new Regex(@"\@(\w+)", RegexOptions.Compiled);
-
-			private IEnumerable<IEnumerable<IDataRow>> ExecuteSql(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
-			{
-				/*
-				 * sql is execute and the args are created as a parameter
-				 */
-
-				using (var cmd = CreateCommand(parameter, CommandType.Text))
-				{
-					cmd.CommandText = name;
-
-					var args = GetArguments(parameter, 1, false);
-					if (args != null)
-					{
-						foreach (Match m in regExSqlParameter.Matches(name))
-						{
-							var k = m.Groups[1].Value;
-							var v = args.GetMemberValue(k, true);
-							cmd.Parameters.Add(new SqlParameter("@" + k, v.NullIfDBNull()));
-						}
-					}
-
-					// execute
-					using (var r = ExecuteReaderCommand(cmd, behavior))
-					{
-						if (r != null)
-						{
-							do
-							{
-								yield return new DbRowReaderEnumerable(r);
-							} while (r.NextResult());
-						}
-					}
-				}
-			} // func ExecuteSql
-
-			#endregion
-
-			#region -- ExecuteDelete --------------------------------------------------------
+			#region -- ExecuteDelete --------------------------------------------------
 
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteDelete(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
@@ -1603,7 +1044,7 @@ namespace TecWare.PPSn.Server.Sql
 					cmd.CommandText = commandText.ToString();
 
 					// execute delete
-					using (var r = ExecuteReaderCommand(cmd, behavior))
+					using (var r = ExecuteReaderCommand<SqlDataReader>(cmd, behavior))
 					{
 						// return results
 						if (r != null)
@@ -1625,16 +1066,7 @@ namespace TecWare.PPSn.Server.Sql
 			protected override IEnumerable<IEnumerable<IDataRow>> ExecuteResult(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
 			{
 				string name;
-				if ((name = (string)parameter["execute"]) != null)
-				{
-					if (name == "sys.UpdateRevisionData")
-						return ExecuteUpdateRevisionData(parameter, behavior);
-					else if (name == "sys.GetRevisionData")
-						return ExecuteGetRevisionData(parameter, behavior);
-					else
-						return ExecuteCall(parameter, name, behavior);
-				}
-				else if ((name = (string)parameter["insert"]) != null)
+				if ((name = (string)parameter["insert"]) != null)
 					return ExecuteInsert(parameter, name, behavior);
 				else if ((name = (string)parameter["update"]) != null)
 					return ExecuteUpdate(parameter, name, behavior);
@@ -1642,18 +1074,15 @@ namespace TecWare.PPSn.Server.Sql
 					return ExecuteDelete(parameter, name, behavior);
 				else if ((name = (string)parameter["upsert"]) != null)
 					return ExecuteUpsert(parameter, name, behavior);
-				else if ((name = (string)parameter["select"]) != null)
-					return ExecuteSimpleSelect(parameter, name, behavior);
-				else if ((name = (string)parameter["sql"]) != null)
-					return ExecuteSql(parameter, name, behavior);
 				else
-					throw new NotImplementedException();
+					return base.ExecuteResult(parameter, behavior);
 			} // func ExecuteResult
 
 			#endregion
 
-			public PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)base.DataSource;
-			public SqlTransaction InternalTransaction => transaction;
+			public PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)DataSource;
+			public SqlConnection SqlConnection => (SqlConnection)DbConnection;
+			public SqlTransaction SqlTransaction => (SqlTransaction)DbTransaction;
 		} // class SqlDataTransaction
 
 		#endregion
@@ -2516,8 +1945,5 @@ namespace TecWare.PPSn.Server.Sql
 			=> connection is SqlConnectionHandle c
 				? c.Connection
 				: null;
-
-		internal static SqlCommand CreateSqlCommand(PpsDataTransaction trans, CommandType commandType, bool noTransaction)
-			=> trans is SqlDataTransaction t ? t.CreateCommand(commandType, noTransaction) : throw new ArgumentException(nameof(trans));
 	} // PpsSqlExDataSource
 }
