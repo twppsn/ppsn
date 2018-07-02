@@ -831,9 +831,10 @@ namespace TecWare.PPSn.UI
 
 			try
 			{
+				var str = (string)value;
 				if (targetType == typeof(DateTime))
 				{
-					if (value == null)
+					if (String.IsNullOrEmpty(str))
 					{
 						if (isNullable)
 							return new DateTime?();
@@ -841,11 +842,11 @@ namespace TecWare.PPSn.UI
 							return new ValidationResult(false, "Null is not allowed");
 					}
 					else
-						return DateTime.Parse((string)value);
+						return DateTime.Parse(str);
 				}
 				else if (targetType == typeof(DateTimeOffset))
 				{
-					if (value == null)
+					if (String.IsNullOrEmpty(str))
 					{
 						if (isNullable)
 							return new DateTimeOffset?();
@@ -853,7 +854,7 @@ namespace TecWare.PPSn.UI
 							return new ValidationResult(false, "Null is not allowed");
 					}
 					else
-						return DateTime.Parse((string)value);
+						return DateTime.Parse(str);
 				}
 				else
 					return DependencyProperty.UnsetValue;
