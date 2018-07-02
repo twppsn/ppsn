@@ -275,7 +275,9 @@ namespace TecWare.PPSn.Controls
 
 		private bool OnPreviewTextChanged(RoutedEventArgs e, string newText)
 		{
-			if (inputManager != null)
+			if (IsReadOnly)
+				return false;
+			else if (inputManager != null )
 			{
 				var r = inputManager.PreviewTextChanged(newText);
 				UpdateInputError(r, true);
@@ -283,7 +285,7 @@ namespace TecWare.PPSn.Controls
 				return r.IsValid;
 			}
 			else
-				return false;
+				return true;
 		} // func OnPreviewTextChanged
 
 		private void OnPasteTextInput(object sender, DataObjectPastingEventArgs e)
@@ -322,27 +324,30 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 		{
-			switch (e.Key)
+			if (!IsReadOnly)
 			{
-				case Key.Space: // space is not part of TextInput
-					OnPreviewTextChanged(e, " "); // Space
-					break;
-				case Key.Back:
-					OnPreviewTextChanged(e, "\b"); // Backspace
-					break;
-				case Key.Delete:
-					OnPreviewTextChanged(e, "\x7F"); // Delete
-					break;
-				case Key.F4:
-					if (CanExecuteDropDownCommand)
-					{
-						e.Handled = true;
-						DropDownCommand.Execute(null, this);
-					}
-					break;
-				default:
-					inputManager?.PreviewKeyDown(e);
-					break;
+				switch (e.Key)
+				{
+					case Key.Space: // space is not part of TextInput
+						OnPreviewTextChanged(e, " "); // Space
+						break;
+					case Key.Back:
+						OnPreviewTextChanged(e, "\b"); // Backspace
+						break;
+					case Key.Delete:
+						OnPreviewTextChanged(e, "\x7F"); // Delete
+						break;
+					case Key.F4:
+						if (CanExecuteDropDownCommand)
+						{
+							e.Handled = true;
+							DropDownCommand.Execute(null, this);
+						}
+						break;
+					default:
+						inputManager?.PreviewKeyDown(e);
+						break;
+				}
 			}
 
 			base.OnPreviewKeyDown(e);
@@ -667,7 +672,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="inputText"></param>
 		/// <param name="newText"></param>
 		/// <returns></returns>
-		protected bool TryInsertText(string inputText, out string newText)
+		protected ValidationResult TryInsertText(string inputText, out string newText)
 		{
 			var selectionStart = textBox.SelectionStart;
 			var selectionLength = textBox.SelectionLength;
@@ -682,28 +687,28 @@ namespace TecWare.PPSn.Controls
 						if (selectionLength > 0)
 						{
 							newText = newText.Remove(selectionStart, selectionLength);
-							return true;
+							return ValidResult;
 						}
 						else if (selectionStart > 0)
 						{
 							newText = newText.Remove(selectionStart - 1, 1);
-							return true;
+							return ValidResult;
 						}
 						else
-							return false;
+							return InvalidResult;
 					case '\x7F':
 						if (selectionLength > 0)
 						{
 							newText = newText.Remove(selectionStart, selectionLength);
-							return true;
+							return ValidResult;
 						}
 						else if (selectionStart + 1 <= newText.Length)
 						{
 							newText = newText.Remove(selectionStart, 1);
-							return true;
+							return ValidResult;
 						}
 						else
-							return false;
+							return InvalidResult;
 				}
 			}
 
@@ -725,12 +730,12 @@ namespace TecWare.PPSn.Controls
 				if (selectionStart >= 0)
 					newText = newText.Remove(selectionStart, selectionLength);
 				else
-					return false;
+					return new ValidationResult(false, "Could not insert text.");
 			}
 
 			// insert the new text
 			newText = newText.Insert(selectionStart, inputText);
-			return true;
+			return ValidResult;
 		} // func TryInsertText
 
 		#endregion
@@ -772,6 +777,8 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		public static ValidationResult ValidResult { get; } = new ValidationResult(true, null);
+		/// <summary></summary>
+		public static ValidationResult InvalidResult { get; } = new ValidationResult(false, null);
 	} // class PpsTextBoxInputManager
 
 	#endregion
@@ -846,9 +853,10 @@ namespace TecWare.PPSn.Controls
 		/// <param name="newText"></param>
 		/// <returns></returns>
 		protected override ValidationResult OnPreviewTextChanged(string newText)
-			=> TryInsertText(newText, out var text)
-				? TryParse(text, true)
-				: new ValidationResult(false, "Could not insert text.");
+		{
+			var r = TryInsertText(newText, out var text);
+			return r.IsValid ? TryParse(text, true) : r;
+		} // func OnPreviewTextChanged
 
 		/// <summary>Handle text change event.</summary>
 		/// <returns></returns>
