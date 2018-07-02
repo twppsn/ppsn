@@ -76,7 +76,7 @@ namespace TecWare.PPSn.UI
 					{
 						try
 						{
-							var ret = (await Environment.CompileLambdaAsync<Func<LuaResult>>((string)e.Parameter, "DebugCommand.lua", true))();
+							var ret = (await Environment.CompileAsync((string)e.Parameter, "TracePaneCommand.lua", true)).Run(Environment);
 							if (ret.Count == 0)
 								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" executed without result.");
 							else

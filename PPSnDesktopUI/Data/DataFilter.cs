@@ -14,10 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
@@ -25,10 +21,13 @@ namespace TecWare.PPSn.Data
 {
 	#region -- class PpsSqLiteFilterVisitor -------------------------------------------
 
+	/// <summary>SQLite filter visitor, to create a sql where condition.</summary>
 	public class PpsSqLiteFilterVisitor : PpsDataFilterVisitorSql
 	{
 		private readonly IDataColumns columns;
 
+		/// <summary></summary>
+		/// <param name="columns"></param>
 		public PpsSqLiteFilterVisitor(IDataColumns columns)
 		{
 			this.columns = columns;
@@ -45,6 +44,9 @@ namespace TecWare.PPSn.Data
 			return null;
 		} // func FindColumnForUser
 
+		/// <summary></summary>
+		/// <param name="columnToken"></param>
+		/// <returns></returns>
 		protected override Tuple<string, Type> LookupColumn(string columnToken)
 		{
 			var col = FindColumnForUser(columnToken);
@@ -53,9 +55,15 @@ namespace TecWare.PPSn.Data
 				: null;
 		} // func LookupColumn
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected sealed override string LookupNativeExpression(string key)
 				=> "1=1"; // not supported
 
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		protected sealed override string CreateDateString(DateTime value)
 				=> "datetime('" + value.ToString("s") + "')";
 	} // class PpsSqLiteFilterVisitor
