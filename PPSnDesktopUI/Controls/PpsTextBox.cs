@@ -1242,7 +1242,9 @@ namespace TecWare.PPSn.Controls
 		{
 			var month = Int32.Parse((string)selectedItems[1]);
 			var year = Int32.Parse((string)selectedItems[2]);
-			var days = DateTime.DaysInMonth(year, month);
+			var days =
+				year >= 1 && year <= 9999
+				&& month >= 1 && month <= 12 ? DateTime.DaysInMonth(year, month) : 31;
 
 			while (days < dayList.Count)
 				dayList.RemoveAt(dayList.Count - 1);

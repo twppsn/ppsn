@@ -18,13 +18,11 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
-using System.Linq;
 
 
 namespace TecWare.PPSn.Controls
@@ -103,8 +101,11 @@ namespace TecWare.PPSn.Controls
 			if (items.Count < listViewCount && items.Count % 2 == 0)
 				HasTwoItems = true;
 
-			if (this.SelectedItem != null)
-				circularListView.MoveTo(this.SelectedItem);
+			if (SelectedItem != null)
+			{
+				if (!circularListView.MoveTo(SelectedItem))
+					SelectedItem = circularListView.CurrentItem;
+			}
 
 			ItemsSource = circularListView;
 		} // proc Initialize
@@ -133,7 +134,10 @@ namespace TecWare.PPSn.Controls
 		/// <param name="newValue"></param>
 		/// <param name="oldValue"></param>
 		protected virtual void OnSelectedItemChanged(object newValue, object oldValue)
-			=> circularListView?.MoveTo(newValue);
+		{
+			if (circularListView != null && !circularListView.MoveTo(newValue))
+				SelectedItem = circularListView.CurrentItem;
+		} // func OnSelectedItemChanged
 
 		private void SelectNextItem()
 			=> circularListView?.Move(1);
@@ -307,7 +311,7 @@ namespace TecWare.PPSn.Controls
 
 			internal void RaiseSelectionChanged(object newValue, object oldValue)
 			{
-				if (!Object.Equals(newValue, oldValue))
+				if (!Equals(newValue, oldValue))
 					OnPropertyChanged(nameof(SelectedItem));
 			} // proc RaiseSelectionChanged
 
