@@ -1392,12 +1392,17 @@ namespace TecWare.PPSn.Server.Sql
 					cmd.CommandText = name;
 
 					var args = GetArguments(parameter, 1, false);
+					var emittedParameter = new List<string>();
 					if (args != null)
 					{
 						foreach (Match m in regExSqlParameter.Matches(name))
 						{
 							var k = m.Groups[1].Value;
-							CreateParameter(cmd, k, args.GetMemberValue(k, true));
+							if (!emittedParameter.Exists(c => String.Compare(c, k, StringComparison.OrdinalIgnoreCase) == 0))
+							{
+								emittedParameter.Add(k);
+								CreateParameter(cmd, k, args.GetMemberValue(k, true));
+							}
 						}
 					}
 
