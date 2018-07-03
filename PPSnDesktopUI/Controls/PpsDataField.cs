@@ -1075,6 +1075,8 @@ namespace TecWare.PPSn.Controls
 			if (properties.TryGetProperty<bool>("Nullable", out var tmpNullable))
 				combobox.IsNullable = tmpNullable;
 
+			SetTextFieldProperties((object)combobox, properties);
+
 			return combobox;
 		} // func CreateSelector
 

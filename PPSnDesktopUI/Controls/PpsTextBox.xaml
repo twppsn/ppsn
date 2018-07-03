@@ -104,7 +104,7 @@ specific language governing permissions and limitations under the Licence.
 
 							<Popup PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}" Placement="Bottom" VerticalOffset="4" HorizontalOffset="8"
 								   IsOpen="{Binding HasInputError, RelativeSource={RelativeSource TemplatedParent},Mode=OneWay}" StaysOpen="False"
-								   AllowsTransparency="True" PopupAnimation="Fade" Focusable="False">
+								   AllowsTransparency="True" PopupAnimation="None" Focusable="False">
 								<Border BorderThickness="1" BorderBrush="{x:Static SystemColors.InfoTextBrush}"
 										TextElement.Foreground="{x:Static SystemColors.InfoTextBrush}" Background="{x:Static SystemColors.InfoBrush}" Padding="8,4">
 									<ContentPresenter Content="{Binding InputErrorMessage,RelativeSource={RelativeSource TemplatedParent},Mode=OneWay}" />

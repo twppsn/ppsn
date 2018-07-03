@@ -199,16 +199,16 @@ namespace TecWare.PPSn.Controls
 			switch (newValue)
 			{
 				case PpsTextBoxInputType.Decimal:
-					newInputManager = new PpsRegExInputManager(this, @"^(?<num>(\d+\.?)*)\,?\d*$", "Zahl erwartet.");
+					newInputManager = new PpsRegExInputManager(this, @"^[\d\.]*(\,\d{0,12})?$", "Zahl erwartet.");
 					break;
 				case PpsTextBoxInputType.DecimalNegative:
-					newInputManager = new PpsRegExInputManager(this, @"^\-?(?<num>(\d+\.?)*)\,?\d*$", "Zahl erwartet.");
+					newInputManager = new PpsRegExInputManager(this, @"^\-?[\d\.]*(\,\d{0,12})?$", "Zahl erwartet.");
 					break;
 				case PpsTextBoxInputType.Integer:
-					newInputManager = new PpsRegExInputManager(this, @"^(?<num>(\d+\.?)+)$", "Positive Zahl erwartet.");
+					newInputManager = new PpsRegExInputManager(this, @"^[\d\.]{0,20}$", "Positive Zahl erwartet.");
 					break;
 				case PpsTextBoxInputType.IntegerNegative:
-					newInputManager = new PpsRegExInputManager(this, @"^\-?(?<num>(\d+\.?)*)$", "Zahl erwartet.");
+					newInputManager = new PpsRegExInputManager(this, @"^\-?[\d+\.]{0,20}$", "Zahl erwartet.");
 					break;
 
 				case PpsTextBoxInputType.Date:
@@ -1265,15 +1265,16 @@ namespace TecWare.PPSn.Controls
 		{
 			get
 			{
+				var d = DateTime.Today.ToString("dd.MM.yyyy");
 				var t = GetText();
 				if (String.IsNullOrEmpty(t))
-					t = DateTime.Today.ToString("dd.MM.yyyy");
+					t = d;
 
 				return new string[]
 				{
-					Mask[0].GetTextPart(t),
-					Mask[2].GetTextPart(t),
-					Mask[4].GetTextPart(t)
+					Mask[0].GetTextPart(t) ?? Mask[0].GetTextPart(d),
+					Mask[2].GetTextPart(t) ?? Mask[2].GetTextPart(d),
+					Mask[4].GetTextPart(t) ?? Mask[4].GetTextPart(d)
 				};
 			}
 			set
@@ -1340,11 +1341,15 @@ namespace TecWare.PPSn.Controls
 		{
 			get
 			{
+				var d = DateTime.Now.ToString("HH:mm");
 				var t = GetText();
+				if (String.IsNullOrEmpty(t))
+					t = d;
+
 				return new string[]
 				{
-					Mask[0].GetTextPart(t),
-					Mask[2].GetTextPart(t)
+					Mask[0].GetTextPart(t) ?? Mask[0].GetTextPart(d),
+					Mask[2].GetTextPart(t) ?? Mask[2].GetTextPart(d)
 				};
 			}
 			set
