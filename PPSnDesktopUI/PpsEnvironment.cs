@@ -1008,6 +1008,7 @@ namespace TecWare.PPSn
 
 						switch (webEx?.Status ?? WebExceptionStatus.UnknownError)
 						{
+							case WebExceptionStatus.NameResolutionFailure:
 							case WebExceptionStatus.Timeout:
 							case WebExceptionStatus.ConnectFailure:
 								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.ServerConnectFailure);
