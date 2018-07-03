@@ -20,7 +20,6 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Placement" Value="Left" />
 		<Setter Property="AllowsTransparency" Value="True" />
 		<Setter Property="PopupAnimation" Value="Fade" />
-		<Setter Property="FocusManager.IsFocusScope" Value="True" />
 	</Style>
 
 	<Style TargetType="{x:Type pps:PpsPopupContent}">
