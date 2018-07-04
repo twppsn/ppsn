@@ -242,16 +242,16 @@ specific language governing permissions and limitations under the Licence.
 				  Figures="M7,17V9H15V11H8V17H7M8,17H15V11H14V16H8M10,7H17V16H16V8H10Z" />
 
 	<PathGeometry x:Key="prevPanePathGeometry"
-				  Figures="M11,4.5 L4.5,11 20.5,11 20.5,12 4.5,12 11,18.5 10.5,19 3,11.5 10.5,4 11,4.5Z" />
+				  Figures="M12,17.5 L6.5,12 19.5,12 19.5,11 6.5,11 12,5.5 11.5,5 5,11.5 11.5,18 12,17.5 Z" />
 
 	<PathGeometry x:Key="nextPanePathGeometry"
-				  Figures="M13,18.5 L19.5,12 3.5,12 3.5,11 19.5,11 13,4.5 13.5,4 21,11.5 13.5,19 13,18.5Z" />
+				  Figures="M12,17.5 L17.5,12 4.5,12 4.5,11 17.5,11 12,5.5 12.5,5 19,11.5 12.5,18 12,17.5 Z" />
 
 	<PathGeometry x:Key="gotoPanePathGeometry"
-				  Figures="M5,5 L19,5 C19.5523,5 20,5.44772 20,6 L20,18 C20,18.5523 19.5523,19 19,19 L5,19 C4.44771,19 4,18.5523 4,18L 4,6 C4,5.44772 4.44771,5 5,5  M5,6 L19,6 19,8 5,8 5,6 M 5,9L 5,18 19,18 19,9 5,9 Z" />
+				  Figures="M5,5 L19,5C 19.5523,5 20,5.44772 20,6 L20,17C 20,17.5523 19.5523,18 19,18 L5,18C 4.44771,18 4,17.5523 4,17 L4,6C 4,5.44772 4.44771,5 5,5 M 5,6 L19,6 19,8 5,8 5,6 M 5,9L 5,17 19,17 19,9 5,9 Z" />
 
 	<PathGeometry x:Key="closePanePathGeometry"
-				  Figures="M5,5.5 L5.5,5 12,11.5 18.5,5 19,5.5 12.5,12 19,18.5 18.5,19 12,12.5 5.5,19 5,18.5 11.5,12 5,5.5Z"/>
+				  Figures="M 6,6.5L 6.5,6 12,11.5 17.5,6 18,6.5 12.5,12 18,17.5 17.5,18 12,12.5 6.5,18 6,17.5 11.5,12 6,6.5 Z"/>
 
 	<PathGeometry x:Key="comboxBoxChevronPathGeometry"
 				  Figures="M5,9 L6,8 12,14 18,8 19,9 12,16 5,9Z"/>
