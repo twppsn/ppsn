@@ -29,7 +29,8 @@ specific language governing permissions and limitations under the Licence.
 			<RowDefinition/>
 		</Grid.RowDefinitions>
 
-		<ItemsControl ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Commands, Mode=OneWay}" Focusable="False">
+		<ItemsControl ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Commands, Mode=OneWay}"
+					  Focusable="False">
 			<ItemsControl.ItemsPanel>
 				<ItemsPanelTemplate>
 					<WrapPanel Orientation="Horizontal"/>
@@ -68,9 +69,9 @@ specific language governing permissions and limitations under the Licence.
 			</ListBox.ItemsPanel>
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid Width="106">
+					<Grid Width="90">
 						<Grid.RowDefinitions>
-							<RowDefinition Height="80"/>
+							<RowDefinition Height="64"/>
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 						<Border x:Name="border" Grid.Row="0" BorderThickness="1"
@@ -95,7 +96,7 @@ specific language governing permissions and limitations under the Licence.
 							<uiL:PpsButton Command="{x:Static uiL:PpsAttachmentsControl.RunAttachmentCommand}"
 										   DisplayMode="Circle"
 										   GeometryName="openInApp"
-										   GeometrySize="34"
+										   GeometrySize="30"
 										   Foreground="{StaticResource PPSnWindowForegroundBrush}"
 										   Fill="{StaticResource PPSnWindowBackgroundBrush}"
 										   DockPanel.Dock="Top"/>
@@ -103,7 +104,7 @@ specific language governing permissions and limitations under the Licence.
 										   Command="{x:Static uiL:PpsAttachmentsControl.RemoveAttachmentCommand}"
 										   DisplayMode="Circle"
 										   GeometryName="delete"
-										   GeometrySize="34"
+										   GeometrySize="30"
 										   Foreground="{StaticResource PPSnWindowForegroundBrush}"
 										   Fill="{StaticResource PPSnWindowBackgroundBrush}"
 										   DockPanel.Dock="Bottom"/>
@@ -145,7 +146,7 @@ specific language governing permissions and limitations under the Licence.
 			<ListBox.ItemContainerStyle>
 				<Style TargetType="{x:Type ListBoxItem}">
 					<Setter Property="VerticalAlignment" Value="Top" />
-					<Setter Property="Margin" Value="0,10,16,6" />
+					<Setter Property="Margin" Value="10,8,0,2" />
 					<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 					<Setter Property="Template">
 						<Setter.Value>
@@ -164,7 +165,6 @@ specific language governing permissions and limitations under the Licence.
 		</ListBox>
 		<Grid.Style>
 			<Style TargetType="{x:Type Grid}">
-				<Setter Property="Margin" Value="16,0,0,0" />
 				<Style.Triggers>
 					<MultiDataTrigger>
 						<MultiDataTrigger.Conditions>
