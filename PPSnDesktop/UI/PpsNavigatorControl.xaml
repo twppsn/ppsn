@@ -26,8 +26,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<UserControl.Resources>
 		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.95}" />
-		<SolidColorBrush x:Key="ShrinkedSeparatorBackgroundBrush" Color="Transparent" />
-		
+
 		<Style x:Key="NavigatorViewsListBoxStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
 			<Style.Resources>
 				<Style x:Key="NavigatorViewsToggleButtonStyle" TargetType="{x:Type ToggleButton}">
@@ -44,7 +43,7 @@ specific language governing permissions and limitations under the Licence.
 											<ColumnDefinition Width="18"/>
 											<ColumnDefinition/>
 										</Grid.ColumnDefinitions>
-										<Rectangle x:Name="selectedMarker" Grid.Column="0" Fill="{StaticResource PPSnMarkerBrush}" Width="4" HorizontalAlignment="Left" Opacity="0"/>
+										<Rectangle x:Name="selectedMarker" Fill="{StaticResource PPSnMarkerBrush}" Width="4" HorizontalAlignment="Left" Opacity="0"/>
 										<Viewbox x:Name="imageBox" Grid.Column="1" Height="18" Opacity=".75">
 											<Canvas Width="24" Height="24">
 												<Path Data="{Binding DisplayImage, Mode=OneTime, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
@@ -91,31 +90,28 @@ specific language governing permissions and limitations under the Licence.
 										<RowDefinition Height="auto"/>
 										<RowDefinition Height="38"/>
 									</Grid.RowDefinitions>
-									<Separator x:Name="separator" Grid.Row="0" Background="{StaticResource PPSnSeparatorBrush}" Margin="16,3"/>
+									<Border x:Name="SeparatorBorder" Height="2" BorderThickness="0,1,0,0" Margin="16,3,16,2"
+											BorderBrush="{StaticResource PPSnSeparatorBrush}"
+											RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" />
 									<ToggleButton Grid.Row="1" Style="{StaticResource NavigatorViewsToggleButtonStyle}"
-												  IsChecked="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}">
-									</ToggleButton>
+												  IsChecked="{Binding IsSelected,RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" />
 								</Grid>
 								<ControlTemplate.Triggers>
 									<DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
-										<Setter TargetName="separator" Property="Visibility" Value="Collapsed"/>
+										<Setter TargetName="SeparatorBorder" Property="Visibility" Value="Collapsed"/>
 									</DataTrigger>
-									<DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBox}}, Path=DataContext.ViewsShowDescription}" Value="false">
+									<DataTrigger Binding="{Binding DataContext.ViewsShowDescription,RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}" Value="false">
 										<DataTrigger.EnterActions>
-											<BeginStoryboard>
-												<Storyboard Storyboard.TargetName="separator" Storyboard.TargetProperty="Background" FillBehavior="HoldEnd">
-													<ObjectAnimationUsingKeyFrames>
-														<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{StaticResource ShrinkedSeparatorBackgroundBrush}"/>
-													</ObjectAnimationUsingKeyFrames>
+											<BeginStoryboard>												
+												<Storyboard Storyboard.TargetName="SeparatorBorder" Storyboard.TargetProperty="Opacity">
+													<DoubleAnimation To="0"	Duration="{StaticResource PPSnShrinkStoryDuration}" />
 												</Storyboard>
 											</BeginStoryboard>
 										</DataTrigger.EnterActions>
 										<DataTrigger.ExitActions>
 											<BeginStoryboard>
-												<Storyboard Storyboard.TargetName="separator" Storyboard.TargetProperty="Background" FillBehavior="HoldEnd">
-													<ObjectAnimationUsingKeyFrames>
-														<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnSeparatorBrush}"/>
-													</ObjectAnimationUsingKeyFrames>
+												<Storyboard Storyboard.TargetName="SeparatorBorder" Storyboard.TargetProperty="Opacity">
+													<DoubleAnimation To="1"	Duration="{StaticResource PPSnShrinkStoryDuration}" />
 												</Storyboard>
 											</BeginStoryboard>
 										</DataTrigger.ExitActions>
@@ -126,6 +122,7 @@ specific language governing permissions and limitations under the Licence.
 					</Setter>
 				</Style>
 			</Style.Resources>
+			
 			<Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}"/>
 			<Setter Property="Template">
 				<Setter.Value>
@@ -148,14 +145,14 @@ specific language governing permissions and limitations under the Licence.
 							<DataTrigger Binding="{Binding ViewsShowDescription}" Value="false">
 								<DataTrigger.EnterActions>
 									<BeginStoryboard>
-										<Storyboard FillBehavior="HoldEnd">
+										<Storyboard>
 											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarShrinkedWidth}"
 															 AccelerationRatio=".4"
 															 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 										</Storyboard>
 									</BeginStoryboard>
 									<BeginStoryboard>
-										<Storyboard Storyboard.TargetName="headerBorder" FillBehavior="HoldEnd">
+										<Storyboard Storyboard.TargetName="headerBorder">
 											<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
 												<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
 											</ObjectAnimationUsingKeyFrames>
@@ -164,14 +161,14 @@ specific language governing permissions and limitations under the Licence.
 								</DataTrigger.EnterActions>
 								<DataTrigger.ExitActions>
 									<BeginStoryboard>
-										<Storyboard FillBehavior="HoldEnd">
+										<Storyboard>
 											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}"
 															 AccelerationRatio=".4"
 															 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 										</Storyboard>
 									</BeginStoryboard>
 									<BeginStoryboard>
-										<Storyboard Storyboard.TargetName="headerBorder" FillBehavior="HoldEnd">
+										<Storyboard Storyboard.TargetName="headerBorder">
 											<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
 												<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
 											</ObjectAnimationUsingKeyFrames>
@@ -305,7 +302,7 @@ specific language governing permissions and limitations under the Licence.
 							<EventTrigger RoutedEvent="LostFocus">
 								<BeginStoryboard>
 									<Storyboard>
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Tag" Duration="0" FillBehavior="HoldEnd">
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Tag" Duration="0">
 											<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static uiL:PpsNavigatorSearchBoxState.Collapsed}"></DiscreteObjectKeyFrame>
 										</ObjectAnimationUsingKeyFrames>
 									</Storyboard>

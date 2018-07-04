@@ -19,7 +19,7 @@ specific language governing permissions and limitations under the Licence.
 	<Style TargetType="{x:Type pps:PpsNamedSeparator}">
 		<Setter Property="TextElement.Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 		<Setter Property="BorderBrush" Value="{DynamicResource PPSnSeparatorBrush}" />
-		<Setter Property="BorderThickness" Value="0,0,0,1" />
+		<Setter Property="BorderThickness" Value="0,1,0,0" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="Template">
 			<Setter.Value>
@@ -33,7 +33,9 @@ specific language governing permissions and limitations under the Licence.
 						<Border Grid.Column="0"
 								Height="2"
 								BorderThickness="{TemplateBinding BorderThickness}"
-								BorderBrush="{TemplateBinding BorderBrush}" />
+								BorderBrush="{TemplateBinding BorderBrush}"
+								RenderOptions.EdgeMode="Aliased"
+								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
 						<ContentPresenter Grid.Column="1"
 										  VerticalAlignment="Center"
 										  Margin="6,0,6,0"
@@ -44,7 +46,9 @@ specific language governing permissions and limitations under the Licence.
 						<Border Grid.Column="2"
 								Height="2"
 								BorderThickness="{TemplateBinding BorderThickness}"
-								BorderBrush="{TemplateBinding BorderBrush}" />
+								BorderBrush="{TemplateBinding BorderBrush}"
+								RenderOptions.EdgeMode="Aliased"
+								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
 					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
