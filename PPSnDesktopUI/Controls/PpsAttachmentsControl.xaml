@@ -68,9 +68,9 @@ specific language governing permissions and limitations under the Licence.
 			</ListBox.ItemsPanel>
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid Width="109">
+					<Grid Width="106">
 						<Grid.RowDefinitions>
-							<RowDefinition Height="86"/>
+							<RowDefinition Height="80"/>
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 						<Border x:Name="border" Grid.Row="0" BorderThickness="1"
