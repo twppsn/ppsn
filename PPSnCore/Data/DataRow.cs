@@ -118,7 +118,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="row"></param>
 		/// <returns></returns>
 		protected sealed override bool FilterRow(PpsDataRow row)
-			=> Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
+			=> Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
 
 		/// <summary>Parent row for the filter</summary>
 		public PpsDataRow Parent => parentRow;
