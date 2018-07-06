@@ -112,6 +112,7 @@ namespace TecWare.PPSn.UI
 				// register events, owner, and in the openDocuments dictionary
 				dataAccess = await data.AccessAsync(arguments);
 				dataAccess.DisableUI = new Func<IDisposable>(() => DisableUI("Verarbeite Daten...", -1));
+				dataAccess.DataChanged += (sender, e) => OnDataChanged();
 
 				transaction.Commit();
 			}
@@ -222,6 +223,7 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged(nameof(UndoView));
 			OnPropertyChanged(nameof(RedoView));
 			OnPropertyChanged(nameof(Data));
+			OnDataChanged();
 		} // porc InitializeData
 
 		public override async Task<bool> UnloadAsync(bool? commit = default(bool?))
@@ -237,6 +239,12 @@ namespace TecWare.PPSn.UI
 
 			return await base.UnloadAsync(commit);
 		} // func UnloadAsync
+
+		/// <summary></summary>
+		protected virtual void OnDataChanged()
+		{
+			CallMemberDirect("OnDataChanged", Array.Empty<object>(), ignoreNilFunction: true);
+		} // proc OnDataChanged
 
 		[LuaMember]
 		public void CommitToDisk(string fileName)

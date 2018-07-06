@@ -102,10 +102,8 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="x"></param>
 		protected override void Write(XElement x)
-		{
-			x.Add(new XElement("c", currentValue.ChangeType<string>()));
-		} // proc Write
-
+			=> x.Add(new XElement("c", currentValue.ChangeType<string>()));
+	
 		/// <summary></summary>
 		/// <param name="x"></param>
 		protected override void Read(XElement x)
@@ -122,7 +120,7 @@ namespace TecWare.PPSn.Data
 			try
 			{
 				var r = chunk.Run(new PpsLuaRowEnvironment(Row.Table.DataSet.Properties, Row));
-				if (!Object.Equals(currentValue, r[0]))
+				if (!Equals(currentValue, r[0]))
 				{
 					using (var t = Row.GetUndoSink()?.BeginTransaction("Update Calculated Value"))
 					{

@@ -2816,7 +2816,9 @@ namespace TecWare.PPSn
 						// persist current object state
 						UpdateLocalAsync().AwaitTask();
 
-						data.GetValue()?.ReloadAsync().AwaitTask();
+						Environment.Dispatcher.InvokeAsync(
+							() => data.GetValue()?.ReloadAsync().AwaitTask()
+						).Wait();
 
 						if (foregroundTransaction == null)
 							trans.Commit();

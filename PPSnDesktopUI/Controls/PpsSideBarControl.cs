@@ -18,6 +18,7 @@ using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
 
@@ -420,7 +421,7 @@ namespace TecWare.PPSn.Controls
 	{
 		/// <summary></summary>
 		public static readonly DependencyProperty AllowToggleSelectionProperty = DependencyProperty.Register(nameof(AllowToggleSelection), typeof(bool), typeof(PpsSideBarControl), new FrameworkPropertyMetadata(true));
-
+		
 		/// <summary></summary>
 		/// <param name="item"></param>
 		/// <returns></returns>
@@ -631,10 +632,14 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if (e.Source == this && SetSelected(!IsTopSelected))
+			if (e.Source == this)
 			{
-				Keyboard.ClearFocus();
-				e.Handled = true;
+				Focus();
+				if (SetSelected(!IsTopSelected))
+				{
+					Keyboard.ClearFocus();
+					e.Handled = true;
+				}
 			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
@@ -764,10 +769,14 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if (e.Source == this && SetSelected(!IsSelected))
+			if (e.Source == this)
 			{
-				Keyboard.ClearFocus();
-				e.Handled = true;
+				Focus();
+				if (SetSelected(!IsSelected))
+				{
+					Keyboard.ClearFocus();
+					e.Handled = true;
+				}
 			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
@@ -869,10 +878,14 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if (e.Source == this && SetSelected(!IsSelected))
+			if (e.Source == this)
 			{
-				Keyboard.ClearFocus();
-				e.Handled = true;
+				Focus();
+				if (SetSelected(!IsSelected))
+				{
+					Keyboard.ClearFocus();
+					e.Handled = true;
+				}
 			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown

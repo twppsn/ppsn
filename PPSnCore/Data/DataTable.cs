@@ -969,6 +969,9 @@ namespace TecWare.PPSn.Data
 		/// <param name="oldIndex"></param>
 		protected virtual void OnRowRemoved(PpsDataRow row, int oldIndex)
 		{
+			if (oldIndex == 0)
+				OnPropertyChanged(nameof(First));
+
 			for (var i = 0; i < TableDefinition.Columns.Count; i++)
 			{
 				if (row.GetRowValueCore(i, rawValue: true) is IPpsDataRowExtendedEvents t)
@@ -1404,10 +1407,8 @@ namespace TecWare.PPSn.Data
 
 				return IndexOf(AddInternal(false, row));
 			}
-			else if (value is LuaTable)
-			{
-				return IndexOf(Add((LuaTable)value));
-			}
+			else if (value is LuaTable table)
+				return IndexOf(Add(table));
 			else
 				throw new NotSupportedException();
 		} // func IListAdd
@@ -1453,13 +1454,11 @@ namespace TecWare.PPSn.Data
 				if (combineData)
 				{
 					// get current row key
-					var xPrimaryKey = xRow.Element(TableDefinition.PrimaryKey.Name);
-					if (xPrimaryKey == null)
-						throw new ArgumentException("Primary key is missing.");
+					var xPrimaryKey = xRow.Element(TableDefinition.PrimaryKey.Name)
+						?? throw new ArgumentException("Primary key is missing.");
 
-					var key = xPrimaryKey.Element(xnDataRowValueCurrent)?.Value ?? xPrimaryKey.Element(xnDataRowValueOriginal)?.Value;
-					if (key == null)
-						throw new ArgumentException("Primary key is null.");
+					var key = xPrimaryKey.Element(xnDataRowValueCurrent)?.Value ?? xPrimaryKey.Element(xnDataRowValueOriginal)?.Value
+						?? throw new ArgumentException("Primary key is null.");
 
 					// find the row
 					row = FindKey(Procs.ChangeType(key, TableDefinition.PrimaryKey.DataType), true);
@@ -1477,8 +1476,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="x">Destination.</param>
 		public void Write(XmlWriter x)
 		{
-			// Schreibe die Datenzeilen
-			foreach (PpsDataRow r in rows)
+			foreach (var r in rows)
 			{
 				x.WriteStartElement(xnDataRow.LocalName);
 				r.Write(x);

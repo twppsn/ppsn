@@ -564,6 +564,7 @@ namespace TecWare.PPSn.Data
 		private readonly string columnName;             // Internal name of the column
 		private readonly bool isIdentity;
 		private readonly Lazy<bool> isExtendedValue;
+		private readonly Lazy<bool> isReadOnly;
 		private PpsDataTableRelationDefinition parentRelation; // relation to the parent column, the current column has a value from the parent column
 
 		/// <summary></summary>
@@ -575,6 +576,7 @@ namespace TecWare.PPSn.Data
 			this.columnName = clone.columnName;
 			this.isIdentity = clone.isIdentity;
 			this.isExtendedValue = new Lazy<bool>(() => DataType.GetTypeInfo().ImplementedInterfaces.Contains(typeof(IPpsDataRowExtendedValue)));
+			this.isReadOnly = new Lazy<bool>(() => IsExtended && !DataType.GetTypeInfo().ImplementedInterfaces.Contains(typeof(IPpsDataRowSetGenericValue)));
 
 			if (clone.IsPrimaryKey)
 				table.SetPrimaryKey(this);
@@ -793,6 +795,8 @@ namespace TecWare.PPSn.Data
 		public bool IsIdentity => isIdentity;
 		/// <summary>Is the value in this column an extended value.</summary>
 		public bool IsExtended => isExtendedValue.Value;
+		/// <summary>Is this column readonly</summary>
+		public bool IsReadOnly => isReadOnly.Value;
 		/// <summary>Has this column a parent/child relation.</summary>
 		public bool IsRelationColumn => parentRelation != null;
 		/// <summary>Parent column for the parent child relation.</summary>
