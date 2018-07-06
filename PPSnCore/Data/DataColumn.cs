@@ -598,6 +598,7 @@ namespace TecWare.PPSn.Data
 
 			this.isIdentity = isIdentity;
 			this.isExtendedValue = new Lazy<bool>(() => DataType.GetTypeInfo().ImplementedInterfaces.Contains(typeof(IPpsDataRowExtendedValue)));
+			this.isReadOnly = new Lazy<bool>(() => IsExtended && !DataType.GetTypeInfo().ImplementedInterfaces.Contains(typeof(IPpsDataRowSetGenericValue)));
 
 			if (isPrimaryKey)
 				table.SetPrimaryKey(this);
