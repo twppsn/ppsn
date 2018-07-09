@@ -1038,9 +1038,9 @@ namespace TecWare.PPSn
 		private enum TagLevel
 		{
 			None,
-			User,
 			System,
-			Revision
+			Revision,
+			User
 		} // enum TagLevel
 
 		#endregion
@@ -1496,7 +1496,7 @@ namespace TecWare.PPSn
 			{
 				RefreshTags(true);
 
-				xTags.Add(revisionTags.Select(c => c.Tag.ToXml(tagElementName)));
+				xTags.Add(revisionTags.Where(c => c.Class != PpsObjectTagClass.Deleted && c.Value != null).Select(c => c.Tag.ToXml(tagElementName)));
 			}
 		} // proc WriteRevisionTagsToXml
 
@@ -2683,12 +2683,17 @@ namespace TecWare.PPSn
 
 	#region -- class PpsRevisionObject ------------------------------------------------
 
+	/// <summary>Object implementation for objects, that are not stored in the local database.</summary>
 	internal sealed class PpsRevisionObject : DynamicDataRow, IPpsObject
 	{
+		/// <summary>Property of the object is changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
+		private readonly object objectLock = new object();
 		private readonly long revisionId;
 		private readonly PpsObject localObject;
+
+		private readonly List<PpsObjectTag> revisionTags = new List<PpsObjectTag>();
 
 		public PpsRevisionObject(PpsObject localObject, long revisionId)
 		{
@@ -2698,6 +2703,25 @@ namespace TecWare.PPSn
 			this.localObject = localObject ?? throw new ArgumentNullException(nameof(localObject));
 			this.revisionId = revisionId;
 		} // ctor
+
+		/// <summary>Reads the object from the pull request.</summary>
+		/// <param name="x"></param>
+		private void ReadObjectFromXml(XElement x)
+		{
+			// base information always used from the local object
+
+			//// links
+			//foreach (var xLink in x.Elements("linksTo"))
+			//{
+			//	var objectId = x.GetAttribute("linkId", -1L);
+			//	var refCount = x.GetAttribute("refCount", 0);
+			//}
+
+			// tags, resision tags only
+			foreach (var tag in PpsObjectTags.ParseTagsFromXml(x.Elements("tag")))
+			{
+			}
+		} // UpdateObjectFromXml
 		
 		public override IReadOnlyList<IDataColumn> Columns => localObject.Columns;
 		public override bool IsDataOwner => true;
@@ -2706,7 +2730,7 @@ namespace TecWare.PPSn
 
 		public override object this[int index] => localObject[index];
 
-		public object SyncRoot => null;
+		public object SyncRoot => objectLock;
 
 		public IEnumerable<PpsObjectTag> Tags => throw new NotImplementedException();
 			
@@ -2842,7 +2866,7 @@ namespace TecWare.PPSn
 			// links
 			links.ReadLinksFromXml(x.Elements("linksTo"));
 
-			// tags, user tags only
+			// revision tags only
 			tags.ChangeRevisionTagsFromXml(x.Elements("tag")); // refresh of the pulled system tags, removes current system tags
 		} // UpdateObjectFromXml
 

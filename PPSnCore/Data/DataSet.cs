@@ -68,7 +68,7 @@ namespace TecWare.PPSn.Data
 	{
 		/// <summary>Marks this tag as deleted.</summary>
 		Deleted = -1,
-		
+
 		/// <summary>Attribute tag, with text content.</summary>
 		Text = 0,
 		/// <summary>Attribute tag, with alpha-numeric content.</summary>
@@ -78,7 +78,7 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Real tag, no value.</summary>
 		Tag = 128,
-		
+
 		/// <summary>Note, value is text including linefeeds.</summary>
 		Note = 256
 	} // enum PpsObjectTagClass
@@ -227,7 +227,7 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public static int FormatClass(PpsObjectTagClass cls)
 			=> (int)cls;
-		
+
 		/// <summary></summary>
 		/// <param name="xTag"></param>
 		/// <returns></returns>
@@ -563,7 +563,7 @@ namespace TecWare.PPSn.Data
 				=> args.Length > 0 || IsStandardMember(LimitType, binder.Name)
 					? base.BindInvokeMember(binder, args)
 					: BindTableOrMeta(binder.Name, true);
-			
+
 			public override IEnumerable<string> GetDynamicMemberNames()
 			{
 				var dataset = (PpsDataSet)Value;
@@ -711,17 +711,17 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		protected virtual object GetEnvironmentValue(object key)
 			=> null;
-		
+
 		/// <summary>Registers a new event sink.</summary>
 		/// <param name="eventSink"></param>
 		public void RegisterEventSink(LuaTable eventSink)
 			=> eventSinks.Add(eventSink);
-		
+
 		/// <summary>Unregisters an event sink.</summary>
 		/// <param name="eventSink"></param>
 		public void UnregisterEventSink(LuaTable eventSink)
 			=> eventSinks.Remove(eventSink);
-		
+
 		/// <summary>Get all event sinks.</summary>
 		/// <returns></returns>
 		private LuaTable[] GetEventSinks()
@@ -1060,9 +1060,9 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc ExecuteQueuedEventsUnsafe
 
-#endregion
+		#endregion
 
-#region -- class PpsDataSetChangedEvent ---------------------------------------
+		#region -- class PpsDataSetChangedEvent ---------------------------------------
 
 		private sealed class PpsDataSetChangedEvent : PpsDataChangedEvent
 		{
@@ -1075,16 +1075,16 @@ namespace TecWare.PPSn.Data
 
 			public override void InvokeEvent()
 				=> dataset.OnDataChanged();
-			
+
 			public override bool Equals(PpsDataChangedEvent ev)
 				=> true;
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.DataSetModified;
 		} // class PpsDataSetChangedEvent
 
-#endregion
+		#endregion
 
-#region -- Events -------------------------------------------------------------
+		#region -- Events -------------------------------------------------------------
 
 		internal void ExecuteDataChanged()
 			=> ExecuteEvent(new PpsDataSetChangedEvent(this));
@@ -1100,7 +1100,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="table"></param>
 		protected internal virtual void OnTableChanged(PpsDataTable table)
 			=> InvokeEventHandler("OnTableChanged", table);
-		
+
 		/// <summary>Row was added.</summary>
 		/// <param name="table"></param>
 		/// <param name="row"></param>
@@ -1135,7 +1135,7 @@ namespace TecWare.PPSn.Data
 		protected internal virtual void OnTableColumnExtendedValueChanged(PpsDataRow row, string columnName, object value, string propertyName)
 			=> InvokeEventHandler("OnTableColumnExtendedValueChanged", row, columnName, value, propertyName);
 
-#endregion
+		#endregion
 
 		/// <summary>Return all auto tags.</summary>
 		/// <returns></returns>
@@ -1181,5 +1181,5 @@ namespace TecWare.PPSn.Data
 		} // sctor
 	} // class PpsDataSet
 
-#endregion
+	#endregion
 }

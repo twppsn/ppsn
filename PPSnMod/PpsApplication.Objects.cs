@@ -447,6 +447,9 @@ namespace TecWare.PPSn.Server
 						{
 							#region -- tag update --
 
+							if (t.IsNew && t.IsRev && (t.TagClass == -1 || t.Value == null))
+								continue; // do not save empty rev tags
+
 							upsertCmd[1] = new LuaTable
 							{
 								{ "ObjKId", objectId },
@@ -850,22 +853,32 @@ namespace TecWare.PPSn.Server
 
 			foreach (var n in revisionTags)
 			{
-				// update tag
-				var o = currentRevTags.Find(c => c.Key == n.Name);
-				if (o == null
-					|| o.TagClass != (int)n.Class)
-				{
-					o?.Remove();
-					AddTag((int)n.Class, n.Name, n.Value.ChangeType<string>(), 0, DateTime.Now, true);
-				}
-				else
-				{
-					o.Value = n.Value.ChangeType<string>();
-				}
+				var strValue = n.Value?.ChangeType<string>();
 
-				// remove from work list
-				if (o != null)
-					currentRevTags.Remove(o);
+				// update tag
+				if (strValue != null)
+				{
+					var o = currentRevTags.Find(c => c.Key == n.Name);
+					if (o == null)
+					{
+						AddTag((int)n.Class, n.Name, strValue, 0, DateTime.Now, true);
+					}
+					else if (o.TagClass != (int)n.Class)
+					{
+						o.Remove();
+						AddTag((int)n.Class, n.Name, strValue, 0, DateTime.Now, true);
+
+						// remove from work list
+						currentRevTags.Remove(o);
+					}
+					else
+					{
+						o.Value = n.Value.ChangeType<string>();
+
+						// remove from work list
+						currentRevTags.Remove(o);
+					}
+				}
 			}
 
 			// remove none touched tags
