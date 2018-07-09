@@ -667,6 +667,8 @@ namespace TecWare.PPSn.UI
 		{
 			private bool disableTracing = false;
 
+			/// <summary></summary>
+			/// <param name="strokes"></param>
 			public PpsDetraceableStrokeCollection(StrokeCollection strokes) : base(strokes)
 			{
 			}
@@ -1099,7 +1101,7 @@ namespace TecWare.PPSn.UI
 
 			#region Undo/Redo
 
-			UndoManagerListBox listBox;
+			//UndoManagerListBox listBox;
 
 			var undoCommand = new PpsUICommandButton()
 			{

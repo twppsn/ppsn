@@ -21,9 +21,11 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
+using System.Dynamic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -75,7 +77,9 @@ namespace TecWare.PPSn
 		private int refCount = 0;                   // how often is this link used within the object
 
 		private WeakReference<PpsObject> linkTo;    // weak ref to the actual object
+
 		private object masterDataRowEvent = null;
+		private object masterDataRowEvent2 = null;
 
 		private bool isDirty;   // is the link changed
 		
@@ -90,18 +94,34 @@ namespace TecWare.PPSn
 			this.refCount = refCount;
 			this.isDirty = !id.HasValue;
 
-			if (id.HasValue)
-				masterDataRowEvent = parent.Parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectLinks", id, OnLinkChanged);
+			var masterData = parent.Parent.Environment.MasterData;
+			ResetMasterDataChangedEvent(masterData);
+			masterDataRowEvent2 = masterData.RegisterWeakDataRowChanged(masterData.ObjectsTable, linkToId, OnLinkToChanged);
 		} // ctor
 
-		private void OnLinkChanged(object sender, PpsDataRowChangedEventArgs e)
+		private void ResetMasterDataChangedEvent(PpsMasterData masterData)
 		{
-			if (e.Operation == PpsDataChangeOperation.Full
-				|| e.Operation == PpsDataChangeOperation.Update)
-			{
-				linkToId = e.Arguments.GetProperty("LinkObjectId", linkToId); // we only observe linktoid
-			}
+			if (id.HasValue)
+				masterDataRowEvent = masterData.RegisterWeakDataRowChanged(masterData.ObjectLinksTable, id, OnLinkChanged);
+		} // proc ResetMasterDataChangedEvent
+
+		private void OnLinkChanged(object sender, PpsDataTableOperationEventArgs e)
+		{
+			if (e.Operation == PpsDataRowOperation.RowUpdate
+				&& id.HasValue
+				&& e is PpsDataRowOperationEventArgs re
+				&& (long)re.RowId == id.Value)
+				linkToId = re.Arguments.GetProperty("LinkObjectId", linkToId);
 		} // proc OnLinkChanged
+
+		private void OnLinkToChanged(object sender, PpsDataTableOperationEventArgs e)
+		{
+			if (e.Operation == PpsDataRowOperation.RowUpdate
+				&& e is PpsDataRowOperationEventArgs re
+				&& re.RowId != re.OldRowId
+				&& (long)re.OldRowId == linkToId)
+				linkToId = (long)re.RowId;
+		} // proc OnLinkToChanged
 
 		/// <summary>Changes the reference counter of this link.</summary>
 		internal void AddRef()
@@ -164,7 +184,7 @@ namespace TecWare.PPSn
 			set
 			{
 				if (!id.HasValue && value.HasValue)
-					masterDataRowEvent = parent.Parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectLinks", id, OnLinkChanged);
+					ResetMasterDataChangedEvent(parent.Parent.Environment.MasterData);
 				id = value;
 			}
 		} // prop Id
@@ -663,285 +683,347 @@ namespace TecWare.PPSn
 	{
 		/// <summary>Nothing loaded.</summary>
 		None = 0,
-		/// <summary>Tag infos were loaded throw a view (only key, value is set)</summary>
+		/// <summary>Only the raw tags are loaded, without local database information.</summary>
 		FastLoad = 1,
-		/// <summary>Tag is loaded from the database table.</summary>
+		/// <summary>Tag is loaded from the database table with all informations.</summary>
 		LocalState = 2,
 	} // enum PpsObjectTagLoadState
 
 	#endregion
+	
+	#region -- class PpsObjectTagBase -------------------------------------------------
 
-	#region -- class PpsObjectTagView -------------------------------------------------
-
-	/// <summary>Tag implementation</summary>
-	public sealed class PpsObjectTagView : INotifyPropertyChanged
+	/// <summary>Tag base class</summary>
+	public abstract class PpsObjectTagBase : INotifyPropertyChanged
 	{
-		/// <summary>Notifies Tag changes.</summary>
+		/// <summary>Notification on value changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private readonly PpsObjectTags parent;
+		private readonly IPpsObject parent; // local object
+		private PpsObjectTag tag; // tag data
+		private DateTime timeStamp;
 
-		private long? id;               // new tags have null
-		private readonly bool isRev;    // is this tag attached to the revision
-		private readonly string key;    // key for the tag
-
-		private PpsObjectTagLoadState state = PpsObjectTagLoadState.None;
-
-		private PpsObjectTagClass tagClass;
-		private object value;
-		private long userId;
-		private PpsMasterDataRow userRow;
-		private DateTime? creationStamp;
-
-		private bool isLocalChanged;    // is the tag changed in the local state
-		private bool isDirty;			// is the tag change in memory, an need to persist
-
-		private readonly object lockUserRow = new object();
-
-		#region -- Ctor/Dtor ----------------------------------------------------------
-
-		internal PpsObjectTagView(PpsObjectTags parent, long? id, string key, bool isRev, PpsObjectTagClass tagClass, object value, long userId, DateTime creationStamp, bool isLocalChanged)
+		/// <summary></summary>
+		/// <param name="parent"></param>
+		/// <param name="tag"></param>
+		protected PpsObjectTagBase(IPpsObject parent, PpsObjectTag tag)
 		{
 			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
-			CheckKey(key);
-
-			this.id = id;
-			this.key = key;
-			this.isRev = isRev;
-
-			RefreshData(tagClass, value, userId, creationStamp, isLocalChanged);
-
-			this.isDirty = !id.HasValue;
-			if (this.isDirty)
-				parent.SetDirty();
+			this.tag = tag ?? throw new ArgumentNullException(nameof(tag));
 		} // ctor
 
-		internal PpsObjectTagView(PpsObjectTags parent, long id, string key, PpsObjectTagClass tagClass, object value, long userId)
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		protected virtual void OnPropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		/// <summary></summary>
+		/// <param name="newTimeStamp"></param>
+		/// <returns></returns>
+		protected bool UpdateTagStamp(DateTime newTimeStamp)
 		{
-			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
-			CheckKey(key);
-
-			this.id = id;
-			this.key = key;
-			this.isRev = true;
-
-			this.state = PpsObjectTagLoadState.FastLoad;
-			this.tagClass = tagClass;
-			this.value = value;
-			this.userId = userId;
-			this.userRow = null;
-			this.creationStamp = null;
-
-			this.isLocalChanged = false;
-			this.isDirty = false;
-		} // ctor
-
-		private static void CheckKey(string key)
-		{
-			if (String.IsNullOrEmpty(key))
-				throw new ArgumentNullException(nameof(key), "Tag name is empty.");
-
-			foreach (var c in key)
+			if (newTimeStamp != timeStamp)
 			{
-				if (c != '_' && !Char.IsLetterOrDigit(c))
-					throw new ArgumentOutOfRangeException(nameof(key), $"Invalid char '{c}'.");
-			}
-		} // proc CheckKey
-
-		private bool SetValue<T>(ref T variable, T value, string propertyName)
-		{
-			if (!Object.Equals(variable, value))
-			{
-				variable = value;
-				OnPropertyChanged(propertyName);
+				timeStamp = newTimeStamp;
+				OnPropertyChanged(nameof(TimeStamp));
 				return true;
 			}
 			else
 				return false;
-		} // proc SetValue
+		} // func UpdateTagStamp
+
+		/// <summary></summary>
+		/// <param name="newTag"></param>
+		protected bool UpdateTagCore(PpsObjectTag newTag)
+		{
+			if (newTag == null)
+				throw new ArgumentNullException(nameof(newTag));
+
+			var nameChanged = tag.Name != newTag.Name;
+			var classChanged = tag.Class != newTag.Class;
+			var valueChanged = !tag.IsValueEqual(newTag.Value);
+
+			if (nameChanged || classChanged || valueChanged)
+			{
+				if (nameChanged)
+					ValidateTagName(newTag.Name);
+
+				tag = newTag;
+
+				if (nameChanged)
+					OnPropertyChanged(nameof(Name));
+				if (classChanged)
+					OnPropertyChanged(nameof(Class));
+				if (valueChanged)
+					OnPropertyChanged(nameof(Value));
+
+				OnPropertyChanged(nameof(Tag));
+				return true;
+			}
+			else
+				return false;
+		} // proc UpdateTagCore
+
+		/// <summary>Owner of the tag</summary>
+		public IPpsObject Parent => parent;
+		/// <summary>Core tag information</summary>
+		public PpsObjectTag Tag => tag;
+
+		/// <summary>Name of the tag.</summary>
+		public string Name => tag.Name;
+		/// <summary>Class of the tag</summary>
+		public PpsObjectTagClass Class => tag.Class;
+		/// <summary>Current value of the tag</summary>
+		public object Value => tag.Value;
+		/// <summary></summary>
+		public DateTime TimeStamp => timeStamp;
+
+		private static string ValidateTagNameCore(string name)
+		{
+			if (String.IsNullOrEmpty(name))
+				return "Name is leer.";
+
+			for (var i = 0; i < name.Length; i++)
+			{
+				var c = name[i];
+				if (c != '_' && !Char.IsLetterOrDigit(c))
+					return String.Format("Ungültiges Zeichen '{0}' bei {1}.", c, i);
+			}
+
+			return null;
+		} // func ValidateTagName
+
+		/// <summary>Validates the syntax of a tag name.</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static bool TryValidateTagName(string name)
+			=> ValidateTagNameCore(name) == null;
+
+		/// <summary>Validates the syntax of a tag name.</summary>
+		/// <param name="name"></param>
+		public static void ValidateTagName(string name)
+		{
+			var msg = ValidateTagNameCore(name);
+			if (msg != null)
+				throw new ArgumentException(msg, nameof(name));
+		} // proc ValidateTagName
+	} // class PpsObjectTagBase
+
+	#endregion
+
+	#region -- class PpsObjectEditableTag ---------------------------------------------
+
+	/// <summary></summary>
+	public abstract class PpsObjectEditableTag : PpsObjectTagBase
+	{
+		private readonly PpsObjectTags tagList;
+
+		private long? id;
+		private bool isLocalChanged;
+		private bool isDirty;
+
+		internal PpsObjectEditableTag(PpsObject parent, long? id, bool isLocalChanged, PpsObjectTag tag)
+			: base(parent, tag)
+		{
+			this.id = id;
+			this.isLocalChanged = isLocalChanged;
+			tagList = parent.Tags;
+
+			if (IsNew)
+				SetDirty();
+		} // ctor
 
 		private void SetDirty()
 		{
-			SetValue(ref isDirty, true, nameof(IsDirty));
-			parent.SetDirty();
+			isLocalChanged = true;
+			isDirty = true;
+			tagList.SetDirty();
 		} // proc SetDirty
 
 		internal void ResetDirty(PpsMasterDataTransaction transaction)
 		{
-			if (isDirty)
-			{
-				transaction?.AddRollbackOperation(SetDirty);
-				isDirty = false;
-				OnPropertyChanged(nameof(IsDirty));
-			}
+			isDirty = false;
+			transaction?.AddRollbackOperation(SetDirty);
 		} // proc ResetDirty
 
-		private void CheckTagState()
+		/// <summary>Change the content of the tag.</summary>
+		/// <param name="newTag"></param>
+		protected bool Update(PpsObjectTag newTag)
 		{
-			if (state != PpsObjectTagLoadState.LocalState)
-				parent.CheckTagsState();
-		} // proc CheckTagState
+			if (Tag.Name != newTag.Name)
+				throw new ArgumentException("Invalid tag name.", nameof(newTag));
 
-		private void OnPropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-		#endregion
-
-		#region -- Refresh ------------------------------------------------------------
-
-		internal void RefreshData(PpsObjectTagClass tagClass, object value, long userId, DateTime creationStamp, bool isLocalChanged)
-		{
-			this.state = PpsObjectTagLoadState.LocalState;
-
-			SetValue(ref this.tagClass, tagClass, nameof(Class));
-			SetValue(ref this.value, value, nameof(Value));
-			SetValue(ref this.userId, userId, nameof(User));
-			SetValue(ref this.creationStamp, creationStamp, nameof(CreationStamp));
-
-			this.isLocalChanged = isLocalChanged;
-			this.isDirty = false;
-		} // proc RefreshData
-
-		#endregion
-
-		private PpsMasterDataRow GetUserRow()
-		{
-			lock (lockUserRow)
+			if (UpdateTagCore(newTag))
 			{
-				if (UserId <= 0)
-					return null;
-				else if (userRow != null && Object.Equals(userRow.Key, userId))
-					return userRow;
-				else
-					return userRow = parent.Parent.Environment.MasterData.GetTable("User")?.GetRowById(UserId, false);
+				SetDirty();
+				return true;
 			}
+			else
+				return false;
+		} // proc Update
+
+		/// <summary></summary>
+		/// <param name="otherId"></param>
+		/// <returns></returns>
+		public bool IsEqualId(long otherId)
+			=> id.HasValue ? id.Value == otherId : false;
+
+		internal void UpdateId(long? newId, bool set)
+		{
+			if (set)
+				id = newId;
+			else if (newId.HasValue)
+				id = newId;
+		} // proc UpdateId
+
+		internal void Remove(ref bool collectionChanged)
+		{
+			if (UpdateTagCore(new PpsObjectTag(Name, PpsObjectTagClass.Deleted, null)))
+			{
+				SetDirty();
+				collectionChanged = true;
+			}
+		} // proc Remove
+
+		/// <summary></summary>
+		/// <param name="raiseEvent"></param>
+		/// <returns></returns>
+		public bool Remove(bool raiseEvent)
+		{
+			var collectionChanged = false;
+			Remove(ref collectionChanged);
+			if (collectionChanged && raiseEvent)
+				tagList.OnCollectionChanged();
+			return collectionChanged;
+		} // func Remove
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public bool Remove()
+			=> Remove(true);
+
+		internal long? Id => id;
+		/// <summary>Is this a new tag and not stored in the local database</summary>
+		public bool IsNew => !id.HasValue;
+		/// <summary>Has this tag a local version.</summary>
+		public bool IsLocalChanged => isLocalChanged;
+		/// <summary>Is this tag persisted in the local database.</summary>
+		public bool IsDirty => IsNew || isDirty;
+	} // class PpsObjectEditableTag
+
+	#endregion
+
+	#region -- class PpsObjectRevisionTag ---------------------------------------------
+
+	/// <summary>Object attached tags.</summary>
+	public sealed class PpsObjectRevisionTag : PpsObjectEditableTag
+	{
+		internal PpsObjectRevisionTag(PpsObject parent, long? id, bool isLocalChanged, PpsObjectTag tag) 
+			: base(parent, id, isLocalChanged, tag)
+		{
+		}
+
+		/// <summary></summary>
+		/// <param name="id"></param>
+		/// <param name="tag"></param>
+		/// <returns></returns>
+		internal bool Update(long? id, PpsObjectTag tag)
+		{
+			UpdateId(id, false);
+			if (tag != null)
+				return Update(tag);
+			else
+				return false;
+		} // proc Update
+	} // class PpsObjectRevisionTag
+
+	#endregion
+
+	#region -- class PpsObjectUserTag -------------------------------------------------
+
+	/// <summary>User generated tags</summary>
+	public sealed class PpsObjectUserTag : PpsObjectEditableTag
+	{
+		private long userId;
+		private Lazy<PpsMasterDataRow> userRow;
+
+		internal PpsObjectUserTag(PpsObject parent, long? id, long userId, DateTime timeStamp, bool isLocalChanged, PpsObjectTag tag) 
+			: base(parent, id, isLocalChanged, tag)
+		{
+			this.userId = userId;
+			UpdateTagStamp(timeStamp);
+			ResetUserRow();
 		} // ctor
 
-		private void CheckTagValue(PpsObjectTagClass newClass, object newValue)
+		private void ResetUserRow()
 		{
-			if (newClass == PpsObjectTagClass.Tag)
-			{
-				if (newValue != null)
-					throw new ArgumentOutOfRangeException("Tags of the class Tag can not have an value.");
-			}
-			else if (newClass == PpsObjectTagClass.Note)
-			{
-				if (newValue == null)
-					throw new ArgumentOutOfRangeException("Tags of the class Note must have an value.");
-			}
-		} // proc CheckTagValue
+			userRow = new Lazy<PpsMasterDataRow>(() => Parent.Environment.MasterData.GetTable("User").GetRowById(userId, false), true);
+			OnPropertyChanged(nameof(User));
+		} // proc ResetUserRow
 
-		internal void RefreshTag(PpsObjectTag tagData)
-		{
-			SetValue(ref tagClass, tagData.Class, nameof(Class));
-			SetValue(ref value, tagData.Value, nameof(Value));
-
-			if (userId != tagData.UserId)
-			{
-				userId = tagData.UserId;
-				OnPropertyChanged(nameof(UserId));
-				OnPropertyChanged(nameof(User));
-			}
-		} // proc RefreshTag
-
-		/// <summary>Updates the content of the tag.</summary>
-		/// <param name="newClass"></param>
-		/// <param name="newValue"></param>
-		public void Update(PpsObjectTagClass newClass, object newValue)
-		{
-			CheckTagState();
-
-			// correct strings
-			if (newValue is string t && String.IsNullOrEmpty(t))
-				newValue = null;
-
-			// update values
-			if (Class != newClass)
-			{
-				if (newClass == PpsObjectTagClass.Deleted)
-				{
-					if (SetValue(ref value, newValue, nameof(Value)))
-						parent.Parent.OnPropertyChanged(key);
-					if (SetValue(ref tagClass, PpsObjectTagClass.Deleted, nameof(Class)))
-						OnPropertyChanged(nameof(IsRemoved));
-					SetValue(ref isLocalChanged, true, nameof(IsLocalChanged));
-					parent.OnTagRemoved(this);
-					SetDirty();
-				}
-				else if (Class == PpsObjectTagClass.Tag
-				  || Class == PpsObjectTagClass.Note)
-					throw new InvalidOperationException("Tag of the Tag or Note, can not change the class.");
-				else
-				{
-					CheckTagValue(tagClass, newValue);
-					if (SetValue(ref value, newValue, nameof(Value)))
-						parent.Parent.OnPropertyChanged(key);
-
-					SetValue(ref tagClass, newClass, nameof(Class));
-					SetValue(ref isLocalChanged, true, nameof(IsLocalChanged));
-					OnPropertyChanged(nameof(IsRemoved));
-					SetDirty();
-				}
-			}
-			else if (!Object.Equals(value, newValue))
-			{
-				CheckTagValue(tagClass, newValue);
-				value = newValue;
-				OnPropertyChanged(nameof(Value));
-				parent.Parent.OnPropertyChanged(key);
-
-				SetValue(ref isLocalChanged, true, nameof(IsLocalChanged));
-				SetDirty();
-			}
-		} // proc UpdateTag
-
-		/// <summary>Remove the tag.</summary>
-		public void Remove()
-			=> Update(PpsObjectTagClass.Deleted, null);
-
-		/// <summary>Internal Id.</summary>
-		internal long? Id { get => id; set => id = value; }
-		/// <summary>Name of the tag.</summary>
-		public string Name => key;
-
-		/// <summary>Returns the current class of the tag.</summary>
-		public PpsObjectTagClass Class => tagClass;
-
-		/// <summary>Returns the current value, for the item.</summary>
-		public object Value => value;
-
-		/// <summary>Returns the Creation DateTime.</summary>
-		public DateTime CreationStamp
-		{
-			get
-			{
-				CheckTagState();
-				return creationStamp.Value;
-			}
-		} // prop CreationStamp
-
-		/// <summary>User that created this tag, or 0 for system created (like autotagging, states)</summary>
-		public long UserId
-		{
-			get
-			{
-				CheckTagState();
-				return userId;
-			}
-		} // prop UserId
-
-		/// <summary>Reference to the master data.</summary>
-		public PpsMasterDataRow User => GetUserRow();
-		/// <summary>Is this tag removed.</summary>
-		public bool IsRemoved => Class == PpsObjectTagClass.Deleted;
-
-		/// <summary>Is this tag attached to an revision.</summary>
-		public bool IsRev => isRev;
-
-		/// <summary>Is this tag changed.</summary>
-		public bool IsDirty => isDirty;
 		/// <summary></summary>
-		public bool IsLocalChanged => isLocalChanged;
+		/// <param name="cls"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public bool UpdateValue(PpsObjectTagClass cls, object value)
+			=> Update(new PpsObjectTag(Tag.Name, cls, value));
+
+		internal bool Update(long? id, long newUserId, DateTime newTimeStamp, PpsObjectTag newTag)
+		{
+			UpdateId(id, false);
+
+			var changed = Update(newTag);
+			changed |= UpdateTagStamp(newTimeStamp);
+
+			if(userId != newUserId)
+			{
+				userId = newUserId;
+				OnPropertyChanged(nameof(UserId));
+				ResetUserRow();
+				changed |= true;
+			}
+			return changed;
+		} // proc Update
+
+		/// <summary></summary>
+		public long UserId => userId;
+		/// <summary></summary>
+		public PpsMasterDataRow User => userRow.Value;
+	} // class PpsObjectTagView
+
+	#endregion
+
+	#region -- class PpsObjectSystemTag -----------------------------------------------
+
+	/// <summary>Server generated tags.</summary>
+	public sealed class PpsObjectSystemTag : PpsObjectTagBase
+	{
+		private readonly long id;
+
+		/// <summary></summary>
+		/// <param name="parent"></param>
+		/// <param name="id"></param>
+		/// <param name="tag"></param>
+		/// <param name="lastChanged"></param>
+		internal PpsObjectSystemTag(IPpsObject parent, long id, PpsObjectTag tag, DateTime lastChanged)
+			:base(parent, tag)
+		{
+			if (id <= 0)
+				throw new ArgumentOutOfRangeException(nameof(id), id, "Invalid system tag id.");
+
+			this.id = id;
+			this.UpdateTagStamp(lastChanged);
+		} // ctor
+		
+		internal bool Update(PpsObjectTag tag, DateTime timeStamp)
+		{
+			var changed = UpdateTagCore(tag);
+			changed |= UpdateTagStamp(timeStamp);
+			return changed;
+		} // proc Update
+
+		/// <summary>Id of the system tag.</summary>
+		public long Id => id;
 	} // class PpsObjectTagView
 
 	#endregion
@@ -949,17 +1031,167 @@ namespace TecWare.PPSn
 	#region -- class PpsObjectTags ----------------------------------------------------
 
 	/// <summary>List for lazy load support of tags.</summary>
-	public sealed class PpsObjectTags : IList, IReadOnlyList<PpsObjectTagView>, IPropertyReadOnlyDictionary, INotifyCollectionChanged
+	public sealed class PpsObjectTags : IEnumerable<PpsObjectTag>, ICollectionViewFactory, INotifyCollectionChanged
 	{
+		#region -- enum TagLevel ------------------------------------------------------
+
+		private enum TagLevel
+		{
+			None,
+			User,
+			System,
+			Revision
+		} // enum TagLevel
+
+		#endregion
+
+		#region -- class TagIndex -----------------------------------------------------
+
+		private sealed class TagIndex
+		{
+			public TagIndex(TagLevel level, PpsObjectTag tag)
+			{
+				Level = level;
+				Tag = tag;
+			} // ctor
+						
+			public override int GetHashCode() 
+				=> Tag.GetHashCode() ^ Level.GetHashCode();
+
+			public override bool Equals(object obj)
+				=> Object.ReferenceEquals(this, obj)
+				|| (obj is TagIndex t ? t.Level == Level && String.Compare(t.Tag.Name, Tag.Name, StringComparison.OrdinalIgnoreCase) == 0 : base.Equals(obj));
+
+			public PpsObjectTag Tag { get; }
+			public TagLevel Level { get; }
+		} // class TagIndex
+
+		#endregion
+
 		/// <summary>Notifies about tag changes.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
+		#region -- class PpsObjectTagCollection ---------------------------------------
+
+		private sealed class PpsObjectTagCollection : ICollection<PpsObjectTagBase>, INotifyCollectionChanged
+		{
+			public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+			private readonly PpsObjectTags tags;
+			private Lazy<int> count;
+
+			public PpsObjectTagCollection(PpsObjectTags tags)
+			{
+				this.tags = tags ?? throw new ArgumentNullException(nameof(tags));
+
+				WeakEventManager<PpsObjectTags, NotifyCollectionChangedEventArgs>.AddHandler(tags, nameof(INotifyCollectionChanged.CollectionChanged), Tags_CollectionChanged);
+				ResetCount();
+			} // ctor
+
+			private void Tags_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+			{
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+				ResetCount();
+			} // proc Tags_CollectionChanged
+
+			private void ResetCount()
+				=> count = new Lazy<int>(() => this.Count());
+			
+			public void Add(PpsObjectTagBase item)
+			{
+				if (item is PpsObjectUserTag userTag)
+					tags.AppendUserTag(userTag.UserId, userTag.Tag);
+				else
+					throw new ArgumentOutOfRangeException(nameof(item), item?.GetType().Name, "Only user tags allowed.");
+			} // func Add
+
+			public bool Remove(PpsObjectTagBase item)
+			{
+				if (item is PpsObjectUserTag userTag)
+					return userTag.Remove(true);
+				else
+					throw new ArgumentOutOfRangeException(nameof(item), item?.GetType().Name, "Only user tags allowed.");
+			} // func Remove
+
+			public void Clear() 
+				=> throw new NotSupportedException();
+
+			public bool Contains(PpsObjectTagBase item)
+			{
+				if (item.Class == PpsObjectTagClass.Deleted)
+					return false;
+
+				switch (item)
+				{
+					case PpsObjectSystemTag sysTag:
+						return tags.systemTags.Contains(sysTag);
+					case PpsObjectRevisionTag revTag:
+						return tags.revisionTags.Contains(revTag);
+					case PpsObjectUserTag userTag:
+						return tags.userTags.Contains(userTag);
+					default:
+						return false;
+				}
+			} // func Contains
+
+			public void CopyTo(PpsObjectTagBase[] array, int arrayIndex)
+			{
+				foreach (var t in this)
+					array[arrayIndex++] = t;
+			} // func CopyTo
+
+			public IEnumerator<PpsObjectTagBase> GetEnumerator()
+			{
+				tags.RefreshTags(false);
+				return tags.revisionTags.Concat(tags.systemTags.Concat<PpsObjectTagBase>(tags.userTags)).Where(t => t.Class != PpsObjectTagClass.Deleted).GetEnumerator();
+			} // func GetEnumerator
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+
+			public int Count => count.Value;
+			public bool IsReadOnly => false;
+		} // class PpsObjectTagCollection
+
+		#endregion
+
+		#region -- class PpsObjectRevisionProperties ----------------------------------
+
+		private sealed class PpsObjectRevisionProperties : IPropertyReadOnlyDictionary
+		{
+			private readonly PpsObjectTags tags;
+
+			public PpsObjectRevisionProperties(PpsObjectTags tags)
+				=> this.tags = tags;
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				if (tags.TryGetRevisionTagByName(name, out var revTag))
+				{
+					value = revTag.Value;
+					return true;
+				}
+				else
+				{
+					value = null;
+					return false;
+				}
+			} // func TryGetProperty
+		} // class PpsObjectRevisionProperties
+
+		#endregion
+
 		private readonly PpsObject parent;
-		private readonly List<PpsObjectTagView> tags;
-		private readonly List<PpsObjectTagView> deletedTags;
+		private readonly object masterRowTagsChangedToken;
+		private readonly PpsObjectRevisionProperties revisionProperties;
+
+		private readonly List<PpsObjectSystemTag> systemTags = new List<PpsObjectSystemTag>();
+		private readonly List<PpsObjectUserTag> userTags = new List<PpsObjectUserTag>();
+		private readonly List<PpsObjectRevisionTag> revisionTags = new List<PpsObjectRevisionTag>();
+
+		private readonly List<TagIndex> tags = new List<TagIndex>(); // tag cache
 
 		private PpsObjectTagLoadState state = PpsObjectTagLoadState.None;
-		private object masterDataRowEvent = null;
 		private bool isDirty = false;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -968,10 +1200,8 @@ namespace TecWare.PPSn
 		{
 			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
-			this.tags = new List<PpsObjectTagView>();
-			this.deletedTags = new List<PpsObjectTagView>();
-
-			masterDataRowEvent = parent.Environment.MasterData.RegisterWeakDataRowChanged("ObjectTags", null, OnTagsChanged);
+			revisionProperties = new PpsObjectRevisionProperties(this);
+			masterRowTagsChangedToken = parent.Environment.MasterData.RegisterWeakDataRowChanged(parent.Environment.MasterData.ObjectTagsTable, null, OnTagsChanged);
 		} // ctor
 
 		internal void SetDirty()
@@ -985,309 +1215,525 @@ namespace TecWare.PPSn
 			if (isDirty)
 			{
 				isDirty = false;
-				transaction.AddRollbackOperation(SetDirty);
+				transaction?.AddRollbackOperation(SetDirty);
 			}
 		} // proc ResetDirty
 
 		#endregion
 
-		#region -- Refresh ----------------------------------------------------------------
+		#region -- Refresh ------------------------------------------------------------
 
-		private void OnCollectionChanged(NotifyCollectionChangedEventArgs e = null)
-			=> CollectionChanged?.Invoke(this, e ?? new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-
-		internal void CheckTagsState()
+		internal void OnCollectionChanged()
 		{
-			if (state != PpsObjectTagLoadState.LocalState)
-				RefreshTags();
-		} // proc CheckTagsState
+			var collectionChanged = CollectionChanged;
+			if (collectionChanged != null)
+				Parent.Environment.Dispatcher.Invoke(() => collectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)));
+		} // proc OnCollectionChanged
 
-		private void OnTagsChanged(object sender, PpsDataRowChangedEventArgs e)
+		/// <summary>Initialize tags from a tag string.</summary>
+		/// <param name="tagString"></param>
+		internal void RefreshTagsFromString(string tagString)
 		{
-			if (state == PpsObjectTagLoadState.LocalState)
-			{
-				switch (e.Operation)
-				{
-					case PpsDataChangeOperation.Delete: // delete command from server
-						if (e.Arguments is PpsMasterData.IPpsTagChangedProperties)
-						{
-							var t = FindTagById(e.RowId);
-							if (t != null && !t.IsRev)
-							{
-								lock (parent.SyncRoot)
-								{
-									var idx = tags.IndexOf(t);
-									if (idx >= 0)
-									{
-										tags.RemoveAt(idx);
-										OnCollectionChanged();
-									}
-								}
-							}
-						}
-						break;
-					case PpsDataChangeOperation.Insert: // insert from server
-					case PpsDataChangeOperation.Update: // update from server
-						if (e.Arguments is PpsMasterData.IPpsTagChangedProperties)
-						{
-							var objId = e.Arguments.GetProperty("ObjectId", 0);
-							if (objId != parent.Id)
-								return;
-
-							var t = FindTagById(e.RowId);
-							if (t != null)
-							{
-								if (t.Id != e.RowId)
-									t.Id = e.RowId; // update id
-
-								if (!t.IsLocalChanged)
-								{
-									t.RefreshData(
-										e.Arguments.GetProperty("Class", PpsObjectTagClass.Text),
-										e.Arguments.GetProperty("Value", null),
-										e.Arguments.GetProperty("UserId", -1L),
-										e.Arguments.GetProperty("CreateDate", DateTime.Now),
-										false
-									);
-								}
-							}
-							else
-							{
-								EnsureTagInList(
-									new PpsObjectTagView(this, e.RowId,
-										e.Arguments.GetProperty("Key", null),
-										false,
-										e.Arguments.GetProperty("Class", PpsObjectTagClass.Text),
-										e.Arguments.GetProperty("Value", null),
-										e.Arguments.GetProperty("UserId", -1L),
-										e.Arguments.GetProperty("CreateDate", DateTime.Now),
-										false
-									)
-								);
-							}
-						}
-						break;
-				}
-			}
-		} // proc OnTagsChanged
-
-		internal void OnTagRemoved(PpsObjectTagView tag)
-		{
-			EnsureTagInList(tag);
-			OnCollectionChanged();
-		} // proc OnTagRemoved
-
-		private void RefreshSingleRevTag(long databaseId, PpsObjectTag tagData)
-		{
-			var tag = FindTagById(databaseId);
-			if (tag != null && !tag.IsDirty && tag.IsRev)
-			{
-				if (tagData.Class != PpsObjectTagClass.Deleted)
-					tag.RefreshTag(tagData);
-			}
-			else
-				tag = new PpsObjectTagView(this, databaseId, tagData.Name, tagData.Class, tagData.Value, tagData.UserId);
-
-			EnsureTagInList(tag);
-		} // proc RefreshSingleRevTag
-
-		/// <summary>Reads revision attached tags from a text-blob. (new line separated, id:key:class:userId=value)</summary>
-		/// <param name="tagList"></param>
-		internal void RefreshTagsFromString(string tagList)
-		{
+			var collectionChanged = false;
 			lock (SyncRoot)
 			{
-				foreach (var c in tagList.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
-				{
-					var p = c.IndexOf(':');
-					if (p <= 0)
-						continue;
+				if (state == PpsObjectTagLoadState.LocalState)
+					return; // do not reload tags from a simple source
 
-					var idText = c.Substring(0, p);
-					var databaseId = Int64.Parse(idText.Substring(1));
-					var tagData = PpsObjectTag.ParseTag(c.Substring(p + 1));
-
-					RefreshSingleRevTag(databaseId, tagData);
-				}
-
+				foreach (var tag in PpsObjectTag.ParseTags(tagString))
+					EnsureTagInList(tag, TagLevel.None, ref collectionChanged);
+				
 				if (state == PpsObjectTagLoadState.None)
 					state = PpsObjectTagLoadState.FastLoad;
 			}
 
-			OnCollectionChanged(null);
+			if (collectionChanged)
+				OnCollectionChanged();
 		} // proc RefreshTagsFromString
 
-		/// <summary>Writes revision attached tags</summary>
-		/// <param name="x"></param>
-		/// <param name="tagElementName"></param>
-		internal void WriteTagsToXml(XElement x, XName tagElementName)
+		private static (long id, PpsObjectTag tag, long userId, DateTime timeStamp, bool isSystemTag, bool isLocalChanged) ParseTagInfo(IDataRecord r)
 		{
+			if (r == null)
+				throw new ArgumentNullException(nameof(r));
+
+			var id = r.GetInt64(0);
+			var key = r.GetString(2);
+
+			//var isRemoteClassNull = r.IsDBNull(3);
+			var isLocalClassNull = r.IsDBNull(5);
+
+			var tagClass = (PpsObjectTagClass)(isLocalClassNull ? r.GetInt32(3) : r.GetInt32(5));
+			var value = Procs.ChangeType(r.IsDBNull(6) ? (r.IsDBNull(4) ? null : r.GetString(4)) : r.GetString(6), PpsObjectTag.GetTypeFromClass(tagClass));
+			var userId = r.IsDBNull(7) ? 0 : r.GetInt64(7);
+			var creationDate = r.IsDBNull(8) ? DateTime.Now : r.GetDateTime(8);
+
+			return (id, new PpsObjectTag(key, tagClass, value), userId, creationDate, isLocalClassNull && userId == 0, !r.IsDBNull(4) && !r.IsDBNull(6) && r.GetString(4) != r.GetString(6));
+		} // proc ParseTagInfo
+
+		/// <summary>Load tags from the local database.</summary>
+		/// <param name="enforce"><c>false</c>, refresh only the tags, if they are already loaded.</param>
+		public void RefreshTags(bool enforce)
+		{
+			var collectionChanged = false;
 			lock (SyncRoot)
 			{
-				if (state == PpsObjectTagLoadState.None)
-					CheckTagsState();
+				if (!enforce && state == PpsObjectTagLoadState.LocalState)
+					return; // return if no tags are loaded until, now.
 
-				foreach (var cur in tags)
-				{
-					// only tags from this user, or system tags
-					if (cur.IsRev)
-					{
-						x.Add(
-							new XElement(tagElementName,
-								new XAttribute("key", cur.Name),
-								new XAttribute("tagClass", PpsObjectTag.FormatClass(cur.Class)),
-								Procs.XAttributeCreate("value", cur.Value),
-								new XAttribute("userId", cur.UserId),
-								new XAttribute("createDate", cur.CreationStamp.ToUniversalTime().ChangeType<string>())
-							)
-						);
-					}
-				}
-			}
-		} // proc WriteTagsToXml
+				var removeTags = new List<PpsObjectTagBase>(
+					revisionTags.Concat(systemTags.Concat<PpsObjectTagBase>(userTags))
+				);
 
-		/// <summary>Merge revision based tags.</summary>
-		internal void ReadTagsFromXml(IEnumerable<XElement> xTags)
-		{
-			lock (SyncRoot)
-			{
-				CheckTagsState();
-
-				var revTagsDone = new List<PpsObjectTagView>();
-
-				foreach (var xCur in xTags)
-				{
-					var key = xCur.GetAttribute("key", null);
-					var tagClass = xCur.GetAttribute("tagClass", PpsObjectTagClass.Text);
-					var value = Procs.ChangeType(xCur.GetAttribute("value", null), PpsObjectTag.GetTypeFromClass(tagClass));
-					var userId = xCur.GetAttribute("userId", 0L);
-
-					var tag = tags.Find(t => t.IsRev && String.Compare(t.Name, key, StringComparison.OrdinalIgnoreCase) == 0);
-
-					if (tag != null)
-					{
-						if (value != null)
-							tag.Update(tagClass, value);
-						else
-							tag.Remove();
-					}
-					else if (value != null)
-					{
-						tag = new PpsObjectTagView(this, null, key, true, tagClass, value, userId, DateTime.UtcNow, false);
-					}
-
-					EnsureTagInList(tag);
-
-					revTagsDone.Add(tag);
-				}
-
-				for (var i = tags.Count - 1; i >= 0; i--)
-				{
-					if (tags[i].IsRev && revTagsDone.IndexOf(tags[i]) == -1)
-					{
-						deletedTags.Add(tags[i]);
-						tags.RemoveAt(i);
-						SetDirty();
-					}
-				}
-			}
-
-			OnCollectionChanged(null);
-		} // proc RefreshTagsFromXml
-
-		/// <summary>Reads all tags from the local database.</summary>
-		public void RefreshTags()
-		{
-			lock (parent.SyncRoot)
-			{
 				using (var trans = parent.Environment.MasterData.CreateReadUncommitedTransaction())
 				{
-					// refresh first all user generated tags
-					using (var selectCommand = trans.CreateNativeCommand("SELECT [Id], [Key], [Class], [Value], [LocalClass], [LocalValue], [UserId], [CreateDate] FROM main.[ObjectTags] WHERE [ObjectId] = @Id"))
+					// refresh all tags
+					using (var selectCommand = trans.CreateNativeCommand("SELECT [Id], [ObjectId], [Key], [Class], [Value], [LocalClass], [LocalValue], [UserId], [CreateDate] FROM main.[ObjectTags] WHERE [ObjectId] = @Id"))
 					{
 						selectCommand.AddParameter("@Id", DbType.Int64, parent.Id);
 
 						using (var r = selectCommand.ExecuteReaderEx(CommandBehavior.SingleResult))
 						{
 							while (r.Read())
-							{
-								var id = r.GetInt64(0);
-								var key = r.GetString(1);
-
-								var isRemoteClassNull = r.IsDBNull(2);
-								var isLocalClassNull = r.IsDBNull(4);
-
-								var tagClass = (PpsObjectTagClass)(isLocalClassNull ? r.GetInt32(2) : r.GetInt32(4));
-								var isLocalChanged = !r.IsDBNull(5);
-								var value = Procs.ChangeType(r.IsDBNull(5) ? (r.IsDBNull(3) ? null : r.GetString(3)) : r.GetString(5), PpsObjectTag.GetTypeFromClass(tagClass));
-								var userId = r.IsDBNull(6) ? 0 : r.GetInt64(6);
-								var creationDate = r.IsDBNull(7) ? DateTime.Now : r.GetDateTime(7);
-
-								var isRev = !isLocalClassNull && userId == 0;
-
-								var tag = FindTagById(id);
-								if (tag != null && (tag.IsRev != isRev || tag.Name != key))
-								{
-									deletedTags.Remove(tag);
-									tags.Remove(tag);
-									tag = null;
-								}
-
-								// update tag
-								if (tag != null)
-								{
-									tag.RefreshData(tagClass, value, userId, creationDate, isLocalChanged);
-								}
-								else
-								{
-									tag = new PpsObjectTagView(this, id, key, isRev, tagClass, value, userId, creationDate, isLocalChanged);
-								}
-
-								// add/remove tag
-								EnsureTagInList(tag);
-							}
+								UpdateTagFromReader(r, removeTags, ref collectionChanged);
 						}
+					}
+				}
+
+				foreach (var t in removeTags)
+				{
+					switch (t)
+					{
+						case PpsObjectSystemTag sysTag:
+							systemTags.Remove(sysTag);
+							RemoveFromTagList(t.Tag, TagLevel.System, ref collectionChanged);
+							break;
+						case PpsObjectRevisionTag revTag:
+							if (revTag.IsLocalChanged || revTag.IsDirty)
+								revTag.UpdateId(null, true); // mark as new
+							else
+								revTag.Remove(ref collectionChanged);
+							break;
+						case PpsObjectUserTag userTag:
+							if (userTag.IsLocalChanged || userTag.IsDirty)
+								userTag.UpdateId(null, true); // mark as new
+							else
+								userTag.Remove(ref collectionChanged);
+							break;
 					}
 				}
 
 				state = PpsObjectTagLoadState.LocalState;
 			}
 
-			OnCollectionChanged(null);
+			if (collectionChanged)
+				OnCollectionChanged();
 		} // proc RefreshTags
 
-		private void EnsureTagInList(PpsObjectTagView tag)
+		private void UpdateTagFromReader(IDataRecord r, List<PpsObjectTagBase> removeTags, ref bool collectionChanged)
 		{
-			if (tag.Class == PpsObjectTagClass.Deleted)
+			var (id, tag, userId, timeStamp, isSystemTag, isLocalChanged) = ParseTagInfo(r);
+			if (userId == 0)
 			{
-				if (tags.Remove(tag))
-					SetDirty();
-				if (deletedTags.IndexOf(tag) == -1)
+				if (isSystemTag) // system tag
+					UpdateSystemTagCore(id, tag, timeStamp, removeTags, ref collectionChanged);
+				else // revision tag
+					UpdateRevisionTagCore(id, tag, isLocalChanged, removeTags, ref collectionChanged);
+			}
+			else // user tag
+				UpdateUserTagCore(id, tag, isLocalChanged, timeStamp, userId, removeTags, ref collectionChanged);
+		} // proc UpdateTagFromReader
+
+		private bool onTagsChangedCollectionChanged = false;
+
+		private void OnTagsChanged(object sender, PpsDataTableOperationEventArgs e)
+		{
+			if (e.Operation == PpsDataRowOperation.TableChanged)
+			{
+				if (onTagsChangedCollectionChanged)
 				{
-					if (tag.Id.HasValue)
-						deletedTags.Add(tag);
-					SetDirty();
+					OnCollectionChanged(); // call in ui-thread
+					onTagsChangedCollectionChanged = false;
 				}
+			}
+			else if(e.Operation == PpsDataRowOperation.UnTouchRows)
+			{
+				onTagsChangedCollectionChanged = false;
+			}
+			else if (e is PpsDataRowOperationEventArgs re && (re.Arguments == null || Equals(re.Arguments[1], parent.Id))) // test object id
+			{
+				if (state == PpsObjectTagLoadState.FastLoad)
+				{
+					switch (e.Operation)
+					{
+						case PpsDataRowOperation.RowInsert:
+						case PpsDataRowOperation.RowUpdate:
+							{
+								// try patch tags
+								lock (SyncRoot)
+								{
+									var (id, tag, userId, timeStamp, isSystemTag, isLocalChanged) = ParseTagInfo(re.Arguments);
+									if (!EnsureTagInList(tag, GetTagLevel(userId, isSystemTag), ref onTagsChangedCollectionChanged))
+										state = PpsObjectTagLoadState.None;
+								}
+							}
+							break;
+						case PpsDataRowOperation.RowDelete:
+							state = PpsObjectTagLoadState.None; // refresh tags
+							onTagsChangedCollectionChanged = true;
+							break;
+					}
+				}
+				else if (state == PpsObjectTagLoadState.LocalState)
+				{
+					switch (e.Operation)
+					{
+						case PpsDataRowOperation.RowInsert:
+						case PpsDataRowOperation.RowUpdate:
+							var collectionChanged = false;
+							lock (SyncRoot)
+								UpdateTagFromReader(re.Arguments, null, ref onTagsChangedCollectionChanged);
+							if (collectionChanged)
+								OnCollectionChanged();
+							break;
+						case PpsDataRowOperation.RowDelete:
+							if (TryGetSystemTagById((long)re.OldRowId, out var sysTag))
+							{
+								systemTags.Remove(sysTag);
+								RemoveFromTagList(sysTag.Tag, TagLevel.System, ref onTagsChangedCollectionChanged);
+								onTagsChangedCollectionChanged = true;
+							}
+							else if (TryGetRevisionTagById((long)re.OldRowId, out var revTag))
+							{
+								if (revTag.IsLocalChanged && revTag.IsDirty)
+								{
+									revTag.UpdateId(null, true); // re insert tag with neg. id
+								}
+								else
+								{
+									revisionTags.Remove(revTag);
+									RemoveFromTagList(revTag.Tag, TagLevel.Revision, ref onTagsChangedCollectionChanged);
+									onTagsChangedCollectionChanged = true;
+								}
+							}
+							else if (TryGetUserTagById((long)re.OldRowId, out var userTag))
+							{
+								if (userTag.IsLocalChanged && userTag.IsDirty)
+								{
+									userTag.UpdateId(null, true); // re insert tag with neg. id
+								}
+								else
+								{
+									userTags.Remove(userTag);
+									RemoveFromTagList(userTag.Tag, TagLevel.User, ref onTagsChangedCollectionChanged);
+									onTagsChangedCollectionChanged = true;
+								}
+							}
+							break;
+					}
+				}
+			}
+		} // proc OnTagsChanged
+
+		private static TagLevel GetTagLevel(long userId, bool isSystemTag) 
+			=> isSystemTag ? TagLevel.System : (userId == 0 ? TagLevel.Revision : TagLevel.User);
+
+		#endregion
+
+		#region -- System Tags --------------------------------------------------------
+
+		private bool TryGetSystemTagById(long rowId, out PpsObjectSystemTag sysTag)
+		{
+			sysTag = systemTags.Find(c => c.Id == rowId);
+			return sysTag != null;
+		} // func TryGetSystemTagById
+
+		private bool TryGetSystemTagByName(string name, out PpsObjectSystemTag sysTag)
+		{
+			sysTag = systemTags.Find(c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+			return sysTag != null;
+		} // func TryGetSystemTagByName
+
+		private void UpdateSystemTagCore(long id, PpsObjectTag tag, DateTime timeStamp, List<PpsObjectTagBase> removeTags, ref bool collectionChanged)
+		{
+			var systemTag = systemTags.Find(c => String.Compare(c.Name, tag.Name, StringComparison.OrdinalIgnoreCase) == 0);
+			if (systemTag == null)
+			{
+				systemTag = new PpsObjectSystemTag(parent, id, tag, timeStamp);
+				systemTags.Add(systemTag);
+				collectionChanged = true;
 			}
 			else
 			{
-				if (tags.IndexOf(tag) == -1)
+				systemTag.Update(tag, timeStamp);
+				removeTags?.Remove(systemTag);
+			}
+
+			EnsureTagInList(systemTag.Tag, TagLevel.System, ref collectionChanged);
+		} // func UpdateSystemTagCore
+
+		#endregion
+
+		#region -- Revision Tags ------------------------------------------------------
+
+		private bool TryGetRevisionTagById(long oldRowId, out PpsObjectRevisionTag revTag)
+		{
+			revTag = revisionTags.Find(c => c.IsEqualId(oldRowId));
+			return revTag != null;
+		} // func TryGetRevisionTagById
+
+		private bool TryGetRevisionTagByName(string name, out PpsObjectRevisionTag revTag)
+		{
+			revTag = revisionTags.Find(c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+			return revTag != null;
+		} // func TryGetRevisionTagByName
+
+		internal static IEnumerable<PpsObjectTag> ParseTagsFromXml(IEnumerable<XElement> xTags)
+			=> xTags.Select(x => PpsObjectTag.FromXml(x));
+		
+		internal void WriteRevisionTagsToXml(XElement xTags, XName tagElementName)
+		{
+			lock (SyncRoot)
+			{
+				RefreshTags(true);
+
+				xTags.Add(revisionTags.Select(c => c.Tag.ToXml(tagElementName)));
+			}
+		} // proc WriteRevisionTagsToXml
+
+		/// <summary>Update revision tags from a object.</summary>
+		/// <param name="xTags"></param>
+		internal void ChangeRevisionTagsFromXml(IEnumerable<XElement> xTags)
+			=> UpdateRevisionTags(false, ParseTagsFromXml(xTags));
+
+		private void UpdateRevisionTagCore(long? id, PpsObjectTag newTag, bool isLocalChanged, List<PpsObjectTagBase> removeTags, ref bool collectionChanged)
+		{
+			var currentTag = (PpsObjectEditableTag)revisionTags.Find(t => String.Compare(t.Name, newTag.Name, StringComparison.OrdinalIgnoreCase) == 0);
+
+			if (currentTag != null) // tag alread exists
+			{
+				if (((PpsObjectRevisionTag)currentTag).Update(id, newTag))
+					EnsureTagInList(currentTag.Tag, TagLevel.Revision, ref collectionChanged);
+				parent.IsDocumentChanged = true;
+
+				removeTags?.Remove(currentTag);
+			}
+			else // add new tag
+			{
+				var newRevisionTag = new PpsObjectRevisionTag(parent, id, isLocalChanged, newTag);
+				revisionTags.Add(newRevisionTag);
+				SetDirty();
+
+				EnsureTagInList(newRevisionTag.Tag, TagLevel.Revision, ref collectionChanged);
+
+				parent.IsDocumentChanged = true;
+				collectionChanged = true;
+			}
+		} // func UpdateRevisionTagCore
+
+		/// <summary></summary>
+		/// <param name="appendOnly"></param>
+		/// <param name="tags"></param>
+		public void UpdateRevisionTags(bool appendOnly, params PpsObjectTag[] tags)
+			=> UpdateRevisionTags(appendOnly, tags);
+
+		/// <summary>Update all revision tags.</summary>
+		/// <param name="appendOnly"></param>
+		/// <param name="tags"></param>
+		public void UpdateRevisionTags(bool appendOnly, IEnumerable<PpsObjectTag> tags)
+		{
+			var collectionChanged = false;
+
+			lock (SyncRoot)
+			{
+				RefreshTags(false);
+
+				var removeTags = appendOnly ? null : new List<PpsObjectTagBase>(revisionTags);
+
+				// update tags
+				foreach (var cur in tags)
 				{
-					tags.Add(tag);
-					SetDirty();
+					if ((cur.Class == PpsObjectTagClass.Date
+						|| cur.Class == PpsObjectTagClass.Number
+						|| cur.Class == PpsObjectTagClass.Text)
+						&& cur.Value != null)
+					{
+						UpdateRevisionTagCore(null, cur, true, removeTags, ref collectionChanged);
+					}
 				}
-				if (deletedTags.Remove(tag))
-					SetDirty();
+
+				// remove not updated tags
+				if (!appendOnly)
+				{
+					foreach (var k in removeTags)
+					{
+						if (k is PpsObjectRevisionTag r && r.Remove(false))
+							collectionChanged = true;
+					}
+				}
+			}
+
+			if (collectionChanged)
+				OnCollectionChanged();
+		} // proc UpdateRevisionTags
+
+		#endregion
+
+		#region -- User Tags ----------------------------------------------------------
+
+		private bool TryGetUserTagById(long oldRowId, out PpsObjectUserTag userTag)
+		{
+			userTag = userTags.Find(c => c.IsEqualId(oldRowId));
+			return userTag != null;
+		} // func TryGetRevisionTagById
+		
+		private void UpdateUserTagCore(long? newId, PpsObjectTag newTag, bool isLocalChanged, DateTime newTimeStamp, long newUserId, List<PpsObjectTagBase> removeTags, ref bool collectionChanged)
+		{
+			var currentTag = (PpsObjectEditableTag)userTags.Find(t => String.Compare(t.Name, newTag.Name, StringComparison.OrdinalIgnoreCase) == 0 && t.UserId == newUserId);
+
+			if (currentTag != null) // tag alread exists
+			{
+				if (((PpsObjectUserTag)currentTag).Update(newId, newUserId, newTimeStamp, newTag))
+					EnsureTagInList(currentTag.Tag, TagLevel.User, ref collectionChanged);
+				parent.IsDocumentChanged = true;
+
+				removeTags?.Remove(currentTag);
+			}
+			else // add new tag
+			{
+				var newUserTag = new PpsObjectUserTag(parent, newId, newUserId, newTimeStamp, isLocalChanged, newTag);
+				userTags.Add(newUserTag);
+				SetDirty();
+
+				EnsureTagInList(newUserTag.Tag, TagLevel.User, ref collectionChanged);
+
+				parent.IsDocumentChanged = true;
+				collectionChanged = true;
+			}
+		} // proc UpdateUserTagCore
+
+		/// <summary>Append a new user tag to the object.</summary>
+		/// <param name="userId"></param>
+		/// <param name="userTag"></param>
+		public void AppendUserTag(long userId, PpsObjectTag userTag)
+		{
+			var collectionChanged = false;
+
+			lock (SyncRoot)
+				UpdateUserTagCore(null, userTag, true, DateTime.Now, userId, null, ref collectionChanged);
+
+			if (collectionChanged)
+				OnCollectionChanged();
+		} // proc AppendUserTag
+
+		#endregion
+
+		#region -- Update Simple Tag View ---------------------------------------------
+
+		private void OnObjectPropertyChanged(string name)
+			=> parent.OnPropertyChanged(name);
+
+		private int IndexOfListTag(string name)
+			=> tags.FindIndex(c => String.Compare(c.Tag.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+	
+		private bool RemoveFromTagList(PpsObjectTag tag, TagLevel tagLevel, ref bool collectionChanged)
+		{
+			var idx = IndexOfListTag(tag.Name);
+			if (idx >= 0)
+			{
+				if (state == PpsObjectTagLoadState.LocalState)
+				{
+					if (tags[idx].Level == tagLevel) // remove value and find replacment
+					{
+						switch (tagLevel)
+						{
+							case TagLevel.None:
+							case TagLevel.System:
+								tags.RemoveAt(idx);
+								OnObjectPropertyChanged(tag.Name);
+								collectionChanged = true;
+								return true;
+
+							case TagLevel.Revision:
+								if (TryGetSystemTagByName(tag.Name, out var sysTag))
+								{
+									tags[idx] = new TagIndex(TagLevel.System, sysTag.Tag);
+									OnObjectPropertyChanged(tag.Name);
+									collectionChanged = true;
+									return true;
+								}
+								else
+									goto case TagLevel.None;
+
+							case TagLevel.User:
+								if (TryGetRevisionTagByName(tag.Name, out var revTag))
+								{
+									tags[idx] = new TagIndex(TagLevel.Revision, revTag.Tag);
+									OnObjectPropertyChanged(tag.Name);
+									collectionChanged = true;
+									return true;
+								}
+								else
+									goto case TagLevel.Revision;
+
+							default:
+								throw new InvalidOperationException();
+						}
+					}
+					else
+						return false;
+				}
+				else
+				{
+					state = PpsObjectTagLoadState.None; // clear state
+					OnObjectPropertyChanged(tag.Name);
+					collectionChanged = true;
+					return true;
+				}
+			}
+			else
+				return false;
+		} // func RemoveFromTagList
+
+		private bool EnsureTagInList(PpsObjectTag tag, TagLevel level, ref bool collectionChanged)
+		{
+			if (tag.Class == PpsObjectTagClass.Deleted)
+				return RemoveFromTagList(tag, level, ref collectionChanged);
+			else
+			{
+				var idx = IndexOfListTag(tag.Name);
+				if (idx >= 0) // tag in list -> update?
+				{
+					var value = tags[idx];
+					if (value.Tag == tag
+						|| value.Tag.IsValueEqual(tag.Value))
+						return false;
+					else if (value.Level <= level)
+					{
+						tags[idx] = new TagIndex(level, tag);
+						collectionChanged = true;
+						OnObjectPropertyChanged(tag.Name);
+						return true;
+					}
+					else
+						return false;
+				}
+				else
+				{
+					tags.Add(new TagIndex(level, tag));
+					collectionChanged = true;
+					OnObjectPropertyChanged(tag.Name);
+					return true;
+				}
 			}
 		} // proc EnsureTagInList
 
 		#endregion
-
-		#region -- UpdateLocal ------------------------------------------------------------
+		
+		#region -- UpdateLocal --------------------------------------------------------
 
 		internal void UpdateLocal(PpsMasterDataTransaction transaction)
 		{
-			lock (parent.SyncRoot)
+			lock (SyncRoot)
 			{
 				if (state != PpsObjectTagLoadState.LocalState
 					 || !isDirty)
@@ -1315,440 +1761,123 @@ namespace TecWare.PPSn
 
 					var nextLocalId = (long?)null;
 
-					foreach (var cur in tags.Union(deletedTags))
+					var tableModified = false;
+					foreach (var cur in revisionTags.Concat<PpsObjectEditableTag>(userTags))
 					{
 						if (cur.IsDirty)
 						{
-							if (cur.Id.HasValue)
+							if (cur.IsNew)
 							{
-								if (cur.IsRev && cur.IsRemoved)
+								if (cur.Class != PpsObjectTagClass.Deleted) // insert new tag
 								{
-									// fix me: what is when there is a remote tag with the same key?
+									if (nextLocalId.HasValue)
+									{
+										nextLocalId = nextLocalId.Value - 1;
+										insertIdParameter.Value = nextLocalId.Value;
+									}
+									else
+									{
+										nextLocalId = transaction.GetNextLocalId(parent.Environment.MasterData.ObjectTagsTable.Name, "Id");
+										insertIdParameter.Value = nextLocalId;
+									}
+									insertObjectIdParameter.Value = parent.Id;
+									insertKeyParameter.Value = cur.Name;
+									insertClassParameter.Value = (int)cur.Class;
+									insertValueParameter.Value = cur.Value == null ? DBNull.Value : (object)cur.Value.ChangeType<string>();
+									insertUserIdParameter.Value = cur is PpsObjectUserTag u ? u.UserId : 0L;
+									insertCreationDatedParameter.Value = cur.TimeStamp;
+
+									insertCommand.ExecuteNonQueryEx();
+									tableModified = true;
+
+									// update id
+									cur.UpdateId((long)insertIdParameter.Value, true);
+									transaction.AddRollbackOperation(() => cur.UpdateId(null, true));
+								}
+							}
+							else if (cur.Class == PpsObjectTagClass.Deleted) // remove tag data
+							{
+								if (cur.Id.Value < 0) // local id only-> delete
+								{
 									deleteIdParameter.Value = cur.Id.Value;
 									deleteCommand.ExecuteNonQueryEx();
+									tableModified = true;
 								}
-								else if (cur.IsRemoved && cur.Id.Value < 0) // local only
-								{
-									deleteIdParameter.Value = cur.Id.Value;
-									deleteCommand.ExecuteNonQueryEx();
-								}
-								else
+								else // remove sync -> update
 								{
 									updateIdParameter.Value = cur.Id.Value;
-									updateClassParameter.Value = (int)cur.Class;
-									updateValueParameter.Value = cur.Value == null ? DBNull.Value : (object)cur.Value.ChangeType<string>();
-									updateUserIdParameter.Value = cur.UserId;
-									updateCreationDateParameter.Value = cur.CreationStamp;
+									updateClassParameter.Value = (int)PpsObjectTagClass.Deleted;
+									updateValueParameter.Value = DBNull.Value;
+									updateUserIdParameter.Value = cur is PpsObjectUserTag u ? u.UserId : 0L;
+									updateCreationDateParameter.Value = cur.TimeStamp;
 
 									updateCommand.ExecuteNonQueryEx();
+									tableModified = true;
 								}
 							}
-							else
+							else // update tag data
 							{
-								if (nextLocalId.HasValue)
-								{
-									nextLocalId = nextLocalId.Value - 1;
-									insertIdParameter.Value = nextLocalId.Value;
-								}
-								else
-								{
-									nextLocalId = transaction.GetNextLocalId("ObjectTags", "Id");
-									insertIdParameter.Value = nextLocalId;
-								}
-								insertObjectIdParameter.Value = parent.Id;
-								insertKeyParameter.Value = cur.Name;
-								insertClassParameter.Value = (int)cur.Class;
-								insertValueParameter.Value = cur.Value == null ? DBNull.Value : (object)cur.Value.ChangeType<string>();
-								insertUserIdParameter.Value = cur.UserId;
-								insertCreationDatedParameter.Value = cur.CreationStamp;
+								updateIdParameter.Value = cur.Id.Value;
+								updateClassParameter.Value = (int)cur.Class;
+								updateValueParameter.Value = cur.Value == null ? DBNull.Value : (object)cur.Value.ChangeType<string>();
+								updateUserIdParameter.Value = cur is PpsObjectUserTag u ? u.UserId : 0L;
+								updateCreationDateParameter.Value = cur.TimeStamp;
 
-								insertCommand.ExecuteNonQueryEx();
-
-								// update id
-								cur.Id = (long)insertIdParameter.Value;
-								transaction.AddRollbackOperation(() => cur.Id = null);
+								updateCommand.ExecuteNonQueryEx();
+								tableModified = true;
 							}
+
 							cur.ResetDirty(transaction);
 						}
 					}
-
-					ResetDirty(transaction);
 				}
+
+				isDirty = false;
+				transaction.AddRollbackOperation(SetDirty);
+
+				// set isObjectTagsChanged to true
+				transaction.RaiseOperationEvent(new PpsDataTableOperationEventArgs(parent.Environment.MasterData.ObjectTagsTable, PpsDataRowOperation.TableChanged));
 			}
 		} // proc UpdateLocal
 
 		#endregion
+		
+		ICollectionView ICollectionViewFactory.CreateView()
+			=> System.Windows.Data.CollectionViewSource.GetDefaultView(All);
 
-		#region -- Tag Manipulation -------------------------------------------------------
+		/// <summary>Return all tags</summary>
+		public IEnumerable<PpsObjectTagBase> All
+			=> new PpsObjectTagCollection(this);
 
-		private void UpdateRevisionTagCore(string key, PpsObjectTagClass tagClass, object value, List<PpsObjectTagView> removeTags)
+		/// <summary>Enumerates a unique tag list.</summary>
+		/// <returns></returns>
+		public IEnumerator<PpsObjectTag> GetEnumerator()
 		{
-			var findTag = new Predicate<PpsObjectTagView>(t => t.IsRev && String.Compare(t.Name, key, StringComparison.OrdinalIgnoreCase) == 0);
-			var tag = tags.Find(findTag) ?? deletedTags.Find(findTag);
+			if (state == PpsObjectTagLoadState.None)
+				RefreshTags(true);
 
-			if (tag != null)
-			{
-				tag.Update(tagClass, value);
-				removeTags?.Remove(tag);
-			}
-			else
-			{
-				tag = new PpsObjectTagView(this, null, key, true, tagClass, value, 0, DateTime.Now, true);
-			}
-
-			parent.IsDocumentChanged = true;
-			EnsureTagInList(tag);
-		} // func UpdateRevisionTagCore
-
-		/// <summary>Updates a revision attached tag.</summary>
-		/// <param name="key">Key of the tag.</param>
-		/// <param name="tagClass">Classification of the tag.</param>
-		/// <param name="value">Value of the tag.</param>
-		public void UpdateRevisionTag(string key, PpsObjectTagClass tagClass, object value)
-		{
-			if (tagClass != PpsObjectTagClass.Text
-				&& tagClass != PpsObjectTagClass.Date
-				&& tagClass != PpsObjectTagClass.Number)
-				throw new ArgumentOutOfRangeException(nameof(tagClass));
-
-			lock (SyncRoot)
-			{
-				if (state == PpsObjectTagLoadState.None)
-					CheckTagsState();
-
-				UpdateRevisionTagCore(key, tagClass, value, null);
-			}
-		} // proc UpdateRevisionTag
-
-		/// <summary>Merges the revision based tags with the tag-list.</summary>
-		/// <param name="tagList"></param>
-		public void UpdateRevisionTags(params PpsObjectTag[] tagList)
-			=> UpdateRevisionTags(tagList);
-
-		/// <summary>Merges the revision based tags with the tag-list.</summary>
-		/// <param name="tagList"></param>
-		public void UpdateRevisionTags(IEnumerable<PpsObjectTag> tagList)
-		{
-			lock (SyncRoot)
-			{
-				if (state == PpsObjectTagLoadState.None)
-					CheckTagsState();
-
-				var removeTags = new List<PpsObjectTagView>(tags.Where(c => c.IsRev));
-
-				// update tags
-				foreach (var cur in tagList)
-				{
-					if ((cur.Class == PpsObjectTagClass.Date
-						|| cur.Class == PpsObjectTagClass.Number
-						|| cur.Class == PpsObjectTagClass.Text)
-						&& cur.Value != null)
-					{
-						UpdateRevisionTagCore(cur.Name, cur.Class, cur.Value, removeTags);
-					}
-				}
-
-				// remove not updated tags
-				foreach (var k in removeTags)
-					k.Remove();
-			}
-
-			OnCollectionChanged();
-		} // proc RefreshTags
-
-		/// <summary>Update a tag for the current user.</summary>
-		/// <param name="key">Key of the tag.</param>
-		/// <param name="cls">Classification of the tag.</param>
-		/// <param name="value">Value of the tag.</param>
-		/// <param name="updateTagBeforeReset">Function is called with the new tag-view before the CollectionReset gets calle.d</param>
-		/// <returns>New or current tag-view of the tag.</returns>
-		public PpsObjectTagView UpdateTag(string key, PpsObjectTagClass cls, object value, Action<PpsObjectTagView> updateTagBeforeReset = null)
-			=> UpdateTag(parent.Environment.UserId, key, cls, value, updateTagBeforeReset);
-
-		/// <summary>Update a tag for a user.</summary>
-		/// <param name="userId">Id of the user.</param>
-		/// <param name="key">Key of the tag.</param>
-		/// <param name="cls">Classification of the tag.</param>
-		/// <param name="value">Value of the tag.</param>
-		/// <param name="updateTagBeforeReset">Function is called with the new tag-view before the CollectionReset gets calle.d</param>
-		/// <returns>New or current tag-view of the tag.</returns>
-		public PpsObjectTagView UpdateTag(long userId, string key, PpsObjectTagClass cls, object value, Action<PpsObjectTagView> updateTagBeforeReset = null)
-		{
-			try
-			{
-				lock (parent.SyncRoot)
-				{
-					CheckTagsState();
-
-					var idx = IndexOf(key, userId);
-					if (idx == -1 || tags[idx].Class != cls)
-					{
-						var newTag = new PpsObjectTagView(this, null, key, false, cls, value, userId, DateTime.Now, true);
-						tags.Add(newTag);
-						updateTagBeforeReset?.Invoke(newTag);
-						return newTag;
-					}
-					else
-					{
-						var t = tags[idx];
-						t.Update(cls, value);
-						updateTagBeforeReset?.Invoke(t);
-						return t;
-					}
-				}
-			}
-			finally
-			{
-				OnCollectionChanged();
-			}
-		} // func UpdateTag
-
-		/// <summary>Remove the tag of the current user..</summary>
-		/// <param name="key">Key of the tag.</param>
-		public void Remove(string key)
-		{
-			lock (parent.SyncRoot)
-			{
-				CheckTagsState();
-
-				var idx = IndexOf(key, parent.Environment.UserId);
-				if (idx >= 0)
-					tags[idx].Remove();
-			}
-		} // proc Remove
-
-		/// <summary>Get a list of all tags.</summary>
-		/// <returns>Tags</returns>
-		public IEnumerator<PpsObjectTagView> GetEnumerator()
-		{
-			lock (SyncRoot)
-			{
-				CheckTagsState();
-
-				foreach (var c in tags)
-					yield return c;
-			}
+			foreach (var t in tags)
+				yield return t.Tag;
 		} // func GetEnumerator
-
-		/// <summary></summary>
-		/// <param name="key"></param>
-		/// <returns></returns>
-		public bool Contains(string key)
-			=> IndexOf(key) >= 0;
-
-		/// <summary></summary>
-		/// <param name="tag"></param>
-		/// <returns></returns>
-		public bool Contains(PpsObjectTag tag)
-			=> IndexOf(tag.Name) >= 0;
-
-		/// <summary></summary>
-		/// <param name="tag"></param>
-		/// <returns></returns>
-		public bool Contains(PpsObjectTagView tag)
-			=> IndexOf(tag.Name) >= 0;
-
-		/// <summary></summary>
-		/// <param name="name"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		public bool TryGetProperty(string name, out object value)
-		{
-			lock (SyncRoot)
-			{
-				var idx = IndexOf(name);
-				if (idx >= 0)
-				{
-					value = tags[idx].Value;
-					return true;
-				}
-				else
-				{
-					value = null;
-					return false;
-				}
-			}
-		} // func TryGetProperty
-
-		private PpsObjectTagView FindTagById(long id)
-		{
-			lock (SyncRoot)
-			{
-				var f = new Predicate<PpsObjectTagView>(c => c.Id.HasValue && c.Id == id);
-				return tags.Find(f) ?? deletedTags.Find(f);
-			}
-		} // func FindTagById
-
-		/// <summary></summary>
-		/// <param name="key"></param>
-		/// <returns></returns>
-		public int IndexOf(string key)
-		{
-			var idxScore = 0;
-			var idxFound = -1;
-
-			lock (SyncRoot)
-			{
-				CheckTagsState();
-				for (var i = 0; i < tags.Count; i++)
-				{
-					var t = tags[i];
-					if (t.Name == key)
-					{
-						if (t.IsRev)
-						{
-							idxScore = 100;
-							idxFound = i;
-							break;
-						}
-						else
-						{
-							idxScore = 50;
-							idxFound = i;
-						}
-					}
-					else if (String.Compare(t.Name, key, StringComparison.OrdinalIgnoreCase) == 0)
-					{
-						if (t.IsRev)
-						{
-							idxScore = 100;
-							idxFound = i;
-							break;
-						}
-						else if (idxScore > 10)
-						{
-							idxScore = 0;
-							idxFound = i;
-						}
-					}
-				}
-			}
-
-			return idxFound;
-		} // func IndexOf
-
-		/// <summary></summary>
-		/// <param name="key"></param>
-		/// <param name="userId"></param>
-		/// <returns></returns>
-		public int IndexOf(string key, long userId)
-		{
-			lock (parent.SyncRoot)
-			{
-				CheckTagsState();
-				return tags.FindIndex(c => c.UserId == userId && String.Compare(c.Name, key, StringComparison.CurrentCultureIgnoreCase) == 0);
-			}
-		} // func Contains
-
-		/// <summary></summary>
-		/// <param name="tag"></param>
-		/// <returns></returns>
-		public int IndexOf(PpsObjectTagView tag)
-			=> IndexOf(tag.Name, tag.UserId);
-
-		/// <summary></summary>
-		/// <param name="tag"></param>
-		/// <returns></returns>
-		public int IndexOf(PpsObjectTag tag)
-			=> IndexOf(tag.Name, tag.UserId);
-
-		#endregion
-
-		#region -- IList Interface --------------------------------------------------------
-
-		int IList.Add(object value)
-		{
-			switch (value)
-			{
-				case PpsObjectTag t:
-					return IndexOf(UpdateTag(t.Name, t.Class, t.Value));
-				default:
-					throw new ArgumentException();
-			}
-		} // func IList.Add
-
-		void IList.Insert(int index, object value) => throw new NotSupportedException();
-
-		void IList.Remove(object value)
-		{
-			switch (value)
-			{
-				case string key:
-					Remove(key);
-					break;
-				case PpsObjectTag tag:
-					Remove(tag.Name);
-					break;
-				case PpsObjectTagView tag:
-					Remove(tag.Name);
-					break;
-			}
-		} // proc Remove
-
-		void IList.RemoveAt(int index)
-			=> tags[index].Remove();
-
-		void IList.Clear() => throw new NotSupportedException();
-
-		void ICollection.CopyTo(Array array, int index)
-		{
-			lock (parent.SyncRoot)
-				((ICollection)tags).CopyTo(array, index);
-		} // proc CopyTo
-
-		bool IList.Contains(object value)
-			=> Contains((PpsObjectTag)value);
-
-		int IList.IndexOf(object value)
-			=> (value is PpsObjectTagView) ? IndexOf((PpsObjectTagView)value) : IndexOf((PpsObjectTag)value);
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
-		bool IList.IsReadOnly => true;
-		bool IList.IsFixedSize => false;
-		object IList.this[int index] { get { return this[index]; } set => throw new NotSupportedException(); }
-
-		bool ICollection.IsSynchronized => true;
-
-		/// <summary></summary>
-		public object SyncRoot => parent.SyncRoot;
-
-		#endregion
-
-		/// <summary>Number of tags.</summary>
-		public int Count
-		{
-			get
-			{
-				lock (parent.SyncRoot)
-				{
-					CheckTagsState();
-					return tags.Count;
-				}
-			}
-		} // prop Count
+		internal PpsObjectTag GetTagByIndex(int idx)
+			=> tags[idx].Tag;
 
 		/// <summary>Is the tag list changed, and not written in the local database.</summary>
 		public bool IsDirty => isDirty;
 
-		/// <summary>Access a tag by index.</summary>
-		/// <param name="index">Index of the tag.</param>
-		/// <returns></returns>
-		public PpsObjectTagView this[int index]
-		{
-			get
-			{
-				lock (parent.SyncRoot)
-				{
-					CheckTagsState();
-					return tags[index];
-				}
-			}
-		} // prop this
+		/// <summary></summary>
+		public IPropertyReadOnlyDictionary RevisionProperties => revisionProperties;
 
+		internal int TagCount => tags.Count;
+		
 		/// <summary>Parent of the tag list.</summary>
 		public PpsObject Parent => parent;
+		/// <summary>Synchronization root.</summary>
+		public object SyncRoot => parent.SyncRoot;
 	} // class PpsObjectTags
 
 	#endregion
@@ -2083,7 +2212,7 @@ namespace TecWare.PPSn
 		private async Task LoadDataAsync()
 		{
 			loadedRawData = await baseObj.LoadObjectDataInformationAsync() ?? DBNull.Value;
-			loadedHash = baseObj.Tags.GetProperty(hashTag, null);
+			loadedHash = baseObj.RevisionTags.GetProperty(hashTag, null);
 			newRawData = null;
 			newHash = null;
 
@@ -2166,7 +2295,7 @@ namespace TecWare.PPSn
 				// update database
 				await baseObj.SaveObjectDataInformationAsync(newRawData, baseObj.MimeType ?? MimeTypes.Application.OctetStream, true);
 				// update hash
-				baseObj.Tags.UpdateRevisionTag(hashTag, PpsObjectTagClass.Text, newHash);
+				baseObj.Tags.UpdateRevisionTags(true, new PpsObjectTag(hashTag, PpsObjectTagClass.Text, newHash));
 				// update tags
 				await baseObj.UpdateLocalAsync();
 
@@ -2325,8 +2454,8 @@ namespace TecWare.PPSn
 		{
 			using (var dst = new MemoryStream())
 			{
-				strokes.Save(dst);
-				baseObj.Tags.UpdateRevisionTag("Overlay", PpsObjectTagClass.Text, Convert.ToBase64String(dst.ToArray()));
+				strokes.Save(dst, true);
+				baseObj.Tags.UpdateRevisionTags(true, new PpsObjectTag("Overlay", PpsObjectTagClass.Text, Convert.ToBase64String(dst.ToArray())));
 				await baseObj.UpdateLocalAsync();
 
 				ResetPreviewImage();
@@ -2379,7 +2508,6 @@ namespace TecWare.PPSn
 		private readonly PpsObject baseObj;
 		private readonly IPpsActiveObjectDataTable activeObjectTable;
 		private readonly PpsUndoManager undoManager;
-		private readonly List<PpsRevisionDataSet> revisions = new List<PpsRevisionDataSet>();
 
 		internal PpsObjectDataSet(PpsDataSetDefinitionDesktop definition, PpsObject obj)
 			: base(definition, obj.Environment)
@@ -2487,7 +2615,7 @@ namespace TecWare.PPSn
 				}
 
 				// update tags
-				baseObj.Tags.UpdateRevisionTags(GetAutoTags().ToList());
+				baseObj.Tags.UpdateRevisionTags(false, GetAutoTags());
 
 				// persist the object description
 				await baseObj.UpdateLocalAsync();
@@ -2535,23 +2663,62 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsRevisionDataSet -----------------------------------------------
+	#region -- interface IPpsObject ---------------------------------------------------
 
-	/// <summary></summary>
-	public sealed class PpsRevisionDataSet : PpsDataSetClient
+	/// <summary>Contract for objects (local and remote)</summary>
+	public interface IPpsObject : IDataRow, IDataColumns, IDataValues, IPropertyReadOnlyDictionary, IDynamicMetaObjectProvider, INotifyPropertyChanged
 	{
-		internal PpsRevisionDataSet(PpsObjectDataSet parent, long revisionId)
-			: base((PpsDataSetDefinitionDesktop)parent.DataSetDefinition, (PpsEnvironment)parent.Shell)
+		/// <summary>Access the tag list.</summary>
+		IEnumerable<PpsObjectTag> Tags { get; }
+		/// <summary>Filter only revision tags.</summary>
+		IPropertyReadOnlyDictionary RevisionTags { get; }
+
+		/// <summary>Access the environment</summary>
+		PpsEnvironment Environment { get; }
+		/// <summary></summary>
+		object SyncRoot { get; }
+	} // interface IPpsObject
+
+	#endregion
+
+	#region -- class PpsRevisionObject ------------------------------------------------
+
+	internal sealed class PpsRevisionObject : DynamicDataRow, IPpsObject
+	{
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		private readonly long revisionId;
+		private readonly PpsObject localObject;
+
+		public PpsRevisionObject(PpsObject localObject, long revisionId)
 		{
+			if (revisionId <= 0)
+				throw new ArgumentOutOfRangeException(nameof(revisionId), revisionId, "Invalid revision.");
+
+			this.localObject = localObject ?? throw new ArgumentNullException(nameof(localObject));
+			this.revisionId = revisionId;
 		} // ctor
-	} // class PpsRevisionDataSet
+		
+		public override IReadOnlyList<IDataColumn> Columns => localObject.Columns;
+		public override bool IsDataOwner => true;
+
+		public PpsEnvironment Environment => localObject.Environment;
+
+		public override object this[int index] => localObject[index];
+
+		public object SyncRoot => null;
+
+		public IEnumerable<PpsObjectTag> Tags => throw new NotImplementedException();
+			
+		IPropertyReadOnlyDictionary IPpsObject.RevisionTags => throw new NotImplementedException();
+	} // class PpsRevisionObject
 
 	#endregion
 
 	#region -- class PpsObject --------------------------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsObject : DynamicDataRow, INotifyPropertyChanged
+	public sealed class PpsObject : DynamicDataRow, IPpsObject
 	{
 		#region -- class PpsStaticObjectColumn ------------------------------------------
 
@@ -2580,6 +2747,7 @@ namespace TecWare.PPSn
 		private readonly object objectLock = new object();
 
 		private readonly LazyProperty<IPpsObjectData> data; // access to the object data
+
 		private readonly PpsObjectTags tags;                // list with assigned tags
 		private readonly PpsObjectLinks links;              // linked objects
 
@@ -2602,7 +2770,7 @@ namespace TecWare.PPSn
 			this.tags = new PpsObjectTags(this);
 			this.links = new PpsObjectLinks(this);
 
-			masterRowEvent = environment.MasterData.RegisterWeakDataRowChanged("Objects", objectId, OnObjectDataChanged);
+			masterRowEvent = environment.MasterData.RegisterWeakDataRowChanged(environment.MasterData.ObjectsTable, objectId, OnObjectDataChanged);
 
 			ReadObjectInfo(r);
 		} // ctor
@@ -2612,10 +2780,21 @@ namespace TecWare.PPSn
 		public override string ToString()
 			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
 
-		private void OnObjectDataChanged(object sender, PpsDataRowChangedEventArgs e)
+		private void OnObjectDataChanged(object sender, PpsDataTableOperationEventArgs e)
 		{
-			ReadObjectInfo(e.Arguments);
-			ResetDirty(null);
+			switch(e.Operation)
+			{
+				case PpsDataRowOperation.RowUpdate:
+					if (e is PpsDataRowOperationEventArgs e2 && e2.Arguments != null)
+					{
+						if (e2.RowId != e2.OldRowId)
+							ReplaceObjectIdAsync((long)e2.RowId).AwaitTask(); // invoke id replace
+
+						ReadObjectInfo(e2.Arguments);
+						ResetDirty(null);
+					}
+					break;
+			}
 		} // proc OnObjectDataChanged
 
 		/// <summary>Reads the properties from the local database.</summary>
@@ -2664,7 +2843,7 @@ namespace TecWare.PPSn
 			links.ReadLinksFromXml(x.Elements("linksTo"));
 
 			// tags, user tags only
-			tags.ReadTagsFromXml(x.Elements("tag")); // refresh of the pulled system tags, removes current system tags
+			tags.ChangeRevisionTagsFromXml(x.Elements("tag")); // refresh of the pulled system tags, removes current system tags
 		} // UpdateObjectFromXml
 
 		#endregion
@@ -2695,20 +2874,29 @@ namespace TecWare.PPSn
 			return request;
 		} //func PushDataRequest
 
-		private async Task UpdateObjectIdAsync(PpsMasterDataTransaction trans, long newObjectId)
+		private async Task ReplaceObjectIdAsync(long newObjectId)
 		{
+			// validate object id
 			if (newObjectId < 0)
 				throw new ArgumentOutOfRangeException(nameof(objectId), newObjectId, "New object Id is invalid.");
-			else if (objectId > 0 && objectId != newObjectId)
-				throw new ArgumentOutOfRangeException(nameof(Id), newObjectId, "Object id is different.");
+			else if (objectId > 0)
+			{
+				if (objectId != newObjectId)
+					throw new ArgumentOutOfRangeException(nameof(Id), newObjectId, "Object id is different.");
+				else
+					return;
+			}
 
+			// update all ref id's
+			using (var trans = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write)) // attach or create a transaction
 			using (var cmd = trans.CreateNativeCommand(
 				"UPDATE main.[Objects] SET Id = @Id WHERE Id = @OldId; " +
-				"UPDATE main.[ObjectTags] SET ObjectId = @Id WHERE Id = @OldId; " +
+				"UPDATE main.[ObjectTags] SET ObjectId = @Id WHERE ObjectId = @OldId; " +
 				"UPDATE main.[ObjectLinks] SET ParentObjectId = @Id WHERE ParentObjectId = @OldId; " +
 				"UPDATE main.[ObjectLinks] SET LinkObjectId = @Id WHERE LinkObjectId = @OldId; "))
 			{
 				var oldObjectId = objectId;
+
 				// updates the object id in the local database
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
 				cmd.AddParameter("@OldId", DbType.Int64, oldObjectId);
@@ -2718,10 +2906,9 @@ namespace TecWare.PPSn
 				objectId = newObjectId;
 				trans.AddRollbackOperation(() => objectId = oldObjectId);
 
-				// refresh Id in dictionary
-				// linked objects should realize the change on the database change (in dataset, and object structure)
-				environment.ReplaceObjectCacheId(oldObjectId, newObjectId, false);
-				trans.AddRollbackOperation(() => environment.ReplaceObjectCacheId(newObjectId, oldObjectId, true));
+				// refresh Id in dictionaries for objects, links and tags
+				// Warning: never use direct id links for refObjectId's in Tags or Links
+				trans.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowUpdate, Environment.MasterData.ObjectsTable, newObjectId, oldObjectId, null));
 			}
 		} // proc UpdateObjectId
 
@@ -2977,7 +3164,7 @@ namespace TecWare.PPSn
 				{
 					// first update the new object id
 					var newObjectId = xAnswer.GetAttribute<long>(nameof(Id), -1);
-					await UpdateObjectIdAsync(trans, newObjectId);
+					await ReplaceObjectIdAsync(newObjectId);
 
 					// update object data
 					ReadObjectInfo(new XAttributesPropertyDictionary(xAnswer));
@@ -3186,6 +3373,8 @@ namespace TecWare.PPSn
 		private XElement ToXml()
 		{
 			var xObj = new XElement("object");
+
+			// base object properties
 			xObj.Add(
 				Procs.XAttributeCreate("Id", objectId, -1L),
 				Procs.XAttributeCreate("Guid", Guid, Guid.Empty),
@@ -3194,11 +3383,11 @@ namespace TecWare.PPSn
 				Procs.XAttributeCreate("Nr", Nr)
 			);
 
-			// add links
+			// add revision links
 			links.AddToXml(xObj, "linksTo");
 
-			// add system tags
-			tags.WriteTagsToXml(xObj, "tag");
+			// add revision tags to the object info
+			tags.WriteRevisionTagsToXml(xObj, "tag");
 
 			return xObj;
 		} // proc ToXml
@@ -3253,7 +3442,11 @@ namespace TecWare.PPSn
 		#region -- Properties -------------------------------------------------------------
 
 		internal void OnPropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+		{
+			var propertyChanged = PropertyChanged;
+			if (propertyChanged != null)
+				Environment.Dispatcher.BeginInvoke(new Action(() => propertyChanged.Invoke(this, new PropertyChangedEventArgs(propertyName))));
+		} // proc OnPropertyChanged
 
 		private T GetValue<T>(int index, T empty)
 		{
@@ -3267,7 +3460,7 @@ namespace TecWare.PPSn
 			newValue = newValue == null ? null : Procs.ChangeType(newValue, staticColumns[(int)index].DataType);
 
 			// comparer value
-			if (!Object.Equals(staticValues[(int)index], newValue))
+			if (!Equals(staticValues[(int)index], newValue))
 			{
 				staticValues[(int)index] = newValue;
 
@@ -3317,9 +3510,9 @@ namespace TecWare.PPSn
 							return StaticTagsColumn;
 						else if (index == StaticColumns.Length + 3)
 							return StaticLinksColumn;
-						else if (index < StaticColumns.Length + obj.Tags.Count + staticPropertyCount)
+						else if (index < StaticColumns.Length + obj.Tags.TagCount + staticPropertyCount)
 						{
-							var tag = obj.Tags[index - StaticColumns.Length - staticPropertyCount];
+							var tag = obj.Tags.GetTagByIndex(index - StaticColumns.Length - staticPropertyCount);
 							return CreateSimpleDataColumn(tag);
 						}
 						else
@@ -3328,10 +3521,10 @@ namespace TecWare.PPSn
 				}
 			} // prop this
 
-			private static SimpleDataColumn CreateSimpleDataColumn(PpsObjectTagView tag)
+			private static SimpleDataColumn CreateSimpleDataColumn(PpsObjectTag tag)
 				=> new SimpleDataColumn(tag.Name, PpsObjectTag.GetTypeFromClass(tag.Class));
 
-			public int Count => StaticColumns.Length + obj.Tags.Count + staticPropertyCount;
+			public int Count => StaticColumns.Length + obj.Tags.TagCount + staticPropertyCount;
 		} // class PpsObjectColumns
 
 		#endregion
@@ -3372,10 +3565,10 @@ namespace TecWare.PPSn
 					lock (objectLock)
 						return links;
 				}
-				else if (index < StaticColumns.Length + Tags.Count + staticPropertyCount)
+				else if (index < StaticColumns.Length + Tags.TagCount + staticPropertyCount)
 				{
 					lock (objectLock)
-						return tags[index - StaticColumns.Length - staticPropertyCount].Value;
+						return tags.GetTagByIndex(index - StaticColumns.Length - staticPropertyCount).Value;
 				}
 				else
 					throw new ArgumentOutOfRangeException();
@@ -3432,8 +3625,7 @@ namespace TecWare.PPSn
 			get => GetValue((int)PpsStaticObjectColumnIndex.IsDocumentChanged, false);
 			set => SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, value, true);
 		} // prop IsDocumentChanged
-
-
+		
 		/// <summary></summary>
 		public IPpsObjectData Data => data.GetValueAsync().AwaitTask();
 		/// <summary></summary>
@@ -3445,11 +3637,16 @@ namespace TecWare.PPSn
 		public PpsObjectLinks Links => links;
 		/// <summary>Object tags and properties</summary>
 		public PpsObjectTags Tags => tags;
+		/// <summary></summary>
+		public IPropertyReadOnlyDictionary RevisionTags => tags.RevisionProperties;
+
+		IEnumerable<PpsObjectTag> IPpsObject.Tags => tags;
+		
 
 		/// <summary>Is the meta data changed and not persisted in the local database.</summary>
 		public bool IsChanged => isDirty;
-
-		internal object SyncRoot => objectLock;
+		/// <summary></summary>
+		public object SyncRoot => objectLock;
 
 		// -- Static ----------------------------------------------------------------
 
@@ -4147,7 +4344,7 @@ namespace TecWare.PPSn
 				}
 
 				// append multi-value column
-				cmd.Append("group_concat('S' || s_all.Id || ':' || s_all.Key || ':' || ifnull(s_all.LocalClass , s_all.Class) || ':' || s_all.UserId || '=' || replace(ifnull(s_all.LocalValue, s_all.Value), char(10), ' '), char(10)) as [Values]");
+				cmd.Append("group_concat('S' || s_all.Id || ':' || s_all.Key || ':' || ifnull(s_all.LocalClass , s_all.Class) ||  '=' || replace(ifnull(s_all.LocalValue, s_all.Value), char(10), ' '), char(10)) as [Values]");
 
 				// generate dynamic columns
 				foreach (var c in GetAllKeyColumns())
@@ -4259,8 +4456,10 @@ order by t_liefnr.value desc
 			using (var src = new FileStream(fileName, FileMode.Open, FileAccess.Read))
 			{
 				var newObject = await CreateNewObjectFromStreamAsync(src, Path.GetFileName(fileName));
-				newObject.Tags.UpdateRevisionTag("FileName", PpsObjectTagClass.Text, fileName);
-				newObject.Tags.UpdateRevisionTag("LastWriteTime", PpsObjectTagClass.Date, lastWriteTime.ChangeType<string>());
+				newObject.Tags.UpdateRevisionTags(true,
+					new PpsObjectTag("FileName", PpsObjectTagClass.Text, fileName),
+					new PpsObjectTag("LastWriteTime", PpsObjectTagClass.Date, lastWriteTime.ChangeType<string>())
+				);
 
 				// write changes
 				await newObject.UpdateLocalAsync();
@@ -4283,7 +4482,9 @@ order by t_liefnr.value desc
 
 				// create the new empty object
 				var newObject = await CreateNewObjectAsync(ObjectInfos[AttachmentObjectTyp], mimeType);
-				newObject.Tags.UpdateRevisionTag(PpsObjectBlobData.fileNameTag, PpsObjectTagClass.Text, name);
+				newObject.Tags.UpdateRevisionTags(true,
+					new PpsObjectTag(PpsObjectBlobData.fileNameTag, PpsObjectTagClass.Text, name)
+				);
 
 				// import the data
 				var data = await newObject.GetDataAsync<PpsObjectBlobData>();
@@ -4450,6 +4651,20 @@ order by t_liefnr.value desc
 
 		#region -- Object Cache -------------------------------------------------------
 
+		private void ReplaceObjectCacheId(long? newObjectId, long oldObjectId)
+		{
+			lock (objectStoreLock)
+			{
+				if (objectStoreById.TryGetValue(oldObjectId, out var idx))
+				{
+					if (!newObjectId.HasValue)
+						objectStoreById.Remove(oldObjectId);
+					else
+						objectStoreById[newObjectId.Value] = idx;
+				}
+			}
+		} // func ReplaceObjectCacheId
+
 		private PpsObject ReadObject(object key, bool useGuid, bool throwException = false)
 		{
 			// refresh core data
@@ -4566,18 +4781,6 @@ order by t_liefnr.value desc
 			}
 		} // func GetCachedObjectOrCreate
 
-		internal void ReplaceObjectCacheId(long newObjectId, long oldObjectId, bool removeOldId)
-		{
-			lock (objectStoreLock)
-			{
-				if (objectStoreById.TryGetValue(oldObjectId, out var idx))
-				{
-					if (removeOldId)
-						objectStoreById.Remove(oldObjectId);
-					objectStoreById[newObjectId] = idx;
-				}
-			}
-		} // func ReplaceObjectCacheId
 
 		/// <summary></summary>
 		/// <param name="localId"></param>

@@ -58,8 +58,10 @@ namespace TecWare.PPSn.Controls
 
 	#region -- interface IPpsEditableObject -------------------------------------------
 
+	/// <summary>Expension to the <see cref="System.ComponentModel.IEditableObject"/></summary>
 	public interface IPpsEditableObject : IEditableObject
 	{
+		/// <summary>Is this object editable.</summary>
 		bool IsEditable { get; }
 	} // proc IPpsEditableObject
 

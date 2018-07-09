@@ -1120,7 +1120,7 @@ namespace TecWare.PPSn
 			else if (v is PpsObject o)
 				return o.Id;
 			else if (v is PpsMasterDataRow mr)
-				return mr.Key;
+				return mr.RowId;
 			else if (v is PpsLinkedObjectExtendedValue l)
 				return l.IsNull ? null : (object)((PpsObject)l.Value).Id;
 			else if (v is PpsFormattedStringValue fsv)

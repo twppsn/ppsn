@@ -34,7 +34,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -43,24 +42,100 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Properties;
-using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
-	#region -- enum PpsDataChangeOperation --------------------------------------------
+	#region -- enum PpsDataRowOperation -----------------------------------------------
 
 	/// <summary>Data change operation type</summary>
-	public enum PpsDataChangeOperation
+	public enum PpsDataRowOperation
 	{
-		/// <summary>Full refresh</summary>
-		Full,
+		/// <summary>All rows a marked for delete.</summary>
+		UnTouchRows,
+		/// <summary>Delete not process rows from views.</summary>
+		UnTouchedDeleteRows,
+		/// <summary>Notifies about a table is changed operation.</summary>
+		TableChanged,
+
 		/// <summary>Insert operation</summary>
-		Insert,
+		RowInsert,
 		/// <summary>Delete operation</summary>
-		Delete,
+		RowDelete,
 		/// <summary>Update operation</summary>
-		Update
-	} // enum PpsDataChangeOperation
+		RowUpdate
+	} // enum PpsDataRowOperation
+
+	#endregion
+
+	#region -- class PpsDataTableOperationEventArgs -----------------------------------
+
+	/// <summary>Event arguments for table based change operations from the system.</summary>
+	public class PpsDataTableOperationEventArgs : EventArgs
+	{
+		private readonly PpsDataTableDefinition table;
+		private readonly PpsDataRowOperation operation;
+
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <param name="operation"></param>
+		public PpsDataTableOperationEventArgs(PpsDataTableDefinition table, PpsDataRowOperation operation)
+		{
+			this.table = table;
+			this.operation = operation;
+		} // ctor
+
+		/// <summary></summary>
+		public PpsDataTableDefinition Table => table;
+		/// <summary></summary>
+		public PpsDataRowOperation Operation => operation;
+	} // class PpsDataTableOperationEventArgs
+
+	/// <summary></summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
+	public delegate void PpsDataTableOperationEventHandler(object sender, PpsDataTableOperationEventArgs e);
+
+	#endregion
+
+	#region -- class IPpsDataRowOperationArguments ------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsDataRowOperationArguments : IPropertyEnumerableDictionary, IDataRecord
+	{
+	} // IPpsDataRowOperationArguments
+
+	#endregion
+
+	#region -- class PpsDataRowOperationEventArgs -------------------------------------
+
+	/// <summary>Row based event</summary>
+	public class PpsDataRowOperationEventArgs : PpsDataTableOperationEventArgs
+	{
+		private readonly object rowId;
+		private readonly object oldRowId;
+		private readonly IPpsDataRowOperationArguments arguments;
+
+		/// <summary></summary>
+		/// <param name="operation"></param>
+		/// <param name="table"></param>
+		/// <param name="rowId"></param>
+		/// <param name="oldRowId"></param>
+		/// <param name="arguments"></param>
+		public PpsDataRowOperationEventArgs(PpsDataRowOperation operation, PpsDataTableDefinition table, object rowId, object oldRowId, IPpsDataRowOperationArguments arguments)
+			: base(table, operation)
+		{
+			this.rowId = rowId;
+			this.oldRowId = oldRowId;
+			this.arguments = arguments;
+		} // ctor
+
+		/// <summary>Primary key of the row.</summary>
+		public object RowId => rowId;
+		/// <summary>Returns the old id.</summary>
+		public object OldRowId => oldRowId ?? rowId;
+		/// <summary>Optional column description.</summary>
+		public IPpsDataRowOperationArguments Arguments => arguments;
+	} // class PpsDataRowOperationEventArgs
 
 	#endregion
 
@@ -127,11 +202,15 @@ namespace TecWare.PPSn
 	/// <summary>Transaction for the sqlite data manipulation.</summary>
 	public abstract class PpsMasterDataTransaction : IDbTransaction, IDisposable
 	{
+		private readonly PpsMasterData masterData;
+
 		#region -- Ctor/Dtor/Commit/Rollback --------------------------------------------
 
 		/// <summary>Transaction for the sqlite data manipulation.</summary>
-		protected PpsMasterDataTransaction()
+		/// <param name="masterData"></param>
+		protected PpsMasterDataTransaction(PpsMasterData masterData)
 		{
+			this.masterData = masterData ?? throw new ArgumentNullException(nameof(masterData));
 		} // ctor
 
 		/// <summary></summary>
@@ -198,6 +277,12 @@ namespace TecWare.PPSn
 			}
 		} // func GetNextLocalId
 
+		/// <summary>Notify the system about a data change.</summary>
+		/// <param name="args"></param>
+		/// <param name="raiseTableChanged"><c>true</c>, to raise a table change on insert or delete.</param>
+		public void RaiseOperationEvent(PpsDataTableOperationEventArgs args, bool raiseTableChanged = true)
+			=> masterData.OnMasterDataTableChanged(args, raiseTableChanged);
+		
 		/// <summary>Last inserted id.</summary>
 		public long LastInsertRowId => ConnectionCore.LastInsertRowId;
 
@@ -213,6 +298,9 @@ namespace TecWare.PPSn
 		/// <summary>Transaction isolation level.</summary>
 		public IsolationLevel IsolationLevel => TransactionCore.IsolationLevel;
 
+		/// <summary>Access master data service.</summary>
+		public PpsMasterData MasterData => masterData;
+
 		/// <summary>Is the transaction disposed.</summary>
 		public abstract bool IsDisposed { get; }
 		/// <summary>Is the transaction commited/rollbacked.</summary>
@@ -224,9 +312,13 @@ namespace TecWare.PPSn
 	#region -- class PpsMasterDataRow -------------------------------------------------
 
 	/// <summary>Represents a datarow of a master data table.</summary>
-	public sealed class PpsMasterDataRow : DynamicDataRow
+	public sealed class PpsMasterDataRow : DynamicDataRow, INotifyPropertyChanged
 	{
+		/// <summary>Is called if a value gets changed.</summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+
 		private readonly PpsMasterDataTable owner;
+		private long rowId;
 		private readonly object[] values;
 
 		internal PpsMasterDataRow(PpsMasterDataTable owner, IDataRecord r)
@@ -238,25 +330,45 @@ namespace TecWare.PPSn
 			for (var i = 0; i < values.Length; i++)
 			{
 				var v = r.GetValue(i);
-				if (primaryKeyIndex == i && (v == null || v == DBNull.Value))
-					throw new ArgumentNullException(owner.Columns[primaryKeyIndex].Name, "Null primary columns are not allowed.");
+				if (primaryKeyIndex == i)
+				{
+					if (v == null || v == DBNull.Value)
+						throw new ArgumentNullException(owner.Columns[primaryKeyIndex].Name, "Null primary columns are not allowed.");
+					rowId = values[i].ChangeType<long>();
+				}
 
 				values[i] = v == DBNull.Value ? null : v;
 			}
 		} // ctor
+
+		internal void UpdateValues(IPpsDataRowOperationArguments arguments)
+		{
+			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
+			for (var i = 0; i < values.Length; i++)
+			{
+				if (!Equals(values[i], arguments[i]))
+				{
+					if (i == primaryKeyIndex)
+						values[i] = arguments[i].ChangeType<long>();
+
+					values[i] = arguments[i];
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(owner.Columns[i].Name));
+				}
+			}
+		} // func UpdateValues
 
 		/// <summary>Check of the rows are the same.</summary>
 		/// <param name="obj">other object</param>
 		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is PpsMasterDataRow r
-				? (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Equals(Key, r.Key))
+				? (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && RowId == r.RowId)
 				: false;
 
 		/// <summary>Hashcode for the current datarow.</summary>
 		/// <returns></returns>
 		public override int GetHashCode()
-			=> owner.Definition.GetHashCode() ^ (Key?.GetHashCode() ?? 0);
+			=> owner.Definition.GetHashCode() ^ RowId.GetHashCode();
 
 		/// <summary></summary>
 		/// <param name="columnName"></param>
@@ -300,7 +412,7 @@ namespace TecWare.PPSn
 					if (column.IsRelationColumn) // return the related row
 					{
 						var masterDataTable = owner.MasterData.GetTable(column.ParentColumn.Table);
-						return masterDataTable?.GetRowById(values[index]);
+						return masterDataTable?.GetRowById(values[index].ChangeType<long>());
 					}
 					else
 						return values[index];
@@ -312,9 +424,11 @@ namespace TecWare.PPSn
 
 		/// <summary>Master data rows, own there data.</summary>
 		public override bool IsDataOwner => true;
+		/// <summary>Internal flag for batch updates.</summary>
+		internal bool IsTouched { get; set; } = false;
 
 		/// <summary>Return key value for this row.</summary>
-		public object Key => values[owner.GetPrimaryKeyColumnIndex()];
+		public long RowId => rowId;
 	} // class PpsMasterDataRow
 
 	#endregion
@@ -322,8 +436,11 @@ namespace TecWare.PPSn
 	#region -- class PpsMasterDataSelector --------------------------------------------
 
 	/// <summary>Base implementation of a data selector.</summary>
-	public abstract class PpsMasterDataSelector : IDataRowEnumerable, IDataColumns
+	public abstract class PpsMasterDataSelector : IDataRowEnumerable, IDataColumns, INotifyCollectionChanged
 	{
+		/// <summary>Use only reset.</summary>
+		public event NotifyCollectionChangedEventHandler CollectionChanged;
+
 		/// <summary></summary>
 		protected PpsMasterDataSelector()
 		{
@@ -345,6 +462,10 @@ namespace TecWare.PPSn
 					yield return Table.CreateRow(primaryKeyColumnIndex, r);
 			}
 		} // func GetEnumerator
+
+		/// <summary></summary>
+		protected void OnCollectionReset()
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
@@ -423,7 +544,15 @@ namespace TecWare.PPSn
 			{
 				this.table = table ?? throw new ArgumentNullException(nameof(table));
 				this.filter = filter ?? PpsDataFilterExpression.True;
+
+				table.MasterData.RegisterWeakDataRowChanged(table.Definition.Name, null, OnTableChanged);
 			} // ctor
+
+			private void OnTableChanged(object sender, PpsDataTableOperationEventArgs e)
+			{
+				if (e.Operation == PpsDataRowOperation.TableChanged)
+					OnCollectionReset();
+			} // proc OnTableChanged
 
 			protected override DbCommand PrepareCommand()
 			{
@@ -469,6 +598,7 @@ namespace TecWare.PPSn
 		#endregion
 
 		private readonly Dictionary<object, WeakReference<PpsMasterDataRow>> cachedRows = new Dictionary<object, WeakReference<PpsMasterDataRow>>();
+		private readonly object dataRowChangedToken;
 
 		/// <summary></summary>
 		/// <param name="masterData"></param>
@@ -477,7 +607,54 @@ namespace TecWare.PPSn
 		{
 			this.MasterData = masterData;
 			this.Definition = table;
+
+			dataRowChangedToken = masterData.RegisterWeakDataRowChanged(table.Name, null, OnTableRowChanged);
 		} // ctor
+
+		private void OnTableRowChanged(object sender, PpsDataTableOperationEventArgs args)
+		{
+			switch (args.Operation)
+			{
+				case PpsDataRowOperation.UnTouchRows:
+					foreach (var cur in cachedRows.Values)
+					{
+						if (cur.TryGetTarget(out var row))
+							row.IsTouched = false;
+					}
+					break;
+				case PpsDataRowOperation.UnTouchedDeleteRows:
+					var removeList = new List<long>();
+					foreach (var cur in cachedRows.Values)
+					{
+						if (cur.TryGetTarget(out var row) && !row.IsTouched)
+							removeList.Add(row.RowId);
+					}
+
+					// remove items
+					for (var i = 0; i < removeList.Count; i++)
+						cachedRows.Remove(removeList[i]);
+					break;
+				case PpsDataRowOperation.TableChanged:
+					OnCollectionReset();
+					break;
+
+				case PpsDataRowOperation.RowUpdate:
+					{
+						if (args is PpsDataRowOperationEventArgs e
+						  && cachedRows.TryGetValue(e.RowId, out var cur)
+						  && cur.TryGetTarget(out var row))
+							row.UpdateValues(e.Arguments);
+					}
+					break;
+				case PpsDataRowOperation.RowDelete:
+					{
+						if (args is PpsDataRowOperationEventArgs e
+							&& cachedRows.TryGetValue(e.RowId, out var cur))
+							cachedRows.Remove(e.RowId);
+					}
+					break;
+			}
+		} // proc OnTableRowChanged
 
 		private StringBuilder PrepareCommandText(Action<StringBuilder> appendVirtualColumns)
 		{
@@ -516,7 +693,7 @@ namespace TecWare.PPSn
 		/// <param name="key"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public PpsMasterDataRow GetRowById(object key, bool throwException = false)
+		public PpsMasterDataRow GetRowById(long key, bool throwException = false)
 		{
 			lock (cachedRows)
 			{
@@ -558,7 +735,7 @@ namespace TecWare.PPSn
 		{
 			lock (cachedRows)
 			{
-				var key = r.GetValue(primaryKeyColumnIndex);
+				var key = r.GetInt64(primaryKeyColumnIndex);
 				if (cachedRows.TryGetValue(key, out var rowRef) && rowRef.TryGetTarget(out var row) && row != null)
 					return row;
 				else
@@ -593,68 +770,6 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsDataTableChangedEventArgs -------------------------------------
-
-	/// <summary></summary>
-	public class PpsDataTableChangedEventArgs : EventArgs
-	{
-		private readonly PpsDataTableDefinition table;
-
-		/// <summary></summary>
-		/// <param name="table"></param>
-		public PpsDataTableChangedEventArgs(PpsDataTableDefinition table)
-		{
-			this.table = table;
-		} // ctor
-
-		/// <summary></summary>
-		public PpsDataTableDefinition Table => table;
-	} // class PpsDataRowChangedEventArgs
-
-	/// <summary></summary>
-	/// <param name="sender"></param>
-	/// <param name="e"></param>
-	public delegate void PpsDataTableChangedEventHandler(object sender, PpsDataTableChangedEventArgs e);
-
-	#endregion
-
-	#region -- class PpsDataRowChangedEventArgs ---------------------------------------
-
-	/// <summary>Arguments</summary>
-	public class PpsDataRowChangedEventArgs : PpsDataTableChangedEventArgs
-	{
-		private readonly PpsDataChangeOperation operation;
-		private readonly long rowId;
-		private readonly IPropertyReadOnlyDictionary arguments;
-
-		/// <summary></summary>
-		/// <param name="operation"></param>
-		/// <param name="table"></param>
-		/// <param name="rowId"></param>
-		/// <param name="arguments"></param>
-		public PpsDataRowChangedEventArgs(PpsDataChangeOperation operation, PpsDataTableDefinition table, long rowId, IPropertyReadOnlyDictionary arguments)
-			: base(table)
-		{
-			this.operation = operation;
-			this.rowId = rowId;
-			this.arguments = arguments;
-		} // ctor
-
-		/// <summary>Database operation</summary>
-		public PpsDataChangeOperation Operation => operation;
-		/// <summary>Primary key of the row.</summary>
-		public long RowId => rowId;
-		/// <summary>Optional column description.</summary>
-		public IPropertyReadOnlyDictionary Arguments => arguments;
-	} // class PpsDataRowChangedEventArgs
-
-	/// <summary></summary>
-	/// <param name="sender"></param>
-	/// <param name="e"></param>
-	public delegate void PpsDataRowChangedEventHandler(object sender, PpsDataRowChangedEventArgs e);
-
-	#endregion
-
 	#region -- class PpsMasterData ------------------------------------------------------
 
 	/// <summary></summary>
@@ -662,36 +777,8 @@ namespace TecWare.PPSn
 	{
 		/// <summary>Name of the master data schema</summary>
 		public const string MasterDataSchema = "masterData";
-		private const string refreshColumnName = "_IsUpdated";
 
-		private const string objectTagsTableName = "ObjectTags";
-
-		#region -- class SqLiteParameterDictionaryWrapper -----------------------------
-
-		private sealed class SqLiteParameterDictionaryWrapper : IPropertyReadOnlyDictionary
-		{
-			private readonly SQLiteParameter[] arguments;
-
-			public SqLiteParameterDictionaryWrapper(SQLiteParameter[] arguments)
-				=> this.arguments = arguments;
-
-			public bool TryGetProperty(string name, out object value)
-			{
-				var p = arguments.FirstOrDefault(c => c != null && String.Compare(c.SourceColumn, name, StringComparison.OrdinalIgnoreCase) == 0);
-				if (p == null)
-				{
-					value = null;
-					return false;
-				}
-				else
-				{
-					value = p.Value;
-					return true;
-				}
-			} // func TryGetProperty
-		} // class SqLiteParameterDictionaryWrapper
-
-		#endregion
+		private const string refreshColumnName = "_IsUpdated"; // column for update hints
 
 		#region -- class PpsMasterDataMetaObject --------------------------------------
 
@@ -707,7 +794,7 @@ namespace TecWare.PPSn
 				var masterData = (PpsMasterData)Value;
 
 				// check for table
-				var tableDefinition = masterData.FindTable(binder.Name);
+				var tableDefinition = masterData.FindTable(binder.Name, false);
 				if (tableDefinition == null)
 					return base.BindGetMember(binder);
 
@@ -722,144 +809,6 @@ namespace TecWare.PPSn
 				);
 			} // proc BindGetMember
 		} // class PpsMasterDataMetaObject
-
-		#endregion
-
-		#region -- class PpsDataEvent -------------------------------------------------
-
-		private sealed class PpsDataEvent
-		{
-			private PpsDataChangeOperation operation;
-			private readonly string databaseName;
-			private readonly string tableName;
-			private readonly long rowId;
-
-			public PpsDataEvent(PpsDataChangeOperation operation, string databaseName, string tableName, long rowId)
-			{
-				this.operation = operation;
-				this.databaseName = databaseName;
-				this.tableName = tableName;
-				this.rowId = rowId;
-			} // ctor
-
-			public override bool Equals(object obj)
-				=> obj is PpsDataEvent o
-					? o.operation == operation && o.databaseName == databaseName && o.tableName == tableName && o.rowId == rowId
-					: obj is UpdateEventArgs u
-						? ConvertEventToOperation(u.Event) == operation && u.Database == databaseName && u.Table == tableName && u.RowId == rowId
-						: false;
-
-			public override int GetHashCode()
-				=> operation.GetHashCode() ^ databaseName.GetHashCode() ^ tableName.GetHashCode() ^ rowId.GetHashCode();
-
-			public PpsDataChangeOperation Operation => operation;
-			public string DatabaseName => databaseName;
-			public string TableName => tableName;
-			public long RowId => rowId;
-
-			public static PpsDataChangeOperation ConvertEventToOperation(UpdateEventType type)
-			{
-				switch (type)
-				{
-					case UpdateEventType.Delete:
-						return PpsDataChangeOperation.Delete;
-					case UpdateEventType.Insert:
-						return PpsDataChangeOperation.Insert;
-					case UpdateEventType.Update:
-						return PpsDataChangeOperation.Update;
-					default:
-						throw new ArgumentException(nameof(type));
-				}
-			} // func ConvertEventToOperation
-		} // class PpsDataEvent
-
-		#endregion
-
-		#region -- class PpsMasterLazyArguments ---------------------------------------
-
-		private sealed class PpsMasterLazyArguments : IPropertyEnumerableDictionary
-		{
-			private readonly PpsMasterData masterData;
-			private readonly PpsDataTableDefinition table;
-			private readonly long rowId;
-
-			private object[] values = null;
-
-			public PpsMasterLazyArguments(PpsMasterData masterData, PpsDataTableDefinition table, long rowId)
-			{
-				this.masterData = masterData;
-				this.table = table;
-				this.rowId = rowId;
-			} // ctor
-
-			private void CheckValues()
-			{
-				if (values != null)
-					return;
-
-				var selectCommand = new StringBuilder("SELECT ");
-				var first = true;
-				foreach (var c in table.Columns)
-				{
-					if (first)
-						first = false;
-					else
-						selectCommand.Append(',');
-					selectCommand.Append('[').Append(c.Name).Append(']');
-				}
-				selectCommand.Append(" FROM main.").Append(table.Name)
-					.Append(" WHERE rowid = @rowId");
-
-				using (var cmd = masterData.CreateNativeCommand(selectCommand.ToString()))
-				{
-					cmd.AddParameter("@rowId", DbType.Int64, rowId);
-
-					using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
-					{
-						values = new object[table.Columns.Count];
-						if (r.Read())
-						{
-							r.GetValues(values);
-
-							for (var i = 0; i < values.Length; i++)
-							{
-								if (values[i] == DBNull.Value)
-									values[i] = null;
-							}
-						}
-					}
-				}
-			} // proc CheckValues
-
-			IEnumerator IEnumerable.GetEnumerator()
-				=> GetEnumerator();
-
-			public IEnumerator<PropertyValue> GetEnumerator()
-			{
-				CheckValues();
-
-				for (var i = 0; i < table.Columns.Count; i++)
-					yield return new PropertyValue(table.Columns[i].Name, table.Columns[i].DataType, values[i]);
-			} // func GetEnumerator
-
-			public bool TryGetProperty(string name, out object value)
-			{
-				var columnIndex = table.FindColumnIndex(name, false);
-				if (columnIndex == -1)
-				{
-					value = null;
-					return false;
-				}
-				else
-				{
-					CheckValues();
-
-					value = values[columnIndex];
-					return value != null;
-				}
-			} // prop TryGetProperty
-		} // class PpsMasterLazyArguments
-
 
 		#endregion
 
@@ -894,15 +843,11 @@ namespace TecWare.PPSn
 				get => isUnique;
 				set => isUnique = isUnique | value;
 			} // prop IsUnique
+
 			public List<IDataColumn> Columns => columns;
 		} // class IndexDef
 
 		#endregion
-
-		/// <summary>Data table changed in local database.</summary>
-		public event PpsDataTableChangedEventHandler DataTableChanged;
-		/// <summary>Data row changed in local database.</summary>
-		public event PpsDataRowChangedEventHandler DataRowChanged;
 
 		private readonly PpsEnvironment environment;
 		private readonly SQLiteConnection connection;
@@ -919,7 +864,9 @@ namespace TecWare.PPSn
 		private ThreadLocal<bool> isSynchronizationRunning = new ThreadLocal<bool>(() => false, false);
 		private bool updateUserInfo = false;
 
-		private readonly List<PpsDataEvent> collectedEvents = new List<PpsDataEvent>();
+		private Lazy<PpsDataTableDefinition> objectsTable = null;
+		private Lazy<PpsDataTableDefinition> objectTagsTable = null;
+		private Lazy<PpsDataTableDefinition> objectLinksTable = null;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -934,11 +881,11 @@ namespace TecWare.PPSn
 			this.environment = environment;
 			this.connection = connection;
 
-			this.connection.Update += Connection_Update;
-
 			this.schema = schema;
 			this.lastSynchronizationSchema = lastSynchronizationSchema;
 			this.lastSynchronizationStamp = lastSynchronizationStamp;
+
+			ResetStaticTableDefinitions();
 		} // ctor
 
 		/// <summary></summary>
@@ -950,6 +897,13 @@ namespace TecWare.PPSn
 				connection?.Dispose();
 			}
 		} // proc Dispose
+
+		private void ResetStaticTableDefinitions()
+		{
+			objectsTable = new Lazy<PpsDataTableDefinition>(() => FindTable("Objects", true));
+			objectTagsTable = new Lazy<PpsDataTableDefinition>(() => FindTable("ObjectTags", true));
+			objectLinksTable = new Lazy<PpsDataTableDefinition>(() => FindTable("ObjectLinks", true));
+		} // proc ResetStaticTableDefinitions
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 			=> new PpsMasterDataMetaObject(this, parameter);
@@ -1012,6 +966,7 @@ namespace TecWare.PPSn
 
 			// update schema
 			schema = newMasterDataSchema;
+			ResetStaticTableDefinitions();
 		} // proc UpdateSchemaAsync
 
 		private static IReadOnlyList<string> GetUpdateCommands(SQLiteConnection connection, PpsDataSetDefinitionDesktop schema, bool syncStateTableExists)
@@ -1363,21 +1318,164 @@ namespace TecWare.PPSn
 
 		private abstract class ProcessBatchBase : IDisposable
 		{
-			private readonly PpsMasterData masterData;
+			#region -- class PpsDataRowOperationArgument ------------------------------
+
+			private sealed class PpsDataRowOperationArgument : IPpsDataRowOperationArguments
+			{
+				private readonly PpsDataTableDefinition table;
+				private readonly string[] parameterValues;
+
+				public PpsDataRowOperationArgument(PpsDataTableDefinition table, string[] parameterValues)
+				{
+					this.table = table ?? throw new ArgumentNullException(nameof(table));
+					this.parameterValues = parameterValues ?? throw new ArgumentNullException(nameof(table));
+				} // ctor
+
+				public IEnumerator<PropertyValue> GetEnumerator()
+				{
+					for (var i = 0; i < parameterValues.Length; i++)
+					{
+						var v = (object)parameterValues[i];
+						var t = table.Columns[i].DataType;
+						if (v != null)
+							v = Procs.ChangeType(v, t);
+
+						yield return new PropertyValue(table.Columns[i].Name, t, v);
+					}
+				} // func GetEnumerator
+
+				IEnumerator IEnumerable.GetEnumerator()
+					=> GetEnumerator();
+
+				public bool TryGetProperty(string name, out object value)
+				{
+					var idx = table.FindColumnIndex(name, false);
+					if (idx >= 0 && idx < parameterValues.Length)
+					{
+						value = parameterValues[idx];
+						return true;
+					}
+					else
+					{
+						value = null;
+						return false;
+					}
+				} // func TryGetProperty
+
+				public string GetName(int i) 
+					=> table.Columns[i].Name;
+
+				public object GetValue(int i)
+				{
+					if (i >= 0 && i < parameterValues.Length)
+					{
+						if (parameterValues[i] == null)
+							return null;
+						else if (table.Columns[i].IsExtended)
+						{
+							var type = table.Columns[i].DataType;
+							if (typeof(PpsObjectExtendedValue) == type
+								|| typeof(PpsMasterDataExtendedValue) == type)
+								return Procs.ChangeType(parameterValues[i], typeof(long));
+							else
+								return parameterValues[i];
+						}
+						else
+							return Procs.ChangeType(parameterValues[i], table.Columns[i].DataType);
+					}
+					else
+						return null;
+				} // func GetValue
+
+				public int GetValues(object[] values)
+				{
+					for (var i = 0; i < values.Length; i++)
+						values[i] = GetValue(i);
+					return values.Length;
+				} // func GetValues
+
+				public int GetOrdinal(string name) 
+					=> table.FindColumnIndex(name, false);
+
+				public Type GetFieldType(int i)
+					=> table.Columns[i].DataType;
+
+				public string GetDataTypeName(int i)
+					=> GetFieldType(i).Name;
+
+				public bool GetBoolean(int i)
+					=> GetValue(i).ChangeType<bool>();
+
+				public byte GetByte(int i)
+					=> GetValue(i).ChangeType<byte>();
+
+				public long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)
+					=> throw new NotImplementedException();
+				public char GetChar(int i) 
+					=> throw new NotImplementedException();
+				public long GetChars(int i, long fieldoffset, char[] buffer, int bufferoffset, int length) 
+					=> throw new NotImplementedException();
+
+				public Guid GetGuid(int i)
+					=> GetValue(i).ChangeType<Guid>();
+
+				public short GetInt16(int i)
+					=> GetValue(i).ChangeType<short>();
+				public int GetInt32(int i)
+					=> GetValue(i).ChangeType<int>();
+				public long GetInt64(int i)
+					=> GetValue(i).ChangeType<long>();
+
+				public float GetFloat(int i)
+					=> GetValue(i).ChangeType<float>();
+				public double GetDouble(int i)
+					=> GetValue(i).ChangeType<double>();
+				public string GetString(int i)
+					=> GetValue(i).ChangeType<string>();
+
+				public decimal GetDecimal(int i)
+					=> GetValue(i).ChangeType<decimal>();
+
+				public DateTime GetDateTime(int i)
+					=> GetValue(i).ChangeType<DateTime>();
+				public IDataReader GetData(int i) 
+					=> throw new NotSupportedException();
+
+				public bool IsDBNull(int i)
+					=> GetValue(i) == null;
+
+				public int FieldCount => table.Columns.Count;
+
+				public object this[int i]
+					=> GetValue(i);
+
+				public object this[string name]
+				{
+					get
+					{
+						var idx = table.FindColumnIndex(name, false);
+						return idx == -1 ? null : GetValue(idx);
+					}
+				} // prop this
+			} // class PpsDataRowOperationArgument
+
+			#endregion
+
 			private readonly PpsDataTableDefinition table;
 			private readonly PpsMasterDataTransaction transaction;
 			private readonly bool isFull;
 
 			private bool isDisposed = false;
 
-			public ProcessBatchBase(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
+			#region -- Ctor/Dtor ------------------------------------------------------
+
+			public ProcessBatchBase(PpsMasterDataTransaction transaction, string tableName, bool isFull)
 			{
-				this.masterData = masterData;
 				this.transaction = transaction;
 				this.isFull = isFull;
 
 				// check definition
-				this.table = masterData.schema.FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Could not find master table '{tableName}.'");
+				this.table = transaction.MasterData.schema.FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Could not find master table '{tableName}.'");
 			} // ctor
 
 			// This code added to correctly implement the disposable pattern.
@@ -1397,11 +1495,42 @@ namespace TecWare.PPSn
 				}
 			} // proc Dispose
 
+			#endregion
+
+			#region -- Prepare, Clean, Parse ------------------------------------------
+
 			public abstract Task PrepareAsync();
 
-			public abstract Task CleanAsync();
+			public abstract Task<bool> CleanAsync();
 
-			public async Task ParseAsync(XmlReader xml, IProgress<string> progress)
+			/// <summary></summary>
+			/// <returns></returns>
+			protected async Task<bool> CleanUntouchedRows()
+			{
+				var deleted = false;
+
+				// raise delete events
+				using (var cmd = Transaction.CreateNativeCommand($"SELECT [{Table.PrimaryKey.Name}] FROM main.[{Table.Name}] WHERE [" + refreshColumnName + "] is null"))
+				using (var r = cmd.ExecuteReader(CommandBehavior.SingleResult))
+				{
+					while (r.Read())
+					{
+						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowDelete, Table, r.GetValue(0), null, null), false);
+						deleted = true;
+					}
+				}
+
+				// execute delete
+				if (deleted)
+				{
+					using (var cmd = Transaction.CreateNativeCommand($"DELETE FROM main.[{Table.Name}] WHERE [" + refreshColumnName + "] is null"))
+						await cmd.ExecuteNonQueryExAsync();
+				}
+
+				return deleted;
+			} // func CleanUntouchedRows
+
+			public async Task<bool> ParseAsync(XmlReader xml, IProgress<string> progress)
 			{
 				var objectCounter = 0;
 				var lastProgress = Environment.TickCount;
@@ -1492,14 +1621,27 @@ namespace TecWare.PPSn
 					await xml.ReadEndElementAsync();
 				}
 				if (objectCounter > 0)
+				{
 					Trace.TraceInformation($"Synchonization of {Table.Name} finished ({objectCounter:N0} objects).");
+					return true;
+				}
+				else
+					return false;
 			} // proc Parse
 
 			protected abstract Task ProcessCurrentNodeAsync(string actionName, string[] parameterValues);
 
+			/// <summary></summary>
+			/// <param name="parameterValues"></param>
+			/// <returns></returns>
+			protected IPpsDataRowOperationArguments CreateOperationArguments(string[] parameterValues)
+				=> new PpsDataRowOperationArgument(Table, parameterValues);
+
+			#endregion
+
 			protected abstract int ColumnCount { get; }
 
-			public PpsMasterData MasterData => masterData;
+			public PpsMasterData MasterData => transaction.MasterData;
 			public PpsMasterDataTransaction Transaction => transaction;
 			public bool IsFull => isFull;
 			public PpsDataTableDefinition Table => table;
@@ -1509,76 +1651,8 @@ namespace TecWare.PPSn
 
 		#region -- class ProcessBatchTags ---------------------------------------------
 
-		/// <summary></summary>
-		public interface IPpsTagChangedProperties : IPropertyReadOnlyDictionary { }
-
 		private sealed class ProcessBatchTags : ProcessBatchBase
 		{
-			#region -- class PpsTagChangedProperties --------------------------------------
-
-			/// <summary></summary>
-			public sealed class PpsTagChangedProperties : IPpsTagChangedProperties
-			{
-				private readonly long oldId;
-				private readonly object[] values;
-
-				public PpsTagChangedProperties(long oldId, string[] parameterValues)
-				{
-					this.oldId = oldId;
-					if (parameterValues != null)
-					{
-						values = new object[]
-						{
-							parameterValues[0]?.ChangeType<long>(),
-							parameterValues[1]?.ChangeType<long>(),
-							parameterValues[2],
-							parameterValues[3]?.ChangeType<int>(),
-							parameterValues[4],
-							null,
-							null,
-							parameterValues[7]?.ChangeType<long>(),
-							parameterValues[8]?.ChangeType<DateTime>()
-						};
-					}
-				} // ctor
-
-				public bool TryGetProperty(string name, out object value)
-				{
-					switch (name)
-					{
-						case "OldId":
-							value = oldId;
-							return true;
-						case "Id":
-							value = values != null ? values[0] : oldId;
-							return true;
-						case "ObjectId":
-							value = values[1];
-							return true;
-						case "Key":
-							value = values[2];
-							return true;
-						case "Class":
-							value = values[3];
-							return true;
-						case "Value":
-							value = values[4];
-							return true;
-						case "UserId":
-							value = values[7];
-							return true;
-						case "CreateDate":
-							value = values[8];
-							return true;
-						default:
-							value = null;
-							return false;
-					}
-				} // func TryGetProperty
-			} // class PpsTagChangedProperties
-
-			#endregion
-
 			private readonly DbCommand existsCommand;
 			private readonly DbParameter parameterExistsId;
 			private readonly DbParameter parameterExistsObjectId;
@@ -1611,8 +1685,8 @@ namespace TecWare.PPSn
 			private readonly DbCommand deleteCommand;
 			private readonly DbParameter parameterDeleteId;
 
-			public ProcessBatchTags(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
-				: base(transaction, masterData, tableName, isFull)
+			public ProcessBatchTags(PpsMasterDataTransaction transaction, string tableName, bool isFull)
+				: base(transaction, tableName, isFull)
 			{
 				existsCommand = transaction.CreateNativeCommand("SELECT [Id] FROM main.[ObjectTags] WHERE [Id] = @OldId OR ([ObjectId] = @ObjectId AND [Key] = @Key AND ifnull([LocalClass], [Class]) = @Class AND [UserId] = @UserId)");
 				parameterExistsId = existsCommand.AddParameter("@OldId", DbType.Int64);
@@ -1676,7 +1750,7 @@ namespace TecWare.PPSn
 					await deleteCommand.ExecuteNonQueryExAsync();
 
 					var remoteId = Convert.ToInt64(parameterValues[0]);
-					MasterData.OnMasterDataRowChanged(PpsDataChangeOperation.Delete, Table, remoteId, new PpsTagChangedProperties(remoteId, null));
+					Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowDelete, Table, remoteId, null, null), false);
 				}
 				else
 				{
@@ -1713,7 +1787,7 @@ namespace TecWare.PPSn
 
 						await updateCommand.ExecuteNonQueryExAsync();
 
-						MasterData.OnMasterDataRowChanged(PpsDataChangeOperation.Update, Table, rowId.Value, new PpsTagChangedProperties(rowId.Value, parameterValues));
+						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowUpdate, Table, remoteId, rowId.Value, CreateOperationArguments(parameterValues)), false);
 					}
 					else // insert row
 					{
@@ -1730,19 +1804,13 @@ namespace TecWare.PPSn
 						await insertCommand.ExecuteNonQueryExAsync();
 						var newId = ((SQLiteConnection)insertCommand.Connection).LastInsertRowId;
 
-						MasterData.OnMasterDataRowChanged(PpsDataChangeOperation.Insert, Table, newId, new PpsTagChangedProperties(newId, parameterValues));
+						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowInsert, Table, newId, null, CreateOperationArguments(parameterValues)), false);
 					}
 				}
 			} // proc ProcessCurrentNodeAsync
 
-			public override async Task CleanAsync()
-			{
-				if (IsFull)
-				{
-					using (var cmd = Transaction.CreateNativeCommand("DELETE FROM main.[ObjectTags] WHERE [" + refreshColumnName + "] IS NULL"))
-						await cmd.ExecuteNonQueryExAsync();
-				}
-			} // proc CleanAsync
+			public override Task<bool> CleanAsync()
+				=> IsFull ? CleanUntouchedRows() : Task.FromResult(false);
 
 			protected override int ColumnCount => 9;
 		} // class ProcessBatchTags
@@ -1771,8 +1839,8 @@ namespace TecWare.PPSn
 
 			#region -- Ctor/Dtor ----------------------------------------------------
 
-			public ProcessBatchGeneric(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
-				: base(transaction, masterData, tableName, isFull)
+			public ProcessBatchGeneric(PpsMasterDataTransaction transaction, string tableName, bool isFull)
+				: base(transaction, tableName, isFull)
 			{
 				var physPrimaryKey = Table.PrimaryKey ?? throw new ArgumentException($"Table '{Table.Name}' has no primary key.", nameof(Table.PrimaryKey));
 
@@ -1897,8 +1965,12 @@ namespace TecWare.PPSn
 				{
 					if (refreshColumnIndex == -1)
 					{
+						// remove all values
 						using (var cmd = Transaction.CreateNativeCommand($"DELETE FROM main.[{Table.Name}]"))
 							await cmd.ExecuteNonQueryExAsync();
+
+						// mark cached rows
+						Transaction.RaiseOperationEvent(new PpsDataTableOperationEventArgs(Table, PpsDataRowOperation.UnTouchRows));
 					}
 					else
 					{
@@ -1908,13 +1980,20 @@ namespace TecWare.PPSn
 				}
 			} // proc PrepareAsync
 
-			public override async Task CleanAsync()
+			public override Task<bool> CleanAsync()
 			{
-				if (IsFull && refreshColumnIndex >= 0)
+				if (IsFull)
 				{
-					using (var cmd = Transaction.CreateNativeCommand($"DELETE FROM main.[{Table.Name}] WHERE [" + refreshColumnName + "] is null"))
-						await cmd.ExecuteNonQueryExAsync();
+					if (refreshColumnIndex >= 0)
+						return CleanUntouchedRows();
+					else
+					{
+						Transaction.RaiseOperationEvent(new PpsDataTableOperationEventArgs(Table, PpsDataRowOperation.UnTouchedDeleteRows));
+						return Task.FromResult(true);
+					}
 				}
+				else
+					return Task.FromResult(false);
 			} // proc CleanAsync
 
 			protected override async Task ProcessCurrentNodeAsync(string actionName, string[] parameterValues)
@@ -1950,6 +2029,7 @@ namespace TecWare.PPSn
 				}
 
 				// process action
+				var arguments = CreateOperationArguments(parameterValues);
 				switch (actionName[0])
 				{
 					case 'r':
@@ -1958,13 +2038,23 @@ namespace TecWare.PPSn
 						else
 							goto case 'i';
 					case 'i':
+						// execute the command
 						await ExecuteCommandAsync(insertCommand);
+						// raise change event
+
+						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowInsert, Table, arguments[physPrimaryColumnIndex], null, arguments), false);
 						break;
 					case 'u':
+						// execute the command
 						await ExecuteCommandAsync(updateCommand);
+						// raise change event
+						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowUpdate, Table, arguments[physPrimaryColumnIndex], null, arguments), false);
 						break;
 					case 'd':
+						// execute the command
 						await ExecuteCommandAsync(deleteCommand);
+						// raise change event
+						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowDelete, Table, arguments[physPrimaryColumnIndex], null, null), false);
 						break;
 				}
 			} // proc ProcessCurrentNode
@@ -2023,7 +2113,7 @@ namespace TecWare.PPSn
 				isObjectTagsDirty = false; // reset
 
 				// check for changes
-				using (var cmd = new SQLiteCommand("SELECT [Id], [ObjectId], [Key], [LocalClass], [LocalValue], [UserId], [CreateDate] FROM main.[" + objectTagsTableName + "] WHERE [ObjectId] >= 0 AND [" + refreshColumnName + "] <> 0 AND [UserId] > 0 AND [LocalClass] IS NOT NULL", connection))
+				using (var cmd = new SQLiteCommand("SELECT [Id], [ObjectId], [Key], [LocalClass], [LocalValue], [UserId], [CreateDate] FROM main.[" + ObjectTagsTable.Name + "] WHERE [ObjectId] >= 0 AND [" + refreshColumnName + "] <> 0 AND [UserId] > 0 AND [LocalClass] IS NOT NULL", connection))
 				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
 					while (r.Read())
@@ -2117,10 +2207,10 @@ namespace TecWare.PPSn
 
 		private ProcessBatchBase CreateProcessBatch(PpsMasterDataTransaction transaction, string tableName, bool isFull)
 		{
-			if (tableName == "ObjectTags")
-				return new ProcessBatchTags(transaction, this, tableName, isFull);
+			if (tableName == ObjectTagsTable.Name) // special case for ObjectTags
+				return new ProcessBatchTags(transaction, tableName, isFull);
 			else
-				return new ProcessBatchGeneric(transaction, this, tableName, isFull);
+				return new ProcessBatchGeneric(transaction, tableName, isFull);
 		} // func CreateProcessBatch
 
 		private async Task<bool> FetchDataXmlBatchAsync(XmlReader xml, bool nonBlocking, IProgress<string> progress)
@@ -2146,13 +2236,14 @@ namespace TecWare.PPSn
 						await b.PrepareAsync();
 
 						// parse data
-						await b.ParseAsync(xml, progress);
+						var changed = await b.ParseAsync(xml, progress);
 
-						await b.CleanAsync();
+						changed |= await b.CleanAsync();
 						transaction.Commit(); // commit can block
 
-						// run outsite the transaction, should not create a new
-						OnMasterDataTableChanged(b.Table);
+						// Run a table change command
+						if (changed)
+							OnMasterDataTableChanged(new PpsDataTableOperationEventArgs(b.Table, PpsDataRowOperation.TableChanged), false);
 					}
 				}
 
@@ -2202,20 +2293,16 @@ namespace TecWare.PPSn
 		public PpsMasterDataTable GetTable(string tableName, bool throwException = true)
 		{
 			// find schema
-			var tableDefinition = schema.FindTable(tableName);
+			var tableDefinition = FindTable(tableName, throwException);
 			if (tableDefinition == null)
-			{
-				if (throwException)
-					throw new ArgumentException($"MasterData table '{tableName}' not found.", nameof(tableName));
-				else
-					return null;
-			}
+				return null;
 
 			return GetTable(tableDefinition);
 		} // func GetTable
 
-		internal PpsDataTableDefinition FindTable(string tableName)
-			=> schema?.FindTable(tableName);
+		internal PpsDataTableDefinition FindTable(string tableName, bool throwException)
+			=> schema?.FindTable(tableName)
+			?? (throwException ? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"MasterDataTable '{tableName}' not found.") : (PpsDataTableDefinition)null);
 
 		#endregion
 
@@ -2773,6 +2860,7 @@ namespace TecWare.PPSn
 			private readonly PpsMasterThreadSafeTransaction rootTransaction;
 
 			public PpsMasterNestedTransaction(PpsMasterThreadSafeTransaction rootTransaction)
+				: base(rootTransaction.MasterData)
 			{
 				this.rootTransaction = rootTransaction ?? throw new ArgumentNullException(nameof(rootTransaction));
 
@@ -2815,7 +2903,8 @@ namespace TecWare.PPSn
 		{
 			private readonly int threadId;
 
-			public PpsMasterThreadSafeTransaction()
+			public PpsMasterThreadSafeTransaction(PpsMasterData masterData)
+				: base(masterData)
 			{
 				this.threadId = Thread.CurrentThread.ManagedThreadId;
 			} // ctor
@@ -2889,7 +2978,6 @@ namespace TecWare.PPSn
 
 		private sealed class PpsMasterRootTransaction : PpsMasterThreadSafeTransaction
 		{
-			private readonly PpsMasterData masterData;
 			private readonly SQLiteConnection connection;
 			private readonly SQLiteTransaction transaction;
 
@@ -2902,8 +2990,8 @@ namespace TecWare.PPSn
 			private int nestedTransactionCounter = 0;
 
 			public PpsMasterRootTransaction(PpsMasterData masterData, SQLiteConnection connection, SQLiteTransaction transaction)
+				: base(masterData)
 			{
-				this.masterData = masterData ?? throw new ArgumentNullException(nameof(masterData));
 				this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
 				this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
 			} // ctor
@@ -2927,7 +3015,7 @@ namespace TecWare.PPSn
 				if (disposing)
 					transaction.Dispose();
 
-				masterData.ClearTransaction(this);
+				MasterData.ClearTransaction(this);
 			} // proc Dispose
 
 			internal override void AddRollbackOperationUnsafe(Action rollback)
@@ -3000,6 +3088,7 @@ namespace TecWare.PPSn
 			private readonly PpsMasterRootTransaction rootTransaction;
 
 			public PpsMasterThreadJoinTransaction(PpsMasterRootTransaction rootTransaction)
+				: base(rootTransaction.MasterData)
 			{
 				this.rootTransaction = rootTransaction ?? throw new ArgumentNullException(nameof(rootTransaction));
 				rootTransaction.JoinedTransaction = this;
@@ -3041,8 +3130,9 @@ namespace TecWare.PPSn
 			private readonly SQLiteConnection connection;
 			private bool isDisposed = false;
 
-			public PpsMasterReadTransaction(SQLiteConnection connection)
-				=> this.connection = connection;
+			public PpsMasterReadTransaction(PpsMasterData masterData, SQLiteConnection connection)
+				: base(masterData)
+				=> this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
 
 			protected override void Dispose(bool disposing)
 			{
@@ -3072,7 +3162,7 @@ namespace TecWare.PPSn
 		/// <summary>Create a simple transaction for read access only..</summary>
 		/// <returns></returns>
 		public PpsMasterDataTransaction CreateReadUncommitedTransaction()
-			=> new PpsMasterReadTransaction(connection);
+			=> new PpsMasterReadTransaction(this, connection);
 
 		/// <summary>Create a transaction with an access level.</summary>
 		/// <param name="level">Level of access.</param>
@@ -3102,7 +3192,7 @@ namespace TecWare.PPSn
 		public async Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level, CancellationToken cancellationToken, PpsMasterDataTransaction transactionJoinTo = null)
 		{
 			if (level == PpsMasterDataTransactionLevel.ReadUncommited) // we done care about any transaction
-				return new PpsMasterReadTransaction(connection);
+				return new PpsMasterReadTransaction(this, connection);
 			else if (transactionJoinTo != null)  // join thread access
 			{
 				PpsMasterThreadSafeTransaction GetRootTransaction()
@@ -3234,105 +3324,66 @@ namespace TecWare.PPSn
 		private sealed class DataRowChangedEventItem
 		{
 			private readonly PpsDataTableDefinition table;
-			private readonly long? rowId;
-			private readonly PpsDataRowChangedEventHandler rowChangedEvent;
+			private readonly object rowId;
+			private readonly PpsDataTableOperationEventHandler changeEvent;
 
-			public DataRowChangedEventItem(PpsDataTableDefinition table, long? rowId, PpsDataRowChangedEventHandler rowChangedEvent)
+			public DataRowChangedEventItem(PpsDataTableDefinition table, object rowId, PpsDataTableOperationEventHandler changeEvent)
 			{
 				this.table = table;
 				this.rowId = rowId;
-				this.rowChangedEvent = rowChangedEvent;
+				this.changeEvent = changeEvent;
 			} // ctor
-			
-			public void Invoke(object sender, PpsDataRowChangedEventArgs e)
+
+			public void Invoke(object sender, PpsDataTableOperationEventArgs e)
 			{
-				if (rowId.HasValue)
+				if (e.Table == Table)
 				{
-					if (rowId == e.RowId)
-						rowChangedEvent.Invoke(sender, e);
+					if (rowId != null)
+					{
+						if (e is PpsDataRowOperationEventArgs e2 && Equals(rowId, e2.OldRowId))
+							changeEvent.Invoke(sender, e);
+					}
+					else
+						changeEvent.Invoke(sender, e);
 				}
-				else
-					rowChangedEvent.Invoke(sender, e);
 			} // proc Invoke
 
+			/// <summary>Table that is selected</summary>
 			public PpsDataTableDefinition Table => table;
-			public long? RowId => rowId;
+			/// <summary>Row id to raise.</summary>
+			public object RowId => rowId;
 		} // class DataRowChangedEventItem
 
 		#endregion
 
 		private readonly List<WeakReference<DataRowChangedEventItem>> weakDataRowEvents = new List<WeakReference<DataRowChangedEventItem>>();
 
-		private void Connection_Update(object sender, UpdateEventArgs e)
-		{
-			lock (collectedEvents)
-			{
-				var idx = collectedEvents.FindIndex(c => c.Equals(e));
-				if (idx != -1)
-				{
-					var c = collectedEvents[idx];
-					collectedEvents.RemoveAt(idx);
-					collectedEvents.Add(c);
-				}
-				else
-					collectedEvents.Add(new PpsDataEvent(PpsDataEvent.ConvertEventToOperation(e.Event), e.Database, e.Table, e.RowId));
-
-				OnCollectedEvents();
-			}
-		} // proc Connection_Update
-
-		private void OnCollectedEvents()
-			=> environment.Dispatcher.BeginInvoke(new Action(ProcessEvents), DispatcherPriority.ApplicationIdle);
-
-		private bool TryDequeueEvent(out PpsDataEvent ev, out PpsDataTableDefinition table)
-		{
-			lock (collectedEvents)
-			{
-				while (collectedEvents.Count > 0)
-				{
-					ev = collectedEvents[0];
-					collectedEvents.RemoveAt(0);
-
-					table = FindTable(ev.TableName);
-					if (table != null)
-						return true;
-				}
-				table = null;
-				ev = null;
-				return false;
-			}
-		} // func TryDequeueEvent
-
-		private void ProcessEvents()
-		{
-			while (TryDequeueEvent(out var ev, out var table))
-			{
-				if (ev.Operation == PpsDataChangeOperation.Full)
-					OnMasterDataTableChanged(table);
-				else
-					OnMasterDataRowChanged(ev.Operation, table, ev.RowId, new PpsMasterLazyArguments(this, table, ev.RowId));
-			}
-		} // proc ProcessEvents
-
 		/// <summary>Registers a listener to local database changes.</summary>
 		/// <param name="tableName"></param>
 		/// <param name="rowId"></param>
 		/// <param name="handler"></param>
-		public object RegisterWeakDataRowChanged(string tableName, long? rowId, PpsDataRowChangedEventHandler handler)
+		public object RegisterWeakDataRowChanged(string tableName, long? rowId, PpsDataTableOperationEventHandler handler)
 		{
-			var table = FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Table '{tableName}' not found.");
+			var table = FindTable(tableName, true);
+			return RegisterWeakDataRowChanged(table, rowId, handler);
+		} // func RegisterWeakDataRowChanged
 
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <param name="rowId"></param>
+		/// <param name="handler"></param>
+		/// <returns></returns>
+		public object RegisterWeakDataRowChanged(PpsDataTableDefinition table, object rowId, PpsDataTableOperationEventHandler handler)
+		{
 			var token = new DataRowChangedEventItem(table, rowId, handler);
 			weakDataRowEvents.Add(new WeakReference<DataRowChangedEventItem>(token));
 			return token;
-		} // proc RegisterWeakDataRowChanged
+		} // func RegisterWeakDataRowChanged
 
-		private void OnMasterDataRowChanged(PpsDataChangeOperation operation, PpsDataTableDefinition table, long rowId, IPropertyReadOnlyDictionary arguments)
+		internal void OnMasterDataTableChanged(PpsDataTableOperationEventArgs args, bool raiseTableChanged)
 		{
-			var args = new PpsDataRowChangedEventArgs(operation, table, rowId, arguments);
-
 			// set object tags to dirty
-			if (table.Name == "ObjectTags")
+			if (args.Table == ObjectTagsTable)
 				isObjectTagsDirty = true;
 
 			// raise weak event
@@ -3346,22 +3397,11 @@ namespace TecWare.PPSn
 				i--;
 			}
 
-			// raise event
-			DataRowChanged?.Invoke(this, args);
-			// raise method
-			environment.OnMasterDataRowChanged(operation, table, rowId, arguments);
-		} // proc OnMasterDataRowChanged
+			// raise vent on environment
+			environment.OnMasterDataTableChanged(args);
 
-		private void OnMasterDataTableChanged(PpsDataTableDefinition table)
-		{
-			// set object tags to dirty
-			if (table.Name == "ObjectTags")
-				isObjectTagsDirty = true;
-
-			// raise event
-			DataTableChanged?.Invoke(this, new PpsDataTableChangedEventArgs(table));
-			// raise method
-			environment.OnMasterDataTableChanged(table);
+			if (raiseTableChanged && (args.Operation == PpsDataRowOperation.RowInsert || args.Operation == PpsDataRowOperation.RowDelete))
+				OnMasterDataTableChanged(new PpsDataTableOperationEventArgs(args.Table, PpsDataRowOperation.TableChanged), false);
 		} // proc OnMasterDataTableChanged
 
 		#endregion
@@ -3370,6 +3410,13 @@ namespace TecWare.PPSn
 		public bool IsSynchronizationStarted => isSynchronizationStarted;
 		[Obsolete("ConnectionAccess")]
 		public SQLiteConnection Connection => connection;
+
+		/// <summary></summary>
+		public PpsDataTableDefinition ObjectsTable => objectsTable.Value;
+		/// <summary></summary>
+		public PpsDataTableDefinition ObjectLinksTable => objectLinksTable.Value;
+		/// <summary></summary>
+		public PpsDataTableDefinition ObjectTagsTable => objectTagsTable.Value;
 
 		/// <summary>Return the current transaction.</summary>
 		public PpsMasterDataTransaction CurrentTransaction
@@ -3404,7 +3451,7 @@ namespace TecWare.PPSn
 		#region -- Local store primitives ---------------------------------------------
 
 		/// <summary>Data type mapping for sqlite.</summary>
-		private static (Type Type, string SqlLite, DbType DbType)[] SqlLiteTypeMapping { get; } = 
+		private static (Type Type, string SqlLite, DbType DbType)[] SqlLiteTypeMapping { get; } =
 		{
 			(typeof(bool), "Boolean", DbType.Boolean),
 			(typeof(DateTime), "DateTime", DbType.DateTime),
@@ -4988,9 +5035,13 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary>Gets called before a synchronization run.</summary>
 		protected internal virtual void OnBeforeSynchronization() { }
+		/// <summary>Gets called after a synchronization run.</summary>
 		protected internal virtual void OnAfterSynchronization() { }
 
+		/// <summary>Is called when the system changes the state to online.</summary>
+		/// <returns></returns>
 		protected async virtual Task OnSystemOnlineAsync()
 		{
 			Trace.WriteLine("[Environment] System goes online.");
@@ -5000,6 +5051,8 @@ namespace TecWare.PPSn
 			await RefreshTemplatesAsync();
 		} // proc OnSystemOnline
 
+		/// <summary>Is called when the system changes the state to offline.</summary>
+		/// <returns></returns>
 		protected async virtual Task OnSystemOfflineAsync()
 		{
 			Trace.WriteLine("[Environment] System goes offline.");
@@ -5007,21 +5060,29 @@ namespace TecWare.PPSn
 			await RefreshTemplatesAsync();
 		} // proc OnSystemOffline
 
-		/// <summary>Gets called if the local database gets changed.</summary>
-		/// <param name="operation"></param>
-		/// <param name="table">Table description</param>
-		/// <param name="id">Primary key.</param>
-		public virtual void OnMasterDataRowChanged(PpsDataChangeOperation operation, PpsDataTableDefinition table, object id, IPropertyReadOnlyDictionary arguments)
+		/// <summary>Is called when a table gets changed.</summary>
+		/// <param name="args"></param>
+		public virtual void OnMasterDataTableChanged(PpsDataTableOperationEventArgs args)
 		{
-		} // proc OnMasterDataChanged
-
-		/// <summary>Gets called if a batch is processed.</summary>
-		/// <param name="table"></param>
-		public virtual void OnMasterDataTableChanged(PpsDataTableDefinition table)
-		{
-			if (!masterData.IsInSynchronization && table.Name == "OfflineCache")
-			{
+			if (!masterData.IsInSynchronization && args.Table.Name == "OfflineCache")
 				masterData.CheckOfflineCache();
+
+			if (args.Table == MasterData.ObjectsTable && args is PpsDataRowOperationEventArgs re)
+			{
+				switch (args.Operation)
+				{
+					case PpsDataRowOperation.RowUpdate:
+						{
+							var rowId = re.RowId == null ? null : (long?)re.RowId;
+							var oldRowId = (long)re.OldRowId;
+							if (rowId != oldRowId)
+								ReplaceObjectCacheId(rowId, oldRowId);
+						}
+						break;
+					case PpsDataRowOperation.RowDelete:
+						ReplaceObjectCacheId(null, (long)re.OldRowId);
+						break;
+				}
 			}
 		} // proc OnMasterDataTableChanged
 

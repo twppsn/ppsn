@@ -18,10 +18,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
@@ -30,26 +30,39 @@ namespace TecWare.PPSn.UI
 {
 	#region -- enum PpsTagOwnerIdentityIcon -------------------------------------------
 
+	/// <summary>Tag owner icon</summary>
 	public enum PpsTagOwnerIdentityIcon
 	{
+		/// <summary>Unknown tag group.</summary>
+		None,
+		/// <summary>New tag.</summary>
 		New,
+		/// <summary>System tag.</summary>
 		System,
+		/// <summary>My tag.</summary>
 		Mine,
-		Community
+		/// <summary>Other than my tag.</summary>
+		Community,
+		/// <summary>Revision tag</summary>
+		Revision
 	} // enum PpsTagOwnerIdentityIcon
 
 	#endregion
 
 	#region -- class PpsTagsEditor ----------------------------------------------------
 
+	/// <summary>Tag editor user control.</summary>
 	public partial class PpsTagsEditor : UserControl
 	{
-		public readonly static DependencyProperty TagClassProperty = DependencyProperty.Register(nameof(TagClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(PpsObjectTagClass.Deleted, TagClassChanged));
-		public readonly static DependencyProperty ObjectProperty = DependencyProperty.Register(nameof(Object), typeof(PpsObject), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(ObjectChanged));
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty TagClassProperty = DependencyProperty.Register(nameof(TagClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(PpsObjectTagClass.Deleted, TagClassChanged));
+		public static readonly DependencyProperty ObjectProperty = DependencyProperty.Register(nameof(Object), typeof(PpsObject), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(ObjectChanged));
 
 		private readonly static DependencyPropertyKey tagsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(TagsSource), typeof(ListCollectionView), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(null));
 		public readonly static DependencyProperty TagsSourceProperty = tagsSourcePropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
+		/// <summary></summary>
 		public PpsTagsEditor()
 		{
 			InitializeComponent();
@@ -57,37 +70,31 @@ namespace TecWare.PPSn.UI
 
 		private void RefreshTagsSource()
 		{
-			var currentSource = TagsSource?.SourceCollection as PpsTagsModel;
-
 			var obj = Object;
 			var cls = TagClass;
 
-			if (currentSource == null)
+
+			if (TagsSource?.SourceCollection is PpsTagsModel currentSource)
 			{
-				if (obj != null && cls != PpsObjectTagClass.Deleted)
-					SetValue(tagsSourcePropertyKey, CreateCollectionView(obj, cls));
+				if (currentSource.Object == obj
+					&& currentSource.Filter == cls)
+					return;
+
+				currentSource.DetachObject();
+			}
+
+			if (obj != null && cls != PpsObjectTagClass.Deleted)
+			{
+				SetValue(tagsSourcePropertyKey,
+					new ListCollectionView(new PpsTagsModel(obj, cls))
+					{
+						NewItemPlaceholderPosition = cls == PpsObjectTagClass.Tag ? NewItemPlaceholderPosition.AtEnd : NewItemPlaceholderPosition.AtBeginning
+					}
+				);
 			}
 			else
-			{
-				if (currentSource.Object != obj
-					|| currentSource.Filter != cls)
-				{
-					currentSource.DetachObject();
-
-					if (obj != null && cls != PpsObjectTagClass.Deleted)
-						SetValue(tagsSourcePropertyKey, CreateCollectionView(obj, cls));
-				}
-			}
+				SetValue(tagsSourcePropertyKey, null);
 		} // proc RefreshTagsSource
-
-		private static ListCollectionView CreateCollectionView(PpsObject obj, PpsObjectTagClass cls)
-		{
-			var collectionView = new ListCollectionView(new PpsTagsModel(obj, cls))
-			{
-				NewItemPlaceholderPosition = cls == PpsObjectTagClass.Tag ? NewItemPlaceholderPosition.AtEnd : NewItemPlaceholderPosition.AtBeginning
-			};
-			return collectionView;
-		} // func CreateCollectionView
 
 		private static void TagClassChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTagsEditor)d).RefreshTagsSource();
@@ -111,19 +118,20 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsTagItemModel --------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Model for tag.</summary>
 	public sealed class PpsTagItemModel : IPpsEditableObject, INotifyPropertyChanged
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsObject ppsObject;
-		private PpsObjectTagView tag;
+		private PpsObjectTagBase tag;
 
 		private bool isEditing = false;
+		private bool tagNameExists = false;
 		private bool isModified = false;
 		private string currentName = null;
 		private object currentValue = null;
-		private PpsObjectTagClass currentClass;
+		private readonly PpsObjectTagClass currentClass;
 
 		public PpsTagItemModel(PpsObject ppsObject, PpsObjectTagClass newClass)
 		{
@@ -133,7 +141,7 @@ namespace TecWare.PPSn.UI
 			this.currentClass = newClass;
 		} // ctor
 
-		public PpsTagItemModel(PpsObject ppsObject, PpsObjectTagView tag)
+		public PpsTagItemModel(PpsObject ppsObject, PpsObjectTagBase tag)
 		{
 			this.ppsObject = ppsObject;
 			this.tag = tag;
@@ -141,35 +149,61 @@ namespace TecWare.PPSn.UI
 			this.currentClass = tag.Class;
 		} // ctor
 
+		#region -- Tag Property Changed -----------------------------------------------
+
 		private void TagPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
 			if (IsEditing)
 				return;
 			switch (e.PropertyName)
 			{
-				case nameof(PpsObjectTagView.Name):
+				case nameof(PpsObjectUserTag.Name):
 					OnPropertyChanged(nameof(Name));
 					break;
-				case nameof(PpsObjectTagView.Value):
+				case nameof(PpsObjectUserTag.Value):
 					OnPropertyChanged(nameof(Value));
 					break;
-				case nameof(PpsObjectTagView.Class):
+				case nameof(PpsObjectUserTag.Class):
 					OnPropertyChanged(nameof(Class));
 					break;
-				case nameof(PpsObjectTagView.CreationStamp):
-					OnPropertyChanged(nameof(CreationStamp));
+				case nameof(PpsObjectUserTag.TimeStamp):
+					OnPropertyChanged(nameof(TimeStamp));
 					break;
 			}
 		} // proc TagPropertyChanged
 
 		private void AttachPropertyChanged()
-			=> WeakEventManager<PpsObjectTagView, PropertyChangedEventArgs>.AddHandler(tag, nameof(INotifyPropertyChanged.PropertyChanged), TagPropertyChanged);
+		{
+			if (tag is PpsObjectUserTag userTag)
+				AttachPropertyChanged(userTag);
+			else if (tag is PpsObjectSystemTag sysTag)
+				AttachPropertyChanged(sysTag);
+			else if (tag is PpsObjectRevisionTag revTag)
+				AttachPropertyChanged(revTag);
+		} // proc AttachPropertyChanged
+		
+		private void AttachPropertyChanged<T>(T tag)
+			where T : PpsObjectTagBase
+			=> WeakEventManager<T, PropertyChangedEventArgs>.AddHandler(tag, nameof(INotifyPropertyChanged.PropertyChanged), TagPropertyChanged);
 
 		public void DetachPropertyChanged()
-			=> WeakEventManager<PpsObjectTagView, PropertyChangedEventArgs>.RemoveHandler(tag, nameof(INotifyPropertyChanged.PropertyChanged), TagPropertyChanged);
+		{
+			if (tag is PpsObjectUserTag userTag)
+				DetachPropertyChanged(userTag);
+			else if (tag is PpsObjectSystemTag sysTag)
+				DetachPropertyChanged(sysTag);
+			else if (tag is PpsObjectRevisionTag revTag)
+				DetachPropertyChanged(revTag);
+		} // proc DetachPropertyChanged
+
+		private void DetachPropertyChanged<T>(T tag)
+			where T : PpsObjectTagBase
+			=> WeakEventManager<T, PropertyChangedEventArgs>.RemoveHandler(tag, nameof(INotifyPropertyChanged.PropertyChanged), TagPropertyChanged);
 
 		private void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		#endregion
 
 		private void CheckEditMode()
 		{
@@ -187,6 +221,7 @@ namespace TecWare.PPSn.UI
 
 			isEditing = true;
 			isModified = false;
+			CheckTagName();
 
 			if (IsNew && currentName == null)
 			{
@@ -207,20 +242,20 @@ namespace TecWare.PPSn.UI
 			// update the tag behind
 			if (IsNew)
 			{
-				ppsObject.Tags.UpdateTag(currentName, currentClass, currentValue, t => tag = t);
+				ppsObject.Tags.AppendUserTag(ppsObject.Environment.UserId, new PpsObjectTag(currentName, currentClass, currentValue));
 				AttachPropertyChanged();
 			}
 			else if (currentName != tag.Name)
 			{
 				var tmp = tag;
 				tag = null; // remove tag, that refresh will not remove this item
-				tmp.Remove();
+				((PpsObjectUserTag)tmp).Remove();
 				DetachPropertyChanged();
-				ppsObject.Tags.UpdateTag(currentName, currentClass, currentValue, t => tag = t);
+				ppsObject.Tags.AppendUserTag(ppsObject.Environment.UserId, new PpsObjectTag(currentName, currentClass, currentValue));
 				AttachPropertyChanged();
 			}
-			else if (!Object.Equals(tag.Value, currentValue))
-				tag.Update(currentClass, currentValue);
+			else if (!Equals(tag.Value, currentValue))
+				((PpsObjectUserTag)tag).UpdateValue(currentClass, currentValue);
 
 			isEditing = false;
 			isModified = false;
@@ -234,18 +269,29 @@ namespace TecWare.PPSn.UI
 			currentName = null;
 			currentValue = null;
 			isEditing = false;
+			TagNameExists = false;
+			
 		} // proc CancelEdit
+
+		public void Remove()
+		{
+			((PpsObjectUserTag)tag).Remove();
+			ppsObject.UpdateLocalAsync().AwaitTask();
+		} // proc Remove
+
+		private void CheckTagName()
+		{
+			TagNameExists = ppsObject.Tags.All.OfType<PpsObjectUserTag>().FirstOrDefault(ut => ut.UserId == CurrentUserId && ut != tag && ut.Name == currentName) != null;
+		} // proc CheckTagName
 
 		private void SetValue<T>(ref T value, T newValue, string propertyName)
 		{
 			CheckEditMode();
 
-			if (!Object.Equals(value, newValue))
+			if (!Equals(value, newValue))
 			{
 				value = newValue;
 				OnPropertyChanged(propertyName);
-				if (propertyName == nameof(Name))
-					OnPropertyChanged(nameof(WillOverwrite));
 				SetValue(ref isModified, true, nameof(IsModified));
 			}
 		} // proc SetValue
@@ -256,7 +302,7 @@ namespace TecWare.PPSn.UI
 		public string Name
 		{
 			get => IsEditing || IsNew ? currentName : tag.Name;
-			set => SetValue(ref currentName, value, nameof(Name));
+			set { SetValue(ref currentName, value, nameof(Name)); CheckTagName(); }
 		} // prop Name
 
 		/// <summary>Value of the tag.</summary>
@@ -269,21 +315,35 @@ namespace TecWare.PPSn.UI
 		/// <summary>Tag class</summary>
 		public PpsObjectTagClass Class => IsEditing || IsNew ? currentClass : tag.Class;
 		/// <summary>Tag create time stamp.</summary>
-		public DateTime CreationStamp => tag?.CreationStamp ?? DateTime.Now;
+		public DateTime TimeStamp => tag?.TimeStamp ?? DateTime.Now;
 
 		/// <summary>Is the tag editable</summary>
-		public bool IsEditable => IsNew || tag.UserId == CurrentUserId;
+		public bool IsEditable => IsNew || (tag is PpsObjectUserTag userTag) && userTag.UserId == CurrentUserId;
 		/// <summary>Is this tag a new one.</summary>
 		public bool IsNew => tag == null;
 		/// <summary>Is the tag in editmode</summary>
 		public bool IsEditing => isEditing;
 		/// <summary>Is the current data modified.</summary>
 		public bool IsModified => isModified;
-		/// <summary>Is already a Tag with that Name present, thus overwriting the old value.</summary>
-		public bool WillOverwrite => IsNew && IsEditing && ppsObject.Tags.IndexOf(Name) >= 0;
+		/// <summary>If the tag name already exists.</summary>
+		public bool TagNameExists
+		{
+			get => tagNameExists;
+			private set
+			{
+				if (tagNameExists != value)
+				{
+					tagNameExists = value;
+					OnPropertyChanged(nameof(TagNameExists));
+				}
+			}
+		} // prop TagNameExists
 
 		/// <summary>User, that created the tag.</summary>
-		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().GetMemberValue("UserName") as string : tag.User?.GetProperty("Login", "<error>") ?? ""; // todo:
+		public string UserName =>
+			IsNew
+				? PpsEnvironment.GetEnvironment().UsernameDisplay
+				: tag is PpsObjectUserTag userTag ? userTag.User?.GetProperty("Login", "<error>") ?? String.Empty : String.Empty;
 
 		public PpsTagOwnerIdentityIcon OwnerIdentityIcon
 		{
@@ -291,23 +351,32 @@ namespace TecWare.PPSn.UI
 			{
 				if (IsNew)
 					return PpsTagOwnerIdentityIcon.New;
-				else if (tag.UserId == 0)
-					return PpsTagOwnerIdentityIcon.System;
-				else if (tag.UserId == CurrentUserId)
-					return PpsTagOwnerIdentityIcon.Mine;
 				else
-					return PpsTagOwnerIdentityIcon.Community;
+				{
+					switch (tag)
+					{
+						case PpsObjectUserTag userTag:
+							return userTag.UserId == CurrentUserId ? PpsTagOwnerIdentityIcon.Mine : PpsTagOwnerIdentityIcon.Community;
+						case PpsObjectSystemTag sysTag:
+							return PpsTagOwnerIdentityIcon.System;
+						case PpsObjectRevisionTag revTag:
+							return PpsTagOwnerIdentityIcon.Revision;
+						default:
+							return PpsTagOwnerIdentityIcon.None;
+					}
+				}
 			}
 		} // prop OwnerIdentityIcon
 
 		/// <summary>Only for internal use.</summary>
-		internal PpsObjectTagView InnerTag => tag;
+		internal PpsObjectTagBase InnerTag => tag;
 	} // class PpsTagItemModel
 
 	#endregion
 
 	#region -- class PpsTagsModel -----------------------------------------------------
 
+	/// <summary>Tag model</summary>
 	public sealed class PpsTagsModel : IList, INotifyCollectionChanged
 	{
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
@@ -342,10 +411,10 @@ namespace TecWare.PPSn.UI
 		} // proc DetachObject
 
 		void ICollection.CopyTo(Array array, int index)
-			=> throw new NotImplementedException("If it is useful. It must clear all items of the type.");
+			=> ((ICollection)items).CopyTo(array, index);
 
 		void IList.Clear() 
-			=> throw new NotImplementedException("If it is useful. It must clear all items of the type.");
+			=> throw new NotSupportedException();
 
 		int IList.Add(object value)
 			=> Insert((PpsTagItemModel)value, -1);
@@ -353,7 +422,7 @@ namespace TecWare.PPSn.UI
 		void IList.Insert(int index, object value)
 			=> Insert((PpsTagItemModel)value, index);
 
-		private int IndexOf(PpsObjectTagView tag)
+		private int IndexOf(PpsObjectTagBase tag)
 			=> items.FindIndex(c => tag == c.InnerTag);
 
 		bool IList.Contains(object value)
@@ -380,7 +449,7 @@ namespace TecWare.PPSn.UI
 						throw new NotSupportedException();
 
 					{
-						var innerTag = (PpsObjectTagView)e.NewItems[0];
+						var innerTag = (PpsObjectTagBase)e.NewItems[0];
 						if (innerTag.Class != classFilter)
 							return;
 
@@ -393,7 +462,7 @@ namespace TecWare.PPSn.UI
 						throw new NotSupportedException();
 
 					{
-						var idx = IndexOf((PpsObjectTagView)e.NewItems[0]);
+						var idx = IndexOf((PpsObjectTagBase)e.NewItems[0]);
 						if (idx >= 0)
 							RemoveFromView(items[idx], idx);
 					}
@@ -429,7 +498,7 @@ namespace TecWare.PPSn.UI
 					itemsToRemove.AddRange(items);
 
 				// rebuild models
-				foreach (var innerTag in InnerTagList) // can raise a Reset Event
+				foreach (var innerTag in InnerTagList.All) // can raise a Reset Event
 				{
 					if (innerTag.Class == classFilter)
 					{
@@ -449,8 +518,11 @@ namespace TecWare.PPSn.UI
 				// remove not updated items
 				foreach (var c in itemsToRemove)
 				{
-					if (c.InnerTag != null)
+					if (c.InnerTag != null) // do not remove new tags
+					{
+						c.DetachPropertyChanged();
 						items.Remove(c);
+					}
 				}
 
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -467,8 +539,8 @@ namespace TecWare.PPSn.UI
 			if (!tag.IsNew)
 			{
 				// remove in list -> notify changes the view
-				tag.InnerTag.Remove();
-				ppsObject.UpdateLocalAsync().AwaitTask();
+				if (tag.IsEditable)
+					tag.Remove();
 			}
 			else
 				RemoveFromView(tag, idx);

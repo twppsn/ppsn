@@ -91,7 +91,6 @@ namespace TecWare.PPSn.Data
 	public sealed class PpsObjectTag
 	{
 		private readonly string tagName;
-		private readonly long userId;
 		private readonly PpsObjectTagClass cls;
 		private readonly object value;
 
@@ -99,13 +98,11 @@ namespace TecWare.PPSn.Data
 		/// <param name="tagName"></param>
 		/// <param name="cls"></param>
 		/// <param name="value"></param>
-		/// <param name="userId"></param>
-		public PpsObjectTag(string tagName, PpsObjectTagClass cls, object value, long userId)
+		public PpsObjectTag(string tagName, PpsObjectTagClass cls, object value)
 		{
 			this.tagName = tagName;
 			this.cls = cls;
 			this.value = value;
-			this.userId = userId;
 		} // ctor
 
 		/// <summary>Format tag.</summary>
@@ -113,11 +110,22 @@ namespace TecWare.PPSn.Data
 		public override string ToString()
 			=> FormatTag(this);
 
+		/// <summary></summary>
+		/// <param name="tag"></param>
+		/// <param name="tagElementName"></param>
+		/// <returns></returns>
+		public XElement ToXml(XName tagElementName)
+			=> new XElement(tagElementName,
+				new XAttribute("key", tagName),
+				new XAttribute("tagClass", PpsObjectTag.FormatClass(cls)),
+				Procs.XAttributeCreate("value", value)
+			);
+
 		/// <summary>Is the tag value equal.</summary>
 		/// <param name="otherValue"></param>
 		/// <returns></returns>
 		public bool IsValueEqual(object otherValue)
-			=> Object.Equals(value, Procs.ChangeType(otherValue, GetTypeFromClass(cls)));
+			=> Equals(value, Procs.ChangeType(otherValue, GetTypeFromClass(cls)));
 
 		/// <summary>Tag name.</summary>
 		public string Name => tagName;
@@ -125,20 +133,18 @@ namespace TecWare.PPSn.Data
 		public PpsObjectTagClass Class => cls;
 		/// <summary>The optional value of the tag.</summary>
 		public object Value => value;
-		/// <summary>User that, created the tag. 0 zero is for system generated tag.</summary>
-		public long UserId => userId;
 
 		// -- Static ----------------------------------------------------------------------
 
-		private static Regex regAttributeLine = new Regex(@"(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*))?)?\=(?<v>.*)", RegexOptions.Singleline);
+		private static Regex regAttributeLine = new Regex(@"(?<n>\w+)(\:(?<c>\d*))?\=(?<v>.*)", RegexOptions.Singleline);
 
 		/// <summary>Parse tag, return from sqlite db.</summary>
 		/// <param name="attributeLine"></param>
 		/// <returns></returns>
 		public static PpsObjectTag ParseTag(string attributeLine)
 		{
-			// name:class:user=value
-			// key:0:23=text
+			// name:class=value
+			// e.g.: key:0=text
 
 			var m = regAttributeLine.Match(attributeLine);
 			if (!m.Success)
@@ -156,7 +162,7 @@ namespace TecWare.PPSn.Data
 					value = Procs.ChangeType(value, dataType);
 			}
 
-			return new PpsObjectTag(m.Groups["n"].Value, classHint, value, String.IsNullOrEmpty(m.Groups["u"].Value) ? -1 : Int64.Parse(m.Groups["u"].Value));
+			return new PpsObjectTag(m.Groups["n"].Value, classHint, value);
 		} // func ParseTag
 
 		/// <summary>Format tag for sqlite db.</summary>
@@ -164,19 +170,16 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public static string FormatTag(PpsObjectTag tag)
 		{
-			string GetUserId()
-				=> tag.UserId > 0 ? ":" + tag.UserId.ChangeType<string>() : String.Empty;
-
 			switch (tag.Class)
 			{
 				case PpsObjectTagClass.Deleted:
-					return tag.Name + ":-1" + GetUserId() + "=";
+					return tag.Name + ":-1=";
 				case PpsObjectTagClass.Text:
+					return tag.Name + ":0=" + (tag.Value == null ? String.Empty : Procs.EscapeSpecialChars(tag.Value.ChangeType<string>()));
 				case PpsObjectTagClass.Number:
+					return tag.Name + ":1=" + (tag.Value == null ? String.Empty : Procs.EscapeSpecialChars(tag.Value.ChangeType<string>()));
 				case PpsObjectTagClass.Date:
-					return tag.Name + ":" + tag.Class.ToString() + GetUserId() + "=" + (tag.Value == null ? String.Empty : Procs.EscapeSpecialChars(tag.Value.ChangeType<string>()));
-				case PpsObjectTagClass.Tag:
-					return tag.Name + ":3" + GetUserId() + "=";
+					return tag.Name + ":2=" + (tag.Value == null ? String.Empty : Procs.EscapeSpecialChars(tag.Value.ChangeType<string>()));
 				default:
 					throw new ArgumentOutOfRangeException(nameof(PpsObjectTag.Class));
 
@@ -224,6 +227,17 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public static int FormatClass(PpsObjectTagClass cls)
 			=> (int)cls;
+		
+		/// <summary></summary>
+		/// <param name="xTag"></param>
+		/// <returns></returns>
+		public static PpsObjectTag FromXml(XElement xTag)
+		{
+			var key = xTag.GetAttribute("key", null);
+			var tagClass = xTag.GetAttribute("tagClass", PpsObjectTagClass.Text);
+			var value = Procs.ChangeType(xTag.GetAttribute("value", null), PpsObjectTag.GetTypeFromClass(tagClass));
+			return new PpsObjectTag(key, tagClass, value);
+		} // func FromXml
 	} // class PpsObjectTag
 
 	#endregion
@@ -286,9 +300,9 @@ namespace TecWare.PPSn.Data
 			switch (mode)
 			{
 				case PpsDataSetAutoTagMode.First:
-					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count > 0 ? table[0][column.Index] : null, -1);
+					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count > 0 ? table[0][column.Index] : null);
 				case PpsDataSetAutoTagMode.Conact:
-					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count == 0 ? null : String.Join(" ", from c in table select c[column.Index].ToString()), -1);
+					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count == 0 ? null : String.Join(" ", from c in table select c[column.Index].ToString()));
 				case PpsDataSetAutoTagMode.Number:
 					goto case PpsDataSetAutoTagMode.First;
 				default:

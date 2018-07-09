@@ -299,7 +299,7 @@ namespace TecWare.PPSn.Data
 				case long idLong:
 					return SetGenericValue(masterDataTable.GetRowById(idLong, true), firePropertyChanged);
 				case PpsMasterDataRow o:
-					if (base.SetGenericValue(o.Key, firePropertyChanged)) // change change
+					if (base.SetGenericValue(o.RowId, firePropertyChanged)) // change change
 					{
 						referencedRow = new WeakReference<PpsMasterDataRow>(o);
 						return true;
@@ -327,7 +327,7 @@ namespace TecWare.PPSn.Data
 					return row;
 				else
 				{
-					row = masterDataTable.GetRowById(v);
+					row = masterDataTable.GetRowById((long)v);
 					referencedRow = new WeakReference<PpsMasterDataRow>(row);
 					return row;
 				}

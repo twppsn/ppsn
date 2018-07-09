@@ -707,7 +707,7 @@ namespace TecWare.PPSn.Server
 		private readonly Dictionary<string, PpsViewDescription> viewController = new Dictionary<string, PpsViewDescription>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, PpsDataSetServerDefinition> datasetDefinitions = new Dictionary<string, PpsDataSetServerDefinition>(StringComparer.OrdinalIgnoreCase);
 
-		#region -- Init/Done --------------------------------------------------------------
+		#region -- Init/Done ----------------------------------------------------------
 		
 		private void BeginReadConfigurationData(IDEConfigLoading config)
 		{

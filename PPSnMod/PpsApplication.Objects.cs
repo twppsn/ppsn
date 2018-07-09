@@ -36,7 +36,7 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsObjectTagAccess -------------------------------------------------
+	#region -- class PpsObjectTagAccess -----------------------------------------------
 
 	/// <summary>Tag access class</summary>
 	public sealed class PpsObjectTagAccess
@@ -135,7 +135,7 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- class PpsObjectLinkAccess ------------------------------------------------
+	#region -- class PpsObjectLinkAccess ----------------------------------------------
 
 	/// <summary></summary>
 	public sealed class PpsObjectLinkAccess
@@ -233,7 +233,7 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- class PpsObjectAccess ----------------------------------------------------
+	#region -- class PpsObjectAccess --------------------------------------------------
 
 	/// <summary>This class defines a interface to access pps-object model. Some properties are late bound. So, wait for closing the transaction.</summary>
 	public sealed class PpsObjectAccess : LuaTable
@@ -1040,7 +1040,7 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- interface IPpsObjectItem -------------------------------------------------
+	#region -- interface IPpsObjectItem -----------------------------------------------
 
 	/// <summary>Description of an object item.</summary>
 	public interface IPpsObjectItem

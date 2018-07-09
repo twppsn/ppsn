@@ -22,9 +22,10 @@
 			<ControlTemplate.Triggers>
 				<DataTrigger Binding="{Binding Path=OwnerIdentityIcon, Mode=OneWay}">
 					<DataTrigger.Value>
-						<uiL:PpsTagOwnerIdentityIcon>Community</uiL:PpsTagOwnerIdentityIcon>
+						<uiL:PpsTagOwnerIdentityIcon>New</uiL:PpsTagOwnerIdentityIcon>
 					</DataTrigger.Value>
-					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource accountMultiplePathGeometry}"/>
+					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource filePlusPathGeometry}"/>
+					<Setter TargetName="imagePath" Property="Fill" Value="{StaticResource PPSnMarkerBrush}"/>
 				</DataTrigger>
 				<DataTrigger Binding="{Binding Path=OwnerIdentityIcon, Mode=OneWay}">
 					<DataTrigger.Value>
@@ -34,10 +35,21 @@
 				</DataTrigger>
 				<DataTrigger Binding="{Binding Path=OwnerIdentityIcon, Mode=OneWay}">
 					<DataTrigger.Value>
-						<uiL:PpsTagOwnerIdentityIcon>New</uiL:PpsTagOwnerIdentityIcon>
+						<uiL:PpsTagOwnerIdentityIcon>Mine</uiL:PpsTagOwnerIdentityIcon>
 					</DataTrigger.Value>
-					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource filePlusPathGeometry}"/>
-					<Setter TargetName="imagePath" Property="Fill" Value="{StaticResource PPSnMarkerBrush}"/>
+					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource accountPathGeometry}"/>
+				</DataTrigger>
+				<DataTrigger Binding="{Binding Path=OwnerIdentityIcon, Mode=OneWay}">
+					<DataTrigger.Value>
+						<uiL:PpsTagOwnerIdentityIcon>Community</uiL:PpsTagOwnerIdentityIcon>
+					</DataTrigger.Value>
+					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource accountMultiplePathGeometry}"/>
+				</DataTrigger>
+				<DataTrigger Binding="{Binding Path=OwnerIdentityIcon, Mode=OneWay}">
+					<DataTrigger.Value>
+						<uiL:PpsTagOwnerIdentityIcon>Revision</uiL:PpsTagOwnerIdentityIcon>
+					</DataTrigger.Value>
+					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource settingsPathGeometry}"/>
 				</DataTrigger>
 				<DataTrigger Binding="{Binding}" Value="{x:Static CollectionView.NewItemPlaceholder}">
 					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource filePlusPathGeometry}"/>
@@ -212,7 +224,7 @@
 									<Style TargetType="StackPanel">
 										<Setter Property="Visibility" Value="Collapsed"/>
 										<Style.Triggers>
-											<DataTrigger Binding="{Binding WillOverwrite}" Value="True">
+											<DataTrigger Binding="{Binding TagNameExists}" Value="True">
 												<Setter Property="Visibility" Value="Visible"/>
 											</DataTrigger>
 										</Style.Triggers>
@@ -261,7 +273,7 @@
 									<Style TargetType="StackPanel">
 										<Setter Property="Visibility" Value="Collapsed"/>
 										<Style.Triggers>
-											<DataTrigger Binding="{Binding WillOverwrite}" Value="True">
+											<DataTrigger Binding="{Binding TagNameExists}" Value="True">
 												<Setter Property="Visibility" Value="Visible"/>
 											</DataTrigger>
 										</Style.Triggers>
