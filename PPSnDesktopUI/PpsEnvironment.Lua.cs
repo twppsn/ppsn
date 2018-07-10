@@ -754,13 +754,12 @@ namespace TecWare.PPSn
 
 		/// <summary>Show a simple message box.</summary>
 		/// <param name="text"></param>
-		/// <param name="caption"></param>
 		/// <param name="button"></param>
 		/// <param name="image"></param>
 		/// <param name="defaultResult"></param>
 		/// <returns></returns>
 		[LuaMember("msgbox")]
-		private MessageBoxResult LuaMsgBox(string text, string caption, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
+		private MessageBoxResult LuaMsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
 			=> MsgBox(text, button, image, defaultResult);
 
 		[LuaMember("trace")]
