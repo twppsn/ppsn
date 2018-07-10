@@ -1166,6 +1166,8 @@ namespace TecWare.PPSn
 
 			public bool TryGetProperty(string name, out object value)
 			{
+				tags.RefreshTags(false);
+
 				if (tags.TryGetRevisionTagByName(name, out var revTag))
 				{
 					value = revTag.Value;
@@ -1864,7 +1866,10 @@ namespace TecWare.PPSn
 			=> GetEnumerator();
 
 		internal PpsObjectTag GetTagByIndex(int idx)
-			=> tags[idx].Tag;
+		{
+			RefreshTags(true);
+			return tags[idx].Tag;
+		} // func GetTagByIndex
 
 		/// <summary>Is the tag list changed, and not written in the local database.</summary>
 		public bool IsDirty => isDirty;
@@ -1872,7 +1877,14 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public IPropertyReadOnlyDictionary RevisionProperties => revisionProperties;
 
-		internal int TagCount => tags.Count;
+		internal int TagCount
+		{
+			get
+			{
+				RefreshTags(true);
+				return tags.Count;
+			}
+		} // prop TagCount
 		
 		/// <summary>Parent of the tag list.</summary>
 		public PpsObject Parent => parent;
@@ -3361,7 +3373,7 @@ namespace TecWare.PPSn
 		[Obsolete("falsche verantwortung")]
 		public async Task ShellExecute()
 		{
-			var fileName = this.GetProperty(PpsObjectBlobData.fileNameTag, (string)null);
+			var fileName = this.RevisionTags.GetProperty(PpsObjectBlobData.fileNameTag, (string)null);
 			if (String.IsNullOrEmpty(fileName))
 			{
 				await Environment.MsgBoxAsync("Datei kann nicht angezeigt werden. Anzeige Programm konnte nicht zugeordnet werden.");
