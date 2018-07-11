@@ -399,12 +399,19 @@ namespace TecWare.PPSn.Controls
 			}
 			return foundElement;
 		} // func GetFocusableDescendant
+
+		static PpsEditableListbox()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsEditableListbox), new FrameworkPropertyMetadata(typeof(PpsEditableListbox)));
+		} // sctor
+
 	} // class PpsEditableListbox
 
 	#endregion
 
 	#region -- class PpsEditableListboxItem -------------------------------------------
 
+	/// <summary></summary>
 	public class PpsEditableListboxItem : ListBoxItem
 	{
 		/// <summary>Dependencyproperty for IsNewItem</summary>
@@ -588,6 +595,13 @@ namespace TecWare.PPSn.Controls
 
 		internal Selector ParentSelector
 			=> ItemsControl.ItemsControlFromItemContainer(this) as Selector;
+
+
+		static PpsEditableListboxItem()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsEditableListboxItem), new FrameworkPropertyMetadata(typeof(PpsEditableListboxItem)));
+		} // sctor
+
 	} // class PpsEditableListboxItem
 
 	#endregion
