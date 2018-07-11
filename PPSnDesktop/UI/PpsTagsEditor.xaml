@@ -59,13 +59,13 @@
 			</ControlTemplate.Triggers>
 		</ControlTemplate>
 
-		<Style x:Key="PpsTagTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource PPSnTextBoxStyle}">
-			<Setter Property="VerticalAlignment" Value="Stretch"/>
-			<Setter Property="Height" Value="Auto"/>
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderBrush" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="IsReadOnly" Value="True"/>
+		<Style x:Key="PpsTagTextBoxStyle" TargetType="{x:Type TextBox}">
+			<Setter Property="VerticalContentAlignment" Value="Center" />
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="BorderBrush" Value="Transparent" />
+			<Setter Property="BorderThickness" Value="1" />
+			<Setter Property="Padding" Value="2,0" />
+			<Setter Property="IsReadOnly" Value="True" />
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type TextBox}">
@@ -240,7 +240,6 @@
 		<DataTemplate x:Key="TagEditorTemplate">
 			<uiC:PpsEditableListbox ItemsSource="{Binding ElementName=ppsTagsEditor, Path=TagsSource}"
 									AddNewItemFactory="tagAttributes_AddNewItemFactory"
-									ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 									Margin="16,16,0,16">
 				<ListBox.ItemsPanel>
 					<ItemsPanelTemplate>
@@ -257,18 +256,17 @@
 							<TextBox Grid.Row="0" x:Name="tagTextBox" Margin="0,2,0,9"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MaxLength="64"
-									 Style="{StaticResource PpsTagTextBoxStyle}"/>
+									 Style="{StaticResource PpsTagTextBoxStyle}" />
 							<!--Warning, if a Tag will be overwritten-->
 							<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,-24,0">
 								<Canvas Width="24" Height="24" Margin="0,0,5,0">
 									<Path Data="{StaticResource warningPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}"/>
 								</Canvas>
-								<TextBlock 
-									VerticalAlignment="Center" 
-									Foreground="{StaticResource PPSnActionButtonBrush}" 
-									Text="Dieses Tag existiert bereits." 
-									TextWrapping="Wrap"
-									MaxWidth="{Binding ElementName=tagTextBox, Path=ActualWidth}"/>
+								<TextBlock VerticalAlignment="Center" 
+										   Foreground="{StaticResource PPSnActionButtonBrush}" 
+										   Text="Dieses Tag existiert bereits." 
+										   TextWrapping="Wrap"
+										   MaxWidth="{Binding ElementName=tagTextBox, Path=ActualWidth}"/>
 								<StackPanel.Style>
 									<Style TargetType="StackPanel">
 										<Setter Property="Visibility" Value="Collapsed"/>

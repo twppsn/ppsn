@@ -56,6 +56,18 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = true
 				)
 			);
+
+			CommandBindings.Add(new CommandBinding(
+				Controls.PpsControlCommands.ClosePopupCommand,
+				(sender, e) =>
+				{
+					ChangeContent(PPSnCharmbarContentType.Default);
+					e.Handled = true;
+				},
+				(sender, e) => e.CanExecute = true
+				)
+			);
+
 			CommandBindings.Add(
 						new CommandBinding(CopyObjectNameCommand,
 							(isender, ie) =>

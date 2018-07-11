@@ -140,6 +140,7 @@ specific language governing permissions and limitations under the Licence.
 							</MultiTrigger.Conditions>
 							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 						</MultiTrigger>
+
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="DisplayMode" Value="Rectangle" />
@@ -147,7 +148,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="IsMouseCaptured" Value="False" />
 							</MultiTrigger.Conditions>
 							<Setter Property="ImageOpacity" Value="1" />
-							<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 						</MultiTrigger>
 								 
 						<MultiTrigger>

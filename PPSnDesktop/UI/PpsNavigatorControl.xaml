@@ -132,9 +132,21 @@ specific language governing permissions and limitations under the Licence.
 								<RowDefinition Height="Auto"/>
 								<RowDefinition Height="*"/>
 							</Grid.RowDefinitions>
-							<ToggleButton x:Name="viewsToggleButton" Grid.Row="0" Width="30" Height="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="11,0,0,4" 
-										  Command="{Binding ToggleShowViewDescription}"
-										  Style="{StaticResource PPSnShrinkButtonStyle}"/>
+							<ToggleButton Command="{Binding ToggleShowViewDescription}" Width="30" Height="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="11,0,0,4"
+										  Focusable="False" ClickMode="Press">
+								<ToggleButton.Template>
+									<ControlTemplate TargetType="{x:Type ToggleButton}">
+										<Grid x:Name="rootGrid" Background="Transparent">
+											<uiC:PpsGeometryImage GeometryName="menu" GeometryCircled="false" Foreground="{StaticResource PPSnWindowForegroundBrush}" Width="24" Height="24" />
+										</Grid>
+										<ControlTemplate.Triggers>
+											<Trigger Property="IsMouseOver" Value="True">
+												<Setter TargetName="rootGrid" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+											</Trigger>
+										</ControlTemplate.Triggers>
+									</ControlTemplate>
+								</ToggleButton.Template>
+							</ToggleButton>
 							<TextBlock x:Name="headerBorder" Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="46,0,0,6"
 									   FontSize="15" FontWeight="SemiBold" />
 							<ScrollViewer Grid.Row="1" Focusable="false" Padding="0" Style="{StaticResource PPSnScrollViewerStyle}" HorizontalScrollBarVisibility="Disabled">
