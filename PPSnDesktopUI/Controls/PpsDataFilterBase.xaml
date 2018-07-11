@@ -114,12 +114,12 @@ specific language governing permissions and limitations under the Licence.
 								   Visibility="Hidden" />
 						<pps:PpsPopup Placement="Bottom"
 									  VerticalOffset="1"
+									  PreserveFocus="False"
 									  StaysOpen="False"
 									  IsOpen="{TemplateBinding IsDropDownOpen}"
+									  PopupAnimation="Slide"
 									  MinWidth="{TemplateBinding ActualWidth}"
 									  MinHeight="122"
-									  PreserveFocus="False"
-									  PopupAnimation="Slide"
 									  MaxHeight="300">
 							<Border BorderThickness="{TemplateBinding BorderThickness}"
 									BorderBrush="{DynamicResource PPSnControlFocusedBorderBrush}"
@@ -134,7 +134,7 @@ specific language governing permissions and limitations under the Licence.
 											<ColumnDefinition/>
 											<ColumnDefinition Width="20"/>
 										</Grid.ColumnDefinitions>
-										<pps:PpsTextBox BorderThickness="0"
+										<pps:PpsTextBox x:Name="FilterTextBox" BorderThickness="0"
 														Background="Transparent"
 														MaxLength="128"
 														Text="{Binding FilterText, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=400}"/>
