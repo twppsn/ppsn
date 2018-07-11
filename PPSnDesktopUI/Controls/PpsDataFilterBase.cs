@@ -284,9 +284,12 @@ namespace TecWare.PPSn.Controls
 				filteredListBox.Items.MoveCurrentToPosition(-1);
 		} // proc SetAnchorItem
 
+
 		protected ListBoxItem ItemFromPoint(MouseEventArgs e)
+			=> ItemFromPoint(e.GetPosition(filteredListBox)); // func ItemFromPoint
+
+		protected ListBoxItem ItemFromPoint(Point point)
 		{
-			var point = e.GetPosition(filteredListBox);
 			var element = filteredListBox.InputHitTest(point) as UIElement;
 			while (element != null)
 			{
@@ -404,6 +407,8 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Evaluate MouseEvents -----------------------------------------------
 
+		private Point lastMousePosition = new Point();
+
 		/// <summary>Used to close a ListBox, if available</summary>
 		/// <param name="e"></param>
 		protected override void OnMouseDown(MouseButtonEventArgs e)
@@ -429,13 +434,15 @@ namespace TecWare.PPSn.Controls
 			if (!IsFilteredListVisible() || !hasMouseEnteredItemsList)
 				return;
 
-			if (ItemFromPoint(e) != null)
+			var item = ItemFromPoint(e);
+			//System.Diagnostics.Debug.Print(String.Format("{0}   {1}", item, PreSelectedValue));
+			if (item != null)
 			{
 				e.Handled = true;
 				HideFilteredList(true);
 			}
 		} // event OnMouseLeftButtonUp
-		private Point lastMousePosition = new Point();
+
 
 		/// <summary>Used to pre-select items under the cursor</summary>
 		/// <param name="e"></param>
@@ -477,6 +484,20 @@ namespace TecWare.PPSn.Controls
 			}
 			return false;
 		} // func HasMouseMoved
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnTouchDown(TouchEventArgs e)
+		{
+			base.OnTouchDown(e);
+
+			if (!IsFilteredListVisible())
+				return;
+
+			var item = ItemFromPoint(e.GetTouchPoint(filteredListBox).Position);
+			if (item != null && !item.IsSelected)
+				item.IsSelected = true;
+		} // proc OnTouchDown
 
 		#endregion
 
@@ -548,15 +569,12 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Returns te state of IsDropDownOpen</summary>
 		/// <returns></returns>
 		public override bool IsFilteredListVisible()
-		=> IsDropDownOpen;
+			=> IsDropDownOpen;
 
 		/// <summary>Closes the DropDown</summary>
 		/// <param name="commit">true if the pre-selected value should be committed</param>
 		public override void HideFilteredList(bool commit)
-		{
-			CloseDropDown(commit);
-		}
-
+			=> CloseDropDown(commit);
 
 		#endregion
 
