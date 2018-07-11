@@ -334,7 +334,7 @@ namespace TecWare.PPSn
 				{
 					if (v == null || v == DBNull.Value)
 						throw new ArgumentNullException(owner.Columns[primaryKeyIndex].Name, "Null primary columns are not allowed.");
-					rowId = values[i].ChangeType<long>();
+					rowId = v;
 				}
 
 				values[i] = v == DBNull.Value ? null : v;
