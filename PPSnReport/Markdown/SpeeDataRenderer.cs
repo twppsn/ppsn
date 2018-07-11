@@ -200,42 +200,48 @@ namespace TecWare.PPSn.Reporting.Markdown
 
 		private sealed class EmphasisInlineRenderer : SpeeDataObjectRenderer<EmphasisInline>
 		{
-			protected override void Write(SpeeDataRenderer renderer, EmphasisInline span)
+			private static bool WriteSpan(SpeeDataRenderer renderer, EmphasisInline span)
 			{
-				var spanElement = "Span";
-
 				switch (span.DelimiterChar)
 				{
 					case '*':
+						renderer.WriteStartElement("B");
+						return true;
 					case '_':
-						spanElement = span.IsDouble ? "B" : "I";
-						break;
+						renderer.WriteStartElement("I");
+						return true;
+					case '~':
+						// StrikeThrough -> Durchgestrichen
+						return false;
+					case '^':
+						renderer.WriteStartElement(
+							span.IsDouble
+							? "SUP" // Superscript -> Hochgestellt
+							: "SUB" // Subscript -> Tiefstellt
+						);
+						return true;
+					case '+':
+						renderer.WriteStartElement("U"); // Underlined -> Unterstrichen
+						return true;
+					case '=': // Marked
+						renderer.WriteStartElement("COLOR");
+						renderer.WriteAttribute("name", "marked");
+						return true;
+					default:
+						return false;
 				}
+			} // proc WriteSpan
 
-				renderer.WriteStartElement(spanElement);
-
-				//switch (span.DelimiterChar)
-				//{
-				//	case '~':
-				//		if (span.IsDouble)
-				//			renderer.WriteStaticResourceMember(null, "markdig:Styles.StrikeThroughStyleKey");
-				//		else
-				//			goto case '^';
-				//		break;
-				//	case '^':
-				//		renderer.WriteStaticResourceMember(null, "markdig:Styles.SuperscriptStyleKey");
-				//		break;
-				//	case '+':
-				//		renderer.WriteStaticResourceMember(null, "markdig:Styles.InsertedStyleKey");
-				//		break;
-				//	case '=':
-				//		renderer.WriteStaticResourceMember(null, "markdig:Styles.MarkedStyleKey");
-				//		break;
-				//}
-
-				renderer.WriteItems(span);
-				renderer.WriteEndElement();
-			}
+			protected override void Write(SpeeDataRenderer renderer, EmphasisInline span)
+			{
+				if (WriteSpan(renderer, span))
+				{
+					renderer.WriteItems(span);
+					renderer.WriteEndElement();
+				}
+				else
+					renderer.WriteChildren(span);
+			} // proc Write
 		} // class EmphasisInlineRenderer
 
 		#endregion
@@ -334,6 +340,9 @@ namespace TecWare.PPSn.Reporting.Markdown
 			WritePendingText(true);
 			xml.WriteStartElement(elementName);
 		} // proc WriteStartElement
+
+		public void WriteAttribute(string name, string value)
+			=> xml.WriteAttributeString(name, value);
 
 		public void WriteEndElement()
 			=> xml.WriteEndElement();
@@ -485,7 +494,7 @@ namespace TecWare.PPSn.Reporting.Markdown
 			WriteEndText();
 		} // proc WriteItems
 
-		private bool IsPendingText => textBuffer.Length > 0;
+		private bool IsPendingText => textBuffer.Length > 0 || appendWhiteSpace;
 
 		#endregion
 
