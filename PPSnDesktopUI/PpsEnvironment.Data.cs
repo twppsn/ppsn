@@ -318,7 +318,7 @@ namespace TecWare.PPSn
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsMasterDataTable owner;
-		private long rowId;
+		private readonly object rowId;
 		private readonly object[] values;
 
 		internal PpsMasterDataRow(PpsMasterDataTable owner, IDataRecord r)
@@ -362,7 +362,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is PpsMasterDataRow r
-				? (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && RowId == r.RowId)
+				? (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Equals(RowId, r.RowId))
 				: false;
 
 		/// <summary>Hashcode for the current datarow.</summary>
@@ -428,7 +428,7 @@ namespace TecWare.PPSn
 		internal bool IsTouched { get; set; } = false;
 
 		/// <summary>Return key value for this row.</summary>
-		public long RowId => rowId;
+		public object RowId => rowId;
 	} // class PpsMasterDataRow
 
 	#endregion
@@ -623,7 +623,7 @@ namespace TecWare.PPSn
 					}
 					break;
 				case PpsDataRowOperation.UnTouchedDeleteRows:
-					var removeList = new List<long>();
+					var removeList = new List<object>();
 					foreach (var cur in cachedRows.Values)
 					{
 						if (cur.TryGetTarget(out var row) && !row.IsTouched)
