@@ -91,18 +91,19 @@ specific language governing permissions and limitations under the Licence.
 			<Setter Property="ItemTemplate">
 				<Setter.Value>
 					<DataTemplate>
-						<Button x:Name="colorButton"
-								Command="{x:Static local:PpsPicturePane.OverlaySetColorCommand}" 
-								CommandParameter="{Binding}"
-								Background="Transparent"
-								BorderBrush="{StaticResource PpsPicturePaneBorderBrush}"
-								HorizontalContentAlignment="Stretch"
-								VerticalContentAlignment="Stretch"
-								Padding="0,2" Width="30" Height="30" Margin="3">
-							<Button.Content>
+						<uiC:PpsButton x:Name="colorButton"
+									   Command="{x:Static local:PpsPicturePane.OverlaySetColorCommand}" 
+									   CommandParameter="{Binding}"
+									   Focusable="False"
+									   Background="Transparent"
+									   BorderBrush="{StaticResource PpsPicturePaneBorderBrush}"
+									   HorizontalContentAlignment="Stretch"
+									   VerticalContentAlignment="Stretch"
+									   Padding="0,2" Width="30" Height="30" Margin="3">
+							<uiC:PpsButton.Content>
 								<Rectangle Fill="{Binding Brush}"/>
-							</Button.Content>
-						</Button>
+							</uiC:PpsButton.Content>
+						</uiC:PpsButton>
 						<DataTemplate.Triggers>
 							<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
 								<Setter TargetName="colorButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
@@ -110,7 +111,6 @@ specific language governing permissions and limitations under the Licence.
 								<Setter TargetName="colorButton" Property="Padding" Value="-1,1"/>
 							</DataTrigger>
 						</DataTemplate.Triggers>
-
 					</DataTemplate>
 				</Setter.Value>
 			</Setter>
@@ -129,18 +129,19 @@ specific language governing permissions and limitations under the Licence.
 			<Setter Property="ItemTemplate">
 				<Setter.Value>
 					<DataTemplate>
-						<Button x:Name="thicknessButton"
-								Command="{x:Static local:PpsPicturePane.OverlaySetThicknessCommand}" 
-								CommandParameter="{Binding}"
-								Background="Transparent"
-								BorderBrush="Transparent"
-								HorizontalContentAlignment="Stretch"
-								VerticalContentAlignment="Stretch"
-								Padding="1,3" Height="26" Margin="3,1,3,0">
-							<Button.Content>
+						<uiC:PpsButton x:Name="thicknessButton"
+									   Command="{x:Static local:PpsPicturePane.OverlaySetThicknessCommand}" 
+									   CommandParameter="{Binding}"
+									   Focusable="False"
+									   Background="Transparent"
+									   BorderBrush="Transparent"
+									   HorizontalContentAlignment="Stretch"
+									   VerticalContentAlignment="Stretch"
+									   Padding="1,3" Height="26" Margin="3,1,3,0">
+							<uiC:PpsButton.Content>
 								<Rectangle Height="{Binding Size}" Fill="{StaticResource PPSnWindowForegroundBrush}" Margin="6,0"/>
-							</Button.Content>
-						</Button>
+							</uiC:PpsButton.Content>
+						</uiC:PpsButton>
 						<DataTemplate.Triggers>
 							<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
 								<Setter TargetName="thicknessButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
@@ -447,23 +448,24 @@ specific language governing permissions and limitations under the Licence.
 				 Focusable="False">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Button x:Name="cameraButton"
-							Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
-							CommandParameter="{Binding}"
-							BorderBrush="{StaticResource PpsPicturePaneBorderBrush}"
-							Background="{StaticResource PpsPicturePaneBackgroundBrush}"
-							Width="170"
-							Padding="1,3"
-							HorizontalContentAlignment="Stretch"
-							VerticalContentAlignment="Stretch"
-							ToolTip="Diese Kamera auswählen">
-						<Button.Height>
+					<uiC:PpsButton x:Name="cameraButton"
+								   Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
+								   CommandParameter="{Binding}"
+								   Focusable="False"
+								   BorderBrush="{StaticResource PpsPicturePaneBorderBrush}"
+								   Background="{StaticResource PpsPicturePaneBackgroundBrush}"
+								   Width="170"
+								   Padding="1,3"
+								   HorizontalContentAlignment="Stretch"
+								   VerticalContentAlignment="Stretch"
+								   ToolTip="Diese Kamera auswählen">
+						<uiC:PpsButton.Height>
 							<MultiBinding Mode="OneWay" Converter="{StaticResource PreviewHeightConverter}">
 								<Binding ElementName="cameraButton" Path="Width"/>
 								<Binding Path="PreviewVideoRatio"/>
 							</MultiBinding>
-						</Button.Height>
-						<Button.Content>
+						</uiC:PpsButton.Height>
+						<uiC:PpsButton.Content>
 							<Grid>
 								<Grid.RowDefinitions>
 									<RowDefinition/>
@@ -479,8 +481,8 @@ specific language governing permissions and limitations under the Licence.
 										   TextAlignment="Center" VerticalAlignment="Center"
 										   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
 							</Grid>
-						</Button.Content>
-					</Button>
+						</uiC:PpsButton.Content>
+					</uiC:PpsButton>
 					<DataTemplate.Triggers>
 						<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
 							<Setter TargetName="cameraButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
@@ -519,16 +521,17 @@ specific language governing permissions and limitations under the Licence.
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Button x:Name="imageButton"
-								Command="{x:Static local:PpsPicturePane.EditOverlayCommand}" 
-								CommandParameter="{Binding}"
-								BorderBrush="{StaticResource PpsPicturePaneBorderBrush}"
-								Background="{StaticResource PpsPicturePaneBackgroundBrush}"
-								Width="170" 
-								Padding="1,3"
-								HorizontalContentAlignment="Stretch"
-								VerticalContentAlignment="Stretch">
-							<Button.Content>
+						<uiC:PpsButton x:Name="imageButton"
+									   Command="{x:Static local:PpsPicturePane.EditOverlayCommand}" 
+									   CommandParameter="{Binding}"
+									   Focusable="False"
+									   BorderBrush="{StaticResource PpsPicturePaneBorderBrush}"
+									   Background="{StaticResource PpsPicturePaneBackgroundBrush}"
+									   Width="170" 
+									   Padding="1,3"
+									   HorizontalContentAlignment="Stretch"
+									   VerticalContentAlignment="Stretch">
+							<uiC:PpsButton.Content>
 								<Grid>
 									<Grid.RowDefinitions>
 										<RowDefinition/>
@@ -548,8 +551,8 @@ specific language governing permissions and limitations under the Licence.
 												   Margin="0,3,3,0"
 												   Visibility="Hidden" />
 								</Grid>
-							</Button.Content>
-						</Button>
+							</uiC:PpsButton.Content>
+						</uiC:PpsButton>
 						<DataTemplate.Triggers>
 							<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
 								<Setter TargetName="imageButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
