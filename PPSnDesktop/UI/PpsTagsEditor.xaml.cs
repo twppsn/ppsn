@@ -270,7 +270,6 @@ namespace TecWare.PPSn.UI
 			currentValue = null;
 			isEditing = false;
 			TagNameExists = false;
-			
 		} // proc CancelEdit
 
 		public void Remove()

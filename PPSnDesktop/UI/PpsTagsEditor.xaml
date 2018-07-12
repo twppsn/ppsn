@@ -49,7 +49,7 @@
 					<DataTrigger.Value>
 						<uiL:PpsTagOwnerIdentityIcon>Revision</uiL:PpsTagOwnerIdentityIcon>
 					</DataTrigger.Value>
-					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource settingsPathGeometry}"/>
+					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource revisionOutlinePathGeometry}"/>
 				</DataTrigger>
 				<DataTrigger Binding="{Binding}" Value="{x:Static CollectionView.NewItemPlaceholder}">
 					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource filePlusPathGeometry}"/>

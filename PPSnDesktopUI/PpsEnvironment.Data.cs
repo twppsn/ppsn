@@ -348,9 +348,6 @@ namespace TecWare.PPSn
 			{
 				if (!Equals(values[i], arguments[i]))
 				{
-					if (i == primaryKeyIndex)
-						values[i] = arguments[i].ChangeType<long>();
-
 					values[i] = arguments[i];
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(owner.Columns[i].Name));
 				}
