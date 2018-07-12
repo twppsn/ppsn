@@ -500,8 +500,9 @@ namespace TecWare.PPSn.Reporting.Markdown
 
 		private static MarkdownPipeline CreatePipeline()
 		{
-			var pipeLine = new MarkdownPipelineBuilder();
-			return pipeLine.Build();
+			return new MarkdownPipelineBuilder()
+				.UseEmphasisExtras()
+				.Build();
 		} // func CreatePipeline
 
 		public static void ToXml(string markdown, XmlWriter xml, MarkdownPipeline pipeline)
