@@ -216,15 +216,15 @@ namespace TecWare.PPSn.Reporting.Markdown
 					case '^':
 						renderer.WriteStartElement(
 							span.IsDouble
-							? "SUP" // Superscript -> Hochgestellt
-							: "SUB" // Subscript -> Tiefstellt
+							? "Sup" // Superscript -> Hochgestellt
+							: "Sub" // Subscript -> Tiefstellt
 						);
 						return true;
 					case '+':
 						renderer.WriteStartElement("U"); // Underlined -> Unterstrichen
 						return true;
 					case '=': // Marked
-						renderer.WriteStartElement("COLOR");
+						renderer.WriteStartElement("Color");
 						renderer.WriteAttribute("name", "marked");
 						return true;
 					default:
