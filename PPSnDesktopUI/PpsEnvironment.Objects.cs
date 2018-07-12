@@ -1505,7 +1505,7 @@ namespace TecWare.PPSn
 		/// <summary>Update revision tags from a object.</summary>
 		/// <param name="xTags"></param>
 		internal void ChangeRevisionTagsFromXml(IEnumerable<XElement> xTags)
-			=> UpdateRevisionTags(false, ParseTagsFromXml(xTags));
+			=> UpdateRevisionTagsCore(false, ParseTagsFromXml(xTags));
 
 		private void UpdateRevisionTagCore(long? id, PpsObjectTag newTag, bool isLocalChanged, List<PpsObjectTagBase> removeTags, ref bool collectionChanged)
 		{
@@ -1541,7 +1541,7 @@ namespace TecWare.PPSn
 		/// <summary>Update all revision tags.</summary>
 		/// <param name="appendOnly"></param>
 		/// <param name="tags"></param>
-		public void UpdateRevisionTags(bool appendOnly, IEnumerable<PpsObjectTag> tags)
+		public void UpdateRevisionTagsCore(bool appendOnly, IEnumerable<PpsObjectTag> tags)
 		{
 			var collectionChanged = false;
 
@@ -1576,7 +1576,7 @@ namespace TecWare.PPSn
 
 			if (collectionChanged)
 				OnCollectionChanged();
-		} // proc UpdateRevisionTags
+		} // proc UpdateRevisionTagsCore
 
 		#endregion
 
@@ -2629,7 +2629,7 @@ namespace TecWare.PPSn
 				}
 
 				// update tags
-				baseObj.Tags.UpdateRevisionTags(false, GetAutoTags());
+				baseObj.Tags.UpdateRevisionTagsCore(false, GetAutoTags());
 
 				// persist the object description
 				await baseObj.UpdateLocalAsync();
