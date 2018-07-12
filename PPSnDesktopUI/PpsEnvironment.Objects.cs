@@ -1590,6 +1590,8 @@ namespace TecWare.PPSn
 		
 		private void UpdateUserTagCore(long? newId, PpsObjectTag newTag, bool isLocalChanged, DateTime newTimeStamp, long newUserId, List<PpsObjectTagBase> removeTags, ref bool collectionChanged)
 		{
+			PpsObjectTagBase.ValidateTagName(newTag.Name);
+
 			var currentTag = (PpsObjectEditableTag)userTags.Find(t => String.Compare(t.Name, newTag.Name, StringComparison.OrdinalIgnoreCase) == 0 && t.UserId == newUserId);
 
 			if (currentTag != null) // tag alread exists
