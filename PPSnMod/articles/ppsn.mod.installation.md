@@ -51,7 +51,14 @@ Es sollte MS SQL Server 2016 (oder höher) Standart Edition oder höher installi
 
 ## V. Zertifikat
 
-1. <span style="color:red">ToDo: ???</span>
+1. Ein gültiges Zertifikat muss vorliegen
+2. Das Zertifikat muss sich im Zertifikatspeicher befinden
+3. Der Fingerabdruck des Zertifikats muss bekannt sein
+   PowerShell
+   ```bash
+   dir cert:\\localmachine\\[Zerfifikatname]
+   ```
+4. Unter VII.3. das Zertifikat mit dem Parameter <b>certhash=</b> den Fingerabdruck angeben und ggf. den Port auf 443 setzen
 
 ## VI. PPSn-Server konfigurieren
 
