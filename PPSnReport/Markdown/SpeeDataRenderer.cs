@@ -200,47 +200,57 @@ namespace TecWare.PPSn.Reporting.Markdown
 
 		private sealed class EmphasisInlineRenderer : SpeeDataObjectRenderer<EmphasisInline>
 		{
-			private static bool WriteSpan(SpeeDataRenderer renderer, EmphasisInline span)
+			private static int WriteSpan(SpeeDataRenderer renderer, EmphasisInline span)
 			{
 				switch (span.DelimiterChar)
 				{
 					case '*':
 						renderer.WriteStartElement("B");
-						return true;
+						return 1;
 					case '_':
 						renderer.WriteStartElement("I");
-						return true;
+						return 1;
 					case '~':
 						// StrikeThrough -> Durchgestrichen
-						return false;
+						return 0;
 					case '^':
 						renderer.WriteStartElement(
 							span.IsDouble
 							? "Sup" // Superscript -> Hochgestellt
 							: "Sub" // Subscript -> Tiefstellt
 						);
-						return true;
+						//renderer.WriteStartElement("Value");
+						return 1;
 					case '+':
 						renderer.WriteStartElement("U"); // Underlined -> Unterstrichen
-						return true;
+						return 1;
 					case '=': // Marked
 						renderer.WriteStartElement("Color");
 						renderer.WriteAttribute("name", "marked");
-						return true;
+						renderer.WriteStartElement("Value");
+						return 2;
 					default:
-						return false;
+						return 0;
 				}
 			} // proc WriteSpan
 
 			protected override void Write(SpeeDataRenderer renderer, EmphasisInline span)
 			{
-				if (WriteSpan(renderer, span))
+				switch (WriteSpan(renderer, span))
 				{
-					renderer.WriteItems(span);
-					renderer.WriteEndElement();
+					case 1:
+						renderer.WriteItems(span);
+						renderer.WriteEndElement();
+						break;
+					case 2:
+						renderer.WriteItems(span);
+						renderer.WriteEndElement();
+						renderer.WriteEndElement();
+						break;
+					default:
+						renderer.WriteChildren(span);
+						break;
 				}
-				else
-					renderer.WriteChildren(span);
 			} // proc Write
 		} // class EmphasisInlineRenderer
 
