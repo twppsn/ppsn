@@ -100,7 +100,14 @@ namespace TecWare.PPSn.Reporting.Markdown
 			protected override void Write(SpeeDataRenderer renderer, HeadingBlock headingBlock)
 			{
 				renderer.WriteStartParagraph();
+				renderer.WriteStartElement("Fontface");
+				renderer.WriteAttribute("fontfamily", headingBlock.Level <=1 ? "head1" : "head2");
+				renderer.WriteStartElement("B");
+				renderer.WriteStartElement("Value");
 				renderer.WriteItems(headingBlock);
+				renderer.WriteEndElement();
+				renderer.WriteEndElement();
+				renderer.WriteEndElement();
 				renderer.WriteEndParagraph();
 			}
 		} // class HeadingRenderer
