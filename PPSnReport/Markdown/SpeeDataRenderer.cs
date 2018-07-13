@@ -209,28 +209,39 @@ namespace TecWare.PPSn.Reporting.Markdown
 		{
 			private static int WriteSpan(SpeeDataRenderer renderer, EmphasisInline span)
 			{
+				// Links:
+				// - https://github.com/lunet-io/markdig/blob/master/src/Markdig.Tests/Specs/EmphasisExtraSpecs.md
+				// - http://commonmark.org/help/
 				switch (span.DelimiterChar)
 				{
 					case '*':
-						renderer.WriteStartElement("B");
-						return 1;
 					case '_':
-						renderer.WriteStartElement("I");
+						renderer.WriteStartElement(span.IsDouble ? "B" : "I");
 						return 1;
 					case '~':
-						// StrikeThrough -> Durchgestrichen
-						return 0;
+						if (span.IsDouble)
+							return 0; // StrikeThrough -> Durchgestrichen
+						else
+						{
+							renderer.WriteStartElement("Sub");
+							return 1;
+						}
 					case '^':
-						renderer.WriteStartElement(
-							span.IsDouble
-							? "Sup" // Superscript -> Hochgestellt
-							: "Sub" // Subscript -> Tiefstellt
-						);
-						//renderer.WriteStartElement("Value");
-						return 1;
+						if (span.IsDouble)
+							return 0; // free
+						else
+						{
+							renderer.WriteStartElement("Sup"); // Superscript -> Hochgestellt
+							return 1;
+						}
 					case '+':
-						renderer.WriteStartElement("U"); // Underlined -> Unterstrichen
-						return 1;
+						if (span.IsDouble)
+						{
+							renderer.WriteStartElement("U"); // Underlined -> Unterstrichen
+							return 1;
+						}
+						else
+							return 0; // free
 					case '=': // Marked
 						renderer.WriteStartElement("Color");
 						renderer.WriteAttribute("name", "marked");

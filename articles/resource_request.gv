@@ -1,0 +1,74 @@
+digraph {
+    http1 -> httpsys [dir="both", constraint=false];
+ subgraph cluster_wpf {
+     label="Client";
+ wpf1 [label="PPSnWpf",shape="doublecircle", fontsize=10, color="lightgray"];
+ 
+ subgraph cluster_proxy2 {
+     label="WebProxy";
+     shape="box";
+     style=rounded;
+     color="lightgray";
+     cp2n0 [label=" ", shape="circle", color="lightgray"];
+     cp2n1 [label=" ", shape="circle", color="lightgray"];
+     cp2n2 [label=" ", shape="circle", color="lightgray"];
+     cp2n3 [label=" ", shape="circle", color="lightgray"];
+ }
+ sqlite1 [label="SQLite",shape="box",style=rounded, color="lightgray"];
+ http1 [label="Http",shape="box",style=rounded, color="lightgray"];
+
+ //wpfend [label="PPSnWpf",shape="box",style=rounded, fontsize=10, color="blue"];
+
+ wpf1 -> cp2n0 [label="requests\nresource", fontsize="5", color="blue:green"];
+ cp2n0 -> sqlite1 [label="checks if cached", fontsize="5", color="blue:green"];
+ sqlite1 -> cp2n1 [taillabel="cached", label="delivery", fontsize="5", color="blue"];
+ cp2n1 -> wpf1 [label="delivery", fontsize="5", constraint=false, color="blue"];
+ sqlite1 -> cp2n2 [taillabel="not\ncached", fontsize="5", color="green"];
+ cp2n2 -> http1 [label="request online version", fontsize="5", color="green"];
+ http1 -> cp2n3 [label="delivery", fontsize="5", color="green"];
+ cp2n3-> wpf1 [label="delivery", fontsize="5", constraint=false, color="green"];
+ cp2n3 -> sqlite1 [label="save to cache", taillabel="if cacheable", fontsize="5", color="green"];
+ }
+
+subgraph cluster_mod {
+    rank=min;
+    label="Server";
+    httpsys [label="HttpSys", fontsize=10, color="lightgray"];
+    subgraph cluster_des {
+        label="DE-Server";
+        shape="box";
+        style=rounded;
+        color="lightgray";
+        provider_select [label="determines Provider\nfor\nrequest", shape="circle", color="lightgray", fontsize=8];
+        des_delivery[label=" ", shape="circle", color="lightgray"]
+    }
+    subgraph cluster_filesys{
+        label="Filesystem";
+     shape="box";
+     style=rounded;
+     color="lightgray";
+        direct_filesystem [label=" ", shape="circle", color="lightgray"];
+        mod_filesystem [label=" ", shape="circle", color="lightgray"];
+    }
+    subgraph cluster_mod {
+        label="PPSnMod"; 
+        fontsize=10; 
+        color="lightgray"
+        mod_select[label=" ", shape="circle", color="lightgray"];
+        mod_delivery[label=" ", shape="circle", color="lightgray"]
+    }
+    db_provider [label="Database\nProvider", shape="box",style=rounded, color="lightgray"]
+
+    httpsys->provider_select [label="Request"];
+    provider_select -> direct_filesystem;
+    direct_filesystem -> des_delivery;
+    provider_select->mod_select;
+    mod_select->mod_filesystem;
+    mod_filesystem->mod_delivery;
+    mod_delivery->des_delivery;
+    des_delivery->httpsys;
+    mod_select->db_provider;
+    db_provider->mod_delivery;
+}
+
+}
