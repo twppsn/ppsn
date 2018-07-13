@@ -2010,9 +2010,9 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public static Predicate<T> CompileTypedFilter<T>(PpsDataFilterExpression expression)
 		{
-			var filterVisitor = new PpsDataFilterVisitorTyped(ParameterExpression.Parameter(typeof(T)));
+			var filterVisitor = new PpsDataFilterVisitorTyped(Expression.Parameter(typeof(T)));
 			var filterExpr = filterVisitor.CreateFilter(expression);
-			return LambdaExpression.Lambda<Predicate<T>>(filterExpr, filterVisitor.CurrentRowParameter).Compile();
+			return Expression.Lambda<Predicate<T>>(filterExpr, filterVisitor.CurrentRowParameter).Compile();
 		} // func CompileTypedFilter
 
 	} // class PpsDataFilterVisitorLambda

@@ -217,21 +217,21 @@ namespace TecWare.PPSn.Reporting.Markdown
 						renderer.WriteStartElement(span.IsDouble ? "B" : "I");
 						return true;
 					case '~':
-						if (span.IsDouble)
-							return false; // StrikeThrough -> Durchgestrichen
-						else
-						{
-							renderer.WriteStartElement("Sub");
-							return true;
-						}
+						//if (span.IsDouble)
+						return false; // StrikeThrough -> Durchgestrichen
+						//else
+						//{
+						//	renderer.WriteStartElement("Sub"); // Subscript -> Tiefgestellt
+						//	return true;
+						//}
 					case '^':
-						if (span.IsDouble)
+						//if (span.IsDouble)
 							return false; // free
-						else
-						{
-							renderer.WriteStartElement("Sup"); // Superscript -> Hochgestellt
-							return true;
-						}
+						//else
+						//{
+						//	renderer.WriteStartElement("Sup"); // Superscript -> Hochgestellt
+						//	return true;
+						//}
 					case '+':
 						if (span.IsDouble)
 						{
