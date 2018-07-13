@@ -103,9 +103,7 @@ namespace TecWare.PPSn.Reporting.Markdown
 				renderer.WriteStartElement("Fontface");
 				renderer.WriteAttribute("fontfamily", headingBlock.Level <=1 ? "head1" : "head2");
 				renderer.WriteStartElement("B");
-				renderer.WriteStartElement("Value");
 				renderer.WriteItems(headingBlock);
-				renderer.WriteEndElement();
 				renderer.WriteEndElement();
 				renderer.WriteEndElement();
 				renderer.WriteEndParagraph();
@@ -207,7 +205,7 @@ namespace TecWare.PPSn.Reporting.Markdown
 
 		private sealed class EmphasisInlineRenderer : SpeeDataObjectRenderer<EmphasisInline>
 		{
-			private static int WriteSpan(SpeeDataRenderer renderer, EmphasisInline span)
+			private static bool WriteSpan(SpeeDataRenderer renderer, EmphasisInline span)
 			{
 				// Links:
 				// - https://github.com/lunet-io/markdig/blob/master/src/Markdig.Tests/Specs/EmphasisExtraSpecs.md
@@ -217,58 +215,49 @@ namespace TecWare.PPSn.Reporting.Markdown
 					case '*':
 					case '_':
 						renderer.WriteStartElement(span.IsDouble ? "B" : "I");
-						return 1;
+						return true;
 					case '~':
 						if (span.IsDouble)
-							return 0; // StrikeThrough -> Durchgestrichen
+							return false; // StrikeThrough -> Durchgestrichen
 						else
 						{
 							renderer.WriteStartElement("Sub");
-							return 1;
+							return true;
 						}
 					case '^':
 						if (span.IsDouble)
-							return 0; // free
+							return false; // free
 						else
 						{
 							renderer.WriteStartElement("Sup"); // Superscript -> Hochgestellt
-							return 1;
+							return true;
 						}
 					case '+':
 						if (span.IsDouble)
 						{
 							renderer.WriteStartElement("U"); // Underlined -> Unterstrichen
-							return 1;
+							return true;
 						}
 						else
-							return 0; // free
+							return false; // free
 					case '=': // Marked
 						renderer.WriteStartElement("Color");
 						renderer.WriteAttribute("name", "marked");
-						renderer.WriteStartElement("Value");
-						return 2;
+						return true;
 					default:
-						return 0;
+						return false;
 				}
 			} // proc WriteSpan
 
 			protected override void Write(SpeeDataRenderer renderer, EmphasisInline span)
 			{
-				switch (WriteSpan(renderer, span))
+				if (WriteSpan(renderer, span))
 				{
-					case 1:
-						renderer.WriteItems(span);
-						renderer.WriteEndElement();
-						break;
-					case 2:
-						renderer.WriteItems(span);
-						renderer.WriteEndElement();
-						renderer.WriteEndElement();
-						break;
-					default:
-						renderer.WriteChildren(span);
-						break;
+					renderer.WriteItems(span);
+					renderer.WriteEndElement();
 				}
+				else
+					renderer.WriteChildren(span);
 			} // proc Write
 		} // class EmphasisInlineRenderer
 
@@ -354,12 +343,10 @@ namespace TecWare.PPSn.Reporting.Markdown
 		public void WriteStartParagraph()
 		{
 			WriteStartElement("Paragraph");
-			WriteStartElement("Value");
 		} // proc WriteStartParagraph
 
 		public void WriteEndParagraph()
 		{
-			WriteEndElement();
 			WriteEndElement();
 		} // proc WriteEndParagraph
 
@@ -452,7 +439,7 @@ namespace TecWare.PPSn.Reporting.Markdown
 				if (preserveWhitespace)
 				{
 					var t = textBuffer.ToString();
-					xml.WriteStartElement("SPAN");
+					xml.WriteStartElement("Value");
 					xml.WriteValue(textBuffer.ToString());
 					xml.WriteEndElement();
 					textBuffer.Length = 0;
@@ -465,7 +452,9 @@ namespace TecWare.PPSn.Reporting.Markdown
 						appendWhiteSpace = false;
 					}
 
+					xml.WriteStartElement("Value");
 					xml.WriteValue(textBuffer.ToString());
+					xml.WriteEndElement();
 					textBuffer.Length = 0;
 				}
 			}
