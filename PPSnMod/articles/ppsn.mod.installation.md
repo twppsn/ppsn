@@ -5,30 +5,16 @@ title: Installation of PPSnMod for Production
 
 # Installation des PPSn Servers
 
-## I. Vorarbeiten
+## I. Installation des DE-Servers
 
-1. Es sollte ein neuer Benutzer mit <span style="color:red">ToDo: erforderliche Rechte herausfinden</span> eingerichtet werden.  
-   Dazu Eingabeaufforderung mit erhöhten Rechten starten.
+[!include[includetest3](~/des/articles/usersmanual/des.installationforppsn.md)]
+
+## II. [Speedata](https://www.speedata.de) einrichten
+
+1. PowerShell in <i>[Arbeitsverzeichnis]\\speedata</i> starten
    ```bash
-   net user /add [DES-Benutzername] [DES-Passwort]
-   net user [DES-Benutzername] /passwordchg:no
-   net user [DES-Benutzername] /expires:never
-   net localgroup Administratoren [DES-Benutzername] /add
+   update.ps1
    ```
-   <span style="color:red">oder Managed Service Account?</span>
-
-## II. Dateisystem vorbereiten
-
-1. Ein neues Verzeichnis anlegen, bspw: <i>C:\DE-Server</i> ->Arbeitsverzeichnis
-2. folgende Unterordner anlegen:
-    * <i>Backup</i> -> für Backups des PPSn Systemes
-    * <i>Bin</i> -> Binärdateien des DE-Servers (alle Dateien aus <i>PPSnOS\\ppsn\\PPSnMod\\bin\\[Release/Debug]</i>)
-    * <i>Cfg</i> -> Konfigurationsdateien des DE-Servers (alle Dateien aus <i>PPSnOS\\ppsn\\PPSnModCfg\\cfg</i>)
-    * <i>Client</i> -> Clientanwendung (alle Dateien aus <i>PPSnOS\\ppsn\\PPSnDesktop\\bin\\[Release/Debug]</i>)
-    * <i>Data</i> -> Datenbankverzeichnis
-    * <i>Log</i> -> Logdateien des Servers
-    * <i>speedata</i> -> Verzeichnis für das Reportingsystem (<i>update.ps1</i> aus <i>PPSnOS\\ppsn\\PPSnReport\\system</i>)
-    * <i>Temp</i> -> Temporäre Daten
 
 ## III. Datenbankkonfiguration
 
@@ -46,21 +32,13 @@ Es sollte MS SQL Server 2016 (oder höher) Standart Edition oder höher installi
 
 ## IV. PPSn Datenbank einrichten
 
-1. <span style="color:red">ToDo: welche Datei ist wie auszuführen</span>
+1. Das Datenbankschema importieren.
+   ```sql
+   sqlcmd -S [SERVERNAME]\[INSTANCE_NAME] -i \PPSnMaster.sql -o [Arbeitsverzeichnis]\Log\database_import_log.txt
+   ```
 2. Nutzer des PPSn anlegen <span style="color:red">ToDo: SQL-Befehle/Admin-Tool</span>
 
-## V. Zertifikat
-
-1. Ein gültiges Zertifikat muss vorliegen
-2. Das Zertifikat muss sich im Zertifikatspeicher befinden
-3. Der Fingerabdruck des Zertifikats muss bekannt sein
-   PowerShell
-   ```bash
-   dir cert:\\localmachine\\[Zerfifikatname]
-   ```
-4. Unter VII.3. das Zertifikat mit dem Parameter <b>certhash=</b> den Fingerabdruck angeben und ggf. den Port auf 443 setzen
-
-## VI. PPSn-Server konfigurieren
+## V. PPSn-Server konfigurieren
 
 In der Datei <i>[Arbeitsverzeichnis]\\Cfg\\PPSn.xml</i> folgene Anpassungen vornehmen:
 
@@ -69,32 +47,6 @@ In der Datei <i>[Arbeitsverzeichnis]\\Cfg\\PPSn.xml</i> folgene Anpassungen vorn
 * <b>server logpath=</b> sollte auf <i>[Arbeitsverzeichnis]\\Log</i> verweisen
 * Reporting Pfad <span style="color:red">ToDo: wo wird der gesetzt?</span>
 * Die Eigenschaft <b>pps:connectionString</b> muss entsprechend der eingerichteten Datenbank gesetzt werden
-
-## VII. DE-Server als Dienst einrichten
-
-1. Eingabeaufforderung mit erhöhten Rechten starten:
-   ```bash
-   #Service registrieren
-   [Arbeitsverzeichnis]\\Bin\\DEServer.exe register --config [Arbeitsverzeichnis]\\Cfg\\[Config].xml --name [Unternehmensname]
-   #Benutzer für den Service festlegen
-   sc.exe config "Tw_DES_[Unternehmensname]" obj= ".\[DES-Benutzername]" password= "[DES-Passwort]"
-   #URL für DE-Server freigeben
-   netsh http add urlacl url=http://+:80/ppsn user=[DES-Benutzername] listen=yes
-   #Ausnahme in der Firewall erstellen
-   netsh advfirewall firewall add rule name="DE-Server" dir=in protocol=TCP localport=80 action=allow
-   #oder
-   netsh advfirewall firewall add rule name="DE-Server" dir=in program="[Arbeitsverzeichnis]\\Bin\\DE-Server.exe" action=allow
-   #DE-Server als Service starten
-   net start Tw_DES_[Unternehmensname]
-   ```
-2. Gegebenenfalls müssen in übergeordneten Routern Exposed Hosts/Portweiterleitungen eingerichtet werden, um den DE-Server aus weiteren Netzsegmenten erreichen zu können
-
-## IIX. [Speedata](https://www.speedata.de) einrichten
-
-1. PowerShell in <i>[Arbeitsverzeichnis]\\speedata</i> starten
-   ```bash
-   update.ps1
-   ```
 
 ## Weitere Schritte
 
