@@ -1536,7 +1536,7 @@ namespace TecWare.PPSn
 		/// <param name="appendOnly"></param>
 		/// <param name="tags"></param>
 		public void UpdateRevisionTags(bool appendOnly, params PpsObjectTag[] tags)
-			=> UpdateRevisionTags(appendOnly, tags);
+			=> UpdateRevisionTagsCore(appendOnly, tags);
 
 		/// <summary>Update all revision tags.</summary>
 		/// <param name="appendOnly"></param>
