@@ -493,21 +493,7 @@ namespace TecWare.PPSn.Data
 		/// <remarks>This implementation is not stackable, like on requests.</remarks>
 		public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 		{
-			var currentParameter = ParameterExpression.Parameter(typeof(object), "#current");
-			var rowParameter = Expression.Variable(typeof(IDataRow), "#row");
-			var filterExpr = new PpsDataFilterVisitorDataRow(rowParameter, InternalList as IDataColumns).CreateFilter(expression);
-
-			var predicateExpr = Expression.Lambda<Predicate<object>>(
-				Expression.Block(typeof(bool),
-					new ParameterExpression[] { rowParameter },
-					Expression.Assign(rowParameter, Expression.Convert(currentParameter, typeof(IDataRow))),
-					filterExpr
-				),
-				currentParameter
-			);
-			
-			this.Filter = predicateExpr.Compile();
-
+			Filter = PpsDataFilterVisitorDataRow.CreateDataRowFilter<object>(expression);
 			return this; // we do not create a new collectionview -> it should be unique for the current context
 		} // func ApplyFilter
 				

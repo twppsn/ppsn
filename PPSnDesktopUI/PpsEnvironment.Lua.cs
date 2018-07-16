@@ -1231,6 +1231,13 @@ namespace TecWare.PPSn
 			return new FileInfo(Path.Combine(tempDirectory.FullName, fileName));
 		} // func GetLocalTempFileInfo
 
+		/// <summary></summary>
+		/// <param name="filterExpr"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public Predicate<IDataRow> CreateDataRowFilter(string filterExpr)
+			=> PpsDataFilterVisitorDataRow.CreateDataRowFilter<IDataRow>(PpsDataFilterExpression.Parse(filterExpr));
+
 		[Obsolete("Implemented for a special case, will be removed.")]
 		[LuaMember]
 		public Task<PpsObjectDataSet> PullRevisionAsync(PpsObject obj, long revId)

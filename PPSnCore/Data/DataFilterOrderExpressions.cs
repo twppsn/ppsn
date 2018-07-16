@@ -2014,7 +2014,6 @@ namespace TecWare.PPSn.Data
 			var filterExpr = filterVisitor.CreateFilter(expression);
 			return Expression.Lambda<Predicate<T>>(filterExpr, filterVisitor.CurrentRowParameter).Compile();
 		} // func CompileTypedFilter
-
 	} // class PpsDataFilterVisitorLambda
 
 	#endregion
@@ -2098,10 +2097,10 @@ namespace TecWare.PPSn.Data
 			}
 		} // func GetProperty
 
-		private static PropertyInfo dataRowIndexIntPropertyInfo;
-		private static PropertyInfo dataRowIndexNamePropertyInfo;
-		private static MethodInfo datarowSearchFullTextMethodInfo;
-		private static MethodInfo datarowSearchFullDateMethodInfo;
+		private static readonly PropertyInfo dataRowIndexIntPropertyInfo;
+		private static readonly PropertyInfo dataRowIndexNamePropertyInfo;
+		private static readonly MethodInfo datarowSearchFullTextMethodInfo;
+		private static readonly MethodInfo datarowSearchFullDateMethodInfo;
 
 		static PpsDataFilterVisitorDataRow()
 		{
@@ -2184,6 +2183,28 @@ namespace TecWare.PPSn.Data
 
 			return false;
 		} // func RtDataRowSearchFullDate
+
+		/// <summary>Create a DataRow filter function.</summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		public static Predicate<T> CreateDataRowFilter<T>(PpsDataFilterExpression expression)
+			where T : class
+		{
+			var currentParameter = Expression.Parameter(typeof(T), "#current");
+			var rowParameter = Expression.Variable(typeof(IDataRow), "#row");
+			var filterExpr = new PpsDataFilterVisitorDataRow(rowParameter).CreateFilter(expression);
+
+			var predicateExpr = Expression.Lambda<Predicate<T>>(
+				Expression.Block(typeof(bool),
+					new ParameterExpression[] { rowParameter },
+					Expression.Assign(rowParameter, Expression.Convert(currentParameter, typeof(IDataRow))),
+					filterExpr
+				),
+				currentParameter
+			);
+
+			return predicateExpr.Compile();
+		} // func CreateDataRowFilter
 	} // class PpsDataFilterVisitorDataRow
 
 	#endregion
