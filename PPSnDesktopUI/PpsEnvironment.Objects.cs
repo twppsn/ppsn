@@ -4532,11 +4532,10 @@ order by t_liefnr.value desc
 				{
 					using (var dst = data.OpenStream(FileAccess.Write))
 						await dataSource.CopyToAsync(dst);
+
+					// write changes, also tags
 					await dataAccess.CommitAsync();
 				}
-
-				// write changes
-				await newObject.UpdateLocalAsync();
 
 				trans.Commit();
 				return newObject;
