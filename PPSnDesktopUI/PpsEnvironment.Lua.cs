@@ -1223,7 +1223,7 @@ namespace TecWare.PPSn
 				tempDirectory.Create();
 
 			// build filename
-			if (obj.TryGetProperty<string>(PpsObjectBlobData.fileNameTag, out var fileName))
+			if (obj.TryGetProperty<string>(PpsObjectBlobData.FileNameTag, out var fileName))
 				fileName = obj.Guid.ToString("N") + "_" + fileName;
 			else
 				fileName = obj.Guid.ToString("N") + MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType);

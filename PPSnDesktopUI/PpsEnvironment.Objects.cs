@@ -2021,7 +2021,7 @@ namespace TecWare.PPSn
 			// get a correct extension
 			string extension = null;
 
-			if (obj.TryGetProperty<string>(PpsObjectBlobData.fileNameTag, out var name))
+			if (obj.TryGetProperty<string>(PpsObjectBlobData.FileNameTag, out var name))
 				extension = Path.GetExtension(name);
 			if (String.IsNullOrEmpty(extension))
 				extension = MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType);
@@ -2175,9 +2175,11 @@ namespace TecWare.PPSn
 	public class PpsObjectBlobData : IPpsObjectData, IPpsObjectDataAccessNotify
 	{
 		/// <summary>Tag for hash value</summary>
-		public const string hashTag = "Sha256";
+		public const string HashTag = "Sha256";
 		/// <summary>Tag for filename</summary>
-		public const string fileNameTag = "Name";
+		public const string FileNameTag = "Name";
+		/// <summary></summary>
+		public const string LastWriteTimeTag = "LastWriteTime";
 
 		/// <summary>Notify property changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -2226,7 +2228,7 @@ namespace TecWare.PPSn
 		private async Task LoadDataAsync()
 		{
 			loadedRawData = await baseObj.LoadObjectDataInformationAsync() ?? DBNull.Value;
-			loadedHash = baseObj.RevisionTags.GetProperty(hashTag, null);
+			loadedHash = baseObj.RevisionTags.GetProperty(HashTag, null);
 			newRawData = null;
 			newHash = null;
 
@@ -2309,7 +2311,7 @@ namespace TecWare.PPSn
 				// update database
 				await baseObj.SaveObjectDataInformationAsync(newRawData, baseObj.MimeType ?? MimeTypes.Application.OctetStream, true);
 				// update hash
-				baseObj.Tags.UpdateRevisionTags(true, new PpsObjectTag(hashTag, PpsObjectTagClass.Text, newHash));
+				baseObj.Tags.UpdateRevisionTags(true, new PpsObjectTag(HashTag, PpsObjectTagClass.Text, newHash));
 				// update tags
 				await baseObj.UpdateLocalAsync();
 
@@ -3375,7 +3377,7 @@ namespace TecWare.PPSn
 		[Obsolete("falsche verantwortung")]
 		public async Task ShellExecute()
 		{
-			var fileName = this.RevisionTags.GetProperty(PpsObjectBlobData.fileNameTag, (string)null);
+			var fileName = this.RevisionTags.GetProperty(PpsObjectBlobData.FileNameTag, (string)null);
 			if (String.IsNullOrEmpty(fileName))
 			{
 				await Environment.MsgBoxAsync("Datei kann nicht angezeigt werden. Anzeige Programm konnte nicht zugeordnet werden.");
@@ -4495,8 +4497,7 @@ order by t_liefnr.value desc
 			{
 				var newObject = await CreateNewObjectFromStreamAsync(src, Path.GetFileName(fileName));
 				newObject.Tags.UpdateRevisionTags(true,
-					new PpsObjectTag("FileName", PpsObjectTagClass.Text, fileName),
-					new PpsObjectTag("LastWriteTime", PpsObjectTagClass.Date, lastWriteTime.ChangeType<string>())
+					new PpsObjectTag(PpsObjectBlobData.LastWriteTimeTag, PpsObjectTagClass.Date, lastWriteTime.ChangeType<string>())
 				);
 
 				// write changes
@@ -4521,7 +4522,7 @@ order by t_liefnr.value desc
 				// create the new empty object
 				var newObject = await CreateNewObjectAsync(ObjectInfos[AttachmentObjectTyp], mimeType);
 				newObject.Tags.UpdateRevisionTags(true,
-					new PpsObjectTag(PpsObjectBlobData.fileNameTag, PpsObjectTagClass.Text, name)
+					new PpsObjectTag(PpsObjectBlobData.FileNameTag, PpsObjectTagClass.Text, name)
 				);
 
 				// import the data
