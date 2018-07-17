@@ -312,7 +312,7 @@ namespace TecWare.PPSn
 	#region -- class PpsMasterDataRow -------------------------------------------------
 
 	/// <summary>Represents a datarow of a master data table.</summary>
-	public sealed class PpsMasterDataRow : DynamicDataRow, INotifyPropertyChanged
+	public sealed class PpsMasterDataRow : DynamicDataRow, IDataValues2, INotifyPropertyChanged
 	{
 		/// <summary>Is called if a value gets changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -391,6 +391,27 @@ namespace TecWare.PPSn
 			}
 		} // func TryGetProperty
 
+		private PpsMasterDataRow GetParentRow(int index, PpsDataColumnDefinition column)
+		{
+			var masterDataTable = owner.MasterData.GetTable(column.ParentColumn.Table);
+			return masterDataTable?.GetRowById(values[index].ChangeType<long>());
+		} // func GetParentRow
+
+		bool IDataValues2.TryGetRelatedDataRow(int index, out IDataRow row)
+		{
+			var columnInfo = owner.GetColumnDefinition(index);
+			if (columnInfo.IsRelationColumn)
+			{
+				row = GetParentRow(index, columnInfo);
+				return row != null;
+			}
+			else
+			{
+				row = null;
+				return false;
+			}
+		} // func TryGetRelatedDataRow
+
 		/// <summary>Access the column decriptions.</summary>
 		public override IReadOnlyList<IDataColumn> Columns
 			=> owner.Columns;
@@ -407,10 +428,7 @@ namespace TecWare.PPSn
 				{
 					var column = owner.GetColumnDefinition(index);
 					if (column.IsRelationColumn) // return the related row
-					{
-						var masterDataTable = owner.MasterData.GetTable(column.ParentColumn.Table);
-						return masterDataTable?.GetRowById(values[index].ChangeType<long>());
-					}
+						return GetParentRow(index, column);
 					else
 						return values[index];
 				}
@@ -767,7 +785,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsMasterData ------------------------------------------------------
+	#region -- class PpsMasterData ----------------------------------------------------
 
 	/// <summary></summary>
 	public sealed class PpsMasterData : IDynamicMetaObjectProvider, IDisposable

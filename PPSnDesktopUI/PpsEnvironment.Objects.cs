@@ -25,7 +25,6 @@ using System.Dynamic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -1743,6 +1742,8 @@ namespace TecWare.PPSn
 					 || !isDirty)
 					return;
 
+				var tableModified = false;
+
 				using (var updateCommand = transaction.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = @LClass, LocalValue = @LValue, UserId = @UserId, CreateDate = @CreationDate, _IsUpdated = 1 WHERE Id = @Id"))
 				using (var insertCommand = transaction.CreateNativeCommand("INSERT INTO main.[ObjectTags] (Id, ObjectId, Key, LocalClass, LocalValue, UserId, CreateDate, _IsUpdated) VALUES (@Id, @ObjectId, @Key, @LClass, @LValue, @UserId, @CreationDate, 1)"))
 				using (var deleteCommand = transaction.CreateNativeCommand("DELETE FROM main.[ObjectTags] WHERE Id = @Id"))
@@ -1765,7 +1766,6 @@ namespace TecWare.PPSn
 
 					var nextLocalId = (long?)null;
 
-					var tableModified = false;
 					foreach (var cur in revisionTags.Concat<PpsObjectEditableTag>(userTags))
 					{
 						if (cur.IsDirty)
@@ -1840,7 +1840,8 @@ namespace TecWare.PPSn
 				transaction.AddRollbackOperation(SetDirty);
 
 				// set isObjectTagsChanged to true
-				transaction.RaiseOperationEvent(new PpsDataTableOperationEventArgs(parent.Environment.MasterData.ObjectTagsTable, PpsDataRowOperation.TableChanged));
+				if (tableModified)
+					transaction.RaiseOperationEvent(new PpsDataTableOperationEventArgs(parent.Environment.MasterData.ObjectTagsTable, PpsDataRowOperation.TableChanged));
 			}
 		} // proc UpdateLocal
 
@@ -3472,6 +3473,9 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public async Task UpdateLocalAsync()
 		{
+			if (!isDirty)
+				return;
+
 			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			{
 				UpdateLocalInternal(trans); // blocking operation, currently!!!
@@ -4533,9 +4537,12 @@ order by t_liefnr.value desc
 					using (var dst = data.OpenStream(FileAccess.Write))
 						await dataSource.CopyToAsync(dst);
 
-					// write changes, also tags
+					// write changes
 					await dataAccess.CommitAsync();
 				}
+
+				// write pending object changes (normally isdirty false)
+				await newObject.UpdateLocalAsync();
 
 				trans.Commit();
 				return newObject;
