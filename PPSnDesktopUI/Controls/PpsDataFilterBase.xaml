@@ -1,4 +1,4 @@
-﻿<!--
+﻿	<!--
 Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
 European Commission - subsequent versions of the EUPL(the "Licence"); You may
 not use this work except in compliance with the Licence.
@@ -120,7 +120,7 @@ specific language governing permissions and limitations under the Licence.
 									  PopupAnimation="Slide"
 									  MinWidth="{TemplateBinding ActualWidth}"
 									  MinHeight="122"
-									  MaxHeight="300">
+									  MaxHeight="325">
 							<Border BorderThickness="{TemplateBinding BorderThickness}"
 									BorderBrush="{DynamicResource PPSnControlFocusedBorderBrush}"
 									Background="{TemplateBinding Background}">
@@ -196,10 +196,12 @@ specific language governing permissions and limitations under the Licence.
 		<Style.Setters>
 			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterListDefaultItemTemplate}" />
 			<Setter Property="ItemContainerStyle" Value="{DynamicResource PPSnAlternatingListBoxItemStyle}" />
+			<Setter Property="IsSynchronizedWithCurrentItem" Value="True" />
 			<Setter Property="AlternationCount" Value="2" />
 			<Setter Property="ListBoxStyle" Value="{DynamicResource PPSnListBoxStyle}" />
 			<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
-			<Setter Property="Focusable" Value="False"/>
+			<Setter Property="Focusable" Value="False" />
+			<Setter Property="Padding" Value="0,0,0,6" />
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type pps:PpsDataFilterList}">
@@ -213,7 +215,7 @@ specific language governing permissions and limitations under the Licence.
 								  HorizontalAlignment="Right"
 								  Width="{StaticResource FixSearchBoxWidth}"
 								  Height="23"
-								  Margin="0,0,0,6">
+								  Margin="{TemplateBinding Padding}">
 								<Grid.ColumnDefinitions>
 									<ColumnDefinition/>
 									<ColumnDefinition Width="20"/>
@@ -230,15 +232,16 @@ specific language governing permissions and limitations under the Licence.
 									</Canvas>
 								</Viewbox>
 							</Grid>
+
 							<ListBox x:Name="PART_FilteredItemsListBox"
+									 IsSynchronizedWithCurrentItem="{TemplateBinding IsSynchronizedWithCurrentItem}"
+									 SelectedValue="{Binding Path=SelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
 									 Focusable="True"
 									 IsTabStop="False"
 									 Grid.Row="1"
-									 IsSynchronizedWithCurrentItem="False"
 									 ItemsSource="{TemplateBinding FilteredItemsSource}"
 									 ItemTemplate="{TemplateBinding ItemTemplate}"
 									 ItemContainerStyle="{TemplateBinding ItemContainerStyle}"
-									 SelectedValue="{Binding Path=SelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
 									 Style="{TemplateBinding ListBoxStyle}"
 									 AlternationCount="{TemplateBinding AlternationCount}"
 									 ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
