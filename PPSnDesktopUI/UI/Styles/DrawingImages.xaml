@@ -170,6 +170,7 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="contactsPathGeometry" 
 				  Figures="M20,0H4V2H20V0M4,24H20V22H4V24M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M12,6.75A2.25,2.25 0 0,1 14.25,9A2.25,2.25 0 0,1 12,11.25A2.25,2.25 0 0,1 9.75,9A2.25,2.25 0 0,1 12,6.75M17,17H7V15.5C7,13.83 10.33,13 12,13C13.67,13 17,13.83 17,15.5V17Z" />
 
+
 	<!-- widgets-->
 	<PathGeometry x:Key="projectPathGeometry" 
 				  Figures="M3,3H11V7.34L16.66,1.69L22.31,7.34L16.66,13H21V21H13V13H16.66L11,7.34V11H3V3M3,13H11V21H3V13Z" />
@@ -182,7 +183,7 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="plusPathGeometry" 
 				  Figures="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
 
-	<!-- account-->
+	<!-- accunt-->
 	<PathGeometry x:Key="accountPathGeometry" 
 				  Figures="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
 
@@ -265,5 +266,13 @@ specific language governing permissions and limitations under the Licence.
 
 	<PathGeometry x:Key="menuPathGeometry"
 				  Figures="M4,7 L20,7 20,8 4,8 4,7 M4,11 L20,11 20,12 4,12 4,11 M4,15 L20,15 20,16 4,16 4,15 Z"/>
+
+	<!-- domain-->
+	<PathGeometry x:Key="domainPathGeometry"
+				  Figures="M18,15H16V17H18M18,11H16V13H18M20,19H12V17H14V15H12V13H14V11H12V9H20M10,7H8V5H10M10,11H8V9H10M10,15H8V13H10M10,19H8V17H10M6,7H4V5H6M6,11H4V9H6M6,15H4V13H6M6,19H4V17H6M12,7V3H2V21H22V7H12Z"/>
+
+	<!-- factory-->
+	<PathGeometry x:Key="factoryPathGeometry" 
+				  Figures="M4,18V20H8V18H4M4,14V16H14V14H4M10,18V20H14V18H10M16,14V16H20V14H16M16,18V20H20V18H16M2,22V8L7,12V8L12,12V8L17,12L18,2H21L22,12V22H2Z" />
 
 </ResourceDictionary>
