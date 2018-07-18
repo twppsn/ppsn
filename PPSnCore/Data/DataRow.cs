@@ -128,10 +128,24 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- class IPpsDataRow ------------------------------------------------------
+
+	/// <summary>Support for related DataRow's.</summary>
+	public interface IDataValues2 : IDataValues
+	{
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <param name="row"></param>
+		/// <returns></returns>
+		bool TryGetRelatedDataRow(int index, out IDataRow row);
+	} // interface IDataValues2
+
+	#endregion
+
 	#region -- class PpsDataRow -------------------------------------------------------
 
 	/// <summary>DataRow implementation for DataTables.</summary>
-	public class PpsDataRow : IDynamicMetaObjectProvider, IDataRow, INotifyPropertyChanged, ICustomTypeDescriptor
+	public class PpsDataRow : IDynamicMetaObjectProvider, IDataRow, IDataValues2, INotifyPropertyChanged, ICustomTypeDescriptor
 	{
 		#region -- class NotSetValue --------------------------------------------------
 
@@ -303,7 +317,7 @@ namespace TecWare.PPSn.Data
 
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
 			{
-				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+				if (IsStandardMember(LimitType, binder.Name))
 					return base.BindGetMember(binder);
 
 				return BindDataColumn(binder.Name, Expression.Constant(null, typeof(object)));
@@ -311,7 +325,7 @@ namespace TecWare.PPSn.Data
 
 			public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value)
 			{
-				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+				if (IsStandardMember(LimitType, binder.Name))
 					return base.BindSetMember(binder, value);
 
 				var columnIndex = Row.table.TableDefinition.FindColumnIndex(binder.Name);
@@ -337,7 +351,7 @@ namespace TecWare.PPSn.Data
 
 			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
 			{
-				if (args.Length > 0 || PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+				if (args.Length > 0 || IsStandardMember(LimitType, binder.Name))
 					return base.BindInvokeMember(binder, args);
 				else
 				{
@@ -345,23 +359,19 @@ namespace TecWare.PPSn.Data
 						new Expression[]
 						{
 							Expression.Constant(binder.Name),
-							Expression.Constant(String.Format("Could not resolve column {0} in table {1}.", binder.Name, Row.Table.TableName))
+							Expression.Constant($"Could not resolve column {binder.Name} in table { Row.Table.TableName}.")
 						}
 					), typeof(object)));
 				}
 			} // func BindInvokeMember
 
 			public override IEnumerable<string> GetDynamicMemberNames()
-			{
-				foreach (var col in Row.table.Columns)
-					yield return col.Name;
-			} // func GetDynamicMemberNames
+				=> Row.table.Columns.Select(c => c.Name);
 
 			protected abstract PpsDataRow Row { get; }
 			protected abstract PropertyInfo ItemInfo { get; }
 		} // class PpsDataRowMetaObject
 
-		/// <summary></summary>
 		private sealed class PpsDataRowMetaObject : PpsDataRowBaseMetaObject
 		{
 			public PpsDataRowMetaObject(Expression expression, object value)
@@ -369,11 +379,10 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
-			protected override PpsDataRow Row { get { return (PpsDataRow)Value; } }
-			protected override PropertyInfo ItemInfo { get { return ItemPropertyInfo; } }
+			protected override PpsDataRow Row => (PpsDataRow)Value;
+			protected override PropertyInfo ItemInfo => ItemPropertyInfo;
 		} // class PpsDataRowMetaObject
 
-		/// <summary></summary>
 		private sealed class PpsDataRowValuesMetaObject : PpsDataRowBaseMetaObject
 		{
 			public PpsDataRowValuesMetaObject(Expression expression, object value)
@@ -381,8 +390,8 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
-			protected override PpsDataRow Row { get { return ((RowValues)Value).Row; } }
-			protected override PropertyInfo ItemInfo { get { return ValuesPropertyInfo; } }
+			protected override PpsDataRow Row => ((RowValues)Value).Row;
+			protected override PropertyInfo ItemInfo => ValuesPropertyInfo;
 		} // class PpsDataRowValuesMetaObject
 
 		#endregion
@@ -517,7 +526,7 @@ namespace TecWare.PPSn.Data
 		private object[] originalValues;
 		private object[] currentValues;
 
-		private object relationFilterLock = new object();
+		private readonly object relationFilterLock = new object();
 		private List<PpsDataRelatedFilter> relationFilter = null;
 		private Dictionary<PpsDataColumnDefinition, PpsDataRow> parentRows = new Dictionary<PpsDataColumnDefinition, PpsDataRow>();
 
@@ -923,8 +932,6 @@ namespace TecWare.PPSn.Data
 
 		#region -- OnPropertyChanged ------------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class PpsDataRowPropertyChangedEvent : PpsDataChangedEvent
 		{
 			private readonly PpsDataRow row;
@@ -952,8 +959,7 @@ namespace TecWare.PPSn.Data
 					return true;
 				else
 				{
-					var other = ev as PpsDataRowPropertyChangedEvent;
-					return other != null ? 
+					return ev is PpsDataRowPropertyChangedEvent other ?
 						other.row == row && other.propertyName == propertyName && Object.Equals(other.newValue, newValue) :
 						false;
 				}
@@ -1014,8 +1020,8 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public object this[int columnIndex]
 		{
-			get { return currentValuesProxy[columnIndex]; }
-			set { currentValuesProxy[columnIndex] = value; }
+			get => currentValuesProxy[columnIndex];
+			set => currentValuesProxy[columnIndex] = value;
 		} // prop this
 
 		/// <summary>Zugriff auf den aktuellen Wert.</summary>
@@ -1024,8 +1030,8 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public object this[string columnName, bool throwException = true]
 		{
-			get { return currentValuesProxy[columnName, throwException]; }
-			set { currentValuesProxy[columnName, throwException] = value; }
+			get => currentValuesProxy[columnName, throwException];
+			set => currentValuesProxy[columnName, throwException] = value;
 		} // prop this
 
 		/// <summary>Zugriff auf die aktuellen Werte</summary>
@@ -1134,6 +1140,21 @@ namespace TecWare.PPSn.Data
 				return null;
 		} // func GetParentRow
 
+		bool IDataValues2.TryGetRelatedDataRow(int index, out IDataRow row)
+		{
+			var columnInfo = Table.Columns[index];
+			if (columnInfo.IsRelationColumn)
+			{
+				row = GetParentRow(columnInfo);
+				return row != null;
+			}
+			else
+			{
+				row = null;
+				return false;
+			}
+		} // func TryGetRelatedDataRow
+
 		#endregion
 
 		#region -- ICustomTypeDescriptor members --------------------------------------
@@ -1173,7 +1194,7 @@ namespace TecWare.PPSn.Data
 
 		object ICustomTypeDescriptor.GetPropertyOwner(PropertyDescriptor pd)
 			=> this;
-		
+
 		#endregion
 
 		/// <summary>Zugehörige Datentabelle</summary>
@@ -1181,9 +1202,10 @@ namespace TecWare.PPSn.Data
 
 		// todo: Implement missing functionality. Change PpsDataTable > PpsDataTableDefinition > PpsDataTableMetaCollection > PpsMetaCollection implementation. ?Expectation: "IDataColumn[] IDataColumns.Columns = table.Columns;"?
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columnsArray.Value;
-
+		
 		// -- Static --------------------------------------------------------------
 
+#pragma warning disable IDE1006 // Naming Styles
 		private static readonly PropertyInfo RowStatePropertyInfo;
 		private static readonly PropertyInfo ItemPropertyInfo;
 		private static readonly PropertyInfo CurrentPropertyInfo;
@@ -1196,6 +1218,7 @@ namespace TecWare.PPSn.Data
 
 		private static readonly PropertyInfo ValuesPropertyInfo;
 		private static readonly FieldInfo RowFieldInfo;
+#pragma warning restore IDE1006 // Naming Styles
 
 		#region -- sctor --------------------------------------------------------------
 

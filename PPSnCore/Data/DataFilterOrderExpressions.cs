@@ -2142,21 +2142,32 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public static bool RtDataRowSearchFullText(IDataRow row, string text, bool startsWith)
+			=> RtDataRowSearchFullText(row, text, startsWith, 0);
+		
+		private static bool RtDataRowSearchFullText(IDataRow row, string text, bool startsWith, int level)
 		{
 			if (row == null)
 				return false;
 
 			for (var i = 0; i < row.Columns.Count; i++)
 			{
-				var v = row[i];
-				if (v == null)
-					continue;
+				if (level < 3 && row is IDataValues2 r && r.TryGetRelatedDataRow(i, out var relatedRow))
+				{
+					if (RtDataRowSearchFullText(relatedRow, text, startsWith, level + 1))
+						return true;
+				}
+				else
+				{
+					var v = row[i];
+					if (v == null)
+						continue;
 
-				var s = v.ChangeType<string>();
-				if (startsWith && s.StartsWith(text, StringComparison.OrdinalIgnoreCase))
-					return true;
-				else if (!startsWith && s.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
-					return true;
+					var s = v.ChangeType<string>();
+					if (startsWith && s.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+						return true;
+					else if (!startsWith && s.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
+						return true;
+				}
 			}
 
 			return false;
