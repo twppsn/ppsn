@@ -138,13 +138,8 @@ specific language governing permissions and limitations under the Licence.
 														Background="Transparent"
 														MaxLength="128"
 														Text="{Binding FilterText, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=400}"/>
-										<Viewbox Grid.Column="1" Margin="0,0,2,0">
-											<Canvas Width="24" Height="24" Opacity=".65">
-												<Path Data="{DynamicResource magnifyPathGeometry}"
-													  Fill="{TemplateBinding Foreground}"
-													  SnapsToDevicePixels="False"/>
-											</Canvas>
-										</Viewbox>
+										<pps:PpsGeometryImage Grid.Column="1" GeometryName="magnify" GeometryCircled="False"
+															  Opacity=".65" SnapsToDevicePixels="False" Margin="1,1,1,1" />
 									</Grid>
 									<ListBox x:Name="PART_FilteredItemsListBox"
 											 Grid.Row="1"
@@ -224,13 +219,9 @@ specific language governing permissions and limitations under the Licence.
 												Background="Transparent"
 												MaxLength="128"
 												Text="{Binding FilterText, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=400}"/>
-								<Viewbox Grid.Column="1" Margin="0,1,2,1">
-									<Canvas Width="24" Height="24" Opacity=".65">
-										<Path Data="{DynamicResource magnifyPathGeometry}"
-											  Fill="{DynamicResource PPSnWindowForegroundBrush}"
-											  SnapsToDevicePixels="False"/>
-									</Canvas>
-								</Viewbox>
+								<pps:PpsGeometryImage Grid.Column="1" GeometryName="magnify" GeometryCircled="False"
+													  Foreground="{DynamicResource PPSnWindowForegroundBrush}" Opacity=".65"
+													  SnapsToDevicePixels="False" Margin="1,2,1,2" />
 							</Grid>
 
 							<ListBox x:Name="PART_FilteredItemsListBox"
