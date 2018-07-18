@@ -279,6 +279,7 @@ namespace TecWare.PPSn.Controls
 
 			filteredListBox.ScrollIntoView(item);
 
+
 			// clear selection?
 			if (SelectedValue == null)
 				filteredListBox.Items.MoveCurrentToPosition(-1);
@@ -368,13 +369,13 @@ namespace TecWare.PPSn.Controls
 							Navigate(FocusNavigationDirection.Last);
 					}
 					break;
-				case Key.Enter:
-					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
-					{
-						e.Handled = true;
-						HideFilteredList(true);
-					}
-					break;
+				//case Key.Enter:
+				//	if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
+				//	{
+				//		e.Handled = true;
+				//		HideFilteredList(true);
+				//	}
+				//	break;
 			}
 			base.OnPreviewKeyDown(e);
 		}
@@ -648,6 +649,13 @@ namespace TecWare.PPSn.Controls
 						var newLast = Math.Max(filteredListBox.SelectedIndex - visibleindexes.Count() + 3, 0);
 						filteredListBox.SelectedIndex = newLast;
 						filteredListBox.ScrollIntoView(filteredListBox.Items[newLast]);
+					}
+					break;
+				case Key.Enter:
+					if (IsDropDownOpen && PreSelectedValue != null && e.KeyboardDevice.Modifiers == ModifierKeys.None)
+					{
+						e.Handled = true;
+						CloseDropDown(true);
 					}
 					break;
 			}
