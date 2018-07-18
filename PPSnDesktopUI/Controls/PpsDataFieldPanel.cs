@@ -312,7 +312,10 @@ namespace TecWare.PPSn.Controls
 			childwidth = Math.Max(childwidth, MinColumnWidth - LabelWidth);
 
 			foreach (var child in PlaceableChildren)
-				child.Measure(new Size(childwidth + (GetFullWidth(child) ? LabelWidth : 0), GetGridLines(child) * RowHeight));
+			{
+				var width = Math.Floor(childwidth + (GetFullWidth(child) ? LabelWidth : 0));
+				child.Measure(new Size(width, GetGridLines(child) * RowHeight));
+			}
 
 			var highestColumn = columnDefinitions.Max();
 
@@ -377,7 +380,7 @@ namespace TecWare.PPSn.Controls
 
 					var controlRect = new Rect(columnX + thisLabelWidth,
 											   line * (RowHeight + RowMargin),
-											   columnWidth - thisLabelWidth,
+											   Math.Floor(columnWidth - thisLabelWidth),
 											   controlLines * RowHeight + (controlLines - 1) * RowMargin);
 					child.Arrange(controlRect);
 
