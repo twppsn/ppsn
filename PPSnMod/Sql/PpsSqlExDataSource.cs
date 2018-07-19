@@ -1607,7 +1607,7 @@ namespace TecWare.PPSn.Server.Sql
 				masterConnection.ConnectionString = sqlConnectionString.ToString();
 
 				// start background thread
-				databaseMainThread = new DEThread(this, "Database", () => ExecuteDatabaseAsync());
+				databaseMainThread = new DEThread(this, "Database", ExecuteDatabaseAsync);
 			}
 		} // proc InitMasterConnection
 
@@ -1715,11 +1715,11 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- Execute Database ---------------------------------------------------
 
-		private async Task ExecuteDatabaseAsync()
+		private async Task ExecuteDatabaseAsync(DEThread thread)
 		{
 			var lastChangeTrackingId = -1L;
 
-			while (databaseMainThread.IsRunning)
+			while (thread.IsRunning)
 			{
 				var executeStartTick = Environment.TickCount;
 				try
