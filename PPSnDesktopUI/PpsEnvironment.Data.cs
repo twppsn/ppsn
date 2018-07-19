@@ -392,10 +392,8 @@ namespace TecWare.PPSn
 		} // func TryGetProperty
 
 		private PpsMasterDataRow GetParentRow(int index, PpsDataColumnDefinition column)
-		{
-			var masterDataTable = owner.MasterData.GetTable(column.ParentColumn.Table);
-			return masterDataTable?.GetRowById(values[index].ChangeType<long>());
-		} // func GetParentRow
+			=> owner.MasterData.GetTable(column.ParentColumn.Table)
+				?.GetRowById(values[index].ChangeType<long>());
 
 		bool IDataValues2.TryGetRelatedDataRow(int index, out IDataRow row)
 		{
