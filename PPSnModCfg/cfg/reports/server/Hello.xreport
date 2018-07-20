@@ -9,11 +9,38 @@
 			<filter>Id:=$Id</filter>
 		</list>
 	</data>
+	
+<Options mainlanguage="German" />
 
 	<Trace grid="yes"/>
 
+	<SetGrid nx="30" height="12pt"/>
 	<DefineColor name="weiß" value="#fff"/>
 	<DefineColor name="grau" value="#eee"/>
+	<DefineColor name="marked" model="rgb" r="100" g="0" b="0"/>
+	<!-- model="spotcolor" colorname="PANTONE 116 C" -->
+	<DefineFontfamily name="head1" fontsize="14" leading="18">
+		<Regular fontface="TeXGyreHeros-Regular" />
+		<Bold fontface="TeXGyreHeros-Bold"/>
+		<Italic fontface="TeXGyreHeros-Italic"/>
+	</DefineFontfamily>
+	<DefineFontfamily name="head2" fontsize="12" leading="16">
+		<Regular fontface="TeXGyreHeros-Regular" />
+		<Bold fontface="TeXGyreHeros-Bold"/>
+		<Italic fontface="TeXGyreHeros-Italic"/>
+	</DefineFontfamily>
+	<DefineFontfamily name="klein" fontsize="8" leading="10">
+		<Regular fontface="TeXGyreHeros-Regular" />
+		<Bold fontface="TeXGyreHeros-Bold"/>
+		<Italic fontface="TeXGyreHeros-Italic"/>
+	</DefineFontfamily>
+
+	<Pagetype name="page" test="true()">
+		<Margin left="10mm" right="5mm" top="10mm" bottom="10mm"/>
+		<PositioningArea name="Pos">
+			<PositioningFrame width="30" height="64" row="1" column="1"/>
+		</PositioningArea>
+	</Pagetype>
 
 	<Record element="data">
 		<PlaceObject>
@@ -69,5 +96,72 @@
 				</ForAll>
 			</Table>
 		</PlaceObject>
+		
+		<PlaceObject area="Pos">
+			<Table stretch="max" padding="4pt" border-collapse="collapse" >
+				<Columns>
+					<Column width="10"/>
+					<Column width="10"/>
+					<Column width="10"/>
+				</Columns>
+					<Tr valign="top" >
+						<Td align="left" border-bottom="0.25pt">
+							<Paragraph fontface="klein">
+								<Fontface fontfamily="head1">
+									<B>
+										<Value>Überschrift 1</Value>
+									</B>
+								</Fontface>
+							</Paragraph>
+							<Paragraph fontface="klein">
+								<Fontface fontfamily="head2">
+									<B>
+										<Value>Überschrift 2</Value>
+									</B>
+								</Fontface>
+							</Paragraph>
+						</Td>
+						<Td align="left" border-bottom="0.25pt">
+							<Paragraph>
+								<Value>Hallo </Value>
+								<B>
+									<Value>Welt</Value>
+								</B>
+								<Value>!</Value>
+							</Paragraph>
+							<Paragraph>
+								<Value>hier noch etwas </Value>
+								<I>
+									<Value>kursives</Value>
+								</I>
+							</Paragraph>
+							<Paragraph>
+								<Value>und noch was =markiertes=</Value>
+							</Paragraph>
+							<Paragraph>
+								<Value>und was </Value>
+								<U>
+									<Value>unterstrichenes</Value>
+								</U>
+							</Paragraph>
+							<Paragraph>
+								<Value>mal sehen ob es klappt</Value>
+							</Paragraph>
+						</Td>
+						<Td align="right" border-bottom="0.25pt">
+							<Paragraph>
+								<Value>hier ist etwas </Value>
+								<Color name="marked">
+									<Value>markiert</Value>
+								</Color>
+							</Paragraph>
+							<Paragraph>
+								<Value>mal schauen</Value>
+							</Paragraph>
+						</Td>
+					</Tr>
+			</Table>
+		</PlaceObject>
+
 	</Record>
 </Layout>
