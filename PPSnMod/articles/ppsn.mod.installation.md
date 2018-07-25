@@ -1,52 +1,108 @@
 ---
 uid: ppsn.mod.installation
-title: Installation of PPSnMod for Production
+title: Installation des PPSnMod-Modules
 ---
 
 # Installation des PPSn Servers
 
+## 0. Vorbedingungen
+
+@des.installation.dc
+
 ## I. Installation des DE-Servers
 
-[!include[includetest3](~/des/articles/usersmanual/des.installationforppsn.md)]
+[!include[Installation of the DE-Server](~/des/articles/usersmanual/des.installationforppsn.md)]
 
 ## II. [Speedata](https://www.speedata.de) einrichten
 
-1. PowerShell in <i>[Arbeitsverzeichnis]\\speedata</i> starten
-   ```bash
-   update.ps1
-   ```
+```bash
+[Arbeitsverzeichnis]\Speedata\update.ps1 [-targetDirectory] [-version]
+```
 
-## III. Datenbankkonfiguration
+> [!NOTE]
+> | Parameter | Beispiel | Bemerkung |
+> | --- | --- | --- |
+> | targetDirectory | -targetDirectory [Arbeitsverzeichnis]\Speedata | wird er weg gelassen, werden die Dateien in das aktuelle Verzeichnis kopiert |
+> | version | -version 3.2.0 | kann weggelassen werden, sofern Version 3.2.0 (default) installiert werden soll |
+
+## III. PPSn Datenbank einrichten
 
 Es sollte MS SQL Server 2016 (oder höher) Standart Edition oder höher installiert sein.
 
-1. Filestream für E/A-Dateizugriff aktivieren <span style="color:red">ToDo: bebildern/Weg zum Menü aufzeigen/SQL-Befehl anführen/alle drei Optionen beschreiben</span>
-2. Abfrage ausführen
-    ```sql
-    EXEC sp_configure filestream_access_level, 2;
-    RECONFIGURE;
-    ```
-3. Datenbankpfad für Binärdateien einstellen <span style="color:red">ToDo: Bild</span>
-4. Datenbankpfad für Backups einstellen <span style="color:red">ToDo: Bild</span>
-5. Server neu starten
-
-## IV. PPSn Datenbank einrichten
+> [!TIP]
+> [Beispielhafte Installation](<xref:des.installation.dc#einrichtung-des-mssql-servers-2016>)
 
 1. Das Datenbankschema importieren.
-   ```sql
-   sqlcmd -S [SERVERNAME]\[INSTANCE_NAME] -i \PPSnMaster.sql -o [Arbeitsverzeichnis]\Log\database_import_log.txt
+   ```bash
+   sqlcmd -S [Servername]\[Instanzname] -i [Arbeitsverzeichnis]\Temp\PPSnMaster.publish.sql -o [Arbeitsverzeichnis]\Log\database_import_log.txt
+   # Ausgabe überprüfen
+   cat [Arbeitsverzeichnis]\Log\database_import_log.txt
    ```
-2. Nutzer des PPSn anlegen <span style="color:red">ToDo: SQL-Befehle/Admin-Tool</span>
 
-## V. PPSn-Server konfigurieren
+   > [!NOTE]
+   > | Variable | Beispiel |
+   > | --- | --- |
+   > | [Arbeitsverzeichnis] | C:\DEServer |
+   > | [Instanzname] | PPSnDatabase |
+   > | [Servername] | localhost |
+
+1. Der Nutzer unter dem der DE-Server gestartet wird, muss Zugriff auf die Datenbank erhalten
+   ```bash
+   Invoke-Sqlcmd -ServerInstance "[Servername]\[Instanzname]" -Query "CREATE LOGIN [[DES-Benutzername]] FROM WINDOWS"
+   Invoke-Sqlcmd -ServerInstance "[Servername]\[Instanzname]" -Query "exec sp_addsrvrolemember @loginame='[DES-Benutzername]', @rolename=sysadmin"
+   ```
+
+   > [!NOTE]
+   > | Variable | Beispiel |
+   > | --- | --- |
+   > | [Arbeitsverzeichnis] | C:\DEServer |
+   > | [DES-Benutzername] | ppsn\PPSnServiceUser$ |
+   > | [Instanzname] | PPSnDatabase |
+   > | [Servername] | localhost |
+
+1. <i>Development use only</i> Testnutzer des PPSn anlegen
+   ```bash
+   Invoke-Sqlcmd -ServerInstance "localhost\PPSnDatabase" -Query "USE [Datenbankname];
+    DECLARE @objkId BIGINT;
+    DECLARE @ktktId BIGINT;
+    DECLARE @nr NVARCHAR(20);
+    SET @nr = 'P000001';
+	INSERT INTO dbo.ObjK ([Guid], [Typ], [MimeType], [Nr], [IsRev]) VALUES (NEWID(), 'crmContacts', 'text/dataset', @nr, 0);
+	SET @objkId = @@IDENTITY;
+	INSERT INTO [dbo].[Ktkt] ([ObjkId], [ParentId], [Name], [KurzName]) VALUES (@objkId, NULL,'Max Mustermann','mm');
+	SET @ktktId = @@IDENTITY;
+	INSERT INTO [dbo].[User] ([Login], [Security], [LoginVersion], [KtktId]) VALUES ('[Benutzername]', 'desSys', 0, @ktktId);
+	INSERT INTO [dbo].[Pers] ([KtktId], [Kurz]) VALUES (@ktktId, 'mm');
+	INSERT INTO dbo.ObjT ([ObjkId], [ObjRId], [Class], [UserId], [Key], [Value]) VALUES (@objkId, null, 0, 0, 'Name', 'Max Mustermann');"
+   ```
+
+   > [!NOTE]
+   > | Variable | Beispiel |
+   > | --- | --- |
+   > | [Datenbankname] | PPSn1 |
+   > | [Benutzername] | ppsn\Administrtator |
+   > | [Instanzname] | PPSnDatabase |
+   > | [Servername] | localhost |
+
+## IV. PPSn-Server konfigurieren
 
 In der Datei <i>[Arbeitsverzeichnis]\\Cfg\\PPSn.xml</i> folgene Anpassungen vornehmen:
 
-* Die Eigenschaft <b>des-var-webBinding</b> muss entsprechend der Gegebenheiten angepasst werden. bei <b>localhost</b> ist der Server nur lokal erreichbar. Dies is ausreichend, sofern der Server nur über einen lokalen Proxy oder über einen Tunnel erreichbar sein soll.  
-    Normalerweise ist hier die IP-Adresse oder der Hostname (FQDN) anzugeben, um den Server im Netzwerk erreichbart zu machen - dies, als auch ein Port kleiner 1024, erfordert einen Start des DE-Servers mit erhöhten Rechten!
-* <b>server logpath=</b> sollte auf <i>[Arbeitsverzeichnis]\\Log</i> verweisen
-* Reporting Pfad <span style="color:red">ToDo: wo wird der gesetzt?</span>
-* Die Eigenschaft <b>pps:connectionString</b> muss entsprechend der eingerichteten Datenbank gesetzt werden
+| Variable | Beispiel | Bemerkung |
+| --- | --- | --- |
+| des-var-webBinding | http://+:80 | Die Eigenschaft muss entsprechend der Gegebenheiten angepasst werden. Bei <b>localhost</b> ist der Server nur lokal erreichbar. Dies is ausreichend, sofern der Server nur über einen lokalen Proxy oder über einen Tunnel erreichbar sein soll. Bei <b>+</b> ist er von aussen erreichbar. |
+| des-var-reportSystem | C:\DEServer\Speedata\bin | zeigt auf das Verzeichnis der sp.exe <b>oder die Exe?</b> |
+| server logpath= | ..\Log | in diesem Verzeichnis werden die Log-Dateien angelegt. |
+| pps:connectionString | Data Source=localhost\PPSnDatabase; Integrated Security=True; Persist Security Info=False; Pooling=False; MultipleActiveResultSets=False ;Connect Timeout=60; Encrypt=False; TrustServerCertificate=True; Initial Catalog=PPSn | Data Source muss auf [Hostnamen]\ [Benannte Instanz der Datenbank] zeigen, Initial Catalog auf die angelegte Datenbank. |
+
+> [!IMPORTANT]
+> Wird der Hostname auf <b>+</b> gesetzt benötigt der DE-Server einen Eintrag in der URLACL.
+
+> [!IMPORTANT]
+> Wird der Port auf einen Wert kleiner <b>1024</b> gesetzt benötigt der DE-Server einen Eintrag in der URLACL.
+
+> [!IMPORTANT]
+> Der Benutzer unter dem der DE-Server gestartet wird, benötigt Schreibrechte auf das Log-Verzeichnis.
 
 ## Weitere Schritte
 
