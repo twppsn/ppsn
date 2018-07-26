@@ -1006,21 +1006,31 @@ namespace TecWare.PPSn
 					{
 						var webEx = ex as WebException;
 
-						switch (webEx?.Status ?? WebExceptionStatus.UnknownError)
+						if ((webEx.Response is HttpWebResponse httpResponse) && httpResponse.StatusCode == HttpStatusCode.Forbidden)
 						{
-							case WebExceptionStatus.NameResolutionFailure:
-							case WebExceptionStatus.Timeout:
-							case WebExceptionStatus.ConnectFailure:
-								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.ServerConnectFailure);
-								break;
-							case WebExceptionStatus.ProtocolError: // todo: detect Login failure
-								Traces.AppendException(webEx);
-								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
-								break;
-							default:
-								currentTransmission.SetException(ex);
-								currentTransmission = null;
-								break;
+							SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
+						}
+						else
+						{
+							switch (webEx?.Status ?? WebExceptionStatus.UnknownError)
+							{
+								case WebExceptionStatus.NameResolutionFailure:
+								case WebExceptionStatus.Timeout:
+								case WebExceptionStatus.ConnectFailure:
+									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.ServerConnectFailure);
+									break;
+								case WebExceptionStatus.ProtocolError:
+									Traces.AppendException(webEx);
+									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
+									break;
+								default:
+									if (currentTransmission != null)
+									{
+										currentTransmission.SetException(ex);
+										currentTransmission = null;
+									}
+									break;
+							}
 						}
 						state = PpsEnvironmentState.None;
 					}
