@@ -10,6 +10,11 @@ title: PPSnMod Fehlerbehebung
    ALTER LOGIN [Domain\User] WITH DEFAULT_DATABASE=[DB_NAME], DEFAULT_LANGUAGE=[Deutsch];
    CREATE USER [Domain\User] FOR LOGIN [Domain\User]
    ```
+1. Datenbank ist nicht verfügbar
+   ```bash
+   Get-Service | Where-Object {$_.Name -Match 'SQL'}
+   ```
+
 2. Fehlende Rechte an Objekten
    ```sql
    GRANT SELECT, INSERT, UPDATE, DELETE ON [Schema].[Objekt] TO public;
@@ -18,3 +23,11 @@ title: PPSnMod Fehlerbehebung
    ```sql
    GRANT VIEW CHANGE TRACKING ON [Schema].[Objekt] TO public;
    ```
+
+## Fehler in der Verbindung
+
+```bash
+([System.Net.WebRequest]::Create('http://[IP des DE-Servers]/ppsn/info.xml')).GetResponse().StatusCode
+```
+
+Die Antwort sollte <i>OK</i> lauten.
