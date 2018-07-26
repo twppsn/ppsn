@@ -44,12 +44,27 @@ namespace TecWare.PPSn.UI
 
 			if (dialogMode)
 			{
-				WindowStartupLocation = WindowStartupLocation.CenterOwner;
-				
+				if (Owner != null)
+					WindowStartupLocation = WindowStartupLocation.CenterOwner;
+				else
+					WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
+				if (Height > System.Windows.SystemParameters.VirtualScreenHeight)
+					Height = System.Windows.SystemParameters.VirtualScreenHeight - 75;
+				if (Width > System.Windows.SystemParameters.VirtualScreenWidth)
+					Width = System.Windows.SystemParameters.VirtualScreenWidth - 75;
 			}
 			else
 			{
+				if (Owner != null)
+					WindowStartupLocation = WindowStartupLocation.CenterOwner;
+				else
+					WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
+				if (Height > System.Windows.SystemParameters.VirtualScreenHeight)
+					Height = System.Windows.SystemParameters.VirtualScreenHeight - 75;
+				if (Width > System.Windows.SystemParameters.VirtualScreenWidth)
+					Width = System.Windows.SystemParameters.VirtualScreenWidth - 75;
 			}
 		} // ctor
 
