@@ -1,7 +1,9 @@
 - name: Users Manual
   items:
     - uid: ppsn.wpf.installation
-    - name: Startparameters
+    - uid: ppsn.wpf.commandline
+    - uid: ppsn.wpf.troubleshooting
+    - uid: ppsn.wpf.dev_installation
 - name: Filesystem
 - name: Panes
 - name: Lua-Reference
