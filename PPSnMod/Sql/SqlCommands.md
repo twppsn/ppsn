@@ -1,4 +1,9 @@
-﻿# Select
+﻿---
+uid: ppsn.mod.sqlcommands
+title: PPSnMod SQL-Befehle
+---
+
+# Select
 
 Most shown functions can be combined.
 
