@@ -1,6 +1,6 @@
 ---
 uid: ppsn.mod.installation
-title: Installation des PPSnMod-Modules
+title: Installation vons PPSnMod
 ---
 
 # Installation des PPSn Servers
@@ -22,8 +22,8 @@ title: Installation des PPSnMod-Modules
 > [!NOTE]
 > | Parameter | Beispiel | Bemerkung |
 > | --- | --- | --- |
-> | targetDirectory | -targetDirectory [Arbeitsverzeichnis]\Speedata | wird er weg gelassen, werden die Dateien in das aktuelle Verzeichnis kopiert |
-> | version | -version 3.2.0 | kann weggelassen werden, sofern Version 3.2.0 (default) installiert werden soll |
+> | targetDirectory | `-targetDirectory [Arbeitsverzeichnis]\Speedata` | wird er weg gelassen, werden die Dateien in das aktuelle Verzeichnis kopiert |
+> | version | `-version 3.2.0` | kann weggelassen werden, sofern Version 3.2.0 (default) installiert werden soll |
 
 ## III. PPSn Datenbank einrichten
 
@@ -42,9 +42,9 @@ Es sollte MS SQL Server 2016 (oder höher) Standart Edition oder höher installi
    > [!NOTE]
    > | Variable | Beispiel |
    > | --- | --- |
-   > | [Arbeitsverzeichnis] | C:\DEServer |
-   > | [Instanzname] | PPSnDatabase |
-   > | [Servername] | localhost |
+   > | [Arbeitsverzeichnis] | `C:\DEServer` |
+   > | [Instanzname] | `PPSnDatabase` |
+   > | [Servername] | `localhost` |
 
 1. Der Nutzer unter dem der DE-Server gestartet wird, muss Zugriff auf die Datenbank erhalten
    ```bash
@@ -55,10 +55,10 @@ Es sollte MS SQL Server 2016 (oder höher) Standart Edition oder höher installi
    > [!NOTE]
    > | Variable | Beispiel |
    > | --- | --- |
-   > | [Arbeitsverzeichnis] | C:\DEServer |
-   > | [DES-Benutzername] | ppsn\PPSnServiceUser$ |
-   > | [Instanzname] | PPSnDatabase |
-   > | [Servername] | localhost |
+   > | [Arbeitsverzeichnis] | `C:\DEServer` |
+   > | [DES-Benutzername] | `ppsn\PPSnServiceUser$` |
+   > | [Instanzname] | `PPSnDatabase` |
+   > | [Servername] | `localhost` |
 
 1. <i>Development use only</i> Testnutzer des PPSn anlegen
    ```bash
@@ -79,10 +79,10 @@ Es sollte MS SQL Server 2016 (oder höher) Standart Edition oder höher installi
    > [!NOTE]
    > | Variable | Beispiel |
    > | --- | --- |
-   > | [Datenbankname] | PPSn1 |
-   > | [Benutzername] | ppsn\Administrtator |
-   > | [Instanzname] | PPSnDatabase |
-   > | [Servername] | localhost |
+   > | [Datenbankname] | `PPSn1` |
+   > | [Benutzername] | `ppsn\Administrtator` |
+   > | [Instanzname] | `PPSnDatabase` |
+   > | [Servername] | `localhost` |
 
 ## IV. PPSn-Server konfigurieren
 
@@ -90,10 +90,10 @@ In der Datei <i>[Arbeitsverzeichnis]\\Cfg\\PPSn.xml</i> folgene Anpassungen vorn
 
 | Variable | Beispiel | Bemerkung |
 | --- | --- | --- |
-| des-var-webBinding | http://+:80 | Die Eigenschaft muss entsprechend der Gegebenheiten angepasst werden. Bei <b>localhost</b> ist der Server nur lokal erreichbar. Dies is ausreichend, sofern der Server nur über einen lokalen Proxy oder über einen Tunnel erreichbar sein soll. Bei <b>+</b> ist er von aussen erreichbar. |
-| des-var-reportSystem | C:\DEServer\Speedata\bin | zeigt auf das Verzeichnis der sp.exe <b>oder die Exe?</b> |
-| server logpath= | ..\Log | in diesem Verzeichnis werden die Log-Dateien angelegt. |
-| pps:connectionString | Data Source=localhost\PPSnDatabase; Integrated Security=True; Persist Security Info=False; Pooling=False; MultipleActiveResultSets=False ;Connect Timeout=60; Encrypt=False; TrustServerCertificate=True; Initial Catalog=PPSn | Data Source muss auf [Hostnamen]\ [Benannte Instanz der Datenbank] zeigen, Initial Catalog auf die angelegte Datenbank. |
+| des-var-webBinding | `http://+:80` | Die Eigenschaft muss entsprechend der Gegebenheiten angepasst werden. Bei <b>localhost</b> ist der Server nur lokal erreichbar. Dies is ausreichend, sofern der Server nur über einen lokalen Proxy oder über einen Tunnel erreichbar sein soll. Bei <b>+</b> ist er von aussen erreichbar. |
+| des-var-reportSystem | `C:\DEServer\Speedata\bin` | zeigt auf das Verzeichnis der sp.exe <b>oder die Exe?</b> |
+| server logpath= | `..\Log` | in diesem Verzeichnis werden die Log-Dateien angelegt. |
+| pps:connectionString | `Data Source=localhost\PPSnDatabase; Integrated Security=True; Persist Security Info=False; Pooling=False; MultipleActiveResultSets=False ;Connect Timeout=60; Encrypt=False; TrustServerCertificate=True; Initial Catalog=PPSn` | Data Source muss auf [Hostnamen]\ [Benannte Instanz der Datenbank] zeigen, Initial Catalog auf die angelegte Datenbank. |
 
 > [!IMPORTANT]
 > Wird der Hostname auf <b>+</b> gesetzt benötigt der DE-Server einen Eintrag in der URLACL.

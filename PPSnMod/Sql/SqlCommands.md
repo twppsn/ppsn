@@ -1,11 +1,22 @@
-﻿# Select
+﻿---
+uid: ppsn.mod.sqlcommands
+title: PPSnMod SQL-Befehle
+---
+
+# Select
 
 Most shown functions can be combined.
+
+```sql
 
 Select any from the table, return every column
 {
 	select = "dbo.Table"
 }
+
+```
+
+```sql
 
 Select any from the table, return only columns Col1, Col2, Col3
 {
@@ -17,6 +28,10 @@ Select any from the table, return only columns Col1, Col2, Col3
 	}
 }
 
+```
+
+```sql
+
 Select conditional (Col1 must has the value 2), return every column
 {
 	select = "dbo.Table",
@@ -24,6 +39,10 @@ Select conditional (Col1 must has the value 2), return every column
 		Col1 = 2
 	}
 }
+
+```
+
+```sql
 
 Select any from the table, return only columns Col1, Col2, Col3 and rename (''ALIAS'') Col3 to MyColumn
 {
@@ -36,6 +55,10 @@ Select any from the table, return only columns Col1, Col2, Col3 and rename (''AL
 	}
 }
 
+```
+
+```sql
+
 Select any from the table, if Col3 is null or not existing, return the result of the function
 {
 	select = "dbo.Table"
@@ -44,12 +67,20 @@ Select any from the table, if Col3 is null or not existing, return the result of
     }
 }
 
+```
+
+```sql
+
 Select existent and non-existent columns from the table
 {
 	select = "dbo.Table",
 	columnList = { "Col1", "Col2", "Testcolumn" },
 	defaults = { }
 }
+
+```
+
+```sql
 
 Select with Custom ''WHERE''-Clause
 {
@@ -59,6 +90,7 @@ Select with Custom ''WHERE''-Clause
 }
 
 
+```
 
 select: supports also joins
 	t1 alias1=t2 alias2 is a simple inner join
@@ -74,12 +106,16 @@ columnList: alias are allowed, because we can have more than one table
 
 # Upsert/Merge
 
+```sql
+
 {
 	upsert = "dbo.Table",
 	columnList = { "Col1", "Col2", "Coln" }
 	on = { "Col1", "Col2" }
 	rows
 }
+
+ ```
 
 columnList: column/alias list with all columns that will be touched.
 on: optional modification of the on-clause. Compare columns.
