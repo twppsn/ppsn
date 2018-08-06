@@ -1996,7 +1996,7 @@ namespace TecWare.PPSn.Server.Sql
 		private static async Task<string> LoadSqlFileAsync(string fileName)
 		{
 			using (var src = new FileStream(fileName, FileMode.Open))
-			using (var sr = Procs.OpenStreamReader(src, Encoding.UTF8))
+			using (var sr = new StreamReader(src, Encoding.UTF8, true))
 				return await sr.ReadToEndAsync();
 		} // func LoadSqlFileAsync
 

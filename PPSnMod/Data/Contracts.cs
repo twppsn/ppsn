@@ -269,6 +269,9 @@ namespace TecWare.PPSn.Server.Data
 			=> WindowsIdentity.GetCurrent().User != identity.User
 				? identity.Impersonate()
 				: null;
+
+		/// <summary></summary>
+		public string Name => identity.Name;
 	} // class PpsIntegratedCredentials
 
 	#endregion

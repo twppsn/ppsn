@@ -678,7 +678,7 @@ namespace TecWare.PPSn.Server
 			if (row.GetProperty("IsDocumentText", false))
 			{
 				using (var src = (Stream)row["Document"])
-				using (var tr = Procs.OpenStreamReader(src, DataEncoding))
+				using (var tr = new StreamReader(src, DataEncoding, true))
 					return tr.ReadToEnd();
 			}
 			else
