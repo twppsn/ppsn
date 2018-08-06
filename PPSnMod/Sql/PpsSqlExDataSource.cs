@@ -123,11 +123,11 @@ namespace TecWare.PPSn.Server.Sql
 				public void UpdateValue(object row, object value)
 					=> updateValue?.Invoke(row, value);
 
-				public void AppendParameter(DbCommand cmd, object initialValues)
+				public void AppendParameter(SqlDataTransaction trans, SqlCommand cmd, object initialValues)
 				{
 					if (parameter != null)
 						throw new InvalidOperationException();
-					parameter = columnInfo.AppendSqlParameter(cmd, parameterName, initialValues == null ? null : getValue(initialValues));
+					parameter = trans.CreateParameter(cmd, columnInfo, parameterName, initialValues == null ? null : getValue(initialValues));
 				} // func AppendParameter
 
 				private string DebuggerDisplay
@@ -529,7 +529,7 @@ namespace TecWare.PPSn.Server.Sql
 							var parameterName = '@' + columnName;
 							commandText.Append('[' + columnName + ']');
 							variableList.Append(parameterName);
-							column.AppendSqlParameter(cmd, parameterName, value);
+							CreateParameter(cmd, column, parameterName, value);
 						}
 
 						if (primaryKey != column)
@@ -615,7 +615,7 @@ namespace TecWare.PPSn.Server.Sql
 							.Append(" = ")
 							.Append(parameterName);
 
-						column.AppendSqlParameter(cmd, parameterName, value);
+						CreateParameter(cmd, column, parameterName, value);
 
 						insertedList.Append("inserted.").Append("[").Append(columnName).Append("]");
 					}
@@ -636,7 +636,7 @@ namespace TecWare.PPSn.Server.Sql
 						.Append(primaryKeyName)
 						.Append(" = ")
 						.Append("@").Append(primaryKeyName);
-					tableInfo.PrimaryKey.AppendSqlParameter(cmd, "@" + primaryKeyName, primaryKeyValue);
+					CreateParameter(cmd, tableInfo.PrimaryKey, "@" + primaryKeyName, primaryKeyValue);
 
 					cmd.CommandText = commandText.ToString();
 
@@ -807,7 +807,7 @@ namespace TecWare.PPSn.Server.Sql
 
 						commandText.Append(col.ParameterName);
 						col.ColumnInfo.AppendAsColumn(columnNames);
-						col.AppendParameter(cmd, null);
+						col.AppendParameter(this, cmd, null);
 					}
 					
 					commandText.Append(")) AS SRC (")
@@ -1035,7 +1035,7 @@ namespace TecWare.PPSn.Server.Sql
 						commandText.Append(columnName)
 							.Append(" = ")
 							.Append(parameterName);
-						column.AppendSqlParameter(cmd, parameterName, m.Value);
+						CreateParameter(cmd, column, parameterName, m.Value);
 					}
 
 					if (first && args.GetOptionalValue("__all", false))
@@ -1141,8 +1141,11 @@ namespace TecWare.PPSn.Server.Sql
 				return false;
 			} // func TryGetProperty
 
-			protected override void InitSqlParameter(DbParameter parameter, string parameterName, object value)
+			public override void InitSqlParameter(DbParameter parameter, string parameterName, object value)
 			{
+				if (String.IsNullOrEmpty(parameterName))
+					parameterName = "@" + Name;
+
 				base.InitSqlParameter(parameter, parameterName, value);
 				((SqlParameter)parameter).SqlDbType = sqlType;
 				if (sqlType == SqlDbType.Udt)

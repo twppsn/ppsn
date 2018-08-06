@@ -195,31 +195,20 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary></summary>
 		/// <param name="parameter"></param>
 		/// <param name="parameterName"></param>
-		/// <param name="value"></param>
-		protected virtual void InitSqlParameter(DbParameter parameter, string parameterName, object value)
+		/// <param name="parameterValue"></param>
+		public virtual void InitSqlParameter(DbParameter parameter, string parameterName = null, object parameterValue = null)
 		{
-			parameter.ParameterName = parameterName ?? "@" + Name;
+			if (parameterName != null)
+				parameter.ParameterName = parameterName;
+
 			parameter.Size = maxLength;
 			parameter.Precision = precision;
 			parameter.Scale = scale;
 			parameter.Direction = ParameterDirection.Input;
 			parameter.SourceColumn = Name;
 			parameter.SourceVersion = DataRowVersion.Current;
-			parameter.SetValue(value, DataType);
+			parameter.SetValue(parameterValue, DataType);
 		} // proc InitSqlParameter
-
-		/// <summary></summary>
-		/// <param name="command"></param>
-		/// <param name="parameterName"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		public virtual DbParameter AppendSqlParameter(DbCommand command, string parameterName = null, object value = null)
-		{
-			var parameter = command.CreateParameter();
-			InitSqlParameter(parameter, parameterName, value);
-			command.Parameters.Add(parameter);
-			return parameter;
-		} // AppendSqlParameter
 
 		/// <summary>Table</summary>
 		public PpsSqlTableInfo Table => table;
@@ -255,93 +244,6 @@ namespace TecWare.PPSn.Server.Sql
 				? columnName
 				: columnName.Substring(pos + 1);
 		} // func GetColumnName
-
-		/// <summary></summary>
-		/// <param name="command"></param>
-		/// <param name="columnDescription"></param>
-		/// <param name="parameterName"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		public static DbParameter AppendSqlParameter(DbCommand command, IDataColumn columnDescription, string parameterName = null, object value = null)
-		{
-			if (columnDescription is IPpsColumnDescription c && c.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn)) // sql column -> easy to add
-				return sqlColumn.AppendSqlParameter(command);
-			else // other column, create 
-			{
-				var parameter = command.CreateParameter();
-
-				parameter.ParameterName = parameterName ?? "@" + GetColumnName(columnDescription.Name);
-
-				parameter.Direction = ParameterDirection.Input;
-				parameter.SourceColumn = columnDescription.Name;
-				parameter.SourceVersion = DataRowVersion.Current;
-
-				var t = columnDescription.DataType;
-				switch (Type.GetTypeCode(t))
-				{
-					case TypeCode.String:
-						parameter.Size = columnDescription.Attributes.GetProperty("maxLength", 32000);
-						parameter.DbType = DbType.String;
-						break;
-					case TypeCode.Boolean:
-						parameter.DbType = DbType.Boolean;
-						break;
-					case TypeCode.DateTime:
-						parameter.DbType = DbType.DateTime2;
-						break;
-
-					case TypeCode.Single:
-						parameter.Precision = columnDescription.Attributes.GetProperty("Precision", (byte)20);
-						parameter.Scale = columnDescription.Attributes.GetProperty("Scale", (byte)10);
-						parameter.DbType = DbType.Single;
-						break;
-					case TypeCode.Double:
-						parameter.Precision = columnDescription.Attributes.GetProperty("Precision", (byte)15);
-						parameter.Scale = columnDescription.Attributes.GetProperty("Scale", (byte)7);
-						parameter.DbType = DbType.Double;
-						break;
-					case TypeCode.Decimal:
-						parameter.Precision = columnDescription.Attributes.GetProperty("Precision", (byte)7);
-						parameter.Scale = columnDescription.Attributes.GetProperty("Scale", (byte)3);
-						parameter.DbType = DbType.Decimal;
-						break;
-
-					case TypeCode.Byte:
-						parameter.DbType = DbType.Byte;
-						break;
-					case TypeCode.SByte:
-						parameter.DbType = DbType.SByte;
-						break;
-					case TypeCode.Int16:
-						parameter.DbType = DbType.Int16;
-						break;
-					case TypeCode.Int32:
-						parameter.DbType = DbType.Int32;
-						break;
-					case TypeCode.Int64:
-						parameter.DbType = DbType.Int64;
-						break;
-					case TypeCode.UInt16:
-						parameter.DbType = DbType.UInt16;
-						break;
-					case TypeCode.UInt32:
-						parameter.DbType = DbType.UInt32;
-						break;
-					case TypeCode.UInt64:
-						parameter.DbType = DbType.UInt64;
-						break;
-
-					case TypeCode.Object:
-						if (t == typeof(Guid))
-							parameter.DbType = DbType.Guid;
-						break;
-				}
-
-				parameter.SetValue(value, columnDescription.DataType);
-				command.Parameters.Add(parameter);
-				return parameter;
-			}
-		} // func AppendSqlParameter
 	} // class PpsSqlColumnInfo
 
 	#endregion
@@ -1061,23 +963,45 @@ namespace TecWare.PPSn.Server.Sql
 			protected abstract class ParameterMapping
 			{
 				private readonly DbParameter parameter;
+				private readonly Type dataType;
 
 				/// <summary></summary>
 				/// <param name="parameter"></param>
-				protected ParameterMapping(DbParameter parameter)
+				/// <param name="dataType"></param>
+				protected ParameterMapping(DbParameter parameter, Type dataType)
 				{
 					this.parameter = parameter ?? throw new ArgumentNullException(nameof(parameter));
+					this.dataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
 				} // ctor
 
 				/// <summary>Set parameter value</summary>
 				/// <param name="table"></param>
-				public abstract void UpdateParameter(LuaTable table);
+				public void UpdateParameter(LuaTable table)
+				{
+					if ((parameter.Direction & ParameterDirection.Input) == ParameterDirection.Input)
+						UpdateParameterCore(table);
+				} // proc UpdateParameter
+
+				/// <summary></summary>
+				/// <param name="table"></param>
+				protected abstract void UpdateParameterCore(LuaTable table);
+
 				/// <summary>Set source value</summary>
 				/// <param name="table"></param>
-				public abstract void UpdateSource(LuaTable table);
+				public void UpdateSource(LuaTable table)
+				{
+					if ((parameter.Direction & ParameterDirection.Output) == ParameterDirection.Output)
+						UpdateParameterCore(table);
+				} // proc UpdateSource
+
+				/// <summary></summary>
+				/// <param name="table"></param>
+				protected abstract void UpdateSourceCore(LuaTable table);
 
 				/// <summary></summary>
 				protected DbParameter Parameter => parameter;
+				/// <summary></summary>
+				protected Type DataType => dataType;
 			} // class ParameterMapping
 
 			/// <summary></summary>
@@ -1088,27 +1012,25 @@ namespace TecWare.PPSn.Server.Sql
 				/// <summary></summary>
 				/// <param name="name"></param>
 				/// <param name="parameter"></param>
-				public NameParameterMapping(string name, DbParameter parameter)
-					: base(parameter)
+				/// <param name="dataType"></param>
+				public NameParameterMapping(string name, DbParameter parameter, Type dataType)
+					: base(parameter, dataType)
 				{
 					this.name = name ?? throw new ArgumentNullException(nameof(name));
 				} // ctor
 
-
 				/// <summary>Set parameter value</summary>
 				/// <param name="table"></param>
-				public override void UpdateParameter(LuaTable table)
-				{
-					Parameter.Value = table.GetMemberValue(name) ?? DBNull.Value;
-				} // proc UpdateParameter
+				protected override void UpdateParameterCore(LuaTable table)
+					=> Parameter.SetValue(table.GetMemberValue(name), DataType);
 
 				/// <summary>Set source value</summary>
 				/// <param name="table"></param>
-				public override void UpdateSource(LuaTable table)
-				{
-					if ((Parameter.Direction & ParameterDirection.Output) == ParameterDirection.Output)
-						table.SetMemberValue(name, Parameter.Value.NullIfDBNull());
-				} // proc UpdateSource
+				protected override void UpdateSourceCore(LuaTable table)
+					=> table.SetMemberValue(name, Parameter.Value.NullIfDBNull());
+
+				/// <summary></summary>
+				public string Name => name;
 			} // class NameParameterMapping
 
 			/// <summary></summary>
@@ -1119,26 +1041,22 @@ namespace TecWare.PPSn.Server.Sql
 				/// <summary></summary>
 				/// <param name="index"></param>
 				/// <param name="parameter"></param>
-				public IndexParameterMapping(int index, DbParameter parameter)
-					: base(parameter)
+				/// <param name="dataType"></param>
+				public IndexParameterMapping(int index, DbParameter parameter, Type dataType)
+					: base(parameter, dataType)
 				{
 					this.index = index;
 				} // ctor
 
 				/// <summary>Set parameter value</summary>
 				/// <param name="table"></param>
-				public override void UpdateParameter(LuaTable table)
-				{
-					Parameter.Value = table.GetArrayValue(index);
-				} // proc UpdateParameter
+				protected override void UpdateParameterCore(LuaTable table)
+					=> Parameter.SetValue(table.GetArrayValue(index), DataType);
 
 				/// <summary>Set source value</summary>
 				/// <param name="table"></param>
-				public override void UpdateSource(LuaTable table)
-				{
-					if ((Parameter.Direction & ParameterDirection.Output) == ParameterDirection.Output)
-						table.SetArrayValue(index, Parameter.Value.NullIfDBNull());
-				} // proc UpdateSource
+				protected override void UpdateSourceCore(LuaTable table)
+					=> table.SetArrayValue(index, Parameter.Value.NullIfDBNull());
 			} // class IndexParameterMapping
 
 			#endregion
@@ -1219,16 +1137,123 @@ namespace TecWare.PPSn.Server.Sql
 			protected DBCOMMAND CreateCommand(LuaTable parameter, CommandType commandType)
 				=> CreateCommand(commandType, parameter.GetOptionalValue("__notrans", false));
 
+			#endregion
+
+			#region -- CreateParameter ------------------------------------------------
+
+			private static T GetColumnInfoAttribute<T>(IDataColumn columnInfo, string name, T @default)
+				=> columnInfo == null ? @default : columnInfo.Attributes.GetProperty(name, @default);
+
+			/// <summary></summary>
+			/// <param name="parameter"></param>
+			/// <param name="dataType"></param>
+			/// <param name="columnInfo"></param>
+			protected virtual void SetSqlParameterType(DbParameter parameter, Type dataType, IDataColumn columnInfo = null)
+			{
+				switch (System.Type.GetTypeCode(dataType))
+				{
+					case TypeCode.String:
+						parameter.Size = GetColumnInfoAttribute(columnInfo, "maxLength", 32000);
+						parameter.DbType = DbType.String;
+						break;
+					case TypeCode.Boolean:
+						parameter.DbType = DbType.Boolean;
+						break;
+					case TypeCode.DateTime:
+						parameter.DbType = DbType.DateTime2;
+						break;
+
+					case TypeCode.Single:
+						parameter.Precision = GetColumnInfoAttribute(columnInfo, "Precision", (byte)20);
+						parameter.Scale = GetColumnInfoAttribute(columnInfo, "Scale", (byte)10);
+						parameter.DbType = DbType.Single;
+						break;
+					case TypeCode.Double:
+						parameter.Precision = GetColumnInfoAttribute(columnInfo, "Precision", (byte)15);
+						parameter.Scale = GetColumnInfoAttribute(columnInfo, "Scale", (byte)7);
+						parameter.DbType = DbType.Double;
+						break;
+					case TypeCode.Decimal:
+						parameter.Precision = GetColumnInfoAttribute(columnInfo, "Precision", (byte)7);
+						parameter.Scale = GetColumnInfoAttribute(columnInfo, "Scale", (byte)3);
+						parameter.DbType = DbType.Decimal;
+						break;
+
+					case TypeCode.Byte:
+						parameter.DbType = DbType.Byte;
+						break;
+					case TypeCode.SByte:
+						parameter.DbType = DbType.SByte;
+						break;
+					case TypeCode.Int16:
+						parameter.DbType = DbType.Int16;
+						break;
+					case TypeCode.Int32:
+						parameter.DbType = DbType.Int32;
+						break;
+					case TypeCode.Int64:
+						parameter.DbType = DbType.Int64;
+						break;
+					case TypeCode.UInt16:
+						parameter.DbType = DbType.UInt16;
+						break;
+					case TypeCode.UInt32:
+						parameter.DbType = DbType.UInt32;
+						break;
+					case TypeCode.UInt64:
+						parameter.DbType = DbType.UInt64;
+						break;
+
+					case TypeCode.Object:
+						if (dataType == typeof(Guid))
+							parameter.DbType = DbType.Guid;
+						break;
+				}
+			} // proc InitSqlParameter
+
 			/// <summary></summary>
 			/// <param name="command"></param>
+			/// <param name="columnInfo"></param>
 			/// <param name="parameterName"></param>
 			/// <param name="parameterValue"></param>
 			/// <returns></returns>
-			protected virtual DbParameter CreateParameter(DBCOMMAND command, string parameterName, object parameterValue)
+			protected virtual DbParameter CreateParameter(DBCOMMAND command, IDataColumn columnInfo = null, string parameterName = null, object parameterValue = null)
 			{
 				var param = command.CreateParameter();
-				param.ParameterName = FormatParameterName(parameterName);
-				param.Value = parameterValue ?? DBNull.Value;
+
+				// set parameter name
+				if (parameterName != null)
+					parameterName = UnformatParameterName(parameterName);
+
+				// set value
+				if (columnInfo is PpsSqlColumnInfo sqlColumnInfo)
+					sqlColumnInfo.InitSqlParameter(param, parameterName, parameterValue);
+				else if (columnInfo is IPpsColumnDescription c && c.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumnInfo2)) // sql column -> easy to add
+					sqlColumnInfo2.InitSqlParameter(param, parameterName, parameterValue);
+				else
+				{
+					if (!String.IsNullOrEmpty(parameterName))
+						param.ParameterName = parameterName;
+
+					param.Direction = ParameterDirection.Input;
+					if (columnInfo != null)
+						param.SourceColumn = columnInfo.Name;
+					param.SourceVersion = DataRowVersion.Current;
+
+					if (columnInfo != null || parameterValue != null)
+					{
+						var t = columnInfo == null
+							? parameterValue.GetType()
+							: columnInfo.DataType;
+
+						SetSqlParameterType(param, t, columnInfo);
+
+						param.SetValue(parameterValue, t);
+					}
+					else
+						param.SetValue(parameterValue, parameterValue?.GetType());
+				}
+				
 				command.Parameters.Add(param);
 				return param;
 			} // CreateParameter
@@ -1237,7 +1262,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="parameterName"></param>
 			/// <returns></returns>
 			protected virtual string FormatParameterName(string parameterName)
-				=> "@" + UnformatParameterName(parameterName);
+				=> String.IsNullOrEmpty(parameterName) ? "?" : "@" + UnformatParameterName(parameterName);
 
 			/// <summary>Remove trailing sql notations.</summary>
 			/// <param name="parameterName"></param>
@@ -1252,6 +1277,10 @@ namespace TecWare.PPSn.Server.Sql
 					: parameterName;
 			} // func UnformatParameterName
 
+			#endregion
+
+			#region -- ExecuteReaderCommand -------------------------------------------
+
 			/// <summary></summary>
 			/// <param name="cmd"></param>
 			/// <param name="behavior"></param>
@@ -1262,16 +1291,55 @@ namespace TecWare.PPSn.Server.Sql
 				switch (behavior)
 				{
 					case PpsDataTransactionExecuteBehavior.NoResult:
-						cmd.ExecuteNonQuery();
+						cmd.ExecuteNonQueryEx();
 						return null;
 					case PpsDataTransactionExecuteBehavior.SingleRow:
-						return (DBDATAREADER)cmd.ExecuteReader(CommandBehavior.SingleRow);
+						return (DBDATAREADER)cmd.ExecuteReaderEx(CommandBehavior.SingleRow);
 					case PpsDataTransactionExecuteBehavior.SingleResult:
-						return (DBDATAREADER)cmd.ExecuteReader(CommandBehavior.SingleResult);
+						return (DBDATAREADER)cmd.ExecuteReaderEx(CommandBehavior.SingleResult);
 					default:
-						return (DBDATAREADER)cmd.ExecuteReader(CommandBehavior.Default);
+						return (DBDATAREADER)cmd.ExecuteReaderEx(CommandBehavior.Default);
 				}
 			} // func ExecuteReaderCommand
+
+			/// <summary></summary>
+			/// <param name="cmd"></param>
+			/// <param name="parameter"></param>
+			/// <param name="parameterMapping"></param>
+			/// <param name="behavior"></param>
+			/// <returns></returns>
+			protected IEnumerable<IEnumerable<IDataRow>> ExecuteCommandWithArguments(DBCOMMAND cmd, LuaTable parameter, IList<ParameterMapping> parameterMapping, PpsDataTransactionExecuteBehavior behavior)
+			{
+				// execute arguments
+				for (var i = 1; i <= parameter.ArrayList.Count; i++)
+				{
+					var args = GetArguments(parameter, i, false);
+					if (args == null)
+						yield break;
+
+					// fill arguments
+					foreach (var p in parameterMapping)
+						p.UpdateParameter(args);
+
+					using (var r = ExecuteReaderCommand<DbDataReader>(cmd, behavior))
+					{
+						// copy arguments back
+						foreach (var p in parameterMapping)
+							p.UpdateSource(args);
+
+						// return results
+						if (r != null)
+						{
+							do
+							{
+								yield return new DbRowReaderEnumerable(r);
+								if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
+									break;
+							} while (r.NextResult());
+						}
+					} // using r
+				} // for (args)
+			} // func ExecuteCommandWithArguments
 
 			#endregion
 
@@ -1301,6 +1369,25 @@ namespace TecWare.PPSn.Server.Sql
 					throw new ArgumentNullException($"parameter[{index}]", "No arguments defined.");
 				return args;
 			} // func GetArguments
+
+			/// <summary></summary>
+			/// <param name="parameter"></param>
+			/// <param name="name"></param>
+			/// <returns></returns>
+			protected object GetSampleValueFromArguments(LuaTable parameter, string name)
+			{
+				var i = 1;
+				var args = GetArguments(parameter, i, false);
+				while (args != null)
+				{
+					var v = args.GetMemberValue(name, true);
+					if (v != null)
+						return v;
+
+					args = GetArguments(parameter, ++i, false);
+				}
+				return null;
+			} // func GetSampleValueFromArguments
 
 			#endregion
 
@@ -1332,42 +1419,11 @@ namespace TecWare.PPSn.Server.Sql
 
 						// threat return value different
 						parameterMapping[j++] = (p.Direction & ParameterDirection.ReturnValue) == ParameterDirection.ReturnValue
-							? (ParameterMapping)new IndexParameterMapping(1, p)
-							: (ParameterMapping)new NameParameterMapping(parameterName, p);
+							? (ParameterMapping)new IndexParameterMapping(1, p, p.GetDataType())
+							: (ParameterMapping)new NameParameterMapping(parameterName, p, p.GetDataType());
 					}
 
-					// copy arguments
-					for (var i = 1; i <= parameter.ArrayList.Count; i++)
-					{
-						var args = GetArguments(parameter, i, false);
-						if (args == null)
-							yield break;
-
-						// fill arguments
-						foreach (var p in parameterMapping)
-						{
-							if (p is NameParameterMapping)
-								p.UpdateParameter(args);
-						}
-
-						using (var r = ExecuteReaderCommand<DbDataReader>(cmd, behavior))
-						{
-							// copy arguments back
-							foreach (var p in parameterMapping)
-								p.UpdateSource(args);
-
-							// return results
-							if (r != null)
-							{
-								do
-								{
-									yield return new DbRowReaderEnumerable(r);
-									if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
-										break;
-								} while (r.NextResult());
-							}
-						} // using r
-					} // for (args)
+					return ExecuteCommandWithArguments(cmd, parameter, parameterMapping, behavior);
 				} // using cmd
 			} // func ExecuteInsertResult
 
@@ -1390,33 +1446,23 @@ namespace TecWare.PPSn.Server.Sql
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
 					cmd.CommandText = name;
-
+					var parameterMapping = new List<ParameterMapping>();
 					var args = GetArguments(parameter, 1, false);
-					var emittedParameter = new List<string>();
 					if (args != null)
 					{
 						foreach (Match m in regExSqlParameter.Matches(name))
 						{
 							var k = m.Groups[1].Value;
-							if (!emittedParameter.Exists(c => String.Compare(c, k, StringComparison.OrdinalIgnoreCase) == 0))
+							if (!parameterMapping.Exists(c => String.Compare(((NameParameterMapping)c).Name, k, StringComparison.OrdinalIgnoreCase) == 0))
 							{
-								emittedParameter.Add(k);
-								CreateParameter(cmd, k, args.GetMemberValue(k, true));
+								var p = CreateParameter(cmd, null, k, GetSampleValueFromArguments(parameter, k));
+								parameterMapping.Add(new NameParameterMapping(k, p, p.GetDataType()));
 							}
 						}
 					}
 
 					// execute
-					using (var r = ExecuteReaderCommand<DbDataReader>(cmd, behavior))
-					{
-						if (r != null)
-						{
-							do
-							{
-								yield return new DbRowReaderEnumerable(r);
-							} while (r.NextResult());
-						}
-					}
+					return ExecuteCommandWithArguments(cmd, parameter, parameterMapping, behavior);
 				}
 			} // func ExecuteSql
 
@@ -1553,7 +1599,7 @@ namespace TecWare.PPSn.Server.Sql
 							else // try append empty DbNull column
 							{
 								var field = DataSource.Application.GetFieldDescription(columnName, true);
-								commandText.Append(PpsSqlColumnInfo.AppendSqlParameter(cmd, field).ParameterName);
+								commandText.Append(FormatParameterName(CreateParameter(cmd, field).ParameterName));
 							}
 						} // proc AppendColumnFromTableKey
 
@@ -1596,7 +1642,7 @@ namespace TecWare.PPSn.Server.Sql
 							if (column != null) // append table column
 								tableInfos.AppendColumn(commandText, table, column);
 							else // try append empty DbNull column
-								commandText.Append(PpsSqlColumnInfo.AppendSqlParameter(cmd, col).ParameterName);
+								commandText.Append(CreateParameter(cmd, col).ParameterName);
 
 							commandText.Append(" AS [").Append(col.Name).Append(']');
 						}
@@ -1624,14 +1670,17 @@ namespace TecWare.PPSn.Server.Sql
 								commandText.Append(" AND ");
 
 							var (table, column) = tableInfos.FindColumn((string)p.Key, true);
-							var parm = column.AppendSqlParameter(cmd, value: p.Value);
+							var parm = CreateParameter(cmd, columnInfo: column, parameterValue: p.Value);
 							tableInfos.AppendColumn(commandText, table, column);
 							commandText.Append(" = ")
-								.Append(parm.ParameterName);
+								.Append(FormatParameterName(parm.ParameterName));
 						}
 					}
 					else if (parameter.GetMemberValue("where") is string sqlWhere)
 						commandText.Append(" WHERE ").Append(sqlWhere);
+
+					if (parameter.GetMemberValue("orderby") is string sqlOrderBy)
+						commandText.Append(" ORDER BY ").Append(sqlOrderBy);
 
 					cmd.CommandText = commandText.ToString();
 

@@ -23,7 +23,6 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Stuff
 {
-
 	#region -- class PpsXmlPosition ---------------------------------------------------
 
 	/// <summary>Class to read source file hints from an xml-element.</summary>

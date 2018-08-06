@@ -143,6 +143,20 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Execute the command and raise a exception with the command text included.</summary>
 		/// <param name="command"></param>
+		public static void ExecuteNonQueryEx(this DbCommand command)
+		{
+			try
+			{
+				command.ExecuteNonQuery();
+			}
+			catch (Exception e)
+			{
+				throw new CommandException(command, e);
+			}
+		} // proc ExecuteNonQueryEx
+
+		/// <summary>Execute the command and raise a exception with the command text included.</summary>
+		/// <param name="command"></param>
 		/// <param name="commandBehavior"></param>
 		/// <returns></returns>
 		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
@@ -173,6 +187,76 @@ namespace TecWare.PPSn.Server
 				? (object)DBNull.Value
 				: (value != DBNull.Value ? Procs.ChangeType(value, parameterType) : value);
 		} // proc SetValue
+
+
+		/// <summary></summary>
+		/// <param name="type"></param>
+		/// <returns></returns>
+		public static Type GetDataTypeFromDbType(DbType type)
+		{
+			switch (type)
+			{
+				case DbType.AnsiString:
+				case DbType.String:
+				case DbType.AnsiStringFixedLength:
+				case DbType.StringFixedLength:
+				case DbType.Xml:
+					return typeof(string);
+				case DbType.Binary:
+					return typeof(byte[]);
+
+				case DbType.Boolean:
+					return typeof(bool);
+
+				case DbType.Decimal:
+				case DbType.Currency:
+				case DbType.VarNumeric:
+					return typeof(decimal);
+				case DbType.Double:
+					return typeof(double);
+				case DbType.Single:
+					return typeof(float);
+
+				case DbType.DateTime:
+				case DbType.Date:
+				case DbType.Time:
+					return typeof(DateTime);
+				case DbType.DateTime2:
+				case DbType.DateTimeOffset:
+					return typeof(DateTimeOffset);
+
+				case DbType.Guid:
+					return typeof(Guid);
+
+				case DbType.SByte:
+					return typeof(sbyte);
+				case DbType.Int16:
+					return typeof(short);
+				case DbType.Int32:
+					return typeof(int);
+				case DbType.Int64:
+					return typeof(long);
+
+				case DbType.Byte:
+					return typeof(byte);
+				case DbType.UInt16:
+					return typeof(ushort);
+				case DbType.UInt32:
+					return typeof(uint);
+				case DbType.UInt64:
+					return typeof(ulong);
+				case DbType.Object:
+					return typeof(object);
+				default:
+					throw new ArgumentOutOfRangeException(nameof(type), type, "Invalid DbType.");
+			}
+		} // func GetDataTypeFromDbType
+
+		/// <summary></summary>
+		/// <param name="param"></param>
+		/// <returns></returns>
+		public static Type GetDataType(this DbParameter param)
+			=> GetDataTypeFromDbType(param.DbType);
 
 		#endregion
 

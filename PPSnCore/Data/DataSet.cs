@@ -111,7 +111,6 @@ namespace TecWare.PPSn.Data
 			=> FormatTag(this);
 
 		/// <summary></summary>
-		/// <param name="tag"></param>
 		/// <param name="tagElementName"></param>
 		/// <returns></returns>
 		public XElement ToXml(XName tagElementName)
