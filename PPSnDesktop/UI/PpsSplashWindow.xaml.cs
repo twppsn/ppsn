@@ -18,6 +18,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -218,7 +219,23 @@ namespace TecWare.PPSn.UI
 		public sealed class EditLoginStateData : ObservableObject
 		{
 			private string newEnvironmentName = String.Empty;
-			public string NewEnvironmentName { get => newEnvironmentName; set => Set(ref newEnvironmentName, value, nameof(NewEnvironmentName)); }
+			public string NewEnvironmentName
+			{
+				get => newEnvironmentName;
+				set
+				{
+					// because the name is later used as the directory name, it has to be sanitized
+					var cleanName = new StringBuilder();
+					// only get the chars once
+					var illegalChars = Path.GetInvalidPathChars().Union(Path.GetInvalidFileNameChars());
+					foreach (var ch in value)
+						if (illegalChars.Contains(ch))
+							cleanName.Append('_');
+						else
+							cleanName.Append(ch);
+					Set(ref newEnvironmentName, cleanName.ToString(), nameof(NewEnvironmentName));
+				}
+			}
 			private string newEnvironmentUri = String.Empty;
 			public string NewEnvironmentUri { get => newEnvironmentUri; set => Set(ref newEnvironmentUri, value, nameof(NewEnvironmentUri)); }
 			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);   //ToDo: check if that Environment already exists!
