@@ -379,6 +379,84 @@ namespace TecWare.PPSn.Server.Sql
 
 	#endregion
 
+	#region -- class PpsSqlParameterInfo ----------------------------------------------
+
+	/// <summary></summary>
+	public abstract class PpsSqlParameterInfo
+	{
+		private readonly string name;
+		private readonly bool hasDefault;
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="hasDefault"></param>
+		public PpsSqlParameterInfo(string name, bool hasDefault)
+		{
+			this.name = name;
+			this.hasDefault = hasDefault;
+		} // ctor
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString() 
+			=> name;
+
+		/// <summary></summary>
+		/// <param name="parameter"></param>
+		public abstract void InitSqlParameter(DbParameter parameter);
+
+		/// <summary></summary>
+		public string Name => name;
+		/// <summary></summary>
+		public bool HasDefault => hasDefault;
+	} // class PpsSqlParameterInfo
+
+	#endregion
+
+	#region -- class PpsSqlProcedureInfo ----------------------------------------------
+
+	/// <summary></summary>
+	[DebuggerDisplay("{DebuggerDisplay,nq}")]
+	public class PpsSqlProcedureInfo
+	{
+		private readonly string schemaName;
+		private readonly string procedureName;
+
+		private readonly List<PpsSqlParameterInfo> parameters = new List<PpsSqlParameterInfo>();
+
+		/// <summary></summary>
+		/// <param name="schemaName"></param>
+		/// <param name="procedureName"></param>
+		public PpsSqlProcedureInfo(string schemaName, string procedureName)
+		{
+			this.schemaName = schemaName;
+			this.procedureName = procedureName;
+		} // ctor
+
+
+		/// <summary></summary>
+		/// <param name="parameterInfo"></param>
+		public void AddParameter(PpsSqlParameterInfo parameterInfo)
+			=> parameters.Add(parameterInfo);
+
+		private string DebuggerDisplay
+			=> $"ProcedureInfo: {QualifiedName} ({ (String.Join(", ", from p in parameters select p.ToString())) })";
+
+		/// <summary>Schema</summary>
+		public string SchemaName => schemaName;
+		/// <summary>Name of the procedure.</summary>
+		public string ProcedureName => procedureName;
+		/// <summary>Full qualified name for sql-server.</summary>
+		public virtual string SqlQualifiedName => schemaName + ".[" + procedureName + "]";
+		/// <summary>Qualified name within the server.</summary>
+		public string QualifiedName => schemaName + "." + procedureName;
+
+		/// <summary>Parameter information of this table.</summary>
+		public IEnumerable<PpsSqlParameterInfo> Parameters => parameters;
+	} // class PpsSqlProcedureInfo
+
+	#endregion
+
 	#region -- interface IPpsSqlConnectionHandle --------------------------------------
 
 	/// <summary></summary>
@@ -991,7 +1069,7 @@ namespace TecWare.PPSn.Server.Sql
 				public void UpdateSource(LuaTable table)
 				{
 					if ((parameter.Direction & ParameterDirection.Output) == ParameterDirection.Output)
-						UpdateParameterCore(table);
+						UpdateSourceCore(table);
 				} // proc UpdateSource
 
 				/// <summary></summary>
@@ -1022,12 +1100,12 @@ namespace TecWare.PPSn.Server.Sql
 				/// <summary>Set parameter value</summary>
 				/// <param name="table"></param>
 				protected override void UpdateParameterCore(LuaTable table)
-					=> Parameter.SetValue(table.GetMemberValue(name), DataType);
+					=> Parameter.SetValue(table.GetMemberValue(name, ignoreCase: true), DataType);
 
 				/// <summary>Set source value</summary>
 				/// <param name="table"></param>
 				protected override void UpdateSourceCore(LuaTable table)
-					=> table.SetMemberValue(name, Parameter.Value.NullIfDBNull());
+					=> table.SetMemberValue(name, Parameter.Value.NullIfDBNull(), ignoreCase: true);
 
 				/// <summary></summary>
 				public string Name => name;
@@ -1126,6 +1204,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var cmd = (DBCOMMAND)connection.CreateCommand();
 				cmd.CommandTimeout = 7200;
+				cmd.CommandType = commandType;
 				cmd.Transaction = noTransaction ? null : transaction;
 				return cmd;
 			} // func CreateCommand
@@ -1226,7 +1305,13 @@ namespace TecWare.PPSn.Server.Sql
 					parameterName = UnformatParameterName(parameterName);
 
 				// set value
-				if (columnInfo is PpsSqlColumnInfo sqlColumnInfo)
+				if (columnInfo is PpsSqlParameterInfo sqlParameterInfo)
+				{
+					sqlParameterInfo.InitSqlParameter(param);
+					if (parameterValue != null)
+						param.SetValue(parameterValue, param.GetDataType());
+				}
+				else if (columnInfo is PpsSqlColumnInfo sqlColumnInfo)
 					sqlColumnInfo.InitSqlParameter(param, parameterName, parameterValue);
 				else if (columnInfo is IPpsColumnDescription c && c.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumnInfo2)) // sql column -> easy to add
 					sqlColumnInfo2.InitSqlParameter(param, parameterName, parameterValue);
@@ -1311,34 +1396,41 @@ namespace TecWare.PPSn.Server.Sql
 			protected IEnumerable<IEnumerable<IDataRow>> ExecuteCommandWithArguments(DBCOMMAND cmd, LuaTable parameter, IList<ParameterMapping> parameterMapping, PpsDataTransactionExecuteBehavior behavior)
 			{
 				// execute arguments
-				for (var i = 1; i <= parameter.ArrayList.Count; i++)
+				try
 				{
-					var args = GetArguments(parameter, i, false);
-					if (args == null)
-						yield break;
-
-					// fill arguments
-					foreach (var p in parameterMapping)
-						p.UpdateParameter(args);
-
-					using (var r = ExecuteReaderCommand<DbDataReader>(cmd, behavior))
+					for (var i = 1; i <= parameter.ArrayList.Count; i++)
 					{
-						// copy arguments back
-						foreach (var p in parameterMapping)
-							p.UpdateSource(args);
+						var args = GetArguments(parameter, i, false);
+						if (args == null)
+							yield break;
 
-						// return results
-						if (r != null)
+						// fill arguments
+						foreach (var p in parameterMapping)
+							p.UpdateParameter(args);
+
+						using (var r = ExecuteReaderCommand<DbDataReader>(cmd, behavior))
 						{
-							do
+							// copy arguments back
+							foreach (var p in parameterMapping)
+								p.UpdateSource(args);
+
+							// return results
+							if (r != null)
 							{
-								yield return new DbRowReaderEnumerable(r);
-								if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
-									break;
-							} while (r.NextResult());
-						}
-					} // using r
-				} // for (args)
+								do
+								{
+									yield return new DbRowReaderEnumerable(r);
+									if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
+										break;
+								} while (r.NextResult());
+							}
+						} // using r
+					} // for (args)
+				}
+				finally
+				{
+					cmd.Dispose();
+				}
 			} // func ExecuteCommandWithArguments
 
 			#endregion
@@ -1395,7 +1487,19 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="command"></param>
-			protected abstract void PrepareStoredProcedure(DBCOMMAND command);
+			protected virtual void PrepareStoredProcedure(DBCOMMAND command)
+			{
+				if (command.CommandType != CommandType.StoredProcedure)
+					throw new ArgumentOutOfRangeException(nameof(command.CommandType), command.CommandType, "Only StoredProcedure is allowed.");
+
+				var procedureInfo = ((PpsSqlDataSource)DataSource).ResolveProcedureName<PpsSqlProcedureInfo>(command.CommandText, true);
+				foreach (var p in procedureInfo.Parameters)
+				{
+					var parameter = command.CreateParameter();
+					p.InitSqlParameter(parameter);
+					command.Parameters.Add(parameter);
+				}
+			} // proc PrepareStoredProcedure
 
 			/// <summary></summary>
 			/// <param name="parameter"></param>
@@ -1404,12 +1508,14 @@ namespace TecWare.PPSn.Server.Sql
 			/// <returns></returns>
 			protected virtual IEnumerable<IEnumerable<IDataRow>> ExecuteCall(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
-				using (var cmd = CreateCommand(parameter, CommandType.StoredProcedure))
+				var cmd = CreateCommand(parameter, CommandType.StoredProcedure);
+				try
 				{
 					// build argument list
 					cmd.CommandText = name;
-					PrepareStoredProcedure(cmd); 
-					
+
+					PrepareStoredProcedure(cmd);
+
 					// build parameter mapping
 					var parameterMapping = new ParameterMapping[cmd.Parameters.Count];
 					var j = 0;
@@ -1424,7 +1530,12 @@ namespace TecWare.PPSn.Server.Sql
 					}
 
 					return ExecuteCommandWithArguments(cmd, parameter, parameterMapping, behavior);
-				} // using cmd
+				}
+				catch
+				{
+					cmd?.Dispose();
+					throw;
+				}
 			} // func ExecuteInsertResult
 
 			#endregion
@@ -1443,7 +1554,8 @@ namespace TecWare.PPSn.Server.Sql
 				/*
 				 * sql is execute and the args are created as a parameter
 				 */
-				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				var cmd = CreateCommand(parameter, CommandType.Text);
+				try
 				{
 					cmd.CommandText = name;
 					var parameterMapping = new List<ParameterMapping>();
@@ -1463,6 +1575,11 @@ namespace TecWare.PPSn.Server.Sql
 
 					// execute
 					return ExecuteCommandWithArguments(cmd, parameter, parameterMapping, behavior);
+				}
+				catch
+				{
+					cmd?.Dispose();
+					throw;
 				}
 			} // func ExecuteSql
 
@@ -1670,7 +1787,7 @@ namespace TecWare.PPSn.Server.Sql
 								commandText.Append(" AND ");
 
 							var (table, column) = tableInfos.FindColumn((string)p.Key, true);
-							var parm = CreateParameter(cmd, columnInfo: column, parameterValue: p.Value);
+							var parm = CreateParameter(cmd, column, null, p.Value);
 							tableInfos.AppendColumn(commandText, table, column);
 							commandText.Append(" = ")
 								.Append(FormatParameterName(parm.ParameterName));
@@ -1737,6 +1854,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		private readonly Dictionary<string, PpsSqlTableInfo> tables = new Dictionary<string, PpsSqlTableInfo>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, PpsSqlColumnInfo> columns = new Dictionary<string, PpsSqlColumnInfo>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, PpsSqlProcedureInfo> procedures = new Dictionary<string, PpsSqlProcedureInfo>(StringComparer.OrdinalIgnoreCase);
 
 		#region -- Ctor/Dtor/Config ---------------------------------------------------
 
@@ -1917,6 +2035,11 @@ namespace TecWare.PPSn.Server.Sql
 			column.Table.AddColumn(column);
 		} // proc AddColumn
 
+		/// <summary>Add this procedure to schema.</summary>
+		/// <param name="procedure"></param>
+		protected void AddProcedure(PpsSqlProcedureInfo procedure)
+			=> procedures.Add(procedure.QualifiedName, procedure);
+
 		/// <summary>Add relations to the tables.</summary>
 		/// <param name="relation"></param>
 		protected void AddRelation(PpsSqlRelationInfo relation)
@@ -1938,6 +2061,20 @@ namespace TecWare.PPSn.Server.Sql
 				throw new ArgumentNullException("name", $"Table '{name}' is not defined.");
 			return (T)tableInfo;
 		} // func ResolveTableByName
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		protected T ResolveProcedureName<T>(string name, bool throwException = false)
+			where T : PpsSqlProcedureInfo
+		{
+			var procedureInfo = procedures[name];
+			if (procedureInfo == null && throwException)
+				throw new ArgumentNullException("name", $"Procedure '{name}' is not defined.");
+			return (T)procedureInfo;
+		} // func ResolveProcedureName
 
 		/// <summary>Full qualified column name.</summary>
 		/// <param name="columnName"></param>

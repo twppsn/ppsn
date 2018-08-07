@@ -462,9 +462,6 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- ExecuteCall ----------------------------------------------------
 
-			protected override void PrepareStoredProcedure(SqlCommand command)
-				=> SqlCommandBuilder.DeriveParameters(command);
-
 			protected override IEnumerable<IEnumerable<IDataRow>> ExecuteCall(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
 				if (name == "sys.UpdateRevisionData")
@@ -1218,7 +1215,7 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // func GetFieldType
 
-			private static SqlDbType GetSqlType(byte systemTypeId)
+			internal static SqlDbType GetSqlType(byte systemTypeId)
 			{
 				switch (systemTypeId)
 				{
@@ -1304,7 +1301,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- SqlTableInfo -------------------------------------------------------
+		#region -- class SqlTableInfo -------------------------------------------------
 
 		private sealed class SqlTableInfo : PpsSqlTableInfo
 		{
@@ -1325,6 +1322,89 @@ namespace TecWare.PPSn.Server.Sql
 			{
 			} // ctor
 		} // class SqlRelationInfo
+
+		#endregion
+
+		#region -- class SqlParameterInfo ---------------------------------------------
+
+		private sealed class SqlParameterInfo : PpsSqlParameterInfo
+		{
+			private readonly ParameterDirection direction;
+			private readonly SqlDbType dbType;
+			private readonly int maxLength;
+			private readonly byte scale;
+			private readonly byte precision;
+
+			private readonly string typeName;
+			private readonly string xmlSchemaCollectionDatabase;
+			private readonly string xmlSchemaCollectionName;
+			private readonly string xmlSchemaCollectionOwningSchema;
+
+			public SqlParameterInfo(IDataRecord r)
+				: base(r.GetString(1), r.GetBoolean(7))
+			{
+				direction = (ParameterDirection)r.GetByte(2);
+				dbType = SqlColumnInfo.GetSqlType(r.GetByte(3));
+				maxLength = r.GetInt16(4);
+				precision = r.GetByte(5);
+				scale = r.GetByte(6);
+				typeName = r.IsDBNull(8) ? null : r.GetString(8);
+				xmlSchemaCollectionDatabase = r.IsDBNull(9) ? null : r.GetString(9);
+				xmlSchemaCollectionName = r.IsDBNull(10) ? null : r.GetString(10);
+				xmlSchemaCollectionOwningSchema = r.IsDBNull(11) ? null : r.GetString(11);
+			} // ctor
+
+			public override string ToString()
+				=> $"{Name} {dbType}";
+
+			public override void InitSqlParameter(DbParameter parameter)
+			{
+				var p = (SqlParameter)parameter;
+				p.ParameterName = Name;
+				p.SqlDbType = dbType;
+				p.Direction = direction;
+				switch (dbType)
+				{
+					case SqlDbType.NVarChar:
+					case SqlDbType.VarBinary:
+					case SqlDbType.VarChar:
+						p.Size = maxLength;
+						break;
+					case SqlDbType.Decimal:
+						p.Precision = precision;
+						p.Scale = scale;
+						break;
+					case SqlDbType.Udt:
+						p.UdtTypeName = typeName;
+						break;
+					case SqlDbType.Structured:
+						p.TypeName = typeName;
+						break;
+					case SqlDbType.Xml:
+						p.XmlSchemaCollectionDatabase = xmlSchemaCollectionDatabase;
+						p.XmlSchemaCollectionName = xmlSchemaCollectionName;
+						p.XmlSchemaCollectionOwningSchema = xmlSchemaCollectionOwningSchema;
+						break;
+					case SqlDbType.Time:
+					case SqlDbType.DateTime2:
+						p.SqlDbType = SqlDbType.DateTimeOffset;
+						p.Scale = scale;
+						break;
+				}
+			} // proc InitSqlParameter
+		} // class SqlParameterInfo
+
+		#endregion
+
+		#region -- class SqlProcedureInfo ---------------------------------------------
+
+		private sealed class SqlProcedureInfo : PpsSqlProcedureInfo
+		{
+			public SqlProcedureInfo(IDataRecord r) 
+				: base(r.GetString(1), r.GetString(2))
+			{
+			} // ctor
+		} // class SqlProcedureInfo
 
 		#endregion
 
@@ -1707,7 +1787,37 @@ namespace TecWare.PPSn.Server.Sql
 							AddRelation(new SqlRelationInfo(r.GetString(1), parentColumn, referencedColumn));
 						}
 					}
-				}
+
+					if (!r.NextResult())
+						throw new InvalidOperationException();
+
+					// read all stored procedures/functions
+					var procedureIndex = new Dictionary<int, SqlProcedureInfo>();
+					while (r.Read())
+					{
+						var objectId = r.GetInt32(0);
+						try
+						{
+							var tab = new SqlProcedureInfo(r);
+							AddProcedure(tab);
+							procedureIndex[objectId] = tab;
+						}
+						catch (Exception e)
+						{
+							Log.Except($"Procedure initialization failed: objectId={objectId}", e);
+						}
+					}
+
+					if (!r.NextResult())
+						throw new InvalidOperationException();
+
+					// read all arguments
+					while (r.Read())
+					{
+						if (procedureIndex.TryGetValue(r.GetInt32(0), out var procedureInfo))
+							procedureInfo.AddParameter(new SqlParameterInfo(r));
+					}
+				} // using r
 			}
 
 			// Register Server logins
