@@ -238,7 +238,26 @@ namespace TecWare.PPSn.UI
 			}
 			private string newEnvironmentUri = String.Empty;
 			public string NewEnvironmentUri { get => newEnvironmentUri; set => Set(ref newEnvironmentUri, value, nameof(NewEnvironmentUri)); }
-			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);   //ToDo: check if that Environment already exists!
+			public bool NewEnvironmentIsValid
+			{
+				get
+				{
+					if (String.IsNullOrWhiteSpace(NewEnvironmentName))
+						return false;
+					if (!Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute))
+						return false;
+
+					// fastest check if EnvironmentName already exists or if the directory is otherwise already existing
+					if (Directory.Exists(Path.GetFullPath(Path.Combine(PpsEnvironmentInfo.LocalEnvironmentsPath, NewEnvironmentName))))
+						return false;
+
+					// check if the Uri is already configured
+					if (PpsEnvironmentInfo.GetLocalEnvironments().Any(env => env.Uri.Equals(new Uri(NewEnvironmentUri + (NewEnvironmentUri.EndsWith("/") ? String.Empty : "/"), UriKind.Absolute))))
+						return false;
+
+					return true;
+				}
+			}
 		} // class EditLoginStateData
 
 		#endregion
