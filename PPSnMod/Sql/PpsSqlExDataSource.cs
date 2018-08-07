@@ -26,7 +26,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -1329,7 +1328,6 @@ namespace TecWare.PPSn.Server.Sql
 
 		private sealed class SqlParameterInfo : PpsSqlParameterInfo
 		{
-			private readonly ParameterDirection direction;
 			private readonly SqlDbType dbType;
 			private readonly int maxLength;
 			private readonly byte scale;
@@ -1340,10 +1338,22 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly string xmlSchemaCollectionName;
 			private readonly string xmlSchemaCollectionOwningSchema;
 
-			public SqlParameterInfo(IDataRecord r)
-				: base(r.GetString(1), r.GetBoolean(7))
+			internal SqlParameterInfo(string name)
+				: base(name, ParameterDirection.ReturnValue, false)
 			{
-				direction = (ParameterDirection)r.GetByte(2);
+				dbType = SqlDbType.Int;
+				maxLength = 0;
+				precision = 0;
+				scale = 0;
+				typeName = null;
+				xmlSchemaCollectionDatabase = null;
+				xmlSchemaCollectionName = null;
+				xmlSchemaCollectionOwningSchema = null;
+			} // ctor
+
+			public SqlParameterInfo(IDataRecord r)
+				: base(r.GetString(1), (ParameterDirection)r.GetByte(2), r.GetBoolean(7))
+			{
 				dbType = SqlColumnInfo.GetSqlType(r.GetByte(3));
 				maxLength = r.GetInt16(4);
 				precision = r.GetByte(5);
@@ -1362,7 +1372,7 @@ namespace TecWare.PPSn.Server.Sql
 				var p = (SqlParameter)parameter;
 				p.ParameterName = Name;
 				p.SqlDbType = dbType;
-				p.Direction = direction;
+				p.Direction = Direction;
 				switch (dbType)
 				{
 					case SqlDbType.NVarChar:
@@ -1400,10 +1410,37 @@ namespace TecWare.PPSn.Server.Sql
 
 		private sealed class SqlProcedureInfo : PpsSqlProcedureInfo
 		{
+			private bool hasReturnValue = false;
+			private bool hasOutput = false;
+			private bool hasResult = false;
+
 			public SqlProcedureInfo(IDataRecord r) 
 				: base(r.GetString(1), r.GetString(2))
 			{
+				hasResult = r.GetBoolean(3);
 			} // ctor
+
+			public override void AddParameter(PpsSqlParameterInfo parameterInfo)
+			{
+				if (ParameterCount == 0)
+				{
+					if (parameterInfo.Direction != ParameterDirection.ReturnValue)
+					{
+						base.AddParameter(new SqlParameterInfo("@RETURN_VALUE"));
+						hasReturnValue = false;
+					}
+					else
+						hasReturnValue = true;
+				}
+				else if ((parameterInfo.Direction & ParameterDirection.Output) == ParameterDirection.Output)
+					hasOutput = true;
+
+				base.AddParameter(parameterInfo);
+			} // func AddParameter
+
+			public override bool HasResult => hasResult;
+			public override bool HasOutput => hasOutput;
+			public override bool HasReturnValue => hasReturnValue;
 		} // class SqlProcedureInfo
 
 		#endregion

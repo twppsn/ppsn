@@ -386,13 +386,16 @@ namespace TecWare.PPSn.Server.Sql
 	{
 		private readonly string name;
 		private readonly bool hasDefault;
+		private readonly ParameterDirection direction;
 
 		/// <summary></summary>
 		/// <param name="name"></param>
+		/// <param name="direction"></param>
 		/// <param name="hasDefault"></param>
-		public PpsSqlParameterInfo(string name, bool hasDefault)
+		public PpsSqlParameterInfo(string name, ParameterDirection direction, bool hasDefault)
 		{
 			this.name = name;
+			this.direction = direction;
 			this.hasDefault = hasDefault;
 		} // ctor
 
@@ -407,6 +410,8 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary></summary>
 		public string Name => name;
+		/// <summary>Parameter direction</summary>
+		public ParameterDirection Direction => direction;
 		/// <summary></summary>
 		public bool HasDefault => hasDefault;
 	} // class PpsSqlParameterInfo
@@ -417,7 +422,7 @@ namespace TecWare.PPSn.Server.Sql
 
 	/// <summary></summary>
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
-	public class PpsSqlProcedureInfo
+	public abstract class PpsSqlProcedureInfo
 	{
 		private readonly string schemaName;
 		private readonly string procedureName;
@@ -432,11 +437,10 @@ namespace TecWare.PPSn.Server.Sql
 			this.schemaName = schemaName;
 			this.procedureName = procedureName;
 		} // ctor
-
-
+		
 		/// <summary></summary>
 		/// <param name="parameterInfo"></param>
-		public void AddParameter(PpsSqlParameterInfo parameterInfo)
+		public virtual void AddParameter(PpsSqlParameterInfo parameterInfo)
 			=> parameters.Add(parameterInfo);
 
 		private string DebuggerDisplay
@@ -451,8 +455,17 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary>Qualified name within the server.</summary>
 		public string QualifiedName => schemaName + "." + procedureName;
 
+		/// <summary>Has this procedure has output parameter.</summary>
+		public virtual bool HasOutput => parameters.FirstOrDefault(c => c.Direction != ParameterDirection.ReturnValue && (c.Direction & ParameterDirection.Output) == ParameterDirection.Output) != null;
+		/// <summary>Has this procedure an return value.</summary>
+		public virtual bool HasReturnValue => parameters[0].Direction == ParameterDirection.ReturnValue;
+		/// <summary>Has this procedure a result.</summary>
+		public abstract bool HasResult { get; }
+
 		/// <summary>Parameter information of this table.</summary>
 		public IEnumerable<PpsSqlParameterInfo> Parameters => parameters;
+		/// <summary>Number of arguments</summary>
+		public int ParameterCount => parameters.Count;
 	} // class PpsSqlProcedureInfo
 
 	#endregion
@@ -1195,7 +1208,21 @@ namespace TecWare.PPSn.Server.Sql
 			#endregion
 
 			#region -- CreateCommand --------------------------------------------------
-			
+
+			/// <summary></summary>
+			/// <param name="procedureName"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public PpsSqlProcedureInfo FindProcedure(string procedureName, bool throwException = true)
+				=> ((PpsSqlDataSource)DataSource).ResolveProcedureByName<PpsSqlProcedureInfo>(procedureName, throwException);
+
+			/// <summary></summary>
+			/// <param name="tableName"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public PpsSqlTableInfo FindTable(string tableName, bool throwException = true)
+				=> ((PpsSqlDataSource)DataSource).ResolveTableByName<PpsSqlTableInfo>(tableName, throwException);
+
 			/// <summary>Create a command</summary>
 			/// <param name="commandType"></param>
 			/// <param name="noTransaction"></param>
@@ -1491,8 +1518,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				if (command.CommandType != CommandType.StoredProcedure)
 					throw new ArgumentOutOfRangeException(nameof(command.CommandType), command.CommandType, "Only StoredProcedure is allowed.");
-
-				var procedureInfo = ((PpsSqlDataSource)DataSource).ResolveProcedureName<PpsSqlProcedureInfo>(command.CommandText, true);
+				var procedureInfo = FindProcedure(command.CommandText);
 				foreach (var p in procedureInfo.Parameters)
 				{
 					var parameter = command.CreateParameter();
@@ -2055,26 +2081,20 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		protected T ResolveTableByName<T>(string name, bool throwException = false)
 			where T : PpsSqlTableInfo
-		{
-			var tableInfo = tables[name];
-			if (tableInfo == null && throwException)
-				throw new ArgumentNullException("name", $"Table '{name}' is not defined.");
-			return (T)tableInfo;
-		} // func ResolveTableByName
-
+			=> tables.TryGetValue(name, out var tableInfo)
+				? (T)tableInfo
+				: (throwException ? throw new ArgumentNullException("name", $"Table '{name}' is not defined.") : (T)null);
+		
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="name"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		protected T ResolveProcedureName<T>(string name, bool throwException = false)
+		protected T ResolveProcedureByName<T>(string name, bool throwException = false)
 			where T : PpsSqlProcedureInfo
-		{
-			var procedureInfo = procedures[name];
-			if (procedureInfo == null && throwException)
-				throw new ArgumentNullException("name", $"Procedure '{name}' is not defined.");
-			return (T)procedureInfo;
-		} // func ResolveProcedureName
+			=> procedures.TryGetValue(name, out var procedureInfo)
+				? (T)procedureInfo 
+				: (throwException ? throw new ArgumentNullException("name", $"Procedure '{name}' is not defined.") : (T)null);
 
 		/// <summary>Full qualified column name.</summary>
 		/// <param name="columnName"></param>
