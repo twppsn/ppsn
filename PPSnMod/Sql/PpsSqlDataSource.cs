@@ -1866,6 +1866,18 @@ namespace TecWare.PPSn.Server.Sql
 					return base.ExecuteResult(parameter, behavior);
 			} // func ExecuteResult
 
+			/// <summary></summary>
+			/// <param name="viewOrTableName"></param>
+			/// <returns></returns>
+			public override PpsDataSelector CreateSelector(string viewOrTableName)
+			{
+				var tableInfo = FindTable(viewOrTableName, true);
+
+				return new PpsSqlDataSelector((IPpsSqlConnectionHandle)Connection, 
+					new PpsSqlDataSelectorToken((PpsSqlDataSource)DataSource, viewOrTableName, viewOrTableName, tableInfo.Columns.ToArray()
+				), null, null, null);
+			} // func CreateSelector
+
 			/// <summary>Connection for the data manipulation</summary>
 			public DBCONNECTION DbConnection => connection;
 			/// <summary>Access the transaction</summary>

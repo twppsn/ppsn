@@ -151,7 +151,13 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		protected virtual IEnumerable<IEnumerable<IDataRow>> ExecuteResult(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
 			=> throw new NotImplementedException();
-		
+
+		/// <summary>Create a selector for a view or table.</summary>
+		/// <param name="viewOrTableName"></param>
+		/// <returns></returns>
+		public virtual PpsDataSelector CreateSelector(string viewOrTableName)
+			=> throw new NotImplementedException();
+
 		/// <summary>DataSource of the transaction.</summary>
 		public PpsDataSource DataSource => dataSource;
 		/// <summary>Connection assigned to this transaction.</summary>
