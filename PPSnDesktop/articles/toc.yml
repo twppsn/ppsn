@@ -4,6 +4,7 @@
     - uid: ppsn.wpf.commandline
     - uid: ppsn.wpf.troubleshooting
     - uid: ppsn.wpf.dev_installation
+    - uid: ppsn.wpf.searchacommandfield
 - name: Filesystem
 - name: Panes
 - name: Lua-Reference
