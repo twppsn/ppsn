@@ -1156,6 +1156,8 @@ namespace TecWare.PPSn
 			/// <summary>Keeps the UI up to date.</summary>
 			public event NotifyCollectionChangedEventHandler CollectionChanged;
 
+			private bool hasData = false;
+
 			/// <summary>Public Constructor</summary>
 			/// <param name="elementCount">Amount of datapoints to keep</param>
 			public CircularBuffer(int elementCount)
@@ -1169,6 +1171,9 @@ namespace TecWare.PPSn
 			/// <param name="item"></param>
 			public void Add(long item)
 			{
+				if (!hasData)
+					hasData = true;
+
 				if (queue.Count == maxCount)
 					queue.Dequeue();
 
@@ -1187,6 +1192,9 @@ namespace TecWare.PPSn
 			{
 				return GetEnumerator();
 			}
+
+			/// <summary>if false, the Queue is empty</summary>
+			public bool HasData => hasData;
 		}
 
 		/// <summary>Class representing one Statistic Element</summary>
@@ -1238,6 +1246,8 @@ namespace TecWare.PPSn
 			public string MaxValue => formatValue != null ? formatValue(max) : max.ToString();
 			/// <summary>Returns the last Value, formatted as given</summary>
 			public string CurrentValue => formatValue != null ? formatValue(history.Last()) : history.Last().ToString();
+			/// <summary>False, if the Statistic was never activated</summary>
+			public bool HasData => history.HasData;
 		}
 
 		private DispatcherTimer statisticsTimer;

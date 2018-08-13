@@ -145,6 +145,8 @@ namespace TecWare.PPSn.UI
 											}
 											foreach (var statistic in Environment.Statistics)
 											{
+												if (!statistic.HasData)
+													continue;
 												var en = statistic.History.GetEnumerator();
 												var historic = 0;
 												en.Reset();
