@@ -4,12 +4,18 @@ title: Installation of PPSnMod for Development
 ---
 
 # Installation of the Debug Environment
+
+## Install the Pre-Requirements
+
+1. .Net 4.7
+1. MSSqlServer (2017 Express will suffice)
+
 ## Pull the Repository
 
 ```bash
 
-mkdir PPSn
-cd PPSn
+mkdir PPSnOS
+cd PPSnOS
 git clone --recursive https://github.com/twppsn/ppsn.git
 # or
 git clone --recursive --branch development https://github.com/twppsn/ppsn.git

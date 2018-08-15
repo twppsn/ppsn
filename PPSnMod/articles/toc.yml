@@ -1,8 +1,10 @@
 - uid: ppsn.mod.dev_installation
 - uid: ppsn.mod.installation
 - uid: ppsn.mod.troubleshooting
-- name: Database Schema
-  uid: 
+- uid: ppsn.mod.programming
+- name: Datenbank
+  items:
+  - uid: ppsn.mod.sqlcommands
 - name: Lua-Reference
 - name: CodeReference
   uid: TecWare.PPSn.Server
