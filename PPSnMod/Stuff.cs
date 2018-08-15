@@ -181,13 +181,13 @@ namespace TecWare.PPSn.Server
 		/// <param name="parameter"></param>
 		/// <param name="value"></param>
 		/// <param name="parameterType"></param>
-		public static void SetValue(this DbParameter parameter, object value, Type parameterType)
+		/// <param name="isDefault"></param>
+		public static void SetValue(this DbParameter parameter, object value, Type parameterType, bool isDefault = false)
 		{
 			parameter.Value = value == null
-				? (object)DBNull.Value
+				? (isDefault ? null : (object)DBNull.Value)
 				: (value != DBNull.Value ? Procs.ChangeType(value, parameterType) : value);
 		} // proc SetValue
-
 
 		/// <summary></summary>
 		/// <param name="type"></param>

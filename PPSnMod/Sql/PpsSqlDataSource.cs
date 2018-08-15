@@ -1113,7 +1113,7 @@ namespace TecWare.PPSn.Server.Sql
 				/// <summary>Set parameter value</summary>
 				/// <param name="table"></param>
 				protected override void UpdateParameterCore(LuaTable table)
-					=> Parameter.SetValue(table.GetMemberValue(name, ignoreCase: true), DataType);
+					=> Parameter.SetValue(table.GetMemberValue(name, ignoreCase: true), DataType, Parameter.IsNullable);
 
 				/// <summary>Set source value</summary>
 				/// <param name="table"></param>
@@ -1822,8 +1822,25 @@ namespace TecWare.PPSn.Server.Sql
 					else if (parameter.GetMemberValue("where") is string sqlWhere)
 						commandText.Append(" WHERE ").Append(sqlWhere);
 
-					if (parameter.GetMemberValue("orderby") is string sqlOrderBy)
-						commandText.Append(" ORDER BY ").Append(sqlOrderBy);
+					if (parameter.GetMemberValue("orderby") is string orderByString)
+					{
+						first = true;
+						foreach (var orderBy in PpsDataOrderExpression.Parse(orderByString))
+						{
+							if (first)
+							{
+								commandText.Append(" ORDER BY ");
+								first = false;
+							}
+							else
+								commandText.Append(',');
+
+							commandText.Append(orderBy.Identifier)
+								.Append(' ');
+							if (orderBy.Negate)
+								commandText.Append("DESC ");
+						}
+					}
 
 					cmd.CommandText = commandText.ToString();
 
