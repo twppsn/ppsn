@@ -1374,7 +1374,6 @@ namespace TecWare.PPSn.Server.Sql
 				p.ParameterName = Name;
 				p.SqlDbType = dbType;
 				p.Direction = Direction;
-				p.IsNullable = HasDefault;
 				switch (dbType)
 				{
 					case SqlDbType.NVarChar:

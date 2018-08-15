@@ -207,7 +207,7 @@ namespace TecWare.PPSn.Server.Sql
 			parameter.Direction = ParameterDirection.Input;
 			parameter.SourceColumn = Name;
 			parameter.SourceVersion = DataRowVersion.Current;
-			parameter.SetValue(parameterValue, DataType);
+			parameter.SetValue(parameterValue, DataType, DBNull.Value);
 		} // proc InitSqlParameter
 
 		/// <summary>Table</summary>
@@ -414,6 +414,8 @@ namespace TecWare.PPSn.Server.Sql
 		public ParameterDirection Direction => direction;
 		/// <summary></summary>
 		public bool HasDefault => hasDefault;
+		/// <summary>Return default value for c# null.</summary>
+		public virtual object DefaultValue => hasDefault ? null : DBNull.Value;
 	} // class PpsSqlParameterInfo
 
 	#endregion
@@ -1099,21 +1101,24 @@ namespace TecWare.PPSn.Server.Sql
 			protected sealed class NameParameterMapping : ParameterMapping
 			{
 				private readonly string name;
+				private readonly object defaultValue;
 
 				/// <summary></summary>
 				/// <param name="name"></param>
 				/// <param name="parameter"></param>
 				/// <param name="dataType"></param>
-				public NameParameterMapping(string name, DbParameter parameter, Type dataType)
+				/// <param name="defaultValue"></param>
+				public NameParameterMapping(string name, DbParameter parameter, Type dataType, object defaultValue)
 					: base(parameter, dataType)
 				{
 					this.name = name ?? throw new ArgumentNullException(nameof(name));
+					this.defaultValue = defaultValue;
 				} // ctor
 
 				/// <summary>Set parameter value</summary>
 				/// <param name="table"></param>
 				protected override void UpdateParameterCore(LuaTable table)
-					=> Parameter.SetValue(table.GetMemberValue(name, ignoreCase: true), DataType, Parameter.IsNullable);
+					=> Parameter.SetValue(table.GetMemberValue(name, ignoreCase: true), DataType, defaultValue);
 
 				/// <summary>Set source value</summary>
 				/// <param name="table"></param>
@@ -1142,7 +1147,7 @@ namespace TecWare.PPSn.Server.Sql
 				/// <summary>Set parameter value</summary>
 				/// <param name="table"></param>
 				protected override void UpdateParameterCore(LuaTable table)
-					=> Parameter.SetValue(table.GetArrayValue(index), DataType);
+					=> Parameter.SetValue(table.GetArrayValue(index), DataType, DBNull.Value);
 
 				/// <summary>Set source value</summary>
 				/// <param name="table"></param>
@@ -1336,7 +1341,7 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					sqlParameterInfo.InitSqlParameter(param);
 					if (parameterValue != null)
-						param.SetValue(parameterValue, param.GetDataType());
+						param.SetValue(parameterValue, param.GetDataType(), sqlParameterInfo.DefaultValue);
 				}
 				else if (columnInfo is PpsSqlColumnInfo sqlColumnInfo)
 					sqlColumnInfo.InitSqlParameter(param, parameterName, parameterValue);
@@ -1360,10 +1365,10 @@ namespace TecWare.PPSn.Server.Sql
 
 						SetSqlParameterType(param, t, columnInfo);
 
-						param.SetValue(parameterValue, t);
+						param.SetValue(parameterValue, t, DBNull.Value);
 					}
 					else
-						param.SetValue(parameterValue, parameterValue?.GetType());
+						param.SetValue(parameterValue, parameterValue?.GetType(), DBNull.Value);
 				}
 				
 				command.Parameters.Add(param);
@@ -1514,17 +1519,29 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="command"></param>
-			protected virtual void PrepareStoredProcedure(DBCOMMAND command)
+			protected virtual ParameterMapping[] PrepareStoredProcedure(DBCOMMAND command)
 			{
 				if (command.CommandType != CommandType.StoredProcedure)
 					throw new ArgumentOutOfRangeException(nameof(command.CommandType), command.CommandType, "Only StoredProcedure is allowed.");
+
+				var parameterMapping = new List<ParameterMapping>();
 				var procedureInfo = FindProcedure(command.CommandText);
+
 				foreach (var p in procedureInfo.Parameters)
 				{
 					var parameter = command.CreateParameter();
 					p.InitSqlParameter(parameter);
-					command.Parameters.Add(parameter);
+				   					command.Parameters.Add(parameter);
+
+					// threat return value different
+					parameterMapping.Add(
+						(p.Direction & ParameterDirection.ReturnValue) == ParameterDirection.ReturnValue
+							? (ParameterMapping)new IndexParameterMapping(1, parameter, parameter.GetDataType())
+							: (ParameterMapping)new NameParameterMapping(UnformatParameterName(p.Name), parameter, parameter.GetDataType(), p.DefaultValue)
+					);
 				}
+
+				return parameterMapping.ToArray();
 			} // proc PrepareStoredProcedure
 
 			/// <summary></summary>
@@ -1540,21 +1557,7 @@ namespace TecWare.PPSn.Server.Sql
 					// build argument list
 					cmd.CommandText = name;
 
-					PrepareStoredProcedure(cmd);
-
-					// build parameter mapping
-					var parameterMapping = new ParameterMapping[cmd.Parameters.Count];
-					var j = 0;
-					foreach (DbParameter p in cmd.Parameters)
-					{
-						var parameterName = UnformatParameterName(p.ParameterName);
-
-						// threat return value different
-						parameterMapping[j++] = (p.Direction & ParameterDirection.ReturnValue) == ParameterDirection.ReturnValue
-							? (ParameterMapping)new IndexParameterMapping(1, p, p.GetDataType())
-							: (ParameterMapping)new NameParameterMapping(parameterName, p, p.GetDataType());
-					}
-
+					var parameterMapping = PrepareStoredProcedure(cmd);
 					return ExecuteCommandWithArguments(cmd, parameter, parameterMapping, behavior);
 				}
 				catch
@@ -1594,7 +1597,7 @@ namespace TecWare.PPSn.Server.Sql
 							if (!parameterMapping.Exists(c => String.Compare(((NameParameterMapping)c).Name, k, StringComparison.OrdinalIgnoreCase) == 0))
 							{
 								var p = CreateParameter(cmd, null, k, GetSampleValueFromArguments(parameter, k));
-								parameterMapping.Add(new NameParameterMapping(k, p, p.GetDataType()));
+								parameterMapping.Add(new NameParameterMapping(k, p, p.GetDataType(), DBNull.Value));
 							}
 						}
 					}
