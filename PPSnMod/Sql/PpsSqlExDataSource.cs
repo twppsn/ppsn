@@ -1143,6 +1143,7 @@ namespace TecWare.PPSn.Server.Sql
 					parameterName = "@" + Name;
 
 				base.InitSqlParameter(parameter, parameterName, value);
+
 				((SqlParameter)parameter).SqlDbType = sqlType;
 				if (sqlType == SqlDbType.Udt)
 					((SqlParameter)parameter).UdtTypeName = udtName;
