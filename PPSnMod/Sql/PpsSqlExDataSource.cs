@@ -1975,17 +1975,19 @@ namespace TecWare.PPSn.Server.Sql
 
 			return name;
 		} // func CreateOrReplaceViewAsync
-
+		
 		/// <summary></summary>
 		/// <param name="connection"></param>
 		/// <param name="selectList"></param>
-		/// <param name="viewName"></param>
+		/// <param name="from"></param>
 		/// <param name="whereCondition"></param>
+		/// <param name="whereNativeLookup"></param>
 		/// <param name="orderBy"></param>
+		/// <param name="orderByNativeLookup"></param>
 		/// <param name="start"></param>
 		/// <param name="count"></param>
 		/// <returns></returns>
-		protected override DbCommand CreateViewCommand(IPpsSqlConnectionHandle connection, string selectList, string viewName, string whereCondition, string orderBy, int start, int count)
+		protected override DbCommand CreateViewCommand(IPpsSqlConnectionHandle connection, IEnumerable<IDataColumn> selectList, PpsSqlJoinExpression from, PpsDataFilterExpression whereCondition, Func<string,string> whereNativeLookup, IEnumerable<PpsDataOrderExpression> orderBy, Func<string,string> orderByNativeLookup, int start, int count)
 		{
 			SqlCommand cmd = null;
 			try
@@ -2007,32 +2009,32 @@ namespace TecWare.PPSn.Server.Sql
 				var sb = new StringBuilder("SELECT ");
 
 				// build the select
-				if (String.IsNullOrEmpty(selectList))
-					sb.Append("* ");
-				else
-					sb.Append(selectList).Append(' ');
+				var columns = selectList.OfType<IPpsSqlAliasColumn>().ToArray();
+				var columnLookup = new Func<string, IPpsSqlAliasColumn>(n => columns.FirstOrDefault(c => String.Compare(c.Alias, n, StringComparison.OrdinalIgnoreCase) == 0));
+				FormatSelectList(sb, columns);
 
 				// add the view
-				sb.Append("FROM ").Append(viewName).Append(' ');
+				sb.Append("FROM ").Append(from.EmitJoin()).Append(' ');
 
 				// add the where
-				if (!String.IsNullOrEmpty(whereCondition))
-					sb.Append("WHERE ").Append(whereCondition).Append(' ');
+				if (whereCondition != null && whereCondition != PpsDataFilterExpression.True)
+					sb.Append("WHERE ").Append(FormatWhereExpression(whereCondition, whereNativeLookup, columnLookup)).Append(' ');
 
 				// add the orderBy
-				if (!String.IsNullOrEmpty(orderBy))
-				{
-					sb.Append("ORDER BY ").Append(orderBy).Append(' ');
+				var orderByEmitted = FormatOrderList(sb, orderBy, orderByNativeLookup, columnLookup);
 
-					// build the range, without order fetch is not possible
-					if (count >= 0 && start < 0)
-						start = 0;
-					if (start >= 0)
-					{
-						sb.Append("OFFSET ").Append(start).Append(" ROWS ");
-						if (count >= 0)
-							sb.Append("FETCH NEXT ").Append(count).Append(" ROWS ONLY ");
-					}
+				// build the range, without order fetch is not possible
+				if (count >= 0 && start < 0)
+					start = 0;
+				if (start >= 0 && count < Int32.MaxValue)
+				{
+					if (orderByEmitted)
+						sb.Append("ORDER BY ");
+					else
+						sb.Append(' ');
+					sb.Append("OFFSET ").Append(start).Append(" ROWS ");
+					if (count >= 0)
+						sb.Append("FETCH NEXT ").Append(count).Append(" ROWS ONLY ");
 				}
 
 				cmd.CommandText = sb.ToString();

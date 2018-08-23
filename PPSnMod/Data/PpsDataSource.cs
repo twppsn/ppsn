@@ -62,6 +62,13 @@ namespace TecWare.PPSn.Server.Data
 		public virtual PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 			=> throw new NotImplementedException();
 
+		/// <summary></summary>
+		/// <param name="connection"></param>
+		/// <param name="selectorName"></param>
+		/// <returns></returns>
+		public virtual PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorName)
+			=> throw new NotImplementedException();
+
 		/// <summary>Returns a native column description.</summary>
 		/// <param name="columnName"></param>
 		/// <param name="throwException"></param>

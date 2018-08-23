@@ -248,11 +248,41 @@ namespace TecWare.PPSn.Server.Sql
 
 	#endregion
 
+	#region -- interface IPpsSqlTableOrView -------------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsSqlTableOrView : IDataColumns
+	{
+		/// <summary></summary>
+		string TableName { get; }
+		/// <summary></summary>
+		string QualifiedName { get; }
+		/// <summary></summary>
+		new IReadOnlyList<IPpsColumnDescription> Columns { get; }
+	} // interface IPpsSqlTableOrView
+
+	#endregion
+
+	#region -- interface IPpsSqlAliasColumn -------------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsSqlAliasColumn
+	{
+		/// <summary></summary>
+		string Alias { get; }
+		/// <summary></summary>
+		string Expression { get; }
+		/// <summary></summary>
+		Type DataType { get; }
+	} // interface IPpsSqlAliasColumn
+
+	#endregion
+
 	#region -- class PpsSqlTableInfo --------------------------------------------------
 
 	/// <summary>Table information</summary>
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
-	public abstract class PpsSqlTableInfo : IDataColumns
+	public abstract class PpsSqlTableInfo : IDataColumns, IPpsSqlTableOrView
 	{
 		private readonly string schemaName;
 		private readonly string tableName;
@@ -325,6 +355,9 @@ namespace TecWare.PPSn.Server.Sql
 		public string TableName => tableName;
 		/// <summary>Full qualified name for sql-server.</summary>
 		public virtual string SqlQualifiedName => schemaName + ".[" + tableName + "]";
+
+		string IPpsSqlTableOrView.QualifiedName => SqlQualifiedName;
+
 		/// <summary>Qualified name within the server.</summary>
 		public string QualifiedName => schemaName + "." + tableName;
 
@@ -340,6 +373,8 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary>Relations of this table.</summary>
 		public IEnumerable<PpsSqlRelationInfo> RelationInfo => relations;
 
+
+		IReadOnlyList<IPpsColumnDescription> IPpsSqlTableOrView.Columns => columns;
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columns;
 	} // class PpsSqlTableInfo
 
@@ -561,7 +596,7 @@ namespace TecWare.PPSn.Server.Sql
 		#region -- class PpsSqlDataSelectorToken --------------------------------------
 
 		/// <summary>Representation of a data view for the system.</summary>
-		protected sealed class PpsSqlDataSelectorToken : IPpsSelectorToken
+		protected sealed class PpsSqlDataSelectorToken : IPpsSelectorToken, IPpsSqlTableOrView
 		{
 			private readonly PpsSqlDataSource source;
 			private readonly string name;
@@ -582,7 +617,15 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="throwException"></param>
 			/// <returns></returns>
 			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
-				=> new PpsSqlDataSelector((IPpsSqlConnectionHandle)connection, this, null, null, null);
+				=> CreateSelector(connection, null, throwException);
+
+			/// <summary></summary>
+			/// <param name="connection"></param>
+			/// <param name="throwException"></param>
+			/// <param name="aliasName"></param>
+			/// <returns></returns>
+			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string aliasName = null, bool throwException = true)
+				=> new PpsSqlDataSelector((IPpsSqlConnectionHandle)connection, this, aliasName);
 
 			/// <summary></summary>
 			/// <param name="selectorColumn"></param>
@@ -597,9 +640,17 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary></summary>
 			public PpsSqlDataSource DataSource => source;
 
+			/// <summary></summary>
+			public IReadOnlyCollection<IPpsColumnDescription> Columns => columnDescriptions;
+
 			PpsDataSource IPpsSelectorToken.DataSource => DataSource;
 
 			IReadOnlyList<IDataColumn> IDataColumns.Columns => columnDescriptions;
+
+			string IPpsSqlTableOrView.TableName => name;
+			string IPpsSqlTableOrView.QualifiedName => viewName;
+
+			IReadOnlyList<IPpsColumnDescription> IPpsSqlTableOrView.Columns => columnDescriptions;
 		} // class PpsSqlDataSelectorToken
 
 		#endregion
@@ -728,172 +779,10 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class PpsSqlDataSelector -------------------------------------------
-
-		/// <summary></summary>
-		private sealed class PpsSqlDataSelector : PpsDataSelector
-		{
-			#region -- class SqlDataFilterVisitor -------------------------------------
-
-			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitorSql
-			{
-				private readonly Func<string, string> lookupNative;
-				private readonly Func<string, IPpsColumnDescription> lookupColumn;
-
-				public SqlDataFilterVisitor(Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
-				{
-					this.lookupNative = lookupNative;
-					this.lookupColumn = lookupColumn;
-				} // ctor
-
-				protected override Tuple<string, Type> LookupColumn(string columnToken)
-				{
-					var column = lookupColumn(columnToken);
-					if (column == null)
-						throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
-
-					return new Tuple<string, Type>(column.Name, column.DataType);
-				} // func LookupColumn
-
-				protected override string LookupNativeExpression(string key)
-				{
-					var expr = lookupNative(key);
-					if (String.IsNullOrEmpty(expr))
-						throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{key}'.");
-					return expr;
-				} // func LookupNativeExpression
-			} // class SqlDataFilterVisitor
-
-			#endregion
-
-			private readonly IPpsSqlConnectionHandle connection;
-
-			private readonly PpsSqlDataSelectorToken selectorToken;
-			private readonly string selectList;
-			private readonly string whereCondition;
-			private readonly string orderBy;
-
-			/// <summary></summary>
-			/// <param name="connection"></param>
-			/// <param name="selectorToken"></param>
-			/// <param name="selectList"></param>
-			/// <param name="whereCondition"></param>
-			/// <param name="orderBy"></param>
-			public PpsSqlDataSelector(IPpsSqlConnectionHandle connection, PpsSqlDataSelectorToken selectorToken, string selectList, string whereCondition, string orderBy)
-				: base(connection.DataSource)
-			{
-				this.connection = connection;
-				this.selectorToken = selectorToken;
-				this.selectList = selectList;
-				this.whereCondition = whereCondition;
-				this.orderBy = orderBy;
-			} // ctor
-
-			private string FormatOrderExpression(PpsDataOrderExpression o, Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
-			{
-				// check for native expression
-				if (lookupNative != null)
-				{
-					var expr = lookupNative(o.Identifier);
-					if (expr != null)
-					{
-						if (o.Negate)
-						{
-							// todo: replace asc with desc and desc with asc
-							expr = expr.Replace(" asc", " desc");
-						}
-						return expr;
-					}
-				}
-
-				// checkt the column
-				var column = lookupColumn(o.Identifier)
-					?? throw new ArgumentNullException("orderby", $"Order by column '{o.Identifier} not found.");
-
-				if (o.Negate)
-					return column.Name + " DESC";
-				else
-					return column.Name;
-			} // func FormatOrderExpression
-
-			/// <summary></summary>
-			/// <param name="expressions"></param>
-			/// <param name="lookupNative"></param>
-			/// <returns></returns>
-			public sealed override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
-				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o, lookupNative, selectorToken.GetFieldDescription)));
-
-			/// <summary></summary>
-			/// <param name="expression"></param>
-			/// <param name="lookupNative"></param>
-			/// <returns></returns>
-			public sealed override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
-				=> SqlWhere(new SqlDataFilterVisitor(lookupNative, selectorToken.GetFieldDescription).CreateFilter(expression));
-
-			private string AddSelectList(string addSelectList)
-			{
-				if (String.IsNullOrEmpty(addSelectList))
-					return selectList;
-
-				return String.IsNullOrEmpty(selectList) ? addSelectList : selectList + ", " + addSelectList;
-			} // func AddSelectList
-
-			public PpsSqlDataSelector SqlSelect(string addSelectList)
-			{
-				if (String.IsNullOrEmpty(addSelectList))
-					return this;
-
-				var newSelectList = AddSelectList(addSelectList);
-				return new PpsSqlDataSelector(connection, selectorToken, newSelectList, whereCondition, orderBy);
-			} // func SqlSelect
-
-			private string AddWhereCondition(string addWhereCondition)
-			{
-				if (String.IsNullOrEmpty(addWhereCondition))
-					return whereCondition;
-
-				return String.IsNullOrEmpty(whereCondition) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
-			} // func AddWhereCondition
-
-			public PpsSqlDataSelector SqlWhere(string addWhereCondition)
-			{
-				if (String.IsNullOrEmpty(addWhereCondition))
-					return this;
-
-				var newWhereCondition = AddWhereCondition(addWhereCondition);
-				return new PpsSqlDataSelector(connection, selectorToken, selectList, newWhereCondition, orderBy);
-			} // func SqlWhere
-
-			private string AddOrderBy(string addOrderBy)
-			{
-				if (String.IsNullOrEmpty(addOrderBy))
-					return orderBy;
-
-				return String.IsNullOrEmpty(orderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
-			} // func AddOrderBy
-
-			public PpsSqlDataSelector SqlOrderBy(string addOrderBy)
-			{
-				if (String.IsNullOrEmpty(addOrderBy))
-					return this;
-
-				var newOrderBy = AddOrderBy(addOrderBy);
-				return new PpsSqlDataSelector(connection, selectorToken, selectList, whereCondition, newOrderBy);
-			} // func SqlOrderBy
-
-			public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
-				=> new DbRowEnumerator(((PpsSqlDataSource)DataSource).CreateViewCommand(connection, selectList, selectorToken.ViewName, whereCondition, orderBy, start, count));
-
-			public override IPpsColumnDescription GetFieldDescription(string nativeColumnName)
-				=> selectorToken.GetFieldDescription(nativeColumnName);
-		} // class SqlDataSelector
-
-		#endregion
-
-		#region -- class SqlJoinExpression --------------------------------------------
+		#region -- class PpsSqlJoinExpression -----------------------------------------
 
 		/// <summary>Implementation of the join expression for SQL.</summary>
-		public sealed class PpsSqlJoinExpression : PpsDataJoinExpression<PpsSqlTableInfo>
+		protected sealed class PpsSqlJoinExpression : PpsDataJoinExpression<IPpsSqlTableOrView>
 		{
 			#region -- class SqlEmitVisitor -------------------------------------------
 
@@ -919,10 +808,10 @@ namespace TecWare.PPSn.Server.Sql
 					return "(" + leftExpression + GetJoinExpr() + rightExpression + " ON (" + on + "))";
 				} // func CreateJoinStatement
 
-				public override string CreateTableStatement(PpsSqlTableInfo table, string alias)
+				public override string CreateTableStatement(IPpsSqlTableOrView table, string alias)
 					=> String.IsNullOrEmpty(alias)
-						? table.SqlQualifiedName
-						: table.SqlQualifiedName + " AS " + alias;
+						? table.QualifiedName
+						: table.QualifiedName + " AS " + alias;
 			} // class SqlEmitVisitor
 
 			#endregion
@@ -931,37 +820,110 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="dataSource"></param>
-			public PpsSqlJoinExpression(PpsSqlDataSource dataSource)
+			/// <param name="part"></param>
+			private PpsSqlJoinExpression(PpsSqlDataSource dataSource, PpsExpressionPart part)
+				: base(part)
 			{
 				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
 			} // ctor
 
 			/// <summary></summary>
-			/// <param name="tableName"></param>
-			/// <returns></returns>
-			protected override PpsSqlTableInfo ResolveTable(string tableName)
-				=> dataSource.ResolveTableByName<PpsSqlTableInfo>(tableName, true);
+			/// <param name="dataSource"></param>
+			/// <param name="tableOrView"></param>
+			/// <param name="aliasName"></param>
+			public PpsSqlJoinExpression(PpsSqlDataSource dataSource, IPpsSqlTableOrView tableOrView, string aliasName)
+				: base(tableOrView, aliasName)
+			{
+				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+			} // ctor
 
 			/// <summary></summary>
+			/// <param name="dataSource"></param>
+			/// <param name="expression"></param>
+			public PpsSqlJoinExpression(PpsSqlDataSource dataSource, string expression)
+				: base(expression)
+			{
+				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+			} // ctor
+			
+			/// <summary></summary>
+			/// <param name="commandText"></param>
+			/// <param name="table"></param>
+			/// <param name="column"></param>
+			/// <returns></returns>
+			public StringBuilder AppendColumn(StringBuilder commandText, PpsTableExpression table, PpsSqlColumnInfo column)
+				=> String.IsNullOrEmpty(table.Alias)
+					? column.AppendAsColumn(commandText, true)
+					: column.AppendAsColumn(commandText, table.Alias);
+
+			/// <summary>Create automatic on statement.</summary>
 			/// <param name="left"></param>
 			/// <param name="joinOp"></param>
 			/// <param name="right"></param>
 			/// <returns></returns>
 			protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
 			{
-				foreach (var r in right.Table.RelationInfo)
+				if (right.Table is PpsSqlTableInfo rightTable
+					&& left.Table is PpsSqlTableInfo leftTable)
 				{
-					if (r.ReferencedColumn.Table == left.Table)
+					foreach (var r in rightTable.RelationInfo)
 					{
-						var sb = new StringBuilder();
-						AppendColumn(sb, left, r.ReferencedColumn);
-						sb.Append(" = ");
-						AppendColumn(sb, right, r.ParentColumn);
-						return sb.ToString();
+						if (r.ReferencedColumn.Table == leftTable)
+						{
+							var sb = new StringBuilder();
+							AppendColumn(sb, left, r.ReferencedColumn);
+							sb.Append(" = ");
+							AppendColumn(sb, right, r.ParentColumn);
+							return sb.ToString();
+						}
 					}
 				}
+
 				return null;
 			} // func CreateOnStatement
+
+			/// <summary>Resolve table by name</summary>
+			/// <param name="tableName"></param>
+			/// <returns></returns>
+			protected override IPpsSqlTableOrView ResolveTable(string tableName)
+				=> dataSource.ResolveTableByName<PpsSqlTableInfo>(tableName, true); // todo: views?
+
+			private string CreateOnStatement(IPpsSqlTableOrView right, PpsDataJoinStatement[] statements)
+			{
+				var sb = new StringBuilder();
+
+				var first = true;
+				foreach (var cur in statements)
+				{
+					var (leftTable, leftColumn) = FindNativeColumn(cur.Left, true);
+					var (rightTable, rightColumn) = FindNativeColumn(cur.Right, true);
+
+					if (first)
+						first = false;
+					else
+						sb.Append(" AND ");
+
+					AppendColumn(sb, leftTable, (PpsSqlColumnInfo)leftColumn);
+					sb.Append("=");
+					AppendColumn(sb, rightTable, (PpsSqlColumnInfo)rightColumn);
+				}
+
+				if (first)
+					throw new ArgumentException("No statements");
+
+				return sb.ToString();
+			} // func CreateOnStatement
+
+			/// <summary>Attache a new table join</summary>
+			/// <param name="selector"></param>
+			/// <param name="aliasName"></param>
+			/// <param name="joinType"></param>
+			/// <param name="statements"></param>
+			/// <returns></returns>
+			public PpsSqlJoinExpression Combine(IPpsSqlTableOrView selector, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
+				=> new PpsSqlJoinExpression(dataSource, AppendCore(selector, aliasName, joinType, CreateOnStatement(selector, statements)));
+
+			#region -- Find Column ----------------------------------------------------
 
 			private void SplitColumnName(string name, out string alias, out string columnName)
 			{
@@ -979,66 +941,300 @@ namespace TecWare.PPSn.Server.Sql
 			} // func SplitColumnName
 
 			/// <summary></summary>
-			/// <param name="ppsColumn"></param>
-			/// <param name="throwException"></param>
-			/// <returns></returns>
-			public (PpsTableExpression, PpsSqlColumnInfo) FindColumn(IPpsColumnDescription ppsColumn, bool throwException)
-			{
-				foreach (var t in GetTables())
-				{
-					if (ppsColumn.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn) && t.Table == sqlColumn.Table)
-						return (t, sqlColumn);
-				}
-
-				if (throwException)
-					throw new ArgumentException($"Column not found ({ppsColumn.Name}).");
-
-				return (null, null);
-			} // func FindColumn
-
-			/// <summary></summary>
 			/// <param name="name"></param>
 			/// <param name="throwException"></param>
 			/// <returns></returns>
-			public (PpsTableExpression, PpsSqlColumnInfo) FindColumn(string name, bool throwException)
+			public (PpsTableExpression table, IPpsColumnDescription nativeColumn) FindNativeColumn(string name, bool throwException)
 			{
 				SplitColumnName(name, out var alias, out var columnName);
-				foreach (var t in GetTables())
+
+				Func<PpsTableExpression, IPpsColumnDescription, bool> predicate;
+
+				if (alias != null)
 				{
-					if (alias != null)
-					{
-						if (t.Alias != null && String.Compare(alias, t.Alias, StringComparison.OrdinalIgnoreCase) == 0)
-							return (t, t.Table.FindColumn(columnName, throwException));
-					}
-					else
-					{
-						var c = t.Table.FindColumn(columnName, false);
-						if (c != null)
-							return (t, c);
-					}
+					predicate = (t, c) =>
+						t.Alias != null
+							&& String.Compare(alias, t.Alias, StringComparison.OrdinalIgnoreCase) == 0
+							&& String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0;
+				}
+				else
+				{
+					predicate = (t, c) => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0;
 				}
 
-				if (throwException)
+				var r = FindNativeColumn(predicate);
+				if (r.nativeColumn == null && throwException)
 					throw new ArgumentException($"Column not found ({name}).");
-
-				return (null, null);
-			} // func FindColumn
+				return r;
+			} // func GetNativeColumn
 
 			/// <summary></summary>
-			/// <param name="commandText"></param>
-			/// <param name="table"></param>
-			/// <param name="column"></param>
+			/// <param name="columnDescription"></param>
+			/// <param name="throwException"></param>
 			/// <returns></returns>
-			public StringBuilder AppendColumn(StringBuilder commandText, PpsTableExpression table, PpsSqlColumnInfo column)
-				=> String.IsNullOrEmpty(table.Alias)
-					? column.AppendAsColumn(commandText, true)
-					: column.AppendAsColumn(commandText, table.Alias);
+			public (PpsTableExpression table, IPpsColumnDescription nativeColumn) FindNativeColumn(IPpsColumnDescription columnDescription, bool throwException)
+			{
+				var r = FindNativeColumn((t, c) => columnDescription.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn) && t.Table == sqlColumn.Table && c.Name == sqlColumn.Name);
+				if (r.nativeColumn == null && throwException)
+					throw new ArgumentException($"Column not found ({columnDescription.Name}).");
+				return r;
+			} // func FindNativeColumn
 
-			/// <summary></summary>
+			private (PpsTableExpression table, IPpsColumnDescription nativeColumn) FindNativeColumn(Func<PpsTableExpression, IPpsColumnDescription, bool> predicate)
+			{
+				foreach (var tableExpr in GetTables())
+				{
+					var col = tableExpr.Table.Columns.FirstOrDefault(c => predicate(tableExpr, c));
+					if (col != null)
+						return (tableExpr, col);
+				}
+				return (null, null);
+			} // func FindNativeColumn
+
+			#endregion
+
+			/// <summary>Compile full join.</summary>
 			/// <returns></returns>
 			public string EmitJoin()
 				=> new SqlEmitVisitor().Visit(this);
-		} // class SqlJoinExpression
+		} // class PpsSqlJoinExpression
+
+		#endregion
+
+		#region -- class PpsSqlDataSelector -------------------------------------------
+
+		/// <summary></summary>
+		private sealed class PpsSqlDataSelector : PpsDataSelector
+		{
+			#region -- class SelectColumn ---------------------------------------------
+
+			private sealed class SelectColumn : AliasColumn, IPpsSqlAliasColumn
+			{
+				public SelectColumn(string expression, IPpsColumnDescription nativeColumn, string aliasName)
+					: base(nativeColumn, aliasName ?? throw new ArgumentNullException(nameof(aliasName)))
+				{
+					Expression = expression ?? throw new ArgumentNullException(nameof(expression));
+				} // ctor
+
+				public string Expression { get; }
+			} // class SelectColumn
+
+			#endregion
+
+			#region -- class WhereConditionStore --------------------------------------
+
+			private sealed class WhereConditionStore
+			{
+				private readonly PpsDataFilterExpression condition;
+				private readonly Func<string, string>[] nativeLookupList;
+
+				public WhereConditionStore(WhereConditionStore oldStore, PpsDataFilterExpression whereCondition, Func<string, string> nativeLookup)
+				{
+					if(whereCondition != null && whereCondition != PpsDataFilterExpression.True)
+					{
+						condition = PpsDataFilterExpression.Combine(oldStore.Expression, whereCondition);
+						nativeLookupList = NativeLookupListCombine(oldStore.nativeLookupList, nativeLookup);
+					}
+					else if(oldStore != null)
+					{
+						condition = oldStore.condition;
+						nativeLookupList = oldStore.nativeLookupList;
+					}
+					else
+					{
+						condition = PpsDataFilterExpression.True;
+						nativeLookupList = null;
+					}
+				} // ctor
+
+				public string NativeLookup(string expr)
+					=> NativeLookupListImpl(nativeLookupList, expr);
+
+				public PpsDataFilterExpression Expression => condition;
+
+				public static WhereConditionStore Empty { get; } = new WhereConditionStore(null, PpsDataFilterExpression.True, null);
+			} // class WhereConditionStore
+
+			#endregion
+
+			#region -- class OrderByStore ---------------------------------------------
+
+			private sealed class OrderByStore
+			{
+				private readonly PpsDataOrderExpression[] orderBy;
+				private readonly Func<string, string>[] nativeLookupList;
+
+				public OrderByStore(OrderByStore oldStore, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> nativeLookup)
+				{
+					if(orderBy != null)
+					{
+						this.orderBy = oldStore.orderBy.Union(orderBy).ToArray();
+						this.nativeLookupList = NativeLookupListCombine(oldStore.nativeLookupList, nativeLookup);
+					}
+					else if(oldStore != null)
+					{
+						this.orderBy = oldStore.orderBy;
+						this.nativeLookupList = oldStore.nativeLookupList;
+					}
+					else
+					{
+						this.orderBy = Array.Empty<PpsDataOrderExpression>();
+						this.nativeLookupList = null;
+					}
+				} // ctor
+
+				public bool IsOrderDesc(string columnName)
+					=> orderBy.FirstOrDefault(c => String.Compare(c.Identifier, columnName, StringComparison.OrdinalIgnoreCase) == 0)?.Negate ?? false;
+
+				public string NativeLookup(string expr)
+					=> NativeLookupListImpl(nativeLookupList, expr);
+
+				public IEnumerable<PpsDataOrderExpression> Expression => orderBy;
+
+				public static OrderByStore Empty { get; } = new OrderByStore(null, null, null);
+			} // class OrderByStore
+
+			private static string NativeLookupListImpl(Func<string, string>[] nativeLookupList, string expr)
+			{
+				if (nativeLookupList == null)
+					return null;
+
+				return nativeLookupList.Select(f => f(expr)).FirstOrDefault(c => c != null);
+			} // func NativeLookupListImpl
+
+			private static Func<string,string>[] NativeLookupListCombine(Func<string,string>[] nativeLookupList, Func<string, string> nativeLookup)
+			{
+				if(nativeLookupList == null)
+				{
+					if (nativeLookup == null)
+						return null;
+					else
+						return new Func<string, string>[] { nativeLookup };
+				}
+				else
+				{
+					if (nativeLookup == null)
+						return nativeLookupList;
+					else
+					{
+						var nativeLookupListLength = nativeLookupList.Length;
+						var newArray = new Func<string, string>[nativeLookupListLength + 1];
+						Array.Copy(nativeLookupList, newArray, nativeLookupListLength);
+						newArray[nativeLookupListLength] = nativeLookup;
+						return newArray;
+					}
+				}
+
+			} // func NativeLookupListCombine
+
+			#endregion
+			
+			private readonly PpsSqlJoinExpression from;
+			private readonly WhereConditionStore whereCondition;
+			private readonly OrderByStore orderBy;
+
+			#region -- Ctor/Dtor ------------------------------------------------------
+
+			/// <summary></summary>
+			/// <param name="connection"></param>
+			/// <param name="viewOrTable"></param>
+			/// <param name="tableAlias"></param>
+			public PpsSqlDataSelector(IPpsSqlConnectionHandle connection, IPpsSqlTableOrView viewOrTable, string tableAlias)
+				: base(connection, GetAliasColumns(viewOrTable, tableAlias).ToArray())
+			{
+				this.from = new PpsSqlJoinExpression((PpsSqlDataSource)connection.DataSource, viewOrTable, tableAlias);
+				this.whereCondition = WhereConditionStore.Empty;
+				this.orderBy = OrderByStore.Empty;
+			} // ctor
+
+			/// <summary></summary>
+			/// <param name="connection"></param>
+			/// <param name="columns"></param>
+			/// <param name="from"></param>
+			/// <param name="whereCondition"></param>
+			/// <param name="orderBy"></param>
+			private PpsSqlDataSelector(IPpsSqlConnectionHandle connection, AliasColumn[] columns, PpsSqlJoinExpression from, WhereConditionStore whereCondition, OrderByStore orderBy)
+				: base(connection, columns ?? throw new ArgumentNullException(nameof(columns)))
+			{
+				this.from = from ?? throw new ArgumentNullException(nameof(from));
+				this.whereCondition = whereCondition ?? WhereConditionStore.Empty;
+				this.orderBy = orderBy ?? OrderByStore.Empty;
+			} // ctor
+
+			#endregion
+
+			#region -- Apply Columns --------------------------------------------------
+
+			private static IEnumerable<AliasColumn> GetAliasColumns(IPpsSqlTableOrView tableOrView, string tableAlias)
+			{
+				var hasAlias = !String.IsNullOrEmpty(tableAlias);
+				foreach (var col in tableOrView.Columns)
+				{
+					if (hasAlias)
+						yield return new SelectColumn(GetColumnExpression(tableAlias, col.Name), col, col.Name);
+					else
+						yield return new SelectColumn(GetColumnExpression(null, col.Name), col, col.Name);
+				}
+			} // func GetAliasColumns
+
+			private static string GetColumnExpression(string tableAlias, string name)
+				=> tableAlias == null ? name : tableAlias + "." + name;
+			
+			protected sealed override AliasColumn[] GetAllColumns()
+				=> throw new InvalidOperationException();
+
+			protected override AliasColumn CreateColumnAliasFromExisting(PpsDataColumnExpression col, AliasColumn aliasColumn)
+			{
+				if (aliasColumn is SelectColumn selectColumn)
+				{
+					if (col.HasAlias) // rename column
+						return new SelectColumn(selectColumn.Expression, selectColumn.NativeColumnInfo, col.Alias);
+					else // nothing to change, just copy reference
+						return aliasColumn;
+				}
+				else
+					throw new InvalidOperationException("Wrong type.");
+			} // func CreateColumnAliasFromExisting
+
+			protected override AliasColumn CreateColumnAliasFromNative(PpsDataColumnExpression col)
+			{
+				var (table, nativeColumn) = from.FindNativeColumn(col.Name, false);
+				if (nativeColumn == null)
+					return null;
+
+				return new SelectColumn(GetColumnExpression(table.Alias, col.Name), nativeColumn, col.HasAlias ? col.Alias : col.Name);
+			} // func CreateColumnAliasFromNative
+
+			protected override PpsDataSelector ApplyColumnsCore(AliasColumn[] columns)
+				=> new PpsSqlDataSelector(SqlConnection, columns, from, whereCondition, orderBy);
+
+			#endregion
+
+			public sealed override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
+				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, new WhereConditionStore(whereCondition, expression, lookupNative), orderBy);
+
+			public sealed override bool IsOrderDesc(string columnName)
+				=> orderBy.IsOrderDesc(columnName);
+
+			public sealed override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
+				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, whereCondition, new OrderByStore(orderBy, expressions, lookupNative));
+
+			public sealed override PpsDataSelector ApplyJoin(PpsDataSelector selector, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
+			{
+				return selector is IPpsSqlTableOrView tableOrView
+					? ApplyJoin(tableOrView, null, joinType, statements)
+					: base.ApplyJoin(selector, joinType, statements);
+			} // func ApplyJoin
+
+			public PpsSqlDataSelector ApplyJoin(IPpsSqlTableOrView tableOrView, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
+				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from.Combine(tableOrView, aliasName, joinType, statements), whereCondition, orderBy);
+
+			protected sealed override IEnumerator<IDataRow> GetEnumeratorCore(int start, int count)
+				=> new DbRowEnumerator(((PpsSqlDataSource)DataSource).CreateViewCommand(SqlConnection, Columns, from, whereCondition.Expression, whereCondition.NativeLookup, orderBy.Expression, orderBy.NativeLookup, start, count));
+
+			/// <summary>Access sql connection handle.</summary>
+			private IPpsSqlConnectionHandle SqlConnection => (IPpsSqlConnectionHandle)Connection;
+		} // class SqlDataSelector
 
 		#endregion
 
@@ -1703,10 +1899,9 @@ namespace TecWare.PPSn.Server.Sql
 				/*
 				 * select @cols from @name where @args
 				 */
-
+				
 				// collect tables
-				var tableInfos = new PpsSqlJoinExpression((PpsSqlDataSource)DataSource);
-				tableInfos.Parse(name);
+				var tableInfos = new PpsSqlJoinExpression((PpsSqlDataSource)DataSource, name);
 
 				var defaults = GetArguments(parameter.GetMemberValue("defaults"), false);
 
@@ -1729,7 +1924,7 @@ namespace TecWare.PPSn.Server.Sql
 								else
 									commandText.Append(", ");
 
-								tableInfos.AppendColumn(commandText, table, column);
+								tableInfos.AppendColumn(commandText, table, (PpsSqlColumnInfo)column);
 							}
 						}
 						#endregion
@@ -1739,9 +1934,9 @@ namespace TecWare.PPSn.Server.Sql
 						#region -- append select columns --
 						void AppendColumnFromTableKey(string columnName)
 						{
-							var (table, column) = tableInfos.FindColumn(columnName, defaults == null);
+							var (table, column) = tableInfos.FindNativeColumn(columnName, defaults == null);
 							if (column != null) // append table column
-								tableInfos.AppendColumn(commandText, table, column);
+								tableInfos.AppendColumn(commandText, table, (PpsSqlColumnInfo)column);
 							else // try append empty DbNull column
 							{
 								var field = DataSource.Application.GetFieldDescription(columnName, true);
@@ -1782,11 +1977,11 @@ namespace TecWare.PPSn.Server.Sql
 								commandText.Append(", ");
 
 							var (table, column) = col is IPpsColumnDescription ppsColumn
-								? tableInfos.FindColumn(ppsColumn, defaults == null)
-								: tableInfos.FindColumn(col.Name, defaults == null);
+								? tableInfos.FindNativeColumn(ppsColumn, defaults == null)
+								: tableInfos.FindNativeColumn(col.Name, defaults == null);
 
 							if (column != null) // append table column
-								tableInfos.AppendColumn(commandText, table, column);
+								tableInfos.AppendColumn(commandText, table, (PpsSqlColumnInfo)column);
 							else // try append empty DbNull column
 								commandText.Append(CreateParameter(cmd, col).ParameterName);
 
@@ -1815,9 +2010,9 @@ namespace TecWare.PPSn.Server.Sql
 							else
 								commandText.Append(" AND ");
 
-							var (table, column) = tableInfos.FindColumn((string)p.Key, true);
+							var (table, column) = tableInfos.FindNativeColumn((string)p.Key, true);
 							var parm = CreateParameter(cmd, column, null, p.Value);
-							tableInfos.AppendColumn(commandText, table, column);
+							tableInfos.AppendColumn(commandText, table, (PpsSqlColumnInfo)column);
 							commandText.Append(" = ")
 								.Append(FormatParameterName(parm.ParameterName));
 						}
@@ -1888,15 +2083,10 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="viewOrTableName"></param>
+			/// <param name="alias"></param>
 			/// <returns></returns>
-			public override PpsDataSelector CreateSelector(string viewOrTableName)
-			{
-				var tableInfo = FindTable(viewOrTableName, true);
-
-				return new PpsSqlDataSelector((IPpsSqlConnectionHandle)Connection, 
-					new PpsSqlDataSelectorToken((PpsSqlDataSource)DataSource, viewOrTableName, viewOrTableName, tableInfo.Columns.ToArray()
-				), null, null, null);
-			} // func CreateSelector
+			public PpsDataSelector CreateSelector(string viewOrTableName, string alias)
+				=>  ((PpsSqlDataSource)DataSource).CreateSelector(Connection, viewOrTableName, alias);
 
 			/// <summary>Connection for the data manipulation</summary>
 			public DBCONNECTION DbConnection => connection;
@@ -2142,6 +2332,21 @@ namespace TecWare.PPSn.Server.Sql
 				return null;
 		} // func GetColumnDescription
 
+		/// <summary></summary>
+		/// <param name="connection"></param>
+		/// <param name="selectorName"></param>
+		/// <returns></returns>
+		public sealed override PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorName) 
+			=> CreateSelector(connection, selectorName, null);
+
+		/// <summary></summary>
+		/// <param name="connection"></param>
+		/// <param name="viewOrTableName"></param>
+		/// <param name="alias"></param>
+		/// <returns></returns>
+		public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string viewOrTableName, string alias)
+			=> new PpsSqlDataSelector((IPpsSqlConnectionHandle)connection, ResolveTableByName<PpsSqlTableInfo>(viewOrTableName, true), alias);
+		
 		#endregion
 
 		#region -- Master Connection Service ------------------------------------------
@@ -2164,7 +2369,7 @@ namespace TecWare.PPSn.Server.Sql
 				cmd.CommandText = "SELECT * FROM " + name;
 				using (var r = await cmd.ExecuteReaderAsync(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
 				{
-					var columnDescriptions = new IPpsColumnDescription[r.FieldCount];
+					var columnDescriptions = new List<IPpsColumnDescription>(r.FieldCount);
 
 					var dt = r.GetSchemaTable();
 					var i = 0;
@@ -2172,6 +2377,10 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						IPpsColumnDescription parentColumnDescription;
 						var nativeColumnName = r.GetName(i);
+
+						var isHidden = c["IsHidden"];
+						if (isHidden is bool t && t)
+							continue;
 
 						// try to find the view base description
 						parentColumnDescription = Application.GetFieldDescription(name + "." + nativeColumnName, false);
@@ -2190,11 +2399,11 @@ namespace TecWare.PPSn.Server.Sql
 							}
 						}
 
-						columnDescriptions[i] = new SqlDataResultColumnDescription(parentColumnDescription, c, nativeColumnName, r.GetFieldType(i));
+						columnDescriptions.Add(new SqlDataResultColumnDescription(parentColumnDescription, c, nativeColumnName, r.GetFieldType(i)));
 						i++;
 					}
 
-					return columnDescriptions;
+					return columnDescriptions.ToArray();
 				}
 			} // using cmd
 		} // pro ExecuteForResultSet
@@ -2202,13 +2411,15 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary></summary>
 		/// <param name="connection"></param>
 		/// <param name="selectList"></param>
-		/// <param name="viewName"></param>
+		/// <param name="from"></param>
 		/// <param name="whereCondition"></param>
+		/// <param name="whereConditionLookup"></param>
 		/// <param name="orderBy"></param>
+		/// <param name="orderByLookup"></param>
 		/// <param name="start"></param>
 		/// <param name="count"></param>
 		/// <returns></returns>
-		protected abstract DbCommand CreateViewCommand(IPpsSqlConnectionHandle connection, string selectList, string viewName, string whereCondition, string orderBy, int start, int count);
+		protected abstract DbCommand CreateViewCommand(IPpsSqlConnectionHandle connection, IEnumerable<IDataColumn> selectList, PpsSqlJoinExpression from, PpsDataFilterExpression whereCondition, Func<string, string> whereConditionLookup, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByLookup, int start, int count);
 		
 		/// <summary>Generate view in the database.</summary>
 		/// <param name="connection">Database connection</param>
@@ -2302,6 +2513,141 @@ namespace TecWare.PPSn.Server.Sql
 				throw new DEConfigurationException(sourceDescription, String.Format("Can not create selector for '{0}'.", name), e);
 			}
 		} // func CreateSelectorTokenAsync
+
+		#endregion
+
+		#region -- Sql Helper ---------------------------------------------------------
+
+		#region -- class SqlDataFilterVisitor -----------------------------------------
+
+		private sealed class SqlDataFilterVisitor : PpsDataFilterVisitorSql
+		{
+			private readonly Func<string, string> lookupNative;
+			private readonly Func<string, IPpsSqlAliasColumn> columnLookup;
+
+			public SqlDataFilterVisitor(Func<string, string> lookupNative, Func<string, IPpsSqlAliasColumn> columnLookup)
+			{
+				this.lookupNative = lookupNative;
+				this.columnLookup = columnLookup;
+			} // ctor
+
+			protected override Tuple<string, Type> LookupColumn(string columnToken)
+			{
+				var column = columnLookup(columnToken);
+				if (column == null)
+					throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
+
+				return new Tuple<string, Type>(column.Expression, column.DataType);
+			} // func LookupColumn
+
+			protected override string LookupNativeExpression(string key)
+			{
+				var expr = lookupNative(key);
+				if (String.IsNullOrEmpty(expr))
+					throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{key}'.");
+				return expr;
+			} // func LookupNativeExpression
+		} // class SqlDataFilterVisitor
+
+		#endregion
+
+		/// <summary></summary>
+		/// <param name="orderBy"></param>
+		/// <param name="lookupNative"></param>
+		/// <param name="columnLookup"></param>
+		/// <returns></returns>
+		protected static string FormatOrderExpression(PpsDataOrderExpression orderBy, Func<string, string> lookupNative, Func<string, IPpsSqlAliasColumn> columnLookup)
+		{
+			// check for native expression
+			if (lookupNative != null)
+			{
+				var expr = lookupNative(orderBy.Identifier);
+				if (expr != null)
+				{
+					if (orderBy.Negate)
+					{
+						// todo: replace asc with desc and desc with asc
+						expr = expr.Replace(" asc", " desc");
+					}
+					return expr;
+				}
+			}
+
+			// checkt the column
+			var column = columnLookup(orderBy.Identifier)
+				?? throw new ArgumentNullException("orderby", $"Order by column '{orderBy.Identifier} not found.");
+
+			if (orderBy.Negate)
+				return column.Expression + " DESC";
+			else
+				return column.Expression;
+		} // func FormatOrderExpression
+
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		/// <param name="orderBy"></param>
+		/// <param name="orderByNativeLookup"></param>
+		/// <param name="columnLookup"></param>
+		/// <returns></returns>
+		protected static bool FormatOrderList(StringBuilder sb, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByNativeLookup, Func<string, IPpsSqlAliasColumn> columnLookup)
+		{
+			var first = true;
+
+			if (orderBy != null)
+			{
+				foreach (var o in orderBy)
+				{
+					if (first)
+					{
+						sb.Append("ORDER BY ");
+						first = false;
+					}
+					else
+						sb.Append(", ");
+
+					sb.Append(FormatOrderExpression(o, orderByNativeLookup, columnLookup));
+				}
+			}
+
+			return first;
+		} // func FormatOrderList
+
+		/// <summary></summary>
+		/// <param name="whereCondition"></param>
+		/// <param name="lookupNative"></param>
+		/// <param name="columnLookup"></param>
+		/// <returns></returns>
+		protected static string FormatWhereExpression(PpsDataFilterExpression whereCondition, Func<string, string> lookupNative, Func<string, IPpsSqlAliasColumn> columnLookup)
+			=> new SqlDataFilterVisitor(lookupNative, columnLookup).CreateFilter(whereCondition);
+
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		/// <param name="columns"></param>
+		protected static void FormatSelectList(StringBuilder sb, IPpsSqlAliasColumn[] columns)
+		{
+			var first = true;
+			if (columns != null) // emit column expressions
+			{
+				foreach (var cur in columns)
+				{
+					if (first)
+						first = false;
+					else
+						sb.Append(", ");
+
+					sb.Append(cur.Expression);
+					if (!String.IsNullOrEmpty(cur.Alias) && cur.Alias != cur.Expression)
+					{
+						sb.Append(" AS ")
+							.Append('[').Append(cur.Alias).Append(']');
+					}
+				}
+			}
+			if (first) // emit select all
+				sb.Append("* ");
+			else
+				sb.Append(' ');
+		} // func FormatSelectList
 
 		#endregion
 

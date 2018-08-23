@@ -222,7 +222,7 @@ namespace TecWare.PPSn.Server.Data
 		protected IPpsDataSynchronizationBatch CreateTimeStampBatchFromSelector(string viewName, string viewSyncColumn, long lastSyncId)
 		{
 			var view = application.GetViewDefinition(viewName, true);
-			var selector = view.SelectorToken.CreateSelector(connection, true);
+			var selector = view.SelectorToken.CreateSelector(connection, null, true);
 			if (lastSyncId > 0)
 			{
 				var timeStampDateTime = DateTime.FromFileTimeUtc(lastSyncId);

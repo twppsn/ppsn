@@ -153,10 +153,10 @@ namespace TecWare.PPSn.Server.Data
 			=> throw new NotImplementedException();
 
 		/// <summary>Create a selector for a view or table.</summary>
-		/// <param name="viewOrTableName"></param>
+		/// <param name="selectorName"></param>
 		/// <returns></returns>
-		public virtual PpsDataSelector CreateSelector(string viewOrTableName)
-			=> throw new NotImplementedException();
+		public PpsDataSelector CreateSelector(string selectorName)
+			=> DataSource.CreateSelector(connection, selectorName);
 
 		/// <summary>DataSource of the transaction.</summary>
 		public PpsDataSource DataSource => dataSource;

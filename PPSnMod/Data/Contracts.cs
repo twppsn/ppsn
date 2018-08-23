@@ -540,7 +540,7 @@ namespace TecWare.PPSn.Server.Data
 			public Type DataType => column.DataType;
 
 			public IPropertyEnumerableDictionary Attributes
-				=> new PpsColumnDescriptionAttributes(column.Attributes, parent.Attributes);
+				=> parent == null ? column.Attributes : new PpsColumnDescriptionAttributes(column.Attributes, parent.Attributes);
 		} // class PpsDataColumnDescription
 
 		#endregion
@@ -560,7 +560,9 @@ namespace TecWare.PPSn.Server.Data
 		public static T GetColumnDescriptionParentImplementation<T>(this IPpsColumnDescription @this, IPpsColumnDescription parent)
 			where T : IPpsColumnDescription
 		{
-			if (typeof(T).IsAssignableFrom(@this.GetType()))
+			if (parent == null)
+				return default(T);
+			else if (typeof(T).IsAssignableFrom(@this.GetType()))
 				return (T)(IPpsColumnDescription)@this;
 			else if (parent != null)
 				return parent.GetColumnDescription<T>();
@@ -594,9 +596,10 @@ namespace TecWare.PPSn.Server.Data
 	{
 		/// <summary>Create a real request to the datasource to retrieve the data.</summary>
 		/// <param name="connection"></param>
+		/// <param name="alias"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true);
+		PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string alias = null, bool throwException = true);
 
 		/// <summary>Get the defintion for a column from the native column name.</summary>
 		/// <param name="selectorColumn">Get the column information for the result column.</param>
@@ -611,7 +614,7 @@ namespace TecWare.PPSn.Server.Data
 	} // interface IPpsSelectorToken
 
 	#endregion
-
+	
 	#region -- class PpsPrivateDataContextHelper --------------------------------------
 
 	/// <summary>Simple helpder for Data Context</summary>

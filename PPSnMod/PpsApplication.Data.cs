@@ -862,7 +862,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
 		public PpsDataSelector GetViewDefinitionSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsViewDescription>(dataSource, "sys.views", GetViewDefinitions());
+			=> new PpsGenericSelector<PpsViewDescription>(dataSource.SystemConnection, "sys.views", GetViewDefinitions());
 
 		/// <summary></summary>
 		/// <param name="name"></param>

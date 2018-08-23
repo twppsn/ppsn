@@ -71,7 +71,7 @@ namespace TecWare.PPSn.Server.Wpf
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
 		public PpsDataSelector GetReportItemsSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource, "bi.reports", GetExcelReportItems());
+			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource.SystemConnection, "bi.reports", GetExcelReportItems());
 
 		#endregion
 	} // class ExcelCientItem

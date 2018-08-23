@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Security.Principal;
 using System.Threading.Tasks;
@@ -24,6 +25,7 @@ using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
+using TecWare.PPSn.Server.Sql;
 
 namespace TecWare.PPSn.Server
 {
@@ -371,8 +373,84 @@ namespace TecWare.PPSn.Server
 
 			#endregion
 
-			#region -- Data Tasks -----------------------------------------------------------
+			#region -- Data Tasks -----------------------------------------------------
 
+			#region -- class PpsViewJoinExpression ------------------------------------
+
+			private sealed class PpsViewJoinExpression : PpsDataJoinExpression<PpsViewDescription>
+			{
+				#region -- class PpsViewJoinVisitor -----------------------------------
+
+				private sealed class PpsViewJoinVisitor : PpsJoinVisitor<PpsDataSelector>
+				{
+					private readonly PpsViewJoinExpression owner;
+
+					public PpsViewJoinVisitor(PpsViewJoinExpression owner)
+					{
+						this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
+					} // ctor
+
+					public override PpsDataSelector CreateJoinStatement(PpsDataSelector leftExpression, PpsDataJoinType type, PpsDataSelector rightExpression, string on) 
+						=> leftExpression.ApplyJoin(rightExpression, type, PpsDataJoinStatement.Parse(on).ToArray());
+
+					public override PpsDataSelector CreateTableStatement(PpsViewDescription table, string alias)
+						=> owner.CreateSelector(table, alias);
+				} // class PpsViewJoinVisitor
+
+				#endregion
+
+				private readonly PrivateUserDataContext context;
+				private readonly bool throwException;
+
+				private readonly Dictionary<PpsDataSource, IPpsConnectionHandle> openConnections = new Dictionary<PpsDataSource, IPpsConnectionHandle>();
+
+				public PpsViewJoinExpression(PrivateUserDataContext context, string expression, bool throwException)
+					: base(expression)
+				{
+					this.context = context ?? throw new ArgumentNullException(nameof(context));
+					this.throwException = throwException;
+				} // ctor
+
+				private PpsDataSelector CreateSelector(PpsViewDescription viewInfo, string alias)
+				{
+					// ensure the connection
+					var dataSource = viewInfo.SelectorToken.DataSource;
+					if (!openConnections.TryGetValue(dataSource, out var connectionHandle))
+					{
+						connectionHandle = context.EnsureConnectionAsync(dataSource, throwException).Result;
+						openConnections.Add(dataSource, connectionHandle);
+
+						if (connectionHandle == null)
+						{
+							if (throwException)
+								throw new ArgumentException(); // todo;
+							else
+								return null;
+						}
+					}
+
+					// create the selector
+					return viewInfo.SelectorToken.CreateSelector(connectionHandle, alias, throwException);
+				} // func CreateSelector
+
+				protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
+					=> null;
+
+				protected override PpsViewDescription ResolveTable(string tableName)
+					=> context.Application.GetViewDefinition(tableName, throwException);
+
+				public string LookupFilter(string expr)
+					=> null;
+
+				public string LookupOrder(string expr)
+					=> null;
+
+				public Task<PpsDataSelector> CreateSelectorAsync()
+					=> Task.Run(() => new PpsViewJoinVisitor(this).Visit(this));
+			} // class PpsStringJoinExpression
+
+			#endregion
+			
 			public async Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException)
 			{
 				var c = privateUser.GetOrCreatePooledConnection(source, this, throwException);
@@ -381,30 +459,24 @@ namespace TecWare.PPSn.Server
 
 				return c != null && await c.EnsureConnectionAsync(throwException) ? c : null;
 			} // func EnsureConnection
-
+	
+			/// <summary>Create a selector from a select information.</summary>
+			/// <param name="select"></param>
+			/// <param name="columns"></param>
+			/// <param name="filter"></param>
+			/// <param name="order"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
 			public async Task<PpsDataSelector> CreateSelectorAsync(string select, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true)
 			{
 				if (String.IsNullOrEmpty(select))
 					throw new ArgumentNullException(nameof(select));
 
-				//PpsCombineViewDefinition
-				// todo: build a joined selector, doppelte spalten müssten entfernt werden, wenn man es machen will
-				var viewInfo = Application.GetViewDefinition(select, throwException);
-				if (viewInfo == null)
+				// create selector
+				var selectorInfo = new PpsViewJoinExpression(this, select, throwException);
+				var selector = await selectorInfo.CreateSelectorAsync();
+				if (selector == null)
 					return null;
-
-				// ensure the connection
-				var connectionHandle = await EnsureConnectionAsync(viewInfo.SelectorToken.DataSource, throwException);
-				if (connectionHandle == null)
-				{
-					if (throwException)
-						throw new ArgumentException(); // todo;
-					else
-						return null;
-				}
-
-				// create the selector
-				var selector = viewInfo.SelectorToken.CreateSelector(connectionHandle, throwException);
 
 				// column restrictions
 				if (!PpsDataColumnExpression.IsEmpty(columns))
@@ -412,11 +484,11 @@ namespace TecWare.PPSn.Server
 
 				// apply filter rules
 				if (!PpsDataFilterExpression.IsEmpty(filter))
-					selector = selector.ApplyFilter(filter, viewInfo.LookupFilter);
+					selector = selector.ApplyFilter(filter, selectorInfo.LookupFilter);
 
 				// apply order
 				if (!PpsDataOrderExpression.IsEmpty(order))
-					selector = selector.ApplyOrder(order, viewInfo.LookupOrder);
+					selector = selector.ApplyOrder(order, selectorInfo.LookupOrder);
 
 				return selector;
 			} // func CreateSelector

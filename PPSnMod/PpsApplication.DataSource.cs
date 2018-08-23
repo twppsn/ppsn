@@ -40,7 +40,7 @@ namespace TecWare.PPSn.Server
 		internal PpsSysConnectionHandle(PpsSysDataSource dataSource, IIdentity identity)
 		{
 			this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-			this.identity = identity;
+			this.identity = identity ?? throw new ArgumentNullException(nameof(identity));
 		} // ctor
 
 		public void Dispose()
@@ -88,7 +88,7 @@ namespace TecWare.PPSn.Server
 
 			public void InitializeColumns()
 			{
-				var selector = CreateSelector(dataSource.systemConnection, false); // call head
+				var selector = CreateSelector(dataSource.systemConnection, null, false); // call head
 				if (selector is IDataColumns columns)
 				{
 					columnDescriptions = new IPpsColumnDescription[columns.Columns.Count];
@@ -99,7 +99,7 @@ namespace TecWare.PPSn.Server
 					columnDescriptions = null;
 			} // proc InitializeColumnsAsync
 
-			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
+			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string alias, bool throwException = true)
 			{
 				PpsDataSelector ret = null;
 				if (String.IsNullOrEmpty(path))
@@ -171,7 +171,7 @@ namespace TecWare.PPSn.Server
 			: base(sp, name)
 		{
 			this.application = sp.GetService<PpsApplication>(true);
-			this.systemConnection = new PpsSysConnectionHandle(this, null);
+			this.systemConnection = new PpsSysConnectionHandle(this, PpsUserIdentity.System);			
 		} // ctor
 
 		/// <summary></summary>
@@ -180,7 +180,7 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userData, bool throwException = true)
 			=> new PpsSysConnectionHandle(this, userData.Identity);
-
+		
 		/// <summary></summary>
 		/// <param name="name"></param>
 		/// <param name="sourceDescription"></param>
@@ -229,6 +229,8 @@ namespace TecWare.PPSn.Server
 		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext userData, DateTime lastSynchronization)
 			=> new PpsDataSynchronization(application, CreateConnection(userData, true), lastSynchronization);
 
+		/// <summary>Get the system connection handle.</summary>
+		public IPpsConnectionHandle SystemConnection => systemConnection;
 		/// <summary></summary>
 		public override string Type => "Sys";
 	} // class PpsSysDataSource

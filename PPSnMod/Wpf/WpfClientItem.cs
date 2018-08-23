@@ -970,7 +970,7 @@ namespace TecWare.PPSn.Server.Wpf
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
 		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource, "wpf.sync", GetApplicationFileList());
+			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource.SystemConnection, "wpf.sync", GetApplicationFileList());
 
 		#endregion
 
