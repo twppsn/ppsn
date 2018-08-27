@@ -61,11 +61,11 @@ namespace PPSnExcel
 		private string onStatement;
 	}
 
-	internal class TableJoinExpression : PpsDataJoinExpression<TableInfo>
-	{
-		protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right) => throw new NotImplementedException();
-		protected override TableInfo ResolveTable(string tableName) => throw new NotImplementedException();
-	}
+	//internal class TableJoinExpression : PpsDataJoinExpression<TableInfo>
+	//{
+	//	protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right) => throw new NotImplementedException();
+	//	protected override TableInfo ResolveTable(string tableName) => throw new NotImplementedException();
+	//}
 
 
 

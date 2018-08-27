@@ -841,9 +841,9 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="dataSource"></param>
 			/// <param name="expression"></param>
 			public PpsSqlJoinExpression(PpsSqlDataSource dataSource, string expression)
-				: base(expression)
 			{
 				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+				Parse(expression);
 			} // ctor
 			
 			/// <summary></summary>
@@ -888,7 +888,7 @@ namespace TecWare.PPSn.Server.Sql
 			protected override IPpsSqlTableOrView ResolveTable(string tableName)
 				=> dataSource.ResolveTableByName<PpsSqlTableInfo>(tableName, true); // todo: views?
 
-			private string CreateOnStatement(IPpsSqlTableOrView right, PpsDataJoinStatement[] statements)
+			private string CreateOnStatement(PpsSqlJoinExpression right, PpsDataJoinStatement[] statements)
 			{
 				var sb = new StringBuilder();
 
@@ -896,7 +896,7 @@ namespace TecWare.PPSn.Server.Sql
 				foreach (var cur in statements)
 				{
 					var (leftTable, leftColumn) = FindNativeColumn(cur.Left, true);
-					var (rightTable, rightColumn) = FindNativeColumn(cur.Right, true);
+					var (rightTable, rightColumn) = right.FindNativeColumn(cur.Right, true);
 
 					if (first)
 						first = false;
@@ -915,13 +915,13 @@ namespace TecWare.PPSn.Server.Sql
 			} // func CreateOnStatement
 
 			/// <summary>Attache a new table join</summary>
-			/// <param name="selector"></param>
+			/// <param name="expr"></param>
 			/// <param name="aliasName"></param>
 			/// <param name="joinType"></param>
 			/// <param name="statements"></param>
 			/// <returns></returns>
-			public PpsSqlJoinExpression Combine(IPpsSqlTableOrView selector, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
-				=> new PpsSqlJoinExpression(dataSource, AppendCore(selector, aliasName, joinType, CreateOnStatement(selector, statements)));
+			public PpsSqlJoinExpression Combine(PpsSqlJoinExpression expr, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
+				=> new PpsSqlJoinExpression(dataSource, AppendCore(expr, aliasName, joinType, CreateOnStatement(expr, statements)));
 
 			#region -- Find Column ----------------------------------------------------
 
@@ -1179,9 +1179,6 @@ namespace TecWare.PPSn.Server.Sql
 
 			private static string GetColumnExpression(string tableAlias, string name)
 				=> tableAlias == null ? name : tableAlias + "." + name;
-			
-			protected sealed override AliasColumn[] GetAllColumns()
-				=> throw new InvalidOperationException();
 
 			protected override AliasColumn CreateColumnAliasFromExisting(PpsDataColumnExpression col, AliasColumn aliasColumn)
 			{
@@ -1221,13 +1218,13 @@ namespace TecWare.PPSn.Server.Sql
 
 			public sealed override PpsDataSelector ApplyJoin(PpsDataSelector selector, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
 			{
-				return selector is IPpsSqlTableOrView tableOrView
+				return selector is PpsSqlDataSelector tableOrView
 					? ApplyJoin(tableOrView, null, joinType, statements)
 					: base.ApplyJoin(selector, joinType, statements);
 			} // func ApplyJoin
 
-			public PpsSqlDataSelector ApplyJoin(IPpsSqlTableOrView tableOrView, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
-				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from.Combine(tableOrView, aliasName, joinType, statements), whereCondition, orderBy);
+			public PpsSqlDataSelector ApplyJoin(PpsSqlDataSelector sqlSelector, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
+				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from.Combine(sqlSelector.from, aliasName, joinType, statements), whereCondition, orderBy);
 
 			protected sealed override IEnumerator<IDataRow> GetEnumeratorCore(int start, int count)
 				=> new DbRowEnumerator(((PpsSqlDataSource)DataSource).CreateViewCommand(SqlConnection, Columns, from, whereCondition.Expression, whereCondition.NativeLookup, orderBy.Expression, orderBy.NativeLookup, start, count));

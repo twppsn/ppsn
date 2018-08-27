@@ -405,10 +405,11 @@ namespace TecWare.PPSn.Server
 				private readonly Dictionary<PpsDataSource, IPpsConnectionHandle> openConnections = new Dictionary<PpsDataSource, IPpsConnectionHandle>();
 
 				public PpsViewJoinExpression(PrivateUserDataContext context, string expression, bool throwException)
-					: base(expression)
 				{
 					this.context = context ?? throw new ArgumentNullException(nameof(context));
 					this.throwException = throwException;
+
+					Parse(expression);
 				} // ctor
 
 				private PpsDataSelector CreateSelector(PpsViewDescription viewInfo, string alias)

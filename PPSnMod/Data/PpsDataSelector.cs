@@ -93,10 +93,10 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		/// <param name="connection"></param>
 		/// <param name="columns"></param>
-		public PpsDataSelector(IPpsConnectionHandle connection, AliasColumn[] columns = null)
+		public PpsDataSelector(IPpsConnectionHandle connection, AliasColumn[] columns)
 		{
 			this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
-			this.columns = columns ?? GetAllColumns(); 
+			this.columns = columns ?? throw new ArgumentNullException(nameof(columns)); 
 		} // ctor
 
 		#endregion
@@ -241,14 +241,40 @@ namespace TecWare.PPSn.Server.Data
 				this.compareColumns = compareColumns ?? throw new ArgumentNullException(nameof(compareColumns));
 			} // ctor
 
-			public bool Compare(IDataRow left, IDataRow right)
+			public int Compare(IDataRow left, IDataRow right)
 			{
+				if (left is null && right is null)
+					return 0;
+				else if (left is null)
+					return -1;
+				else if (right is null)
+					return 1;
+				else if (ReferenceEquals(left, right))
+					return 0;
+
+				var cmp = 0;
 				for (var i = 0; i < compareColumns.Length; i++)
 				{
-					if (!Equals(left[compareColumns[i].Item1], right[compareColumns[i].Item2]))
-						return false;
+					var l = left[compareColumns[i].Item1];
+					var r = right[compareColumns[i].Item2];
+
+					var t = ((IComparable)l).CompareTo(r);
+					if (cmp == 0) // first value that diffs
+					{
+						if (t < 0)
+						{
+							cmp = -1;
+							break;
+						}
+						else if (t > 0)
+						{
+							cmp = 1;
+							break;
+						}
+					}
 				}
-				return true;
+
+				return cmp;
 			} // func Compare
 		} // class CompareFields
 
@@ -285,7 +311,7 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // func GetOrderExpressionFromStatements
 
-		private static Func<IDataRow, IDataRow, bool> CreateEqualsFunctionFromStatements(PpsDataSelector leftSelector, PpsDataSelector rightSelector, PpsDataJoinStatement[] statements)
+		private static Func<IDataRow, IDataRow, int> CreateEqualsFunctionFromStatements(PpsDataSelector leftSelector, PpsDataSelector rightSelector, PpsDataJoinStatement[] statements)
 		{
 			var compareFields = new List<Tuple<int, int>>();
 			foreach (var cur in statements)
@@ -300,10 +326,6 @@ namespace TecWare.PPSn.Server.Data
 		#endregion
 
 		#region -- GetFieldDescription ------------------------------------------------
-
-		/// <summary></summary>
-		/// <returns></returns>
-		protected abstract AliasColumn[] GetAllColumns();
 
 		/// <summary></summary>
 		/// <param name="columnIndex"></param>
@@ -347,18 +369,19 @@ namespace TecWare.PPSn.Server.Data
 			private readonly IEnumerator<IDataRow> left;
 			private readonly IEnumerator<IDataRow> right;
 			private readonly bool innerJoin;
-			private readonly Func<IDataRow, IDataRow, bool> equalRows;
+			private readonly Func<IDataRow, IDataRow, int> compareRows;
 
 			private IDataRow currentLeft = null;
 			private IDataRow currentRight = null;
+			private bool useRight = false;
 		
-			public JoinEnumerator(PpsJoinDataSelector selector, IEnumerator<IDataRow> left, IEnumerator<IDataRow> right, bool innerJoin, Func<IDataRow, IDataRow, bool> equalRows)
+			public JoinEnumerator(PpsJoinDataSelector selector, IEnumerator<IDataRow> left, IEnumerator<IDataRow> right, bool innerJoin, Func<IDataRow, IDataRow, int> compareRows)
 			{
 				this.selector = selector ?? throw new ArgumentNullException(nameof(selector));
 				this.left = left ?? throw new ArgumentNullException(nameof(left));
 				this.right = right ?? throw new ArgumentNullException(nameof(right));
 				this.innerJoin = innerJoin;
-				this.equalRows = equalRows ?? throw new ArgumentNullException(nameof(equalRows));
+				this.compareRows = compareRows ?? throw new ArgumentNullException(nameof(compareRows));
 			} // ctor
 
 			public void Dispose()
@@ -373,6 +396,7 @@ namespace TecWare.PPSn.Server.Data
 				right.Reset();
 				currentLeft = null;
 				currentRight = null;
+				useRight = false;
 			} // proc Reset
 
 			public bool MoveNext()
@@ -382,8 +406,11 @@ namespace TecWare.PPSn.Server.Data
 					if (right.MoveNext())
 					{
 						currentRight = right.Current;
-						if (equalRows(currentLeft, currentRight))
+						if (compareRows(currentLeft, currentRight) == 0)
+						{
+							useRight = true;
 							return true;
+						}
 					}
 					else
 						currentRight = null;
@@ -398,24 +425,42 @@ namespace TecWare.PPSn.Server.Data
 				}
 				else // look right
 				{
-					if (currentRight != null && equalRows(currentLeft, currentRight))
+					currentLeft = left.Current;
+
+					if (currentRight != null && compareRows(currentLeft, currentRight) == 0)
+					{
+						useRight = true;
 						return true;
+					}
 					else
 					{
 						RoDoForRight:
 						if (right.MoveNext())
 						{
 							currentRight = right.Current;
-							if (!equalRows(currentLeft, currentLeft))
+							var t = compareRows(currentLeft, currentRight);
+							if (t > 0)
 								goto RoDoForRight;
-							else
+							else if (t < 0)
+							{
+								if (innerJoin)
+									goto ReDoForInner; // move next left
+								useRight = false;
 								return true;
+							}
+							else
+							{
+								useRight = true;
+								return true;
+							}
 						}
 						else
 						{
 							currentRight = null;
 							if (innerJoin)
-								goto ReDoForInner;
+								goto ReDoForInner; // fetch to end?
+
+							useRight = false;
 							return true;
 						}
 					}
@@ -431,9 +476,7 @@ namespace TecWare.PPSn.Server.Data
 					var leftCount = currentLeft.Columns.Count;
 					if (index < leftCount)
 						return currentLeft[index];
-					else if (currentRight == null)
-						return null;
-					else
+					else if (useRight)
 					{
 						index -= leftCount;
 						if (index < currentRight.Columns.Count)
@@ -441,6 +484,8 @@ namespace TecWare.PPSn.Server.Data
 						else
 							return null;
 					}
+					else
+						return null;
 				}
 			} // func GetNativeValue
 
@@ -482,7 +527,7 @@ namespace TecWare.PPSn.Server.Data
 		private readonly PpsDataSelector leftSelector;
 		private readonly PpsDataSelector rightSelector;
 		private readonly PpsDataJoinType joinType;
-		private readonly Func<IDataRow, IDataRow, bool> equalRows;
+		private readonly Func<IDataRow, IDataRow, int> compareRows;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -491,10 +536,10 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="leftSelector"></param>
 		/// <param name="joinType"></param>
 		/// <param name="rightSelector"></param>
-		/// <param name="equalRows"></param>
+		/// <param name="compareRows"></param>
 		/// <param name="columns"></param>
-		public PpsJoinDataSelector(IPpsConnectionHandle connection, PpsDataSelector leftSelector, PpsDataJoinType joinType, PpsDataSelector rightSelector, Func<IDataRow, IDataRow, bool> equalRows, AliasColumn[] columns)
-			: base(connection, columns)
+		public PpsJoinDataSelector(IPpsConnectionHandle connection, PpsDataSelector leftSelector, PpsDataJoinType joinType, PpsDataSelector rightSelector, Func<IDataRow, IDataRow, int> compareRows, AliasColumn[] columns)
+			: base(connection, columns ?? GetAllColumns(leftSelector, rightSelector))
 		{
 			if (joinType == PpsDataJoinType.None)
 				joinType = PpsDataJoinType.Inner;
@@ -509,7 +554,7 @@ namespace TecWare.PPSn.Server.Data
 			this.leftSelector = leftSelector ?? throw new ArgumentNullException(nameof(leftSelector));
 			this.joinType = joinType;
 			this.rightSelector = rightSelector ?? throw new ArgumentNullException(nameof(rightSelector));
-			this.equalRows = equalRows;
+			this.compareRows = compareRows;
 		} // ctor
 
 		#endregion
@@ -534,7 +579,7 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary></summary>
 		/// <returns></returns>
-		protected override AliasColumn[] GetAllColumns()
+		private static AliasColumn[] GetAllColumns(PpsDataSelector leftSelector, PpsDataSelector rightSelector)
 		{
 			var leftColumnCount = leftSelector.Columns.Count;
 			var rightColumnCount = rightSelector.Columns.Count;
@@ -558,7 +603,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="columns"></param>
 		/// <returns></returns>
 		protected override PpsDataSelector ApplyColumnsCore(AliasColumn[] columns)
-			=> new PpsJoinDataSelector(Connection, leftSelector, joinType, rightSelector, equalRows, columns);
+			=> new PpsJoinDataSelector(Connection, leftSelector, joinType, rightSelector, compareRows, columns);
 
 		/// <summary></summary>
 		/// <param name="col"></param>
@@ -596,7 +641,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="count"></param>
 		/// <returns></returns>
 		protected override IEnumerator<IDataRow> GetEnumeratorCore(int start, int count)
-			=> Procs.GetRangeEnumerator(new JoinEnumerator(this, leftSelector.GetEnumerator(), rightSelector.GetEnumerator(), joinType == PpsDataJoinType.Inner, equalRows), start, count);
+			=> Procs.GetRangeEnumerator(new JoinEnumerator(this, leftSelector.GetEnumerator(), rightSelector.GetEnumerator(), joinType == PpsDataJoinType.Inner, compareRows), start, count);
 	} // class PpsJoinDataSelector
 
 	#endregion
@@ -621,23 +666,20 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="enumerable"></param>
 		/// <param name="columns"></param>
 		public PpsGenericSelector(IPpsConnectionHandle connection, string viewId, IEnumerable<T> enumerable, AliasColumn[] columns = null) 
-			: base(connection, columns)
+			: base(connection, columns ?? GetAllColumns(viewId, connection.DataSource.Application))
 		{
 			this.viewId = viewId;
 			this.enumerable = enumerable;
-			this.application = connection.DataSource.GetService<PpsApplication>(true);
+			this.application = connection.DataSource.Application;
 		} // ctor
 
 		#endregion
 
 		#region -- Columns ------------------------------------------------------------
 
-		/// <summary></summary>
-		/// <returns></returns>
-		protected override AliasColumn[] GetAllColumns()
+		private static AliasColumn[] GetAllColumns(string viewId, PpsApplication application)
 		{
-			var application = DataSource.GetService<PpsApplication>(true);
-			var nativeColumns = this.nativeColumns.Value;
+			var nativeColumns = GenericDataRowEnumerator<T>.GetColumnInfo();
 			var aliasColumns = new AliasColumn[nativeColumns.Length];
 			for (var i = 0; i < aliasColumns.Length; i++)
 			{

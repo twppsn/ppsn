@@ -144,6 +144,8 @@ namespace TecWare.PPSn.Data
 		{
 			switch (c)
 			{
+				case '\0':
+					return PpsDataJoinType.None;
 				case ',':
 				case '=':
 					return PpsDataJoinType.Inner;
@@ -166,7 +168,7 @@ namespace TecWare.PPSn.Data
 
 		private sealed class SimpleOnParser : SimpleStatementParser
 		{
-			public SimpleOnParser(string expression) 
+			public SimpleOnParser(string expression)
 				: base(expression)
 			{
 			}
@@ -184,7 +186,7 @@ namespace TecWare.PPSn.Data
 						throw CreateException("Expected '='.");
 					else
 						pos++;
-
+					
 					// right site
 					ParseWhiteSpace();
 					var right = ParseDotName();
@@ -198,8 +200,11 @@ namespace TecWare.PPSn.Data
 						ParseWhiteSpace();
 						continue;
 					}
-					
+
 					var and = ParseAlias();
+					if (and == null) // test for eos?
+						break;
+
 					if (String.Compare(and, "AND", StringComparison.OrdinalIgnoreCase) != 0)
 						throw CreateException("Expected 'AND' or ','");
 					ParseWhiteSpace();
@@ -449,18 +454,15 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private readonly PpsExpressionPart root;
+		private PpsExpressionPart root;
+
+		/// <summary></summary>
+		protected PpsDataJoinExpression() { }
 
 		/// <summary></summary>
 		/// <param name="part"></param>
 		protected PpsDataJoinExpression(PpsExpressionPart part)
 			=> root = part ?? throw new ArgumentNullException(nameof(part));
-
-		/// <summary></summary>
-		public PpsDataJoinExpression(string expression)
-		{
-			root = Parse(expression);
-		} // ctor
 
 		/// <summary></summary>
 		/// <param name="table"></param>
@@ -505,17 +507,23 @@ namespace TecWare.PPSn.Data
 		/// <param name="statement"></param>
 		protected PpsJoinExpression AppendCore(TTABLE table, string aliasName, PpsDataJoinType joinType, string statement)
 			=> new PpsJoinExpression(root, joinType, new PpsTableExpression(table, aliasName), statement);
-		
+
+		/// <summary></summary>
+		/// <param name="expr"></param>
+		/// <param name="aliasName"></param>
+		/// <param name="joinType"></param>
+		/// <param name="statement"></param>
+		protected PpsJoinExpression AppendCore(PpsDataJoinExpression<TTABLE> expr, string aliasName, PpsDataJoinType joinType, string statement)
+			=> new PpsJoinExpression(root, joinType, expr.root, statement);
+
 		/// <summary>Parse expression.</summary>
 		/// <param name="expression"></param>
-		private PpsExpressionPart Parse(string expression)
+		protected void Parse(string expression)
 		{
 			// t1 alias
 			// t1 op t2 [ ]
 			// ( )
-
-			var p = new SimpleParser(this, expression);
-			return p.Parse();
+			root = new SimpleParser(this, expression).Parse();
 		} // func Parse
 		
 		/// <summary>Enumerates all tables.</summary>
