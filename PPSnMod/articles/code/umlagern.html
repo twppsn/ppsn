@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="de" xmlns="http://www.w3.org/1999/xhtml">
+<%
+-- 
+-- charge, charge2, von, nach
+-- 
+local teilInfo;
+local chargeInfo;
+local vonLagerInfo;
+local nachLagerInfo;
+
+if charge ~= nil then
+    chargeInfo = Pps.GetBestandInfo { charge = charge, charge2 = charge2 };
+    if chargeInfo ~= nil then
+        teilInfo = Pps.GetTeilInfo(chargeInfo.TeilNr);
+        chargeInfo = chargeInfo[1];
+    end;
+end;
+
+if von ~= nil then
+    vonLagerInfo = Pps.GetLagerInfo(von);
+end;
+if nach ~= nil then
+    nachLagerInfo = Pps.GetLagerInfo(nach);
+end;
+
+%>
+<head>
+    <meta charset="utf-8" />
+    <title>Umlagern</title>
+</head>
+<body>
+    <!-- Chargen Information -->
+    <% if charge then %>
+
+    <ul>
+        <li>Art.-Nr: <%= teilInfo.Nr %></li>
+        <li>Charge: <%= chargeInfo.Charge %></li>
+        <li>Charge2: <%= chargeInfo.Charge2 %></li>
+        <li>Bez: <%= teilInfo.Name %></li>
+    </ul>
+
+    <% else %>
+
+    <div class="info">Nach keine Charge gescannt.</div>
+
+    <% end; %>
+
+    <!-- Von Lager -->
+    <hr />
+    <% if vonLagerInfo then %>
+
+    <ul>
+        <li>Von: <%= vonLagerInfo.Nr %></li>
+        <li>Bestand: <%= bestand %></li>
+    </ul>
+
+    <% else %>
+
+    <div class="info">Von Lager fehlt.</div>
+
+    <% end; %>
+
+    <!-- Nach Lager -->
+    <hr />
+    <% if nachLagerInfo then %>
+
+    <ul>
+        <li>Nach: <%= nachLagerInfo.Nr %></li>
+    </ul>
+
+    <% else %>
+    <!-- todo: Lager vorschläge, wo liegt das teil -->
+    <div class="info">Nach Lager fehlt.</div>
+
+    <% end; %>
+</body>
+</html>

@@ -1,0 +1,5 @@
+- uid: ppsn.usersmanual.programming
+  items:
+    - uid: ppsn.usersmanual.programming.mde
+      items:
+        - uid: ppsn.usersmanual.programming.mde.styleguide
