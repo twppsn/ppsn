@@ -390,8 +390,8 @@ namespace TecWare.PPSn.Server
 						this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
 					} // ctor
 
-					public override PpsDataSelector CreateJoinStatement(PpsDataSelector leftExpression, PpsDataJoinType type, PpsDataSelector rightExpression, string on) 
-						=> leftExpression.ApplyJoin(rightExpression, type, PpsDataJoinStatement.Parse(on).ToArray());
+					public override PpsDataSelector CreateJoinStatement(PpsDataSelector leftExpression, PpsDataJoinType type, PpsDataSelector rightExpression, PpsDataJoinStatement[] on) 
+						=> leftExpression.ApplyJoin(rightExpression, type, on);
 
 					public override PpsDataSelector CreateTableStatement(PpsViewDescription table, string alias)
 						=> owner.CreateSelector(table, alias);
@@ -434,8 +434,8 @@ namespace TecWare.PPSn.Server
 					return viewInfo.SelectorToken.CreateSelector(connectionHandle, alias, throwException);
 				} // func CreateSelector
 
-				protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
-					=> null;
+				protected override PpsDataJoinStatement[] CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
+					=> left.Table.LookupJoin(right.Table.Name)?.Statement;
 
 				protected override PpsViewDescription ResolveTable(string tableName)
 					=> context.Application.GetViewDefinition(tableName, throwException);

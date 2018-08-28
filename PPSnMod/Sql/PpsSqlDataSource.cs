@@ -788,7 +788,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			private sealed class SqlEmitVisitor : PpsJoinVisitor<string>
 			{
-				public override string CreateJoinStatement(string leftExpression, PpsDataJoinType type, string rightExpression, string on)
+				public override string CreateJoinStatement(string leftExpression, PpsDataJoinType type, string rightExpression, PpsDataJoinStatement[] on)
 				{
 					string GetJoinExpr()
 					{
@@ -805,8 +805,11 @@ namespace TecWare.PPSn.Server.Sql
 						}
 					} // func GetJoinExpr
 
-					return "(" + leftExpression + GetJoinExpr() + rightExpression + " ON (" + on + "))";
+					return "(" + leftExpression + GetJoinExpr() + rightExpression + " ON (" + CreateOnStatement(on) + "))";
 				} // func CreateJoinStatement
+
+				private string CreateOnStatement(PpsDataJoinStatement[] on)
+					=> String.Join(" AND ", on.Select(c => c.Left + "=" + c.Right));
 
 				public override string CreateTableStatement(IPpsSqlTableOrView table, string alias)
 					=> String.IsNullOrEmpty(alias)
@@ -847,36 +850,37 @@ namespace TecWare.PPSn.Server.Sql
 			} // ctor
 			
 			/// <summary></summary>
-			/// <param name="commandText"></param>
 			/// <param name="table"></param>
 			/// <param name="column"></param>
 			/// <returns></returns>
-			public StringBuilder AppendColumn(StringBuilder commandText, PpsTableExpression table, PpsSqlColumnInfo column)
+			public string GetColumnExpression(PpsTableExpression table, IPpsColumnDescription column)
 				=> String.IsNullOrEmpty(table.Alias)
-					? column.AppendAsColumn(commandText, true)
-					: column.AppendAsColumn(commandText, table.Alias);
+					? table.Table.QualifiedName + ".[" + column.Name + "]"
+					: table.Alias + ".[" + column.Name + "]";
 
 			/// <summary>Create automatic on statement.</summary>
 			/// <param name="left"></param>
 			/// <param name="joinOp"></param>
 			/// <param name="right"></param>
 			/// <returns></returns>
-			protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
+			protected override PpsDataJoinStatement[] CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
 			{
 				if (right.Table is PpsSqlTableInfo rightTable
 					&& left.Table is PpsSqlTableInfo leftTable)
 				{
+					var returnStatements = new List<PpsDataJoinStatement>();
 					foreach (var r in rightTable.RelationInfo)
 					{
 						if (r.ReferencedColumn.Table == leftTable)
 						{
 							var sb = new StringBuilder();
-							AppendColumn(sb, left, r.ReferencedColumn);
-							sb.Append(" = ");
-							AppendColumn(sb, right, r.ParentColumn);
-							return sb.ToString();
+							returnStatements.Add(new PpsDataJoinStatement(
+								GetColumnExpression(left, r.ReferencedColumn),
+								GetColumnExpression(right, r.ParentColumn)
+							));
 						}
 					}
+					return returnStatements.ToArray();
 				}
 
 				return null;
@@ -888,30 +892,26 @@ namespace TecWare.PPSn.Server.Sql
 			protected override IPpsSqlTableOrView ResolveTable(string tableName)
 				=> dataSource.ResolveTableByName<PpsSqlTableInfo>(tableName, true); // todo: views?
 
-			private string CreateOnStatement(PpsSqlJoinExpression right, PpsDataJoinStatement[] statements)
+			private PpsDataJoinStatement[] CreateOnStatement(PpsSqlJoinExpression right, PpsDataJoinStatement[] statements)
 			{
+				if (statements == null || statements.Length == 0)
+					throw new ArgumentNullException(nameof(statements), "No statements");
+
 				var sb = new StringBuilder();
 
-				var first = true;
-				foreach (var cur in statements)
+				var returnStatements = new PpsDataJoinStatement[statements.Length];
+				for (var i = 0; i < statements.Length; i++)
 				{
-					var (leftTable, leftColumn) = FindNativeColumn(cur.Left, true);
-					var (rightTable, rightColumn) = right.FindNativeColumn(cur.Right, true);
+					var (leftTable, leftColumn) = FindNativeColumn(statements[i].Left, true);
+					var (rightTable, rightColumn) = right.FindNativeColumn(statements[i].Right, true);
 
-					if (first)
-						first = false;
-					else
-						sb.Append(" AND ");
-
-					AppendColumn(sb, leftTable, (PpsSqlColumnInfo)leftColumn);
-					sb.Append("=");
-					AppendColumn(sb, rightTable, (PpsSqlColumnInfo)rightColumn);
+					returnStatements[i] = new PpsDataJoinStatement(
+						GetColumnExpression(leftTable, leftColumn),
+						GetColumnExpression(rightTable, rightColumn)
+					);
 				}
 
-				if (first)
-					throw new ArgumentException("No statements");
-
-				return sb.ToString();
+				return returnStatements;
 			} // func CreateOnStatement
 
 			/// <summary>Attache a new table join</summary>
@@ -1028,6 +1028,12 @@ namespace TecWare.PPSn.Server.Sql
 				private readonly PpsDataFilterExpression condition;
 				private readonly Func<string, string>[] nativeLookupList;
 
+				public WhereConditionStore(WhereConditionStore oldStore, WhereConditionStore otherStore)
+				{
+					condition = PpsDataFilterExpression.Combine(oldStore.condition, otherStore.condition);
+					nativeLookupList = NativeLookupListCombine(oldStore.nativeLookupList, otherStore.nativeLookupList);
+				} // ctor
+
 				public WhereConditionStore(WhereConditionStore oldStore, PpsDataFilterExpression whereCondition, Func<string, string> nativeLookup)
 				{
 					if(whereCondition != null && whereCondition != PpsDataFilterExpression.True)
@@ -1063,6 +1069,12 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				private readonly PpsDataOrderExpression[] orderBy;
 				private readonly Func<string, string>[] nativeLookupList;
+
+				public OrderByStore(OrderByStore oldStore, OrderByStore otherStore)
+				{
+					orderBy = oldStore.orderBy.Union(otherStore.orderBy).ToArray();
+					nativeLookupList = NativeLookupListCombine(oldStore.nativeLookupList, otherStore.nativeLookupList);
+				} // ctor
 
 				public OrderByStore(OrderByStore oldStore, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> nativeLookup)
 				{
@@ -1101,6 +1113,21 @@ namespace TecWare.PPSn.Server.Sql
 
 				return nativeLookupList.Select(f => f(expr)).FirstOrDefault(c => c != null);
 			} // func NativeLookupListImpl
+
+			private static Func<string, string>[] NativeLookupListCombine(Func<string, string>[] a, Func<string, string>[] b)
+			{
+				if (a == null)
+					return b;
+				else if (b == null)
+					return a;
+				else
+				{
+					var newArray = new Func<string, string>[a.Length + b.Length];
+					Array.Copy(a, 0, newArray, 0, a.Length);
+					Array.Copy(b, 0, newArray, a.Length, b.Length);
+					return newArray;
+				}
+			} // func NativeLookupListCombine
 
 			private static Func<string,string>[] NativeLookupListCombine(Func<string,string>[] nativeLookupList, Func<string, string> nativeLookup)
 			{
@@ -1223,8 +1250,20 @@ namespace TecWare.PPSn.Server.Sql
 					: base.ApplyJoin(selector, joinType, statements);
 			} // func ApplyJoin
 
-			public PpsSqlDataSelector ApplyJoin(PpsSqlDataSelector sqlSelector, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
-				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from.Combine(sqlSelector.from, aliasName, joinType, statements), whereCondition, orderBy);
+			public PpsDataSelector ApplyJoin(PpsSqlDataSelector sqlSelector, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
+			{
+				if (sqlSelector.DataSource != DataSource) // teste datasource
+					return base.ApplyJoin(sqlSelector, joinType, statements);
+
+
+
+				return new PpsSqlDataSelector(SqlConnection,
+					AliasColumns.Concat(sqlSelector.AliasColumns).ToArray(),
+					from.Combine(sqlSelector.from, aliasName, joinType, statements),
+					new WhereConditionStore(whereCondition, sqlSelector.whereCondition),
+					new OrderByStore(orderBy, sqlSelector.orderBy)
+				);
+			} // func ApplyJoin
 
 			protected sealed override IEnumerator<IDataRow> GetEnumeratorCore(int start, int count)
 				=> new DbRowEnumerator(((PpsSqlDataSource)DataSource).CreateViewCommand(SqlConnection, Columns, from, whereCondition.Expression, whereCondition.NativeLookup, orderBy.Expression, orderBy.NativeLookup, start, count));
@@ -1921,7 +1960,7 @@ namespace TecWare.PPSn.Server.Sql
 								else
 									commandText.Append(", ");
 
-								tableInfos.AppendColumn(commandText, table, (PpsSqlColumnInfo)column);
+								commandText.Append(tableInfos.GetColumnExpression(table, column));
 							}
 						}
 						#endregion
@@ -1933,7 +1972,7 @@ namespace TecWare.PPSn.Server.Sql
 						{
 							var (table, column) = tableInfos.FindNativeColumn(columnName, defaults == null);
 							if (column != null) // append table column
-								tableInfos.AppendColumn(commandText, table, (PpsSqlColumnInfo)column);
+								commandText.Append(tableInfos.GetColumnExpression(table, column));
 							else // try append empty DbNull column
 							{
 								var field = DataSource.Application.GetFieldDescription(columnName, true);
@@ -1978,7 +2017,7 @@ namespace TecWare.PPSn.Server.Sql
 								: tableInfos.FindNativeColumn(col.Name, defaults == null);
 
 							if (column != null) // append table column
-								tableInfos.AppendColumn(commandText, table, (PpsSqlColumnInfo)column);
+								commandText.Append(tableInfos.GetColumnExpression(table, column));
 							else // try append empty DbNull column
 								commandText.Append(CreateParameter(cmd, col).ParameterName);
 
@@ -2009,7 +2048,7 @@ namespace TecWare.PPSn.Server.Sql
 
 							var (table, column) = tableInfos.FindNativeColumn((string)p.Key, true);
 							var parm = CreateParameter(cmd, column, null, p.Value);
-							tableInfos.AppendColumn(commandText, table, (PpsSqlColumnInfo)column);
+							commandText.Append(tableInfos.GetColumnExpression(table, column));
 							commandText.Append(" = ")
 								.Append(FormatParameterName(parm.ParameterName));
 						}

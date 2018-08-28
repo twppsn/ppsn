@@ -39,6 +39,7 @@ namespace TecWare.PPSn.Server
 
 		public readonly static XName xnView = PpsNamespace + "view";
 		public readonly static XName xnSource = PpsNamespace + "source";
+		public readonly static XName xnJoin = PpsNamespace + "join";
 		public readonly static XName xnFilter = PpsNamespace + "filter";
 		public readonly static XName xnOrder = PpsNamespace + "order";
 		public readonly static XName xnAttribute = PpsNamespace + "attribute";

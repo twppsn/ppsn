@@ -15,6 +15,10 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
+using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Server.Data;
@@ -66,6 +70,94 @@ namespace TecWare.PPSn.Server.Wpf
 					yield return new PpsExcelReportItem("table", v.Name, v.DisplayName, v.Attributes.GetProperty("description", (string)null));
 			}
 		} // func GetExcelReportItems
+
+		// todo: move DECore
+		private static XElement CreateAttributeInfo(PropertyValue attr)
+		{
+			if (attr.Value == null)
+				return null;
+
+			return new XElement("attribute",
+				new XAttribute("name", attr.Name),
+				new XAttribute("dataType", LuaType.GetType(attr.Type).AliasName),
+				new XText(attr.Value.ChangeType<string>())
+			);
+		} // func CreateAttributeInfo
+
+		private static XElement CreateParameterInfo(XName n, PpsViewParameterDefinition def)
+			=> new XElement(n,
+				new XAttribute("name", def.Name),
+				Procs.XAttributeCreate("displayName", def.DisplayName, null)
+			);
+
+		private static XElement CreateFilterInfo(PpsViewParameterDefinition def)
+			=> CreateParameterInfo("filter", def);
+
+		private static XElement CreateOrderInfo(PpsViewParameterDefinition def)
+			=> CreateParameterInfo("order", def);
+
+		private static XElement CreateJoinInfo(PpsViewJoinDefinition def)
+			=> new XElement("join",
+				new XAttribute("view", def.ViewName),
+				Procs.XAttributeCreate("alias", def.AliasName, null)
+			);
+
+		private static XElement CreateColumnInfo(IDataColumn c, string a)
+		{
+			var xColumn = new XElement("field",
+				new XAttribute("name", c.Name),
+				new XAttribute("type", LuaType.GetType(c.DataType).AliasName)
+			);
+
+			// filter attributes
+			var desc = c is IPpsColumnDescription columnDescription ? columnDescription.GetColumnDescription<PpsFieldDescription>() : null;
+			if (desc == null)
+			{
+				if (c.Attributes.TryGetProperty<string>("displayName", out var displayName))
+					xColumn.Add(new XAttribute("displayName", displayName));
+			}
+			else
+			{
+				foreach (var attr in desc.GetAttributes(a))
+					xColumn.Add(CreateAttributeInfo(attr));
+			}
+
+			return xColumn;
+		} // func CreateColumnInfo
+
+		[DEConfigHttpAction("tableinfo", IsSafeCall = true)]
+		private XElement HttpViewInfoAction(string v, string a)
+		{
+			var xReturn = new XElement("return");
+
+			foreach (var view in v.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+			{
+				var viewInfo = application.GetViewDefinition(view, true);
+				var xInfo = new XElement("table",
+					new XAttribute("name", viewInfo.Name),
+					new XAttribute("displayName", viewInfo.DisplayName)
+				);
+
+				// append properties
+				if (viewInfo.Attributes is IPropertyEnumerableDictionary properties)
+					xInfo.Add(properties.Select(CreateAttributeInfo));
+
+				// append filter
+				xInfo.Add(viewInfo.Filter.Where(o => o.IsVisible).Select(CreateFilterInfo));
+
+				// append order
+				xInfo.Add(viewInfo.Order.Where(o => o.IsVisible).Select(CreateOrderInfo));
+
+				// append joins
+				xInfo.Add(viewInfo.Joins.Select(CreateJoinInfo));
+
+				// apppend columns
+				xInfo.Add(viewInfo.SelectorToken.Columns.Select(c => CreateColumnInfo(viewInfo.SelectorToken.GetFieldDescription(c.Name) ?? c, a)));
+
+				xReturn.Add(xInfo);
+			}
+			return xReturn;
+		} // func HttpViewInfoAction
 
 		/// <summary>View to get all excel reports</summary>
 		/// <param name="dataSource"></param>

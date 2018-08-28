@@ -26,6 +26,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Server.Sql;
 using static TecWare.PPSn.Server.PpsStuff;
@@ -481,6 +482,36 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
+	#region -- class PpsViewJoinDefinition --------------------------------------------
+
+	/// <summary>Define join</summary>
+	public sealed class PpsViewJoinDefinition
+	{
+		/// <summary></summary>
+		/// <param name="viewName"></param>
+		/// <param name="aliasName"></param>
+		/// <param name="statement"></param>
+		public PpsViewJoinDefinition(string viewName, string aliasName, PpsDataJoinStatement[] statement)
+		{
+			ViewName = viewName;
+			AliasName = aliasName;
+			Statement = statement;
+		} // ctor
+
+		/// <summary></summary>
+		public string ViewName { get; }
+		/// <summary></summary>
+		public string AliasName { get;  }
+		/// <summary></summary>
+		public PpsDataJoinStatement[] Statement { get;  }
+
+		/// <summary>Empty parameter array.</summary>
+		public static PpsViewJoinDefinition[] EmptyArray { get; } = Array.Empty<PpsViewJoinDefinition>();
+	} // class PpsViewJoinDefinition
+
+
+	#endregion
+
 	#region -- class PpsViewDefinition ------------------------------------------------
 
 	/// <summary>View description to manage request to the system.</summary>
@@ -489,6 +520,7 @@ namespace TecWare.PPSn.Server
 		private readonly IPpsSelectorToken selectorToken;
 		private readonly string displayName;
 
+		private readonly PpsViewJoinDefinition[] joins;
 		private readonly PpsViewParameterDefinition[] filter;
 		private readonly PpsViewParameterDefinition[] order;
 
@@ -497,16 +529,18 @@ namespace TecWare.PPSn.Server
 		/// <summary></summary>
 		/// <param name="selectorToken"></param>
 		/// <param name="displayName"></param>
-		/// <param name="filter"></param>
-		/// <param name="order"></param>
+		/// <param name="joins"></param>
+		/// <param name="filters"></param>
+		/// <param name="orders"></param>
 		/// <param name="attributes"></param>
-		public PpsViewDescription(IPpsSelectorToken selectorToken, string displayName, PpsViewParameterDefinition[] filter, PpsViewParameterDefinition[] order, IPropertyReadOnlyDictionary attributes)
+		public PpsViewDescription(IPpsSelectorToken selectorToken, string displayName, PpsViewJoinDefinition[] joins, PpsViewParameterDefinition[] filters, PpsViewParameterDefinition[] orders, IPropertyReadOnlyDictionary attributes)
 		{
 			this.selectorToken = selectorToken;
 			this.displayName = displayName;
 
-			this.filter = filter ?? PpsViewParameterDefinition.EmptyArray;
-			this.order = order ?? PpsViewParameterDefinition.EmptyArray;
+			this.joins = joins ?? PpsViewJoinDefinition.EmptyArray;
+			this.filter = filters ?? PpsViewParameterDefinition.EmptyArray;
+			this.order = orders ?? PpsViewParameterDefinition.EmptyArray;
 
 			this.attributes = attributes ?? new PropertyDictionary();
 		} // ctor
@@ -523,6 +557,12 @@ namespace TecWare.PPSn.Server
 		public string LookupFilter(string filterName)
 			=> filter.FirstOrDefault(c => String.Compare(filterName, c.Name, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter;
 
+		/// <summary>Lookup a join by view name.</summary>
+		/// <param name="viewName"></param>
+		/// <returns></returns>
+		public PpsViewJoinDefinition LookupJoin(string viewName)
+			=> joins.FirstOrDefault(c => String.Compare(viewName, c.ViewName, StringComparison.OrdinalIgnoreCase) == 0);
+
 		/// <summary>Name of the view.</summary>
 		public string Name => selectorToken.Name;
 		/// <summary>Name of the view for the user.</summary>
@@ -530,6 +570,8 @@ namespace TecWare.PPSn.Server
 		/// <summary>Access token to the view.</summary>
 		public string SecurityToken => null;
 
+		/// <summary>Predefined join expressions.</summary>
+		public PpsViewJoinDefinition[] Joins => joins;
 		/// <summary>Predefined filter expressions.</summary>
 		public PpsViewParameterDefinition[] Filter => filter;
 		/// <summary>Predefined order expressions,</summary>
@@ -544,33 +586,6 @@ namespace TecWare.PPSn.Server
 		/// <summary>Is this view visible for the user.</summary>
 		public bool IsVisible => displayName != null;
 	} // class PpsViewDefinition
-
-	#endregion
-
-	#region -- class PpsCombineViewDefinition -----------------------------------------
-
-	///// <summary></summary>
-	//public sealed class PpsCombineViewDefinition : PpsDataJoinExpression<PpsViewDescription>
-	//{
-	//	/// <summary></summary>
-	//	public PpsCombineViewDefinition()
-	//	{
-	//	}
-
-	//	/// <summary></summary>
-	//	/// <param name="left"></param>
-	//	/// <param name="joinOp"></param>
-	//	/// <param name="right"></param>
-	//	/// <returns></returns>
-	//	protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right) 
-	//		=> throw new NotImplementedException();
-
-	//	/// <summary></summary>
-	//	/// <param name="tableName"></param>
-	//	/// <returns></returns>
-	//	protected override PpsViewDescription ResolveTable(string tableName) 
-	//		=> throw new NotImplementedException();
-	//} // class PpsCombineViewDefinition
 
 	#endregion
 
@@ -604,6 +619,7 @@ namespace TecWare.PPSn.Server
 				var view = new PpsViewDescription(
 					selectorToken,
 					xDefinition.GetAttribute("displayName", (string)null),
+					xDefinition.Elements(xnJoin).Select(CreateJoinDefinition).ToArray(),
 					xDefinition.Elements(xnFilter).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnOrder).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnAttribute).ToPropertyDictionary(
@@ -614,6 +630,34 @@ namespace TecWare.PPSn.Server
 
 				return view;
 			} // proc InitializeAsync
+
+			private static PpsViewJoinDefinition CreateJoinDefinition(XElement xJoin)
+			{
+				var viewName = xJoin.GetAttribute("view", null);
+				if (String.IsNullOrEmpty(viewName))
+					throw new DEConfigurationException(xJoin, "@view is missing.");
+				var statement = ParseOnStatement(xJoin);
+				var aliasName = xJoin.GetAttribute("alias", null); // optional
+
+				return new PpsViewJoinDefinition(viewName, aliasName, statement);
+			} // func CreateJoinDefinition
+
+			private static PpsDataJoinStatement[] ParseOnStatement(XElement xJoin)
+			{
+				PpsDataJoinStatement[] statement;
+				try
+				{
+					statement = PpsDataJoinStatement.Parse(xJoin.GetAttribute("on", null)).ToArray();
+					if (statement == null && statement.Length == 0)
+						throw new ArgumentNullException();
+				}
+				catch (Exception e)
+				{
+					throw new DEConfigurationException(xJoin, "@on could not parsed.", e);
+				}
+
+				return statement;
+			} // func ParseOnStatement
 		} // class PpsViewDefinitionInit
 
 		#endregion
@@ -779,7 +823,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="selectorToken"></param>
 		/// <param name="displayName"></param>
 		public void RegisterView(IPpsSelectorToken selectorToken, string displayName = null)
-			=> RegisterView(new PpsViewDescription(selectorToken, displayName, null, null, null));
+			=> RegisterView(new PpsViewDescription(selectorToken, displayName, null, null, null, null));
 
 		private void RegisterView(PpsDataSource source, string name, XElement x)
 		{
@@ -908,7 +952,7 @@ namespace TecWare.PPSn.Server
 			
 			var selector = ctx.CreateSelectorAsync(
 				r.GetProperty<string>("v", null),
-				r.GetProperty<string>("c", null),
+				r.GetProperty<string>("r", null),
 				r.GetProperty<string>("f", null),
 				r.GetProperty<string>("o", null),
 				true

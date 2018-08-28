@@ -234,9 +234,9 @@ namespace TecWare.PPSn.Server.Data
 
 		private sealed class CompareFields
 		{
-			private readonly Tuple<int, int>[] compareColumns;
+			private readonly Tuple<int, int, bool>[] compareColumns;
 
-			public CompareFields(Tuple<int, int>[] compareColumns)
+			public CompareFields(Tuple<int, int, bool>[] compareColumns)
 			{
 				this.compareColumns = compareColumns ?? throw new ArgumentNullException(nameof(compareColumns));
 			} // ctor
@@ -261,19 +261,35 @@ namespace TecWare.PPSn.Server.Data
 					var t = ((IComparable)l).CompareTo(r);
 					if (cmp == 0) // first value that diffs
 					{
-						if (t < 0)
+						if (compareColumns[i].Item3)
 						{
-							cmp = -1;
-							break;
+							if (t > 0)
+							{
+								cmp = -1;
+								break;
+							}
+							else if (t < 0)
+							{
+								cmp = 1;
+								break;
+							}
 						}
-						else if (t > 0)
+						else
 						{
-							cmp = 1;
-							break;
+							if (t < 0)
+							{
+								cmp = -1;
+								break;
+							}
+							else if (t > 0)
+							{
+								cmp = 1;
+								break;
+							}
 						}
 					}
 				}
-
+				
 				return cmp;
 			} // func Compare
 		} // class CompareFields
@@ -313,12 +329,16 @@ namespace TecWare.PPSn.Server.Data
 
 		private static Func<IDataRow, IDataRow, int> CreateEqualsFunctionFromStatements(PpsDataSelector leftSelector, PpsDataSelector rightSelector, PpsDataJoinStatement[] statements)
 		{
-			var compareFields = new List<Tuple<int, int>>();
+			var compareFields = new List<Tuple<int, int, bool>>();
 			foreach (var cur in statements)
 			{
 				var leftColumnIndex = leftSelector.FindColumnIndex(cur.Left, true);
 				var rightColumnIndex = rightSelector.FindColumnIndex(cur.Right, true);
-				compareFields.Add(new Tuple<int, int>(leftColumnIndex, rightColumnIndex));
+				var leftColumnOrderDesc = leftSelector.IsOrderDesc(cur.Left);
+				var rightColumnOrderDesc = leftSelector.IsOrderDesc(cur.Left);
+				if (leftColumnOrderDesc != rightColumnOrderDesc)
+					throw new ArgumentException("Left right order mismatch.");
+				compareFields.Add(new Tuple<int, int, bool>(leftColumnIndex, rightColumnIndex, leftColumnOrderDesc));
 			}
 			return new CompareFields(compareFields.ToArray()).Compare;
 		} // func CreateEqualsFunctionFromStatements

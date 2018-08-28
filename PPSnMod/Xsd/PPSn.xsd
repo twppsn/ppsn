@@ -274,6 +274,22 @@
 							</xs:element>
 
 							<xs:sequence minOccurs="0" maxOccurs="unbounded">
+								<xs:element name="join" minOccurs="0" maxOccurs="unbounded">
+									<xs:annotation>
+										<xs:documentation>Define a connection to a other view.</xs:documentation>
+									</xs:annotation>
+									<xs:complexType>
+										<xs:attribute name="view" type="xs:string" use="required">
+											
+										</xs:attribute>
+										<xs:attribute name="alias" type="xs:string" use="optional">
+											
+										</xs:attribute>
+										<xs:attribute name="on" type="xs:string" use="required">
+											
+										</xs:attribute>
+									</xs:complexType>
+								</xs:element>
 								<xs:element name="filter" minOccurs="0" maxOccurs="unbounded">
 									<xs:complexType>
 										<xs:simpleContent>

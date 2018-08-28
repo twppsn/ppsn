@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TecWare.DE.Data;
 
 namespace TecWare.PPSn.Data
@@ -91,9 +92,47 @@ namespace TecWare.PPSn.Data
 			else
 				return null;
 		} // func ParseAlias
-		
+
+		protected IEnumerable<PpsDataJoinStatement> ParseOnStatement()
+		{
+			while (true)
+			{
+				// left site
+				var left = ParseDotName();
+				ParseWhiteSpace();
+
+				// parse equal
+				if (Cur != '=')
+					throw CreateException("Expected '='.");
+				else
+					pos++;
+
+				// right site
+				ParseWhiteSpace();
+				var right = ParseDotName();
+				yield return new PpsDataJoinStatement(left, right);
+
+				// connector , or AND
+				ParseWhiteSpace();
+				if (Cur == ',')
+				{
+					pos++;
+					ParseWhiteSpace();
+					continue;
+				}
+
+				var and = ParseAlias();
+				if (and == null)
+					break;
+
+				if (String.Compare(and, "AND", StringComparison.OrdinalIgnoreCase) != 0)
+					throw CreateException("Expected 'AND' or ','");
+				ParseWhiteSpace();
+			}
+		} // func ParseOnStatement
+
 		protected char Cur => pos >= expression.Length ? '\0' : expression[pos];
-	} // class SimpleParser
+	} // class SimpleStatementParser
 
 	#endregion
 
@@ -171,44 +210,14 @@ namespace TecWare.PPSn.Data
 			public SimpleOnParser(string expression)
 				: base(expression)
 			{
-			}
+			} // ctor
 
 			public IEnumerable<PpsDataJoinStatement> Parse()
 			{
-				while (true)
-				{
-					// left site
-					var left = ParseDotName();
-					ParseWhiteSpace();
-
-					// parse equal
-					if (Cur != '=')
-						throw CreateException("Expected '='.");
-					else
-						pos++;
-					
-					// right site
-					ParseWhiteSpace();
-					var right = ParseDotName();
-					yield return new PpsDataJoinStatement(left, right);
-
-					// connector , or AND
-					ParseWhiteSpace();
-					if (Cur == ',')
-					{
-						pos++;
-						ParseWhiteSpace();
-						continue;
-					}
-
-					var and = ParseAlias();
-					if (and == null) // test for eos?
-						break;
-
-					if (String.Compare(and, "AND", StringComparison.OrdinalIgnoreCase) != 0)
-						throw CreateException("Expected 'AND' or ','");
-					ParseWhiteSpace();
-				}
+				foreach (var cur in ParseOnStatement())
+					yield return cur;
+				if (Cur != '\0')
+					throw CreateException("End of statement expected."); // todo: better message?
 			} // func Parse
 		} // class SimpleOnParser
 
@@ -293,14 +302,14 @@ namespace TecWare.PPSn.Data
 			private readonly PpsDataJoinType type;
 			private readonly PpsExpressionPart right;
 
-			private readonly string onStatement;
+			private readonly PpsDataJoinStatement[] onStatement;
 
 			/// <summary></summary>
 			/// <param name="left"></param>
 			/// <param name="type"></param>
 			/// <param name="right"></param>
 			/// <param name="onStatement"></param>
-			public PpsJoinExpression(PpsExpressionPart left, PpsDataJoinType type, PpsExpressionPart right, string onStatement)
+			public PpsJoinExpression(PpsExpressionPart left, PpsDataJoinType type, PpsExpressionPart right, PpsDataJoinStatement[] onStatement)
 			{
 				this.left = left ?? throw new ArgumentNullException(nameof(left));
 				this.type = type;
@@ -313,7 +322,7 @@ namespace TecWare.PPSn.Data
 			/// <summary>Right site of the join.</summary>
 			public PpsExpressionPart Right => right;
 			/// <summary>Join statement.</summary>
-			public string Statement => onStatement;
+			public PpsDataJoinStatement[] Statement => onStatement;
 			/// <summary>Type</summary>
 			public PpsDataJoinType Type => type;
 		} // class PpsJoinExpression
@@ -337,7 +346,7 @@ namespace TecWare.PPSn.Data
 			/// <param name="rightExpression"></param>
 			/// <param name="on"></param>
 			/// <returns></returns>
-			public abstract TRESULT CreateJoinStatement(TRESULT leftExpression, PpsDataJoinType type, TRESULT rightExpression, string on);
+			public abstract TRESULT CreateJoinStatement(TRESULT leftExpression, PpsDataJoinType type, TRESULT rightExpression, PpsDataJoinStatement[] on);
 
 			/// <summary>Visit expression part</summary>
 			/// <param name="expr"></param>
@@ -383,26 +392,6 @@ namespace TecWare.PPSn.Data
 				return owner.CreateTable(tableName, tableAlias);
 			} // func ParseTable
 
-			private string ParseOnStatement()
-			{
-				ParseWhiteSpace();
-				if (Cur == '[')
-				{
-					var startAt = ++pos;
-					while (Cur != ']' && Cur != '\0')
-						pos++;
-
-					if (Cur != ']')
-						throw CreateException("']' expected.");
-					var endAt = pos;
-
-					pos++;
-					return expression.Substring(startAt, endAt - startAt);
-				}
-				else
-					return null;
-			} // func ParseOnStatement
-
 			private PpsDataJoinType ParseJoinOperator()
 			{
 				ParseWhiteSpace();
@@ -431,10 +420,19 @@ namespace TecWare.PPSn.Data
 					var joinOp = PpsDataJoinType.None;
 					while ((joinOp = ParseJoinOperator()) != PpsDataJoinType.None)
 					{
-						var right = ParseExpr();
-						var on = ParseOnStatement();
+						var right = ParseTable();
+						PpsDataJoinStatement[] onStatement = null;
+						if (Cur == '[')
+						{
+							pos++; // eat start
+							onStatement = ParseOnStatement().ToArray();
 
-						left = new PpsJoinExpression(left, joinOp, right, on ?? owner.CreateOnStatement(left, joinOp, right));
+							if (Cur != ']')
+								throw CreateException("']' expected.");
+							pos++;
+						}
+
+						left = new PpsJoinExpression(left, joinOp, right, onStatement ?? owner.CreateOnStatement(left, joinOp, right));
 					}
 
 					return left;
@@ -479,7 +477,7 @@ namespace TecWare.PPSn.Data
 		private PpsExpressionPart CreateTable(string tableName, string tableAlias)
 			=> new PpsTableExpression(ResolveTable(tableName), tableAlias);
 
-		private string CreateOnStatement(PpsExpressionPart left, PpsDataJoinType joinOp, PpsExpressionPart right)
+		private PpsDataJoinStatement[] CreateOnStatement(PpsExpressionPart left, PpsDataJoinType joinOp, PpsExpressionPart right)
 		{
 			if (left is PpsTableExpression leftTableExpr
 				&& right is PpsTableExpression rightTableExpr)
@@ -493,7 +491,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="joinOp"></param>
 		/// <param name="right"></param>
 		/// <returns></returns>
-		protected abstract string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right);
+		protected abstract PpsDataJoinStatement[] CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right);
 
 		/// <summary>Resolve table by name.</summary>
 		/// <param name="tableName"></param>
@@ -505,7 +503,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="aliasName"></param>
 		/// <param name="joinType"></param>
 		/// <param name="statement"></param>
-		protected PpsJoinExpression AppendCore(TTABLE table, string aliasName, PpsDataJoinType joinType, string statement)
+		protected PpsJoinExpression AppendCore(TTABLE table, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statement)
 			=> new PpsJoinExpression(root, joinType, new PpsTableExpression(table, aliasName), statement);
 
 		/// <summary></summary>
@@ -513,7 +511,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="aliasName"></param>
 		/// <param name="joinType"></param>
 		/// <param name="statement"></param>
-		protected PpsJoinExpression AppendCore(PpsDataJoinExpression<TTABLE> expr, string aliasName, PpsDataJoinType joinType, string statement)
+		protected PpsJoinExpression AppendCore(PpsDataJoinExpression<TTABLE> expr, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statement)
 			=> new PpsJoinExpression(root, joinType, expr.root, statement);
 
 		/// <summary>Parse expression.</summary>
