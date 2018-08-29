@@ -28,29 +28,20 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.availTablesList = new System.Windows.Forms.ListBox();
 			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.availableColumns = new System.Windows.Forms.ListBox();
 			this.selectedColumns = new System.Windows.Forms.ListBox();
 			this.button1 = new System.Windows.Forms.Button();
 			this.button2 = new System.Windows.Forms.Button();
 			this.selectedTables = new System.Windows.Forms.ListBox();
-			this.textBox2 = new System.Windows.Forms.TextBox();
 			this.label1 = new System.Windows.Forms.Label();
 			this.label2 = new System.Windows.Forms.Label();
 			this.label3 = new System.Windows.Forms.Label();
 			this.conditionExpression = new System.Windows.Forms.TextBox();
 			this.cmdInsert = new System.Windows.Forms.Button();
 			this.cmdClose = new System.Windows.Forms.Button();
+			this.tableTree = new System.Windows.Forms.TreeView();
 			this.SuspendLayout();
-			// 
-			// availTablesList
-			// 
-			this.availTablesList.FormattingEnabled = true;
-			this.availTablesList.Location = new System.Drawing.Point(27, 25);
-			this.availTablesList.Name = "availTablesList";
-			this.availTablesList.Size = new System.Drawing.Size(253, 446);
-			this.availTablesList.TabIndex = 0;
 			// 
 			// textBox1
 			// 
@@ -100,13 +91,6 @@
 			this.selectedTables.Name = "selectedTables";
 			this.selectedTables.Size = new System.Drawing.Size(458, 56);
 			this.selectedTables.TabIndex = 5;
-			// 
-			// textBox2
-			// 
-			this.textBox2.Location = new System.Drawing.Point(384, 103);
-			this.textBox2.Name = "textBox2";
-			this.textBox2.Size = new System.Drawing.Size(396, 20);
-			this.textBox2.TabIndex = 6;
 			// 
 			// label1
 			// 
@@ -165,26 +149,33 @@
 			this.cmdClose.Text = "Schließen";
 			this.cmdClose.UseVisualStyleBackColor = true;
 			// 
+			// tableTree
+			// 
+			this.tableTree.CheckBoxes = true;
+			this.tableTree.Location = new System.Drawing.Point(27, 25);
+			this.tableTree.Name = "tableTree";
+			this.tableTree.Size = new System.Drawing.Size(253, 446);
+			this.tableTree.TabIndex = 11;
+			// 
 			// TableInsertForm
 			// 
 			this.AcceptButton = this.cmdInsert;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(826, 554);
+			this.Controls.Add(this.tableTree);
 			this.Controls.Add(this.cmdClose);
 			this.Controls.Add(this.cmdInsert);
 			this.Controls.Add(this.label3);
 			this.Controls.Add(this.label2);
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.conditionExpression);
-			this.Controls.Add(this.textBox2);
 			this.Controls.Add(this.selectedTables);
 			this.Controls.Add(this.button2);
 			this.Controls.Add(this.button1);
 			this.Controls.Add(this.selectedColumns);
 			this.Controls.Add(this.availableColumns);
 			this.Controls.Add(this.textBox1);
-			this.Controls.Add(this.availTablesList);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.MaximizeBox = false;
 			this.MinimizeBox = false;
@@ -200,20 +191,18 @@
 		}
 
 		#endregion
-
-		private System.Windows.Forms.ListBox availTablesList;
 		private System.Windows.Forms.TextBox textBox1;
 		private System.Windows.Forms.ListBox availableColumns;
 		private System.Windows.Forms.ListBox selectedColumns;
 		private System.Windows.Forms.Button button1;
 		private System.Windows.Forms.Button button2;
 		private System.Windows.Forms.ListBox selectedTables;
-		private System.Windows.Forms.TextBox textBox2;
 		private System.Windows.Forms.Label label1;
 		private System.Windows.Forms.Label label2;
 		private System.Windows.Forms.Label label3;
 		private System.Windows.Forms.TextBox conditionExpression;
 		private System.Windows.Forms.Button cmdInsert;
 		private System.Windows.Forms.Button cmdClose;
+		private System.Windows.Forms.TreeView tableTree;
 	}
 }

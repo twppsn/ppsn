@@ -156,6 +156,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 				xReturn.Add(xInfo);
 			}
+
 			return xReturn;
 		} // func HttpViewInfoAction
 

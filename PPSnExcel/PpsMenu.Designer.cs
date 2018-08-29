@@ -108,7 +108,7 @@
 			this.cmdTable.ScreenTip = "Datentabelle verknüpfen";
 			this.cmdTable.ShowImage = true;
 			this.cmdTable.SuperTip = "Verknüpft eine Datentabelle mit dem aktuellen Arbeitsblatt";
-			this.cmdTable.Visible = false;
+			this.cmdTable.Visible = true;
 			this.cmdTable.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdTable_Click);
 			// 
 			// cmdRefreshAll

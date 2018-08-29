@@ -264,6 +264,9 @@ namespace TecWare.PPSn.Data
 		/// <summary>Base part of the expression.</summary>
 		public abstract class PpsExpressionPart
 		{
+			/// <summary></summary>
+			/// <returns></returns>
+			public abstract IEnumerable<PpsTableExpression> GetTables();
 		} // class PpsExpressionPart
 
 		#endregion
@@ -284,6 +287,13 @@ namespace TecWare.PPSn.Data
 				this.table = table;
 				this.alias = alias;
 			} // ctor
+
+			/// <summary></summary>
+			/// <returns></returns>
+			public override IEnumerable<PpsTableExpression> GetTables()
+			{
+				yield return this;
+			} // func GetTables
 
 			/// <summary>Referenced table.</summary>
 			public TTABLE Table => table;
@@ -316,6 +326,26 @@ namespace TecWare.PPSn.Data
 				this.right = right ?? throw new ArgumentNullException(nameof(right));
 				this.onStatement = onStatement ?? throw new ArgumentNullException(nameof(onStatement));
 			} // ctor
+
+			/// <summary></summary>
+			/// <returns></returns>
+			public override IEnumerable<PpsTableExpression> GetTables()
+			{
+				if (left is PpsTableExpression leftTable)
+					yield return  leftTable;
+				else 
+				{
+					foreach (var c in left.GetTables())
+						yield return c;
+				}
+				if (right is PpsTableExpression rightTable)
+					yield return rightTable;
+				else
+				{
+					foreach (var c in right.GetTables())
+						yield return c;
+				}
+			} // func GetTables
 
 			/// <summary>Left site of the join.</summary>
 			public PpsExpressionPart Left => left;
@@ -479,11 +509,16 @@ namespace TecWare.PPSn.Data
 
 		private PpsDataJoinStatement[] CreateOnStatement(PpsExpressionPart left, PpsDataJoinType joinOp, PpsExpressionPart right)
 		{
-			if (left is PpsTableExpression leftTableExpr
-				&& right is PpsTableExpression rightTableExpr)
-				return CreateOnStatement(leftTableExpr, joinOp, rightTableExpr);
-			else
-				return null;
+			foreach (var l in left.GetTables())
+			{
+				foreach (var r in right.GetTables())
+				{
+					var on = CreateOnStatement(l, joinOp, r);
+					if (on != null)
+						return on;
+				}
+			}
+			return null;
 		} // func CreateOnStatement
 
 		/// <summary>Create on statement</summary>
