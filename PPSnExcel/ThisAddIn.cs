@@ -51,12 +51,13 @@ namespace PPSnExcel
 		private PpsEnvironment currentEnvironment = null;
 
 		private WaitForm waitForm;
+		private int mainThreadId = 0;
 
 		private void ThisAddIn_Startup(object sender, EventArgs e)
 		{
 			// create wait form
 			this.waitForm = new WaitForm(Application);
-
+			mainThreadId = Thread.CurrentThread.ManagedThreadId;
 			//Globals.Ribbons.PpsMenu.
 		} // ctor
 
@@ -115,7 +116,7 @@ namespace PPSnExcel
 
 		public Task InvokeAsync(System.Action action)
 		{
-			if (waitForm.InvokeRequired)
+			if (InvokeRequired)
 			{
 				return Task.Factory.FromAsync(
 					waitForm.BeginInvoke(action),
@@ -139,7 +140,7 @@ namespace PPSnExcel
 
 		public Task<T> InvokeAsync<T>(Func<T> func)
 		{
-			if (waitForm.InvokeRequired)
+			if (InvokeRequired)
 			{
 				return Task.Factory.FromAsync(
 					waitForm.BeginInvoke(func),
@@ -152,7 +153,7 @@ namespace PPSnExcel
 
 		public void BeginInvoke(System.Action action)
 		{
-			if (waitForm.InvokeRequired)
+			if (InvokeRequired)
 				waitForm.BeginInvoke(action);
 			else
 				action();
@@ -160,6 +161,8 @@ namespace PPSnExcel
 
 		public IProgressBar CreateAwaitProgress()
 			=> waitForm.CreateProgress();
+
+		private bool InvokeRequired => waitForm.InvokeRequired; // Thread.CurrentThread.ManagedThreadId != mainThreadId;
 
 		#endregion
 

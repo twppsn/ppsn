@@ -79,7 +79,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 			return new XElement("attribute",
 				new XAttribute("name", attr.Name),
-				new XAttribute("dataType", LuaType.GetType(attr.Type).AliasName),
+				new XAttribute("dataType", LuaType.GetType(attr.Type).AliasOrFullName),
 				new XText(attr.Value.ChangeType<string>())
 			);
 		} // func CreateAttributeInfo
@@ -106,7 +106,7 @@ namespace TecWare.PPSn.Server.Wpf
 		{
 			var xColumn = new XElement("field",
 				new XAttribute("name", c.Name),
-				new XAttribute("type", LuaType.GetType(c.DataType).AliasName)
+				new XAttribute("type", LuaType.GetType(c.DataType).AliasOrFullName)
 			);
 
 			// filter attributes
@@ -114,7 +114,7 @@ namespace TecWare.PPSn.Server.Wpf
 			if (desc == null)
 			{
 				if (c.Attributes.TryGetProperty<string>("displayName", out var displayName))
-					xColumn.Add(new XAttribute("displayName", displayName));
+					xColumn.Add(CreateAttributeInfo(new PropertyValue("displayName", displayName)));
 			}
 			else
 			{

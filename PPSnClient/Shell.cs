@@ -76,7 +76,7 @@ namespace TecWare.PPSn
 			if (Filter != null && Filter != PpsDataFilterExpression.True)
 				sb.Append("&f=").Append(Uri.EscapeDataString(Filter.ToString()));
 			if (Columns != null && Columns.Length > 0)
-				sb.Append("&l=").Append(PpsDataColumnExpression.ToString(Columns));
+				sb.Append("&r=").Append(PpsDataColumnExpression.ToString(Columns));
 			if (Order != null && Order.Length > 0)
 				sb.Append("&o=").Append(Uri.EscapeDataString(PpsDataOrderExpression.ToString(Order)));
 			if (Start != -1)

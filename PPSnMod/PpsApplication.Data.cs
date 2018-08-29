@@ -374,7 +374,7 @@ namespace TecWare.PPSn.Server
 		{
 			foreach (var c in Attributes)
 			{
-				if (c.Name.StartsWith(attributeSelector)) // todo: convert standard attribute
+				if (attributeSelector == null || c.Name.StartsWith(attributeSelector)) // todo: convert standard attribute
 					yield return c;
 			}
 		} // proc GetAttributesConverted

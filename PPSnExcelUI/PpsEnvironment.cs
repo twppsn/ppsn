@@ -21,6 +21,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -107,6 +108,9 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func LoginAsync
+
+		public Task<XElement> GetXmlData(string requestUri)
+			=> request.GetXmlAsync(requestUri);
 
 		public IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
 			=> request.CreateViewDataReader(arguments.ToQuery());

@@ -28,92 +28,26 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.textBox1 = new System.Windows.Forms.TextBox();
-			this.availableColumns = new System.Windows.Forms.ListBox();
-			this.selectedColumns = new System.Windows.Forms.ListBox();
-			this.button1 = new System.Windows.Forms.Button();
-			this.button2 = new System.Windows.Forms.Button();
-			this.selectedTables = new System.Windows.Forms.ListBox();
-			this.label1 = new System.Windows.Forms.Label();
-			this.label2 = new System.Windows.Forms.Label();
+			this.tableSearchText = new System.Windows.Forms.TextBox();
 			this.label3 = new System.Windows.Forms.Label();
 			this.conditionExpression = new System.Windows.Forms.TextBox();
 			this.cmdInsert = new System.Windows.Forms.Button();
 			this.cmdClose = new System.Windows.Forms.Button();
 			this.tableTree = new System.Windows.Forms.TreeView();
+			this.availableColumns = new System.Windows.Forms.CheckedListBox();
 			this.SuspendLayout();
 			// 
-			// textBox1
+			// tableSearchText
 			// 
-			this.textBox1.Location = new System.Drawing.Point(121, 477);
-			this.textBox1.Name = "textBox1";
-			this.textBox1.Size = new System.Drawing.Size(159, 20);
-			this.textBox1.TabIndex = 1;
-			// 
-			// availableColumns
-			// 
-			this.availableColumns.FormattingEnabled = true;
-			this.availableColumns.Location = new System.Drawing.Point(331, 198);
-			this.availableColumns.Name = "availableColumns";
-			this.availableColumns.Size = new System.Drawing.Size(187, 199);
-			this.availableColumns.TabIndex = 2;
-			// 
-			// selectedColumns
-			// 
-			this.selectedColumns.FormattingEnabled = true;
-			this.selectedColumns.Location = new System.Drawing.Point(586, 181);
-			this.selectedColumns.Name = "selectedColumns";
-			this.selectedColumns.Size = new System.Drawing.Size(203, 199);
-			this.selectedColumns.TabIndex = 3;
-			// 
-			// button1
-			// 
-			this.button1.Location = new System.Drawing.Point(539, 225);
-			this.button1.Name = "button1";
-			this.button1.Size = new System.Drawing.Size(41, 23);
-			this.button1.TabIndex = 4;
-			this.button1.Text = "<";
-			this.button1.UseVisualStyleBackColor = true;
-			// 
-			// button2
-			// 
-			this.button2.Location = new System.Drawing.Point(539, 254);
-			this.button2.Name = "button2";
-			this.button2.Size = new System.Drawing.Size(41, 23);
-			this.button2.TabIndex = 4;
-			this.button2.Text = ">";
-			this.button2.UseVisualStyleBackColor = true;
-			// 
-			// selectedTables
-			// 
-			this.selectedTables.FormattingEnabled = true;
-			this.selectedTables.Location = new System.Drawing.Point(322, 40);
-			this.selectedTables.Name = "selectedTables";
-			this.selectedTables.Size = new System.Drawing.Size(458, 56);
-			this.selectedTables.TabIndex = 5;
-			// 
-			// label1
-			// 
-			this.label1.AutoSize = true;
-			this.label1.Location = new System.Drawing.Point(335, 23);
-			this.label1.Name = "label1";
-			this.label1.Size = new System.Drawing.Size(34, 13);
-			this.label1.TabIndex = 7;
-			this.label1.Text = "Joins:";
-			// 
-			// label2
-			// 
-			this.label2.AutoSize = true;
-			this.label2.Location = new System.Drawing.Point(344, 178);
-			this.label2.Name = "label2";
-			this.label2.Size = new System.Drawing.Size(50, 13);
-			this.label2.TabIndex = 7;
-			this.label2.Text = "Columns:";
+			this.tableSearchText.Location = new System.Drawing.Point(121, 477);
+			this.tableSearchText.Name = "tableSearchText";
+			this.tableSearchText.Size = new System.Drawing.Size(159, 20);
+			this.tableSearchText.TabIndex = 1;
 			// 
 			// label3
 			// 
 			this.label3.AutoSize = true;
-			this.label3.Location = new System.Drawing.Point(319, 425);
+			this.label3.Location = new System.Drawing.Point(304, 393);
 			this.label3.Name = "label3";
 			this.label3.Size = new System.Drawing.Size(73, 13);
 			this.label3.TabIndex = 8;
@@ -121,7 +55,7 @@
 			// 
 			// conditionExpression
 			// 
-			this.conditionExpression.Location = new System.Drawing.Point(385, 409);
+			this.conditionExpression.Location = new System.Drawing.Point(307, 409);
 			this.conditionExpression.Multiline = true;
 			this.conditionExpression.Name = "conditionExpression";
 			this.conditionExpression.Size = new System.Drawing.Size(379, 62);
@@ -130,19 +64,19 @@
 			// cmdInsert
 			// 
 			this.cmdInsert.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.cmdInsert.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.cmdInsert.Location = new System.Drawing.Point(604, 515);
+			this.cmdInsert.Location = new System.Drawing.Point(489, 504);
 			this.cmdInsert.Name = "cmdInsert";
 			this.cmdInsert.Size = new System.Drawing.Size(100, 23);
 			this.cmdInsert.TabIndex = 9;
 			this.cmdInsert.Text = "Einfügen";
 			this.cmdInsert.UseVisualStyleBackColor = true;
+			this.cmdInsert.Click += new System.EventHandler(this.cmdInsert_Click);
 			// 
 			// cmdClose
 			// 
 			this.cmdClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.cmdClose.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.cmdClose.Location = new System.Drawing.Point(710, 515);
+			this.cmdClose.Location = new System.Drawing.Point(595, 504);
 			this.cmdClose.Name = "cmdClose";
 			this.cmdClose.Size = new System.Drawing.Size(100, 23);
 			this.cmdClose.TabIndex = 10;
@@ -154,28 +88,33 @@
 			this.tableTree.CheckBoxes = true;
 			this.tableTree.Location = new System.Drawing.Point(27, 25);
 			this.tableTree.Name = "tableTree";
+			this.tableTree.ShowPlusMinus = false;
+			this.tableTree.ShowRootLines = false;
 			this.tableTree.Size = new System.Drawing.Size(253, 446);
 			this.tableTree.TabIndex = 11;
+			this.tableTree.AfterCheck += new System.Windows.Forms.TreeViewEventHandler(this.tableTree_AfterCheck);
+			// 
+			// availableColumns
+			// 
+			this.availableColumns.FormattingEnabled = true;
+			this.availableColumns.Location = new System.Drawing.Point(307, 25);
+			this.availableColumns.Name = "availableColumns";
+			this.availableColumns.Size = new System.Drawing.Size(379, 364);
+			this.availableColumns.TabIndex = 12;
 			// 
 			// TableInsertForm
 			// 
 			this.AcceptButton = this.cmdInsert;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(826, 554);
+			this.ClientSize = new System.Drawing.Size(711, 543);
+			this.Controls.Add(this.availableColumns);
 			this.Controls.Add(this.tableTree);
 			this.Controls.Add(this.cmdClose);
 			this.Controls.Add(this.cmdInsert);
 			this.Controls.Add(this.label3);
-			this.Controls.Add(this.label2);
-			this.Controls.Add(this.label1);
 			this.Controls.Add(this.conditionExpression);
-			this.Controls.Add(this.selectedTables);
-			this.Controls.Add(this.button2);
-			this.Controls.Add(this.button1);
-			this.Controls.Add(this.selectedColumns);
-			this.Controls.Add(this.availableColumns);
-			this.Controls.Add(this.textBox1);
+			this.Controls.Add(this.tableSearchText);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.MaximizeBox = false;
 			this.MinimizeBox = false;
@@ -191,18 +130,12 @@
 		}
 
 		#endregion
-		private System.Windows.Forms.TextBox textBox1;
-		private System.Windows.Forms.ListBox availableColumns;
-		private System.Windows.Forms.ListBox selectedColumns;
-		private System.Windows.Forms.Button button1;
-		private System.Windows.Forms.Button button2;
-		private System.Windows.Forms.ListBox selectedTables;
-		private System.Windows.Forms.Label label1;
-		private System.Windows.Forms.Label label2;
+		private System.Windows.Forms.TextBox tableSearchText;
 		private System.Windows.Forms.Label label3;
 		private System.Windows.Forms.TextBox conditionExpression;
 		private System.Windows.Forms.Button cmdInsert;
 		private System.Windows.Forms.Button cmdClose;
 		private System.Windows.Forms.TreeView tableTree;
+		private System.Windows.Forms.CheckedListBox availableColumns;
 	}
 }

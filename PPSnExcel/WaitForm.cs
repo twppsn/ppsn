@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -110,7 +111,6 @@ namespace PPSnExcel
 
 		private string currentProgressText = null;
 		private int currentProgressValue = -1;
-		private IntPtr wnd;
 
 		public WaitForm(Excel.Application application)
 		{
@@ -119,8 +119,20 @@ namespace PPSnExcel
 
 			InitializeComponent();
 
-			wnd = Handle;
+			CreateHandle();
 		} // ctor
+
+		protected override void OnHandleCreated(EventArgs e)
+		{
+			base.OnHandleCreated(e);
+			Debug.Print("[Thread {0}] OnHandleCreated", Thread.CurrentThread.ManagedThreadId);
+		}
+
+		protected override void OnHandleDestroyed(EventArgs e)
+		{
+			Debug.Print("[Thread {0}] OnHandleDestroyed", Thread.CurrentThread.ManagedThreadId);
+			base.OnHandleDestroyed(e);
+		}
 
 		#region -- ShowWait/CloseWait -------------------------------------------------
 
@@ -140,6 +152,9 @@ namespace PPSnExcel
 				inMessageLoop = true;
 				awaitingTasks = 1;
 				ShowDialog(Globals.ThisAddIn);
+
+				// recreate handle
+				CreateHandle();
 			}
 			finally
 			{
