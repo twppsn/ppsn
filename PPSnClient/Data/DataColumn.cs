@@ -72,7 +72,7 @@ namespace TecWare.PPSn.Data
 			this.dataType = ((PpsDataSetDefinitionClient) table.DataSet).GetColumnType(xColumn.GetAttribute("dataType", "object"));
 
 			this.parentRelationName = xColumn.GetAttribute<string>("parentRelationName", null);
-			this.parentRelationType = xColumn.GetAttribute<PpsRelationType>("parentRelationType", PpsRelationType.None);
+			this.parentRelationType = xColumn.GetAttribute("parentRelationType", PpsRelationType.None);
 			this.parentTableName = xColumn.GetAttribute<string>("parentTable", null);
 			this.parentColumn = xColumn.GetAttribute<string>("parentColumn", null);
 		} // ctor

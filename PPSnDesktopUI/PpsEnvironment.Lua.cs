@@ -627,7 +627,7 @@ namespace TecWare.PPSn
 				throw new ArgumentNullException(nameof(source));
 			try
 			{
-				using (var r = await request.GetResponseAsync(source.ToString()))
+				using (var r = await request.GetResponseAsync(source.ToString(), null))
 				{
 					var contentDisposition = r.GetContentDisposition(true);
 					using (var sr = request.GetTextReader(r, MimeTypes.Text.Plain))
@@ -958,7 +958,7 @@ namespace TecWare.PPSn
 		{
 			try
 			{
-				using (var r = await request.GetResponseAsync(paneUri.ToString()))
+				using (var r = await request.GetResponseAsync(paneUri.ToString(), String.Join(";", MimeTypes.Application.Xaml, MimeTypes.Text.Lua, MimeTypes.Text.Plain)))
 				{
 					// read the file name
 					arguments["_filename"] = r.GetContentDisposition().FileName;

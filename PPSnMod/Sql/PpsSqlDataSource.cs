@@ -2019,7 +2019,7 @@ namespace TecWare.PPSn.Server.Sql
 							if (column != null) // append table column
 								commandText.Append(tableInfos.GetColumnExpression(table, column));
 							else // try append empty DbNull column
-								commandText.Append(CreateParameter(cmd, col).ParameterName);
+								commandText.Append(FormatParameterName(CreateParameter(cmd, col).ParameterName));
 
 							commandText.Append(" AS [").Append(col.Name).Append(']');
 						}

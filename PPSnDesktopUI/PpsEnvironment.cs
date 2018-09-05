@@ -917,7 +917,7 @@ namespace TecWare.PPSn
 									if (mimeType != null)
 									{
 										var isCompressedContent = c.GetAttribute("isCompressedContent", false);
-										var extensions = c.GetAttribute("extensions", (string)null)?.Split(';') ?? Array.Empty<string>();
+										var extensions = c.GetAttribute("extensions", (string)null)?.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
 										MimeTypeMapping.Update(mimeType, isCompressedContent, false, extensions);
 									}
 								}
@@ -1006,7 +1006,7 @@ namespace TecWare.PPSn
 					{
 						var webEx = ex as WebException;
 
-						if ((webEx.Response is HttpWebResponse httpResponse) && httpResponse.StatusCode == HttpStatusCode.Forbidden)
+						if ((webEx?.Response is HttpWebResponse httpResponse) && httpResponse.StatusCode == HttpStatusCode.Forbidden)
 						{
 							SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
 						}

@@ -930,7 +930,7 @@ namespace TecWare.PPSn
 			progress?.Report("Lokale Datenbank wird aktualisiert...");
 
 			// load new schema
-			var respone = await environment.Request.GetResponseAsync(environment.GetDocumentUri(MasterDataSchema));
+			var respone = await environment.Request.GetResponseAsync(environment.GetDocumentUri(MasterDataSchema), MimeTypes.Text.Xml);
 			var schemaStamp = respone.GetLastModified();
 			var xSchema = environment.Request.GetXml(respone);
 

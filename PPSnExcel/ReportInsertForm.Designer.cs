@@ -51,6 +51,7 @@
 			// cmdOk
 			// 
 			this.cmdOk.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.cmdOk.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.cmdOk.Location = new System.Drawing.Point(604, 576);
 			this.cmdOk.Margin = new System.Windows.Forms.Padding(6, 0, 0, 0);
 			this.cmdOk.Name = "cmdOk";
