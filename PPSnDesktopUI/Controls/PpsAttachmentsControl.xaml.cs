@@ -27,6 +27,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Networking;
@@ -97,6 +98,8 @@ namespace TecWare.PPSn.Controls
 		public static readonly RoutedCommand AddAttachmentAddFileCommand = new PpsAsyncCommand("Attachments.AddFile", typeof(PpsAttachmentsControl), ctx => AppendAttachmentFromFileDialogAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
 		/// <summary>Routed command for adding a Link</summary>
 		public static readonly RoutedCommand AddAttachmentAddLinkCommand = new PpsAsyncCommand("Attachments.AddLink", typeof(PpsAttachmentsControl), ctx => AppendAttachmentFromObjectAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
+		/// <summary></summary>
+		public static readonly RoutedCommand AddAttachmentFromClipboardCommand = new PpsAsyncCommand("Attachments.AddClipboard", typeof(PpsAttachmentsControl), ctx => AppendAttachmentFromClipboardAsync(ctx), ctx => IsAddFromClipboardEnabled(ctx));
 		/// <summary>Routed command for removing an attachment</summary>
 		public static readonly RoutedCommand RemoveAttachmentCommand = new PpsCommand("Attachments.Remove", typeof(IPpsAttachmentItem), ctx => RemoveAttachment(ctx), ctx => IsAttachmentRemovable(ctx));
 		/// <summary>Routed command for executing/showing of an attachment</summary>
@@ -127,7 +130,8 @@ namespace TecWare.PPSn.Controls
 
 			// Add default commands
 			Commands.AddButton("100,110", "filePlus", AddAttachmentAddFileCommand, String.Empty, "Fügt einen Anhang hinzu");
-			Commands.AddButton("100,120", "link", AddAttachmentAddLinkCommand, String.Empty, "Fügt eine Verknüpfung hinzu");
+			Commands.AddButton("100,120", "clipboardPaste", AddAttachmentFromClipboardCommand, String.Empty, "Füge ein Bild aus der Zwischenablage ein.");
+			//Commands.AddButton("100,120", "link", AddAttachmentAddLinkCommand, String.Empty, "Fügt eine Verknüpfung hinzu");
 			Commands.AddButton("100,130", "camera", RunPictureEditorCommand, String.Empty, "Startet die Bearbeitung der Bildanhänge");
 
 			Loaded += PpsAttachmentsControl_Loaded;
@@ -196,7 +200,30 @@ namespace TecWare.PPSn.Controls
 
 		private static Task AppendAttachmentFromObjectAsync(PpsCommandContext context)
 			=> context.GetService<PpsAttachmentsControl>(true).AppendAttachmentFromObjectAsync();
-		
+
+		private static Task AppendAttachmentFromClipboardAsync(PpsCommandContext context)
+			=> context.GetService<PpsAttachmentsControl>(true).AppendAttachmentFromClipboardAsync();
+
+		private async Task AppendAttachmentFromClipboardAsync()
+		{
+			if ((await Environment.MsgBoxAsync("Bild aus Zwischenanlage anfügen?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes)) != MessageBoxResult.Yes)
+				return;
+
+			// convert bitmap to png
+			var bmp = Clipboard.GetImage();
+			using (var bar = CurrentPane?.DisableUI("Füge Bild aus Zwischenablage ein..."))
+			using (var dst = new MemoryStream())
+			{
+				var encoder = new PngBitmapEncoder();
+				encoder.Frames.Add(BitmapFrame.Create(bmp));
+				encoder.Save(dst);
+				dst.Flush();
+
+				dst.Position = 0;
+				await AttachmentsSource.AppendAsync(Environment, dst, DateTime.Now.ToString("yyyy-MM-dd_HH:mm") + ".png", MimeTypes.Image.Png);
+			}
+		} // AppendAttachmentFromClipboardAsync
+
 		private Task AppendAttachmentFromObjectAsync()
 		{
 			MessageBox.Show("Todo");
@@ -205,6 +232,9 @@ namespace TecWare.PPSn.Controls
 
 		private static bool IsAttachmentControlEnabled(PpsCommandContext context)
 			=> true;
+
+		private static bool IsAddFromClipboardEnabled(PpsCommandContext context)
+			=> IsAttachmentControlEnabled(context) && Clipboard.ContainsImage();
 
 		private static IPpsAttachmentItem GetCurrentAttachmentItemFromContext(PpsCommandContext ctx)
 			=> ctx.DataContext is IPpsAttachmentItem item ? item : ctx.GetService<PpsAttachmentsControl>()?.SelectedAttachment;
@@ -469,20 +499,42 @@ namespace TecWare.PPSn.Controls
 
 	#region -- class PpsAttachmentsHelper ---------------------------------------------
 
+	/// <summary>Helper for the attachments interface</summary>
 	public static class PpsAttachmentsHelper
 	{
-		public static async Task<PpsObject> AppendAsync(this IPpsAttachments attachments, PpsEnvironment environment, string fileName)
+		private static async Task<PpsObject> AppendAsync(IPpsAttachments attachments, PpsEnvironment environment, Func<Task<PpsObject>> createObject)
 		{
 			// every file one transaction, and exception handling
 			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			{
-				var obj = await environment.CreateNewObjectFromFileAsync(fileName);
+				var obj = await createObject();
 				attachments.Append(obj);
 				trans.Commit();
 				return obj;
 			}
-		} // proc AppendAsync
+		} // func AppendAsync
 
+		/// <summary>Append a file to the attachments list.</summary>
+		/// <param name="attachments"></param>
+		/// <param name="environment"></param>
+		/// <param name="fileName"></param>
+		/// <returns></returns>
+		public static Task<PpsObject> AppendAsync(this IPpsAttachments attachments, PpsEnvironment environment, string fileName)
+			=> AppendAsync(attachments, environment, () => environment.CreateNewObjectFromFileAsync(fileName));
+
+		/// <summary>Append a stream to the attachemnts list</summary>
+		/// <param name="attachments"></param>
+		/// <param name="environment"></param>
+		/// <param name="source"></param>
+		/// <param name="name"></param>
+		/// <param name="mimeType"></param>
+		/// <returns></returns>
+		public static Task<PpsObject> AppendAsync(this IPpsAttachments attachments, PpsEnvironment environment, Stream source, string name, string mimeType)
+			=> AppendAsync(attachments, environment, () => environment.CreateNewObjectFromStreamAsync(source, name, mimeType));
+
+		/// <summary>Get the attachments source from an wpf-object.</summary>
+		/// <param name="dc"></param>
+		/// <returns></returns>
 		public static IPpsAttachmentSource GetAttachmentSource(this DependencyObject dc)
 			=> StuffUI.GetControlService<IPpsAttachmentSource>(dc, true);
 	} // class PpsAttachmentsHelper
