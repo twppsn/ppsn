@@ -1562,10 +1562,10 @@ namespace TecWare.PPSn.UI
 			}
 		} // func LoadAsync
 
-		/// <summary></summary>
-		/// <param name="xamlReader"></param>
-		/// <param name="xamlWriter"></param>
-		/// <param name="timeSlot"></param>
+		/// <summary>Copy object structure from a read to writer.</summary>
+		/// <param name="xamlReader">Xaml object source.</param>
+		/// <param name="xamlWriter">Xaml object target.</param>
+		/// <param name="timeSlot">ms to until yield to message queue.</param>
 		/// <returns></returns>
 		public static async Task TransformAsync(System.Xaml.XamlReader xamlReader, System.Xaml.XamlWriter xamlWriter, int timeSlot = 300)
 		{

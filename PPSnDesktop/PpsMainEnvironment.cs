@@ -174,11 +174,11 @@ namespace TecWare.PPSn
 		public bool ActivatePane(IPpsWindowPane pane)
 			=> pane?.PaneManager.ActivatePane(pane) ?? false;
 
-		/// <summary></summary>
+		/// <summary>Loads a new pane in a new window.</summary>
 		/// <param name="paneType"></param>
-		/// <param name="newPaneMode"></param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
+		/// <param name="newPaneMode">Pane mode to use. Default is <c>NewMainWindow</c>. <c>NewPane</c> and <c>ReplacePane</c> will throw an exception.</param>
+		/// <param name="arguments">Argument set for the pane.</param>
+		/// <returns>Task that returns a full initialized pane.</returns>
 		public async Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode, LuaTable arguments)
 		{
 			// find pane

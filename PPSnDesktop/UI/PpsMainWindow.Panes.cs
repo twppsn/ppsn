@@ -221,9 +221,40 @@ namespace TecWare.PPSn.UI
 
 		#region -- OpenPaneAsync ------------------------------------------------------
 
+		private Type GetPaneType(dynamic arguments)
+		{
+			var paneTypeValue = (object)arguments?.paneType;
+
+			switch (paneTypeValue)
+			{
+				case Type type:
+					return type;
+				case LuaType luaType:
+					return luaType.Type;
+				case string typeString:
+					switch (typeString)
+					{
+						case "mask":
+							return typeof(PpsGenericMaskWindowPane);
+						case "generic":
+							return typeof(PpsGenericWpfWindowPane);
+						case "pdf":
+							return typeof(PpsPdfViewerPane);
+						case "picture":
+							return typeof(PpsPicturePane);
+						default:
+							return LuaType.GetType(typeString, lateAllowed: false).Type;
+					}
+				case null:
+					throw new ArgumentNullException("paneType");
+				default:
+					throw new ArgumentException("Could not parse pane type.", "paneType");
+			}
+		} // func GetPaneType
+
 		private PpsOpenPaneMode GetDefaultPaneMode(dynamic arguments)
 		{
-			if (arguments.mode != null)
+			if (arguments != null && arguments.mode != null)
 				return Procs.ChangeType<PpsOpenPaneMode>(arguments.mode);
 
 			return Environment.GetOptionalValue("NewPaneMode", false) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
@@ -258,21 +289,56 @@ namespace TecWare.PPSn.UI
 			// Hide Navigator and show the pane
 		} // proc LoadPaneInternAsync
 
-		/// <summary>Lua friendly implementation of OpenPane.</summary>
-		/// <param name="arguments"></param>
+		/// <summary>Loads a generic wpf window pane <see cref="PpsGenericMaskWindowPane"/>.</summary>
+		/// <param name="arguments">Argument for the pane load function. This is pane specific.</param>
+		/// <returns>A full inialized pane.</returns>
+		/// <remarks>This function uses <c>AwaitTask</c>
+		/// 
+		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
+		/// </remarks>
 		public IPpsWindowPane LoadPane(LuaTable arguments = null)
 			=> OpenPaneAsync(typeof(PpsGenericWpfWindowPane), PpsOpenPaneMode.Default, arguments).AwaitTask();
 
-		/// <summary>Lua friendly implementation of OpenPane.</summary>
-		/// <param name="arguments"></param>
+		/// <summary>Loads a mask wpf window pane <see cref="PpsGenericMaskWindowPane"/>.</summary>
+		/// <param name="arguments">Argument for the pane load function. This is pane specific.</param>
+		/// <returns>A full inialized pane.</returns>
+		/// <remarks>This function uses <c>AwaitTask</c>
+		/// 
+		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
+		/// </remarks>
 		public IPpsWindowPane LoadMask(LuaTable arguments = null)
 			=> OpenPaneAsync(typeof(PpsGenericMaskWindowPane), PpsOpenPaneMode.Default, arguments).AwaitTask();
-		
-		/// <summary>Loads a new current pane.</summary>
-		/// <param name="paneType">Type of the pane to load.</param>
-		/// <param name="newPaneMode"></param>
-		/// <param name="arguments">Argument set for the pane</param>
-		/// <returns></returns>
+
+		/// <summary>Loads a pane of specific type with the givven arguments.</summary>
+		/// <param name="arguments">Argument for the pane load function. This is pane specific.</param>
+		/// <returns>A full inialized pane.</returns>
+		/// <remarks>This function uses <c>AwaitTask</c>
+		/// 
+		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
+		/// - <c>arguments.paneType</c>: is the type as string or type, of the pane. (required)
+		///   Well known Pane types are:
+		///   - mask
+		///   - generic
+		///   - picture
+		///   - pdf
+		/// </remarks>
+		public IPpsWindowPane OpenPane(LuaTable arguments = null)
+		{
+			var paneType = GetPaneType(arguments);
+			if (paneType == null)
+				throw new ArgumentException("Pane type is missing.");
+
+			return OpenPaneAsync(paneType, GetDefaultPaneMode(arguments), arguments).AwaitTask();
+		} // func OpenPane
+
+		/// <summary>Loads a new pane and makes it to the current pane.</summary>
+		/// <param name="paneType">Type of the pane to load (is must implement <see cref="IPpsWindowPane"/>).</param>
+		/// <param name="newPaneMode">Pane mode to use. Default is <c>NewPane</c> or activation of a previouse loaded pane.</param>
+		/// <param name="arguments">Argument set for the pane.</param>
+		/// <returns>Task that returns a full initialized pane.
+		/// 
+		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
+		/// </returns>
 		public async Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null)
 		{
 			try

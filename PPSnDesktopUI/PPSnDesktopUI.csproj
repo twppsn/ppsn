@@ -120,6 +120,9 @@
     <Compile Include="Controls\PpsGenericWpfControl.cs" />
     <Compile Include="Controls\PpsTextBox.cs" />
     <Compile Include="Controls\PpsControl.cs" />
+    <Compile Include="UI\PpsPdfViewerPane.xaml.cs">
+      <DependentUpon>PpsPdfViewerPane.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
@@ -258,6 +261,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="UI\PpsMessageDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\PpsPdfViewerPane.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

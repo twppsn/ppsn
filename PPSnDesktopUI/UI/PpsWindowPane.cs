@@ -56,6 +56,10 @@ namespace TecWare.PPSn.UI
 	#region -- interface IPpsWindowPane -----------------------------------------------
 
 	/// <summary>Implements the basic function of a pane for the window client area.</summary>
+	/// <remarks>The implementer can have a constructor with argumnets. E.g. to retrieve a
+	///  - <seealso cref="IPpsWindowPaneManager"/>
+	///  - <seealso cref="IPpsWindowPaneHost"/>
+	///  - <seealso cref="PpsEnvironment"/>.</remarks>
 	public interface IPpsWindowPane : INotifyPropertyChanged, IDisposable
 	{
 		/// <summary>Loads the content of a pane</summary>
@@ -174,9 +178,9 @@ namespace TecWare.PPSn.UI
 	public static class PpsWindowPaneHelper
 	{
 		/// <summary>Initializes a empty pane, it can only be used by a pane manager.</summary>
-		/// <param name="paneManager"></param>
-		/// <param name="paneHost"></param>
-		/// <param name="paneType"></param>
+		/// <param name="paneManager">Pane manager to use.</param>
+		/// <param name="paneHost">Pane host, that will be owner of this pane.</param>
+		/// <param name="paneType">Type the fill be initialized.</param>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		public static IPpsWindowPane CreateEmptyPane(this IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost, Type paneType)
@@ -185,6 +189,9 @@ namespace TecWare.PPSn.UI
 			var ctorBest = (ConstructorInfo)null;
 			var ctoreBestParamLength = -1;
 
+			if (!typeof(IPpsWindowPane).IsAssignableFrom(paneType))
+				throw new ArgumentException($"{paneType.Name} does not implement {nameof(IPpsWindowPane)}.");
+			
 			// search for the longest constructor
 			foreach (var ci in ti.GetConstructors())
 			{
@@ -222,11 +229,11 @@ namespace TecWare.PPSn.UI
 			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
 		} // func CreateEmptyPane
 
-		/// <summary></summary>
-		/// <param name="pane"></param>
-		/// <param name="paneType"></param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
+		/// <summary>Are the pane equal to the pane arguments.</summary>
+		/// <param name="pane">Pane to compare with.</param>
+		/// <param name="paneType">Type of the other pane.</param>
+		/// <param name="arguments">Arguments of the other pane.</param>
+		/// <returns><c>true</c>, if the pane arguments are the same.</returns>
 		public static bool EqualPane(this IPpsWindowPane pane, Type paneType, LuaTable arguments)
 			=> pane != null && paneType == pane.GetType() && pane.CompareArguments(arguments ?? new LuaTable()) == PpsWindowPaneCompareResult.Same;
 
