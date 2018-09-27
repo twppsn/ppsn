@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Threading;
 using Neo.IronLua;
 
@@ -191,7 +192,7 @@ namespace TecWare.PPSn.UI
 
 			if (!typeof(IPpsWindowPane).IsAssignableFrom(paneType))
 				throw new ArgumentException($"{paneType.Name} does not implement {nameof(IPpsWindowPane)}.");
-			
+
 			// search for the longest constructor
 			foreach (var ci in ti.GetConstructors())
 			{
@@ -258,6 +259,27 @@ namespace TecWare.PPSn.UI
 			progress.Value = value;
 			return progress;
 		} // func DisableUI
+
+		/// <summary>Helper to show a system dialog static.</summary>
+		/// <param name="owner"></param>
+		/// <param name="showDialog"></param>
+		/// <returns></returns>
+		public static bool ShowModalDialog(this DependencyObject owner, Func<bool?> showDialog)
+		{
+			var oldWindow = Application.Current.MainWindow;
+			var window = Window.GetWindow(owner);
+			try
+			{
+				Application.Current.MainWindow = window;
+				return showDialog() ?? false;
+			}
+			finally
+			{
+				if (Application.Current.MainWindow != window)
+					throw new InvalidOperationException();
+				Application.Current.MainWindow = oldWindow;
+			}
+		} // proc ShowModalDialog
 	} // class PpsWindowPaneHelper
 
 	#endregion

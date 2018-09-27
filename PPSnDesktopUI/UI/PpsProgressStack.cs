@@ -28,7 +28,7 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Statustext</summary>
 		string Text { get; set; }
-		/// <summary>Progressbar position</summary>
+		/// <summary>Progressbar position (0...1000)</summary>
 		int Value { get; set; }
 	} // interface IPpsProgress
 

@@ -58,7 +58,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>The dataset reads data.</summary>
 		bool IsReading { get; }
 		/// <summary>Returns the attached object to the dataset.</summary>
-		PpsObject Object { get; }
+		IPpsObject Object { get; }
 	} // interface IPpsObjectBasedDataSet
 
 	#endregion
@@ -153,9 +153,9 @@ namespace TecWare.PPSn.Data
 				{
 					var guidString = x.GetNode("g", (string)null); // there is no g, when the object comes from server
 					if (guidString != null)
-						base.SetGenericValue(dataset.Object.Links.FindByGuid(new Guid(guidString))?.LinkToId, false);
+						base.SetGenericValue(((PpsObject)dataset.Object).Links.FindByGuid(new Guid(guidString))?.LinkToId, false);
 					else
-						base.SetGenericValue(dataset.Object.Links.FindById(objectId)?.LinkToId, false);
+						base.SetGenericValue(((PpsObject)dataset.Object).Links.FindById(objectId)?.LinkToId, false);
 				}
 			}
 		} // proc Read
@@ -171,9 +171,9 @@ namespace TecWare.PPSn.Data
 			{
 				// remove possible old link
 				if (oldValue != null)
-					dataset.Object.Links.RemoveLink((long)oldValue, false);
+					((PpsObject)dataset.Object).Links.RemoveLink((long)oldValue, false);
 				// add the new link
-				dataset.Object.Links.AppendLink((long)newValue);
+				((PpsObject)dataset.Object).Links.AppendLink((long)newValue);
 
 			}
 			base.OnPropertyChanged(propertyName, oldValue, newValue, firePropertyChanged);
@@ -183,14 +183,14 @@ namespace TecWare.PPSn.Data
 		public void OnRowAdded()
 		{
 			if (dataset != null && !dataset.IsReading && InternalValue != null)
-				dataset.Object.Links.AppendLink((long)InternalValue);
+				((PpsObject)dataset.Object).Links.AppendLink((long)InternalValue);
 		} // proc OnRowAdded
 
 		/// <summary></summary>
 		public void OnRowRemoved()
 		{
 			if (dataset != null && !dataset.IsReading && InternalValue != null)
-				dataset.Object.Links.RemoveLink((long)InternalValue);
+				((PpsObject)dataset.Object).Links.RemoveLink((long)InternalValue);
 		} // proc OnRowRemoved
 
 		/// <summary></summary>

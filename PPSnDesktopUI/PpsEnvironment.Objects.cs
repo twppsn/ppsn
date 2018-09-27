@@ -1899,17 +1899,23 @@ namespace TecWare.PPSn
 
 	#region -- interface IPpsObjectDataAccess -----------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Data access object. It holds the loaded data.</summary>
+	/// <remarks>The caller should set DisableUI and DataChanged to get the notification of other accesses.</remarks>
 	public interface IPpsObjectDataAccess : IDisposable
 	{
 		/// <summary>Gets call if the data was changed.</summary>
 		event EventHandler DataChanged;
-		/// <summary>Set the UI-Disable method.</summary>
+		/// <summary>Disable access to this object.</summary>
 		Func<IDisposable> DisableUI { get; set; }
 
-		/// <summary>Commit the data to the local database.</summary>
+		/// <summary>Commit the data to the local changes.</summary>
 		/// <returns></returns>
 		Task CommitAsync();
+
+		/// <summary>Is a combination from <see cref="IPpsObjectData"/>.<c>IsReadOnly</c> and the implementation of <see cref="IPpsObjectDataAccessNotify"/></summary>
+		bool IsReadOnly { get; }
+		/// <summary>Data accessed to.</summary>
+		IPpsObjectData ObjectData { get; }
 	} // interface IPpsObjectDataAccess
 
 	#endregion
@@ -1955,20 +1961,23 @@ namespace TecWare.PPSn
 
 	#region -- interface IPpsObjectData -----------------------------------------------
 
-	/// <summary>Basis implementation for the data-model.</summary>
+	/// <summary>Basix implementation for the data-model.</summary>
+	/// <remarks>Any new data type should implement this interface to get basic store and load functionality.
+	/// To get any notifications from Active Object Store implement also <see cref="IPpsObjectDataAccessNotify"/>.</remarks>
 	public interface IPpsObjectData : INotifyPropertyChanged
 	{
 		/// <summary>Access object-data.</summary>
-		/// <param name="arguments"></param>
+		/// <param name="arguments">Arguments for the access. They depends on the object type.</param>
 		/// <returns></returns>
 		Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments = null);
 
 		/// <summary>Pack the data for the server.</summary>
-		/// <param name="dst"></param>
+		/// <param name="dst">Destination stream for the byte representation of the data.</param>
 		/// <returns></returns>
 		Task PushAsync(Stream dst);
 
-		/// <summary>Reload data from store.</summary>
+		/// <summary>Force a reload of the data from source.</summary>
+		/// <remarks>The implementer must notify all accessing objects.</remarks>
 		Task ReloadAsync();
 
 		/// <summary>Is the data changable</summary>
@@ -1980,8 +1989,72 @@ namespace TecWare.PPSn
 		object PreviewImageLazy { get; }
 
 		/// <summary>Owning object.</summary>
-		PpsObject Object { get; }
+		IPpsObject Object { get; }
 	} // interface IPpsObjectData
+
+	#endregion
+
+	#region -- interface IPpsBlobObjectData -------------------------------------------
+
+	/// <summary>Implementation by object data, that supports a raw data access.</summary>
+	public interface IPpsBlobObjectData  : IPpsObjectData
+	{
+		/// <summary>Open an stream on the data.</summary>
+		/// <param name="mode"></param>
+		/// <param name="expectedLength"></param>
+		/// <returns></returns>
+		Stream OpenStream(FileAccess mode, long expectedLength = -1);
+	} // interface IPpsBlobObjectData
+
+	#endregion
+
+	#region -- interface IPpsObjectInfo -----------------------------------------------
+
+	/// <summary>Description of the object type.</summary>
+	public interface IPpsObjectInfo
+	{
+		///// <summary>Open the current obje</summary>
+		///// <returns></returns>
+		//Task OpenAsync();
+
+		/// <summary>Access the environment</summary>
+		PpsEnvironment Environment { get; }
+	} // interface IPpsObjectInfo
+	
+	#endregion
+
+	#region -- interface IPpsObject ---------------------------------------------------
+
+	/// <summary>Contract for objects (local and remote)</summary>
+	public interface IPpsObject : IDataRow, IDataColumns, IDataValues, IPropertyReadOnlyDictionary, IDynamicMetaObjectProvider, INotifyPropertyChanged
+	{
+		/// <summary>Get the object content.</summary>
+		/// <returns>Load content of the object.</returns>
+		Task<IPpsObjectData> GetDataAsync();
+
+		/// <summary>Access the tag list.</summary>
+		IEnumerable<PpsObjectTag> Tags { get; }
+		/// <summary>Filter only revision tags.</summary>
+		IPropertyReadOnlyDictionary RevisionTags { get; }
+
+		/// <summary>Numeric object id.</summary>
+		long Id { get; }
+		/// <summary>Global unique object nr.</summary>
+		Guid Guid { get; }
+		/// <summary>Display object nr.</summary>
+		string Nr { get; }
+		///// <summary>Base object typ, classification.</summary>
+		//IPpsObjectInfo Info { get; }
+
+		/// <summary>Datatyp of object body.</summary>
+		string MimeType { get; }
+
+		/// <summary>Access the environment</summary>
+		PpsEnvironment Environment { get; }
+
+		/// <summary>Sync root for an object.</summary>
+		object SyncRoot { get; }
+	} // interface IPpsObject
 
 	#endregion
 
@@ -2146,7 +2219,7 @@ namespace TecWare.PPSn
 		private readonly PpsObjectBlobData blobData;
 
 		public PpsObjectBlobHashWriteStream(PpsObjectBlobData blobData, long expectedLength)
-			: base(new PpsObjectWriteStream(blobData.Object, expectedLength), HashStreamDirection.Write, false, SHA256.Create())
+			: base(new PpsObjectWriteStream((PpsObject)blobData.Object, expectedLength), HashStreamDirection.Write, false, SHA256.Create())
 		{
 			this.blobData = blobData;
 		} // ctor
@@ -2173,7 +2246,7 @@ namespace TecWare.PPSn
 	#region -- class PpsObjectBlobData ------------------------------------------------
 
 	/// <summary>Control byte based data.</summary>
-	public class PpsObjectBlobData : IPpsObjectData, IPpsObjectDataAccessNotify
+	public class PpsObjectBlobData : IPpsBlobObjectData, IPpsObjectDataAccessNotify
 	{
 		/// <summary>Tag for hash value</summary>
 		public const string HashTag = "Sha256";
@@ -2300,9 +2373,12 @@ namespace TecWare.PPSn
 			this.rawData.Reset();
 		} // proc SetNewData
 
+		Task IPpsObjectDataAccessNotify.CommitAsync()
+			=> CommitAsync();
+
 		/// <summary>Write the changed data to the local data store.</summary>
 		/// <returns></returns>
-		public async Task CommitAsync()
+		private async Task CommitAsync()
 		{
 			if (!IsDataChanged)
 				return;
@@ -2512,7 +2588,7 @@ namespace TecWare.PPSn
 		public object PreviewImageLazy => previewImage.GetValue();
 
 		/// <summary>Access to the base object.</summary>
-		public PpsObject Object => baseObj;
+		public IPpsObject Object => baseObj;
 	} // class PpsObjectBlobData
 
 	#endregion
@@ -2671,30 +2747,12 @@ namespace TecWare.PPSn
 		/// <summary>Is the data set readonly.</summary>
 		public bool IsReadOnly => false;
 		/// <summary>This document is connected with ...</summary>
-		public PpsObject Object => baseObj;
+		public IPpsObject Object => baseObj;
 		/// <summary>Returns the icon of this dataset.</summary>
 		public object PreviewImage => null;
 		/// <summary>Returns the icon of this dataset.</summary>
 		public object PreviewImageLazy => null;
 	} // class PpsObjectDataSet
-
-	#endregion
-
-	#region -- interface IPpsObject ---------------------------------------------------
-
-	/// <summary>Contract for objects (local and remote)</summary>
-	public interface IPpsObject : IDataRow, IDataColumns, IDataValues, IPropertyReadOnlyDictionary, IDynamicMetaObjectProvider, INotifyPropertyChanged
-	{
-		/// <summary>Access the tag list.</summary>
-		IEnumerable<PpsObjectTag> Tags { get; }
-		/// <summary>Filter only revision tags.</summary>
-		IPropertyReadOnlyDictionary RevisionTags { get; }
-
-		/// <summary>Access the environment</summary>
-		PpsEnvironment Environment { get; }
-		/// <summary></summary>
-		object SyncRoot { get; }
-	} // interface IPpsObject
 
 	#endregion
 
@@ -2739,7 +2797,9 @@ namespace TecWare.PPSn
 			{
 			}
 		} // UpdateObjectFromXml
-		
+
+		public Task<IPpsObjectData> GetDataAsync() => throw new NotImplementedException();
+
 		public override IReadOnlyList<IDataColumn> Columns => localObject.Columns;
 		public override bool IsDataOwner => true;
 
@@ -2752,6 +2812,15 @@ namespace TecWare.PPSn
 		public IEnumerable<PpsObjectTag> Tags => throw new NotImplementedException();
 			
 		IPropertyReadOnlyDictionary IPpsObject.RevisionTags => throw new NotImplementedException();
+
+		public long Id => throw new NotImplementedException();
+		public Guid Guid => throw new NotImplementedException();
+
+		public string Nr => throw new NotImplementedException();
+
+		public string Typ => throw new NotImplementedException();
+
+		public string MimeType => throw new NotImplementedException();
 	} // class PpsRevisionObject
 
 	#endregion
@@ -3239,6 +3308,9 @@ namespace TecWare.PPSn
 			// create the core data object
 			return await environment.CreateObjectDataObjectAsync<IPpsObjectData>(this);
 		} // func GetDataCoreAsync
+
+		Task<IPpsObjectData> IPpsObject.GetDataAsync()
+			=> GetDataAsync<IPpsObjectData>();
 
 		/// <summary>Get the data object.</summary>
 		/// <typeparam name="T"></typeparam>
@@ -3778,8 +3850,7 @@ namespace TecWare.PPSn
 			using (var trans = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited))
 			using (var cmd = trans.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND abs(substr(Nr, 4)) != 0.0")) //SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'
 			{
-				var lastNrString = await cmd.ExecuteScalarExAsync() as string;
-				var lastNr = lastNrString == null ? 0 : Int32.Parse(lastNrString.Substring(3));
+				var lastNr = !(await cmd.ExecuteScalarExAsync() is string lastNrString) ? 0 : Int32.Parse(lastNrString.Substring(3));
 				return "*n*" + (lastNr + 1).ToString("000");
 			}
 		} // func GetNextNumber
@@ -3920,6 +3991,10 @@ namespace TecWare.PPSn
 				/// <summary>Function that disables the ui.</summary>
 				public Func<IDisposable> DisableUI { get; set; }
 
+				/// <summary>Is this object read only.</summary>
+				public bool IsReadOnly => data.IsReadOnly || notify == null;
+
+				/// <summary>Access the object data</summary>
 				public IPpsObjectData ObjectData => data;
 			} // class PpsObjectDataAccessImplementation
 
@@ -4903,4 +4978,22 @@ order by t_liefnr.value desc
 	} // class PpsEnvironment
 
 	#endregion
+
+	/// <summary></summary>
+	public static class PpsObjectHelper
+	{
+		/// <summary>Format a filename from </summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public static string GetFileName(this IPpsObject obj)
+		{
+			if (obj == null)
+				return null;
+
+			// build file name
+			return obj.TryGetProperty<string>(PpsObjectBlobData.FileNameTag, out var name)
+				? name
+				: obj.Nr + MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType);
+		} // func GetFileName
+	}
 }

@@ -79,6 +79,7 @@
       <HintPath>..\packages\NeoLua.1.2.25\lib\net45\Neo.Lua.Desktop.dll</HintPath>
     </Reference>
     <Reference Include="PresentationFramework.Aero2" />
+    <Reference Include="ReachFramework" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.SQLite, Version=1.0.108.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
@@ -86,6 +87,7 @@
     </Reference>
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.Printing" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
@@ -105,6 +107,7 @@
     <Compile Include="Controls\PpsCircularListBox.cs" />
     <Compile Include="Controls\PpsComboBox.cs" />
     <Compile Include="Controls\PpsGeometryImage.cs" />
+    <Compile Include="Controls\PpsPdfViewer.cs" />
     <Compile Include="Controls\PpsPopup.cs" />
     <Compile Include="Controls\PpsButton.cs" />
     <Compile Include="Controls\PpsCommandBarControl.cs" />
@@ -114,12 +117,16 @@
     <Compile Include="Controls\PpsEditableListbox.cs" />
     <Compile Include="Controls\PpsNamedSeparator.cs" />
     <Compile Include="Controls\PpsProgressControl.cs" />
+    <Compile Include="Controls\PpsScrollViewer.cs" />
     <Compile Include="Controls\PpsSharedResourceKey.cs" />
     <Compile Include="Controls\PpsSideBarControl.cs" />
     <Compile Include="Controls\PpsStackSectionControl.cs" />
     <Compile Include="Controls\PpsGenericWpfControl.cs" />
     <Compile Include="Controls\PpsTextBox.cs" />
     <Compile Include="Controls\PpsControl.cs" />
+    <Compile Include="Controls\PpsVisibleBox.cs" />
+    <Compile Include="NativeMethods.Pdfium.cs" />
+    <Compile Include="Data\PdfReader.cs" />
     <Compile Include="UI\PpsPdfViewerPane.xaml.cs">
       <DependentUpon>PpsPdfViewerPane.xaml</DependentUpon>
     </Compile>
@@ -171,10 +178,20 @@
     <Compile Include="Controls\PpsWindow.Chrome.cs" />
     <Compile Include="Controls\PpsWindow.cs" />
     <Compile Include="UI\PpsWindowPane.cs" />
+    <Compile Include="UI\Printing.cs" />
     <Compile Include="UI\TakeList.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Controls\text.fx" />
+    <Content Include="x64\pdfium.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="x86\pdfium.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="x64\args.gn" />
+    <None Include="x86\args.gn" />
+    <Resource Include="x86\Readme.txt" />
     <None Include="app.config" />
     <None Include="TecWare.PPSn.DesktopUI.nuspec" />
     <Resource Include="Images\SplashLogo.png" />

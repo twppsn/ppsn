@@ -3,10 +3,23 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:TecWare.PPSn.UI"
+			 xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
+			 xmlns:ui="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-            
-    </Grid>
+	<Grid>
+		<Grid.Resources>
+			<ui:VisibilityMarkConverterParameter x:Key="visibleMark" WaterMark="0.4" />
+		</Grid.Resources>
+		
+		<pps:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" MinScaleFactor="0.1" MaxScaleFactor="20.0" CanContentScroll="True">
+			<pps:PpsPdfViewer x:Name="pdfViewer" Zoom="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=TwoWay}" />
+		</pps:PpsScrollViewer>
+		<Grid MaxWidth="120" MaxHeight="120" Margin="32" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.8"
+			  Visibility="{Binding ElementName=visibleBox,Path=VisibleArea,Converter={x:Static ui:PpsConverter.VisibilityMark},ConverterParameter={StaticResource visibleMark}}">
+			<pps:PpsPdfPageViewer Document="{Binding ElementName=pdfViewer,Path=Document,Mode=OneWay}" 
+								  PageNumber="{Binding ElementName=pdfViewer,Path=CurrentPageNumber,Mode=OneWay}" />
+			<pps:PpsVisibleBox x:Name="visibleBox" Opacity="0.5" BaseRectangle="{Binding ElementName=pdfViewer,Path=CurrentPageArea,Mode=OneWay}" VisibleRectangle="{Binding ElementName=pdfViewer,Path=VisiblePageArea,Mode=OneWay}" />
+		</Grid>
+	</Grid>
 </UserControl>

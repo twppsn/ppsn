@@ -37,6 +37,8 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter DateValue => DateValueConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static IValueConverter Visibility => VisibilityConverter.Default;
+		/// <summary>Convert Visibility.</summary>
+		public static IValueConverter VisibilityMark => VisibilityMarkConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static VisibilityConverterParameter VisibilityCollapsedParameter { get; } = new VisibilityConverterParameter() { FalseValue = System.Windows.Visibility.Collapsed };
 		/// <summary>Convert between Visibility and bool.</summary>
@@ -405,6 +407,59 @@ namespace TecWare.PPSn.UI
 
 		public static IValueConverter Default { get; } = new VisibilityConverter();
 	} // class VisibilityConverter
+
+	#endregion
+
+	#region -- class VisibilityMarkConverter ------------------------------------------
+
+	/// <summary>Parameter for the Visibility Convert.</summary>
+	public sealed class VisibilityMarkConverterParameter
+	{
+		/// <summary>Watermark for visibility.</summary>
+		public double WaterMark { get; set; } = 0.5;
+		/// <summary>Convert value for lower the mark.</summary>
+		public Visibility LowerValue { get; set; } = Visibility.Visible;
+		/// <summary>Convert value for greater the mark.</summary>
+		public Visibility GreaterValue { get; set; } = Visibility.Hidden;
+
+		/// <summary>Singelton for the default Parameter.</summary>
+		public static VisibilityMarkConverterParameter Default { get; } = new VisibilityMarkConverterParameter();
+	} // class VisibilityMarkConverterParameter
+
+	internal sealed class VisibilityMarkConverter : IValueConverter
+	{
+		private VisibilityMarkConverter()
+		{
+		} // ctor
+
+		private static VisibilityMarkConverterParameter GetParameter(object parameter)
+			=> parameter is VisibilityMarkConverterParameter p ? p : VisibilityMarkConverterParameter.Default;
+
+		private static double GetDoubleValue(object value)
+		{
+			switch (value)
+			{
+				case double d:
+					return d;
+				case float f:
+					return f;
+
+				default:
+					throw new FormatException();
+			}
+		} // func GetBoolValue
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var p = GetParameter(parameter);
+			return GetDoubleValue(value) < p.WaterMark ? p.LowerValue : p.GreaterValue;
+		} // func Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static IValueConverter Default { get; } = new VisibilityMarkConverter();
+	} // class VisibilityMarkConverter
 
 	#endregion
 

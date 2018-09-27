@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -154,6 +155,9 @@ namespace TecWare.PPSn
 				return false;
 		} // func CloseApplicationAsync
 
+		private static string GetNativeLibrariesPath()
+			=> Path.Combine(Path.GetDirectoryName(typeof(App).Assembly.Location), IntPtr.Size == 8 ? "x64" : "x86");
+
 		protected override void OnStartup(StartupEventArgs e)
 		{
 			// upgrade settings
@@ -162,6 +166,12 @@ namespace TecWare.PPSn
 				Settings.Default.Upgrade();
 				Settings.Default.UpgradeSettings = false;
 			}
+
+			// change environment for specific dll's
+			System.Environment.SetEnvironmentVariable("PATH",
+				System.Environment.GetEnvironmentVariable("PATH") + ";" + GetNativeLibrariesPath(),
+				EnvironmentVariableTarget.Process
+			);
 
 			ParseArguments(e, out var environment, out var userCred);
 			

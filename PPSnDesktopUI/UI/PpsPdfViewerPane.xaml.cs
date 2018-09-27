@@ -15,22 +15,16 @@
 #endregion
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
@@ -39,12 +33,17 @@ namespace TecWare.PPSn.UI
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsPdfViewerPane), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(OnSubTitleChanged)));
-		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(string), typeof(PpsUICommandCollection), new FrameworkPropertyMetadata(null));
+		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsPdfViewerPane), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private readonly IPpsWindowPaneManager paneManager;
 		private readonly IPpsWindowPaneHost paneHost;
+
+		private PdfReader loadedDocument = null;
+		private IPpsObjectDataAccess objectDataAccess = null;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Pane constructor, that gets called by the host.</summary>
 		public PpsPdfViewerPane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
@@ -60,6 +59,9 @@ namespace TecWare.PPSn.UI
 			SetValue(commandsPropertyKey, commands);
 
 			InitializeComponent();
+
+			// add commands
+			commands.AddButton("100;100", "print", new PpsAsyncCommand(ctx => PrintAsync(ctx), ctx => CanPrint(ctx)), "Drucken", "Druckt die Pdf-Datei.");
 		} // ctor
 
 		/// <summary></summary>
@@ -67,17 +69,150 @@ namespace TecWare.PPSn.UI
 		{
 		} // proc Dispose
 
+		#endregion
+
 		#region -- Load, Close --------------------------------------------------------
 
-		private Task OpenPdfAsync(string fileName)
+		private async Task OpenPdfAsync(object data)
 		{
-			return Task.CompletedTask;
+			switch (data)
+			{
+				case string fileName: // open a file from disk
+					using (var bar = this.DisableUI(String.Format("Lade Pdf-Datei ({0})...", fileName)))
+						SetLoadedDocument(await LoadDocumentFromFileNameAsync(fileName)); // parse pdf in background
+					break;
+				case IPpsObject obj: // open a internal object
+					using (var bar = this.DisableUI(String.Format("Lade Pdf-Dokument ({0})...", obj.Nr)))
+					{
+						// create access
+						var dataObject = await obj.GetDataAsync();
+						objectDataAccess = await dataObject.AccessAsync();
+
+						objectDataAccess.DisableUI = () => this.DisableUI("Pdf-Dokument wird bearbeitet...");
+						objectDataAccess.DataChanged += async (sender, e) => await LoadDocumentFromObjectAsync();
+
+						await LoadDocumentFromObjectAsync();
+					}
+					break;
+				case null:
+					throw new ArgumentNullException(nameof(data));
+				default:
+					throw new ArgumentException($"Invalid pdf-data container {data.GetType().Name}.", nameof(data));
+			}
 		} // proc OpenPdfAsync
+
+		private static Task<PdfReader> LoadDocumentFromFileNameAsync(string fileName) 
+			=> Task.Run(() => PdfReader.Open(fileName));
+
+		private async Task LoadDocumentFromObjectAsync()
+		{
+			if (objectDataAccess.ObjectData is IPpsBlobObjectData blobData)
+			{
+				var src = blobData.OpenStream(FileAccess.Read);
+				try
+				{
+					if (src.CanRead && src.CanSeek) // use file stream
+						SetLoadedDocument(await Task.Run(() => PdfReader.Open(src, objectDataAccess.ObjectData.Object.GetFileName())));
+					else // cache data in a file stream
+					{
+						var bytes = await src.ReadInArrayAsync();
+						SetLoadedDocument(await Task.Run(() => PdfReader.Open(bytes, name: objectDataAccess.ObjectData.Object.GetFileName())));
+					}
+
+					UpdateObject(objectDataAccess.ObjectData.Object);
+				}
+				catch
+				{
+					src.Dispose();
+					throw;
+				}
+			}
+			else
+				throw new ArgumentNullException("data", "Data is not an blob.");
+		} // func LoadDocumentFromObjectAsync
+
+		private void SetLoadedDocument(PdfReader pdf)
+		{
+			// set new pdf
+			loadedDocument = pdf;
+			pdfViewer.Document = pdf;
+
+			SubTitle = pdf.Name;
+		} // proc SetLoadedDocument
+
+		private void UpdateObject(IPpsObject obj)
+		{
+			// todo: bade code
+			//var wnd = (PpsWindow)Window.GetWindow(this);
+			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+			((dynamic)wnd).CharmObject = obj;
+
+			// search for more:
+			// ((dynamic)wnd).CharmObject = 
+		} // proc UpdateObject
 
 		private bool ClosePdf()
 		{
+			// clear document
+			pdfViewer.Document = null;
+			// close pdf
+			loadedDocument?.Dispose();
+			// close object access
+			if (objectDataAccess != null)
+			{
+				objectDataAccess.Dispose();
+				objectDataAccess = null;
+			}
 			return true;
 		} // func ClosePdf
+
+		#endregion
+
+		#region -- Print --------------------------------------------------------------
+
+		private bool inPrint = false;
+
+		private bool CanPrint(PpsCommandContext ctx)
+			=> pdfViewer.Document != null && !inPrint;
+
+		private async Task PrintAsync(PpsCommandContext ctx)
+		{
+			var pdf = pdfViewer.Document;
+			using (var doc = pdf.GetPrintDocument())
+			{
+				var printDialog = new PrintDialog
+				{
+					MinPage = 1,
+					MaxPage = (uint)pdf.PageCount,
+					PageRange = new PageRange(1, pdf.PageCount),
+					CurrentPageEnabled = true,
+					UserPageRangeEnabled = true
+				};
+
+				using (var bar = this.DisableUI("Drucken..."))
+				{
+					if (this.ShowModalDialog(printDialog.ShowDialog))
+					{
+						inPrint = true;
+						try
+						{
+							if (printDialog.PageRangeSelection == PageRangeSelection.CurrentPage)
+							{
+								printDialog.PageRange = new PageRange(pdfViewer.CurrentPageNumber + 1);
+								printDialog.PageRangeSelection = PageRangeSelection.UserPages;
+							}
+							
+							doc.CopyWpfToGDI(printDialog, bar);
+							await Task.Run(new Action(doc.Print));
+						}
+						finally
+						{
+							inPrint = false;
+						}
+					}
+				}
+			}
+		} // proc PrintAsync
 
 		#endregion
 
@@ -93,10 +228,9 @@ namespace TecWare.PPSn.UI
 
 		Task IPpsWindowPane.LoadAsync(LuaTable args)
 		{
-			var fileName = args.GetOptionalValue("fileName", String.Empty);
-
-			return OpenPdfAsync(fileName);
-		} // func LoadAsync
+			ClosePdf();
+			return OpenPdfAsync(args.GetMemberValue("Object") ?? args.GetMemberValue("FileName"));
+		} // proc IPpsWindowPane.LoadAsync
 
 		Task<bool> IPpsWindowPane.UnloadAsync(bool? commit)
 			=> Task.FromResult(ClosePdf());

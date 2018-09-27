@@ -23,5 +23,7 @@
 		<file src="bin\Release\PPSn.Desktop.UI.dll" target="lib\net47" />
 		<file src="bin\Release\PPSn.Desktop.UI.pdb" target="lib\net47" />
 		<file src="bin\Release\PPSn.Desktop.UI.xml" target="lib\net47" />
+		<file src="bin\Release\x86\pdfium.dll" target="lib\net47\x86" />
+		<file src="bin\Release\x64\pdfium.dll" target="lib\net47\x64" />
 	</files>
 </package>

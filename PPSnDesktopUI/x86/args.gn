@@ -1,0 +1,22 @@
+# Build arguments go here.
+# See "gn args <out_dir> --list" for available build arguments.
+use_goma = false  # Googlers only. Make sure goma is installed and running first.
+is_debug = false  # Enable debugging features.
+
+pdf_use_skia = false  # Set true to enable experimental skia backend.
+pdf_use_skia_paths = false  # Set true to enable experimental skia backend (paths only).
+
+is_official_build = true
+pdf_is_standalone = true
+pdf_use_win32_gdi = true
+
+pdf_enable_xfa = false # Set false to remove XFA support (implies JS support).
+pdf_enable_v8 = false  # Set false to remove Javascript support.
+
+target_cpu = "x86"
+#visual_studio_version = "2017"
+is_component_build = false
+clang_use_chrome_plugins = false
+
+
+

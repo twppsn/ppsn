@@ -335,10 +335,8 @@ namespace TecWare.PPSn.UI
 		/// <param name="paneType">Type of the pane to load (is must implement <see cref="IPpsWindowPane"/>).</param>
 		/// <param name="newPaneMode">Pane mode to use. Default is <c>NewPane</c> or activation of a previouse loaded pane.</param>
 		/// <param name="arguments">Argument set for the pane.</param>
-		/// <returns>Task that returns a full initialized pane.
-		/// 
-		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
-		/// </returns>
+		/// <returns>Task that returns a full initialized pane.</returns>
+		/// <remarks>- <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)</remarks>
 		public async Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null)
 		{
 			try
