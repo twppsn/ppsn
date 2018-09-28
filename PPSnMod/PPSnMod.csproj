@@ -36,14 +36,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DE.Server, Version=3.4.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\TecWare.DES.ServerLib.3.4.20\lib\net47\DE.Server.dll</HintPath>
+      <HintPath>..\packages\TecWare.DES.ServerLib.3.4.21\lib\net47\DE.Server.dll</HintPath>
     </Reference>
     <Reference Include="DES.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\TecWare.DES.Core.3.4.20\lib\net47\DES.Core.dll</HintPath>
+      <HintPath>..\packages\TecWare.DES.Core.3.4.21\lib\net47\DES.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.SqlServer.Types.14.0.314.76\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.SqlServer.Types.14.0.1016.290\lib\net40\Microsoft.SqlServer.Types.dll</HintPath>
     </Reference>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
       <HintPath>..\packages\NeoLua.1.2.25\lib\net45\Neo.Lua.dll</HintPath>
@@ -78,6 +77,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="app.config" />
     <None Include="Sql\SqlServerTypes\Loader.cs" />
+    <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Sql\PpsSqlExDataSource.cs" />
     <Compile Include="Sql\PpsSqlDataSource.cs" />
     <Compile Include="Stuff.cs" />
@@ -121,6 +121,19 @@
     </Content>
     <Content Include="..\packages\Microsoft.SqlServer.Types.14.0.314.76\nativeBinaries\x86\SqlServerSpatial140.dll">
       <Link>x86\SqlServerSpatial140.dll</Link>
+    </Content>
+    <Content Include="SqlServerTypes\readme.htm" />
+    <Content Include="SqlServerTypes\x64\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x64\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x86\msvcr120.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="SqlServerTypes\x86\SqlServerSpatial140.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Sql\SqlServerTypes\readme.htm" />
   </ItemGroup>
