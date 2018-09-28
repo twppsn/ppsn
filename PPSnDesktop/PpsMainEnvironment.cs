@@ -267,6 +267,20 @@ namespace TecWare.PPSn
 			}
 		} // prop Panes
 
+		/// <summary></summary>
+		/// <param name="paneType"></param>
+		/// <returns></returns>
+		public override Type GetPaneTypeFromString(string paneType)
+		{
+			switch (paneType)
+			{
+				case "mask":
+					return typeof(PpsGenericMaskWindowPane);
+				default:
+					return base.GetPaneTypeFromString(paneType);
+			}
+		} // func GetPaneTypeFromString
+
 		PpsEnvironment IPpsWindowPaneManager.Environment => this;
 		bool IPpsWindowPaneManager.IsActive => false;
 

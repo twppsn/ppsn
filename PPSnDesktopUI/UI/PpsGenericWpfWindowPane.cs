@@ -502,9 +502,9 @@ namespace TecWare.PPSn.UI
 		private Uri GetPaneUri(LuaTable arguments, bool throwException)
 		{
 			// get the basic template
-			var paneFile = arguments.GetOptionalValue("pane", String.Empty);
+			var paneFile = arguments.GetOptionalValue("Pane", String.Empty);
 			return String.IsNullOrEmpty(paneFile)
-				? (throwException ? throw new ArgumentException("pane is missing.") : (Uri)null)
+				? (throwException ? throw new ArgumentException("Pane is missing.") : (Uri)null)
 				: Environment.Request.GetFullUri(paneFile); // prepare the base
 		} // func GetPaneUri
 

@@ -527,9 +527,6 @@ namespace TecWare.PPSn
 			this.activeObjectData = new PpsActiveObjectDataImplementation(this);
 			this.objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
 
-			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
-			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
-
 			// create ui stuff
 			this.mainResources = mainResources ?? throw new ArgumentNullException("mainResources");
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
@@ -1333,6 +1330,10 @@ namespace TecWare.PPSn
 
 		static PpsEnvironment()
 		{
+			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
+			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
+			Neo.IronLua.LuaType.RegisterTypeExtension(typeof(PpsWindowPaneHelper));
+
 			// install resolver for referenced assemblies
 			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
 		} // ctor 

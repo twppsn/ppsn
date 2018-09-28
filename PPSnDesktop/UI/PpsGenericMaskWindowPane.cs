@@ -71,7 +71,7 @@ namespace TecWare.PPSn.UI
 			var r = base.CompareArguments(otherArgumens);
 			if (r == PpsWindowPaneCompareResult.Reload)
 			{
-				var otherObj = otherArgumens.GetMemberValue("object");
+				var otherObj = otherArgumens.GetMemberValue("Object");
 				return otherObj == obj ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;
 			}
 			return r;
@@ -99,7 +99,7 @@ namespace TecWare.PPSn.UI
 			} // proc CreateNewObject
 
 			// get the object reference for the document
-			obj = (PpsObject)arguments.GetMemberValue("object");
+			obj = (PpsObject)arguments.GetMemberValue("Object");
 
 			// new document or load one
 			using (var transaction = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
@@ -124,13 +124,13 @@ namespace TecWare.PPSn.UI
 				var info = Environment.GetObjectInfo(obj.Typ);
 				var paneUri = info["defaultPane"] as string;
 				if (!String.IsNullOrEmpty(paneUri))
-					arguments.SetMemberValue("pane", paneUri);
+					arguments.SetMemberValue("Pane", paneUri);
 				else
 				{
 					// read the schema meta data
 					paneUri = data.DataSetDefinition.Meta.GetProperty<string>(PpsDataSetMetaData.DefaultPaneUri, null);
 					if (!String.IsNullOrEmpty(paneUri))
-						arguments.SetMemberValue("pane", paneUri);
+						arguments.SetMemberValue("Pane", paneUri);
 				}
 			}
 

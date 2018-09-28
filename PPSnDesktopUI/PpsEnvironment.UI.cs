@@ -468,6 +468,24 @@ namespace TecWare.PPSn
 		Task IPpsShell.ShowMessageAsync(string message)
 			=> MsgBoxAsync(message);
 
+		/// <summary></summary>
+		/// <param name="paneType"></param>
+		/// <returns></returns>
+		public virtual Type GetPaneTypeFromString(string paneType)
+		{
+			switch (paneType)
+			{
+				case "generic":
+					return typeof(PpsGenericWpfWindowPane);
+				case "pdf":
+					return typeof(PpsPdfViewerPane);
+				case "picture":
+					return typeof(PpsPicturePane);
+				default:
+					return Neo.IronLua.LuaType.GetType(paneType, lateAllowed: false).Type;
+			}
+		} // func GetPaneTypeFromString
+
 		#endregion
 
 		#region -- Resources ----------------------------------------------------------

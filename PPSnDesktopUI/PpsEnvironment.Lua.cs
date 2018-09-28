@@ -1277,9 +1277,6 @@ namespace TecWare.PPSn
 				File.Delete(tempFileName);
 			}
 
-			// show file
-			Process.Start(targetFileName);
-
 			return targetFileName;
 		} // func RunServerReportAsync
 

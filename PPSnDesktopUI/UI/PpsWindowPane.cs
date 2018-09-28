@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -178,6 +179,8 @@ namespace TecWare.PPSn.UI
 	/// <summary>Extensions for the Pane, or PaneControl</summary>
 	public static class PpsWindowPaneHelper
 	{
+		#region -- Open Pane helper ---------------------------------------------------
+
 		/// <summary>Initializes a empty pane, it can only be used by a pane manager.</summary>
 		/// <param name="paneManager">Pane manager to use.</param>
 		/// <param name="paneHost">Pane host, that will be owner of this pane.</param>
@@ -229,6 +232,73 @@ namespace TecWare.PPSn.UI
 			// activate the pane
 			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
 		} // func CreateEmptyPane
+
+		private static Type GetPaneType(IPpsWindowPaneManager paneManager, dynamic arguments)
+		{
+			var paneTypeValue = (object)arguments?.PaneType;
+
+			switch (paneTypeValue)
+			{
+				case Type type:
+					return type;
+				case LuaType luaType:
+					return luaType.Type;
+				case string typeString:
+					return paneManager.Environment.GetPaneTypeFromString(typeString);
+				case null:
+					throw new ArgumentNullException("paneType");
+				default:
+					throw new ArgumentException("Could not parse pane type.", "paneType");
+			}
+		} // func GetPaneType
+
+		/// <summary>Get default open pane mode</summary>
+		/// <param name="paneManager">Pane manager to use.</param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public static PpsOpenPaneMode GetDefaultPaneMode(this IPpsWindowPaneManager paneManager, dynamic arguments)
+		{
+			if (arguments != null && arguments.Mode != null)
+				return Procs.ChangeType<PpsOpenPaneMode>(arguments.Mode);
+
+			return paneManager.Environment.GetOptionalValue("NewPaneMode", false) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
+		} // func GetDefaultPaneMode
+
+		/// <summary>Loads a generic wpf window pane <see cref="PpsGenericWpfWindowPane"/>.</summary>
+		/// <param name="paneManager">Pane manager to use.</param>
+		/// <param name="arguments">Argument for the pane load function. This is pane specific.</param>
+		/// <returns>A full inialized pane.</returns>
+		/// <remarks>This function uses <c>AwaitTask</c>
+		/// 
+		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
+		/// </remarks>
+		public static IPpsWindowPane LoadGenericPane(this IPpsWindowPaneManager paneManager, LuaTable arguments = null)
+			=> paneManager.OpenPaneAsync(typeof(PpsGenericWpfWindowPane), PpsOpenPaneMode.Default, arguments).AwaitTask();
+
+		/// <summary>Loads a pane of specific type with the givven arguments.</summary>
+		/// <param name="paneManager">Pane manager to use.</param>
+		/// <param name="arguments">Argument for the pane load function. This is pane specific.</param>
+		/// <returns>A full inialized pane.</returns>
+		/// <remarks>This function uses <c>AwaitTask</c>
+		/// 
+		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
+		/// - <c>arguments.paneType</c>: is the type as string or type, of the pane. (required)
+		///   Well known Pane types are:
+		///   - mask
+		///   - generic
+		///   - picture
+		///   - pdf
+		/// </remarks>
+		public static IPpsWindowPane LoadPane(this IPpsWindowPaneManager paneManager, LuaTable arguments = null)
+		{
+			var paneType = GetPaneType(paneManager, arguments);
+			if (paneType == null)
+				throw new ArgumentException("Pane type is missing.");
+
+			return paneManager.OpenPaneAsync(paneType, GetDefaultPaneMode(paneManager, arguments), arguments).AwaitTask();
+		} // func OpenPane
+
+		#endregion
 
 		/// <summary>Are the pane equal to the pane arguments.</summary>
 		/// <param name="pane">Pane to compare with.</param>
