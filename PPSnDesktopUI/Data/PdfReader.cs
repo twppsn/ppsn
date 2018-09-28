@@ -912,8 +912,8 @@ namespace TecWare.PPSn.Data
 				if (e.Cancel)
 					return;
 
-				var pt = new System.Drawing.Point[] { new System.Drawing.Point(e.PageBounds.Left, e.PageBounds.Top), new System.Drawing.Point(e.PageBounds.Width, e.PageBounds.Height) };
-				e.Graphics.TransformPoints(System.Drawing.Drawing2D.CoordinateSpace.Device, System.Drawing.Drawing2D.CoordinateSpace.Page, pt);
+                var pt = new System.Drawing.Point[] { new System.Drawing.Point(e.PageBounds.Left - (int)e.PageSettings.PrintableArea.Left, e.PageBounds.Top - (int)e.PageSettings.PrintableArea.Top), new System.Drawing.Point(e.PageBounds.Width - (int)e.PageSettings.PrintableArea.Left, e.PageBounds.Height - (int)e.PageSettings.PrintableArea.Top) };
+                e.Graphics.TransformPoints(System.Drawing.Drawing2D.CoordinateSpace.Device, System.Drawing.Drawing2D.CoordinateSpace.Page, pt);
 
 				var hdc = e.Graphics.GetHdc();
 				try
