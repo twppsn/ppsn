@@ -8,6 +8,43 @@ title: PPSn Beispielprogrammierung
 Der DE-Server bietet in Verbindung mit PPSn eine große Vielfalt von Möglichkeiten, Services bereit zu stellen. Gerade durch den direkten Zugriff auf Datenstrukturen von PPSn wird eine hohe Effizienz erreicht.  
 Auf den [Beispielen des DE-Servers](xref:des.firststeps.programming) aufbauend werden hier exemplarisch die erweiterten Funktionalitäten beschrieben.
 
+## Beispiele für den Zugriff auf Datenstrukturen
+
+1. Die Datenstruktur befindet sich am Knoten PPSn
+   ```lua
+   :use ppsn
+   ```
+1. Holen der Datenstruktur
+   ```lua
+   db = Db:GetDatabase("pps")
+   ```
+1. Abrufen eines Selektors (View einer Tabelle)
+   ```lua
+   kund = db:CreateSelector("pps.KUND")
+   ```
+1. Definition der Ausgabe:
+   1. bestimmte Spalten:
+      ```lua
+      return kund:ApplyColumns { KUNDMATCH = "Matchcode des Kunden", KUNDORT = "Unternehmenssitz" }
+      ```
+   1. bestimmte Ergebnisse:
+      ```lua
+      return kund:ApplyFilter ( "KUNDORT:=Dresden" )
+      ```
+      Das Format ist folgendes: `[Spaltenname]:[Vergleichsoperator][WERT]`.
+      Dabei ist
+        * Spaltenname der aktuelle Name der Spalte (ggf. durch ApplyColumns umbenannt)
+        * Vergleichsoperator `=`, `>`, `<`, `>=`, `<=`, `!` oder `!=`
+        * Wert `42`, `Dresden`, `#1.1.1995#` (Datum), `#42.12` (Zahl)
+   1. bestimmte Reihenfolge:
+      ```lua
+      return kund:ApplyOrder ( "-KUNDNAME1" )
+      ```
+   1. Kombination aus oben Genanntem:
+      ```lua
+      return kund:ApplyFilter ( "KUNDORT:=Dresden" ):ApplyOrder("-KUNDNAME1")
+      ```
+
 ## Beispiele für angeheftete Aktionen
 
 ### Beispiel 0 - Ausgabe der Kontakte nach Postleitzahl

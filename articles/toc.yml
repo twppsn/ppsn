@@ -7,5 +7,7 @@
   href: wpf/toc.yml
 - name: Codereference
   href: ../code-reference/toc.yml
+- name: Luareferenz
+  href: ../lua-reference/toc.yml
 - name: dieses Handbuch als PDF herunterladen
   href: ~/ressources/ppsn.pdf

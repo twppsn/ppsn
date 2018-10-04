@@ -3,7 +3,6 @@
 - uid: ppsn.mod.programming
 - name: Datenbank
   items:
-  - uid: ppsn.mod.sqlcommands
-- name: Lua-Reference
+- uid: ppsn.mod.sqlcommands
 - name: CodeReference
   uid: TecWare.PPSn.Server

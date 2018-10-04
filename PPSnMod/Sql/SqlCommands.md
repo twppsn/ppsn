@@ -104,7 +104,7 @@ defaults: LuaTable with key-value pairs for null or not existing columns, the va
 
 columnList: alias are allowed, because we can have more than one table
 
-# Upsert/Merge
+## Upsert/Merge
 
 ```sql
 
@@ -123,7 +123,7 @@ on: optional modification of the on-clause. Compare columns.
 
 rows: is possible to set an whole row set
 
-# All
+## All
 
 columnList: is an optional list of columns that has to be in the merge command, if this parameter is missing, only the first argument list is used.
 			also IDataColumns is possible
