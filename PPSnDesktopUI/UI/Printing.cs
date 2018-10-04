@@ -17,6 +17,8 @@ using System;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.Printing;
+using System.Printing.Interop;
+using System.Runtime.InteropServices;
 using System.Windows.Controls;
 
 namespace TecWare.PPSn.UI
@@ -24,6 +26,9 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public static class PrintingHelper
 	{
+		#region -- class PpsProgressPrintController -----------------------------------
+
+		/// <summary>System.Drawing print controller, that notifies to IPpsProgress</summary>
 		private sealed class PpsProgressPrintController : PrintController
 		{
 			private readonly PrintController controller;
@@ -81,61 +86,137 @@ namespace TecWare.PPSn.UI
 			} // proc UpdateProgress
 		} // class PpsProgressPrintController
 
-		private static Duplex ConvertDuplex(Duplexing duplexing)
-		{
-			switch (duplexing)
-			{
-				case Duplexing.OneSided:
-					return Duplex.Simplex;
-				case Duplexing.TwoSidedLongEdge:
-					return Duplex.Horizontal;
-				case Duplexing.TwoSidedShortEdge:
-					return Duplex.Vertical;
-				default:
-					return Duplex.Simplex;
-			}
-		} // func ConvertDuply
+		#endregion
 
-		private static PrintRange ConvertPrintRange(PageRangeSelection pageRangeSelection)
-		{
-			switch(pageRangeSelection)
-			{
-				case PageRangeSelection.CurrentPage:
-					return PrintRange.CurrentPage;
-				case PageRangeSelection.SelectedPages:
-					return PrintRange.Selection;
-				case PageRangeSelection.UserPages:
-					return PrintRange.SomePages;
-				default:
-					return PrintRange.AllPages;
-			}
-		} // func ConvertPrintRange
-
-		/// <summary>Copy Wpf-PrintDialog settings to PrintDocument settings</summary>
-		/// <param name="doc"></param>
+		/// <summary>Copy print-dialog setting to a System.Drawing.</summary>
 		/// <param name="printDialog"></param>
+		/// <param name="printDocument"></param>
 		/// <param name="progress"></param>
-		public static void CopyWpfToGDI(this PrintDocument doc, PrintDialog printDialog, IPpsProgress progress = null)
+		public static void SetPrintDocument(this PrintDialog printDialog, PrintDocument printDocument, IPpsProgress progress = null)
 		{
-			doc.PrintController = progress != null
+			var printerSettings = printDocument.PrinterSettings;
+
+			printDocument.PrintController = progress != null
 				? (PrintController)new PpsProgressPrintController(new StandardPrintController(), progress)
 				: (PrintController)new StandardPrintController();
 
-			// translate printer setting to gdi+
-			var wpfPrintTicket = printDialog.PrintTicket;
-			var gdiPrinterSettings = doc.PrinterSettings;
+			// update device settings
+			printerSettings.SetPrintTicket(printDialog.PrintQueue, printDialog.PrintTicket);
 
-			// basic settings
-			gdiPrinterSettings.PrinterName = printDialog.PrintQueue.Name;
-			gdiPrinterSettings.Collate = (wpfPrintTicket.Collation ?? System.Printing.Collation.Uncollated) == System.Printing.Collation.Collated;
-			gdiPrinterSettings.Copies = (short)(wpfPrintTicket.CopyCount ?? 1);
-			gdiPrinterSettings.Duplex = ConvertDuplex(wpfPrintTicket.Duplexing ?? System.Printing.Duplexing.Unknown);
-			gdiPrinterSettings.PrintRange = ConvertPrintRange(printDialog.PageRangeSelection);
-			gdiPrinterSettings.ToPage = printDialog.PageRange.PageTo;
-			gdiPrinterSettings.FromPage = printDialog.PageRange.PageFrom;
+			switch (printDialog.PageRangeSelection)
+			{
+				case PageRangeSelection.AllPages:
+					printerSettings.PrintRange = PrintRange.AllPages;
+					break;
+				case PageRangeSelection.UserPages:
+					printerSettings.PrintRange = PrintRange.SomePages;
+					printerSettings.FromPage = printDialog.PageRange.PageFrom;
+					printerSettings.ToPage = printDialog.PageRange.PageTo;
+					break;
+				//case PageRangeSelection.CurrentPage:
+				//case PageRangeSelection.SelectedPages:
+				default:
+					throw new NotSupportedException(nameof(PrintDialog.PageRangeSelection));
+			}
+		} // proc SetPrintDocument
 
-			doc.DefaultPageSettings.Color = (wpfPrintTicket.OutputColor ?? OutputColor.Color) == OutputColor.Color;
-			// todo:
-		} // proc CopyWpfToGDI
+		/// <summary>Copy printer settings from System.Printing to System.Drawing</summary>
+		/// <param name="printerSettings"></param>
+		/// <param name="printQueue"></param>
+		/// <param name="printTicket"></param>
+		public static void SetPrintTicket(this PrinterSettings printerSettings, PrintQueue printQueue, PrintTicket printTicket)
+		{
+			using (var printTicketConverter = new PrintTicketConverter(printQueue.Name, PrintTicketConverter.MaxPrintSchemaVersion))
+			{
+				printerSettings.PrinterName = printQueue.Name;
+
+				var bDevMode = printTicketConverter.ConvertPrintTicketToDevMode(printTicket, BaseDevModeType.UserDefault, PrintTicketScope.JobScope);
+				var pDevMode = Marshal.AllocHGlobal(bDevMode.Length);
+				try
+				{
+					// copy settings
+					Marshal.Copy(bDevMode, 0, pDevMode, bDevMode.Length);
+					printerSettings.SetHdevmode(pDevMode);
+					printerSettings.DefaultPageSettings.SetHdevmode(pDevMode);
+				}
+				finally
+				{
+					Marshal.FreeHGlobal(pDevMode);
+				}
+			}
+		} // proc SetPrintTicket
+
+		/// <summary>Copy printer settings from System.Drawing to System.Printing</summary>
+		/// <param name="printerSettings"></param>
+		/// <param name="printQueue"></param>
+		/// <param name="printTicket"></param>
+		public static unsafe void SetPrinterSettings(this PrinterSettings printerSettings, out PrintQueue printQueue, out PrintTicket printTicket)
+		{
+			using (var printTicketConverter = new PrintTicketConverter(printerSettings.PrinterName, PrintTicketConverter.MaxPrintSchemaVersion))
+			using (var printServer = new LocalPrintServer())
+			{
+				printQueue = printServer.GetPrintQueue(printerSettings.PrinterName);
+
+				var hDevMode = printerSettings.GetHdevmode();
+				try
+				{
+					var pDevMode = NativeMethods.GlobalLock(hDevMode);
+					var bDevMode = new byte[NativeMethods.GlobalSize(hDevMode).ToInt32()];
+					Marshal.Copy(pDevMode, bDevMode, 0, bDevMode.Length);
+					NativeMethods.GlobalUnlock(hDevMode);
+
+					printTicket = printTicketConverter.ConvertDevModeToPrintTicket(bDevMode, PrintTicketScope.JobScope);
+				}
+				finally
+				{
+					Marshal.FreeHGlobal(hDevMode);
+				}
+			}
+		} // proc SetPrinterSettings
+
+		private delegate bool PrintDialogDelegate(IntPtr hwnd, string deviceName, IntPtr pDevModeIn, IntPtr pDevModeOut);
+
+		private static unsafe PrintTicket ShowPrintPropertiesDialog(IntPtr hwnd, PrintQueue printQueue, PrintDialogDelegate dlg, PrintTicket printTicket)
+		{
+			using (var printTicketConverter = new PrintTicketConverter(printQueue.Name, PrintTicketConverter.MaxPrintSchemaVersion))
+			{
+				var bDevModeIn = printTicketConverter.ConvertPrintTicketToDevMode(printTicket, BaseDevModeType.UserDefault, PrintTicketScope.JobScope);
+				var bDevModeOut = new byte[bDevModeIn.Length];
+				fixed (byte* pDevModeOut = bDevModeOut, pDevModeIn = bDevModeIn)
+				{
+					if (dlg(hwnd, printQueue.Name, new IntPtr(pDevModeIn), new IntPtr(pDevModeOut)))
+						return printTicketConverter.ConvertDevModeToPrintTicket(bDevModeOut, PrintTicketScope.JobScope);
+					else
+						return null;
+				}
+			}
+		} // func ShowPrintPropertiesDialog
+
+		private static bool ShowDocumentProperties(IntPtr hwnd, string deviceName, IntPtr pDevModeIn, IntPtr pDevModeOut)
+		{
+			// const uint DM_UPDATE = 1;
+			const int DM_COPY = 2;
+			const int DM_PROMPT = 4;
+			const int DM_MODIFY = 8;
+			return NativeMethods.DocumentProperties(hwnd, IntPtr.Zero, deviceName, pDevModeOut, pDevModeIn, DM_COPY | DM_PROMPT | DM_MODIFY) == 1;
+		} // proc ShowDocumentProperties
+
+		private static bool ShowAdvancedProperties(IntPtr hwnd, string deviceName, IntPtr pDevModeIn, IntPtr pDevModeOut)
+			=> NativeMethods.AdvancedDocumentProperties(hwnd, IntPtr.Zero, deviceName, pDevModeOut, pDevModeIn) == 1;
+
+		/// <summary>Show document properties dialog</summary>
+		/// <param name="printQueue"></param>
+		/// <param name="hwnd"></param>
+		/// <param name="printTicket"></param>
+		/// <returns></returns>
+		public static PrintTicket ShowDocumentProperties(this PrintQueue printQueue, IntPtr hwnd, PrintTicket printTicket)
+			=> ShowPrintPropertiesDialog(hwnd, printQueue, ShowDocumentProperties, printTicket);
+
+		/// <summary>Show document advanved dialog</summary>
+		/// <param name="printQueue"></param>
+		/// <param name="hwnd"></param>
+		/// <param name="printTicket"></param>
+		public static void ShowAdvancedProperties(this PrintQueue printQueue, IntPtr hwnd, PrintTicket printTicket)
+			=> ShowPrintPropertiesDialog(hwnd, printQueue, ShowAdvancedProperties, printTicket);
 	} // class PrintingHelper
 }

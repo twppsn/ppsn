@@ -201,8 +201,8 @@ namespace TecWare.PPSn.UI
 								printDialog.PageRange = new PageRange(pdfViewer.CurrentPageNumber + 1);
 								printDialog.PageRangeSelection = PageRangeSelection.UserPages;
 							}
-							
-							doc.CopyWpfToGDI(printDialog, bar);
+							printDialog.SetPrintDocument(doc, bar);
+
 							await Task.Run(new Action(doc.Print));
 						}
 						finally

@@ -397,6 +397,20 @@ namespace TecWare.PPSn
 
 		[DllImport("msimg32.dll")]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		internal static extern bool AlphaBlend(IntPtr hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, IntPtr hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION pfn);
+		public static extern bool AlphaBlend(IntPtr hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, IntPtr hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION pfn);
+
+		[DllImport("kernel32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool GlobalUnlock(IntPtr hMem);
+		[DllImport("kernel32.dll")]
+		public static extern IntPtr GlobalLock(IntPtr hMem);
+		[DllImport("kernel32.dll")]
+		public static extern IntPtr GlobalSize(IntPtr hMem);
+
+		[DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
+		public static extern int DocumentProperties(IntPtr hwnd, IntPtr hPrinter, string pDeviceName, IntPtr pDevModeOutput, IntPtr pDevModeInput, int mode);
+
+		[DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
+		public static extern int AdvancedDocumentProperties(IntPtr hwnd, IntPtr hPrinter, string pDeviceName, IntPtr pDevModeOutput, IntPtr pDevModeInput);
 	} // class NativeMethods
 }

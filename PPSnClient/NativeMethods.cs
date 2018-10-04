@@ -24,5 +24,5 @@ namespace TecWare.PPSn
 		public static extern void ZeroMemory(IntPtr dest, int size);
 		[DllImport("kernel32.dll", SetLastError = false)]
 		public static extern void CopyMemory(IntPtr dest, IntPtr src, int count);
-	}
+	} // class UnsafeNativeMethods
 }
