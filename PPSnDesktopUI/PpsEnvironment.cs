@@ -488,7 +488,7 @@ namespace TecWare.PPSn
 		private readonly PpsEnvironmentInfo info;       // source information of the environment
 		private readonly NetworkCredential userInfo;    // currently credentials of the user
 		private readonly CancellationTokenSource environmentDisposing;
-		private readonly LuaGlobalPortable luaGlobal;
+		private readonly LuaGlobal luaGlobal;
 
 		private long userId = -1;
 		private readonly DirectoryInfo localDirectory = null;   // local directory for the user data
@@ -510,7 +510,7 @@ namespace TecWare.PPSn
 			this.info = info ?? throw new ArgumentNullException("info");
 			this.userInfo = userInfo ?? throw new ArgumentNullException("userInfo");
 			this.environmentDisposing = new CancellationTokenSource();
-			this.luaGlobal = new LuaGlobalPortable(new Lua());
+			this.luaGlobal = new LuaGlobal(new Lua());
 
 			this.webProxy = new PpsWebProxy(this);
 

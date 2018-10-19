@@ -221,3 +221,5 @@ FakesAssemblies/
 /PPSnModCfg/Schema/Configuration/DEScron.xsd
 /PPSnModCfg/Schema/Configuration/DESprocess.xsd
 /PPSnModCfg/Schema/DES.xsd
+/PPSnMod/SqlServerTypes/Loader.cs
+/PPSnMod/SqlServerTypes/readme.htm

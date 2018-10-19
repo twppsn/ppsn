@@ -2157,7 +2157,7 @@ namespace TecWare.PPSn.Server.Sql
 			try
 			{
 				CloseMasterConnection();
-				schemaInfoInitialized.Dispose();
+				schemaInfoInitialized?.Dispose();
 			}
 			finally
 			{

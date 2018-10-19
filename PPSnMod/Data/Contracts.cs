@@ -25,6 +25,7 @@ using System.Security.Principal;
 using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
@@ -350,7 +351,7 @@ namespace TecWare.PPSn.Server.Data
 	#region -- interface IPpsPrivateDataContext ---------------------------------------
 
 	/// <summary>Hold's the connection and context data for one user.</summary>
-	public interface IPpsPrivateDataContext : IPropertyReadOnlyDictionary, IDisposable
+	public interface IPpsPrivateDataContext : IDEAuthentificatedUser, IPropertyReadOnlyDictionary, IDisposable
 	{
 		/// <summary>Returns a pooled connection for a datasource</summary>
 		/// <param name="source"></param>
