@@ -134,12 +134,14 @@ specific language governing permissions and limitations under the Licence.
 											<ColumnDefinition/>
 											<ColumnDefinition Width="20"/>
 										</Grid.ColumnDefinitions>
-										<pps:PpsTextBox x:Name="FilterTextBox" BorderThickness="0"
+										<pps:PpsTextBox BorderThickness="0"
+														Foreground="Black"
 														Background="Transparent"
+														CaretBrush="Black"
 														MaxLength="128"
 														Text="{Binding FilterText, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=400}"/>
 										<pps:PpsGeometryImage Grid.Column="1" GeometryName="magnify" GeometryCircled="False"
-															  Opacity=".65" SnapsToDevicePixels="False" Margin="1,1,1,1" />
+															  Foreground="Black" Opacity=".65" SnapsToDevicePixels="False" Margin="1,1,1,1" />
 									</Grid>
 									<ListBox x:Name="PART_FilteredItemsListBox"
 											 Grid.Row="1"
@@ -212,18 +214,20 @@ specific language governing permissions and limitations under the Licence.
 								  Height="23"
 								  Margin="{TemplateBinding Padding}">
 								<Grid.ColumnDefinitions>
-									<ColumnDefinition/>
+									<ColumnDefinition />
 									<ColumnDefinition Width="20"/>
 								</Grid.ColumnDefinitions>
-								<pps:PpsTextBox BorderThickness="0"
+								<pps:PpsTextBox x:Name="FilterTextBox"
+												BorderThickness="0"
 												Background="Transparent"
 												MaxLength="128"
-												Text="{Binding FilterText, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=400}"/>
-								<pps:PpsGeometryImage Grid.Column="1" GeometryName="magnify" GeometryCircled="False"
-													  Foreground="{DynamicResource PPSnWindowForegroundBrush}" Opacity=".65"
+												Text="{Binding FilterText, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=400}" />
+								<pps:PpsGeometryImage Grid.Column="1"
+													  GeometryName="magnify" GeometryCircled="False"
+													  Foreground="{Binding ElementName=FilterTextBox, Path=Foreground}"
+													  Opacity=".65"
 													  SnapsToDevicePixels="False" Margin="1,2,1,2" />
 							</Grid>
-
 							<ListBox x:Name="PART_FilteredItemsListBox"
 									 IsSynchronizedWithCurrentItem="{TemplateBinding IsSynchronizedWithCurrentItem}"
 									 SelectedValue="{Binding Path=SelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
@@ -240,6 +244,8 @@ specific language governing permissions and limitations under the Licence.
 						<ControlTemplate.Triggers>
 							<Trigger SourceName="FilterBox" Property="IsKeyboardFocusWithin" Value="True">
 								<Setter TargetName="FilterBox" Property="Background" Value="White" />
+								<Setter TargetName="FilterTextBox" Property="Foreground" Value="Black" />
+								<Setter TargetName="FilterTextBox" Property="CaretBrush" Value="Black" />
 							</Trigger>
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
