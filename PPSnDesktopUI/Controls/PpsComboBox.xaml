@@ -56,7 +56,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<Style TargetType="{x:Type pps:PpsComboBox}">
 		<Setter Property="ScrollViewer.CanContentScroll" Value="True "/>
-		<Setter Property="TextElement.Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsComboBoxItemStyle}" />
 		<Setter Property="BorderThickness" Value="1"/>
@@ -88,6 +88,7 @@ specific language governing permissions and limitations under the Licence.
 								Padding="2,1,2,1"
 								Margin="0,1,21,1"
 								Visibility="Hidden"
+								Foreground="{TemplateBinding Foreground}"
 								Command="{x:Static pps:PpsControlCommands.ClearCommand}"
 								Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
 						<!--ToDo Replace with PpsTextbox-->
