@@ -18,7 +18,7 @@
 	</ui:PpsWindow.Title>
 
 	<ui:PpsWindow.Resources>
-		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{uiO:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
+		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{uiO:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination=Black, SourcePart=0.75}" />
 		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{uiO:AlphaBlendColor Source={StaticResource PPSnActionButtonColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
 
 		<Storyboard x:Key="FadeOutStoryboard" FillBehavior="HoldEnd">
