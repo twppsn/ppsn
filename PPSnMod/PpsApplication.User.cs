@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Security.Principal;
 using System.Threading.Tasks;
@@ -219,7 +220,7 @@ namespace TecWare.PPSn.Server
 					return null;
 				if (!userIdentity.Equals(identity)) // check if that the identity matches
 					return null;
-								
+
 				// check the user information agains the main user
 				var context = CreateContextIntern(identity); // create new context for this identity
 				try
@@ -342,7 +343,7 @@ namespace TecWare.PPSn.Server
 			private readonly IIdentity currentIdentity; // contains the plain identity token from the user
 			private bool isDisposed = false;
 
-			#region -- Ctor/Dtor ------------------------------------------------------------
+			#region -- Ctor/Dtor ------------------------------------------------------
 
 			public PrivateUserDataContext(PrivateUserData privateUser, IIdentity currentIdentity)
 			{
@@ -352,7 +353,7 @@ namespace TecWare.PPSn.Server
 				if (!currentIdentity.IsAuthenticated)
 					throw new ArgumentException("Identity is not verified.", nameof(currentIdentity));
 
-				if (this.currentIdentity is ClaimsIdentity c) // create a copy
+				if (this.currentIdentity is WindowsIdentity c) // create a copy for WindowsIdentity
 					this.currentIdentity = c.Clone();
 			} // ctor
 

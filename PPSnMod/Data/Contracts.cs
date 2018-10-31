@@ -391,7 +391,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Name (display info) of the current user.</summary>
 		string UserName { get; }
 		/// <summary>Returns the current identity.</summary>
-		PpsUserIdentity Identity { get; }
+		new PpsUserIdentity Identity { get; }
 	} // interface IPpsPrivateDataContext
 
 	#endregion

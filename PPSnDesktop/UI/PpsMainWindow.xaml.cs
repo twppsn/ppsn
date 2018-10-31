@@ -35,7 +35,7 @@ namespace TecWare.PPSn.UI
 
 		public readonly static DependencyProperty CharmObjectProperty = DependencyProperty.Register(nameof(CharmObject), typeof(object), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null));
 
-		public readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register(nameof(IsNavigatorVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(true, NavigatorVisibleChanged));
+		public readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register(nameof(IsNavigatorVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false, NavigatorVisibleChanged));
 		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
 		private readonly static DependencyPropertyKey IsSideBarVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsSideBarVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(true));
 		public readonly static DependencyProperty IsSideBarVisibleProperty = IsSideBarVisiblePropertyKey.DependencyProperty;
