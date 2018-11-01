@@ -114,8 +114,15 @@ namespace TecWare.PPSn
 				var code = xEnvironment.Element(xnCode)?.Value;
 				if (!String.IsNullOrEmpty(code))
 				{
-					var chunk = await CompileAsync(code, "environment.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-					await Dispatcher.InvokeAsync(() => RunScript(chunk, this, true, this));
+					try
+					{
+						var chunk = await CompileAsync(code, "environment.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+						await Dispatcher.InvokeAsync(() => RunScript(chunk, this, true, this));
+					}
+					catch (Exception e)
+					{
+						AppendException(e);
+					}
 				}
 			}
 			catch (WebException ex)
