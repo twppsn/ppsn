@@ -67,7 +67,14 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="selectorName"></param>
 		/// <returns></returns>
 		public virtual PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorName)
-			=> throw new NotImplementedException();
+		{
+			// support own view definitions
+			var view = Application.GetViewDefinition(selectorName, false);
+			if (view.SelectorToken.DataSource == this)
+				return view.SelectorToken.CreateSelector(connection);
+			else // return nothing
+				return null;
+		} // func CreateSelector
 
 		/// <summary>Returns a native column description.</summary>
 		/// <param name="columnName"></param>

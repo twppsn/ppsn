@@ -14,7 +14,9 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 
@@ -34,6 +36,144 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Multiple results are expected.</summary>
 		MutliResult
 	} // enum PpsDataTransactionExecuteBehavior
+
+	#endregion
+
+	#region -- class PpsDataCommand ---------------------------------------------------
+
+	/// <summary>Transaction command representation.</summary>
+	public abstract class PpsDataCommand : IDisposable
+	{
+		private readonly PpsDataTransaction transaction;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="transaction"></param>
+		protected PpsDataCommand(PpsDataTransaction transaction)
+		{
+			this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+		} // ctor
+
+		/// <summary></summary>
+		public void Dispose()
+			=> Dispose(true);
+		
+		/// <summary></summary>
+		/// <param name="disposing"></param>
+		protected virtual void Dispose(bool disposing)
+		{
+		} // proc Dispose
+
+		#endregion
+		
+		#region -- Execute Result -----------------------------------------------------
+
+		/// <summary>Overwrite to execute command.</summary>
+		/// <param name="args">Arguments for the command</param>
+		/// <param name="behavior">Result behaviour.</param>
+		/// <returns></returns>
+		protected abstract IEnumerable<IEnumerable<IDataRow>> ExecuteResultCore(object args, PpsDataTransactionExecuteBehavior behavior);
+
+		private IEnumerable<IEnumerable<IDataRow>> ExecuteResult(object args, PpsDataTransactionExecuteBehavior behavior)
+		{
+			transaction.ResetTransaction();
+			return ExecuteResultCore(args, behavior);
+		} // func ExecuteResult
+
+		/// <summary>Execute the command with no result.</summary>
+		/// <param name="args"></param>
+		public void ExecuteNoneResult(object args)
+		{
+			foreach (var c in ExecuteResult(args, PpsDataTransactionExecuteBehavior.NoResult))
+				c.GetEnumerator()?.Dispose();
+		} // func ExecuteNoneResult
+
+		/// <summary>Execute the command and return one row.</summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		public IDataRow ExecuteSingleRow(object args)
+		{
+			var first = true;
+			IDataRow result = null;
+			foreach (var c in ExecuteResult(args, PpsDataTransactionExecuteBehavior.SingleRow))
+			{
+				if (first)
+				{
+					using (var r = c.GetEnumerator())
+					{
+						if (r.MoveNext())
+							result = new SimpleDataRow(r.Current);
+					}
+					first = false;
+				}
+				else
+					c.GetEnumerator()?.Dispose();
+			}
+			return result;
+		} // func ExecuteSingleRow
+
+		/// <summary>Execute command and return one result set.</summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		public IEnumerable<IDataRow> ExecuteSingleResult(object args)
+		{
+			var first = true;
+			foreach (var c in ExecuteResult(args, PpsDataTransactionExecuteBehavior.SingleResult))
+			{
+				if (first)
+				{
+					foreach (var r in c)
+						yield return r;
+
+					first = false;
+				}
+				else
+					c.GetEnumerator()?.Dispose();
+			}
+		} // func ExecuteSingleResult
+
+		/// <summary>Execute command and return all results.</summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		public IEnumerable<IEnumerable<IDataRow>> ExecuteMultipleResult(object args)
+			=> ExecuteResult(args, PpsDataTransactionExecuteBehavior.MutliResult);
+
+		#endregion
+
+		/// <summary></summary>
+		public PpsDataTransaction Transaction => transaction;
+	} // class PpsDataCommand
+
+	#endregion
+
+	#region -- class PpsInvokeDataCommand ---------------------------------------------
+
+	/// <summary></summary>
+	/// <param name="args"></param>
+	/// <param name="behavior"></param>
+	public delegate IEnumerable<IEnumerable<IDataRow>> PpsInvokeDataCommandDelegate(object args, PpsDataTransactionExecuteBehavior behavior);
+
+	/// <summary></summary>
+	public sealed class PpsInvokeDataCommand : PpsDataCommand
+	{
+		private readonly PpsInvokeDataCommandDelegate invoke;
+
+		/// <summary></summary>
+		/// <param name="invoke"></param>
+		public PpsInvokeDataCommand(PpsInvokeDataCommandDelegate invoke)
+			: base((PpsDataTransaction)invoke.Target)
+		{
+			this.invoke = invoke ?? throw new ArgumentNullException(nameof(invoke));
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="args"></param>
+		/// <param name="behavior"></param>
+		/// <returns></returns>
+		protected override IEnumerable<IEnumerable<IDataRow>> ExecuteResultCore(object args, PpsDataTransactionExecuteBehavior behavior)
+			=> invoke.Invoke(args, behavior);
+	} // class PpsInvokeDataCommand
 
 	#endregion
 
@@ -75,6 +215,12 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
+		#region -- Commit, Rollback ---------------------------------------------------
+
+		/// <summary>Start a new transaction.</summary>
+		protected internal virtual void ResetTransaction()
+			=> commited = null;
+
 		/// <summary>Commit the transaction.</summary>
 		public virtual void Commit()
 		{
@@ -87,12 +233,78 @@ namespace TecWare.PPSn.Server.Data
 			commited = false;
 		} // proc Rollback
 
+		#endregion
+
+		#region -- Prepare/Execute ----------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="parameter"></param>
+		/// <param name="firstArgs"></param>
+		/// <returns></returns>
+		public PpsDataCommand Prepare(LuaTable parameter, LuaTable firstArgs)
+		{
+			if (parameter.GetMemberValue("rows") != null)
+				throw new ArgumentNullException("rows", "Prepare does not support 'rows'.");
+
+			return PrepareCore(parameter, firstArgs);
+		} // func Prepare
+
+		/// <summary>Prepare a command.</summary>
+		/// <param name="parameter"></param>
+		/// <param name="firstArgs"></param>
+		/// <returns></returns>
+		protected virtual PpsDataCommand PrepareCore(LuaTable parameter, LuaTable firstArgs)
+			=> throw new ArgumentOutOfRangeException(nameof(parameter), "Parameter not supported.");
+
+		private (IEnumerator<object>, PpsDataCommand) PrepareWithData(LuaTable parameter)
+		{
+			if (parameter.GetMemberValue("rows") is IEnumerable<IDataRow> rows) // from datatable or other row source
+			{
+				var rowEnumerator = rows.GetEnumerator();
+				if (!rowEnumerator.MoveNext()) // no arguments defined
+				{
+					rowEnumerator.Dispose();
+					return (null, null); // silent return nothing
+				}
+
+				// create columns list parameter
+				if (rowEnumerator.Current is IDataColumns columns)
+					parameter["columnList"] = columns;
+				else
+					throw new ArgumentException("IDataColumns not implemented.", nameof(parameter));
+
+				return (rowEnumerator, PrepareCore(parameter, null));
+			}
+			else
+			{
+				var rowEnumerator = parameter.ArrayList.OfType<LuaTable>().GetEnumerator();
+				if (!rowEnumerator.MoveNext())
+				{
+					rowEnumerator.Dispose();
+					return (null, PrepareCore(parameter, null));
+				}
+
+				return (rowEnumerator, PrepareCore(parameter, rowEnumerator.Current));
+			}
+		} // func PrepareWithData
+
 		/// <summary>Execute a command.</summary>
 		/// <param name="parameter"></param>
 		public void ExecuteNoneResult(LuaTable parameter)
 		{
-			foreach (var c in ExecuteResult(parameter, PpsDataTransactionExecuteBehavior.NoResult))
-				c.GetEnumerator()?.Dispose();
+			var (data, cmd) = PrepareWithData(parameter);
+			try
+			{
+				do
+				{
+					cmd.ExecuteNoneResult(data?.Current);
+				} while (data != null && data.MoveNext());
+			}
+			finally
+			{
+				data?.Dispose();
+				cmd?.Dispose();
+			}
 		} // proc ExecuteNoneResult
 
 		/// <summary>Execute a command.</summary>
@@ -100,23 +312,16 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public IDataRow ExecuteSingleRow(LuaTable parameter)
 		{
-			var first = true;
-			IDataRow result = null;
-			foreach (var c in ExecuteResult(parameter, PpsDataTransactionExecuteBehavior.SingleRow))
+			var (data, cmd) = PrepareWithData(parameter);
+			try
 			{
-				if (first)
-				{
-					using (var r = c.GetEnumerator())
-					{
-						if (r.MoveNext())
-							result = new SimpleDataRow(r.Current);
-					}
-					first = false;
-				}
-				else
-					c.GetEnumerator()?.Dispose();
+				return cmd.ExecuteSingleRow(data?.Current);
 			}
-			return result;
+			finally
+			{
+				data?.Dispose();
+				cmd?.Dispose();
+			}
 		} // proc ExecuteSingleRow
 
 		/// <summary>Execute a command.</summary>
@@ -124,18 +329,19 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public IEnumerable<IDataRow> ExecuteSingleResult(LuaTable parameter)
 		{
-			var first = true;
-			foreach (var c in ExecuteResult(parameter, PpsDataTransactionExecuteBehavior.SingleResult))
+			var (data, cmd) = PrepareWithData(parameter);
+			try
 			{
-				if (first)
+				do
 				{
-					foreach (var r in c)
-						yield return r;
-
-					first = false;
-				}
-				else
-					c.GetEnumerator()?.Dispose();
+					foreach (var cur in cmd.ExecuteSingleResult(data?.Current))
+						yield return cur;
+				} while (data != null && data.MoveNext());
+			}
+			finally
+			{
+				data?.Dispose();
+				cmd?.Dispose();
 			}
 		} // proc ExecuteSingleResult
 
@@ -143,14 +349,24 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="parameter"></param>
 		/// <returns></returns>
 		public IEnumerable<IEnumerable<IDataRow>> ExecuteMultipleResult(LuaTable parameter)
-			=> ExecuteResult(parameter, PpsDataTransactionExecuteBehavior.MutliResult);
+		{
+			var (data, cmd) = PrepareWithData(parameter);
+			try
+			{
+				do
+				{
+					foreach (var i in cmd.ExecuteMultipleResult(data?.Current))
+						yield return i;
+				} while (data != null && data.MoveNext());
+			}
+			finally
+			{
+				data?.Dispose();
+				cmd?.Dispose();
+			}
+		} // func ExecuteMultipleResult
 
-		/// <summary>Execute a command.</summary>
-		/// <param name="parameter"></param>
-		/// <param name="behavior"></param>
-		/// <returns></returns>
-		protected virtual IEnumerable<IEnumerable<IDataRow>> ExecuteResult(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
-			=> throw new NotImplementedException();
+		#endregion
 
 		/// <summary>Create a selector for a view or table.</summary>
 		/// <param name="selectorName"></param>

@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
@@ -167,6 +168,12 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns>Return a new selector with the attached filter.</returns>
 		public PpsDataSelector ApplyFilter(string expression, Func<string, string> lookupNative)
 			=> ApplyFilter(PpsDataFilterExpression.Parse(expression), lookupNative);
+
+		///// <summary>Apply a filter to the selector.</summary>
+		///// <param name="expression"></param>
+		///// <returns></returns>
+		//public PpsDataSelector ApplyFilter(LuaTable expression)
+		//	=> ApplyFilter(PpsDataFilterExpression.FromTable(expression));
 
 		/// <summary>Apply a filter to the selector.</summary>
 		/// <param name="expression">Filter expression.</param>

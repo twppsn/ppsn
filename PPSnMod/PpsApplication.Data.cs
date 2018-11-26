@@ -661,7 +661,7 @@ namespace TecWare.PPSn.Server
 		} // class PpsViewDefinitionInit
 
 		#endregion
-		
+
 		#region -- class DependencyElement --------------------------------------------
 
 		private sealed class DependencyElement
@@ -836,7 +836,7 @@ namespace TecWare.PPSn.Server
 			lock (viewController)
 				viewController[view.Name] = view;
 		} // func RegisterView
-		
+
 		private void RegisterDataSet(PpsDataSource source, string name, XElement x)
 		{
 			var datasetDefinition = (source ?? mainDataSource).CreateDataSetDefinition(name, x, Server.Configuration.ConfigurationStamp);

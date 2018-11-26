@@ -37,6 +37,8 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnEnvironment = PpsNamespace + "environment";
 		public readonly static XName xnCode = PpsNamespace + "code";
 
+		public readonly static XName xnStoredProcedure = PpsNamespace + "procedure";
+
 		public readonly static XName xnView = PpsNamespace + "view";
 		public readonly static XName xnSource = PpsNamespace + "source";
 		public readonly static XName xnJoin = PpsNamespace + "join";

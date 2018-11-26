@@ -35,6 +35,21 @@
 		</xs:complexContent>
 	</xs:complexType>
 
+	<xs:element name="msSqlDataSource" substitutionGroup="pps:dataSource">
+		<xs:annotation>
+			<xs:documentation>Implementation for a Sql-Server data source.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.Sql.PpsMsSqlDataSource</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="pps:sqlDataSourceType">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
 	<xs:element name="sqlExDataSource" substitutionGroup="pps:dataSource">
 		<xs:annotation>
 			<xs:documentation>Implementation for a Sql-Server data source.</xs:documentation>

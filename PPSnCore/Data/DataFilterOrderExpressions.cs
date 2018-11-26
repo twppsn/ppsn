@@ -565,6 +565,19 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- FromTable ----------------------------------------------------------
+
+		/// <summary>Create a filter expression from a table.</summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		public static PpsDataFilterExpression FromTable(LuaTable expression)
+		{
+			throw new NotImplementedException();
+			/* {  COLUMN = VALUE, "Expr", {} } */
+		} // func FromTable
+
+		#endregion
+
 		/// <summary>Test if the expression is true or empty.</summary>
 		/// <param name="expr"></param>
 		/// <returns></returns>
