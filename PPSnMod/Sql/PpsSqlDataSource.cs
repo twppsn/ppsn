@@ -1206,7 +1206,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // func GetAliasColumns
 
 			private static string GetColumnExpression(string tableAlias, string name)
-				=> tableAlias == null ? name : tableAlias + "." + name;
+				=> tableAlias == null ? FormatColumn(name) : tableAlias + "." + FormatColumn(name);
 
 			protected override AliasColumn CreateColumnAliasFromExisting(PpsDataColumnExpression col, AliasColumn aliasColumn)
 			{
@@ -2645,7 +2645,7 @@ namespace TecWare.PPSn.Server.Sql
 		public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string viewOrTableName, string alias)
 		{
 			// first look up view
-			var view = Application.GetViewDefinition(viewOrTableName);
+			var view = Application.GetViewDefinition(viewOrTableName, false);
 			if(view != null && view.SelectorToken.DataSource == this)
 				return view.SelectorToken.CreateSelector(connection, alias, true);
 
@@ -2954,6 +2954,11 @@ namespace TecWare.PPSn.Server.Sql
 			else
 				sb.Append(' ');
 		} // func FormatSelectList
+
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		protected static string FormatColumn(string columnName)
+			=> "[" + columnName + "]";
 
 		#endregion
 

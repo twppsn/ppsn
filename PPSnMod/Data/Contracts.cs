@@ -185,7 +185,10 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public abstract bool Equals(IIdentity other);
 
-		internal PpsCredentials GetCredentialsFromIdentity(IIdentity identity)
+		/// <summary></summary>
+		/// <param name="identity"></param>
+		/// <returns></returns>
+		public PpsCredentials GetCredentialsFromIdentity(IIdentity identity)
 		{
 			if (identity == null)
 				throw new ArgumentNullException(nameof(identity));
@@ -284,6 +287,15 @@ namespace TecWare.PPSn.Server.Data
 	{
 		private readonly string userName;
 		private readonly SecureString password;
+		
+		/// <summary></summary>
+		/// <param name="userName"></param>
+		/// <param name="password"></param>
+		public PpsUserCredentials(string userName, SecureString password)
+		{
+			this.userName = userName ?? throw new ArgumentNullException(nameof(userName));
+			this.password = password ?? throw new ArgumentNullException(nameof(password));
+		} // ctor
 
 		internal unsafe PpsUserCredentials(HttpListenerBasicIdentity identity)
 		{

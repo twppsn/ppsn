@@ -21,6 +21,7 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
@@ -677,7 +678,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary></summary>
 			public PpsCredentials Credentials { get; }
 			/// <summary></summary>
-			public PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)DataSource;
+			public PpsMsSqlDataSource SqlDataSource => (PpsMsSqlDataSource)DataSource;
 			/// <summary></summary>
 			public SqlConnection SqlConnection => (SqlConnection)DbConnection;
 			/// <summary></summary>
@@ -1050,6 +1051,8 @@ namespace TecWare.PPSn.Server.Sql
 		#endregion
 
 		private readonly SqlConnection masterConnection;
+		private string sysUserName = null;
+		private SecureString sysPassword = null;
 		private DEThread databaseMainThread = null;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -1083,6 +1086,36 @@ namespace TecWare.PPSn.Server.Sql
 				base.Dispose(disposing);
 			}
 		} // proc Dispose
+
+		/// <summary></summary>
+		/// <param name="config"></param>
+		protected override void OnBeginReadConfiguration(IDEConfigLoading config)
+		{
+			base.OnBeginReadConfiguration(config);
+
+			config.Tags.SetProperty("sysuser", config.ConfigNew.GetAttribute("sysuser", (string)null));
+			config.Tags.SetProperty("syspassword", ProcsDE.DecodePassword(config.ConfigNew.GetAttribute("syspassword", (string)null)));
+		} // proc OnBeginReadConfiguration
+
+		/// <summary></summary>
+		/// <param name="config"></param>
+		protected override void OnEndReadConfiguration(IDEConfigLoading config)
+		{
+			if (config.Tags.TryGetProperty<string>("sysuser", out var tmpUser) && !String.IsNullOrWhiteSpace(tmpUser)
+				&& config.Tags.TryGetProperty<SecureString>("syspassword", out var tmpPwd))
+			{
+				sysUserName = tmpUser;
+				sysPassword = tmpPwd;
+				sysPassword.MakeReadOnly();
+			}
+			else
+			{
+				sysUserName = null;
+				sysPassword = null;
+			}
+
+			base.OnEndReadConfiguration(config);
+		} // proc OnEndReadConfiguration
 
 		#endregion
 
@@ -1205,7 +1238,20 @@ namespace TecWare.PPSn.Server.Sql
 				masterConnection.Close();
 
 				// use integrated security by default
-				sqlConnectionString.IntegratedSecurity = true; // todo: support sa-user
+				if (sysUserName != null)
+				{
+					Log.Info("Init master connection with {0}", sysUserName);
+					sqlConnectionString.UserID = sysUserName;
+					sqlConnectionString.Password = sysPassword?.AsPlainText();
+					sqlConnectionString.IntegratedSecurity = false;
+				}
+				else
+				{
+					Log.Info("Init master connection with integrated security.");
+					sqlConnectionString.UserID = String.Empty;
+					sqlConnectionString.Password = String.Empty;
+					sqlConnectionString.IntegratedSecurity = true;
+				}
 
 				// set the new connection
 				masterConnection.ConnectionString = sqlConnectionString.ToString();
@@ -1226,6 +1272,7 @@ namespace TecWare.PPSn.Server.Sql
 		private async Task ExecuteDatabaseAsync(DEThread thread)
 		{
 			var lastChangeTrackingId = -1L;
+			var lastExceptionNumber = 0;
 
 			while (thread.IsRunning)
 			{
@@ -1274,9 +1321,17 @@ namespace TecWare.PPSn.Server.Sql
 							}
 						}
 					}
+					catch (SqlException e)
+					{
+						if (e.Number != lastExceptionNumber) // todo: detect disconnect
+						{
+							lastExceptionNumber = e.Number;
+							Log.Except(e);
+						}
+					}
 					catch (Exception e)
 					{
-						Log.Except(e); // todo: detect disconnect
+						Log.Except(e);
 					}
 				}
 				finally
@@ -1411,7 +1466,20 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="throwException"></param>
 		/// <returns></returns>
 		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userContext, bool throwException = true)
-			=> new SqlConnectionHandle(this, userContext.GetNetworkCredential());
+		{
+			PpsCredentials credentials;
+			if (userContext.Identity == PpsUserIdentity.System)
+			{
+				if (sysUserName != null)
+					credentials = new PpsUserCredentials(sysUserName, sysPassword);
+				else
+					credentials = PpsUserIdentity.System.GetCredentialsFromIdentity(PpsUserIdentity.System);
+			}
+			else
+				credentials = userContext.GetNetworkCredential();
+
+			return new SqlConnectionHandle(this, credentials);
+		} // func CreateConnection
 
 		/// <summary></summary>
 		/// <param name="connection"></param>

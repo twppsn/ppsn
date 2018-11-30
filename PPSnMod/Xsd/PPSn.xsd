@@ -45,6 +45,16 @@
 		<xs:complexType>
 			<xs:complexContent>
 				<xs:extension base="pps:sqlDataSourceType">
+					<xs:attribute name="sysuser" type="xs:string" use="optional">
+						<xs:annotation>
+							<xs:documentation>System user to access database.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+					<xs:attribute name="syspassword" type="PasswordType" use="optional">
+						<xs:annotation>
+							<xs:documentation>System password.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
 				</xs:extension>
 			</xs:complexContent>
 		</xs:complexType>
