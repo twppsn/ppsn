@@ -649,9 +649,9 @@ namespace TecWare.PPSn.Data
 		Text,
 		/// <summary></summary>
 		Date,
-		/// <summary></summary>
+		/// <summary>A formatted Integer, p.e. D-01689 or 0.12.4310.234</summary>
 		Number,
-		/// <summary></summary>
+		/// <summary>A value which is presenting an amount.</summary>
 		Integer
 	} // enum PpsDataFilterCompareValueType
 

@@ -76,8 +76,7 @@
     <Compile Include="PpsPackage.cs" />
     <Compile Include="Properties\AssemblyInfoLocal.cs" />
     <None Include="app.config" />
-    <None Include="Sql\SqlServerTypes\Loader.cs" />
-    <Compile Include="SqlServerTypes\Loader.cs" />
+    <Compile Include="Sql\SqlServerTypes\Loader.cs" />
     <Compile Include="Sql\PpsMsSqlDataSource.cs" />
     <Compile Include="Sql\PpsSqlExDataSource.cs" />
     <Compile Include="Sql\PpsSqlDataSource.cs" />
