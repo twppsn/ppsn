@@ -122,7 +122,6 @@ namespace TecWare.PPSn
 
 	internal class LogicalContentEnumerator : IEnumerator
 	{
-	
 		private int state = -1;
 		private readonly IEnumerator baseItems; // base enumerator
 		private readonly object content;
@@ -238,8 +237,8 @@ namespace TecWare.PPSn
 				return r;
 
 			return GetControlService(
-				useVisualTree 
-					? GetVisualParent(current) 
+				useVisualTree
+					? GetVisualParent(current)
 					: GetLogicalParent(current), serviceType, useVisualTree
 			);
 		} // func GetControlService
@@ -405,7 +404,7 @@ namespace TecWare.PPSn
 		{
 			if (value == null)
 				return Procs.ChangeType(null, typeTo);
-			else if (typeTo.IsAssignableFrom( value.GetType() ))
+			else if (typeTo.IsAssignableFrom(value.GetType()))
 				return value;
 			else
 			{
@@ -452,7 +451,7 @@ namespace TecWare.PPSn
 
 		private static DependencyObject GetUIParent(DependencyObject current)
 		{
-			switch(current)
+			switch (current)
 			{
 				case UIElement ui:
 					return InvokeGetUIParent<UIElement>(current);
@@ -661,7 +660,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static int FindColumnIndex(this IDataRecord r, string columnName, bool throwException = true)
 		{
-			for(var i = 0;i< r.FieldCount;i++)
+			for (var i = 0; i < r.FieldCount; i++)
 			{
 				if (String.Compare(r.GetName(i), columnName, StringComparison.OrdinalIgnoreCase) == 0)
 					return i;
@@ -688,7 +687,7 @@ namespace TecWare.PPSn
 			{
 				var n = r.GetName(i);
 				var j = Array.FindIndex(columnNames, c => String.Compare(n, c, StringComparison.OrdinalIgnoreCase) == 0);
-				if(j != -1)
+				if (j != -1)
 					idx[j] = i;
 			}
 
@@ -728,7 +727,7 @@ namespace TecWare.PPSn
 		[Obsolete("Not compatible with server")]
 		public static string ConvertHashToString(HashAlgorithm algorithm, byte[] hash)
 		{
-			if(hash == null ||hash.Length == 0)
+			if (hash == null || hash.Length == 0)
 				return null;
 
 			var sb = new StringBuilder(GetHashPrefix(algorithm)).Append(':');
@@ -867,71 +866,10 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class IPpsUserRuntimeException -----------------------------------------
-
-	/// <summary>Marks a exception as a friendly exception for the user.</summary>
-	public interface IPpsUserRuntimeException
-	{
-		/// <summary></summary>
-		string Message { get; }
-	} // interface IPpsUserRuntimeException
-
-	#endregion
-
-	#region -- class LuaUserRuntimeException ------------------------------------------
-
-	/// <summary></summary>
-	public sealed class LuaUserRuntimeException : LuaRuntimeException, IPpsUserRuntimeException
-	{
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="innerException"></param>
-		public LuaUserRuntimeException(string message, Exception innerException) 
-			: base(message, innerException)
-		{
-		}
-
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="level"></param>
-		/// <param name="skipClrFrames"></param>
-		public LuaUserRuntimeException(string message, int level, bool skipClrFrames) 
-			: base(message, level, skipClrFrames)
-		{
-		}
-	} // class LuaUserRuntimeException
-
-	#endregion
-
-	#region -- class LuaAssertRuntimeException ----------------------------------------
-
-	/// <summary></summary>
-	public sealed class LuaAssertRuntimeException : LuaRuntimeException
-	{
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="innerException"></param>
-		public LuaAssertRuntimeException(string message, Exception innerException)
-			: base(message, innerException)
-		{
-		}
-
-		/// <summary></summary>
-		/// <param name="message"></param>
-		/// <param name="level"></param>
-		/// <param name="skipClrFrames"></param>
-		public LuaAssertRuntimeException(string message, int level, bool skipClrFrames)
-			: base(message, level, skipClrFrames)
-		{
-		}
-	} // class LuaAssertRuntimeException
-
-	#endregion
-
 	#region -- class PpsUserException -------------------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsUserException : Exception, IPpsUserRuntimeException
+	public sealed class PpsUserException : Exception, ILuaUserRuntimeException
 	{
 		/// <summary></summary>
 		/// <param name="message"></param>

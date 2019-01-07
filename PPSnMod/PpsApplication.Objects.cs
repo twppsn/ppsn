@@ -20,6 +20,8 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http.Headers;
+using System.Net.Mime;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -1182,7 +1184,7 @@ namespace TecWare.PPSn.Server
 		} // func PullDataSet
 
 		[
-		DEConfigHttpAction("pull", IsSafeCall = false, SecurityToken = "user"),
+		DEConfigHttpAction("pull", IsSafeCall = false, SecurityToken = SecurityUser),
 		Description("Reads the revision from the server.")
 		]
 		private void HttpPullAction(long id, long rev = -1)
@@ -1198,7 +1200,7 @@ namespace TecWare.PPSn.Server
 					obj.SetRevision(rev);
 
 				// prepare object data
-				var xObject = SetStatusAttributes(obj.ToXml(), true);
+				var xObject = SetStatusAttributes(obj.ToXml(), DEHttpReturnState.Ok);
 				var headerBytes = Encoding.Unicode.GetBytes(xObject.ToString(SaveOptions.DisableFormatting));
 				ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
 				ctx.OutputHeaders["ppsn-pulled-revId"] = obj.RevId.ChangeType<string>();
@@ -1948,20 +1950,22 @@ namespace TecWare.PPSn.Server
 			[LuaMember]
 			public static XmlWriter CreateXmlWriter()
 			{
-				var r = DEScope.GetScopeService<IDEWebRequestScope>(true);
-				CheckContextArgument(r);
+				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
 				return XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Http.DefaultEncoding), Procs.XmlWriterSettings);
 			} // func CreateXmlWriter
+
+			[LuaMember]
+			public static TextReader CreateTextReader()
+			{
+				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
+				return r.GetInputTextReader();
+			} // func CreateTextReader
 
 			/// <summary>Creates a XmlReader for the input stream.</summary>
 			/// <returns></returns>
 			[LuaMember]
 			public static XmlReader CreateXmlReader()
-			{
-				var r = DEScope.GetScopeService<IDEWebRequestScope>(true);
-				CheckContextArgument(r);
-				return XmlReader.Create(r.GetInputTextReader(), Procs.XmlReaderSettings);
-			} // func CreateXmlReader
+				=> XmlReader.Create(CreateTextReader(), Procs.XmlReaderSettings);
 
 			/// <summary>Writes the XElement in the output stream.</summary>
 			/// <param name="x"></param>
@@ -1981,6 +1985,13 @@ namespace TecWare.PPSn.Server
 					return XElement.Load(xml);
 			} // proc WriteXml
 
+			[LuaMember]
+			public static string GetText()
+			{
+				using (var tr = CreateTextReader())
+					return tr.ReadToEnd();
+			} // func GetText
+
 			/// <summary>Write the table in the output stream.</summary>
 			/// <param name="t"></param>
 			[LuaMember]
@@ -1991,7 +2002,23 @@ namespace TecWare.PPSn.Server
 			/// <returns></returns>
 			[LuaMember]
 			public static LuaTable GetTable()
-				=> Procs.CreateLuaTable(GetXml());
+			{
+				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
+				if (MediaTypeHeaderValue.TryParse(r.InputContentType, out var contentType))
+				{
+					if (contentType.MediaType == MimeTypes.Text.Xml)
+						return Procs.CreateLuaTable(GetXml());
+					else if (contentType.MediaType == MimeTypes.Text.Lson)
+					{
+						using (var tr = CreateTextReader())
+							return FromLson(tr);
+					}
+					else
+						throw new ArgumentOutOfRangeException(nameof(r.InputContentType), r.InputContentType, "InputContentType is neither xml nor lson.");
+				}
+				else
+					throw new ArgumentException("InputContentType is missing.", nameof(r.InputContentType));
+			} // func GetTable
 		} // class PpsHttpLibrary
 
 		#endregion

@@ -256,9 +256,7 @@ namespace TecWare.PPSn.Server
 			{
 				if (String.IsNullOrEmpty(securityToken) || userId == sysUserId)
 					return true;
-				else if (securityToken == "user")
-					return true;
-
+				
 				return Array.BinarySearch(securityTokens, securityToken.ToLower()) >= 0;
 			} // func DemandToken
 
@@ -286,7 +284,7 @@ namespace TecWare.PPSn.Server
 				if (r.TryGetProperty<string>(UserContextInitials, out var initials))
 					SetMemberValue(UserContextInitials, initials);
 
-				this.securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", "User"));
+				this.securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", String.Empty), SecurityUser);
 			} // proc UpdateData
 
 			public static PpsUserIdentity CreateUserIdentity(IDataRow r)

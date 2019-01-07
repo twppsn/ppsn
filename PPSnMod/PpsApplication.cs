@@ -618,7 +618,7 @@ namespace TecWare.PPSn.Server
 					));
 					return true;
 				case "login.xml":
-					// r.DemandToken("USER");
+					r.DemandToken(SecurityUser);
 					
 					var ctx = r.GetUser<IPpsPrivateDataContext>();
 					await Task.Run(() =>

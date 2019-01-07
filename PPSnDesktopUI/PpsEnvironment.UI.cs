@@ -399,7 +399,7 @@ namespace TecWare.PPSn
 			{
 				case PpsEnvironmentOnlineFailedException ex:
 					return MsgBox(ex.Message, MessageBoxButton.OK, MessageBoxImage.Information) != MessageBoxResult.OK;
-				case IPpsUserRuntimeException urex:
+				case ILuaUserRuntimeException urex:
 					return MsgBox(urex.Message, MessageBoxButton.OK, MessageBoxImage.Information) != MessageBoxResult.OK;
 				default:
 					var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;

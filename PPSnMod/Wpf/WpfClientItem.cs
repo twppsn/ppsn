@@ -1169,7 +1169,7 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc ExecuteMasterDataTableSync
 
-		[DEConfigHttpAction("mdata", SecurityToken = "user", IsSafeCall = false)]
+		[DEConfigHttpAction("mdata", SecurityToken = SecurityUser, IsSafeCall = false)]
 		private void HttpMasterDataSyncAction(IDEWebRequestScope r, string tableName = null, long syncId = -1, long syncStamp = -1)
 		{
 			var user = r.GetUser<IPpsPrivateDataContext>();
