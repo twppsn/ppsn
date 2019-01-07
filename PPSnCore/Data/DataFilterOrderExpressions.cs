@@ -2392,8 +2392,8 @@ namespace TecWare.PPSn.Data
 				case string str:
 					var p = str.IndexOfAny(new char[] { '=', ':' });
 					return p == -1
-						? new PpsDataColumnExpression(str)
-						: new PpsDataColumnExpression(str.Substring(0, p), str.Substring(p + 1));
+						? new PpsDataColumnExpression(str.Trim())
+						: new PpsDataColumnExpression(str.Substring(0, p).Trim(), str.Substring(p + 1).Trim());
 				default:
 					return CreateStringKeyValuePair(value.ToString());
 			}
