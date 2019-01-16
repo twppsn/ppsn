@@ -16,9 +16,13 @@
 	</PropertyGroup>
 	<Import Project="..\Common\AssemblyInfo.targets" />
 	<ItemGroup>
+	  <None Remove="Sql\tsql\ConnectionInitScript.sql" />
+	  <None Remove="Sql\tsql\ServerLogins.sql" />
 	  <None Remove="Xsd\PPSn.xsd" />
 	</ItemGroup>
 	<ItemGroup>
+	  <EmbeddedResource Include="Sql\tsql\ConnectionInitScript.sql" />
+	  <EmbeddedResource Include="Sql\tsql\ServerLogins.sql" />
 	  <EmbeddedResource Include="Xsd\PPSn.xsd" />
 		<Content Include="Xsd\PPSn.xsd">
 			<Pack>true</Pack>
