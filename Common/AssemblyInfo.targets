@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project>
+	<PropertyGroup>
+		<Product>PPSn</Product>
+		<Company>TecWare Gesellschaft für Softwareentwicklung mbH</Company>
+		<Authors>TecWare</Authors>
+		
+		<PackageProjectUrl>https://github.com/twppsn/ppsn/</PackageProjectUrl>
+
+		<RepositoryUrl>https://github.com/twppsn/ppsn.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+</Project>

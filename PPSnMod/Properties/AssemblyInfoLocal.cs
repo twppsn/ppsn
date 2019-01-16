@@ -13,14 +13,10 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using System.Reflection;
 using System.Runtime.InteropServices;
 using TecWare.DE.Server.Configuration;
 using TecWare.PPSn.Server;
 
-[assembly: AssemblyTitle("PPSnMod")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]
 

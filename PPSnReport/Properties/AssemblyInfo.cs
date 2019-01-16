@@ -13,13 +13,7 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("PPSnReport")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyCulture("")]
-
 [assembly: ComVisible(false)]
-
 [assembly: Guid("bd5faf7d-b1dd-4a54-a481-c46179fcc087")]
