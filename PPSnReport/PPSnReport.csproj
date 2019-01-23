@@ -15,8 +15,8 @@
 	<ItemGroup>
 	  <PackageReference Include="Markdig" Version="0.15.7" />
 	  <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
-	  <PackageReference Include="NeoLua" Version="1.3.7" />
-	  <PackageReference Include="TecWare.DES.Core" Version="3.4.29" />
+	  <PackageReference Include="NeoLua" Version="1.3.8-beta" />
+	  <PackageReference Include="TecWare.DES.Core" Version="3.4.30-pre.295" />
 	</ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">

@@ -15,17 +15,13 @@
 #endregion
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Mime;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -37,8 +33,6 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Xml.Linq;
-using Neo.IronLua;
-using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn
@@ -755,46 +749,6 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public static class WebRequestHelper
 	{
-		public static ContentDisposition GetContentDisposition(this WebResponse r, bool createDummy = true)
-		{
-			//var tmp = r.Headers["Content-Disposition"];
-
-			//if (tmp == null)
-			//{
-			if (createDummy)
-			{
-				var cd = new ContentDisposition();
-
-				// try to get a filename
-				var path = r.ResponseUri.AbsolutePath;
-				var pos = -1;
-				if (!String.IsNullOrEmpty(path))
-					pos = path.LastIndexOf('/', path.Length - 1);
-				if (pos >= 0)
-					cd.FileName = path.Substring(pos + 1);
-				else
-					cd.FileName = path;
-
-				// set the date
-				cd.ModificationDate = GetLastModified(r);
-				return cd;
-			}
-			else
-				return null;
-			//}
-			//else
-			//	return new ContentDisposition(tmp);
-		} // func GetContentDisposition
-
-		public static DateTime GetLastModified(this WebHeaderCollection headers)
-			=> DateTime.TryParse(headers[HttpResponseHeader.LastModified], out var lastModified) ? lastModified : DateTime.Now; // todo: format?
-
-		public static DateTime GetLastModified(this WebResponse r)
-			=> GetLastModified(r.Headers);
-
-		public static ContentType GetContentType(this WebResponse r)
-			=> new ContentType(r.ContentType);
-
 		public static NameValueCollection ParseQuery(this Uri uri)
 			=> uri.IsAbsoluteUri
 				? HttpUtility.ParseQueryString(uri.Query)

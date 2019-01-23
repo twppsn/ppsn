@@ -932,7 +932,7 @@ namespace TecWare.PPSn
 			// load new schema
 			var respone = await environment.Request.GetResponseAsync(environment.GetDocumentUri(MasterDataSchema), MimeTypes.Text.Xml);
 			var schemaStamp = respone.GetLastModified();
-			var xSchema = environment.Request.GetXml(respone);
+			var xSchema = await respone.GetXmlAsync();
 
 			var newMasterDataSchema = new PpsDataSetDefinitionDesktop(environment, MasterDataSchema, xSchema);
 			newMasterDataSchema.EndInit();
@@ -2160,9 +2160,9 @@ namespace TecWare.PPSn
 			var requestString = "/remote/wpf/?action=mdata";
 
 			// parse and process result
-			using (var xml = environment.Request.GetXmlStream(await environment.Request.PutXmlResponseAsync(requestString, MimeTypes.Text.Xml, WriteCurentSyncState),
-				settings: new XmlReaderSettings() { IgnoreComments = true, IgnoreWhitespace = true, Async = true })
-			)
+
+			using (var r = await environment.Request.PutResponseXmlAsync(requestString, WriteCurentSyncState, MimeTypes.Text.Xml, MimeTypes.Text.Xml))
+			using (var xml = await r.GetXmlStreamAsync(MimeTypes.Text.Xml, new XmlReaderSettings() { IgnoreComments = true, IgnoreWhitespace = true, Async = true }))
 			{
 				await xml.ReadStartElementAsync("mdata");
 				if (!xml.IsEmptyElement)
@@ -2477,12 +2477,14 @@ namespace TecWare.PPSn
 		{
 			// check if schema is change
 			var schemaUri = environment.GetDocumentUri(MasterDataSchema) ?? throw new ArgumentNullException(MasterDataSchema, "Schema uri missing.");
-			var request = WebRequest.Create(environment.Request.GetFullUri(schemaUri));
-			request.Method = "HEAD";
 
-			using (var r = await request.GetResponseAsync())
+			using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Head, environment.Request.CreateFullUri(schemaUri)))
+			using (var httpResponseMessage = await environment.Request.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead))
 			{
-				var schemaDate = r.GetLastModified();
+				if (!httpResponseMessage.IsSuccessStatusCode)
+					throw new HttpResponseException(httpResponseMessage);
+
+				var schemaDate = httpResponseMessage.GetLastModified();
 				if (schemaDate == DateTime.MinValue || schemaDate.ToUniversalTime() != lastSynchronizationSchema)
 				{
 					schemaIsOutDated = true;
@@ -4285,7 +4287,7 @@ namespace TecWare.PPSn
 				public Stream Content => data;
 				public string ContentType => contentType;
 				public long ContentLength => data.Length;
-				public DateTime LastModification => headers.GetLastModified();
+				public DateTime LastModification => DateTime.TryParse(headers[HttpResponseHeader.LastModified], out var lastModified) ? lastModified : DateTime.Now;
 			} // class PpsOfflineItemDataImplementation
 
 			#endregion
@@ -4700,7 +4702,7 @@ namespace TecWare.PPSn
 		private readonly Uri baseUri;       // internal uri for this datastore
 		private ProxyStatus statusOfProxy;  // interface for the transaction manager
 
-		private readonly BaseWebRequest request;
+		private readonly DEHttpClient request;
 
 		#region -- Init -----------------------------------------------------------------
 
@@ -5121,7 +5123,7 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		[LuaMember]
-		public BaseWebRequest Request => request;
+		public DEHttpClient Request => request;
 		/// <summary>Default encodig for strings.</summary>
 		public Encoding Encoding => Encoding.Default;
 		/// <summary>Internal Uri of the environment.</summary>

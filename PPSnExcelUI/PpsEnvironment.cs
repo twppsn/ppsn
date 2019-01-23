@@ -38,7 +38,7 @@ namespace TecWare.PPSn
 		private readonly LuaTable luaLibrary;
 
 		private string fullName = null;
-		private BaseWebRequest request = null;
+		private DEHttpClient request = null;
 
 		public PpsEnvironment(IPpsShell baseShell, PpsEnvironmentInfo info)
 		{
@@ -69,8 +69,7 @@ namespace TecWare.PPSn
 					}
 
 					// try login with user
-					var newRequest = new BaseWebRequest(info.Uri, Encoding, login.GetCredentials());
-					// 			request.Headers.Add("des-multiple-authentifications", "true");
+					var newRequest = DEHttpClient.Create(info.Uri, login.GetCredentials(), Encoding);
 					try
 					{
 						var xLogin = await newRequest.GetXmlAsync("login.xml");
@@ -196,7 +195,7 @@ namespace TecWare.PPSn
 
 		public Lua Lua => baseShell.Lua;
 		public LuaTable LuaLibrary => luaLibrary;
-		public Uri BaseUri => request?.BaseUri ?? info.Uri;
+		public Uri BaseUri => request?.BaseAddress ?? info.Uri;
 		public Encoding Encoding => baseShell.Encoding;
 	} // class PpsEnvironment
 }

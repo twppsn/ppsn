@@ -25,6 +25,7 @@ using System.Dynamic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -3211,6 +3212,91 @@ namespace TecWare.PPSn
 			}
 		} // func PullRevisionAsync
 
+		private static XElement CheckForExceptionResult(XElement x)
+		{
+			var xStatus = x.Attribute("status");
+			if (xStatus != null && xStatus.Value != "ok")
+			{
+				var xText = x.Attribute("text");
+				throw new ArgumentException(String.Format("Server returns an error: {0}", xText?.Value ?? "unknown"));
+			}
+			return x;
+		} // func CheckForExceptionResult
+
+		private static Encoding CheckMimeType(string contentType, string acceptedMimeType, bool charset)
+		{
+			string mimeType;
+
+			// Lese den MimeType
+			var pos = contentType.IndexOf(';');
+			if (pos == -1)
+				mimeType = contentType.Trim();
+			else
+				mimeType = contentType.Substring(0, pos).Trim();
+
+			// Prüfe den MimeType
+			if (acceptedMimeType != null && !mimeType.StartsWith(acceptedMimeType))
+				throw new ArgumentException($"Expected: {acceptedMimeType}; received: {mimeType}");
+
+			if (charset)
+			{
+				var startAt = contentType.IndexOf("charset=");
+				if (startAt >= 0)
+				{
+					startAt += 8;
+					var endAt = contentType.IndexOf(';', startAt);
+					if (endAt == -1)
+						endAt = contentType.Length;
+
+					var charSet = contentType.Substring(startAt, endAt - startAt);
+					return Encoding.GetEncoding(charSet);
+				}
+				else
+					return Encoding.UTF8;
+			}
+			else
+				return null;
+		} // func CheckMimeType
+
+		private static bool IsCompressed(string contentEncoding)
+			=> contentEncoding != null && contentEncoding.IndexOf("gzip") >= 0;
+
+		private static TextReader GetTextReader(WebResponse response, string acceptedMimeType)
+		{
+			var enc = CheckMimeType(response.ContentType, acceptedMimeType, true);
+			if (IsCompressed(response.Headers["Content-Encoding"]))
+				return new StreamReader(new GZipStream(response.GetResponseStream(), CompressionMode.Decompress), enc);
+			else
+				return new StreamReader(response.GetResponseStream(), enc);
+		}// func GetTextReaderAsync
+		
+		private static XmlReader GetXmlStream(WebResponse response)
+		{
+				var settings = new XmlReaderSettings()
+				{
+					IgnoreComments = true,
+					IgnoreWhitespace = true,
+					CloseInput = true
+				};
+			var baseUri = response.ResponseUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.SafeUnescaped);
+			var context = new XmlParserContext(null, null, null, null, null, null, baseUri, null, XmlSpace.Default);
+
+			return XmlReader.Create(GetTextReader(response, MimeTypes.Text.Xml), settings, context);
+		} // func GetXmlStream
+
+		private static XElement GetXml(WebResponse response)
+		{
+			XDocument document;
+			using (var xml = GetXmlStream(response))
+				document = XDocument.Load(xml, LoadOptions.SetBaseUri);
+			if (document == null)
+				throw new ArgumentException("Keine Antwort vom Server.");
+
+			CheckForExceptionResult(document.Root);
+
+			return document.Root;
+		} // func GetXml
+
 		/// <summary>Push the object to server.</summary>
 		/// <returns></returns>
 		public async Task PushAsync()
@@ -3265,7 +3351,7 @@ namespace TecWare.PPSn
 				}
 
 				// get the result
-				xAnswer = await Task.Run(() => Environment.Request.GetXml(request.GetResponse()));
+				xAnswer = await Task.Run(() => GetXml(request.GetResponse()));
 				if (xAnswer.Name.LocalName == "push") // something is wrong / pull request.
 				{
 					throw new Exception("todo: exception for UI pull request.");

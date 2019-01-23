@@ -66,7 +66,7 @@ namespace TecWare.PPSn.UI
 			if (parentPane == null)
 				throw new ArgumentNullException("parentPane");
 
-			this.Request = new BaseWebRequest(new Uri(fullUri, "."), Environment.Encoding);
+			this.Request = DEHttpClient.Create(new Uri(fullUri, "."), defaultEncoding: Environment.Encoding);
 
 			// create the control
 			if (paneData is XDocument xamlCode)
@@ -135,7 +135,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary></summary>
 		[LuaMember]
-		public BaseWebRequest Request { get; }
+		public DEHttpClient Request { get; }
 	} // class PpsGenericWpfChildPane 
 
 	#endregion
@@ -383,8 +383,8 @@ namespace TecWare.PPSn.UI
 		private LuaResult LuaRequirePane(LuaTable self, string path, LuaTable initialTable = null)
 		{
 			// get the current root
-			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
-			var fullUri = webRequest.GetFullUri(path);
+			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as DEHttpClient ?? Request;
+			var fullUri = webRequest.CreateFullUri(path);
 			var paneData = Environment.LoadPaneDataAsync(webRequest, initialTable ?? new LuaTable(), fullUri).AwaitTask();
 			return new LuaResult(new PpsGenericWpfChildPane(this, paneData, fullUri));
 		} // func LuaRequirePane
@@ -505,7 +505,7 @@ namespace TecWare.PPSn.UI
 			var paneFile = arguments.GetOptionalValue("Pane", String.Empty);
 			return String.IsNullOrEmpty(paneFile)
 				? (throwException ? throw new ArgumentException("Pane is missing.") : (Uri)null)
-				: Environment.Request.GetFullUri(paneFile); // prepare the base
+				: Environment.Request.CreateFullUri(paneFile); // prepare the base
 		} // func GetPaneUri
 
 		/// <summary>Compare the arguments.</summary>
@@ -543,7 +543,7 @@ namespace TecWare.PPSn.UI
 
 			// prepare the base
 			var paneUri = GetPaneUri(arguments, true);
-			Request = new BaseWebRequest(new Uri(paneUri, "."), Environment.Encoding);
+			Request = DEHttpClient.Create(new Uri(paneUri, "."), defaultEncoding: Environment.Encoding);
 
 			// Load the xaml file and code
 			var paneData = await Environment.LoadPaneDataAsync(Request, arguments, paneUri);
@@ -694,7 +694,7 @@ namespace TecWare.PPSn.UI
 			{
 				var creator = LuaWpfCreator.CreateFactory(Environment.LuaUI, typeof(PpsGenericWpfControl));
 				creator.SetTableMembers(t);
-				using (var xamlReader = new PpsXamlReader(creator.CreateReader(this), new PpsXamlReaderSettings() { Code = this, CloseInput = true, BaseUri = Request.BaseUri, ServiceProvider = this }))
+				using (var xamlReader = new PpsXamlReader(creator.CreateReader(this), new PpsXamlReaderSettings() { Code = this, CloseInput = true, BaseUri = Request.BaseAddress, ServiceProvider = this }))
 					returnValue = PpsXamlParser.LoadAsync<PpsGenericWpfControl>(xamlReader).AwaitTask();
 			}
 			else
@@ -794,10 +794,10 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Base web request, for the pane.</summary>
 		[LuaMember]
-		public BaseWebRequest Request { get; private set; }
+		public DEHttpClient Request { get; private set; }
 
 		/// <summary>BaseUri of the Wpf-Control</summary>
-		public Uri BaseUri { get => Request?.BaseUri; set => throw new NotSupportedException(); }
+		public Uri BaseUri { get => Request?.BaseAddress; set => throw new NotSupportedException(); }
 
 		/// <summary>Synchronization to the UI.</summary>
 		public Dispatcher Dispatcher => PaneHost.Dispatcher;

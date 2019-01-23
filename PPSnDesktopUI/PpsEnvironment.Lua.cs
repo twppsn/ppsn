@@ -68,7 +68,7 @@ namespace TecWare.PPSn
 	public interface IPpsLuaRequest
 	{
 		/// <summary>Implementes a redirect for the request call.</summary>
-		BaseWebRequest Request { get; }
+		DEHttpClient Request { get; }
 	} // interface IPpsLuaRequest
 
 	#endregion
@@ -619,7 +619,7 @@ namespace TecWare.PPSn
 		/// <param name="throwException">Throw an exception on fail</param>
 		/// <param name="arguments">Argument definition for the chunk.</param>
 		/// <returns>Compiled chunk</returns>
-		public async Task<LuaChunk> CompileAsync(BaseWebRequest request, Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		public async Task<LuaChunk> CompileAsync(DEHttpClient request, Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
 		{
 			if (request == null)
 				throw new ArgumentNullException(nameof(request));
@@ -629,8 +629,8 @@ namespace TecWare.PPSn
 			{
 				using (var r = await request.GetResponseAsync(source.ToString(), null))
 				{
-					var contentDisposition = r.GetContentDisposition(true);
-					using (var sr = request.GetTextReader(r, MimeTypes.Text.Plain))
+					var contentDisposition = r.GetContentDisposition();
+					using (var sr = await r.GetTextReaderAsync(MimeTypes.Text.Plain))
 						return await CompileAsync(sr, contentDisposition.FileName, throwException, arguments);
 				}
 			}
@@ -846,11 +846,11 @@ namespace TecWare.PPSn
 		private LuaResult LuaRequire(LuaTable self, string path)
 		{
 			// get the current root
-			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
+			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as DEHttpClient ?? Request;
 
 			if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) // load assembly
 			{
-				return new LuaResult(LoadAssemblyFromUri(new Uri(webRequest.BaseUri, new Uri(path, UriKind.Relative))));
+				return new LuaResult(LoadAssemblyFromUri(webRequest.CreateFullUri(path)));
 			}
 			else // load lua script
 			{
@@ -954,7 +954,7 @@ namespace TecWare.PPSn
 		/// <param name="arguments"></param>
 		/// <param name="paneUri"></param>
 		/// <returns></returns>
-		public async Task<object> LoadPaneDataAsync(BaseWebRequest request, LuaTable arguments, Uri paneUri)
+		public async Task<object> LoadPaneDataAsync(DEHttpClient request, LuaTable arguments, Uri paneUri)
 		{
 			try
 			{
@@ -964,13 +964,13 @@ namespace TecWare.PPSn
 					arguments["_filename"] = r.GetContentDisposition().FileName;
 
 					// check content
-					var contentType = r.GetContentType();
+					var contentType = r.Content.Headers.ContentType;
 					if (contentType.MediaType == MimeTypes.Application.Xaml) // load a xaml file
 					{
 						XDocument xamlContent;
 
 						// parse the xaml as xml document
-						using (var sr = request.GetTextReader(r, MimeTypes.Application.Xaml))
+						using (var sr = await r.GetTextReaderAsync(MimeTypes.Application.Xaml))
 						{
 							using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, paneUri.ToString()))
 								xamlContent = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
@@ -982,7 +982,7 @@ namespace TecWare.PPSn
 						|| contentType.MediaType == MimeTypes.Text.Plain) // load a code file
 					{
 						// load an compile the chunk
-						using (var sr = request.GetTextReader(r, null))
+						using (var sr = await r.GetTextReaderAsync(null))
 							return await CompileAsync(sr, paneUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
 					}
 					else
@@ -1266,7 +1266,8 @@ namespace TecWare.PPSn
 
 			string targetFileName;
 
-			using (var src = await Request.GetStreamAsync(requestUrl.ToString(), MimeTypes.Application.Pdf))
+			using (var r = await Request.GetResponseAsync(requestUrl.ToString(), MimeTypes.Application.Pdf))
+			using (var src = await r.Content.ReadAsStreamAsync())
 			{
 				// download file
 				var tempFileName = Path.GetTempFileName();

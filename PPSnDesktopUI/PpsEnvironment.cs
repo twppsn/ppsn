@@ -553,7 +553,7 @@ namespace TecWare.PPSn
 
 			// initialize local store
 			this.baseUri = InitProxy();
-			request = new BaseWebRequest(baseUri, Encoding);
+			request = DEHttpClient.Create(baseUri, defaultEncoding: Encoding);
 
 			// Register new Data Schemes from, the server
 			RegisterObjectInfoSchema(PpsMasterData.MasterDataSchema, 

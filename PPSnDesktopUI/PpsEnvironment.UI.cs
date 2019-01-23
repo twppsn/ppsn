@@ -74,8 +74,9 @@ namespace TecWare.PPSn
 		{
 			try
 			{
-				using (var r = await Request.GetResponseAsync(path, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml))
-				using (var xml = Request.GetXmlStream(r, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml))
+				var acceptedMimeType = isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml;
+				using (var r = await Request.GetResponseAsync(path, acceptedMimeType))
+				using (var xml = await r.GetXmlStreamAsync(acceptedMimeType))
 				{
 					var dt = DateTime.MinValue;
 					return new Tuple<XDocument, DateTime>(await Task.Run(() => XDocument.Load(xml)), dt);
@@ -93,7 +94,18 @@ namespace TecWare.PPSn
 		{
 			try
 			{
-				return await Request.GetXmlStreamAsync(path, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml, new XmlReaderSettings() { Async = true });
+				var acceptedMimeType = isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml;
+				using (var r = await Request.GetResponseAsync(path, acceptedMimeType))
+				{
+					return await r.GetXmlStreamAsync(acceptedMimeType,
+						new XmlReaderSettings()
+						{
+							Async = true,
+							IgnoreComments = !isXaml,
+							IgnoreWhitespace = !isXaml
+						}
+					);
+				}
 			}
 			catch (WebException e)
 			{
