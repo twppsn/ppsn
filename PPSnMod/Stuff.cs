@@ -300,13 +300,28 @@ namespace TecWare.PPSn.Server
 		/// <param name="command"></param>
 		/// <param name="innerException"></param>
 		public CommandException(DbCommand command, Exception innerException)
-			: base(innerException.Message, innerException)
+			: base(GetCleanMessageText(innerException.Message), innerException)
 		{
 			this.commandText = command.CommandText;
 		} // ctor
 
+		/// <summary>Give error code of inner exception.</summary>
+		public override int ErrorCode => InnerException is DbException dbx ? dbx.ErrorCode : -1;
+
 		/// <summary>Command text</summary>
 		public string CommandText => commandText;
+
+		private static string GetCleanMessageText(string message)
+		{
+			if (message.StartsWith("RAISERROR ", StringComparison.OrdinalIgnoreCase))
+			{
+				var pos = message.IndexOf(':');
+				return pos > 0 ? message.Substring(pos + 1).Trim() : message;
+			}
+			else
+				return message;
+		} // func GetCleanMessageText
+
 	} // class CommandException
 
 	#endregion
