@@ -1244,12 +1244,12 @@ namespace TecWare.PPSn.Data
 					args.Add(c);
 			}
 
-			if (args.Count > 1)
-				return new PpsDataFilterLogicExpression(Type, args.ToArray());
-			else if (args.Count == 1)
+			if (args.Count == 0)
+				return PpsDataFilterTrueExpression.Default;
+			else if (args.Count == 1 && (Type == PpsDataFilterExpressionType.And || Type == PpsDataFilterExpressionType.Or))
 				return args[0];
 			else
-				return PpsDataFilterTrueExpression.Default;
+				return new PpsDataFilterLogicExpression(Type, args.ToArray());
 		} // proc Reduce
 
 		/// <summary></summary>
