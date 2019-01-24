@@ -178,7 +178,7 @@ namespace TecWare.PPSn.Data
 			return sb.ToString();
 		} // func ParseConstant
 
-		private static PpsDataFilterCompareValue ParseCompareValue(string expression, IPropertyReadOnlyDictionary variables, ref int offset)
+		private static PpsDataFilterCompareValue ParseCompareValue(string expression, bool allowFields, IPropertyReadOnlyDictionary variables, ref int offset)
 		{
 			PpsDataFilterCompareValue value;
 
@@ -250,7 +250,18 @@ namespace TecWare.PPSn.Data
 				var startAt2 = offset;
 				while (offset < expression.Length && !(Char.IsWhiteSpace(expression[offset]) || expression[offset] == ')' || expression[offset] == '\'' || expression[offset] == '"'))
 					offset++;
-				value = startAt2 < offset ? new PpsDataFilterCompareTextValue(expression.Substring(startAt2, offset - startAt2)) : PpsDataFilterCompareNullValue.Default;
+
+				if (startAt2 < offset)
+				{
+					var textValue = expression.Substring(startAt2, offset - startAt2);
+					var textValueLength = textValue.Length;
+					if (allowFields && textValueLength > 1 && textValue[0] == ':')
+						value = new PpsDataFilterCompareFieldValue(textValue.Substring(1));
+					else
+						value = new PpsDataFilterCompareTextValue(textValue);
+				}
+				else
+					value = PpsDataFilterCompareNullValue.Default;
 			}
 
 			return value;
@@ -428,7 +439,7 @@ namespace TecWare.PPSn.Data
 					if (offset < expression.Length && !Char.IsWhiteSpace(expression[offset]))
 					{
 						var op = ParseCompareOperator(expression, ref offset); // parse the operator
-						var value = ParseCompareValue(expression, variables, ref offset); // parse the value
+						var value = ParseCompareValue(expression, true, variables, ref offset); // parse the value
 
 						// create expression
 						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, op, value));
@@ -444,7 +455,7 @@ namespace TecWare.PPSn.Data
 				else
 				{
 					offset = startAt; // nothing special try compare expression
-					var value = ParseCompareValue(expression, variables, ref offset);
+					var value = ParseCompareValue(expression, false, variables, ref offset);
 					if (value != PpsDataFilterCompareNullValue.Default)
 						compareExpressions.Add(new PpsDataFilterCompareExpression(null, PpsDataFilterCompareOperator.Contains, value));
 				}
@@ -485,6 +496,8 @@ namespace TecWare.PPSn.Data
 					return returnAtLeastTrueExpression ? True : null;
 				case string stringExpr:
 					return Parse(stringExpr);
+				case LuaTable table:
+					return PpsDataFilterExpression.FromTable(table);
 				default:
 					if (throwException)
 						throw new ArgumentException("Could not parse filter expression.");
@@ -517,6 +530,8 @@ namespace TecWare.PPSn.Data
 				{
 					case PpsDataFilterCompareValueType.Null:
 						return PpsDataFilterCompareNullValue.Default;
+					case PpsDataFilterCompareValueType.Field:
+						return new PpsDataFilterCompareFieldValue(value.ChangeType<string>());
 					case PpsDataFilterCompareValueType.Text:
 						return new PpsDataFilterCompareTextValue(value.ChangeType<string>());
 					case PpsDataFilterCompareValueType.Number:
@@ -548,7 +563,9 @@ namespace TecWare.PPSn.Data
 					case null:
 						return PpsDataFilterCompareNullValue.Default;
 					case string s:
-						return new PpsDataFilterCompareTextValue(s);
+						return s.Length > 1 && s[0] == ':'
+							? (PpsDataFilterCompareValue)new PpsDataFilterCompareFieldValue(s.Substring(1))
+							: (PpsDataFilterCompareValue)new PpsDataFilterCompareTextValue(s);
 					case int i:
 						return new PpsDataFilterCompareIntegerValue((long)i);
 					case long n:
@@ -567,13 +584,65 @@ namespace TecWare.PPSn.Data
 
 		#region -- FromTable ----------------------------------------------------------
 
+		private static PpsDataFilterExpressionType GetLogicExpression(object obj)
+		{
+			switch (obj)
+			{
+				case null:
+					return PpsDataFilterExpressionType.And;
+				case PpsDataFilterExpressionType t:
+					return t;
+				case string expr:
+					switch (expr)
+					{
+						case "and":
+							return PpsDataFilterExpressionType.And;
+						case "or":
+							return PpsDataFilterExpressionType.Or;
+						case "nand":
+							return PpsDataFilterExpressionType.NAnd;
+						case "nor":
+							return PpsDataFilterExpressionType.NOr;
+						default:
+							throw new ArgumentOutOfRangeException(nameof(expr), expr, "Unknown logic expression.");
+					}
+				default:
+					throw new ArgumentOutOfRangeException(nameof(obj), obj, "Unknown logic expression.");
+			}
+		} // func GetLogicExpression
+
+		private static PpsDataFilterExpression GetExpressionFromObject(object expr)
+			=> Parse(expr, false);
+
+		private static PpsDataFilterExpression GetExpressionFromKeyValue(KeyValuePair<string, object> expr)
+		{
+			if (expr.Value == null)
+				return null;
+
+			return Compare(expr.Key, PpsDataFilterCompareOperator.Equal, expr.Value);
+		} // func GetExpressionFromObject
+
 		/// <summary>Create a filter expression from a table.</summary>
 		/// <param name="expression"></param>
 		/// <returns></returns>
 		public static PpsDataFilterExpression FromTable(LuaTable expression)
 		{
-			throw new NotImplementedException();
-			/* {  COLUMN = VALUE, "Expr", {} } */
+			/* { [0] = "or",  COLUMN = VALUE, "Expr", {} } */
+
+			var method = GetLogicExpression(expression.GetArrayValue(0, rawGet: true));
+
+			// enumerate all members
+			var expr = new PpsDataFilterLogicExpression(method,
+				(
+					from kv in expression.Members
+					select GetExpressionFromKeyValue(kv)
+				).Concat(
+					from v in expression.ArrayList
+					select GetExpressionFromObject(v)
+				).Where(c => c != null).ToArray()
+			);
+
+			return expr.Reduce();
 		} // func FromTable
 
 		#endregion
@@ -652,7 +721,9 @@ namespace TecWare.PPSn.Data
 		/// <summary>A formatted Integer, p.e. D-01689 or 0.12.4310.234</summary>
 		Number,
 		/// <summary>A value which is presenting an amount.</summary>
-		Integer
+		Integer,
+		/// <summary>An other column.</summary>
+		Field
 	} // enum PpsDataFilterCompareValueType
 
 	#endregion
@@ -702,6 +773,33 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- class PpsDataFilterCompareFieldValue -----------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsDataFilterCompareFieldValue : PpsDataFilterCompareValue
+	{
+		private readonly string fieldName;
+
+		/// <summary></summary>
+		/// <param name="fieldName"></param>
+		public PpsDataFilterCompareFieldValue(string fieldName)
+		{
+			this.fieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		public override void ToString(StringBuilder sb)
+			=> sb.Append(':').Append(fieldName);
+
+		/// <summary></summary>
+		public string FieldName => fieldName;
+		/// <summary></summary>
+		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Field;
+	} // class PpsDataFilterCompareFieldValue
+
+	#endregion
+
 	#region -- class PpsDataFilterCompareTextValue ------------------------------------
 
 	/// <summary></summary>
@@ -713,7 +811,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="text"></param>
 		public PpsDataFilterCompareTextValue(string text)
 		{
-			this.text = text;
+			this.text = text ?? throw new ArgumentNullException(nameof(text));
 		} // ctor
 
 		/// <summary></summary>
@@ -1276,6 +1374,8 @@ namespace TecWare.PPSn.Data
 		{
 			switch (expression.Value.Type)
 			{
+				case PpsDataFilterCompareValueType.Field:
+					return CreateCompareFilterField(expression.Operand, expression.Operator, ((PpsDataFilterCompareFieldValue)expression.Value).FieldName);
 				case PpsDataFilterCompareValueType.Text:
 					return CreateCompareFilterText(expression.Operand, expression.Operator, ((PpsDataFilterCompareTextValue)expression.Value).Text);
 				case PpsDataFilterCompareValueType.Date:
@@ -1290,7 +1390,7 @@ namespace TecWare.PPSn.Data
 					throw new NotImplementedException();
 			}
 		} // func CreateCompareFilter
-
+				
 		private string CreateDefaultCompareValue(string columnName, PpsDataFilterCompareOperator op, string value, bool useContains)
 		{
 			switch (op)
@@ -1323,6 +1423,9 @@ namespace TecWare.PPSn.Data
 					throw new NotImplementedException();
 			}
 		} // func CreateDefaultCompareText
+
+		private string CreateCompareFilterField(string operand, PpsDataFilterCompareOperator op, string fieldName)
+			=> CreateDefaultCompareValue(operand, op, fieldName, false);
 
 		private string CreateCompareFilterText(string columnToken, PpsDataFilterCompareOperator op, string text)
 		{
@@ -1715,13 +1818,15 @@ namespace TecWare.PPSn.Data
 		} // func ConvertTo
 
 		private static Expression CreateCompareTextFilterStartsWith(Expression left, ConstantExpression right)
-			=> Expression.Call(
-				Expression.Coalesce(ConvertTo(left, typeof(string)), Expression.Constant(String.Empty)), stringStartsWithMethodInfo,
-					ConvertTo(right, typeof(string)),
-					Expression.Constant(StringComparison.OrdinalIgnoreCase)
-			);
+		{
+			return Expression.Call(
+				  Expression.Coalesce(ConvertTo(left, typeof(string)), Expression.Constant(String.Empty)), stringStartsWithMethodInfo,
+					  ConvertTo(right, typeof(string)),
+					  Expression.Constant(StringComparison.OrdinalIgnoreCase)
+			  );
+		} // func CreateCompareTextFilterStartsWith
 
-		private static Expression CreateCompareTextFilterContains(ExpressionType expressionType, Expression left, ConstantExpression right)
+		private static Expression CreateCompareTextFilterContains(ExpressionType expressionType, Expression left, Expression right)
 			=> Expression.MakeBinary(expressionType,
 				Expression.Call(
 					Expression.Coalesce(ConvertTo(left, typeof(string)), Expression.Constant(String.Empty)), stringIndexOfMethodInfo,
@@ -1731,34 +1836,46 @@ namespace TecWare.PPSn.Data
 				Expression.Constant(0)
 			);
 
-		private static Expression CreateCompareTextFilterCompare(ExpressionType expressionType, Expression left, ConstantExpression right)
-			=> Expression.MakeBinary(expressionType,
-				Expression.Call(stringCompareMethodInfo,
-						ConvertTo(left, typeof(string)),
-						ConvertTo(right, typeof(string)),
-						Expression.Constant(StringComparison.OrdinalIgnoreCase)
-					),
-					Expression.Constant(0)
-				);
+		private static Expression CreateCompareTextFilterCompare(ExpressionType expressionType, Expression left, Expression right)
+		{
+			return Expression.MakeBinary(expressionType,
+				  Expression.Call(stringCompareMethodInfo,
+						  ConvertTo(left, typeof(string)),
+						  ConvertTo(right, typeof(string)),
+						  Expression.Constant(StringComparison.OrdinalIgnoreCase)
+					  ),
+					  Expression.Constant(0)
+				  );
+		} // func CreateCompareTextFilterCompare
 
-		private static Expression CreateCompareFilterForProperty(PpsDataFilterCompareExpression expression, Expression left)
+		private static Expression CreateCompareFilterForTextProperty(PpsDataFilterCompareExpression expression, Expression left, Expression right)
+		{
+			switch (expression.Operator)
+			{
+				case PpsDataFilterCompareOperator.Contains:
+					return CreateCompareTextFilterContains(ExpressionType.GreaterThanOrEqual, left, right);
+				case PpsDataFilterCompareOperator.NotContains:
+					return CreateCompareTextFilterContains(ExpressionType.LessThan, left, right);
+				default:
+					return CreateCompareTextFilterCompare(GetBinaryExpressionType(expression), left, right);
+			}
+		} // func CreateCompareFilterForTextProperty
+
+		private Expression CreateCompareFilterForProperty(PpsDataFilterCompareExpression expression, Expression left)
 		{
 			// right site depends of the operator
 			switch (expression.Value.Type)
 			{
-				case PpsDataFilterCompareValueType.Text:
+				case PpsDataFilterCompareValueType.Field:
 					{
-						var right = Expression.Constant(((PpsDataFilterCompareTextValue)expression.Value).Text);
-						switch (expression.Operator)
-						{
-							case PpsDataFilterCompareOperator.Contains:
-								return CreateCompareTextFilterContains(ExpressionType.GreaterThanOrEqual, left, right);
-							case PpsDataFilterCompareOperator.NotContains:
-								return CreateCompareTextFilterContains(ExpressionType.LessThan, left, right);
-							default:
-								return CreateCompareTextFilterCompare(GetBinaryExpressionType(expression), left, right);
-						}
+						var right = GetProperty(((PpsDataFilterCompareFieldValue)expression.Value).FieldName);
+						if (left.Type == typeof(string))
+							return CreateCompareFilterForTextProperty(expression, left, right);
+						else
+							return Expression.MakeBinary(GetBinaryExpressionType(expression), ConvertTo(left, typeof(long)), right);
 					}
+				case PpsDataFilterCompareValueType.Text:
+					return CreateCompareFilterForTextProperty(expression, left, Expression.Constant(((PpsDataFilterCompareTextValue)expression.Value).Text));
 				case PpsDataFilterCompareValueType.Integer:
 					{
 						var right = Expression.Constant(((PpsDataFilterCompareIntegerValue)expression.Value).Value);

@@ -162,6 +162,23 @@ namespace TecWare.PPSn.Server.Data
 		IDataRowEnumerable IDataRowEnumerable.ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
 			=> ApplyFilter(expression, lookupNative);
 
+
+		/// <summary>Apply a filter to the selector.</summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		public PpsDataSelector ApplyFilter(object expression)
+		{
+			switch (expression)
+			{
+				case string expr:
+					return ApplyFilter(expr, null);
+				case LuaTable table:
+					return ApplyFilter(table);
+				default:
+					throw new ArgumentException(nameof(expression));
+			}
+		} // func ApplyFilter
+
 		/// <summary>Apply a filter to the selector.</summary>
 		/// <param name="expression">Filter expression as an string.</param>
 		/// <param name="lookupNative">Native filter lookup.</param>
@@ -169,11 +186,11 @@ namespace TecWare.PPSn.Server.Data
 		public PpsDataSelector ApplyFilter(string expression, Func<string, string> lookupNative)
 			=> ApplyFilter(PpsDataFilterExpression.Parse(expression), lookupNative);
 
-		///// <summary>Apply a filter to the selector.</summary>
-		///// <param name="expression"></param>
-		///// <returns></returns>
-		//public PpsDataSelector ApplyFilter(LuaTable expression)
-		//	=> ApplyFilter(PpsDataFilterExpression.FromTable(expression));
+		/// <summary>Apply a filter to the selector.</summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		public PpsDataSelector ApplyFilter(LuaTable expression)
+			=> ApplyFilter(PpsDataFilterExpression.FromTable(expression));
 
 		/// <summary>Apply a filter to the selector.</summary>
 		/// <param name="expression">Filter expression.</param>
