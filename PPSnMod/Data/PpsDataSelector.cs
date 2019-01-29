@@ -183,7 +183,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="expression">Filter expression as an string.</param>
 		/// <param name="lookupNative">Native filter lookup.</param>
 		/// <returns>Return a new selector with the attached filter.</returns>
-		public PpsDataSelector ApplyFilter(string expression, Func<string, string> lookupNative)
+		public PpsDataSelector ApplyFilter(string expression, Func<string, string> lookupNative = null)
 			=> ApplyFilter(PpsDataFilterExpression.Parse(expression), lookupNative);
 
 		/// <summary>Apply a filter to the selector.</summary>
