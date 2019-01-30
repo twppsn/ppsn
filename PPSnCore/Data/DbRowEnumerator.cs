@@ -101,22 +101,20 @@ namespace TecWare.PPSn.Data
 		private sealed class DbDataRow : DynamicDataRow
 		{
 			private readonly DbRowEnumerator enumerator;
-			private readonly object[] values;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
-			public DbDataRow(DbRowEnumerator enumerator, object[] values)
+			public DbDataRow(DbRowEnumerator enumerator)
 			{
 				this.enumerator = enumerator ?? throw new ArgumentNullException(nameof(enumerator));
-				this.values = values ?? throw new ArgumentNullException(nameof(values));
 			} // ctor
 
 			#endregion
 
 			#region -- override -------------------------------------------------------
 
-			public override object this[int index] => values[index];
-			public override bool IsDataOwner => true;
+			public override object this[int index] => enumerator.GetValue(index);
+			public override bool IsDataOwner => false;
 
 			public override IReadOnlyList<IDataColumn> Columns => enumerator.Columns;
 
@@ -129,8 +127,10 @@ namespace TecWare.PPSn.Data
 		private readonly DbCommand command;
 		private DbDataReader reader;
 		private readonly bool leaveOpen;
-		private ReadingState state;
-		private IDataRow currentRow;
+		private ReadingState state = ReadingState.Unread;
+
+		private readonly DbDataRow dataRowProxy;
+
 		private readonly Lazy<IDataColumn[]> columns;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -142,6 +142,7 @@ namespace TecWare.PPSn.Data
 			this.leaveOpen = leaveOpen;
 
 			this.columns = new Lazy<IDataColumn[]>(RetrieveColumnDescriptions);
+			this.dataRowProxy = new DbDataRow(this);
 		} // ctor
 
 		/// <summary></summary>
@@ -229,27 +230,10 @@ namespace TecWare.PPSn.Data
 					if (!reader.Read())
 						goto case ReadingState.Complete;
 
-					var values = new object[reader.FieldCount];
-					for (var i = 0; i < reader.FieldCount; i++)
-					{
-						if (reader.IsDBNull(i))
-							values[i] = null;
-						else
-						{
-							var o = reader.GetValue(i);
-							if (o is string s)
-								values[i] = s.TrimEnd(' ');
-							else
-								values[i] = o;
-						}
-					}
-					currentRow = new DbDataRow(this, values);
-
 					return true;
 
 				case ReadingState.Complete:
 					state = ReadingState.Complete;
-					currentRow = null;
 					return false;
 				default:
 					throw new InvalidOperationException("The state of the object is invalid.");
@@ -268,6 +252,21 @@ namespace TecWare.PPSn.Data
 				throw new InvalidOperationException("The state of the object forbids the calling of this method.");
 		} // proc Reset
 
+		private object GetValue(int index)
+		{
+			CheckDisposed();
+			if (reader.IsDBNull(index))
+				return null;
+			else
+			{
+				var o = reader.GetValue(index);
+				if (o is string s)
+					return s.TrimEnd(' ');
+				else
+					return o;
+			}
+		} // func GetValue
+
 		/// <summary></summary>
 		public IDataRow Current
 		{
@@ -276,7 +275,7 @@ namespace TecWare.PPSn.Data
 				CheckDisposed();
 				if (state != ReadingState.FetchRows)
 					throw new InvalidOperationException("The state of the object forbids the retrieval of this property.");
-				return currentRow;
+				return dataRowProxy;
 			}
 		} // prop Current
 

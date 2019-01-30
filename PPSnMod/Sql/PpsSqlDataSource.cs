@@ -1256,8 +1256,6 @@ namespace TecWare.PPSn.Server.Sql
 				if (sqlSelector.DataSource != DataSource) // teste datasource
 					return base.ApplyJoin(sqlSelector, joinType, statements);
 
-
-
 				return new PpsSqlDataSelector(SqlConnection,
 					AliasColumns.Concat(sqlSelector.AliasColumns).ToArray(),
 					from.Combine(sqlSelector.from, aliasName, joinType, statements),
