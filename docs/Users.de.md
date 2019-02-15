@@ -12,10 +12,10 @@ Es gibt zwei Nutzertypen, Datenbank-Nutzer und Domain-Nutzer.
 
 ### Datenbank
 
-Der Dienst verarbeitet intern die Rückgabe von `dbo.serverlogins`.
+Der Dienst verarbeitet intern die RÃ¼ckgabe von `dbo.serverlogins`.
 
 :::warn
-Änderungen an einem Nutzer muss die Spalte `LoginVersion` erhöhen.
+Ã„nderungen an einem Nutzer muss die Spalte `LoginVersion` erhÃ¶hen.
 :::
 
 ### SimpleDebug
@@ -28,4 +28,11 @@ Auflistung der Nutzer:
 :listget tw_users
 ```
 
-Aktualisierung kann durch `RefreshUsers` angeschoben werden.
+Aktualisierung kann durch `RefreshUsers` angeschoben werden. Dies
+kann auch durch die Action `refreshUsers` erfolgen.
+
+```
+:use /ppsn
+:action refreshUsers
+```
+
