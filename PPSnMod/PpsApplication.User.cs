@@ -264,11 +264,11 @@ namespace TecWare.PPSn.Server
 
 			#region -- UpdateData -----------------------------------------------------
 
-			public void UpdateData(IDataRow r)
+			internal void UpdateData(IDataRow r, bool force)
 			{
 				// check if we need a reload
 				var loginVersion = r.GetProperty("LoginVersion", 0);
-				if (loginVersion == currentVersion)
+				if (!force && loginVersion == currentVersion)
 					return;
 
 				// currently service is for local stuff
@@ -284,7 +284,7 @@ namespace TecWare.PPSn.Server
 				if (r.TryGetProperty<string>(UserContextInitials, out var initials))
 					SetMemberValue(UserContextInitials, initials);
 
-				this.securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", String.Empty), SecurityUser);
+				securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", String.Empty), SecurityUser);
 			} // proc UpdateData
 
 			public static PpsUserIdentity CreateUserIdentity(IDataRow r)
@@ -309,23 +309,30 @@ namespace TecWare.PPSn.Server
 
 			#endregion
 
+			/// <summary>Access application.</summary>
 			[LuaMember("App")]
 			public PpsApplication Application => application;
 
-			[LuaMember("UserId")]
+			/// <summary>Database ID of the user.</summary>
+			[LuaMember("UserId"), DEListTypeProperty("@id")]
 			public long Id => userId;
-			[LuaMember("UserName")]
+			/// <summary>Name of the user</summary>
+			[LuaMember("UserName"), DEListTypeProperty("@name")]
 			public string Name => userIdentity.Name;
 
 			string IDEUser.DisplayName => userIdentity.Name;
 			IIdentity IDEUser.Identity => userIdentity;
 
+			/// <summary>Return all security tokens in a semicolon separeted list.</summary>
+			[LuaMember, DEListTypeProperty("groups")]
+			public string SecurityTokens => String.Join(";", securityTokens);
+
 			[LuaMember]
 			public LoggerProxy Log => log;
 
-			/// <summary></summary>
+			/// <summary>Return the user identity token.</summary>
 			public PpsUserIdentity User => userIdentity;
-			/// <summary></summary>
+			/// <summary>Return the user's local identity.</summary>
 			public PpsUserIdentity LocalIdentity => localIdentity;
 		} // class PrivateUserData
 
@@ -528,6 +535,9 @@ namespace TecWare.PPSn.Server
 			public bool IsInRole(string role)
 				=> privateUser.DemandToken(role);
 
+			public bool TryDemandToken(string securityToken)
+				=> privateUser.DemandToken(securityToken);
+
 			public bool TryGetProperty(string name, out object value)
 			{
 				value = privateUser.GetMemberValue(name);
@@ -544,6 +554,9 @@ namespace TecWare.PPSn.Server
 
 			public long UserId => privateUser.Id;
 			public string UserName => privateUser.Name;
+
+			/// <summary>Return user properties</summary>
+			public LuaTable Properties => privateUser;
 
 			public bool IsDisposed => isDisposed;
 
@@ -567,6 +580,8 @@ namespace TecWare.PPSn.Server
 		{
 			systemUser = new PrivateUserData(this, sysUserId, null);
 			userList = new DEList<PrivateUserData>(this, "tw_users", "User list");
+
+			PublishItem(new DEConfigItemPublicAction("refreshUsers") { DisplayName = "user-refresh" });
 		} // proc InitUser
 
 		private void BeginReadConfigurationUser(IDEConfigLoading config)
@@ -576,16 +591,16 @@ namespace TecWare.PPSn.Server
 		private void BeginEndConfigurationUser(IDEConfigLoading config)
 		{
 			// read the user data
-			RegisterInitializationTask(11000, "Register users", () => RefreshUserDataAsync());
+			RegisterInitializationTask(11000, "Register users", () => RefreshUserDataAsync(true));
 		} // proc BeginEndConfigurationUser
 
-		private async Task RefreshUserDataAsync()
+		private async Task RefreshUserDataAsync(bool force)
 		{
 			bool UpdateUserData(PrivateUserData userData, IDataRow r)
 			{
 				try
 				{
-					userData.UpdateData(r);
+					userData.UpdateData(r, force);
 					return true;
 				}
 				catch (Exception e)
@@ -636,6 +651,14 @@ namespace TecWare.PPSn.Server
 		private void DoneUser()
 		{
 		} // proc DoneUser
+
+		/// <summary>Force refresh of all users</summary>
+		[
+			LuaMember,
+			DEConfigHttpAction("refreshUsers", IsSafeCall = true, SecurityToken = "desSys")
+		]
+		public void RefreshUsers(bool force = true)
+			=> Task.Run(new Action(RefreshUserDataAsync(force).Wait)).Wait();
 
 		#endregion
 

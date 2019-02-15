@@ -398,6 +398,11 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		PpsIntegratedCredentials GetLocalCredentials();
 
+		/// <summary>>Determines whether the current user belongs to the specified security token.</summary>
+		/// <param name="securityToken"></param>
+		/// <returns></returns>
+		bool TryDemandToken(string securityToken);
+
 		/// <summary>UserId of the user in the main database.</summary>
 		long UserId { get; }
 		/// <summary>Name (display info) of the current user.</summary>
