@@ -7,6 +7,7 @@
 		,s.[type]		AS LoginType
 		,s.name			AS [Login]
 		,CASE type WHEN 'S' THEN loginproperty(s.name, 'PasswordHash') ELSE NULL END AS LoginHash
+		,u.Identicon	AS [Identicon]
 		,p.Id			AS [KtKtId]
 		,pp.Id			AS [PersId]
 	FROM dbo.[User] AS u 

@@ -40,6 +40,8 @@ namespace TecWare.PPSn.Server
 		public const string UserContextFullName = "FullName";
 		/// <summary>User context optional wellknown property: Initals of the contact or user.</summary>
 		public const string UserContextInitials = "Initials";
+		/// <summary>User context optional wellknown property: User symbol</summary>
+		public const string UserContextIdenticon = "Identicon";
 
 		private const int noUserId = -1;
 		private const int sysUserId = Int32.MinValue;
@@ -283,6 +285,8 @@ namespace TecWare.PPSn.Server
 					SetMemberValue(UserContextPersId, persId);
 				if (r.TryGetProperty<string>(UserContextInitials, out var initials))
 					SetMemberValue(UserContextInitials, initials);
+				if (r.TryGetProperty<int>(UserContextIdenticon, out var identicon))
+					SetMemberValue(UserContextIdenticon, identicon);
 
 				securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", String.Empty), SecurityUser);
 			} // proc UpdateData
@@ -326,6 +330,8 @@ namespace TecWare.PPSn.Server
 			/// <summary>Return all security tokens in a semicolon separeted list.</summary>
 			[LuaMember, DEListTypeProperty("groups")]
 			public string SecurityTokens => String.Join(";", securityTokens);
+
+			string[] IDEUser.SecurityTokens => securityTokens;
 
 			[LuaMember]
 			public LoggerProxy Log => log;
