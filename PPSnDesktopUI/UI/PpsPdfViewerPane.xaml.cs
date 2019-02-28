@@ -17,13 +17,11 @@ using System;
 using System.Collections;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -41,7 +39,8 @@ namespace TecWare.PPSn.UI
 		private readonly IPpsWindowPaneHost paneHost;
 
 		private PdfReader loadedDocument = null;
-		private IPpsObjectDataAccess objectDataAccess = null;
+		private IPpsDataInfo dataInfo = null;
+		private IPpsDataObject dataAccess = null;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -81,15 +80,16 @@ namespace TecWare.PPSn.UI
 					using (var bar = this.DisableUI(String.Format("Lade Pdf-Datei ({0})...", fileName)))
 						SetLoadedDocument(await LoadDocumentFromFileNameAsync(fileName)); // parse pdf in background
 					break;
-				case IPpsObject obj: // open a internal object
-					using (var bar = this.DisableUI(String.Format("Lade Pdf-Dokument ({0})...", obj.Nr)))
+				case IPpsDataInfo info: // open a internal object
+					using (var bar = this.DisableUI(String.Format("Lade Pdf-Dokument ({0})...", info.Name)))
 					{
-						// create access
-						var dataObject = await obj.GetDataAsync();
-						objectDataAccess = await dataObject.AccessAsync();
+						dataInfo = info;
 
-						objectDataAccess.DisableUI = () => this.DisableUI("Pdf-Dokument wird bearbeitet...");
-						objectDataAccess.DataChanged += async (sender, e) => await LoadDocumentFromObjectAsync();
+						// create access
+						dataAccess = await info.LoadAsync();
+						
+						dataAccess.DisableUI = () => this.DisableUI("Pdf-Dokument wird bearbeitet...");
+						dataAccess.DataChanged += async (sender, e) => await LoadDocumentFromObjectAsync();
 
 						await LoadDocumentFromObjectAsync();
 					}
@@ -106,20 +106,20 @@ namespace TecWare.PPSn.UI
 
 		private async Task LoadDocumentFromObjectAsync()
 		{
-			if (objectDataAccess.ObjectData is IPpsBlobObjectData blobData)
+			if (dataAccess.Data is IPpsDataStream stream)
 			{
-				var src = blobData.OpenStream(FileAccess.Read);
+				var src = stream.OpenStream(FileAccess.Read);
 				try
 				{
 					if (src.CanRead && src.CanSeek) // use file stream
-						SetLoadedDocument(await Task.Run(() => PdfReader.Open(src, objectDataAccess.ObjectData.Object.GetFileName())));
+						SetLoadedDocument(await Task.Run(() => PdfReader.Open(src, dataInfo.Name)));
 					else // cache data in a file stream
 					{
 						var bytes = await src.ReadInArrayAsync();
-						SetLoadedDocument(await Task.Run(() => PdfReader.Open(bytes, name: objectDataAccess.ObjectData.Object.GetFileName())));
+						SetLoadedDocument(await Task.Run(() => PdfReader.Open(bytes, name: dataInfo.Name)));
 					}
 
-					UpdateObject(objectDataAccess.ObjectData.Object);
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IPpsWindowPane.CurrentData)));
 				}
 				catch
 				{
@@ -140,17 +140,6 @@ namespace TecWare.PPSn.UI
 			SubTitle = pdf.Name;
 		} // proc SetLoadedDocument
 
-		private void UpdateObject(IPpsObject obj)
-		{
-			// todo: bade code
-			//var wnd = (PpsWindow)Window.GetWindow(this);
-			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-			((dynamic)wnd).CharmObject = obj;
-
-			// search for more:
-			// ((dynamic)wnd).CharmObject = 
-		} // proc UpdateObject
-
 		private bool ClosePdf()
 		{
 			// clear document
@@ -158,11 +147,12 @@ namespace TecWare.PPSn.UI
 			// close pdf
 			loadedDocument?.Dispose();
 			// close object access
-			if (objectDataAccess != null)
+			if (dataAccess != null)
 			{
-				objectDataAccess.Dispose();
-				objectDataAccess = null;
+				dataAccess.Dispose();
+				dataAccess = null;
 			}
+			dataInfo = null;
 			return true;
 		} // func ClosePdf
 
@@ -243,6 +233,8 @@ namespace TecWare.PPSn.UI
 		object IPpsWindowPane.Control => this;
 		IPpsWindowPaneManager IPpsWindowPane.PaneManager => paneManager;
 		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
+		string IPpsWindowPane.HelpKey => null;
+		IPpsDataInfo IPpsWindowPane.CurrentData => dataInfo;
 
 		#endregion
 

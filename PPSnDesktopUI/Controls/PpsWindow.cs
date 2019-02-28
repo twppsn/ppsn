@@ -60,7 +60,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>GlowColor when window is inactive.</summary>
 		public static readonly DependencyProperty InactiveGlowColorProperty = DependencyProperty.Register("InactiveGlowColor", typeof(Color), typeof(PpsWindow), new FrameworkPropertyMetadata(Colors.LightGray, new PropertyChangedCallback(OnGlowColorChanged)));
 
-		private PpsEnvironment environment;
+		private PpsShellWpf shell;
 
 		/// <summary>Window</summary>
 		public PpsWindow()
@@ -75,8 +75,8 @@ namespace TecWare.PPSn.Controls
 					new CommandBinding(CloseCommand, (sender, e) => Close())
 				});
 
-			CommandManager.AddExecutedHandler(this, Environment.DefaultExecutedHandler);
-			CommandManager.AddCanExecuteHandler(this, Environment.DefaultCanExecuteHandler);
+			CommandManager.AddExecutedHandler(this, Shell.DefaultExecutedHandler);
+			CommandManager.AddCanExecuteHandler(this, Shell.DefaultCanExecuteHandler);
 		} // ctor
 
 		/// <summary>Caption clicked</summary>
@@ -85,13 +85,13 @@ namespace TecWare.PPSn.Controls
 		}
 
 		/// <summary>Current environment of the window.</summary>
-		public PpsEnvironment Environment
+		public PpsShellWpf Shell
 		{
 			get
 			{
-				if (environment == null)
-					environment = PpsEnvironment.GetEnvironment(this);
-				return environment;
+				if (shell == null)
+					shell = PpsShellWpf.GetShell(this);
+				return shell;
 			}
 		} // prop Environment
 	} // class PpsWindow
@@ -103,8 +103,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsWindowApplicationSettings : ApplicationSettingsBase
 	{
-		private PpsWindow owner;
-		private DispatcherTimer persistTimer;
+		private readonly PpsWindow owner;
+		private readonly DispatcherTimer persistTimer;
 		private readonly bool isResizeable;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -115,8 +115,9 @@ namespace TecWare.PPSn.Controls
 		public PpsWindowApplicationSettings(PpsWindow owner, string appSettingsKey = "")
 		{
 			this.owner = owner;
-			this.isResizeable = owner.ResizeMode != ResizeMode.NoResize;
-			this.SettingsKey = appSettingsKey;
+
+			isResizeable = owner.ResizeMode != ResizeMode.NoResize;
+			SettingsKey = appSettingsKey;
 
 			if (UpgradeSettings)
 			{
@@ -124,7 +125,7 @@ namespace TecWare.PPSn.Controls
 				this[nameof(UpgradeSettings)] = false;
 			}
 
-			this.persistTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10000), DispatcherPriority.ApplicationIdle, (sender, e) => Save(), owner.Dispatcher);
+			persistTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10000), DispatcherPriority.ApplicationIdle, (sender, e) => Save(), owner.Dispatcher);
 			this.owner.Closed += (sender, e) =>
 			{
 				if (persistTimer.IsEnabled) // force save on close
@@ -154,8 +155,8 @@ namespace TecWare.PPSn.Controls
 
 			if (isResizeable)
 			{
-				InitWindowPlacementProperty(Window.WidthProperty, nameof(Width));
-				InitWindowPlacementProperty(Window.HeightProperty, nameof(Height));
+				InitWindowPlacementProperty(FrameworkElement.WidthProperty, nameof(Width));
+				InitWindowPlacementProperty(FrameworkElement.HeightProperty, nameof(Height));
 			}
 
 			// must be last, because of the maximized state will only appear on the primary screen

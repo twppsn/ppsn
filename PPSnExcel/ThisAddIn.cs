@@ -23,13 +23,12 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Office.Tools.Excel;
 using Neo.IronLua;
-using TecWare.DE.Data;
 using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
-	public partial class ThisAddIn : IWin32Window, IPpsShell
+	public partial class ThisAddIn : IPpsFormsApplication
 	{
 		#region -- enum RefreshContext ------------------------------------------------
 
@@ -65,107 +64,6 @@ namespace PPSnExcel
 		{
 		} // event ThisAddIn_Shutdown
 
-		#region -- ShowMessage, ShowException -----------------------------------------
-
-		IEnumerable<IDataRow> IPpsShell.GetViewData(PpsShellGetList arguments)
-			=> throw new NotSupportedException();
-
-		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-		{
-			if (exception is ExcelException ee)
-				MessageBox.Show(this, alternativeMessage ?? exception.Message, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-			else
-				MessageBox.Show(this, alternativeMessage ?? exception.ToString());
-		} // proc ShowException
-
-		public void ShowMessage(string message)
-			=> MessageBox.Show(this, message, "PPSnExcel", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-		public Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-			=> InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
-
-		public Task ShowMessageAsync(string message)
-			=> InvokeAsync(() => ShowMessage(message));
-
-		#endregion
-
-		#region -- Threading helper ---------------------------------------------------
-
-		public void Run(Func<Task> t)
-			=> waitForm.Run(t);
-
-		public T Run<T>(Func<Task<T>> t)
-			=> waitForm.Run(t).Result;
-
-		public void Await(Task task)
-			=> waitForm.Await(task);
-
-		public T Await<T>(Task<T> task)
-		{
-			Await((Task)task);
-			return task.Result;
-		} // func Await
-
-		public void Invoke(System.Action action)
-		{
-			if (waitForm.InvokeRequired)
-				waitForm.Invoke(action);
-			else
-				action();
-		} // proc Invoke
-
-		public Task InvokeAsync(System.Action action)
-		{
-			if (InvokeRequired)
-			{
-				return Task.Factory.FromAsync(
-					waitForm.BeginInvoke(action),
-					waitForm.EndInvoke
-				);
-			}
-			else
-			{
-				action();
-				return Task.CompletedTask;
-			}
-		} // proc Invoke
-
-		public T Invoke<T>(Func<T> func)
-		{
-			if (waitForm.InvokeRequired)
-				return (T)waitForm.Invoke(func);
-			else
-				return func();
-		} // proc Invoke
-
-		public Task<T> InvokeAsync<T>(Func<T> func)
-		{
-			if (InvokeRequired)
-			{
-				return Task.Factory.FromAsync(
-					waitForm.BeginInvoke(func),
-					ar => (T)waitForm.EndInvoke(ar)
-				);
-			}
-			else
-				return Task.FromResult(func());
-		} // proc Invoke
-
-		public void BeginInvoke(System.Action action)
-		{
-			if (InvokeRequired)
-				waitForm.BeginInvoke(action);
-			else
-				action();
-		} // proc BeginInvoke
-
-		public IProgressBar CreateAwaitProgress()
-			=> waitForm.CreateProgress();
-
-		private bool InvokeRequired => waitForm.InvokeRequired; // Thread.CurrentThread.ManagedThreadId != mainThreadId;
-
-		#endregion
-
 		#region -- Environment Handling -----------------------------------------------
 
 		private PpsEnvironment FindOrCreateEnvironment(PpsEnvironmentInfo info)
@@ -173,7 +71,7 @@ namespace PPSnExcel
 			var env = GetEnvironmentFromInfo(info);
 			if (env == null)
 			{
-				env = new PpsEnvironment(this, info);
+				env = new PpsEnvironment(lua, this, info);
 				openEnvironments.Add(env);
 			}
 			return env;
@@ -183,46 +81,48 @@ namespace PPSnExcel
 		{
 			if (environment != null
 				&& (environment.IsAuthentificated // is authentificated
-				|| Await(environment.LoginAsync(this)))) // try to authentificate the environment
+				|| environment.Await(environment.LoginAsync(this)))) // try to authentificate the environment
 				return environment;
 			else
 				return null;
 		} // func AuthentificateEnvironment
 
 		public PpsEnvironment FindEnvironment(string name, Uri uri)
-			=> Invoke(() =>
-			{
-				PpsEnvironment envByName = null;
-				PpsEnvironmentInfo infoByName = null;
-				PpsEnvironmentInfo infoByUri = null;
+		{
+			return (PpsEnvironment)waitForm.Invoke(new Func<PpsEnvironment>(() =>
+		   {
+			   PpsEnvironment envByName = null;
+			   PpsEnvironmentInfo infoByName = null;
+			   PpsEnvironmentInfo infoByUri = null;
 
-				foreach (var oe in openEnvironments)
-				{
-					if (oe.Info.Name == name)
-					{
-						envByName = oe;
-						break;
-					}
-				}
+			   foreach (var oe in openEnvironments)
+			   {
+				   if (oe.Info.Name == name)
+				   {
+					   envByName = oe;
+					   break;
+				   }
+			   }
 
-				if (envByName != null)
-					return AuthentificateEnvironment(envByName);
+			   if (envByName != null)
+				   return AuthentificateEnvironment(envByName);
 
-				foreach (var info in PpsEnvironmentInfo.GetLocalEnvironments())
-				{
-					if (info.Name == name)
-					{
-						infoByName = info;
-						break;
-					}
-					else if (info.Uri == uri)
-					{
-						infoByUri = info;
-					}
-				}
+			   foreach (var info in PpsEnvironmentInfo.GetLocalEnvironments())
+			   {
+				   if (info.Name == name)
+				   {
+					   infoByName = info;
+					   break;
+				   }
+				   else if (info.Uri == uri)
+				   {
+					   infoByUri = info;
+				   }
+			   }
 
-				return AuthentificateEnvironment(FindOrCreateEnvironment(infoByName ?? infoByUri)) ?? CurrentEnvironment;
-			});
+			   return AuthentificateEnvironment(FindOrCreateEnvironment(infoByName ?? infoByUri)) ?? CurrentEnvironment;
+		   }));
+		} // func FindEnvironment
 
 		public void ActivateEnvironment(PpsEnvironmentInfo info)
 		{
@@ -281,7 +181,7 @@ namespace PPSnExcel
 			if (range.ListObject != null)
 				throw new ExcelException("Tabelle darf nicht innerhalb einer anderen Tabelle eingefügt werden.");
 
-			using (var progress = CreateAwaitProgress())
+			using (var progress = CreateProgress())
 			{
 				progress.Report(String.Format("Importiere '{0}'...", reportName));
 
@@ -291,7 +191,7 @@ namespace PPSnExcel
 
 		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook)
 		{
-			using (var progress = CreateAwaitProgress())
+			using (var progress = CreateProgress())
 			{
 				progress.Report("Aktualisiere Tabellen...");
 
@@ -326,7 +226,7 @@ namespace PPSnExcel
 
 		private async Task RefreshTableAsync(Excel.ListObject _xlList, bool refreshColumnLayout)
 		{
-			using (var progress = CreateAwaitProgress())
+			using (var progress = CreateProgress())
 			{
 				var xlList = Globals.Factory.GetVstoObject(_xlList);
 
@@ -385,20 +285,66 @@ namespace PPSnExcel
 
 		#endregion
 
+		#region -- IPpsFormsApplication -----------------------------------------------
+
+		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		{
+			if (exception is ExcelException ee)
+				MessageBox.Show(this, alternativeMessage ?? exception.Message, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			else
+				MessageBox.Show(this, alternativeMessage ?? exception.ToString());
+		} // proc ShowException
+
+		public void ShowMessage(string message)
+			=> MessageBox.Show(this, message, "PPSnExcel", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+		public void Await(Task t)
+			=> waitForm.Await(t);
+
+		public IAsyncResult BeginInvoke(Delegate method, object[] args)
+			=> waitForm.BeginInvoke(method, args);
+
+		public object EndInvoke(IAsyncResult result)
+			=> waitForm.EndInvoke(result);
+
+		public object Invoke(Delegate method, object[] args)
+			=> waitForm.Invoke(method, args);
+
+		public IPpsProgress CreateProgress(bool blockUI = true)
+			=> waitForm.CreateProgress();
+
+		public SynchronizationContext SynchronizationContext
+			=> waitForm.SynchronizationContext;
+
+		private T RunCore<T>(Func<T> func)
+			where T : Task
+		{
+			if (!(SynchronizationContext.Current is WindowsFormsSynchronizationContext))
+				SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
+
+			var t = func();
+			Await(t);
+			t.Wait();
+			return t;
+		} // func RunCore
+
+		public Task Run(Func<Task> func)
+			=> RunCore(func);
+
+		public T Run<T>(Func<Task<T>> t)
+			=> RunCore(t).Result;
+
+		public bool InvokeRequired => waitForm.InvokeRequired;
+
+		#endregion
+
 		/// <summary>Current active, authentificated environment.</summary>
 		public PpsEnvironment CurrentEnvironment => currentEnvironment;
 		/// <summary>Lua environment.</summary>
 		public Lua Lua => lua;
-		/// <summary>Base encoding.</summary>
-		public Encoding Encoding => Encoding.Default;
-		/// <summary></summary>
-		public SynchronizationContext Context => waitForm.SynchronizationContext;
 
 		IntPtr IWin32Window.Handle => new IntPtr(Application.Hwnd);
-
-		LuaTable IPpsShell.LuaLibrary => throw new NotSupportedException();
-		Uri IPpsShell.BaseUri => throw new NotSupportedException();
-
+		
 		public Rectangle ApplicationBounds
 		{
 			get
@@ -427,7 +373,7 @@ namespace PPSnExcel
 		[DllImport("user32.dll")]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
+	
 		[StructLayout(LayoutKind.Sequential)]
 		struct RECT
 		{

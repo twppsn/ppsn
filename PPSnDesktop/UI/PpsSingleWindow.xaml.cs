@@ -49,10 +49,10 @@ namespace TecWare.PPSn.UI
 				else
 					WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
-				if (Height > System.Windows.SystemParameters.VirtualScreenHeight)
-					Height = System.Windows.SystemParameters.VirtualScreenHeight - 75;
-				if (Width > System.Windows.SystemParameters.VirtualScreenWidth)
-					Width = System.Windows.SystemParameters.VirtualScreenWidth - 75;
+				if (Height > SystemParameters.VirtualScreenHeight)
+					Height = SystemParameters.VirtualScreenHeight - 75;
+				if (Width > SystemParameters.VirtualScreenWidth)
+					Width = SystemParameters.VirtualScreenWidth - 75;
 			}
 			else
 			{
@@ -61,10 +61,10 @@ namespace TecWare.PPSn.UI
 				else
 					WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
-				if (Height > System.Windows.SystemParameters.VirtualScreenHeight)
-					Height = System.Windows.SystemParameters.VirtualScreenHeight - 75;
-				if (Width > System.Windows.SystemParameters.VirtualScreenWidth)
-					Width = System.Windows.SystemParameters.VirtualScreenWidth - 75;
+				if (Height > SystemParameters.VirtualScreenHeight)
+					Height = SystemParameters.VirtualScreenHeight - 75;
+				if (Width > SystemParameters.VirtualScreenWidth)
+					Width = SystemParameters.VirtualScreenWidth - 75;
 			}
 		} // ctor
 
@@ -79,9 +79,6 @@ namespace TecWare.PPSn.UI
 
 		IPpsWindowPane IPpsWindowPaneManager.FindOpenPane(Type paneType, LuaTable arguments)
 			=> FindOpenPane(paneType, arguments);
-
-		Type IPpsWindowPaneManager.GetPaneType(PpsWellknownType wellknownType)
-			=> ((PpsMainEnvironment)environment).GetPaneType(wellknownType);
 
 		/// <summary>Open pane within the window.</summary>
 		/// <param name="paneType"></param>
@@ -101,9 +98,9 @@ namespace TecWare.PPSn.UI
 							: Task.FromResult(pane);
 					}
 				case PpsOpenPaneMode.NewPane:
-					return ((PpsMainEnvironment)environment).OpenPaneAsync(paneType, PpsOpenPaneMode.NewSingleWindow, arguments);
+					return environment.OpenPaneAsync(paneType, PpsOpenPaneMode.NewSingleWindow, arguments);
 				default:
-					return ((PpsMainEnvironment)environment).OpenPaneAsync(paneType, newPaneMode, arguments);
+					return environment.OpenPaneAsync(paneType, newPaneMode, arguments);
 			}
 		} // func OpenPaneAsync
 

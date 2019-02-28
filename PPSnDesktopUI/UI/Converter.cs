@@ -57,6 +57,8 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter TakeListItems => TakeListItemsConverter.Default;
 		/// <summary>Multiplies a value with the parameter.</summary>
 		public static IValueConverter Multiply => MultiplyConverter.Default;
+		/// <summary>Compare values.</summary>
+		public static IMultiValueConverter Equality => EqualConverter.Default;
 		/// <summary>Concats Name,Vorname.</summary>
 		public static IMultiValueConverter Name => NameConverter.Default;
 	} // class PpsConverter
@@ -69,14 +71,14 @@ namespace TecWare.PPSn.UI
 	[ContentProperty("ConvertExpression")]
 	public class LuaValueConverter : IValueConverter, IMultiValueConverter
 	{
-		private delegate object ConvertDelegate(object value, object targetType, object parameter, PpsEnvironment environment, CultureInfo culture);
-		private static Lua lua = new Lua(); // lua engine for the value converters
+		private delegate object ConvertDelegate(object value, object targetType, object parameter, PpsShell shell, CultureInfo culture);
+		private static readonly Lua lua = new Lua(); // lua engine for the value converters
 
 		private string convert;
 		private ConvertDelegate convertDelegate;
 		private string convertBack;
 		private ConvertDelegate convertBackDelegate;
-		private Lazy<PpsEnvironment> getEnvironment = null;
+		private Lazy<PpsShell> getShell = null;
 
 		private object ConvertIntern(string script, ref ConvertDelegate dlg, object value, object targetType, object parameter, CultureInfo culture)
 		{
@@ -85,11 +87,11 @@ namespace TecWare.PPSn.UI
 
 			if (dlg == null) // compile function
 			{
-				var localLua = getEnvironment != null ? getEnvironment.Value.Lua : lua;
+				var localLua = getShell != null ? getShell.Value.Lua : lua;
 				dlg = localLua.CreateLambda<ConvertDelegate>("convert.lua", script);
 			}
 
-			return dlg.DynamicInvoke(value, targetType, parameter, getEnvironment?.Value, culture);
+			return dlg.DynamicInvoke(value, targetType, parameter, getShell?.Value, culture);
 		} // func ConvertIntern
 
 		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
@@ -144,8 +146,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Does the converter needs an environment</summary>
 		public bool UseEnvironment
 		{
-			get => getEnvironment != null;
-			set => getEnvironment = new Lazy<PpsEnvironment>(PpsEnvironment.GetEnvironment);
+			get => getShell != null;
+			set => getShell = new Lazy<PpsShell>(PpsShell.GetShell);
 		} // prop UseEnvironment
 	} // class LuaValueConverter
 
@@ -795,6 +797,48 @@ namespace TecWare.PPSn.UI
 		} // func IValueConverter.Convert
 
 		public static MultiplyConverter Default { get; } = new MultiplyConverter();
+	} // class MultiplyConverter
+
+	#endregion
+
+	#region -- class MultiplyConverter ------------------------------------------------
+
+	internal sealed class EqualConverter : IMultiValueConverter
+	{
+		private EqualConverter()
+		{
+		}
+
+		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		{
+			try
+			{
+				if (targetType != typeof(bool) || values.Length == 0)
+					return DependencyProperty.UnsetValue;
+
+				var f = values[0];
+				for (var i = 1; i < values.Length; i++)
+				{
+					if (Equals(f, values[i]))
+						return false;
+				}
+
+				return true;
+			}
+			catch (OverflowException)
+			{
+				return DependencyProperty.UnsetValue;
+			}
+			catch (InvalidCastException)
+			{
+				return DependencyProperty.UnsetValue;
+			}
+		} // func IValueConverter.Convert
+
+		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static EqualConverter Default { get; } = new EqualConverter();
 	} // class MultiplyConverter
 
 	#endregion

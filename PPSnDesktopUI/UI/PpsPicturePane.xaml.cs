@@ -32,6 +32,7 @@ using System.Windows.Media;
 using AForge.Video;
 using AForge.Video.DirectShow;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
@@ -107,7 +108,7 @@ namespace TecWare.PPSn.UI
 			#region ---- Readonly ----------------------------------------------------------------
 
 			private readonly System.Timers.Timer refreshTimer;
-			private readonly PpsTraceLog traces;
+			private readonly LoggerProxy log;
 			private readonly System.Windows.Threading.Dispatcher dispatcher;
 
 			#endregion
@@ -131,7 +132,7 @@ namespace TecWare.PPSn.UI
 					foreach (var cam in localValidWebcamCollection)
 					{
 						awaitingCameras.Add(cam);
-						var acam = new PpsAforgeCamera(cam, traces);
+						var acam = new PpsAforgeCamera(cam, log);
 						acam.CameraInitialized += (ts, te) =>
 						{
 							lock (awaitingCameras)
@@ -183,10 +184,10 @@ namespace TecWare.PPSn.UI
 			#region ---- Constructor/Destructor --------------------------------------------------
 
 			/// <summary>Initializes the Handler, starts exploration of devices</summary>
-			/// <param name="tracelog">reference to the TraceLog for Status/Warning messages</param>
-			public PpsCameraHandler(PpsTraceLog tracelog)
+			/// <param name="log">reference to the TraceLog for Status/Warning messages</param>
+			public PpsCameraHandler(LoggerProxy log)
 			{
-				this.traces = tracelog;
+				this.log = log ?? throw new ArgumentNullException(nameof(log));
 				this.dispatcher = Application.Current.Dispatcher;
 
 				cameras = new List<PpsAforgeCamera>();
@@ -355,7 +356,7 @@ namespace TecWare.PPSn.UI
 
 			private readonly IEnumerable<CameraProperty> properties;
 			private readonly string name;
-			private PpsTraceLog traces;
+			private LoggerProxy log;
 			private VideoCaptureDevice device;
 			private readonly double previewVideoRatio;
 
@@ -381,13 +382,14 @@ namespace TecWare.PPSn.UI
 
 			/// <summary>creates a new representation of a given camera</summary>
 			/// <param name="deviceFilter">camera to represent</param>
-			/// <param name="traceLog">receives the status messages</param>
+			/// <param name="log">receives the status messages</param>
 			/// <param name="previewMaxWidth">maximum width of the preview, only used if the camera supports snapshots, default: 800</param>
 			/// <param name="previewMinFPS">minimum framerate the preview has to support, only used if the camera supports snapshots, default: 15</param>
-			public PpsAforgeCamera(AForge.Video.DirectShow.FilterInfo deviceFilter, PpsTraceLog traceLog, int previewMaxWidth = 800, int previewMinFPS = 15)
+			public PpsAforgeCamera(AForge.Video.DirectShow.FilterInfo deviceFilter, LoggerProxy log, int previewMaxWidth = 800, int previewMinFPS = 15)
 			{
-				this.traces = traceLog;
-				this.name = deviceFilter.Name;
+				this.log = log ?? throw new ArgumentNullException(nameof(log));
+
+				name = deviceFilter.Name;
 
 				// initialize the device
 				try
@@ -396,7 +398,7 @@ namespace TecWare.PPSn.UI
 				}
 				catch (Exception)
 				{
-					traces.AppendText(PpsTraceItemType.Fail, String.Format(DeviceDenied, Name));
+					log.Except(DeviceDenied, Name);
 					device = null;
 					return;
 				}
@@ -405,7 +407,7 @@ namespace TecWare.PPSn.UI
 				device.VideoSourceError += (sender, e) =>
 				{
 					if (!disposing)
-						traces.AppendText(PpsTraceItemType.Fail, String.Format(DeviceFailed, Name, e.Description));
+						this.log.Except(DeviceFailed, Name, e.Description);
 				};
 
 				// find the highest snapshot resolution
@@ -426,18 +428,18 @@ namespace TecWare.PPSn.UI
 				if (previewResolution == null)
 				{
 					// no resolution to the requirements, try to set the highest possible FPS (best for preview)
-					traces.AppendText(PpsTraceItemType.Fail, String.Format(PreviewInsufficient, Name));
+					this.log.Except(PreviewInsufficient, Name);
 					previewResolution = (from vc in device.VideoCapabilities orderby vc.AverageFrameRate descending select vc).FirstOrDefault();
 
 					if (previewResolution == null)
 					{
-						traces.AppendText(PpsTraceItemType.Fail, String.Format(PreviewUnavailable, Name));
+						this.log.Except(PreviewUnavailable, Name);
 					}
 				}
 
 				if (!device.ProvideSnapshots)
 				{
-					traces.AppendText(PpsTraceItemType.Information, String.Format(NoSnapshotCapability, Name));
+					this.log.Info(NoSnapshotCapability, Name);
 					device.VideoResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
 				}
 				else
@@ -449,7 +451,7 @@ namespace TecWare.PPSn.UI
 					previewVideoRatio = 1.0 * device.VideoResolution.FrameSize.Width / device.VideoResolution.FrameSize.Height;
 				else
 				{
-					traces.AppendText(PpsTraceItemType.Fail, String.Format(InitializationFailed, Name));
+					this.log.Except(InitializationFailed, Name);
 					CameraLost?.Invoke(this, new EventArgs());
 					return;
 				}
@@ -460,7 +462,7 @@ namespace TecWare.PPSn.UI
 
 				// collect the useable Propertys
 				properties = new List<CameraProperty>();
-				foreach (AForge.Video.DirectShow.CameraControlProperty prop in Enum.GetValues(typeof(AForge.Video.DirectShow.CameraControlProperty)))
+				foreach (CameraControlProperty prop in Enum.GetValues(typeof(CameraControlProperty)))
 				{
 					var property = new CameraProperty(device, prop);
 
@@ -475,7 +477,7 @@ namespace TecWare.PPSn.UI
 				// event is thrown, if the camera is unplugged, after working
 				device.PlayingFinished += (sender, e) =>
 				{
-					traces.AppendText(PpsTraceItemType.Warning, String.Format(DeviceLost, Name));
+					this.log.Warn(DeviceLost, Name);
 					CameraLost.Invoke(this, new EventArgs());
 				};
 
@@ -485,7 +487,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (Preview == null)
 					{
-						traces.AppendText(PpsTraceItemType.Warning, String.Format(InitializationFailed, Name));
+						this.log.Warn(InitializationFailed, Name);
 						CameraLost?.Invoke(this, new EventArgs());
 						((System.Timers.Timer)s).Dispose();
 					}
@@ -529,7 +531,7 @@ namespace TecWare.PPSn.UI
 				if (!initialized)
 				{
 					CameraInitialized?.Invoke(this, new EventArgs());
-					traces.AppendText(PpsTraceItemType.Information, String.Format(InitializationComplete, Name));
+					log.Info(InitializationComplete, Name);
 				}
 				initialized = true;
 
@@ -796,9 +798,11 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#region -- Fields -------------------------------------------------------------
-		private readonly PpsEnvironment environment;
 
+		private IPpsWindowPaneManager paneManager;
+		private IPpsWindowPaneHost paneHost;
 		private IPpsWindowPane parentPane;
+		private LoggerProxy log;
 
 		private PpsUndoManager strokeUndoManager;
 		private List<string> captureSourceNames = new List<string>();
@@ -812,13 +816,14 @@ namespace TecWare.PPSn.UI
 		/// <param name="paneHost"></param>
 		public PpsPicturePane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
 		{
-			this.PaneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
-			PaneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
-			this.environment = paneManager.Environment;
+			this.paneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
+			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
+			
+			log = paneManager.Shell.LogProxy();
 
 			InitializeComponent();
 
-			Resources[PpsEnvironment.WindowPaneService] = this;
+			Resources[PpsWindowPaneHelper.WindowPaneService] = this;
 			
 			InitializePenSettings();
 			InitializeCameras();
@@ -832,10 +837,10 @@ namespace TecWare.PPSn.UI
 
 			SetValue(commandsPropertyKey, new PpsUICommandCollection());
 
-			if (imagesList.Items.Count > 0)
-				SelectedAttachment = (IPpsAttachmentItem)imagesList.Items[0];
-			else if (CameraEnum.Count() > 0)
-				SelectedCamera = CameraEnum.First();
+			//if (imagesList.Items.Count > 0)
+			//	SelectedAttachment = (IPpsAttachmentItem)imagesList.Items[0];
+			//else if (CameraEnum.Count() > 0)
+			//	SelectedCamera = CameraEnum.First();
 		} // ctor
 
 		#endregion
@@ -849,60 +854,60 @@ namespace TecWare.PPSn.UI
 			CommandBindings.Add(
 				new CommandBinding(
 					EditOverlayCommand,
-					async (sender, e) =>
+					(sender, e) =>
 					{
-						if (e.Parameter is IPpsAttachmentItem i)
-						{
-							if (i == SelectedAttachment)
-								return;
+						//if (e.Parameter is IPpsAttachmentItem i)
+						//{
+						//	if (i == SelectedAttachment)
+						//		return;
 
-							SelectedAttachment = i;
+						//	SelectedAttachment = i;
 
-							// if the previous set failed. the user canceled the operation, so exit
-							if (SelectedAttachment != i)
-								return;
+						//	// if the previous set failed. the user canceled the operation, so exit
+						//	if (SelectedAttachment != i)
+						//		return;
 
-							// request the full-sized image
-							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
+							//// request the full-sized image
+							//var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
 
-							var data = await SelectedAttachment.LinkedObject.GetDataAsync<PpsObjectBlobData>();
-							InkStrokes = new PpsDetraceableStrokeCollection(await data.GetOverlayAsync() ?? new StrokeCollection());
+							//var data = await SelectedAttachment.LinkedObject.GetDataAsync<PpsObjectBlobData>();
+							//InkStrokes = new PpsDetraceableStrokeCollection(await data.GetOverlayAsync() ?? new StrokeCollection());
 
-							InkStrokes.StrokesChanged += (chgsender, chge) =>
-							{
-								// tracing is disabled, if a undo/redo action caused the changed event, thus preventing it to appear in the undomanager itself
-								if (!InkStrokes.DisableTracing)
-								{
-									using (var trans = strokeUndoManager.BeginTransaction("Linie hinzugefügt"))
-									{
-										foreach (var stroke in chge.Added)
-											strokeUndoManager.Append(new PpsAddStrokeUndoItem((PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty), stroke));
-										trans.Commit();
-									}
-									using (var trans = strokeUndoManager.BeginTransaction("Linie entfernt"))
-									{
-										foreach (var stroke in chge.Removed)
-											strokeUndoManager.Append(new PpsRemoveStrokeUndoItem((PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty), stroke));
-										trans.Commit();
-									}
-								}
-							};
-							SetCharmObject(i.LinkedObject);
-						}
+							//InkStrokes.StrokesChanged += (chgsender, chge) =>
+							//{
+							//	// tracing is disabled, if a undo/redo action caused the changed event, thus preventing it to appear in the undomanager itself
+							//	if (!InkStrokes.DisableTracing)
+							//	{
+							//		using (var trans = strokeUndoManager.BeginTransaction("Linie hinzugefügt"))
+							//		{
+							//			foreach (var stroke in chge.Added)
+							//				strokeUndoManager.Append(new PpsAddStrokeUndoItem((PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty), stroke));
+							//			trans.Commit();
+							//		}
+							//		using (var trans = strokeUndoManager.BeginTransaction("Linie entfernt"))
+							//		{
+							//			foreach (var stroke in chge.Removed)
+							//				strokeUndoManager.Append(new PpsRemoveStrokeUndoItem((PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty), stroke));
+							//			trans.Commit();
+							//		}
+							//	}
+							//};
+							//SetCharmObject(i.LinkedObject);
+						//}
 						strokeUndoManager.Clear();
 					}));
 
 			CommandBindings.Add(new CommandBinding(
 				ApplicationCommands.Save,
-				async (sender, e) =>
+				(sender, e) =>
 				{
-					if (SelectedAttachment != null)
-					{
-						var data = await SelectedAttachment.LinkedObject.GetDataAsync<PpsObjectBlobData>();
+					//if (SelectedAttachment != null)
+					//{
+					//	var data = await SelectedAttachment.LinkedObject.GetDataAsync<PpsObjectBlobData>();
 
-						await data.SetOverlayAsync(InkStrokes);
-						strokeUndoManager.Clear();
-					}
+					//	await data.SetOverlayAsync(InkStrokes);
+					//	strokeUndoManager.Clear();
+					//}
 
 				},
 				(sender, e) => e.CanExecute = strokeUndoManager.CanUndo));
@@ -911,15 +916,15 @@ namespace TecWare.PPSn.UI
 				ApplicationCommands.Delete,
 				(sender, e) =>
 				{
-					if (e.Parameter is IPpsAttachmentItem pitem)
-					{
-						pitem.Remove();
-					}
-					else if (SelectedAttachment is IPpsAttachmentItem sitem)
-					{
-						sitem.Remove();
-					}
-					SelectedAttachment = null;
+					//if (e.Parameter is IPpsAttachmentItem pitem)
+					//{
+					//	pitem.Remove();
+					//}
+					//else if (SelectedAttachment is IPpsAttachmentItem sitem)
+					//{
+					//	sitem.Remove();
+					//}
+					//SelectedAttachment = null;
 				},
 				(sender, e) => e.CanExecute = true));
 
@@ -946,7 +951,7 @@ namespace TecWare.PPSn.UI
 				(sender, e) =>
 				{
 					SelectedCamera = (PpsAforgeCamera)e.Parameter;
-					SetCharmObject(null);
+					//SetCharmObject(null);
 				}));
 		}
 
@@ -1184,16 +1189,17 @@ namespace TecWare.PPSn.UI
 		/// <param name="otherArguments"></param>
 		/// <returns></returns>
 		public PpsWindowPaneCompareResult CompareArguments(LuaTable otherArguments)
-			=> otherArguments[AttachmentsSourceArgument] == Attachments
-				? PpsWindowPaneCompareResult.Same
-				: PpsWindowPaneCompareResult.Reload;
+			//=> otherArguments[AttachmentsSourceArgument] == Attachments
+			//	? PpsWindowPaneCompareResult.Same
+			//	: PpsWindowPaneCompareResult.Reload;
+			=> PpsWindowPaneCompareResult.Same;
 
 		/// <summary>the Pane has hardware handles to dispose</summary>
 		public void Dispose()
 		{
 			CameraEnum.Dispose();
-			ResetCharmObject();
-		}
+			//PaneManager.SiteBar?.UpdateObjectInfo(null);
+		} // proc Dispose
 
 		/// <summary>
 		/// Loads the content of the panel
@@ -1202,7 +1208,7 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public Task LoadAsync(LuaTable args)
 		{
-			Attachments = args[AttachmentsSourceArgument] as IPpsAttachments;
+			//Attachments = args[AttachmentsSourceArgument] as IPpsAttachments;
 			parentPane = args[ParentPaneArgument] as IPpsWindowPane;
 			SetValue(subTitlePropertyKey, parentPane?.SubTitle ?? "<none>");
 			return Task.CompletedTask;
@@ -1216,50 +1222,20 @@ namespace TecWare.PPSn.UI
 			if (!LeaveCurrentImage())
 				return Task.FromResult(false);
 
-			ResetCharmObject();
+			//ResetCharmObject();
 			return Task.FromResult(true);
 		}
 
 		#endregion
-
-		#region -- Charmbar -----------------------------------------------------------
-
-		/// <summary>variable saving the object, which was loaded before opening the PicturePane</summary>
-		private PpsObject originalObject;
-
-		/// <summary>restores the object before loading the PicturePane</summary>
-		private void ResetCharmObject()
-		{
-			if (originalObject == null)
-				return;
-
-			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-
-			((dynamic)wnd).CharmObject = originalObject;
-		}
-
-		/// <summary>sets the object of the CharmBar - makes a backup, if it was already set (from the pane requesting the PicturePane)</summary>
-		/// <param name="obj">new PpsObject</param>
-		private void SetCharmObject(PpsObject obj)
-		{
-			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-
-			if (originalObject == null)
-				originalObject = ((dynamic)wnd).CharmObject;
-
-			((dynamic)wnd).CharmObject = obj;
-		}
-
-		#endregion
-
+		
 		#region -- Methods ------------------------------------------------------------
 
 		#region -- Pen Settings -------------------------------------------------------
 
-		private static LuaTable GetPenColorTable(PpsEnvironment environment)
+		private static LuaTable GetPenColorTable(PpsShell environment)
 			=> (LuaTable)environment.GetMemberValue("pictureEditorPenColorTable");
 
-		private static LuaTable GetPenThicknessTable(PpsEnvironment environment)
+		private static LuaTable GetPenThicknessTable(PpsShell environment)
 			=> (LuaTable)environment.GetMemberValue("pictureEditorPenThicknessTable");
 
 		private void InitializePenSettings()
@@ -1267,7 +1243,7 @@ namespace TecWare.PPSn.UI
 			var StrokeThicknesses = new List<PpsPecStrokeThickness>();
 			try
 			{
-				foreach (var tab in GetPenThicknessTable(environment)?.ArrayList)
+				foreach (var tab in GetPenThicknessTable(paneManager.Shell)?.ArrayList)
 				{
 					if (tab is LuaTable lt) StrokeThicknesses.Add(new PpsPecStrokeThickness((string)lt["Name"], (double)lt["Thickness"]));
 				}
@@ -1278,7 +1254,7 @@ namespace TecWare.PPSn.UI
 			var StrokeColors = new List<PpsPecStrokeColor>();
 			try
 			{
-				foreach (var tab in GetPenColorTable(environment)?.ArrayList)
+				foreach (var tab in GetPenColorTable(paneManager.Shell)?.ArrayList)
 				{
 					if (tab is LuaTable lt) StrokeColors.Add(new PpsPecStrokeColor((string)lt["Name"], (Brush)lt["Brush"]));
 				}
@@ -1288,7 +1264,7 @@ namespace TecWare.PPSn.UI
 
 			if (StrokeColors.Count == 0)
 			{
-				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Brushes from environment for drawing. Using Fallback.");
+				log.Except("Failed to load Brushes from environment for drawing. Using Fallback.");
 				StrokeColors = new List<PpsPecStrokeColor>
 				{
 					new PpsPecStrokeColor("Weiß", new SolidColorBrush( Colors.White)),
@@ -1302,7 +1278,7 @@ namespace TecWare.PPSn.UI
 
 			if (StrokeThicknesses.Count == 0)
 			{
-				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Thicknesses from environment for drawing. Using Fallback.");
+				log.Except("Failed to load Thicknesses from environment for drawing. Using Fallback.");
 				StrokeThicknesses = new List<PpsPecStrokeThickness>
 				{
 					new PpsPecStrokeThickness("1", 1),
@@ -1316,7 +1292,6 @@ namespace TecWare.PPSn.UI
 			// start values
 			SetValue(currentStrokeColorPropertyKey, StrokeColors[0]);
 			SetValue(currentStrokeThicknessPropertyKey, StrokeThicknesses[0]);
-
 		} // proc InitializePenSettings
 
 		#endregion
@@ -1325,7 +1300,7 @@ namespace TecWare.PPSn.UI
 
 		private void InitializeCameras()
 		{
-			CameraEnum = new PpsCameraHandler(environment.Traces);
+			CameraEnum = new PpsCameraHandler(log);
 
 			CameraEnum.SnapShot += (s, e) =>
 			{
@@ -1354,26 +1329,26 @@ namespace TecWare.PPSn.UI
 				}
 
 				e.Frame.Dispose();
-				PpsObject obj = null;
-				Dispatcher.Invoke(async () =>
-				{
-					obj = await IncludePictureAsync(path);
+				//PpsObject obj = null;
+				//Dispatcher.Invoke(async () =>
+				//{
+				//	obj = await IncludePictureAsync(path);
 
-					Attachments.Append(obj);
+				//	Attachments.Append(obj);
 
-					File.Delete(path);
-					var i = 0;
+				//	File.Delete(path);
+				//	var i = 0;
 
-					// scroll the new item into view - 
-					// to find the new item one has to scroll one-by-one, because the itemscontrol is virtualizing so a new item can't be found, because it is not rendered, unless it is near the FOV
-					while (i < imagesList.Items.Count && imagesList.Items[i] != obj)
-					{
-						((ListBoxItem)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
-						i++;
-					}
+				//	// scroll the new item into view - 
+				//	// to find the new item one has to scroll one-by-one, because the itemscontrol is virtualizing so a new item can't be found, because it is not rendered, unless it is near the FOV
+				//	while (i < imagesList.Items.Count && imagesList.Items[i] != obj)
+				//	{
+				//		((ListBoxItem)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
+				//		i++;
+				//	}
 
-					LastSnapshot = obj;
-				}).AwaitTask();
+				//	LastSnapshot = obj;
+				//}).AwaitTask();
 			};
 		}
 
@@ -1383,21 +1358,21 @@ namespace TecWare.PPSn.UI
 
 		private bool LeaveCurrentImage()
 		{
-			if (SelectedAttachment != null && strokeUndoManager.CanUndo)
-				switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese vor dem Schließen noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
-				{
-					case MessageBoxResult.Yes:
-						ApplicationCommands.Save.Execute(null, null);
-						SetValue(selectedAttachmentPropertyKey, null); ;
-						return true;
-					case MessageBoxResult.No:
-						while (strokeUndoManager.CanUndo)
-							strokeUndoManager.Undo();
-						SetValue(selectedAttachmentPropertyKey, null); ;
-						return true;
-					default:
-						return false;
-				}
+			//if (SelectedAttachment != null && strokeUndoManager.CanUndo)
+			//	switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese vor dem Schließen noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
+			//	{
+			//		case MessageBoxResult.Yes:
+			//			ApplicationCommands.Save.Execute(null, null);
+			//			SetValue(selectedAttachmentPropertyKey, null); ;
+			//			return true;
+			//		case MessageBoxResult.No:
+			//			while (strokeUndoManager.CanUndo)
+			//				strokeUndoManager.Undo();
+			//			SetValue(selectedAttachmentPropertyKey, null); ;
+			//			return true;
+			//		default:
+			//			return false;
+			//	}
 			return true;
 		}
 
@@ -1410,27 +1385,27 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		private async Task<PpsObject> IncludePictureAsync(string imagePath)
-		{
-			PpsObject obj;
+		//private async Task<PpsObject> IncludePictureAsync(string imagePath)
+		//{
+		//	PpsObject obj;
 
-			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
-			{
-				obj = await environment.CreateNewObjectFromFileAsync(imagePath);
+		//	using (var trans = await shell.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+		//	{
+		//		obj = await shell.CreateNewObjectFromFileAsync(imagePath);
 
-				trans.Commit();
-			}
+		//		trans.Commit();
+		//	}
 
-			return obj;
-		} // proc CapturePicutureAsync 
+		//	return obj;
+		//} // proc CapturePicutureAsync 
 
 		private void ShowOnlyObjectImageDataFilter(object sender, FilterEventArgs e)
 		{
-			e.Accepted =
-				e.Item is IPpsAttachmentItem item
-				&& item.LinkedObject != null
-				&& item.LinkedObject.Typ == PpsEnvironment.AttachmentObjectTyp
-				&& item.LinkedObject.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+			e.Accepted = false;
+				//e.Item is IPpsAttachmentItem item
+				//&& item.LinkedObject != null
+				//&& item.LinkedObject.Typ == PpsEnvironment.AttachmentObjectTyp
+				//&& item.LinkedObject.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 		} // proc ShowOnlyObjectImageDataFilter
 
 		#endregion
@@ -1441,25 +1416,25 @@ namespace TecWare.PPSn.UI
 		public IEnumerable<object> UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index descending select un).ToArray();
 		/// <summary>Property for the ToolBar which references the available Redo items</summary>
 		public IEnumerable<object> RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
-		/// <summary>Binding Point for caller to set the shown attachments</summary>
-		public IPpsAttachments Attachments { get => (IPpsAttachments)GetValue(AttachmentsProperty); set => SetValue(AttachmentsProperty, value); }
-		/// <summary>The Attachmnet which is shown in the editor</summary>
-		public IPpsAttachmentItem SelectedAttachment
-		{
-			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
-			private set
-			{
-				if (value != null && !LeaveCurrentImage())
-					return;
+		///// <summary>Binding Point for caller to set the shown attachments</summary>
+		//public IPpsAttachments Attachments { get => (IPpsAttachments)GetValue(AttachmentsProperty); set => SetValue(AttachmentsProperty, value); }
+		///// <summary>The Attachmnet which is shown in the editor</summary>
+		//public IPpsAttachmentItem SelectedAttachment
+		//{
+		//	get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
+		//	private set
+		//	{
+		//		if (value != null && !LeaveCurrentImage())
+		//			return;
 
-				if (value != null)
-					AddToolbarCommands();
-				else
-					RemoveToolbarCommands();
-				SetValue(selectedAttachmentPropertyKey, value);
-				SelectedCamera = null;
-			}
-		} // prop SelectedAttachment
+		//		if (value != null)
+		//			AddToolbarCommands();
+		//		else
+		//			RemoveToolbarCommands();
+		//		SetValue(selectedAttachmentPropertyKey, value);
+		//		SelectedCamera = null;
+		//	}
+		//} // prop SelectedAttachment
 
 		/// <summary>The camera which is shown in the editor</summary>
 		public PpsAforgeCamera SelectedCamera
@@ -1471,14 +1446,14 @@ namespace TecWare.PPSn.UI
 				{
 					if (!LeaveCurrentImage())
 						return;
-					SelectedAttachment = null;
+					//SelectedAttachment = null;
 				}
 				SetValue(selectedCameraPropertyKey, value);
 			}
 		} // prop SelectedCamera
 
-		/// <summary></summary>
-		public PpsObject LastSnapshot { get => (PpsObject)GetValue(LastSnapshotProperty); private set => SetValue(lastSnapshotPropertyKey, value); }
+		///// <summary></summary>
+		//public PpsObject LastSnapshot { get => (PpsObject)GetValue(LastSnapshotProperty); private set => SetValue(lastSnapshotPropertyKey, value); }
 
 		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
 		public PpsCameraHandler CameraEnum { get => (PpsCameraHandler)GetValue(CameraEnumProperty); private set => SetValue(cameraEnumPropertyKey, value); }
@@ -1533,18 +1508,18 @@ namespace TecWare.PPSn.UI
 
 		#region DependencyPropertys
 
-		/// <summary>Files attached to the parent object</summary>
-		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
+		///// <summary>Files attached to the parent object</summary>
+		//public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey selectedCameraPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedCamera), typeof(PpsAforgeCamera), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsAforgeCamera)null));
 		public static readonly DependencyProperty SelectedCameraProperty = selectedCameraPropertyKey.DependencyProperty;
 
-		private static readonly DependencyPropertyKey lastSnapshotPropertyKey = DependencyProperty.RegisterReadOnly(nameof(LastSnapshot), typeof(PpsObject), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsObject)null));
-		public static readonly DependencyProperty LastSnapshotProperty = lastSnapshotPropertyKey.DependencyProperty;
+		//private static readonly DependencyPropertyKey lastSnapshotPropertyKey = DependencyProperty.RegisterReadOnly(nameof(LastSnapshot), typeof(PpsObject), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsObject)null));
+		//public static readonly DependencyProperty LastSnapshotProperty = lastSnapshotPropertyKey.DependencyProperty;
 
-		private static readonly DependencyPropertyKey selectedAttachmentPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane), new FrameworkPropertyMetadata((IPpsAttachmentItem)null));
-		public static readonly DependencyProperty SelectedAttachmentProperty = selectedAttachmentPropertyKey.DependencyProperty;
+		//private static readonly DependencyPropertyKey selectedAttachmentPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane), new FrameworkPropertyMetadata((IPpsAttachmentItem)null));
+		//public static readonly DependencyProperty SelectedAttachmentProperty = selectedAttachmentPropertyKey.DependencyProperty;
 
 		private static readonly DependencyPropertyKey cameraEnumPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CameraEnum), typeof(PpsCameraHandler), typeof(PpsPicturePane), new FrameworkPropertyMetadata((PpsCameraHandler)null));
 		public static readonly DependencyProperty CameraEnumProperty = cameraEnumPropertyKey.DependencyProperty;
@@ -1568,13 +1543,14 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		/// <summary>Get the owning pane manager.</summary>
-		public IPpsWindowPaneManager PaneManager { get; }
+		public IPpsWindowPaneManager PaneManager => paneManager;
 		/// <summary></summary>
-		public IPpsWindowPaneHost PaneHost { get; }
+		public IPpsWindowPaneHost PaneHost => paneHost;
 
 		bool IPpsWindowPane.HasSideBar => false;
+		string IPpsWindowPane.HelpKey => null;
+		IPpsDataInfo IPpsWindowPane.CurrentData => null; // todo:
 
 		#endregion
-
 	} // class PpsPicturePane
 }

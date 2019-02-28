@@ -29,16 +29,16 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Template selector for object templates</summary>
 	public class PpsDataListTemplateSelector : DataTemplateSelector
 	{
-		private readonly PpsEnvironment environment;
+		private readonly PpsShellWpf shell;
 		private readonly DataTemplate defaultTemplate;
 
 		/// <summary></summary>
-		/// <param name="environment"></param>
-		public PpsDataListTemplateSelector(PpsEnvironment environment)
+		/// <param name="shell"></param>
+		public PpsDataListTemplateSelector(PpsShellWpf shell)
 		{
-			this.environment = environment;
+			this.shell = shell;
 
-			defaultTemplate = environment.FindResource<DataTemplate>("DefaultListTemplate");
+			defaultTemplate = shell.FindResource<DataTemplate>("DefaultListTemplate");
 		} // ctor
 
 		/// <summary></summary>
@@ -46,27 +46,11 @@ namespace TecWare.PPSn.Controls
 		/// <param name="container"></param>
 		/// <returns></returns>
 		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-		{
-			string key = null;
-
-			if (item is LuaTable t)
-				key = t.GetMemberValue("Typ") as string;
-			else if (item is PpsObject o)
-				key = o.Typ;
-			else
-				key = ((dynamic)item).Typ;
-
-			if (key == null)
-				return null;
-
-			var typeDef = environment.DataListItemTypes[key];
-			return typeDef?.FindTemplate(item) ?? defaultTemplate;
-		} // proc SelectTemplate
+			=> shell.GetDataTemplate(item, container);
 	} // class PpsDataListTemplateSelector
 
 	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Spezial Control to display data list</summary>
 	public class DataListControl : ListBox
 	{
@@ -111,7 +95,7 @@ namespace TecWare.PPSn.Controls
 		protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
 		{
 			if (this.ItemTemplateSelector == null)
-				this.ItemTemplateSelector = PpsEnvironment.GetEnvironment(this).DataListTemplateSelector;
+				this.ItemTemplateSelector = PpsShellWpf.GetShell(this).DefaultDataTemplateSelector;
 
 			base.OnItemsSourceChanged(oldValue, newValue);
 		} // proc OnItemsSourceChanged
@@ -129,21 +113,4 @@ namespace TecWare.PPSn.Controls
 		//	base.OnContextMenuOpening(e);
 		//} // proc OnContextMenuOpening
 	} // class DataListControl
-
-	/// <summary>compare local with server revisionId</summary>
-	public class CompareRevisionConverter : IMultiValueConverter
-	{
-		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-		{
-			if (object.Equals(values[0], values[1]))
-				return true;
-
-			return false;
-		} // func Convert
-
-		public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-		{
-			throw new NotSupportedException();
-		}
-	} // CompareRevisionConverter
 }

@@ -39,12 +39,10 @@ namespace TecWare.PPSn.UI
 		private PpsObjectDataSet data; // data object
 		private IPpsObjectDataAccess dataAccess; // access token to the data object
 
-		public readonly static RoutedCommand SetCharmCommand = new RoutedCommand("SetCharm", typeof(PpsMainWindow));
-
-		public PpsGenericMaskWindowPane(PpsEnvironment environment, IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
-			: base(environment, paneManager, paneHost)
+		public PpsGenericMaskWindowPane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
+			: base(paneManager, paneHost)
 		{
-			idleActionToken = Environment.AddIdleAction(
+			idleActionToken = Shell.AddIdleAction(
 				elapsed =>
 				{
 					if (elapsed > 3000)
@@ -62,7 +60,7 @@ namespace TecWare.PPSn.UI
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
-				Environment.RemoveIdleAction(idleActionToken);
+				Shell.RemoveIdleAction(idleActionToken);
 			base.Dispose(disposing);
 		} // proc Dispose
 
@@ -90,19 +88,19 @@ namespace TecWare.PPSn.UI
 					throw new ArgumentException("No 'object' or 'createNew' set.");
 
 				// get the object info for the type
-				var objectInfo = Environment.ObjectInfos[documentType];
+				var objectInfo = Shell.ObjectInfos[documentType];
 				if (objectInfo.CreateServerSiteOnly || String.IsNullOrEmpty(objectInfo.DocumentUri))
 					throw new ArgumentNullException("object", "Parameter 'object' is missing.");
 
 				// create the new object entry
-				obj = await Environment.CreateNewObjectAsync(objectInfo);
+				obj = await Shell.CreateNewObjectAsync(objectInfo);
 			} // proc CreateNewObject
 
 			// get the object reference for the document
 			obj = (PpsObject)arguments.GetMemberValue("Object");
 
 			// new document or load one
-			using (var transaction = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+			using (var transaction = await Shell.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			{
 				if (obj == null) // no object given
 					await CreateNewObjectAsync();
@@ -121,7 +119,7 @@ namespace TecWare.PPSn.UI
 			if (!arguments.ContainsKey("pane"))
 			{
 				// try to get the uri from the pane list
-				var info = Environment.GetObjectInfo(obj.Typ);
+				var info = Shell.GetObjectInfo(obj.Typ);
 				var paneUri = info["defaultPane"] as string;
 				if (!String.IsNullOrEmpty(paneUri))
 					arguments.SetMemberValue("Pane", paneUri);
@@ -273,7 +271,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception ex)
 			{
-				await Environment.ShowExceptionAsync(ExceptionShowFlags.None, ex, "Veröffentlichung ist fehlgeschlagen.");
+				await Shell.ShowExceptionAsync(ExceptionShowFlags.None, ex, "Veröffentlichung ist fehlgeschlagen.");
 			}
 		} // proc PushDataAsync
 				
@@ -289,5 +287,7 @@ namespace TecWare.PPSn.UI
 		public PpsDataSet Data => data;
 		[LuaMember]
 		public PpsObject Object => obj;
+
+		public new PpsEnvironment Shell => (PpsEnvironment)Shell;
 	} // class PpsGenericMaskWindowPane
 }

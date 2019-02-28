@@ -20,12 +20,6 @@ using System.Text.RegularExpressions;
 
 namespace TecWare.PPSn
 {
-	/// <summary>Simple progress representation.</summary>
-	public interface IProgressBar : IProgress<string>, IDisposable
-	{
-		void UpdateProgress(int value, int minimum = -1, int maximum = -1);
-	} // interface IProgressBar
-
 	/// <summary></summary>
 	public class ExcelException : Exception
 	{

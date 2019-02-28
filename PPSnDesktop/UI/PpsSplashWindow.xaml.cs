@@ -290,7 +290,7 @@ namespace TecWare.PPSn.UI
 		private DispatcherFrame loginFrame = null;
 		private bool allowClose = false;
 
-		#region -- Ctor/Dtor ------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsSplashWindow()
 		{
@@ -324,10 +324,10 @@ namespace TecWare.PPSn.UI
 						}
 					),
 					new CommandBinding(ShowErrorDetailsCommand,
-						(sender, e) =>
+						async (sender, e) =>
 						{
-							errorEnvironment.ShowTrace(Owner);
 							e.Handled = true;
+							await errorEnvironment.ShowTraceAsync(Owner);
 						},
 						(sender, e) =>
 						{
@@ -383,7 +383,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Login ----------------------------------------------------------------
+		#region -- Login --------------------------------------------------------------
 
 		private void LoginFrameActive(object sender, CanExecuteRoutedEventArgs e)
 		{
@@ -581,12 +581,11 @@ namespace TecWare.PPSn.UI
 					else
 						textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
 			}
-		}
+		} // proc EnterKey
 
 		#endregion
 
 		private void PasswordChanged(object sender, RoutedEventArgs e)
 			=> LoginState.Validate(true);
-
 	} // class PpsSplashWindow
 }

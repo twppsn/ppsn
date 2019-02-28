@@ -41,7 +41,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private readonly IPpsShell shell;
+		private readonly PpsShell shell;
 		private readonly string schema;
 		private PpsDataSetMetaCollectionClient metaInfo;
 
@@ -49,7 +49,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="shell"></param>
 		/// <param name="schema"></param>
 		/// <param name="xSchema"></param>
-		public PpsDataSetDefinitionClient(IPpsShell shell, string schema, XElement xSchema)
+		public PpsDataSetDefinitionClient(PpsShell shell, string schema, XElement xSchema)
 		{
 			this.shell = shell;
 			this.schema = schema;
@@ -111,7 +111,7 @@ namespace TecWare.PPSn.Data
 		public string SchemaType => schema;
 
 		/// <summary></summary>
-		public IPpsShell Shell => shell;
+		public PpsShell Shell => shell;
 		/// <summary>Give access to the shell lua engine.</summary>
 		public override Lua Lua => shell.Lua;
 
@@ -143,7 +143,7 @@ namespace TecWare.PPSn.Data
 			protected override object OnIndex(object key)
 				=> base.OnIndex(key) ??
 					GetDocumentTable(key as string) ??
-					document.shell.LuaLibrary.GetValue(key);
+					document.shell.GetValue(key);
 
 			[LuaMember(nameof(Arguments))]
 			public LuaTable Arguments => document.arguments;
@@ -155,7 +155,7 @@ namespace TecWare.PPSn.Data
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private LuaTable arguments;
-		private readonly IPpsShell shell;
+		private readonly PpsShell shell;
 
 		private bool isDirty = false;             // is this document changed since the last dump
 
@@ -164,7 +164,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="datasetDefinition"></param>
 		/// <param name="shell"></param>
-		protected internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition, IPpsShell shell)
+		public PpsDataSetClient(PpsDataSetDefinition datasetDefinition, PpsShell shell)
 			: base(datasetDefinition)
 		{
 			this.shell = shell;
@@ -174,7 +174,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="key"></param>
 		/// <returns></returns>
 		protected override object GetEnvironmentValue(object key)
-			=> shell.LuaLibrary?.GetValue(key);
+			=> shell?.GetValue(key);
 
 		#endregion
 
@@ -239,7 +239,7 @@ namespace TecWare.PPSn.Data
 		public bool IsInitialized => arguments != null;
 
 		/// <summary>Environment of the dataset.</summary>
-		public IPpsShell Shell => shell;
+		public PpsShell Shell => shell;
 		/// <summary>Is the current dataset changed.</summary>
 		public bool IsDirty => isDirty;
 	} // class PpsDataSetClient

@@ -33,7 +33,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>Command context extension for the service model.</summary>
 	public sealed class PpsCommandContext : IServiceProvider
 	{
-		private readonly PpsEnvironment environment;
+		private readonly PpsShellWpf shell;
 		private readonly object target;
 		private readonly object source;
 		private readonly object parameter;
@@ -41,13 +41,13 @@ namespace TecWare.PPSn.UI
 		private readonly Lazy<object> getDataContext;
 
 		/// <summary>Command context extension for the service model.</summary>
-		/// <param name="environment">Environment</param>
+		/// <param name="shell">Environment</param>
 		/// <param name="target">Command target object</param>
 		/// <param name="source">Command source object</param>
 		/// <param name="parameter">Command parameter</param>
-		public PpsCommandContext(PpsEnvironment environment, object target, object source, object parameter)
+		public PpsCommandContext(PpsShellWpf shell, object target, object source, object parameter)
 		{
-			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 			this.target = target ?? throw new ArgumentNullException(nameof(target));
 			this.source = source ?? throw new ArgumentNullException(nameof(source));
 			this.getDataContext = new Lazy<object>(GetDataContext);
@@ -85,11 +85,11 @@ namespace TecWare.PPSn.UI
 			if (r == null && target != source && source is DependencyObject dc2)
 				r = StuffUI.GetControlService(dc2, serviceType, false);
 
-			return r ?? environment.GetService(serviceType);
+			return r ?? shell.GetService(serviceType);
 		} // func GetService
 
-		/// <summary>Environment</summary>
-		public PpsEnvironment Environment => environment;
+		/// <summary>Shell</summary>
+		public PpsShellWpf Shell => shell;
 		/// <summary>Target control</summary>
 		public object Target => target;
 		/// <summary>Source control</summary>
@@ -257,7 +257,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception e)
 			{
-				commandContext.Environment.ShowException(ExceptionShowFlags.None, e);
+				commandContext.Shell.ShowException(ExceptionShowFlags.None, e);
 			}
 		} // proc Execute
 

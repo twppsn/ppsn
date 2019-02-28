@@ -52,7 +52,7 @@ namespace TecWare.PPSn.UI
 
 		public void OnPreview_TextInput(TextCompositionEventArgs e)
 		{
-			if (!Object.Equals(e.OriginalSource, PART_SearchBox))
+			if (!Equals(e.OriginalSource, PART_SearchBox))
 				e.Handled = ExpandSearchBox(e.Text);
 		}
 

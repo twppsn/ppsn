@@ -23,27 +23,27 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
-	#region -- class PpsMainViewOrder -------------------------------------------------
+	#region -- class PpsViewOrder -----------------------------------------------------
 
 	/// <summary>View order definition for the navigator</summary>
-	public sealed class PpsMainViewOrder
+	public sealed class PpsViewOrder
 	{
 		private readonly string name;
 		private readonly string displayName;
 		private readonly string orderExpression;
 		private readonly int priority;
 
-		internal PpsMainViewOrder(XElement x, ref int priority)
+		internal PpsViewOrder(XElement x, ref int priority)
 		{
-			this.name = x.GetAttribute("name", String.Empty);
+			name = x.GetAttribute("name", String.Empty);
 			if (String.IsNullOrEmpty(this.Name))
 				throw new ArgumentNullException("@name");
 
-			this.displayName = x.GetAttribute("displayName", Name);
+			displayName = x.GetAttribute("displayName", Name);
 			this.priority = priority = x.GetAttribute("priority", priority + 1);
 
 			var t = x.Value;
-			this.orderExpression = String.IsNullOrWhiteSpace(t) ? name : t;
+			orderExpression = String.IsNullOrWhiteSpace(t) ? name : t;
 		} // ctor
 
 		/// <summary>Internal name for the order.</summary>
@@ -55,21 +55,21 @@ namespace TecWare.PPSn
 
 		/// <summary>Order expression.</summary>
 		public string OrderExpression => orderExpression;
-	} // class PpsMainViewSort
+	} // class PpsViewOrder
 
 	#endregion
 
-	#region -- class PpsMainViewFilter ------------------------------------------------
+	#region -- class PpsViewFilter ----------------------------------------------------
 
 	/// <summary>Predefined filter definition for the navigator.</summary>
-	public sealed class PpsMainViewFilter
+	public sealed class PpsViewFilter
 	{
 		private readonly string name;
 		private readonly string displayName;
 		private readonly PpsDataFilterExpression filterExpression;
 		private readonly int priority;
 
-		internal PpsMainViewFilter(XElement x, ref int priority)
+		internal PpsViewFilter(XElement x, ref int priority)
 		{
 			this.name = x.GetAttribute("name", String.Empty);
 			if (String.IsNullOrEmpty(name))
@@ -91,14 +91,14 @@ namespace TecWare.PPSn
 
 		/// <summary>Filter expression.</summary>
 		public PpsDataFilterExpression FilterExpression => filterExpression;
-	} // class PpsMainViewFilter
+	} // class PpsViewFilter
 
 	#endregion
 
-	#region -- class PpsMainViewDefinition --------------------------------------------
+	#region -- class PpsViewDefinition ------------------------------------------------
 
 	/// <summary>View definition for the navigator.</summary>
-	public sealed class PpsMainViewDefinition : PpsEnvironmentDefinition
+	public sealed class PpsViewDefinition : PpsEnvironmentDefinition
 	{
 		/// <summary>Xml-Tag to define views.</summary>
 		public static readonly XName xnViews = "views";
@@ -119,34 +119,34 @@ namespace TecWare.PPSn
 
 		private readonly LuaChunk visibleCondition;
 
-		private readonly PpsMainViewOrder[] sortOrders;
-		private readonly PpsMainViewFilter[] filters;
+		private readonly PpsViewOrder[] sortOrders;
+		private readonly PpsViewFilter[] filters;
 
-		internal PpsMainViewDefinition(PpsMainEnvironment environment, XElement xDefinition)
+		internal PpsViewDefinition(PpsEnvironment environment, XElement xDefinition)
 			: base(environment, xDefinition.GetAttribute("name", null))
 		{
-			this.viewId = xDefinition.GetAttribute("view", String.Empty);
+			viewId = xDefinition.GetAttribute("view", String.Empty);
 			if (String.IsNullOrEmpty(viewId))
 				throw new ArgumentException("List viewId is missing.");
 
-			this.viewBaseFilter = PpsDataFilterExpression.Parse(xDefinition.GetAttribute("filter", String.Empty));
-			this.displayName = xDefinition.GetAttribute("displayName", this.Name);
-			this.displayImage = xDefinition.GetAttribute("displayImage", this.Name);
+			viewBaseFilter = PpsDataFilterExpression.Parse(xDefinition.GetAttribute("filter", String.Empty));
+			displayName = xDefinition.GetAttribute("displayName", this.Name);
+			displayImage = xDefinition.GetAttribute("displayImage", this.Name);
 
-			this.visibleCondition = environment.CreateChunk(xDefinition.Element(xnVisible), true);
+			visibleCondition = environment.CreateChunk(xDefinition.Element(xnVisible), true);
 
 			// parse the filters
 			var priority = 0;
 			this.filters = (
 				from c in xDefinition.Elements(xnFilter)
-				select new PpsMainViewFilter(c, ref priority)
+				select new PpsViewFilter(c, ref priority)
 			).OrderBy(c => c.Priority).ToArray();
 
 			// parse orders
 			priority = 0;
 			this.sortOrders = (
 				from c in xDefinition.Elements(xnOrder)
-				select new PpsMainViewOrder(c, ref priority)
+				select new PpsViewOrder(c, ref priority)
 			).OrderBy(c => c.Priority).ToArray();
 		} // ctor
 
@@ -163,17 +163,17 @@ namespace TecWare.PPSn
 		public bool IsVisible => visibleCondition == null ? true : (bool)Environment.RunScriptWithReturn<bool>(visibleCondition, Environment, false);
 
 		/// <summary>Predefined filter rules.</summary>
-		public IEnumerable<PpsMainViewFilter> Filters => filters;
+		public IEnumerable<PpsViewFilter> Filters => filters;
 		/// <summary>Predefined orders.</summary>
-		public IEnumerable<PpsMainViewOrder> SortOrders => sortOrders;
-	} // class PpsMainViewDefinition
+		public IEnumerable<PpsViewOrder> SortOrders => sortOrders;
+	} // class PpsViewDefinition
 
 	#endregion
 
-	#region -- class PpsMainActionDefinition ------------------------------------------
+	#region -- class PpsActionDefinition ----------------------------------------------
 
 	/// <summary>Global action definitions.</summary>
-	public class PpsMainActionDefinition : PpsEnvironmentDefinition
+	public class PpsActionDefinition : PpsEnvironmentDefinition
 	{
 		/// <summary>Xml-Tag to define actions.</summary>
 		public static readonly XName xnActions = "actions";
@@ -190,13 +190,13 @@ namespace TecWare.PPSn
 		private readonly LuaChunk condition;
 		private readonly LuaChunk code;
 
-		internal PpsMainActionDefinition(PpsMainEnvironment environment, XElement xCur, ref int priority)
+		internal PpsActionDefinition(PpsEnvironment environment, XElement xCur, ref int priority)
 			: base(environment, xCur.GetAttribute("name", String.Empty))
 		{
-			this.displayName = xCur.GetAttribute("displayName", this.Name);
-			this.displayImage = xCur.GetAttribute("displayImage", "star");
-			this.isHidden = xCur.GetAttribute("isHidden", false);
-			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
+			displayName = xCur.GetAttribute("displayName", this.Name);
+			displayImage = xCur.GetAttribute("displayImage", "star");
+			isHidden = xCur.GetAttribute("isHidden", false);
+			Priority = priority = xCur.GetAttribute("priority", priority + 1);
 
 			// compile condition
 			condition = environment.CreateChunk(xCur.Element(xnCondition), true);

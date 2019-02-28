@@ -13,7 +13,7 @@
 		<sys:Double x:Key="maxScrollHeight">300</sys:Double>
 		<sys:Double x:Key="collapsedScrollHeight">19</sys:Double>
 
-		<CollectionViewSource x:Key="SortedTraces" Source="{Binding Traces}"
+		<CollectionViewSource x:Key="SortedTraces" Source="{Binding Log}"
 							  IsLiveFilteringRequested="True">
 			<CollectionViewSource.SortDescriptions>
 				<cm:SortDescription PropertyName="Stamp" Direction="Descending" />

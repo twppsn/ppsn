@@ -28,6 +28,7 @@ using System.Windows.Input;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
@@ -40,8 +41,7 @@ namespace TecWare.PPSn.UI
 		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
 
 		/// <summary>Command to execute Lua-Code on the current Environment</summary>
-		public readonly static RoutedUICommand ExecuteCommandCommand =
-			new RoutedUICommand("ExecuteCommand", "ExecuteCommand", typeof(PpsTracePane));
+		public readonly static RoutedUICommand ExecuteCommandCommand = new RoutedUICommand("ExecuteCommand", "ExecuteCommand", typeof(PpsTracePane));
 
 
 		private readonly IPpsWindowPaneManager paneManager;
@@ -60,9 +60,9 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
-			Resources[PpsEnvironment.WindowPaneService] = this;
+			Resources[PpsWindowPaneHelper.WindowPaneService] = this;
 
-			this.commands = new PpsUICommandCollection
+			commands = new PpsUICommandCollection
 			{
 				AddLogicalChildHandler = AddLogicalChild,
 				RemoveLogicalChildHandler = RemoveLogicalChild
@@ -78,13 +78,13 @@ namespace TecWare.PPSn.UI
 						{
 							var ret = (await Environment.CompileAsync((string)e.Parameter, "TracePaneCommand.lua", true)).Run(Environment);
 							if (ret.Count == 0)
-								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" executed without result.");
+								Environment.Log.Append(PpsLogType.Debug, $"Command \"{(string)e.Parameter}\" executed without result.");
 							else
-								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" returned: \"{ret.ToString()}\".");
+								Environment.Log.Append(PpsLogType.Debug, $"Command \"{(string)e.Parameter}\" returned: \"{ret.ToString()}\".");
 						}
 						catch (Exception ex)
 						{
-							Environment.Traces.AppendException(ex, $"Command \"{(string)e.Parameter}\" threw an Exception.");
+							Environment.Log.Append(PpsLogType.Fail, ex, $"Command \"{(string)e.Parameter}\" threw an Exception.");
 						}
 					},
 					(sender, e) => e.CanExecute = !String.IsNullOrWhiteSpace((string)e.Parameter)
@@ -184,9 +184,7 @@ namespace TecWare.PPSn.UI
 		} // proc LoadAsync
 
 		Task<bool> IPpsWindowPane.UnloadAsync(bool? commit)
-		{
-			return Task.FromResult(true);
-		} // func UnloadAsync
+			=> Task.FromResult(true);
 
 		string IPpsWindowPane.Title => "System";
 		string IPpsWindowPane.SubTitle => "Anwendungsereignisse";
@@ -198,6 +196,8 @@ namespace TecWare.PPSn.UI
 
 		bool IPpsWindowPane.HasSideBar => false;
 		bool IPpsWindowPane.IsDirty => false;
+		IPpsDataInfo IPpsWindowPane.CurrentData => null;
+		string IPpsWindowPane.HelpKey => null;
 
 		#endregion
 
@@ -233,7 +233,7 @@ namespace TecWare.PPSn.UI
 			=> Procs.CombineEnumerator(base.LogicalChildren, commands?.GetEnumerator());
 
 		/// <summary>Access the environment</summary>
-		public PpsEnvironment Environment => paneManager.Environment;
+		public PpsEnvironment Environment => (PpsEnvironment)paneManager.Shell;
 	} // class PpsTracePane
 
 	#endregion

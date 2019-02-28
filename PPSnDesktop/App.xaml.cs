@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,16 +28,33 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public partial class App : Application
 	{
-		private PpsMainEnvironment currentEnvironment = null;
+		#region -- class BindingErrorListener -----------------------------------------
+
+		private sealed class BindingErrorListener : TraceListener
+		{
+			private readonly App app;
+
+			public BindingErrorListener(App app)
+				=> this.app = app ?? throw new ArgumentNullException(nameof(app));
+
+			public override void Write(string message) { }
+
+			public override void WriteLine(string message)
+				=> app.Environment?.Log.Append(PpsLogType.Warning, message.Replace(";", ";\n"));
+		} // class BindingErrorListener
+
+		#endregion
+
+		private PpsEnvironment currentEnvironment = null;
 
 		public App()
 		{
-			this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-			BindingErrorListener.Listen(m => currentEnvironment?.Traces.AppendText(PpsTraceItemType.Fail, m.Replace("; ", ";\n")));
+			DispatcherUnhandledException += App_DispatcherUnhandledException;
+
+			PresentationTraceSources.DataBindingSource.Listeners.Add(new BindingErrorListener(this));
 		} // ctor
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
@@ -83,7 +115,7 @@ namespace TecWare.PPSn
 
 						// create the application environment
 						splashWindow.SetProgressTextAsync("Starte Anwendung...");
-						var env = await Dispatcher.InvokeAsync(() => new PpsMainEnvironment(environment, userInfo, this));
+						var env = await Dispatcher.InvokeAsync(() => new PpsEnvironment(environment, userInfo, this));
 						errorEnvironment = env;
 
 						// create environment
@@ -91,36 +123,36 @@ namespace TecWare.PPSn
 						{
 							case PpsEnvironmentModeResult.LoginFailed:
 								errorInfo = "Anmeldung fehlgeschlagen.";
-								errorEnvironment.Traces.AppendText(PpsTraceItemType.Fail, (string)errorInfo);
+								errorEnvironment.Log.Append(PpsLogType.Fail, (string)errorInfo);
 								break;
 							case PpsEnvironmentModeResult.Shutdown:
 								return false;
 
 							case PpsEnvironmentModeResult.ServerConnectFailure:
 								errorInfo = "Verbindung zum Server fehlgeschlagen.";
-								errorEnvironment.Traces.AppendText(PpsTraceItemType.Fail, (string)errorInfo);
+								errorEnvironment.Log.Append(PpsLogType.Fail, (string)errorInfo);
 								break;
 
 							case PpsEnvironmentModeResult.NeedsUpdate:
 								errorInfo = "Update ist erforderlich.";
-								errorEnvironment.Traces.AppendText(PpsTraceItemType.Fail, (string)errorInfo);
+								errorEnvironment.Log.Append(PpsLogType.Fail, (string)errorInfo);
 								break;
 
 							case PpsEnvironmentModeResult.NeedsSynchronization:
 								errorInfo = "Synchronization ist erforderlich.";
-								errorEnvironment.Traces.AppendText(PpsTraceItemType.Fail, (string)errorInfo);
+								errorEnvironment.Log.Append(PpsLogType.Fail, (string)errorInfo);
 								break;
 
 							case PpsEnvironmentModeResult.Online:
 							case PpsEnvironmentModeResult.Offline:
 								// set new environment
-								currentEnvironment = env;
+								SetEnvironment(env);
 
 								// create first window
 								await currentEnvironment.CreateMainWindowAsync();
 
 								// now, we have windows
-								await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnLastWindowClose);
+								ShutdownMode = ShutdownMode.OnLastWindowClose;
 
 								return true;
 							default:
@@ -129,7 +161,7 @@ namespace TecWare.PPSn
 					}
 					catch (Exception e)
 					{
-						errorEnvironment.Traces.AppendException(e);
+						errorEnvironment.Log.Append(PpsLogType.Exception, e);
 						errorInfo = e;
 					}
 				}
@@ -148,7 +180,7 @@ namespace TecWare.PPSn
 
 			if (!await Dispatcher.Invoke(currentEnvironment.ShutdownAsync))
 			{
-				currentEnvironment = null;
+				SetEnvironment(null);
 				return true;
 			}
 			else
@@ -174,7 +206,7 @@ namespace TecWare.PPSn
 			);
 
 			ParseArguments(e, out var environment, out var userCred);
-			
+
 			StartApplicationAsync(environment, userCred)
 				.ContinueWith(t =>
 				{
@@ -190,7 +222,7 @@ namespace TecWare.PPSn
 		{
 			base.OnExit(e);
 			CloseApplicationAsync().AwaitTask();
-		} // proc  OnExit
+		} // proc OnExit
 
 		private static void ParseArguments(StartupEventArgs e, out PpsEnvironmentInfo environment, out NetworkCredential userCred)
 		{
@@ -198,13 +230,13 @@ namespace TecWare.PPSn
 			var userPass = (string)null;
 
 			environment = null;
-			userCred = (NetworkCredential)null;
+			userCred = null;
 
 			if (e.Args.Length == 0)
 				return;
 
 			var environmentsInfos = new Lazy<PpsEnvironmentInfo[]>(PpsEnvironmentInfo.GetLocalEnvironments().ToArray);
-			
+
 			// first parse arguments for environment or user information
 			foreach (var arg in e.Args)
 			{
@@ -247,33 +279,19 @@ namespace TecWare.PPSn
 
 		private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
 		{
-			currentEnvironment?.Traces.AppendException(e.Exception);
+			currentEnvironment?.Log.Append(PpsLogType.Exception, e.Exception);
 			CoreExceptionHandler(e.Exception);
 			e.Handled = true;
 		} // event App_DispatcherUnhandledException
 
-		public class BindingErrorListener : TraceListener
-		{
-			private Action<string> logAction;
-			public static void Listen(Action<string> logAction)
-			{
-				PresentationTraceSources.DataBindingSource.Listeners
-					.Add(new BindingErrorListener() { logAction = logAction });
-			}
-			public override void Write(string message) { }
-			public override void WriteLine(string message)
-			{
-				logAction(message);
-			}
-		}
-
 		#endregion
 
-		private void SetEnvironment(PpsMainEnvironment env)
+		private void SetEnvironment(PpsEnvironment env)
 		{
 			currentEnvironment = env;
+			PpsShell.SetShell(env);
 		} // proc SetEnvironment
 
-		public PpsMainEnvironment Environment => currentEnvironment;
+		public PpsEnvironment Environment => currentEnvironment;
 	} // class App
 }

@@ -397,9 +397,6 @@ namespace TecWare.PPSn.UI
 		private void OnCurrentPaneHostSideBarChanged(object sender, EventArgs e)
 			=> RefreshSideIsVisibleProperty();
 
-		Type IPpsWindowPaneManager.GetPaneType(PpsWellknownType wellknownType)
-			=> Environment.GetPaneType(wellknownType);
-
 		#endregion
 		
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>

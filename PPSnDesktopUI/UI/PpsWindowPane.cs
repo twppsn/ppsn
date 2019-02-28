@@ -20,8 +20,12 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using System.Xml;
+using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
@@ -48,7 +52,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Dispatcher of the host.</summary>
 		Dispatcher Dispatcher { get; }
 		/// <summary>Progress bar of the host.</summary>
-		IPpsProgressBar Progress { get; }
+		IPpsProgressFactory Progress { get; }
 		/// <summary>PaneManager</summary>
 		IPpsWindowPaneManager PaneManager { get; }
 	} // interface IPpsWindowPaneHost
@@ -60,8 +64,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>Implements the basic function of a pane for the window client area.</summary>
 	/// <remarks>The implementer can have a constructor with argumnets. E.g. to retrieve a
 	///  - <seealso cref="IPpsWindowPaneManager"/>
-	///  - <seealso cref="IPpsWindowPaneHost"/>
-	///  - <seealso cref="PpsEnvironment"/>.</remarks>
+	///  - <seealso cref="IPpsWindowPaneHost"/>.</remarks>
 	public interface IPpsWindowPane : INotifyPropertyChanged, IDisposable
 	{
 		/// <summary>Loads the content of a pane</summary>
@@ -98,8 +101,14 @@ namespace TecWare.PPSn.UI
 		/// <summary>Commands attached to the pane.</summary>
 		PpsUICommandCollection Commands { get; }
 
+		/// <summary>Points to the current selected object.</summary>
+		IPpsDataInfo CurrentData { get; }
+
 		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
 		bool IsDirty { get; }
+
+		/// <summary>Help key for the current pane.</summary>
+		string HelpKey { get; }
 	} // interface IPpsWindowPane
 
 	#endregion
@@ -125,19 +134,6 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- enum PpsWellknownType --------------------------------------------------
-
-	/// <summary></summary>
-	public enum PpsWellknownType
-	{
-		/// <summary></summary>
-		Generic,
-		/// <summary></summary>
-		Mask
-	} // enum PpsWellknownType
-
-	#endregion
-
 	#region -- interface IPpsWindowPaneManager ----------------------------------------
 
 	/// <summary>Interface to open new panes.</summary>
@@ -159,15 +155,12 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments = null);
 
-		/// <summary></summary>
-		/// <param name="wellknownType"></param>
-		/// <returns></returns>
-		Type GetPaneType(PpsWellknownType wellknownType);
-		
 		/// <summary>Pane enumeration.</summary>
 		IEnumerable<IPpsWindowPane> Panes { get; }
+
 		/// <summary>Access the environment.</summary>
-		PpsEnvironment Environment { get; }
+		PpsShellWpf Shell { get; }
+
 		/// <summary>Is this pane manager currenty the active pane manager.</summary>
 		bool IsActive { get; }
 	} // interface IPpsWindowPaneManager
@@ -179,6 +172,9 @@ namespace TecWare.PPSn.UI
 	/// <summary>Extensions for the Pane, or PaneControl</summary>
 	public static class PpsWindowPaneHelper
 	{
+		/// <summary>Resource key for the window pane.</summary>
+		public const string WindowPaneService = "PpsWindowPaneService";
+
 		#region -- Open Pane helper ---------------------------------------------------
 
 		/// <summary>Initializes a empty pane, it can only be used by a pane manager.</summary>
@@ -217,8 +213,8 @@ namespace TecWare.PPSn.UI
 			{
 				var pi = parameterInfo[i];
 				var tiParam = pi.ParameterType.GetTypeInfo();
-				if (tiParam.IsAssignableFrom(typeof(PpsEnvironment)))
-					paneArguments[i] = paneManager.Environment;
+				if (tiParam.IsAssignableFrom(paneManager.Shell.GetType()))
+					paneArguments[i] = paneManager.Shell;
 				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneManager)))
 					paneArguments[i] = paneManager;
 				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneHost)))
@@ -244,7 +240,7 @@ namespace TecWare.PPSn.UI
 				case LuaType luaType:
 					return luaType.Type;
 				case string typeString:
-					return paneManager.Environment.GetPaneTypeFromString(typeString);
+					return paneManager.Shell.GetPaneTypeFromString(typeString);
 				case null:
 					throw new ArgumentNullException("paneType");
 				default:
@@ -261,7 +257,7 @@ namespace TecWare.PPSn.UI
 			if (arguments != null && arguments.Mode != null)
 				return Procs.ChangeType<PpsOpenPaneMode>(arguments.Mode);
 
-			return paneManager.Environment.GetOptionalValue("NewPaneMode", false) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
+			return paneManager.Shell.GetOptionalValue("NewPaneMode", false) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
 		} // func GetDefaultPaneMode
 
 		/// <summary>Loads a generic wpf window pane <see cref="PpsGenericWpfWindowPane"/>.</summary>
@@ -298,6 +294,52 @@ namespace TecWare.PPSn.UI
 			return paneManager.OpenPaneAsync(paneType, GetDefaultPaneMode(paneManager, arguments), arguments).AwaitTask();
 		} // func OpenPane
 
+		/// <summary></summary>
+		/// <param name="request"></param>
+		/// <param name="arguments"></param>
+		/// <param name="paneUri"></param>
+		/// <returns></returns>
+		public static async Task<object> LoadPaneDataAsync(this IPpsRequest request, LuaTable arguments, Uri paneUri)
+		{
+			try
+			{
+				using (var r = await request.Request.GetResponseAsync(paneUri.ToString(), String.Join(";", MimeTypes.Application.Xaml, MimeTypes.Text.Lua, MimeTypes.Text.Plain)))
+				{
+					// read the file name
+					arguments["_filename"] = r.GetContentDisposition().FileName;
+
+					// check content
+					var contentType = r.Content.Headers.ContentType;
+					if (contentType.MediaType == MimeTypes.Application.Xaml) // load a xaml file
+					{
+						XDocument xamlContent;
+
+						// parse the xaml as xml document
+						using (var sr = await r.GetTextReaderAsync(MimeTypes.Application.Xaml))
+						{
+							using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, paneUri.ToString()))
+								xamlContent = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
+						}
+
+						return xamlContent;
+					}
+					else if (contentType.MediaType == MimeTypes.Text.Lua
+						|| contentType.MediaType == MimeTypes.Text.Plain) // load a code file
+					{
+						// load an compile the chunk
+						using (var sr = await r.GetTextReaderAsync(null))
+							return await request.Shell.CompileAsync(sr, paneUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+					}
+					else
+						throw new ArgumentException($"Expected: xaml/lua; received: {contentType.MediaType}");
+				}
+			}
+			catch (Exception e)
+			{
+				throw new ArgumentException("Can not load pane definition.\n" + paneUri.ToString(), e);
+			}
+		} // func LoadPaneDataAsync
+
 		#endregion
 
 		/// <summary>Are the pane equal to the pane arguments.</summary>
@@ -323,7 +365,7 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public static IPpsProgress DisableUI(this IPpsWindowPaneHost pane, string text = null, int value = -1)
 		{
-			var progress = pane.Progress.CreateProgress() ?? PpsProgressStack.Dummy;
+			var progress = pane.Progress.CreateProgress() ?? PpsShell.EmptyProgress;
 			if (text != null)
 				progress.Text = text;
 			progress.Value = value;

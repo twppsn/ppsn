@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -22,22 +23,26 @@ using System.Threading.Tasks;
 using System.Web;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
 	#region -- enum ExceptionShowFlags ------------------------------------------------
 
-	/// <summary>Wie soll die Nachricht angezeigt werden.</summary>
+	/// <summary>Propose of the exception.</summary>
 	[Flags]
 	public enum ExceptionShowFlags
 	{
-		/// <summary>Keine näheren Angaben</summary>
+		/// <summary>No hint</summary>
 		None = 0,
 		/// <summary>Start the shutdown of the application.</summary>
 		Shutown = 1,
 		/// <summary>Do not show any user message.</summary>
-		Background = 4
+		Background = 4,
+		/// <summary>Classify the exception as warning</summary>
+		Warning = 8
 	} // enum ExceptionShowFlags
 
 	#endregion
@@ -51,7 +56,7 @@ namespace TecWare.PPSn
 		/// <param name="viewId"></param>
 		public PpsShellGetList(string viewId)
 		{
-			this.ViewId = viewId;
+			ViewId = viewId;
 		} // ctor
 
 		/// <summary>Copy parameter.</summary>
@@ -59,16 +64,16 @@ namespace TecWare.PPSn
 		public PpsShellGetList(PpsShellGetList copy)
 		{
 			if (copy == null)
-				copy = PpsShellGetList.Empty;
+				copy = Empty;
 
-			this.ViewId = copy.ViewId;
-			this.Filter = copy.Filter;
-			this.Order = copy.Order;
-			this.Start = copy.Start;
-			this.Count = copy.Count;
+			ViewId = copy.ViewId;
+			Filter = copy.Filter;
+			Order = copy.Order;
+			Start = copy.Start;
+			Count = copy.Count;
 		} // ctor
 
-		private StringBuilder ToString(StringBuilder sb )
+		private StringBuilder ToString(StringBuilder sb)
 		{
 			sb.Append("v=");
 			sb.Append(ViewId);
@@ -172,60 +177,564 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsShell ----------------------------------------------------
+	#region -- interface IPpsProgress -------------------------------------------------
 
-	/// <summary>Basic UI functions that must provider to use this library.</summary>
-	public interface IPpsShell
+	/// <summary>Return a progress control.</summary>
+	public interface IPpsProgress : IProgress<string>, IDisposable
 	{
-		/// <summary></summary>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
-		IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments);
+		/// <summary>Statustext</summary>
+		string Text { get; set; }
+		/// <summary>Progressbar position (0...1000)</summary>
+		int Value { get; set; }
+	} // interface IPpsProgress
 
-		/// <summary>Synchronization with UI, old style.</summary>
+	#endregion
+
+	#region -- interface IPpsProgressFactory ------------------------------------------
+
+	/// <summary>Progress bar contract.</summary>
+	public interface IPpsProgressFactory
+	{
+		/// <summary>Create a new progress.</summary>
+		/// <param name="blockUI">Should the whole ui blocked.</param>
+		/// <returns>Progress bar or a dummy implementation.</returns>
+		IPpsProgress CreateProgress(bool blockUI = true);
+	} // interface IPpsProgressFactory
+
+	#endregion
+
+	#region -- interface IPpsRequest --------------------------------------------------
+
+	/// <summary>Defines a new base for a request. The uri </summary>
+	public interface IPpsRequest
+	{
+		/// <summary>Implementes a redirect for the request call.</summary>
+		DEHttpClient Request { get; }
+
+		/// <summary>Get the assigned environment for the request.</summary>
+		PpsShell Shell { get; }
+	} // interface IPpsRequest
+
+	#endregion
+
+	#region -- enum PpsLogType --------------------------------------------------------
+
+	/// <summary>Log item classification, compatible to <see cref="LogMsgType"/></summary>
+	public enum PpsLogType
+	{
+		/// <summary>This TraceItem is neutral</summary>
+		Information = 0,
+		/// <summary>This TraceItem marks an recoverable error</summary>
+		Warning,
+		/// <summary>This TraceItem marks an event, which may reduce the useability</summary>
+		Fail,
+		/// <summary>This TraceItem is only for internal debugging</summary>
+		Debug,
+		/// <summary>This TraceItem shows an Exception</summary>
+		Exception
+	} // enum PpsTraceItemType
+
+	#endregion
+
+	#region -- interface IPpsLogger ---------------------------------------------------
+
+	/// <summary>Pps Log interface</summary>
+	public interface IPpsLogger
+	{
+		/// <summary>Append a simple message to the log.</summary>
+		/// <param name="type"></param>
+		/// <param name="message"></param>
+		void Append(PpsLogType type, string message);
+		/// <summary>Append a exception to the log.</summary>
+		/// <param name="type"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		void Append(PpsLogType type, Exception exception, string alternativeMessage = null);
+	} // interface IPpsLogger
+
+	#endregion
+
+	#region -- class PpsShell ---------------------------------------------------------
+
+	/// <summary>Basic application environment, that is used by this library.
+	/// - Implements a basic Lua execution environment
+	/// - Server access model
+	/// - Basic code execution paths</summary>
+	public abstract partial class PpsShell : LuaGlobal, IPpsRequest, IPpsProgressFactory, IServiceProvider, IDisposable
+	{
+		#region -- class PpsDummyProgress ---------------------------------------------
+
+		private sealed class PpsDummyProgress : IPpsProgress
+		{
+			public PpsDummyProgress()
+			{
+			} // ctor
+
+			public void Dispose()
+			{
+			} // proc Dispose
+
+			public void Report(string text) { }
+
+			public int Value { get; set; }
+			public string Text { get; set; }
+		} // class PpsDummyProgress
+
+		#endregion
+
+		#region -- class PpsDummyLogger -----------------------------------------------
+
+		private sealed class PpsDummyLogger : IPpsLogger
+		{
+			public void Append(PpsLogType type, string message)
+				=> Debug.WriteLine("[" + type.ToString() + "] " + message);
+
+			public void Append(PpsLogType type, Exception exception, string alternativeException)
+			{
+				Append(type,
+					String.IsNullOrEmpty(alternativeException)
+					? exception.UnpackException().ToString()
+					: alternativeException + Environment.NewLine + exception.UnpackException().ToString()
+				);
+			}
+		} // class PpsDummyLogger
+
+		#endregion
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary>Initialize shell.</summary>
+		/// <param name="lua"></param>
+		protected PpsShell(Lua lua)
+			: base(lua)
+		{
+		} // ctor
+
+		/// <summary></summary>
+		public void Dispose()
+		{
+			Dispose(true);
+		} // proc Dispose
+
+		/// <summary></summary>
+		/// <param name="disposing"></param>
+		protected virtual void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				services.ForEach(serv => (serv as IDisposable)?.Dispose());
+			}
+		} // proc Dispose
+
+		#endregion
+
+		#region -- Synchronization ----------------------------------------------------
+
+		/// <summary>Synchronization with UI, do not wait for the return.</summary>
 		/// <param name="action"></param>
-		void BeginInvoke(Action action);
-		/// <summary>Synchronization with UI, old style.</summary>
+		public virtual void BeginInvoke(Action action)
+			=> Context.Post(new SendOrPostCallback(o => ((Action)o)()), action);
+
+		/// <summary>Synchronization with UI, async/await.</summary>
 		/// <param name="action"></param>
 		/// <returns></returns>
-		Task InvokeAsync(Action action);
-		/// <summary>Synchronization with UI. new style.</summary>
+		public abstract Task InvokeAsync(Action action);
+		/// <summary>Synchronization with UI, async/await.</summary>
 		/// <typeparam name="T">Return type of the async function.</typeparam>
 		/// <param name="func">Function that will executed in the ui context.</param>
 		/// <returns></returns>
-		Task<T> InvokeAsync<T>(Func<T> func);
+		public abstract Task<T> InvokeAsync<T>(Func<T> func);
+
+		/// <summary>Synchronization with UI</summary>
+		public abstract SynchronizationContext Context { get; }
+
+		#endregion
+
+		#region -- RunAsync -----------------------------------------------------------
+
+		private Task RunBackgroundInternal(Func<Task> task, string name, CancellationToken cancellationToken)
+			=> new PpsSingleThreadSynchronizationContext(name, cancellationToken, task).Task;
+
+		/// <summary>Creates a new execution thread for the function in the background.</summary>
+		/// <param name="task">Action to run.</param>
+		/// <param name="name">name of the background thread</param>
+		/// <param name="cancellationToken">cancellation option</param>
+		public Task RunAsync(Func<Task> task, string name, CancellationToken cancellationToken)
+			=> RunBackgroundInternal(task, name, cancellationToken);
+
+		/// <summary>Creates a new execution thread for the function in the background.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="task"></param>
+		/// <param name="name"></param>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
+		public async Task<T> RunAsync<T>(Func<Task<T>> task, string name, CancellationToken cancellationToken)
+		{
+			var returnValue = default(T);
+			await RunBackgroundInternal(async () => returnValue = await task(), name, cancellationToken);
+			return returnValue;
+		} // proc RunTaskBackground
+
+		/// <summary></summary>
+		/// <param name="task"></param>
+		/// <returns></returns>
+		public Task RunAsync(Func<Task> task)
+			=> RunAsync(task, "Worker", CancellationToken.None);
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="task"></param>
+		/// <returns></returns>
+		public Task<T> RunAsync<T>(Func<Task<T>> task)
+			=> RunAsync(task, "Worker", CancellationToken.None);
+
+		#endregion
+
+		#region -- Await --------------------------------------------------------------
 
 		/// <summary>Await for a task</summary>
 		/// <param name="task"></param>
-		void Await(Task task);
+		public abstract void Await(Task task);
+
 		/// <summary>Await for a task</summary>
 		/// <param name="task"></param>
 		/// <returns></returns>
-		T Await<T>(Task<T> task);
-		
+		public virtual T Await<T>(Task<T> task)
+		{
+			Await((Task)task);
+			return task.Result;
+		} // func Await
+
+		#endregion
+
+		#region -- ShowException, ShowMessage -----------------------------------------
+
+		/// <summary>Return a dummy progress.</summary>
+		/// <param name="blockUI"></param>
+		/// <returns></returns>
+		public IPpsProgress CreateProgress(bool blockUI = true)
+			=> CreateProgressCore(blockUI) ?? EmptyProgress;
+
+		/// <summary>Return a dummy progress.</summary>
+		/// <param name="blockUI"></param>
+		/// <returns></returns>
+		protected abstract IPpsProgress CreateProgressCore(bool blockUI);
+
+		/// <summary>Display the exception dialog.</summary>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		[LuaMember(nameof(ShowException))]
+		public void ShowException(Exception exception, string alternativeMessage = null)
+			=> ShowException(ExceptionShowFlags.None, exception, alternativeMessage);
+
+		/// <summary>Display the exception dialog in the main ui-thread.</summary>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		/// <returns></returns>
+		[LuaMember(nameof(ShowExceptionAsync))]
+		public Task ShowExceptionAsync(Exception exception, string alternativeMessage = null)
+			=> ShowExceptionAsync(ExceptionShowFlags.None, exception, alternativeMessage);
+
+		/// <summary>Notifies a exception in the UI context.</summary>
+		/// <param name="flags"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		public abstract void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
+
 		/// <summary>Notifies a exception in the UI context.</summary>
 		/// <param name="flags"></param>
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
 		/// <returns></returns>
-		Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
+		public virtual Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+			=> InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
+
 		/// <summary></summary>
 		/// <param name="message"></param>
 		/// <returns></returns>
-		Task ShowMessageAsync(string message);
+		[LuaMember]
+		public abstract void ShowMessage(string message);
 
-		/// <summary>Synchronization with UI</summary>
-		SynchronizationContext Context { get; }
+		/// <summary></summary>
+		/// <param name="message"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public virtual Task ShowMessageAsync(string message)
+			=> InvokeAsync(() => ShowMessage(message));
 
-		/// <summary>Access to the current lua engine.</summary>
-		Lua Lua { get; }
-		/// <summary>Interface to the basic functionality of the current system.</summary>
-		LuaTable LuaLibrary { get; }
-		/// <summary>Base uri for request of complex data.</summary>
-		Uri BaseUri { get; }
+		#endregion
+
+		#region -- Http ---------------------------------------------------------------
+
+		/// <summary>Returns a http-client.</summary>
+		/// <param name="uri">Relative path from the base uri.</param>
+		/// <returns></returns>
+		public abstract DEHttpClient CreateHttp(Uri uri = null);
+
+		/// <summary>Request a list from the shell client.</summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public abstract IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments);
+
+		/// <summary></summary>
+		public abstract DEHttpClient Request { get; }
+
+		#endregion
+
+		#region -- Services -----------------------------------------------------------
+
+		private readonly List<object> services = new List<object>();
+
+		/// <summary>Register Service to the environment root.</summary>
+		/// <param name="key"></param>
+		/// <param name="service"></param>
+		public void RegisterService(string key, object service)
+		{
+			if (services.Exists(c => c.GetType() == service.GetType()))
+				throw new InvalidOperationException(nameof(service));
+			if (ContainsKey(key))
+				throw new InvalidOperationException(nameof(key));
+
+			// dynamic interface
+			this[key] = service;
+
+			// static interface
+			services.Add(service);
+		} // proc RegisterService
+
+		/// <summary>Returns a service.</summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
+		public virtual object GetService(Type serviceType)
+		{
+			foreach (var service in services)
+			{
+				var r = (service as IServiceProvider)?.GetService(serviceType);
+				if (r != null)
+					return r;
+				else if (serviceType.IsAssignableFrom(service.GetType()))
+					return service;
+			}
+
+			if (serviceType.IsAssignableFrom(GetType()))
+				return this;
+			else if (serviceType == typeof(ILogger)
+				|| serviceType == typeof(IPpsLogger))
+				return Log;
+
+			return null;
+		} // func GetService
+
+		/// <summary>Access a log interface.</summary>
+		public abstract IPpsLogger Log { get; }
+
+		#endregion
+
 		/// <summary>Returns the default Encoding for the Application.</summary>
-		Encoding Encoding { get; }
-	} // interface IPpsShell
+		public abstract Encoding Encoding { get; }
+
+		PpsShell IPpsRequest.Shell => this;
+
+		#region -- Current Shell Management -------------------------------------------
+
+		private static PpsShell currentShell = null;
+
+		/// <summary></summary>
+		/// <param name="shell"></param>
+		public static void SetShell(PpsShell shell)
+		{
+			if (currentShell != null)
+				throw new ArgumentException();
+
+			currentShell = shell;
+		} // proc SetShell
+
+		/// <summary>Returns the current shell.</summary>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		public static bool TryGetShell(out PpsShell shell)
+			=> (shell = currentShell) != null;
+
+		/// <summary>Returns the current shell.</summary>
+		/// <returns></returns>
+		public static PpsShell GetShell()
+			=> TryGetShell(out var shell) ? shell : throw new ArgumentException("For this environment is no shell definied.");
+
+		/// <summary>Returns the current shell.</summary>
+		public static PpsShell Current => TryGetShell(out var shell) ? shell : null;
+
+		#endregion
+
+		static PpsShell()
+		{
+			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
+			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
+#if WPF
+			Neo.IronLua.LuaType.RegisterTypeExtension(typeof(UI.PpsWindowPaneHelper));
+#endif
+		} // ctor
+
+		/// <summary>Empty progress bar implementation</summary>
+		public static IPpsProgress EmptyProgress { get; } = new PpsDummyProgress();
+		/// <summary>Logger that prints to the debug output.</summary>
+		public static IPpsLogger DebugLogger { get; } = new PpsDummyLogger();
+	} // class PpsShell
+
+	#endregion
+
+	#region -- class LuaShellTable ----------------------------------------------------
+
+	/// <summary>Connects the current table with the shell.</summary>
+	public class LuaShellTable : LuaTable
+	{
+		private readonly PpsShell shell;
+		private readonly LuaShellTable parentShellTable;
+
+		private readonly Dictionary<string, Action> onPropertyChanged = new Dictionary<string, Action>();
+
+		/// <summary></summary>
+		/// <param name="parentTable"></param>
+		public LuaShellTable(LuaShellTable parentTable)
+		{
+			this.shell = parentTable.Shell;
+			this.parentShellTable = parentTable;
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="shell"></param>
+		public LuaShellTable(PpsShell shell)
+		{
+			this.shell = shell;
+			this.parentShellTable = null;
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
+		protected override object OnIndex(object key)
+			=> base.OnIndex(key) ?? ((LuaTable)parentShellTable ?? shell).GetValue(key);
+
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		protected override void OnPropertyChanged(string propertyName)
+		{
+			if (onPropertyChanged.TryGetValue(propertyName, out var a) && a != null)
+				a();
+			base.OnPropertyChanged(propertyName);
+		} // proc OnPropertyChganged
+
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		/// <param name="onChanged"></param>
+		[LuaMember]
+		public void OnPropertyChangedListener(string propertyName, Action onChanged = null)
+		{
+			if (onChanged == null)
+				onPropertyChanged.Remove(propertyName);
+			else
+				onPropertyChanged[propertyName] = onChanged;
+		} // proc OnPropertyChangedListener
+
+		/// <summary>Helper to set a declared member with an new value. If the value is changed OnPropertyChanged will be invoked.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="m">Field that to set.</param>
+		/// <param name="n">Value for the field.</param>
+		/// <param name="propertyName">Name of the property.</param>
+		protected void SetDeclaredMember<T>(ref T m, T n, string propertyName)
+		{
+			if (!Equals(m, n))
+			{
+				m = n;
+				OnPropertyChanged(propertyName);
+			}
+		} // proc SetDeclaredMember
+
+		/// <summary>Optional parent table.</summary>
+		[LuaMember]
+		public LuaShellTable Parent => parentShellTable;
+		/// <summary>Access to the current environemnt.</summary>
+		[LuaMember]
+		public PpsShell Shell => shell;
+	} // class LuaShellTable
+
+	#endregion
+
+	#region -- class PpsShellExtensions -----------------------------------------------
+
+	/// <summary></summary>
+	public static class PpsShellExtensions
+	{
+		/// <summary>Set the progress bar.</summary>
+		/// <param name="progress">Progress bar</param>
+		/// <param name="value">Value to set</param>
+		/// <param name="minimum">Minium of the value.</param>
+		/// <param name="maximum">Maximum of the value.</param>
+		public static void UpdateProgress(this IPpsProgress progress, int value, int minimum, int maximum)
+		{
+			if (minimum != -1 && maximum != -1)
+				value = (value - minimum) * 1000 / (maximum - minimum);
+
+			int newValue;
+			if (value == -1)
+				newValue = -1;
+			else if (value < -1)
+				newValue = 0;
+			else if (value > 1000)
+				newValue = 1000;
+			else
+				newValue = value;
+
+			progress.Value = newValue;
+		} // proc UpdateProgress
+
+		/// <summary>Unpack exceptions</summary>
+		/// <param name="exception"></param>
+		/// <returns></returns>
+		public static Exception UnpackException(this Exception exception)
+			=> exception is AggregateException agg
+				? UnpackException(agg.InnerException)
+				: exception;
+
+		#region -- CompileAsync -------------------------------------------------------
+
+		/// <summary>Load an compile the file from a remote source.</summary>
+		/// <param name="request"></param>
+		/// <param name="source">Source uri</param>
+		/// <param name="throwException">Throw an exception on fail</param>
+		/// <param name="arguments">Argument definition for the chunk.</param>
+		/// <returns>Compiled chunk</returns>
+		public static async Task<LuaChunk> CompileAsync(this IPpsRequest request, Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		{
+			if (request == null)
+				throw new ArgumentNullException(nameof(request));
+			if (source == null)
+				throw new ArgumentNullException(nameof(source));
+
+			try
+			{
+				using (var r = await request.Request.GetResponseAsync(source.ToString(), null))
+				{
+					var contentDisposition = r.GetContentDisposition();
+					using (var sr = await r.GetTextReaderAsync(MimeTypes.Text.Plain))
+						return await request.Shell.CompileAsync(sr, contentDisposition.FileName, throwException, arguments);
+				}
+			}
+			catch (Exception e)
+			{
+				if (throwException)
+					throw;
+				else if (e is LuaParseException) // alread handled
+					return null;
+				else
+				{
+					await request.Shell.ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile failed for {source}.");
+					return null;
+				}
+			}
+		} // func CompileAsync
+
+		#endregion
+	} // class PpsShellExtensions
 
 	#endregion
 }

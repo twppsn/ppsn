@@ -111,8 +111,9 @@ namespace TecWare.PPSn.Controls
 		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			((PpsDataFilterBase)d).UpdateFilteredList();
-			if (e.NewValue is PpsDataCollectionView pdcv)
-				pdcv.CurrentChanged += (s, et) => ((PpsDataFilterBase)d).UpdateFilteredList();
+			throw new NotImplementedException();
+			//if (e.NewValue is PpsDataCollectionView pdcv)
+			//	pdcv.CurrentChanged += (s, et) => ((PpsDataFilterBase)d).UpdateFilteredList();
 		}
 
 		private static object OnItemsSourceCoerceValue(DependencyObject d, object baseValue)
@@ -285,10 +286,15 @@ namespace TecWare.PPSn.Controls
 				filteredListBox.Items.MoveCurrentToPosition(-1);
 		} // proc SetAnchorItem
 
-
+		/// <summary></summary>
+		/// <param name="e"></param>
+		/// <returns></returns>
 		protected ListBoxItem ItemFromPoint(MouseEventArgs e)
 			=> ItemFromPoint(e.GetPosition(filteredListBox)); // func ItemFromPoint
 
+		/// <summary></summary>
+		/// <param name="point"></param>
+		/// <returns></returns>
 		protected ListBoxItem ItemFromPoint(Point point)
 		{
 			var element = filteredListBox.InputHitTest(point) as UIElement;

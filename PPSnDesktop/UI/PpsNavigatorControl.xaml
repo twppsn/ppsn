@@ -353,7 +353,6 @@ specific language governing permissions and limitations under the Licence.
 			end;
 			]]>
 		</ui:LuaValueConverter>
-		<uiC:CompareRevisionConverter x:Key="compareRevisionConverter"/>
 
 		<Style x:Key="PPSnDataListControlItemStyle" TargetType="{x:Type ListBoxItem}">
 			<Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
@@ -442,7 +441,7 @@ specific language governing permissions and limitations under the Licence.
 											<sys:Boolean>false</sys:Boolean>
 										</Condition.Value>
 										<Condition.Binding>
-											<MultiBinding Converter="{StaticResource compareRevisionConverter}">
+											<MultiBinding Converter="{x:Static ui:PpsConverter.Equality}">
 												<Binding Path="RemoteRevId" Mode="OneWay" />
 												<Binding Path="PulledRevId" Mode="OneWay" />
 											</MultiBinding>
@@ -566,10 +565,10 @@ specific language governing permissions and limitations under the Licence.
 				 ItemsSource="{Binding VisibleViews}"
 				 IsSynchronizedWithCurrentItem="True"
 				 Style="{StaticResource NavigatorViewsListBoxStyle}"/>
-		<uiC:DataListControl Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
+		<!--<uiC:DataListControl Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
 							 ItemsSource="{Binding Items}"
 							 Style="{StaticResource PPSnListBoxStyle}"
-							 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"/>
+							 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"/>-->
 		<!--temporary removed-->
 		<!--ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>-->
 

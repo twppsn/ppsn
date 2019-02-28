@@ -727,7 +727,7 @@ namespace TecWare.PPSn.Data
 			=> eventSinks.ToArray();
 
 		private Task AsyncLua(LuaResult r)
-			=> r[0] as Task ?? Task.FromResult<int>(0);
+			=> r[0] as Task ?? Task.FromResult(0);
 
 		/// <summary>Invoke lua event handler.</summary>
 		/// <param name="t"></param>

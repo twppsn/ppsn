@@ -46,10 +46,26 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty ControlProperty = controlPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
+		private PpsWindowPaneCharmBarControl charmBarControl;
+
 		public PpsWindowPaneHost()
 		{
 			SetValue(paneProgressPropertyKey, new PpsProgressStack(Dispatcher));
 		} // ctor
+
+		public override void OnApplyTemplate()
+		{
+			base.OnApplyTemplate();
+
+			charmBarControl = (PpsWindowPaneCharmBarControl)GetTemplateChild("PART_CharmBar");
+
+			var currentPane = CurrentPane;
+			if (currentPane != null)
+			{
+				charmBarControl.CurrentData = currentPane.CurrentData;
+				charmBarControl.HelpKey = currentPane.HelpKey;
+			}
+		} // proc OnApplyTemplate
 
 		public async Task<IPpsWindowPane> LoadAsync(IPpsWindowPaneManager paneManager, Type paneType, LuaTable arguments)
 		{
@@ -68,6 +84,12 @@ namespace TecWare.PPSn.UI
 				SetValue(commandsPropertyKey, newPane.Commands);
 				SetValue(controlPropertyKey, newPane.Control);
 				SetValue(hasPaneSideBarPropertyKey, newPane.HasSideBar);
+
+				if (charmBarControl != null)
+				{
+					charmBarControl.CurrentData = newPane.CurrentData;
+					charmBarControl.HelpKey = newPane.HelpKey;
+				}
 
 				SetValue(currentPanePropertyKey, newPane);
 
@@ -121,10 +143,16 @@ namespace TecWare.PPSn.UI
 				case nameof(IPpsWindowPane.HasSideBar):
 					SetValue(hasPaneSideBarPropertyKey, CurrentPane.HasSideBar);
 					break;
+				case nameof(IPpsWindowPane.HelpKey):
+					charmBarControl.HelpKey = CurrentPane.HelpKey;
+					break;
+				case nameof(IPpsWindowPane.CurrentData):
+					charmBarControl.CurrentData = CurrentPane.CurrentData;
+					break;
 			}
 		} // proc CurrentPanePropertyChanged
 
-		IPpsProgressBar IPpsWindowPaneHost.Progress => PaneProgress;
+		IPpsProgressFactory IPpsWindowPaneHost.Progress => PaneProgress;
 
 		/// <summary>Current pane</summary>
 		public IPpsWindowPane CurrentPane => (IPpsWindowPane)GetValue(CurrentPaneProperty);
@@ -138,9 +166,9 @@ namespace TecWare.PPSn.UI
 		/// <summary>Current title of the pane.</summary>
 		public string Title => (string)GetValue(TitleProperty);
 		/// <summary>Current subtitle of the pane.</summary>
-		public string SubTitle => (string)GetValue(TitleProperty);
+		public string SubTitle => (string)GetValue(SubTitleProperty);
 		/// <summary>Current commands of the pane</summary>
-		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(TitleProperty);
+		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 		/// <summary>Current control</summary>
 		public object Control => GetValue(ControlProperty);
 

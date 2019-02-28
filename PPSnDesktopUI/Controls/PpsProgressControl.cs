@@ -13,11 +13,8 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using System;
-using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 
 namespace TecWare.PPSn.Controls
 {

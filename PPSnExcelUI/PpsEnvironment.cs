@@ -15,8 +15,10 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,22 +32,33 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
-	/// <summary>Special environment for data warehouse applications</summary>
-	public sealed class PpsEnvironment : IPpsShell
+	public interface IPpsFormsApplication : ISynchronizeInvoke, IWin32Window, IPpsProgressFactory
 	{
-		private readonly IPpsShell baseShell;
+		void Await(Task t);
+
+		void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
+		void ShowMessage(string message);
+
+		SynchronizationContext SynchronizationContext { get; }
+	} // interface IPpsSynchronize
+
+	/// <summary>Special environment for data warehouse applications</summary>
+	public sealed class PpsEnvironment : PpsShell
+	{
+		private readonly IPpsFormsApplication formsApplication;
 		private readonly PpsEnvironmentInfo info;
-		private readonly LuaTable luaLibrary;
 
 		private string fullName = null;
 		private DEHttpClient request = null;
 
-		public PpsEnvironment(IPpsShell baseShell, PpsEnvironmentInfo info)
+		public PpsEnvironment(Lua lua, IPpsFormsApplication formsApplication, PpsEnvironmentInfo info)
+			: base(lua)
 		{
-			this.baseShell = baseShell;
+			this.formsApplication = formsApplication;
 			this.info = info;
-			this.luaLibrary = new LuaGlobal(baseShell.Lua);
 		} // ctor
+
+		#region -- Login --------------------------------------------------------------
 
 		public void ClearCredentials()
 		{
@@ -81,7 +94,8 @@ namespace TecWare.PPSn
 					}
 					catch (Exception e)
 					{
-						if (e is WebException we)
+						if (e is HttpRequestException he
+							&& he.InnerException is WebException we)
 						{
 							switch (we.Status)
 							{
@@ -108,10 +122,21 @@ namespace TecWare.PPSn
 			}
 		} // func LoginAsync
 
+		#endregion
+
+		#region -- Http ---------------------------------------------------------------
+
+		public override DEHttpClient CreateHttp(Uri uri = null)
+		{
+			return uri == null
+				? request
+				: DEHttpClient.Create(new Uri(request.BaseAddress, uri), request.Credentials, request.DefaultEncoding);
+		} // func CreateHttp
+
 		public Task<XElement> GetXmlData(string requestUri)
 			=> request.GetXmlAsync(requestUri);
 
-		public IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
+		public override IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
 			=> request.CreateViewDataReader(arguments.ToQuery());
 
 		public async Task<DataTable> GetViewDataAsync(PpsShellGetList arguments)
@@ -141,20 +166,67 @@ namespace TecWare.PPSn
 			return dt.Columns.Count == 0 ? null : dt;
 		} // func GetViewDataAsync
 
-		public void BeginInvoke(Action action)
-			=> baseShell.BeginInvoke(action);
+		public override DEHttpClient Request => throw new NotImplementedException();
 
-		public Task InvokeAsync(Action action)
-			=> baseShell.InvokeAsync(action);
+		#endregion
 
-		public Task<T> InvokeAsync<T>(Func<T> func)
-			=> baseShell.InvokeAsync(func);
+		#region -- Synchronization ----------------------------------------------------
 
-		public void Await(Task task)
-			=> baseShell.Await(task);
+		public override void BeginInvoke(Action action)
+		{
+			if (InvokeRequired)
+				formsApplication.BeginInvoke(action, EmptyArgs);
+			else
+				action();
+		} // proc BeginInvoke
 
-		public T Await<T>(Task<T> task)
-			=> baseShell.Await(task);
+		public void Invoke(Action action)
+		{
+			if (InvokeRequired)
+				formsApplication.Invoke(action, EmptyArgs);
+			else
+				action();
+		} // proc Invoke
+
+		public T Invoke<T>(Func<T> func)
+		{
+			if (InvokeRequired)
+				return (T)formsApplication.Invoke(func, EmptyArgs);
+			else
+				return func();
+		} // proc Invoke
+
+		public override void Await(Task task)
+			=> formsApplication.Await(task);
+
+		public override Task InvokeAsync(Action action)
+		{
+			if (InvokeRequired)
+			{
+				return Task.Factory.FromAsync(
+					formsApplication.BeginInvoke(action, EmptyArgs),
+					formsApplication.EndInvoke
+				);
+			}
+			else
+			{
+				action();
+				return Task.CompletedTask;
+			}
+		} // func InvokeAsync
+
+		public override Task<T> InvokeAsync<T>(Func<T> func)
+		{
+			if (InvokeRequired)
+			{
+				return Task.Factory.FromAsync(
+					formsApplication.BeginInvoke(func, EmptyArgs),
+					ar => (T)formsApplication.EndInvoke(ar)
+				);
+			}
+			else
+				return Task.FromResult(func());
+		} // func InvokeAsync
 
 		public void Spawn(Func<Task> task)
 		{
@@ -172,11 +244,24 @@ namespace TecWare.PPSn
 			);
 		} // proc Spawn
 
-		public Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-			=> baseShell.ShowExceptionAsync(flags, exception, alternativeMessage);
+		private bool InvokeRequired => formsApplication.InvokeRequired; // Thread.CurrentThread.ManagedThreadId != mainThreadId;
 
-		public Task ShowMessageAsync(string message)
-			=> baseShell.ShowMessageAsync(message);
+		public override SynchronizationContext Context => formsApplication.SynchronizationContext;
+
+		#endregion
+
+		#region -- ShowException, ShowMessage -----------------------------------------
+
+		public override void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+			=> formsApplication.ShowException(flags, exception.UnpackException(), alternativeMessage);
+
+		public override void ShowMessage(string message)
+			=> formsApplication.ShowMessage(message);
+		
+		protected override IPpsProgress CreateProgressCore(bool blockUI) 
+			=> formsApplication.CreateProgress(blockUI);
+
+		#endregion
 
 		/// <summary>Name of the environment.</summary>
 		public string Name => info.Name;
@@ -190,12 +275,10 @@ namespace TecWare.PPSn
 		/// <summary>Has this environment credentials.</summary>
 		public bool IsAuthentificated => !(request?.Credentials is null);
 
-		/// <summary></summary>
-		public SynchronizationContext Context => baseShell.Context;
+		public override Encoding Encoding => Encoding.UTF8;
 
-		public Lua Lua => baseShell.Lua;
-		public LuaTable LuaLibrary => luaLibrary;
-		public Uri BaseUri => request?.BaseAddress ?? info.Uri;
-		public Encoding Encoding => baseShell.Encoding;
+		public override IPpsLogger Log => DebugLogger;
+
+		private static object[] EmptyArgs { get; } = Array.Empty<object>();
 	} // class PpsEnvironment
 }

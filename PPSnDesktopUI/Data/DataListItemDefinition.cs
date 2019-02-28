@@ -29,103 +29,103 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Data
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsDataListItemDefinition : PpsEnvironmentDefinition
-	{
-		#region -- class TemplateItem -----------------------------------------------------
+	/////////////////////////////////////////////////////////////////////////////////
+	///// <summary></summary>
+	//public class PpsDataListItemDefinition : PpsEnvironmentDefinition
+	//{
+	//	#region -- class TemplateItem -----------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class TemplateItem : IComparable<TemplateItem>
-		{
-			private readonly DataTemplate template;			// template of the row
-			private readonly Func<object, bool> condition;	// condition if the template is for this item
-			private readonly int priority;					// select order
-			private readonly string onlineViewId;			// view, that returns extended data for the row
+	//	///////////////////////////////////////////////////////////////////////////////
+	//	/// <summary></summary>
+	//	private sealed class TemplateItem : IComparable<TemplateItem>
+	//	{
+	//		private readonly DataTemplate template;			// template of the row
+	//		private readonly Func<object, bool> condition;	// condition if the template is for this item
+	//		private readonly int priority;					// select order
+	//		private readonly string onlineViewId;			// view, that returns extended data for the row
 
-			public TemplateItem(int priority, Func<object, bool> condition, string onlineViewId, DataTemplate template)
-			{
-				this.priority = priority;
-				this.condition = condition;
-				this.onlineViewId = onlineViewId;
-				this.template = template ?? throw new ArgumentNullException(nameof(template));
+	//		public TemplateItem(int priority, Func<object, bool> condition, string onlineViewId, DataTemplate template)
+	//		{
+	//			this.priority = priority;
+	//			this.condition = condition;
+	//			this.onlineViewId = onlineViewId;
+	//			this.template = template ?? throw new ArgumentNullException(nameof(template));
 
-			} // ctor
+	//		} // ctor
 
-			public int CompareTo(TemplateItem other)
-				=> Priority - other.Priority;
+	//		public int CompareTo(TemplateItem other)
+	//			=> Priority - other.Priority;
 
-			/// <summary>Runs the condition, if the template is accepted.</summary>
-			/// <param name="item"></param>
-			/// <returns></returns>
-			public bool SelectTemplate(dynamic item)
-			{
-				if (condition == null)
-					return template != null;
-				else
-					return condition(item);
-			} // func SelectTemplate
+	//		/// <summary>Runs the condition, if the template is accepted.</summary>
+	//		/// <param name="item"></param>
+	//		/// <returns></returns>
+	//		public bool SelectTemplate(dynamic item)
+	//		{
+	//			if (condition == null)
+	//				return template != null;
+	//			else
+	//				return condition(item);
+	//		} // func SelectTemplate
 
-			public string OnlineViewId => onlineViewId;
-			public int Priority => priority;
-			public DataTemplate Template => template;
-		} // class TemplateItem
+	//		public string OnlineViewId => onlineViewId;
+	//		public int Priority => priority;
+	//		public DataTemplate Template => template;
+	//	} // class TemplateItem
 
-		#endregion
+	//	#endregion
 
-		private readonly List<TemplateItem> templates = new List<TemplateItem>();
+	//	private readonly List<TemplateItem> templates = new List<TemplateItem>();
 
-		internal PpsDataListItemDefinition(PpsEnvironment environment, string key)
-			: base(environment, key)
-		{
-		} // ctor
+	//	internal PpsDataListItemDefinition(PpsEnvironment environment, string key)
+	//		: base(environment, key)
+	//	{
+	//	} // ctor
 
-		private async Task<Func<object, bool>> ReadConditionAsync(XmlReader xml)
-		{
-			var condition = await Environment.CompileLambdaAsync<Func<object, bool>>(xml, true, "Item");
-			await xml.ReadEndElementAsync();
-			return condition;
-		} // func ReadConditionAsync
+	//	private async Task<Func<object, bool>> ReadConditionAsync(XmlReader xml)
+	//	{
+	//		var condition = await Environment.CompileLambdaAsync<Func<object, bool>>(xml, true, "Item");
+	//		await xml.ReadEndElementAsync();
+	//		return condition;
+	//	} // func ReadConditionAsync
 
-		/// <summary></summary>
-		/// <param name="xml"></param>
-		/// <param name="priority"></param>
-		/// <returns></returns>
-		public async Task<int> AppendTemplateAsync(XmlReader xml, int priority)
-		{
-			// get base attributes
-			priority = xml.GetAttribute("priority", priority + 1);
-			var onlineViewId = xml.GetAttribute("viewId", String.Empty);
+	//	/// <summary></summary>
+	//	/// <param name="xml"></param>
+	//	/// <param name="priority"></param>
+	//	/// <returns></returns>
+	//	public async Task<int> AppendTemplateAsync(XmlReader xml, int priority)
+	//	{
+	//		// get base attributes
+	//		priority = xml.GetAttribute("priority", priority + 1);
+	//		var onlineViewId = xml.GetAttribute("viewId", String.Empty);
 
-			// read start element
-			await xml.ReadAsync();
+	//		// read start element
+	//		await xml.ReadAsync();
 
-			// read optional condition
-			var condition =
-				await xml.ReadOptionalStartElementAsync(StuffUI.xnCondition)
-					? await ReadConditionAsync(xml)
-					: null;
+	//		// read optional condition
+	//		var condition =
+	//			await xml.ReadOptionalStartElementAsync(StuffUI.xnCondition)
+	//				? await ReadConditionAsync(xml)
+	//				: null;
 
-			// read template
-			var template = await PpsXamlParser.LoadAsync<DataTemplate>(xml.ReadElementAsSubTree());
+	//		// read template
+	//		var template = await PpsXamlParser.LoadAsync<DataTemplate>(xml.ReadElementAsSubTree());
 
-			var templateItem = new TemplateItem(priority, condition, onlineViewId, template);
+	//		var templateItem = new TemplateItem(priority, condition, onlineViewId, template);
 
-			// insert the item in order of the priority
-			var index = templates.BinarySearch(templateItem);
-			if (index < 0)
-				templates.Insert(~index, templateItem);
-			else
-				templates.Insert(index, templateItem);
+	//		// insert the item in order of the priority
+	//		var index = templates.BinarySearch(templateItem);
+	//		if (index < 0)
+	//			templates.Insert(~index, templateItem);
+	//		else
+	//			templates.Insert(index, templateItem);
 
-			return priority;
-		} // proc AppendTemplate
+	//		return priority;
+	//	} // proc AppendTemplate
 
-		/// <summary></summary>
-		/// <param name="item"></param>
-		/// <returns></returns>
-		public DataTemplate FindTemplate(dynamic item)
-			=> templates.FirstOrDefault(c => c.SelectTemplate(item))?.Template;
-	} // class PpsDataListItemType
+	//	/// <summary></summary>
+	//	/// <param name="item"></param>
+	//	/// <returns></returns>
+	//	public DataTemplate FindTemplate(dynamic item)
+	//		=> templates.FirstOrDefault(c => c.SelectTemplate(item))?.Template;
+	//} // class PpsDataListItemType
 }

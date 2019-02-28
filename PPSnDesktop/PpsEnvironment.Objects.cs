@@ -1902,19 +1902,11 @@ namespace TecWare.PPSn
 
 	/// <summary>Data access object. It holds the loaded data.</summary>
 	/// <remarks>The caller should set DisableUI and DataChanged to get the notification of other accesses.</remarks>
-	public interface IPpsObjectDataAccess : IDisposable
+	public interface IPpsObjectDataAccess : IPpsDataObject, IDisposable
 	{
-		/// <summary>Gets call if the data was changed.</summary>
-		event EventHandler DataChanged;
-		/// <summary>Disable access to this object.</summary>
-		Func<IDisposable> DisableUI { get; set; }
 
-		/// <summary>Commit the data to the local changes.</summary>
-		/// <returns></returns>
-		Task CommitAsync();
-
-		/// <summary>Is a combination from <see cref="IPpsObjectData"/>.<c>IsReadOnly</c> and the implementation of <see cref="IPpsObjectDataAccessNotify"/></summary>
-		bool IsReadOnly { get; }
+		///// <summary>Is a combination from <see cref="IPpsObjectData"/>.<c>IsReadOnly</c> and the implementation of <see cref="IPpsObjectDataAccessNotify"/></summary>
+		//bool IsReadOnly { get; }
 		/// <summary>Data accessed to.</summary>
 		IPpsObjectData ObjectData { get; }
 	} // interface IPpsObjectDataAccess
@@ -1962,7 +1954,7 @@ namespace TecWare.PPSn
 
 	#region -- interface IPpsObjectData -----------------------------------------------
 
-	/// <summary>Basix implementation for the data-model.</summary>
+	/// <summary>Basic implementation for the data-model.</summary>
 	/// <remarks>Any new data type should implement this interface to get basic store and load functionality.
 	/// To get any notifications from Active Object Store implement also <see cref="IPpsObjectDataAccessNotify"/>.</remarks>
 	public interface IPpsObjectData : INotifyPropertyChanged
@@ -2027,7 +2019,7 @@ namespace TecWare.PPSn
 	#region -- interface IPpsObject ---------------------------------------------------
 
 	/// <summary>Contract for objects (local and remote)</summary>
-	public interface IPpsObject : IDataRow, IDataColumns, IDataValues, IPropertyReadOnlyDictionary, IDynamicMetaObjectProvider, INotifyPropertyChanged
+	public interface IPpsObject : IDataRow, IDataColumns, IDataValues, IPpsObjectInfo, IPropertyReadOnlyDictionary, IDynamicMetaObjectProvider, INotifyPropertyChanged
 	{
 		/// <summary>Get the object content.</summary>
 		/// <returns>Load content of the object.</returns>
@@ -2049,9 +2041,6 @@ namespace TecWare.PPSn
 
 		/// <summary>Datatyp of object body.</summary>
 		string MimeType { get; }
-
-		/// <summary>Access the environment</summary>
-		PpsEnvironment Environment { get; }
 
 		/// <summary>Sync root for an object.</summary>
 		object SyncRoot { get; }
@@ -2763,7 +2752,7 @@ namespace TecWare.PPSn
 	internal sealed class PpsRevisionObject : DynamicDataRow, IPpsObject
 	{
 		/// <summary>Property of the object is changed.</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler PropertyChanged { add { } remove { } }
 
 		private readonly object objectLock = new object();
 		private readonly long revisionId;
@@ -3908,7 +3897,7 @@ namespace TecWare.PPSn
 
 	/// <summary>Special environment table, that holds information about the 
 	/// object class.</summary>
-	public sealed class PpsObjectInfo : LuaEnvironmentTable, IPpsEnvironmentDefinition
+	public sealed class PpsObjectInfo : LuaShellTable, IPpsEnvironmentDefinition
 	{
 		private readonly string name;
 		private bool createServerSiteOnly = false;
@@ -3933,7 +3922,7 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public async Task<string> GetNextNumberAsync()
 		{
-			using (var trans = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited))
+			using (var trans = await ((PpsEnvironment)Shell).MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited))
 			using (var cmd = trans.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND abs(substr(Nr, 4)) != 0.0")) //SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'
 			{
 				var lastNr = !(await cmd.ExecuteScalarExAsync() is string lastNrString) ? 0 : Int32.Parse(lastNrString.Substring(3));
@@ -3954,8 +3943,8 @@ namespace TecWare.PPSn
 			if (documentUri == null)
 				return null;
 
-			var xSchema = await Environment.Request.GetXmlAsync(documentUri);
-			definition = (PpsDataSetDefinitionDesktop)Activator.CreateInstance(DocumentDefinitionType, Environment, Name, xSchema);
+			var xSchema = await Shell.Request.GetXmlAsync(documentUri);
+			definition = (PpsDataSetDefinitionDesktop)Activator.CreateInstance(DocumentDefinitionType, Shell, Name, xSchema);
 			definition.EndInit();
 
 			DocumentDefinition = definition; // cache schema
@@ -4008,6 +3997,8 @@ namespace TecWare.PPSn
 			get => isRev;
 			set => SetDeclaredMember(ref isRev, value, nameof(IsRev));
 		}
+
+		PpsEnvironment IPpsEnvironmentDefinition.Environment => (PpsEnvironment)Shell;
 	} // class PpsObjectInfo
 
 	#endregion
@@ -4082,6 +4073,8 @@ namespace TecWare.PPSn
 
 				/// <summary>Access the object data</summary>
 				public IPpsObjectData ObjectData => data;
+
+				object IPpsDataObject.Data => data;
 			} // class PpsObjectDataAccessImplementation
 
 			#endregion

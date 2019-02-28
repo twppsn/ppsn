@@ -31,10 +31,11 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 using LExpression = System.Linq.Expressions.Expression;
@@ -479,84 +480,85 @@ namespace TecWare.PPSn
 
 	#region -- class PpsEnvironment ---------------------------------------------------
 
-	/// <summary>Base class for application data. Holds information about view
+	/// <summary>Base class for the ppsn-Desktop rich client. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
 	/// engine.</summary>
-	public partial class PpsEnvironment : LuaTable, IPpsShell, IServiceProvider, IDisposable
+	public partial class PpsEnvironment : PpsShellWpf, IPpsWindowPaneManager, IServiceProvider
 	{
+		private readonly App app;
 		private readonly int environmentId;             // unique id of the environment
 		private readonly PpsEnvironmentInfo info;       // source information of the environment
 		private readonly NetworkCredential userInfo;    // currently credentials of the user
-		private readonly CancellationTokenSource environmentDisposing;
-		private readonly LuaGlobal luaGlobal;
 
 		private long userId = -1;
 		private readonly DirectoryInfo localDirectory = null;   // local directory for the user data
 
-		private PpsTraceLog logData = new PpsTraceLog();
-		private PpsDataListTemplateSelector dataListTemplateSelector;
-		private PpsEnvironmentCollection<PpsDataListItemDefinition> templateDefinitions;
+		private readonly CancellationTokenSource environmentDisposing;
+		
+		private readonly PpsTraceLog traceLog;
 
-		private readonly List<object> services = new List<object>();
+		private readonly PpsEnvironmentCollection<PpsActionDefinition> actions;
+		private readonly PpsEnvironmentCollection<PpsViewDefinition> views;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		private readonly PpsProgressStack backgroundProgress;
+		private readonly PpsProgressStack forgroundProgress;
 
-		/// <summary></summary>
-		/// <param name="info"></param>
-		/// <param name="userInfo"></param>
-		/// <param name="mainResources"></param>
-		public PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, ResourceDictionary mainResources)
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		public PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, App app)
+			: base(new Lua(), app.Resources)
 		{
+			this.app = app;
 			this.info = info ?? throw new ArgumentNullException("info");
 			this.userInfo = userInfo ?? throw new ArgumentNullException("userInfo");
-			this.environmentDisposing = new CancellationTokenSource();
-			this.luaGlobal = new LuaGlobal(new Lua());
 
-			this.webProxy = new PpsWebProxy(this);
-
-			this.DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, this, e));
-			this.DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, this, e));
-
-			var userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
-			SetMemberValue("UserName", userName);
-
-			this.localDirectory = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, userName));
-			if (!localDirectory.Exists)
-				localDirectory.Create();
-
-			this.activeObjectData = new PpsActiveObjectDataImplementation(this);
-			this.objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
-
-			// create ui stuff
-			this.mainResources = mainResources ?? throw new ArgumentNullException("mainResources");
-			this.currentDispatcher = Dispatcher.CurrentDispatcher;
-			this.inputManager = InputManager.Current;
-			this.synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
-			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
-			this.templateDefinitions = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
-			this.statusOfProxy = new ProxyStatus(this.webProxy, this.currentDispatcher);
-
-			CreateLuaCompileOptions();
-
-			// enable trace access
-			BindingOperations.EnableCollectionSynchronization(logData, logData.SyncRoot,
-				(collection, context, accessMethod, writeAccess) => currentDispatcher.Invoke(accessMethod)
-			);
-
-			// Start idle implementation
-			this.idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
-			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer(e);
+			environmentDisposing = new CancellationTokenSource();
 
 			// Register internal uri
 			lock (environmentCounterLock)
-				this.environmentId = environmentCounter++;
+				environmentId = environmentCounter++;
 
-			// initialize local store
-			this.baseUri = InitProxy();
-			request = DEHttpClient.Create(baseUri, defaultEncoding: Encoding);
+			// create user name
+			var userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
+			SetMemberValue("UserName", userName);
+
+			actions = new PpsEnvironmentCollection<PpsActionDefinition>(this);
+			views = new PpsEnvironmentCollection<PpsViewDefinition>(this);
+
+			CompileOptions = new LuaCompileOptions()
+			{
+				DebugEngine = new LuaEnvironmentTraceLineDebugger()
+			};
+
+			// create local directory from user name
+			localDirectory = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, userName));
+			if (!localDirectory.Exists)
+				localDirectory.Create();
+
+			// create web request proxy
+			webProxy = new PpsWebProxy(this);
+
+			// register proxy for the web requests
+			var baseUri = new Uri($"http://ppsn{environmentId}.local");
+			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
+			Request = CreateHttpCore(baseUri);
+
+			// create object information cache
+			activeObjectData = new PpsActiveObjectDataImplementation(this);
+			objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
+
+			// create ui stuff
+			this.statusOfProxy = new ProxyStatus(this.webProxy, Dispatcher);
+
+			// enable trace access
+			traceLog = new PpsTraceLog(this);
+			BindingOperations.EnableCollectionSynchronization(traceLog, traceLog.SyncRoot,
+				(collection, context, accessMethod, writeAccess) => Dispatcher.Invoke(accessMethod)
+			);
+
 
 			// Register new Data Schemes from, the server
-			RegisterObjectInfoSchema(PpsMasterData.MasterDataSchema, 
+			RegisterObjectInfoSchema(PpsMasterData.MasterDataSchema,
 				new LuaTable()
 				{
 					[nameof(PpsObjectInfo.DocumentUri)] = "remote/wpf/masterdata.xml",
@@ -564,14 +566,14 @@ namespace TecWare.PPSn
 				}
 			);
 
-			// Register Service
-			mainResources[EnvironmentService] = this;
-
 			InitBackgroundNotifier(environmentDisposing.Token, out backgroundNotifier, out backgroundNotifierModeTransmission);
 
 			RegisterService("DataFieldFactory", fieldFactory = new PpsDataFieldFactory(this));
 
 			InitializeStatistics();
+
+			backgroundProgress = new PpsProgressStack(app.Dispatcher);
+			forgroundProgress = new PpsProgressStack(app.Dispatcher);
 		} // ctor
 
 		/// <summary>Initialize environmnet.</summary>
@@ -600,7 +602,7 @@ namespace TecWare.PPSn
 					await OnSystemOnlineAsync(); // mark as online
 					break;
 				case PpsEnvironmentModeResult.Offline:
-				 	await OnSystemOfflineAsync();
+					await OnSystemOfflineAsync();
 					break;
 
 				case PpsEnvironmentModeResult.NeedsUpdate:
@@ -643,15 +645,9 @@ namespace TecWare.PPSn
 			return Task.FromResult(true);
 		} // proc UpdateAsync
 
-		/// <summary>Destroy environment.</summary>
-		public void Dispose()
-		{
-			Dispose(true);
-		} // proc Dispose
-
 		/// <summary></summary>
 		/// <param name="disposing"></param>
-		protected virtual void Dispose(bool disposing)
+		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
 			{
@@ -659,11 +655,6 @@ namespace TecWare.PPSn
 					throw new ObjectDisposedException(nameof(PpsEnvironment));
 
 				SetNewMode(PpsEnvironmentMode.Shutdown);
-
-				services.ForEach(serv => (serv as IDisposable)?.Dispose());
-
-				mainResources.Remove(EnvironmentService);
-				inputManager.PreProcessInput -= preProcessInputEventHandler;
 
 				// close tasks
 				webProxy.Dispose();
@@ -674,51 +665,277 @@ namespace TecWare.PPSn
 				// dispose local store
 				masterData?.Dispose();
 			}
+
+			base.Dispose(disposing);
 		} // proc Dispose
+
+		internal Task<bool> ShutdownAsync()
+		{
+			Dispose();
+			return Task.FromResult(true);
+		} // func ShutdownAsync
 
 		#endregion
 
-		/// <summary>Test if Network is present.</summary>
-		public bool IsNetworkPresent
-			=> System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
+		public override DataTemplate GetDataTemplate(object data, DependencyObject container) 
+			=> throw new NotImplementedException();
+
+		//string key = null;
+
+		//	if (item is LuaTable t)
+		//		key = t.GetMemberValue("Typ") as string;
+		//	else if (item is PpsObject o)
+		//		key = o.Typ;
+		//	else
+		//		key = ((dynamic) item).Typ;
+
+		//	if (key == null)
+		//		return null;
+
+		//	var typeDef = shell.DataListItemTypes[key];
+		//	return typeDef?.FindTemplate(item) ?? defaultTemplate;
+
+
+		protected override IPpsProgress CreateProgressCore(bool blockUI)
+			=> BackgroundProgressState.CreateProgress(false); 
+
+		#region -- Online/Offline -----------------------------------------------------
+
+		/// <summary>Is called when the system changes the state to online.</summary>
+		/// <returns></returns>
+		private async Task OnSystemOnlineAsync()
+		{
+			Trace.WriteLine("[Environment] System goes online.");
+
+			masterData.CheckOfflineCache(); // start download
+
+			await RefreshDefaultResourcesAsync();
+			await RefreshTemplatesAsync();
+
+			await RefreshNavigatorAsync();
+		} // proc OnSystemOnlineAsync
+
+		/// <summary>Is called when the system changes the state to offline.</summary>
+		/// <returns></returns>
+		private async Task OnSystemOfflineAsync()
+		{
+			Trace.WriteLine("[Environment] System goes offline.");
+
+			await RefreshDefaultResourcesAsync();
+			await RefreshTemplatesAsync();
+
+			await RefreshNavigatorAsync();
+		} // proc OnSystemOfflineAsync
+
+		#endregion
+
+		#region -- RefreshNavigatorAsync ----------------------------------------------
+
+		private static readonly XName xnEnvironment = "environment";
+		private static readonly XName xnCode = "code";
+		private static readonly XName xnNavigator = "navigator";
+
+		private async Task RefreshNavigatorAsync()
+		{
+			// clear the views
+			await Dispatcher.InvokeAsync(() =>
+			{
+				views.Clear();
+				actions.Clear();
+			});
+
+			try
+			{
+				// get the views from storage
+				var xEnvironment = await Request.GetXmlAsync("wpf/environment.xml", rootName: xnEnvironment);
+
+				// read navigator content
+				var xNavigator = xEnvironment.Element(xnNavigator);
+				if (xNavigator != null)
+				{
+
+					// append the new views
+					foreach (var cur in xNavigator.Elements(PpsViewDefinition.xnView))
+						views.AppendItem(new PpsViewDefinition(this, cur));
+
+					// append the new actions
+					var priority = 0;
+					foreach (var cur in xNavigator.Elements(PpsActionDefinition.xnAction))
+						actions.AppendItem(new PpsActionDefinition(this, cur, ref priority));
+
+					// update document info
+					lock (GetObjectInfoSyncObject())
+					{
+						var removeList = GetRemoveListObjectInfo();
+						foreach (var cur in xNavigator.Elements(XName.Get("document")))
+							UpdateObjectInfo(cur, removeList);
+						ClearObjectInfo(removeList);
+					}
+				}
+
+				// run environment extensions
+				var code = xEnvironment.Element(xnCode)?.Value;
+				if (!String.IsNullOrEmpty(code))
+				{
+					try
+					{
+						var chunk = await CompileAsync(code, "environment.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+						await Dispatcher.InvokeAsync(() => RunScript(chunk, this, true, this));
+					}
+					catch (Exception e)
+					{
+						AppendException(e);
+					}
+				}
+			}
+			catch (WebException ex)
+			{
+				if (ex.Status == WebExceptionStatus.ProtocolError) // e.g. file not found
+					await ShowExceptionAsync(ExceptionShowFlags.Background, ex);
+				else
+					throw;
+			}
+		} // proc RefreshNavigatorAsync
+
+		#endregion
+
+		#region -- Window Manager -----------------------------------------------------
+
+		public async Task<PpsMainWindow> CreateMainWindowAsync()
+		{
+			return await Dispatcher.InvokeAsync(() =>
+			{
+				// find a free window index
+				var freeIndex = 0;
+				while (GetWindow(freeIndex) != null)
+					freeIndex++;
+
+				var window = new PpsMainWindow(freeIndex);
+				window.Show();
+				return window;
+			}
+			);
+		} // proc CreateMainWindow
+
+		public PpsMainWindow GetWindow(int index)
+		{
+			foreach (var c in Application.Current.Windows)
+			{
+				if (c is PpsMainWindow w && w.WindowIndex == index)
+					return w;
+			}
+			return null;
+		} // func GetWindow
+
+		public IEnumerable<PpsMainWindow> GetWindows()
+		{
+			foreach (var c in Application.Current.Windows)
+			{
+				if (c is PpsMainWindow w)
+					yield return w;
+			}
+		} // func GetWindows
+
+		#endregion
+
+		#region -- Pane Manager -------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="pane"></param>
+		/// <returns></returns>
+		public bool ActivatePane(IPpsWindowPane pane)
+			=> pane?.PaneManager.ActivatePane(pane) ?? false;
+
+		/// <summary>Loads a new pane in a new window.</summary>
+		/// <param name="paneType"></param>
+		/// <param name="newPaneMode">Pane mode to use. Default is <c>NewMainWindow</c>. <c>NewPane</c> and <c>ReplacePane</c> will throw an exception.</param>
+		/// <param name="arguments">Argument set for the pane.</param>
+		/// <returns>Task that returns a full initialized pane.</returns>
+		public async Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode, LuaTable arguments)
+		{
+			// find pane
+			var pane = FindOpenPane(paneType, arguments);
+			if (pane == null)
+			{
+				// open pane
+				switch (newPaneMode)
+				{
+					case PpsOpenPaneMode.Default:
+					case PpsOpenPaneMode.NewMainWindow:
+						{
+							var window = await CreateMainWindowAsync();
+							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.NewPane, arguments);
+						}
+					case PpsOpenPaneMode.NewSingleWindow:
+						{
+							var window = new PpsSingleWindow(this, false);
+							window.Show();
+							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.NewPane, arguments);
+						}
+					case PpsOpenPaneMode.NewSingleDialog:
+						{
+							var window = new PpsSingleWindow(this, false);
+							if (arguments?.GetMemberValue("DialogOwner") is Window dialogOwner)
+								window.Owner = dialogOwner;
+							var dlgPane = await window.OpenPaneAsync(paneType, PpsOpenPaneMode.Default, arguments);
+							var r = window.ShowDialog();
+							if (arguments != null && r.HasValue)
+								arguments["DialogResult"] = r;
+							return dlgPane;
+						}
+					default:
+						throw new ArgumentOutOfRangeException(nameof(newPaneMode), newPaneMode, $"Only {nameof(PpsOpenPaneMode.Default)}, {nameof(PpsOpenPaneMode.NewMainWindow)} and {nameof(PpsOpenPaneMode.NewSingleWindow)} is allowed.");
+				}
+			}
+			else
+			{
+				ActivatePane(pane);
+				return pane;
+			}
+		} // func OpenPaneAsync
+
+		/// <summary></summary>
+		/// <param name="paneType"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments)
+		{
+			foreach (var p in Panes)
+			{
+				if (p.EqualPane(paneType, arguments))
+					return p;
+			}
+			return null;
+		} // func FindOpenPane
+
+		public IEnumerable<IPpsWindowPane> Panes
+		{
+			get
+			{
+				foreach (var w in GetWindows())
+				{
+					if (w is IPpsWindowPaneManager m)
+					{
+						foreach (var p in m.Panes)
+							yield return p;
+					}
+				}
+			}
+		} // prop Panes
+
+		PpsShellWpf IPpsWindowPaneManager.Shell => this;
+		bool IPpsWindowPaneManager.IsActive => false;
+
+		#endregion
 
 		#region -- Services -----------------------------------------------------------
-
-		/// <summary>Register Service to the environment root.</summary>
-		/// <param name="key"></param>
-		/// <param name="service"></param>
-		public void RegisterService(string key, object service)
-		{
-			if (services.Exists(c => c.GetType() == service.GetType()))
-				throw new InvalidOperationException(nameof(service));
-			if (this.ContainsKey(key))
-				throw new InvalidOperationException(nameof(key));
-
-			// dynamic interface
-			this[key] = service;
-
-			// static interface
-			services.Add(service);
-		} // proc RegisterService
 
 		/// <summary></summary>
 		/// <param name="serviceType"></param>
 		/// <returns></returns>
-		public object GetService(Type serviceType)
+		public override object GetService(Type serviceType)
 		{
-			foreach (var service in services)
-			{
-				var r = (service as IServiceProvider)?.GetService(serviceType);
-				if (r != null)
-					return r;
-				else if (serviceType.IsAssignableFrom(service.GetType()))
-					return service;
-			}
-
-			if (serviceType.IsAssignableFrom(GetType()))
-				return this;
-
-			return null;
+			return base.GetService(serviceType);
 		} // func GetService
 
 		#endregion
@@ -852,7 +1069,7 @@ namespace TecWare.PPSn
 			{
 				if (!masterData.IsInSynchronization)
 				{
-					using (var log = Traces.TraceProgress())
+					using (var log = CreateProgress(false))
 						await masterData.SynchronizationAsync(false, log);
 				}
 			}
@@ -891,7 +1108,7 @@ namespace TecWare.PPSn
 								if (changedTo)
 									await Dispatcher.InvokeAsync(() => OnSystemOfflineAsync().AwaitTask());
 							}
-							
+
 							if (!await backgroundNotifierModeTransmission.WaitAsync(30000) && IsNetworkPresent)
 								state = PpsEnvironmentState.OfflineConnect;
 							break;
@@ -910,11 +1127,11 @@ namespace TecWare.PPSn
 							{
 								foreach (var c in x)
 								{
-									var mimeType = c.GetAttribute("id", (string)null);
+									var mimeType = c.GetAttribute("id", null);
 									if (mimeType != null)
 									{
 										var isCompressedContent = c.GetAttribute("isCompressedContent", false);
-										var extensions = c.GetAttribute("extensions", (string)null)?.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+										var extensions = c.GetAttribute("extensions", null)?.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
 										MimeTypeMapping.Update(mimeType, isCompressedContent, false, extensions);
 									}
 								}
@@ -1017,7 +1234,7 @@ namespace TecWare.PPSn
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.ServerConnectFailure);
 									break;
 								case WebExceptionStatus.ProtocolError:
-									Traces.AppendException(webEx);
+									Log.Append(PpsLogType.Exception, webEx);
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
 									break;
 								default:
@@ -1036,7 +1253,7 @@ namespace TecWare.PPSn
 						if (ex is WebException webEx && webEx.Status == WebExceptionStatus.ConnectFailure)
 							state = PpsEnvironmentState.Offline;
 						else
-							Traces.AppendException(ex, traceItemType: PpsTraceItemType.Warning);
+							Log.Append(PpsLogType.Warning, ex);
 						await Task.Delay(500);
 					}
 				}
@@ -1083,7 +1300,7 @@ namespace TecWare.PPSn
 						CurrentMode = PpsEnvironmentMode.Shutdown;
 						break;
 				}
-		
+
 				Dispatcher.BeginInvoke(new Action(
 					() =>
 					{
@@ -1100,50 +1317,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		void IPpsShell.Await(Task task)
-			=> task.AwaitTask();
-
-		T IPpsShell.Await<T>(Task<T> task)
-			=> task.AwaitTask();
-		
-		/// <summary>Internal Id of the environment.</summary>
-		[LuaMember]
-		public int EnvironmentId => environmentId;
-
-		/// <summary>User Id, not the contact id.</summary>
-		[LuaMember]
-		public long UserId => userId;
-		/// <summary>Displayname for UI.</summary>
-		[LuaMember]
-		public string UsernameDisplay =>
-			GetMemberValue("FullName", rawGet: true) as string ??
-			GetMemberValue("displayName", rawGet: true) as string ??
-			$"User:{UserId}";
-
-		/// <summary>The current mode of the environment.</summary>
-		public PpsEnvironmentMode CurrentMode { get; private set; } = PpsEnvironmentMode.None;
-
-		/// <summary>The current state of the environment.</summary>
-		public PpsEnvironmentState CurrentState { get; private set; } = PpsEnvironmentState.None;
-
-		/// <summary>Current state of the environment</summary>
-		[LuaMember]
-		public bool IsOnline => CurrentState == PpsEnvironmentState.Online;
-
-		/// <summary>Data list items definitions</summary>
-		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => templateDefinitions;
-		/// <summary>Basic template selector for the item selector</summary>
-		public PpsDataListTemplateSelector DataListTemplateSelector => dataListTemplateSelector;
-
-		/// <summary>Dispatcher of the ui-thread.</summary>
-		public Dispatcher Dispatcher => currentDispatcher;
-		/// <summary>Synchronisation</summary>
-		SynchronizationContext IPpsShell.Context => synchronizationContext;
-
-		/// <summary>Access to the current collected informations.</summary>
-		public PpsTraceLog Traces => logData;
-
-		#region ---- Statistics ---------------------------------------------------------
+		#region ---- Statistics -------------------------------------------------------
 
 		/// <summary>Class for performant keeping of statistical values</summary>
 		public class CircularBuffer : IEnumerable<long>, INotifyCollectionChanged
@@ -1197,11 +1371,11 @@ namespace TecWare.PPSn
 		/// <summary>Class representing one Statistic Element</summary>
 		public class StatisticElement : INotifyPropertyChanged
 		{
-			private string name;
-			private Func<long> request;
+			private readonly string name;
+			private readonly Func<long> request;
 			private CircularBuffer history;
 			private long max = 0;
-			private Func<long, string> formatValue;
+			private readonly Func<long, string> formatValue;
 
 			/// <summary>For keeping the UI up to Date</summary>
 			public event PropertyChangedEventHandler PropertyChanged;
@@ -1267,37 +1441,37 @@ namespace TecWare.PPSn
 				new StatisticElement("ObjectStore Alive", () =>
 				{
 					var alive = 0;
-					foreach(var obj in objectStore)
-						if (obj.TryGetTarget(out var tmp))
-							alive++;
+					//foreach(var obj in objectStore)
+					//	if (obj.TryGetTarget(out var tmp))
+					//		alive++;
 					return alive;
 				}),
 				new StatisticElement("ObjectStore Dead", () =>
 				{
 					var alive = 0;
-					foreach(var obj in objectStore)
-						if (!obj.TryGetTarget(out var tmp))
-							alive++;
+					//foreach(var obj in objectStore)
+					//	if (!obj.TryGetTarget(out var tmp))
+					//		alive++;
 					return alive;
 				}),
 				new StatisticElement("Cached Tables Alive", () =>
 				{
 					var alive = 0;
-					var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
-					var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
-					foreach(var obj in cachedTables.Values)
-						if (obj.TryGetTarget(out var tmp))
-							alive++;
+					//var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
+					//var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
+					//foreach(var obj in cachedTables.Values)
+					//	if (obj.TryGetTarget(out var tmp))
+					//		alive++;
 					return alive;
 				}),
 				new StatisticElement("Cached Tables Dead", () =>
 				{
 					var alive = 0;
-					var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
-					var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
-					foreach(var obj in cachedTables.Values)
-						if (!obj.TryGetTarget(out var tmp))
-							alive++;
+					//var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
+					//var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
+					//foreach(var obj in cachedTables.Values)
+					//	if (!obj.TryGetTarget(out var tmp))
+					//		alive++;
 					return alive;
 				})
 			};
@@ -1314,13 +1488,54 @@ namespace TecWare.PPSn
 
 		#endregion Statistics
 
+		/// <summary>Internal Id of the environment.</summary>
+		[LuaMember]
+		public int EnvironmentId => environmentId;
+
+		/// <summary>User Id, not the contact id.</summary>
+		[LuaMember]
+		public long UserId => userId;
+		/// <summary>Displayname for UI.</summary>
+		[LuaMember]
+		public string UsernameDisplay =>
+			GetMemberValue("FullName", rawGet: true) as string
+			?? GetMemberValue("displayName", rawGet: true) as string
+			?? $"User:{UserId}";
+
 		/// <summary>Path of the local data for the user.</summary>
 		[LuaMember]
 		public DirectoryInfo LocalPath => localDirectory;
 
-		LuaTable IPpsShell.LuaLibrary => this;
+		/// <summary>List of actions defined for an context.</summary>
+		[LuaMember(nameof(Actions))]
+		public PpsEnvironmentCollection<PpsActionDefinition> Actions => actions;
+		/// <summary>Navigator views.</summary>
+		[LuaMember(nameof(Views))]
+		public PpsEnvironmentCollection<PpsViewDefinition> Views => views;
+
+		/// <summary>The current mode of the environment.</summary>
+		public PpsEnvironmentMode CurrentMode { get; private set; } = PpsEnvironmentMode.None;
+
+		/// <summary>The current state of the environment.</summary>
+		public PpsEnvironmentState CurrentState { get; private set; } = PpsEnvironmentState.None;
+
+		/// <summary>Current state of the environment</summary>
+		[LuaMember]
+		public bool IsOnline => CurrentState == PpsEnvironmentState.Online;
+
+		[LuaMember]
+		public override IPpsLogger Log => traceLog;
 		
-		// -- Static --------------------------------------------------------------
+		/// <summary>Test if Network is present.</summary>
+		public bool IsNetworkPresent
+			=> System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
+
+		[LuaMember(nameof(BackgroundProgressState))]
+		public PpsProgressStack BackgroundProgressState => backgroundProgress;
+		[LuaMember(nameof(ForegroundProgressState))]
+		public PpsProgressStack ForegroundProgressState => forgroundProgress;
+
+		//// -- Static --------------------------------------------------------------
 
 		private static object environmentCounterLock = new object();
 		private static int environmentCounter = 1;
@@ -1330,10 +1545,6 @@ namespace TecWare.PPSn
 
 		static PpsEnvironment()
 		{
-			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
-			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
-			Neo.IronLua.LuaType.RegisterTypeExtension(typeof(PpsWindowPaneHelper));
-
 			// install resolver for referenced assemblies
 			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
 		} // ctor 
@@ -1357,7 +1568,7 @@ namespace TecWare.PPSn
 				select c
 			).FirstOrDefault();
 
-		private static bool CompareAssemblyName(AssemblyName a, AssemblyName b) 
+		private static bool CompareAssemblyName(AssemblyName a, AssemblyName b)
 			=> String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase) == 0
 				&& a.Version == b.Version;
 
@@ -1408,19 +1619,13 @@ namespace TecWare.PPSn
 				return RegisterReferencedAssemblySource(uri, Assembly.Load(src.ReadInArray()));
 		} // func LoadAssemblyFromUri
 
-		/// <summary>Get the environment, that is attached to the current ui-element.</summary>
-		/// <param name="ui"></param>
-		/// <returns></returns>
-		public static PpsEnvironment GetEnvironment(FrameworkElement ui)
-			=> (PpsEnvironment)ui.FindResource(EnvironmentService);
-		
 		/// <summary>Get the Environment, that is attached to the current application.</summary>
 		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment()
-			=> (PpsEnvironment)Application.Current?.TryFindResource(EnvironmentService);
+			=> (PpsEnvironment)Application.Current?.TryFindResource(PpsShellWpf.ShellService);
 
 		private static IPpsWindowPane GetCurrentPaneCore(FrameworkElement ui)
-			=> (IPpsWindowPane)ui.TryFindResource(WindowPaneService);
+			=> (IPpsWindowPane)ui.TryFindResource(PpsWindowPaneHelper.WindowPaneService);
 
 		/// <summary>Get the current pane from the ui element.</summary>
 		/// <param name="ui"></param>
@@ -1433,83 +1638,6 @@ namespace TecWare.PPSn
 		public static IPpsWindowPane GetCurrentPane()
 			=> GetCurrentPaneCore(Keyboard.FocusedElement as FrameworkElement);
 	} // class PpsEnvironment
-
-	#endregion
-
-	#region -- class LuaEnvironmentTable ----------------------------------------------
-
-	/// <summary>Connects the current table with the Environment</summary>
-	public class LuaEnvironmentTable : LuaTable
-	{
-		private readonly PpsEnvironment environment;
-		private readonly LuaEnvironmentTable parentTable;
-
-		private readonly Dictionary<string, Action> onPropertyChanged = new Dictionary<string, Action>();
-
-		/// <summary></summary>
-		/// <param name="parentTable"></param>
-		public LuaEnvironmentTable(LuaEnvironmentTable parentTable)
-		{
-			this.environment = parentTable.Environment;
-			this.parentTable = parentTable;
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="environment"></param>
-		public LuaEnvironmentTable(PpsEnvironment environment)
-		{
-			this.environment = environment;
-			this.parentTable = null;
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="key"></param>
-		/// <returns></returns>
-		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? ((LuaTable)parentTable ?? environment).GetValue(key);
-
-		/// <summary></summary>
-		/// <param name="propertyName"></param>
-		protected override void OnPropertyChanged(string propertyName)
-		{
-			if (onPropertyChanged.TryGetValue(propertyName, out var a) && a != null)
-				a();
-			base.OnPropertyChanged(propertyName);
-		} // proc OnPropertyChganged
-
-		/// <summary></summary>
-		/// <param name="propertyName"></param>
-		/// <param name="onChanged"></param>
-		[LuaMember]
-		public void OnPropertyChangedListener(string propertyName, Action onChanged = null)
-		{
-			if (onChanged == null)
-				onPropertyChanged.Remove(propertyName);
-			else
-				onPropertyChanged[propertyName] = onChanged;
-		} // proc OnPropertyChangedListener
-
-		/// <summary>Helper to set a declared member with an new value. If the value is changed OnPropertyChanged will be invoked.</summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="m">Field that to set.</param>
-		/// <param name="n">Value for the field.</param>
-		/// <param name="propertyName">Name of the property.</param>
-		protected void SetDeclaredMember<T>(ref T m, T n, string propertyName)
-		{
-			if (!Equals(m, n))
-			{
-				m = n;
-				OnPropertyChanged(propertyName);
-			}
-		} // proc SetDeclaredMember
-
-		/// <summary>Optional parent table.</summary>
-		[LuaMember]
-		public LuaEnvironmentTable Parent => parentTable;
-		/// <summary>Access to the current environemnt.</summary>
-		[LuaMember]
-		public PpsEnvironment Environment => environment;
-	} // class LuaEnvironmentTable
 
 	#endregion
 }

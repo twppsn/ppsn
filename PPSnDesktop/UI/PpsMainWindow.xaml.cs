@@ -33,8 +33,6 @@ namespace TecWare.PPSn.UI
 		public readonly static RoutedCommand GoToPaneCommand = new RoutedCommand("GoToPane", typeof(PpsMainWindow));
 		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
 
-		public readonly static DependencyProperty CharmObjectProperty = DependencyProperty.Register(nameof(CharmObject), typeof(object), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null));
-
 		public readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register(nameof(IsNavigatorVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false, NavigatorVisibleChanged));
 		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
 		private readonly static DependencyPropertyKey IsSideBarVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsSideBarVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(true));
@@ -88,7 +86,7 @@ namespace TecWare.PPSn.UI
 					async (sender, e) =>
 					{
 						e.Handled = true;
-						await OpenPaneAsync(Environment.TracePaneType, PpsOpenPaneMode.NewPane, null);
+						await OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewPane, null);
 					}
 				)
 			);
@@ -228,8 +226,8 @@ namespace TecWare.PPSn.UI
 
 		private void OnCurrentPanePropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
-			if (e.PropertyName == nameof(PpsNavigatorModel.ViewsShowDescription))
-				RefreshSideIsVisibleProperty();
+			//if (e.PropertyName == nameof(PpsNavigatorModel.ViewsShowDescription))
+			//	RefreshSideIsVisibleProperty();
 		} // proc OnCurrentPanePropertyChanged
 
 		private void OnNavigatorVisibleChanged(bool oldValue, bool newValue)
@@ -246,9 +244,9 @@ namespace TecWare.PPSn.UI
 		/// <summary>Index of the current window</summary>
 		public int WindowIndex => windowIndex;
 		/// <summary>Access to the current environment,</summary>
-		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
-		/// <summary>Access to the navigator model</summary>
-		public PpsNavigatorModel Navigator => (PpsNavigatorModel)PART_Navigator.DataContext;
+		public PpsEnvironment Environment => (PpsEnvironment)Shell;
+		///// <summary>Access to the navigator model</summary>
+		//public PpsNavigatorModel Navigator => (PpsNavigatorModel)PART_Navigator.DataContext;
 		/// <summary>Is the navigator visible.</summary>
 		public bool IsNavigatorVisible
 		{
@@ -263,7 +261,5 @@ namespace TecWare.PPSn.UI
 			get => (bool)GetValue(IsPaneVisibleProperty);
 			set => SetValue(IsPaneVisibleProperty, value);
 		} // prop NavigatorState
-
-		public object CharmObject { get => GetValue(CharmObjectProperty); set => SetValue(CharmObjectProperty, value); }
 	} // class PpsMainWindow
 }

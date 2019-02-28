@@ -33,7 +33,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsEnvironmentOnlineFailedException ---------------------------------
+	#region -- class PpsEnvironmentOnlineFailedException ------------------------------
 
 	/// <summary>Exception if the system could not go online.</summary>
 	public class PpsEnvironmentOnlineFailedException : PpsEnvironmentException

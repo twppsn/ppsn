@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="PPSnExcelMSI"
+					 Language="1033"
+					 Version="1.0.0.0"
+					 Manufacturer="TecWare GmbH" UpgradeCode="a12f6a9c-383b-49fe-a0dd-2980e0a1a883">
+
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" Platform="x86"  Comments="PPSn Modul"/>
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+		<Property Id="ARPPRODUCTICON">ProductIcon</Property>
+		<Property Id="ARPCOMMENTS">PPSnExcel modul</Property>
+		<Property Id="ARPHELPLINK">https://tecware-gmbh.de/</Property>
+		<Property Id="ARPURLINFOABOUT">https://tecware-gmbh.de/</Property>
+
+		<Media Id="1" Cabinet="data.cab" EmbedCab="yes" />
+
+		<Feature Id="PPSnExcel" Title="PPSn Excel" Level="1">
+			<ComponentGroupRef Id="PPSnExcel" />
+		</Feature>
+
+		<!--<InstallExecuteSequence>
+			<RemoveExistingProducts After="InstallInitialize" />
+		</InstallExecuteSequence>
+
+		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+		<UIRef Id="WixUI_InstallDir"/>-->
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder" Name="ProgramFiles">
+				<!--<Directory Id="ProgramFiles64Folder" Name="ProgramFiles">-->
+				<Directory Id="TecWare" Name="TecWare">
+					<Directory Id="INSTALLFOLDER" Name="PPSnExcel" />
+				</Directory>
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="PPSnExcel" Directory="INSTALLFOLDER">
+			<Component Id="PPSnExcel" Guid="054313fe-9591-4158-ab2b-b60e9599c40b">
+				<File Id="PPSnExcel.dll" Name="PPSnExcel.dll" Source="..\PPSnExcel\bin\Release\PPSnExcel.dll" />
+				<File Id="PPSnExcel.pdb" Name="PPSnExcel.pdb" Source="..\PPSnExcel\bin\Release\PPSnExcel.pdb" />
+				<File Id="PPSnExcel.vsto" Name="PPSnExcel.vsto" Source="..\PPSnExcel\bin\Release\PPSnExcel.vsto" />
+				<File Id="PPSnExcel.dll.manifest" Name="PPSnExcel.dll.manifest" Source="..\PPSnExcel\bin\Release\PPSnExcel.dll.manifest" />
+
+				<RegistryKey Root="HKLM" Key="Software\Microsoft\Office\Excel\Addins\PPSn.Excel">
+					<RegistryValue Name="FriendlyName" Value="PPSn Excel" Type="string" />
+					<RegistryValue Name="Description" Value="PPSn Excel Modul" Type="string" />
+					<RegistryValue Name="LoadBehavior" Value="3" Type="integer" />
+					<RegistryValue Name="Manifest" Value="file://[#PPSnExcel.vsto]|vstolocal" Type="string" />
+				</RegistryKey>
+			</Component>
+			<Component Id="PPSnExcelUI" Guid="6f50b107-1c1c-4b76-95b4-75beb425dfca">
+				<File Id="PPSnExcelUI.dll" Name="PPSnExcelUI.dll" Source="..\PPSnExcel\bin\Release\PPSnExcelUI.dll" />
+				<File Id="PPSnExcelUI.pdb" Name="PPSnExcelUI.pdb" Source="..\PPSnExcel\bin\Release\PPSnExcelUI.pdb" />
+			</Component>
+			<Component Id="PPSnCore" Guid="3b45f5cf-936e-487e-98b9-2718462b07aa">
+				<File Id="PPSn.Core.dll" Name="PPSn.Core.dll" Source="..\PPSnExcel\bin\Release\PPSn.Core.dll" />
+				<File Id="PPSn.Core.pdb" Name="PPSn.Core.pdb" Source="..\PPSnExcel\bin\Release\PPSn.Core.pdb" />
+			</Component>
+			<Component Id="NeoLua" Guid="4a342d95-ca71-4c8e-85fc-219c48631b60">
+				<File Id="Neo.Lua.dll" Name="Neo.Lua.dll" Source="..\PPSnExcel\bin\Release\Neo.Lua.dll" />
+				<File Id="Neo.Lua.pdb" Name="Neo.Lua.pdb" Source="..\PPSnExcel\bin\Release\Neo.Lua.pdb" />
+			</Component>
+			<Component Id="DESCore" Guid="46eeb19a-24e0-4aa8-9e7c-26fa0791ed49">
+				<File Id="DES.Core.dll" Name="DES.Core.dll" Source="..\PPSnExcel\bin\Release\DES.Core.dll" />
+			</Component>
+			<Component Id="VSTO" Guid="3811f351-ac89-478b-90b3-b60ea8220613">
+				<File Id="Microsoft.Office.Tools.dll" Name="Microsoft.Office.Tools.dll" Source="..\PPSnExcel\bin\Release\Microsoft.Office.Tools.dll" />
+				<File Id="Microsoft.Office.Tools.Common.dll" Name="Microsoft.Office.Tools.Common.dll" Source="..\PPSnExcel\bin\Release\Microsoft.Office.Tools.Common.dll" />
+				<File Id="Microsoft.Office.Tools.Common.v4.0.Utilities.dll" Name="Microsoft.Office.Tools.Common.v4.0.Utilities.dll" Source="..\PPSnExcel\bin\Release\Microsoft.Office.Tools.Common.v4.0.Utilities.dll" />
+				<File Id="Microsoft.Office.Tools.Excel.dll" Name="Microsoft.Office.Tools.Excel.dll" Source="..\PPSnExcel\bin\Release\Microsoft.Office.Tools.Excel.dll" />
+				<File Id="Microsoft.Office.Tools.v4.0.Framework.dll" Name="Microsoft.Office.Tools.v4.0.Framework.dll" Source="..\PPSnExcel\bin\Release\Microsoft.Office.Tools.v4.0.Framework.dll" />
+				<File Id="Microsoft.VisualStudio.Tools.Applications.Runtime.dll" Name="Microsoft.VisualStudio.Tools.Applications.Runtime.dll" Source="..\PPSnExcel\bin\Release\Microsoft.VisualStudio.Tools.Applications.Runtime.dll" />
+			</Component>
+		</ComponentGroup>
+	</Fragment>
+</Wix>

@@ -15,61 +15,16 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Windows.Threading;
 using TecWare.DE.Data;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- interface IPpsProgress -------------------------------------------------
-
-	/// <summary>Return a progress control.</summary>
-	public interface IPpsProgress : IDisposable
-	{
-		/// <summary>Statustext</summary>
-		string Text { get; set; }
-		/// <summary>Progressbar position (0...1000)</summary>
-		int Value { get; set; }
-	} // interface IPpsProgress
-
-	#endregion
-
-	#region -- interface IPpsProgressBar ----------------------------------------------
-
-	/// <summary>Progress bar contract.</summary>
-	public interface IPpsProgressBar
-	{
-		/// <summary>Create a new progress.</summary>
-		/// <returns></returns>
-		IPpsProgress CreateProgress();
-	} // IPpsProgressBar
-
-	#endregion
-
 	#region -- class PpsProgressStack -------------------------------------------------
 
 	/// <summary>Progress stack implementation.</summary>
-	public sealed class PpsProgressStack : ObservableObject, IPpsProgressBar
+	public sealed class PpsProgressStack : ObservableObject, IPpsProgressFactory
 	{
-		#region -- class PpsDummyProgress ---------------------------------------------
-
-		private sealed class PpsDummyProgress : IPpsProgress
-		{
-			public PpsDummyProgress()
-			{
-			} // ctor
-
-			public void Dispose()
-			{
-			} // proc Dispose
-
-			public int Value { get; set; }
-			public string Text { get; set; }
-
-		} // class PpsDummyProgress
-
-		#endregion
-
 		#region -- class PpsWindowPaneControlProgressStub -----------------------------
 
 		private sealed class PpsProgressStub : IPpsProgress
@@ -89,6 +44,9 @@ namespace TecWare.PPSn.UI
 			public void Dispose()
 				=> stack.UnregisterProgress(this);
 
+			void IProgress<string>.Report(string value)
+				=> Text = value;
+			
 			public string Text
 			{
 				get => currentText;
@@ -137,8 +95,9 @@ namespace TecWare.PPSn.UI
 		#region -- Progress Control ---------------------------------------------------
 
 		/// <summary>Create a new progress item.</summary>
+		/// <param name="blockUI">Should the ui be blocked.</param>
 		/// <returns></returns>
-		public IPpsProgress CreateProgress()
+		public IPpsProgress CreateProgress(bool blockUI)
 			=> new PpsProgressStub(this);
 
 		/// <summary>Register progress bar, is call from PpsProgressStub:ctor.</summary>
@@ -169,7 +128,6 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged(nameof(CurrentText));
 			OnPropertyChanged(nameof(CurrentProgress));
 		} // proc RegisterProgressUI
-
 
 		private void UnregisterProgressUI(PpsProgressStub stub)
 		{
@@ -225,9 +183,6 @@ namespace TecWare.PPSn.UI
 		/// <summary><c>-1</c>, shows a marquee, or use a value between 0 and 1000 for percentage</summary>
 		/// <remarks>This member should not return any exception. Dispatching to the UI is done by caller.</remarks>
 		public int CurrentProgress => Top?.Value ?? -1;
-			
-		/// <summary>Dummy Progress for none progress controls</summary>
-		public static IPpsProgress Dummy { get; } = new PpsDummyProgress();
 	} // class PpsProgressStack
 
 	#endregion

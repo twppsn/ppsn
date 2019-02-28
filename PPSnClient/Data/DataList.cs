@@ -27,15 +27,11 @@ using TecWare.DE.Data;
 
 namespace TecWare.PPSn.Data
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Fetches data from a source page by page as a bindable collection.
-	/// </summary>
+	/// <summary>Fetches data from a source page by page as a bindable collection.</summary>
 	public sealed class PpsDataList : IList, INotifyCollectionChanged, INotifyPropertyChanged
 	{
-		#region -- class LuaItemTable -----------------------------------------------------
+		#region -- class LuaItemTable -------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class LuaItemTable : LuaTable
 		{
 			private readonly IDataRow row;
@@ -47,8 +43,7 @@ namespace TecWare.PPSn.Data
 					this.row = row;
 
 					// todo: memleak?
-					var t = this.row as INotifyPropertyChanged;
-					if (t != null)
+					if (this.row is INotifyPropertyChanged t)
 						t.PropertyChanged += (sender, e) => OnPropertyChanged(e.PropertyName);
 				}
 				else
@@ -75,7 +70,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- enum FetchFollow -------------------------------------------------------
+		#region -- enum FetchFollow ---------------------------------------------------
 
 		private enum FetchFollow
 		{
@@ -92,12 +87,12 @@ namespace TecWare.PPSn.Data
 		/// <summary>Notifies if a property of the datalist is changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private readonly IPpsShell shell;            // shell for the data list, to retrieve data and synchronize the events
+		private readonly PpsShell shell;            // shell for the data list, to retrieve data and synchronize the events
 		private PpsShellGetList dataSource = PpsShellGetList.Empty; // List, that will be fetched
-		private int windowSize;             // Size of the window, that will be fetched
+		private readonly int windowSize;             // Size of the window, that will be fetched
 
 		private bool fullyLoaded = false;       // is all data fetched
-		private object rowLock = new object();  // Synchronisation
+		private readonly object rowLock = new object(); // Synchronisation
 		private int loadedCount = 0;            // Current number of items in the array
 		private int visibleCount = 0;           // Current number of items for the ui
 		private dynamic[] rows = emptyList;     // Currently loaded lines
@@ -113,7 +108,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Creates a list, that will fetch the data in pages.</summary>
 		/// <param name="context"></param>
 		/// <param name="windowSize"></param>
-		public PpsDataList(IPpsShell context, int windowSize = 50)
+		public PpsDataList(PpsShell context, int windowSize = 50)
 		{
 			if (context == null)
 				throw new ArgumentNullException("context");
@@ -284,9 +279,11 @@ namespace TecWare.PPSn.Data
 #endif
 
 			// Set the fetch window
-			var fetchSource = new PpsShellGetList(dataSource);
-			fetchSource.Start = startAt;
-			fetchSource.Count = count;
+			var fetchSource = new PpsShellGetList(dataSource)
+			{
+				Start = startAt,
+				Count = count
+			};
 
 			// Fetch the lines
 			var currentIndex = loadedCount;
@@ -324,7 +321,7 @@ namespace TecWare.PPSn.Data
 			{
 				if (index >= rows.Length) // resize the array
 				{
-					dynamic[] newRows = new dynamic[rows.Length == 0 ? 16 : rows.Length * 2];
+					var newRows = new dynamic[rows.Length == 0 ? 16 : rows.Length * 2];
 					Array.Copy(rows, 0, newRows, 0, rows.Length);
 					rows = newRows;
 				}
@@ -479,7 +476,7 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		/// <summary></summary>
-		public IPpsShell Shell => shell;
+		public PpsShell Shell => shell;
 
 		/// <summary>Zugriff auf das angegebene Element</summary>
 		/// <param name="index"></param>
@@ -533,26 +530,22 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
-		#region -- class FetchItem --------------------------------------------------------
+		#region -- class FetchItem ----------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class FetchItem
 		{
-			private readonly WeakReference<PpsDataList> pOwner;
-			private readonly WeakReference<object> pItem;
+			private readonly WeakReference<PpsDataList> refOwner;
+			private readonly WeakReference<object> refItem;
 
 			public FetchItem(PpsDataList owner, object item)
 			{
-				this.pOwner = new WeakReference<PpsDataList>(owner);
-				this.pItem = new WeakReference<object>(item);
+				refOwner = new WeakReference<PpsDataList>(owner ?? throw new ArgumentNullException(nameof(owner)));
+				refItem = new WeakReference<object>(item ?? throw new ArgumentNullException(nameof(owner)));
 			} // ctor
 
 			public void Update()
 			{
-				PpsDataList owner;
-				dynamic item;
-				if (pOwner.TryGetTarget(out owner) && pItem.TryGetTarget(out item))
+				if (refOwner.TryGetTarget(out var owner) && refItem.TryGetTarget(out var item))
 				{
 					try
 					{
@@ -626,8 +619,6 @@ namespace TecWare.PPSn.Data
 
 		[Conditional("DEBUG")]
 		private static void DebugPrint(string message, params object[] args)
-		{
-			Debug.WriteLine(String.Format("[PpsDataList] " + message, args));
-		} // proc DebugPrint
+			=> Debug.WriteLine(String.Format("[PpsDataList] " + message, args));
 	} // class PpsDataList
 }

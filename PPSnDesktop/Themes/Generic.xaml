@@ -12,7 +12,15 @@
 			<Setter.Value>
 				<ControlTemplate TargetType="ui:PpsWindowPaneHost">
 					<Grid>
-						<ContentPresenter Content="{TemplateBinding Control}" />
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition />
+								<ColumnDefinition Width="50" />
+							</Grid.ColumnDefinitions>
+
+							<ContentPresenter Grid.Column="0" Content="{TemplateBinding Control}" />
+							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" x:Name="PART_CharmBar" />
+						</Grid>
 
 						<ContentControl Content="{Binding PaneProgress.CurrentText, RelativeSource={RelativeSource TemplatedParent}}">
 							<ContentControl.Resources>
@@ -62,6 +70,48 @@
 							</ContentControl.Style>
 						</ContentControl>
 					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style TargetType="ui:PpsWindowPaneCharmBarControl">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ui:PpsWindowPaneCharmBarControl">
+					<StackPanel Orientation="Vertical">
+						<TextBlock Text="{TemplateBinding ObjectName}">
+							<TextBlock.LayoutTransform>
+								<RotateTransform Angle="-90" />
+							</TextBlock.LayoutTransform>
+							<TextBlock.ContextMenu>
+								<ContextMenu>
+									<MenuItem Header="Name Kopieren" Command="{x:Static ApplicationCommands.Copy}" />
+									<MenuItem Header="ObjektId kopieren" Command="{x:Static ApplicationCommands.Copy}" CommandParameter="todo" />
+								</ContextMenu>
+							</TextBlock.ContextMenu>
+						</TextBlock>
+						<ToolBar ItemsSource="{TemplateBinding Views}">
+							<ToolBar.ItemTemplate>
+								<DataTemplate DataType="ui:PpsWindowPaneObjectInfo">
+									<ToggleButton Content="{Binding Image}" ToolTip="{Binding Text}" />
+								</DataTemplate>
+							</ToolBar.ItemTemplate>
+						</ToolBar>
+					</StackPanel>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style TargetType="ui:PpsHelpPageViewer">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ui:PpsHelpPageViewer">
+					<TextBlock >
+						<Run Text="HELP VIEWER: " />
+						<Run Text="{TemplateBinding HelpKey}" />
+					</TextBlock>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>

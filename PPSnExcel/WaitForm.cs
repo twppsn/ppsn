@@ -28,7 +28,7 @@ namespace PPSnExcel
 	{
 		#region -- class ProgressBar --------------------------------------------------
 
-		private sealed class ProgressBar : IProgressBar
+		private sealed class ProgressBar : IPpsProgress
 		{
 			private readonly WaitForm form;
 
@@ -48,34 +48,31 @@ namespace PPSnExcel
 
 			public void Report(string value)
 			{
-				this.currentText = value;
-				form.UpdateProgress();
-			} // proc Report
-
-			public void UpdateProgress(int value, int minimum, int maximum)
-			{
-				if (minimum != -1 && maximum != -1)
-					value = (value - minimum) * 1000 / (maximum - minimum);
-
-				int newValue;
-				if (value == -1)
-					newValue = -1;
-				else if (value < -1)
-					newValue = 0;
-				else if (value > 1000)
-					newValue = 1000;
-				else
-					newValue = value;
-
-				if (newValue != currentValue)
+				if (currentText != value)
 				{
-					currentValue = newValue;
+					currentText = value;
 					form.UpdateProgress();
 				}
-			} // proc UpdateProgress
+			} // proc Report
 
-			public string Text => currentText;
-			public int Value => currentValue;
+			public string Text
+			{
+				get => currentText;
+				set => Report(value);
+			} // prop Text
+
+			public int Value
+			{
+				get => currentValue;
+				set
+				{
+					if (value != currentValue)
+					{
+						currentValue = value;
+						form.UpdateProgress();
+					}
+				}
+			} // prop Value 
 		} // proc ProgressBar
 
 		#endregion
@@ -171,7 +168,7 @@ namespace PPSnExcel
 
 		#endregion
 
-		#region -- Update Progres -----------------------------------------------------
+		#region -- Update Progress ----------------------------------------------------
 
 		private void AddToStack(ProgressBar sender)
 		{
@@ -233,25 +230,18 @@ namespace PPSnExcel
 
 		#endregion
 
-		public T Run<T>(Func<T> func)
-			where T : Task
-		{
-			if (!(System.Threading.SynchronizationContext.Current is WindowsFormsSynchronizationContext))
-				System.Threading.SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
-
-			var t = func();
-			Await(t);
-			t.Wait();
-			return t;
-		} // func Run
-
 		public void Await(Task task)
 		{
 			if (task.IsCompleted)
 				return;
 
 			if (InvokeRequired)
-				task.Wait();
+			{
+				if (SynchronizationContext.Current is PpsSynchronizationContext sync)
+					sync.ProcessMessageLoop(task);
+				else
+					task.Wait();
+			}
 			else if (inMessageLoop)
 			{
 				throw new InvalidOperationException();
@@ -267,7 +257,7 @@ namespace PPSnExcel
 			}
 		} // proc Await
 
-		public IProgressBar CreateProgress()
+		public IPpsProgress CreateProgress()
 			=> new ProgressBar(this);
 
 		public SynchronizationContext SynchronizationContext => synchronizationContext;

@@ -13,32 +13,19 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-#if DEBUG
-#define _DEBUG_LUATASK
-#endif
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
-using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
-using TecWare.PPSn.UI;
-using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn
 {
@@ -54,22 +41,21 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
 
-		/// <summary>Returns the dispatcher fo the UI thread</summary>
-		Dispatcher Dispatcher { get; }
+		/// <summary></summary>
+		/// <param name="task"></param>
+		void Await(Task task);
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="task"></param>
+		/// <returns></returns>
+		T Await<T>(Task<T> task);
+
+		/// <summary>Returns the synchronization for the UI thread</summary>
+		SynchronizationContext Context { get; }
 		/// <summary>Returns the trace sink.</summary>
-		PpsTraceLog Traces { get; }
+		IPpsLogger Log { get; }
 	} // interface IPpsLuaTaskParent
-
-	#endregion
-
-	#region -- interface IPpsLuaRequest -----------------------------------------------
-
-	/// <summary></summary>
-	public interface IPpsLuaRequest
-	{
-		/// <summary>Implementes a redirect for the request call.</summary>
-		DEHttpClient Request { get; }
-	} // interface IPpsLuaRequest
 
 	#endregion
 
@@ -84,7 +70,7 @@ namespace TecWare.PPSn
 		{
 			private WeakReference<PpsLuaTask> task;
 			private Thread queueThread;
-			
+
 			public PpsLuaTaskSynchronizationContext(PpsLuaTask luaTask)
 			{
 				this.task = new WeakReference<PpsLuaTask>(luaTask);
@@ -138,13 +124,13 @@ namespace TecWare.PPSn
 		private object onExceptionTask = null;
 		private object onFinallyTask = null;
 		private TaskCompletionSource<LuaResult> onAwaitTask = null;
-		
+
 		private readonly object executionLock = new object();
 		private bool isQueuedTaskRunning = false;
 		private LuaResult currentResult;
 		private Exception currentException = null;
 		private int isDisposed = 0;
-		
+
 		internal PpsLuaTask(IPpsLuaTaskParent parent, SynchronizationContext context, CancellationToken cancellationToken, LuaResult startArguments)
 		{
 			this.parent = parent;
@@ -198,7 +184,7 @@ namespace TecWare.PPSn
 
 		private LuaResult Invoke(object func, params object[] args)
 		{
-			switch(func)
+			switch (func)
 			{
 				case null:
 					throw new ArgumentException(nameof(func));
@@ -206,17 +192,18 @@ namespace TecWare.PPSn
 					return new LuaResult(Lua.RtInvoke(func, args));
 			}
 		} // proc Invoke
-		
+
 		private void SetException(Exception e)
 		{
 			if (currentException != null)
 			{
-				parent.ShowExceptionAsync(ExceptionShowFlags.None, e, "Handler failed.").AwaitTask();
+
+				parent.Await(parent.ShowExceptionAsync(ExceptionShowFlags.None, e, "Handler failed."));
 				return;
-			} 
+			}
 
 			currentException = e ?? throw new ArgumentNullException(nameof(e));
-			parent.Traces.AppendException(e);
+			parent.Log.Append(PpsLogType.Exception, e);
 		} // proc SetException
 
 		private void ExecuteTask(object continueWith)
@@ -274,7 +261,7 @@ namespace TecWare.PPSn
 
 			if (isQueuedTaskRunning)
 				continueTasks.Enqueue(continueWith);
-			else if(!IsFaulted && !IsCanceled)
+			else if (!IsFaulted && !IsCanceled)
 				ExecuteTask(continueWith);
 		} // proc AddContinueTask
 
@@ -315,7 +302,7 @@ namespace TecWare.PPSn
 		private void ExecuteOrQueueAwaitTask(object state)
 		{
 			VerifyThreadAccess();
-			
+
 			if (!isQueuedTaskRunning)
 				ExecuteOnAwaitTask();
 		} // proc ExecuteOrQueueAwaitTask
@@ -342,7 +329,7 @@ namespace TecWare.PPSn
 				ThreadPool.QueueUserWorkItem(s => onAwaitTask.SetException((Exception)s), currentException);
 			else
 				ThreadPool.QueueUserWorkItem(s => onAwaitTask.SetResult((LuaResult)s), currentResult);
-						
+
 			// dispose context
 			DisposeContext();
 		} // proc ExecuteOnAwaitTask
@@ -362,11 +349,11 @@ namespace TecWare.PPSn
 
 			if (continueWith == null)
 				throw new ArgumentNullException(nameof(continueWith));
-			
+
 			context.Post(ExecuteOrQueueTask, continueWith);
 			return this;
 		} // proc Continue
-		
+
 		/// <summary>Append a action, that gets called on an exception to the task.</summary>
 		/// <param name="onException"></param>
 		/// <returns></returns>
@@ -417,7 +404,7 @@ namespace TecWare.PPSn
 		/// <summary>Wait for the task and return the last result.</summary>
 		/// <returns></returns>
 		public LuaResult Await()
-			=> AwaitAsync().AwaitTask();
+			=> parent.Await(AwaitAsync());
 
 		/// <summary>Is this thread cancelable.</summary>
 		public bool CanCancel => cancellationTokenSource != null;
@@ -434,78 +421,8 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	public partial class PpsEnvironment : IPpsLuaTaskParent, IPpsLuaRequest
+	public partial class PpsShell : IPpsLuaTaskParent
 	{
-		#region -- class LuaTraceLineDebugInfo ----------------------------------------
-
-		/// <summary></summary>
-		private sealed class LuaTraceLineDebugInfo : ILuaDebugInfo
-		{
-			private readonly string chunkName;
-			private readonly string sourceFile;
-			private readonly int line;
-
-			public LuaTraceLineDebugInfo(LuaTraceLineExceptionEventArgs e, string sourceFile)
-			{
-				this.chunkName = e.SourceName;
-				this.sourceFile = sourceFile;
-				this.line = e.SourceLine;
-			} // ctor
-
-			public string ChunkName => chunkName;
-			public int Column => 0;
-			public string FileName => sourceFile;
-			public int Line => line;
-		} // class LuaTraceLineDebugInfo
-
-		#endregion
-
-		#region -- class LuaEnvironmentTraceLineDebugger ------------------------------
-
-		/// <summary></summary>
-		private sealed class LuaEnvironmentTraceLineDebugger : LuaTraceLineDebugger
-		{
-			protected override void OnExceptionUnwind(LuaTraceLineExceptionEventArgs e)
-			{
-				var luaFrames = new List<LuaStackFrame>();
-				var offsetForRecalc = 0;
-				LuaExceptionData currentData = null;
-
-				// get default exception data
-				if (e.Exception.Data[LuaRuntimeException.ExceptionDataKey] is LuaExceptionData)
-				{
-					currentData = LuaExceptionData.GetData(e.Exception);
-					offsetForRecalc = currentData.Count;
-					luaFrames.AddRange(currentData);
-				}
-				else
-					currentData = LuaExceptionData.GetData(e.Exception, resolveStackTrace: false);
-
-				// re-trace the stack frame
-				var trace = new StackTrace(e.Exception, true);
-				for (var i = offsetForRecalc; i < trace.FrameCount - 1; i++)
-					luaFrames.Add(LuaExceptionData.GetStackFrame(trace.GetFrame(i)));
-
-				// add trace point
-				luaFrames.Add(new LuaStackFrame(trace.GetFrame(trace.FrameCount - 1), new LuaTraceLineDebugInfo(e, e.SourceName)));
-
-				currentData.UpdateStackTrace(luaFrames.ToArray());
-			} // proc OnExceptionUnwind
-		} // class LuaEnvironmentTraceLineDebugger
-
-		#endregion
-
-		private LuaCompileOptions luaOptions;
-		private PpsDataFieldFactory fieldFactory;
-
-		private void CreateLuaCompileOptions()
-		{
-			luaOptions = new LuaCompileOptions()
-			{
-				DebugEngine = new LuaEnvironmentTraceLineDebugger()
-			};
-		} // CreateLuaCompileOptions
-
 		#region -- Lua Compiler -------------------------------------------------------
 
 		/// <summary>Compiles a chunk in the background.</summary>
@@ -518,7 +435,7 @@ namespace TecWare.PPSn
 		{
 			try
 			{
-				return await Task.Run(() => Lua.CompileChunk(tr, sourceLocation, luaOptions, arguments));
+				return await Task.Run(() => Lua.CompileChunk(tr, sourceLocation, CompileOptions, arguments));
 			}
 			catch (LuaParseException e)
 			{
@@ -531,7 +448,7 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func CompileAsync
-		
+
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="code"></param>
@@ -613,41 +530,6 @@ namespace TecWare.PPSn
 			return CompileAsync(code, pos.LineInfo ?? "dummy.lua", throwException, arguments);
 		} // func CompileAsync
 
-		/// <summary>Load an compile the file from a remote source.</summary>
-		/// <param name="request"></param>
-		/// <param name="source">Source uri</param>
-		/// <param name="throwException">Throw an exception on fail</param>
-		/// <param name="arguments">Argument definition for the chunk.</param>
-		/// <returns>Compiled chunk</returns>
-		public async Task<LuaChunk> CompileAsync(DEHttpClient request, Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
-		{
-			if (request == null)
-				throw new ArgumentNullException(nameof(request));
-			if (source == null)
-				throw new ArgumentNullException(nameof(source));
-			try
-			{
-				using (var r = await request.GetResponseAsync(source.ToString(), null))
-				{
-					var contentDisposition = r.GetContentDisposition();
-					using (var sr = await r.GetTextReaderAsync(MimeTypes.Text.Plain))
-						return await CompileAsync(sr, contentDisposition.FileName, throwException, arguments);
-				}
-			}
-			catch (Exception e)
-			{
-				if (throwException)
-					throw;
-				else if (e is LuaParseException) // alread handled
-					return null;
-				else
-				{
-					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile failed for {source}.");
-					return null;
-				}
-			}
-		} // func CompileAsync
-
 		/// <summary>Compile the chunk in a background thread and hold the UI thread</summary>
 		/// <param name="xCode"></param>
 		/// <param name="throwException"></param>
@@ -658,7 +540,7 @@ namespace TecWare.PPSn
 			if (xCode == null)
 				return null;
 
-			return RunAsync(() => CompileAsync(xCode, throwException, arguments)).AwaitTask();
+			return Await(RunAsync(() => CompileAsync(xCode, throwException, arguments), "Worker", CancellationToken.None));
 		} // func CreateChunk
 
 		/// <summary>Executes the script (the script is always execute in the UI thread).</summary>
@@ -680,7 +562,7 @@ namespace TecWare.PPSn
 				else
 				{
 					// notify exception as warning
-					Traces.AppendException(ex, "Execution failed.", PpsTraceItemType.Warning);
+					ShowExceptionAsync(ExceptionShowFlags.Background, ex, "Execution failed.");
 					return LuaResult.Empty;
 				}
 			}
@@ -696,7 +578,10 @@ namespace TecWare.PPSn
 		public T RunScriptWithReturn<T>(LuaChunk chunk, LuaTable env, T? returnOnException, params object[] arguments)
 			where T : struct
 		{
-			var r = chunk != null ? RunScript(chunk, env, false, arguments) : LuaResult.Empty;
+			var r = chunk != null
+				? RunScript(chunk, env, false, arguments)
+				: LuaResult.Empty;
+
 			if (r.Count == 0)
 			{
 				if (returnOnException.HasValue)
@@ -710,162 +595,14 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Async/Await Lua ----------------------------------------------------
-
-		private Task RunBackgroundInternal(Func<Task> task, string name, CancellationToken cancellationToken)
-			=> new PpsSingleThreadSynchronizationContext(name, cancellationToken, task).Task;
-
-		/// <summary>Creates a new execution thread for the function in the background.</summary>
-		/// <param name="task">Action to run.</param>
-		/// <param name="name">name of the background thread</param>
-		/// <param name="cancellationToken">cancellation option</param>
-		public Task RunAsync(Func<Task> task, string name, CancellationToken cancellationToken)
-			=> RunBackgroundInternal(task, name, cancellationToken);
-
-		/// <summary></summary>
-		/// <param name="task"></param>
-		/// <returns></returns>
-		public Task RunAsync(Func<Task> task)
-			=> RunAsync(task, "Worker", CancellationToken.None);
-
-		/// <summary>Creates a new execution thread for the function in the background.</summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="task"></param>
-		/// <param name="name"></param>
-		/// <param name="cancellationToken"></param>
-		/// <returns></returns>
-		public async Task<T> RunAsync<T>(Func<Task<T>> task, string name, CancellationToken cancellationToken)
-		{
-			var returnValue = default(T);
-			await RunBackgroundInternal(async () => returnValue = await task(), name, cancellationToken);
-			return returnValue;
-		} // proc RunTaskBackground
-
-		/// <summary></summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="task"></param>
-		/// <returns></returns>
-		public Task<T> RunAsync<T>(Func<Task<T>> task)
-			=> RunAsync(task, "Worker", CancellationToken.None);
-
-		#endregion
-
-		#region -- LuaHelper ----------------------------------------------------------
-
-		/// <summary>Show a simple message box.</summary>
-		/// <param name="text"></param>
-		/// <param name="button"></param>
-		/// <param name="image"></param>
-		/// <param name="defaultResult"></param>
-		/// <returns></returns>
-		[LuaMember("msgbox")]
-		private MessageBoxResult LuaMsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
-			=> MsgBox(text, button, image, defaultResult);
-
-		[LuaMember("trace")]
-		private void LuaTrace(PpsTraceItemType type, params object[] args)
-		{
-			if (args == null || args.Length == 0)
-				return;
-
-			if (args[0] is string)
-				Traces.AppendText(type, String.Format((string)args[0], args.Skip(1).ToArray()));
-			else
-				Traces.AppendText(type, String.Join(", ", args));
-		} // proc LuaTrace
-
-		/// <summary>Send a simple notification to the internal log</summary>
-		/// <param name="args"></param>
-		[LuaMember("print")]
-		private void LuaPrint(params object[] args)
-		{
-			LuaTrace(PpsTraceItemType.Information, args);
-		} // proc LuaPrint
-
-		[LuaMember("toTable")]
-		private LuaTable LuaToTable(object table)
-		{
-			switch (table)
-			{
-				case null:
-					return null;
-				case LuaTable t:
-					return t;
-				case IDataRow row:
-					{
-						var r = new LuaTable();
-						var i = 0;
-						foreach (var c in row.Columns)
-							r[c.Name] = GetServerRowValue(row[i++]);
-						return r;
-					}
-				case IEnumerable<PropertyValue> props:
-					{
-						var r = new LuaTable();
-						foreach (var p in props)
-							r[p.Name] = p.Value;
-						return r;
-					}
-				default:
-					throw new ArgumentException();
-			}
-		} // func LuaToTable
-
-		[LuaMember("ToNumberUI")]
-		private object LuaToNumber(object value, Type targetType)
-		{
-			if (targetType == null)
-				throw new ArgumentNullException(nameof(targetType));
-
-			var r = PpsConverter.NumericValue.ConvertBack(value, targetType, null, CultureInfo.CurrentUICulture);
-			if (r is ValidationResult
-				|| r == DependencyProperty.UnsetValue)
-				return null;
-			return r;
-		} // func LuaToNumber
-
-		[LuaMember("ToStringUI")]
-		private object LuaToString(object value)
-		{
-			var r = PpsConverter.NumericValue.Convert(value, typeof(string), null, CultureInfo.CurrentUICulture);
-			if (r is ValidationResult
-				|| r == DependencyProperty.UnsetValue)
-				return null;
-			return r;
-		} // func LuaToString
-
-		[LuaMember("typeof")]
-		private Type LuaType(object o)
-			=> o?.GetType();
-
-		[LuaMember("isfunction")]
-		private bool LuaIsFunction(object o)
-			=> Lua.RtInvokeable(o);
-		
-		[LuaMember("require", true)]
-		private LuaResult LuaRequire(LuaTable self, string path)
-		{
-			// get the current root
-			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as DEHttpClient ?? Request;
-
-			if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) // load assembly
-			{
-				return new LuaResult(LoadAssemblyFromUri(webRequest.CreateFullUri(path)));
-			}
-			else // load lua script
-			{
-				// compile code, synchonize the code to this thread
-				var chunk = CompileAsync(webRequest, new Uri(path, UriKind.Relative), true, new KeyValuePair<string, Type>("self", typeof(LuaTable))).AwaitTask();
-				return RunScript(chunk, self, true, self);
-			}
-		} // proc LuaRequire
+		#region -- Library ------------------------------------------------------------
 
 		/// <summary>Throw a exception.</summary>
 		/// <param name="value"></param>
 		/// <param name="message"></param>
 		/// <returns></returns>
 		[LuaMember("assert")]
-		private object LuaAssert(object value, string message)
+		public new object LuaAssert(object value, string message)
 		{
 			if (!value.ChangeType<bool>())
 				throw new LuaAssertRuntimeException(message ?? "Assertion failed!", 1, true);
@@ -876,7 +613,7 @@ namespace TecWare.PPSn
 		/// <param name="message"></param>
 		/// <param name="arg1"></param>
 		[LuaMember("error")]
-		private static void LuaError(object message, object arg1)
+		public static void LuaError(object message, object arg1)
 		{
 			var level = 1;
 
@@ -949,57 +686,74 @@ namespace TecWare.PPSn
 			ShowException(ExceptionShowFlags.None, e, alternativeMessage);
 		} // proc HandleDataRemoveException
 
-		/// <summary></summary>
-		/// <param name="request"></param>
-		/// <param name="arguments"></param>
-		/// <param name="paneUri"></param>
-		/// <returns></returns>
-		public async Task<object> LoadPaneDataAsync(DEHttpClient request, LuaTable arguments, Uri paneUri)
+		[LuaMember("trace")]
+		public void LuaTrace(PpsLogType type, params object[] args)
 		{
-			try
+			if (args == null || args.Length == 0)
+				return;
+
+			if (args[0] is string)
+				Log.Append(type, String.Format((string)args[0], args.Skip(1).ToArray()));
+			else
+				Log.Append(type, String.Join(", ", args));
+		} // proc LuaTrace
+
+		/// <summary>Send a simple notification to the internal log</summary>
+		/// <param name="args"></param>
+		[LuaMember("print")]
+		public void LuaPrint(params object[] args)
+			=> LuaTrace(PpsLogType.Information, args);
+
+		[LuaMember("toTable")]
+		public LuaTable LuaToTable(object table)
+		{
+			switch (table)
 			{
-				using (var r = await request.GetResponseAsync(paneUri.ToString(), String.Join(";", MimeTypes.Application.Xaml, MimeTypes.Text.Lua, MimeTypes.Text.Plain)))
-				{
-					// read the file name
-					arguments["_filename"] = r.GetContentDisposition().FileName;
-
-					// check content
-					var contentType = r.Content.Headers.ContentType;
-					if (contentType.MediaType == MimeTypes.Application.Xaml) // load a xaml file
+				case null:
+					return null;
+				case LuaTable t:
+					return t;
+				case IDataRow row:
 					{
-						XDocument xamlContent;
-
-						// parse the xaml as xml document
-						using (var sr = await r.GetTextReaderAsync(MimeTypes.Application.Xaml))
-						{
-							using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, paneUri.ToString()))
-								xamlContent = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
-						}
-
-						return xamlContent;
+						var r = new LuaTable();
+						var i = 0;
+						foreach (var c in row.Columns)
+							r[c.Name] = GetServerRowValue(row[i++]);
+						return r;
 					}
-					else if (contentType.MediaType == MimeTypes.Text.Lua
-						|| contentType.MediaType == MimeTypes.Text.Plain) // load a code file
+				case IEnumerable<PropertyValue> props:
 					{
-						// load an compile the chunk
-						using (var sr = await r.GetTextReaderAsync(null))
-							return await CompileAsync(sr, paneUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+						var r = new LuaTable();
+						foreach (var p in props)
+							r[p.Name] = p.Value;
+						return r;
 					}
-					else
-						throw new ArgumentException($"Expected: xaml/lua; received: {contentType.MediaType}");
-				}
+				default:
+					throw new ArgumentException();
 			}
-			catch (Exception e)
-			{
-				throw new ArgumentException("Can not load pane definition.\n" + paneUri.ToString(), e);
-			}
-		} // func LoadPaneDataAsync
+		} // func LuaToTable
+
+		[LuaMember("typeof")]
+		public Type LuaType(object o)
+			=> o?.GetType();
+
+		[LuaMember("isfunction")]
+		public bool LuaIsFunction(object o)
+			=> Lua.RtInvokeable(o);
+
+		[LuaMember("getServerRowValue")]
+		public virtual object GetServerRowValue(object v)
+			=> v;
+
+		#endregion
+
+		#region -- Lua async/await ----------------------------------------------------
 
 		/// <summary>Creates a wrapper for the task.</summary>
 		/// <param name="func">Function will be executed in the current context as an task. A task will be wrapped and executed.</param>
 		/// <returns></returns>
 		[LuaMember("await")]
-		private LuaResult LuaAwait(object func)
+		public LuaResult LuaAwait(object func)
 		{
 			int GetTaskType()
 			{
@@ -1019,7 +773,7 @@ namespace TecWare.PPSn
 				case PpsLuaTask lt:
 					return lt.Await();
 				case Task t:
-					t.AwaitTask();
+					Await(t);
 					switch (GetTaskType())
 					{
 						case 0:
@@ -1036,13 +790,13 @@ namespace TecWare.PPSn
 						default:
 							throw new NotSupportedException($"Could not await for task ({func.GetType().Name}).");
 					}
-				case DispatcherOperation o:
-					LuaAwait(o.Task);
-					return LuaResult.Empty;
 				default:
-					throw new ArgumentException($"The type '{func.GetType().Name}' is not awaitable.");
+					return LuaAwaitFunc(func);
 			}
 		} // func LuaRunTask
+
+		protected virtual LuaResult LuaAwaitFunc(object func)
+			=> throw new ArgumentException($"The type '{func.GetType().Name}' is not awaitable.");
 
 		private PpsLuaTask CreateLuaTask(SynchronizationContext context, object func, object[] args)
 		{
@@ -1087,230 +841,11 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		[LuaMember("async")]
 		public PpsLuaTask LuaAsync(object func, params object[] args)
-		{
-			SynchronizationContext GetUIContext()
-				=> Dispatcher.Thread == Thread.CurrentThread && SynchronizationContext.Current is DispatcherSynchronizationContext
-					? SynchronizationContext.Current
-					: new DispatcherSynchronizationContext(Dispatcher);
-
-			return CreateLuaTask(GetUIContext(), func, args);
-		} // func LuaRunBackground
-
-		/// <summary></summary>
-		/// <returns></returns>
-		[LuaMember("runSync")]
-		public Task RunSynchronization()
-			=> masterData.RunSynchronization();
-
-		/// <summary></summary>
-		/// <returns></returns>
-		[LuaMember("createTransaction")]
-		public PpsMasterDataTransaction CreateTransaction()
-			=> MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited).AwaitTask();
-
-		/// <summary></summary>
-		/// <param name="v"></param>
-		/// <returns></returns>
-		[LuaMember("getServerRowValue")]
-		public object GetServerRowValue(object v)
-		{
-			if (v == null)
-				return null;
-			else if (v is PpsObject o)
-				return o.Id;
-			else if (v is PpsMasterDataRow mr)
-				return mr.RowId;
-			else if (v is PpsLinkedObjectExtendedValue l)
-				return l.IsNull ? null : (object)((PpsObject)l.Value).Id;
-			else if (v is PpsFormattedStringValue fsv)
-				return fsv.IsNull ? null : fsv.FormattedValue;
-			else if (v is IPpsDataRowGetGenericValue gv)
-				return gv.IsNull ? null : gv.Value;
-			else
-				return v;
-		} // func GetServerRowValue
-
-		/// <summary></summary>
-		/// <param name="currentControl"></param>
-		/// <param name="control"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public DependencyObject GetVisualParent(DependencyObject currentControl, object control, bool throwException = false)
-		{
-			if (currentControl == null)
-				throw new ArgumentNullException(nameof(currentControl));
-
-			switch (control)
-			{
-				case LuaType lt:
-					return GetVisualParent(currentControl, lt.Type, throwException);
-				case Type t:
-					return currentControl.GetVisualParent(t)
-						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
-				case string n:
-					return currentControl.GetVisualParent(n)
-						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
-				case null:
-					return currentControl.GetVisualParent()
-						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
-				default:
-					throw new ArgumentException(nameof(control));
-			}
-		} // func GetVisualParent
-
-
-		/// <summary></summary>
-		/// <param name="currentControl"></param>
-		/// <param name="control"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public DependencyObject GetLogicalParent(DependencyObject currentControl, object control = null, bool throwException = false)
-		{
-			if (currentControl == null)
-				throw new ArgumentNullException(nameof(currentControl));
-
-			switch (control)
-			{
-				case LuaType lt:
-					return GetLogicalParent(currentControl, lt.Type, throwException);
-				case Type t:
-					return currentControl.GetLogicalParent(t)
-						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
-				case string n:
-					return currentControl.GetLogicalParent(n)
-						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
-				case null:
-					return currentControl.GetLogicalParent()
-						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
-				default:
-					throw new ArgumentException(nameof(control));
-			}
-		} // func GetLogicalParent
-
-		/// <summary>Create a DataTemplateSelector</summary>
-		/// <param name="func"></param>
-		/// <returns></returns>
-		[LuaMember("templateSelector")]
-		private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
-			=> new LuaDataTemplateSelector(func);
-
-		/// <summary>Find the resource.</summary>
-		/// <param name="key"></param>
-		/// <param name="dependencyObject"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public object GetResource(object key, DependencyObject dependencyObject)
-		{
-			if (dependencyObject is FrameworkElement fe)
-				return fe.TryFindResource(key);
-			else if (dependencyObject is FrameworkContentElement fce)
-				return fce.TryFindResource(key);
-			else
-				return Application.Current.TryFindResource(key);
-		} // func GetResource
-
-		/// <summary>Create a local tempfile name for this objekt</summary>
-		/// <param name="obj"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public FileInfo GetLocalTempFileInfo(PpsObject obj)
-		{
-			// create temp directory
-			var tempDirectory = new DirectoryInfo(Path.Combine(LocalPath.FullName, "tmp"));
-			if (!tempDirectory.Exists)
-				tempDirectory.Create();
-
-			// build filename
-			if (obj.TryGetProperty<string>(PpsObjectBlobData.FileNameTag, out var fileName))
-				fileName = obj.Guid.ToString("N") + "_" + fileName;
-			else
-				fileName = obj.Guid.ToString("N") + MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType);
-
-			return new FileInfo(Path.Combine(tempDirectory.FullName, fileName));
-		} // func GetLocalTempFileInfo
-
-		/// <summary></summary>
-		/// <param name="filterExpr"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public Predicate<IDataRow> CreateDataRowFilter(string filterExpr)
-			=> PpsDataFilterVisitorDataRow.CreateDataRowFilter<IDataRow>(PpsDataFilterExpression.Parse(filterExpr));
-
-		[Obsolete("Implemented for a special case, will be removed.")]
-		[LuaMember]
-		public Task<PpsObjectDataSet> PullRevisionAsync(PpsObject obj, long revId)
-			=> obj.PullRevisionAsync<PpsObjectDataSet>(revId);
-
-		/// <summary></summary>
-		/// <param name="reportName"></param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public async Task<string> RunServerReportAsync(string reportName, LuaTable arguments)
-		{
-			var requestUrl = new StringBuilder("/?action=report&name=");
-			requestUrl.Append(Uri.EscapeUriString(reportName));
-
-			if (arguments != null)
-			{
-				foreach (var m in arguments.Members)
-				{
-					requestUrl.Append('&')
-						.Append(Uri.EscapeUriString(m.Key))
-						.Append('=')
-						.Append(Uri.EscapeUriString(m.Value.ChangeType<string>()));
-				}
-			}
-
-			string targetFileName;
-
-			using (var r = await Request.GetResponseAsync(requestUrl.ToString(), MimeTypes.Application.Pdf))
-			using (var src = await r.Content.ReadAsStreamAsync())
-			{
-				// download file
-				var tempFileName = Path.GetTempFileName();
-				targetFileName = Path.ChangeExtension(tempFileName, ".pdf");
-				using (var dst = new FileStream(targetFileName, FileMode.CreateNew))
-					await src.CopyToAsync(dst);
-
-				File.Delete(tempFileName);
-			}
-
-			return targetFileName;
-		} // func RunServerReportAsync
-
-		/// <summary></summary>
-		/// <param name="frame"></param>
-		/// <param name="message"></param>
-		/// <returns></returns>
-		public IDisposable BlockAllUI(DispatcherFrame frame, string message = null)
-		{
-			Thread.Sleep(200); // wait for finish
-			if(frame.Continue)
-				return null; // block ui
-			else
-				return null;
-		} // proc BlockAllUI
-
-		/// <summary></summary>
-		/// <param name="key"></param>
-		/// <returns></returns>
-		protected override object OnIndex(object key) 
-			=> base.OnIndex(key) ?? luaGlobal.GetValue(key);
-
-		/// <summary>Lua ui-wpf framwework.</summary>
-		[LuaMember("UI")]
-		public LuaUI LuaUI { get; } = new LuaUI();
-		/// <summary>Field factory for controls</summary>
-		[LuaMember]
-		public LuaTable FieldFactory => fieldFactory;
-
-		/// <summary>Assess lua</summary>
-		public Lua Lua => luaGlobal.Lua;
+			=> CreateLuaTask(Context, func, args);
 
 		#endregion
-	} // class PpsEnvironment
+
+		/// <summary></summary>
+		public static LuaCompileOptions CompileOptions { get; protected set; } = null;
+	} // class PpsShell
 }
-	

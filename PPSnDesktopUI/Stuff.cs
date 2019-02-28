@@ -745,7 +745,6 @@ namespace TecWare.PPSn
 
 	#region -- class WebRequestHelper ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public static class WebRequestHelper
 	{
@@ -815,7 +814,7 @@ namespace TecWare.PPSn
 			}
 		} // func EqualUri
 
-		private static NameValueCollection emptyCollection = new NameValueCollection();
+		private static readonly NameValueCollection emptyCollection = new NameValueCollection();
 	} // class WebRequestHelper
 
 	#endregion

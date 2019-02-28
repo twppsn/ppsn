@@ -31,7 +31,7 @@ namespace TecWare.PPSn.UI
 {
 	internal partial class PpsMessageDialog : Window
 	{
-		public readonly static DependencyProperty MessageTypeProperty = DependencyProperty.Register(nameof(MessageType), typeof(PpsTraceItemType), typeof(PpsMessageDialog));
+		//public readonly static DependencyProperty MessageTypeProperty = DependencyProperty.Register(nameof(MessageType), typeof(PpsTraceItemType), typeof(PpsMessageDialog));
 		public readonly static DependencyProperty MessageTextProperty = DependencyProperty.Register(nameof(MessageText), typeof(object), typeof(PpsMessageDialog));
 		public readonly static DependencyProperty SkipVisibleProperty = DependencyProperty.Register(nameof(SkipVisible), typeof(bool), typeof(PpsMessageDialog));
 		public readonly static DependencyProperty SkipCheckedProperty = DependencyProperty.Register(nameof(SkipChecked), typeof(bool), typeof(PpsMessageDialog));
@@ -67,11 +67,11 @@ namespace TecWare.PPSn.UI
 			base.OnPreviewKeyDown(e);
 		} // proc OnPreviewKeyDown
 		
-		public PpsTraceItemType MessageType
-		{
-			get { return (PpsTraceItemType)GetValue(MessageTypeProperty); }
-			set { SetValue(MessageTypeProperty, value); }
-		} // prop MessageType
+		//public PpsTraceItemType MessageType
+		//{
+		//	get { return (PpsTraceItemType)GetValue(MessageTypeProperty); }
+		//	set { SetValue(MessageTypeProperty, value); }
+		//} // prop MessageType
 
 		public object MessageText
 		{
