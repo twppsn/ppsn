@@ -18,6 +18,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
@@ -81,6 +82,9 @@ namespace TecWare.PPSn.UI
 		private readonly PpsWindowPaneObjectInfo helpPage;
 		private readonly PpsHelpPageViewer helpPageViewer;
 
+		private readonly PpsWindowPaneObjectInfo[] ppsObjectPanes;
+		private readonly PpsTagsEditor[] ppsTagsEditors; 
+
 		#region -- CurrentData - Property ---------------------------------------------
 
 		public static readonly DependencyProperty CurrentDataProperty = DependencyProperty.Register(nameof(CurrentData), typeof(object), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurentDataChanged)));
@@ -138,24 +142,47 @@ namespace TecWare.PPSn.UI
 		public PpsWindowPaneCharmBarControl()
 		{
 			helpPage = new PpsWindowPaneObjectInfo() { Text = "Hilfe", Image = "H" };
+
 			helpPageViewer = new PpsHelpPageViewer();
 			helpPage.Content = helpPageViewer; // todo: add to logical tree
+
+			ppsTagsEditors = new PpsTagsEditor[]
+			{
+				new PpsTagsEditor() { TagClass = PpsObjectTagClass.Note },
+				new PpsTagsEditor() { TagClass = PpsObjectTagClass.Tag },
+				new PpsTagsEditor() { TagClass = PpsObjectTagClass.Text },
+				new PpsTagsEditor() { TagClass = PpsObjectTagClass.Date },
+			};
+			ppsObjectPanes = new PpsWindowPaneObjectInfo[]
+			{
+				new PpsWindowPaneObjectInfo() { Text = "Notizen", Content = ppsTagsEditors[0] },
+				new PpsWindowPaneObjectInfo() { Text = "Tags", Content = ppsTagsEditors[1] },
+				new PpsWindowPaneObjectInfo() { Text = "Attribute", Content = ppsTagsEditors[2] },
+				new PpsWindowPaneObjectInfo() { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3] }
+			};
 
 			SetViews(null);
 		} // ctor
 
 		private void ClearObject(object data)
 		{
+			foreach (var t in ppsTagsEditors)
+				t.Object = null;
+
 			SetValue(objectNamePropertyKey, null); // hide object name
 			SetViews(null); // show only help
 		} // proc ClearObject
 
 		private void SetObject(object data)
 		{
-			if (data is IPpsObject obj) // object info
-				;
-
-			SetViews(null);
+			if (data is PpsObject obj) // object info
+			{
+				foreach (var t in ppsTagsEditors)
+					t.Object = obj;
+				SetViews(ppsObjectPanes);
+			}
+			else
+				SetViews(null);
 		} // proc SetObject
 
 		private void SetViews(IEnumerable<PpsWindowPaneObjectInfo> views)
