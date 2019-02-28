@@ -167,6 +167,12 @@ namespace TecWare.PPSn.UI
 			);
 		} // proc SetViews
 
+		private void CmdButton_Click(object sender, RoutedEventArgs e)
+		{
+			e.Handled = true;
+		}
+
+
 		static PpsWindowPaneCharmBarControl()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(typeof(PpsWindowPaneCharmBarControl)));

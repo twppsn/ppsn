@@ -79,7 +79,7 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ui:PpsWindowPaneCharmBarControl">
-					<StackPanel Orientation="Vertical">
+					<StackPanel Orientation="Vertical" Background="Yellow">
 						<TextBlock Text="{TemplateBinding ObjectName}">
 							<TextBlock.LayoutTransform>
 								<RotateTransform Angle="-90" />
@@ -91,13 +91,21 @@
 								</ContextMenu>
 							</TextBlock.ContextMenu>
 						</TextBlock>
-						<ToolBar ItemsSource="{TemplateBinding Views}">
-							<ToolBar.ItemTemplate>
+						<ItemsControl ItemsSource="{TemplateBinding Views}">
+							<ItemsControl.ItemContainerStyle>
+								<Style TargetType="{x:Type ContentPresenter}">
+									<Setter Property="Margin" Value="0,16,0,0" />
+								</Style>
+							</ItemsControl.ItemContainerStyle>
+							<ItemsControl.ItemTemplate>
 								<DataTemplate DataType="ui:PpsWindowPaneObjectInfo">
-									<ToggleButton Content="{Binding Image}" ToolTip="{Binding Text}" />
+									<ToggleButton Content="{Binding Image}"
+												  ToolTip="{Binding Text}"
+												  Click="CmdButton_Click"
+												  Height="40"/>
 								</DataTemplate>
-							</ToolBar.ItemTemplate>
-						</ToolBar>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
 					</StackPanel>
 				</ControlTemplate>
 			</Setter.Value>
