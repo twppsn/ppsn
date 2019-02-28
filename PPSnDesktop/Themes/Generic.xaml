@@ -116,4 +116,16 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style TargetType="ui:PpsObjectLinkEditor">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ui:PpsObjectLinkEditor">
+					<TextBlock >
+						<Run Text="Links " />
+					</TextBlock>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>

@@ -151,7 +151,7 @@
 
 		<DataTemplate x:Key="noteTemplate">
 			<uiC:PpsPopupContent Header="Notizen" GeometryName="noteOutline">
-				<uiL:PpsTagsEditor Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Note}" />
+				<uiL:PpsObjectTagsEditor Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Note}" />
 			</uiC:PpsPopupContent>
 		</DataTemplate>
 
@@ -181,19 +181,19 @@
 
 		<DataTemplate x:Key="tagTemplate">
 			<uiC:PpsPopupContent Header="Tags" GeometryName="hashTag">
-				<uiL:PpsTagsEditor Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Tag}"/>
+				<uiL:PpsObjectTagsEditor Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Tag}"/>
 			</uiC:PpsPopupContent>
 		</DataTemplate>
 
 		<DataTemplate x:Key="attribTemplate">
 			<uiC:PpsPopupContent Header="Attribute" GeometryName="tagText">
-				<uiL:PpsTagsEditor Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Text}"/>
+				<uiL:PpsObjectTagsEditor Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Text}"/>
 			</uiC:PpsPopupContent>
 		</DataTemplate>
 
 		<DataTemplate x:Key="taskTemplate">
 			<uiC:PpsPopupContent Header="Termine / Aufgaben" GeometryName="calendarClock">
-				<uiL:PpsTagsEditor Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Date}"/>
+				<uiL:PpsObjectTagsEditor Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Date}"/>
 			</uiC:PpsPopupContent>
 		</DataTemplate>
 	</UserControl.Resources>
