@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -37,26 +38,60 @@ namespace TecWare.PPSn.UI
 	/// <summary>Pane to display trace messages.</summary>
 	internal sealed partial class PpsTracePane : UserControl, IPpsWindowPane
 	{
-		// ignore any property changed
+		#region -- class PpsTraceEnvironment ------------------------------------------
+
+		private sealed class PpsTraceEnvironment : LuaTable
+		{
+			private readonly IPpsWindowPaneHost paneHost;
+			
+			public PpsTraceEnvironment(IPpsWindowPaneHost paneHost)
+			{
+				this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
+			} // ctor
+
+			#region -- remove --
+
+			[LuaMember]
+			public void LoadPdf(string guid)
+			{
+				var obj = Environment.GetObject(new Guid(guid ?? "F83EA1D1-0248-4880-8FB9-6121960B3FF5"));
+				paneHost.PaneManager.OpenPaneAsync(typeof(PpsPdfViewerPane), PpsOpenPaneMode.NewPane,
+					new LuaTable
+					{
+						["Object"] = obj
+					}
+				).AwaitTask();
+			}
+
+			#endregion
+
+
+			protected override object OnIndex(object key)
+				=> base.OnIndex(key) ?? Context?.GetValue(key) ?? paneHost.PaneManager.Shell.GetValue(key);
+
+			public LuaTable Context { get; set; } = null;
+
+			[LuaMember]
+			public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager.Shell;
+		} // class PpsTraceEnvironment
+
+		#endregion
+
+		// ignore any property changed, because all properties are static
 		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
-
-		/// <summary>Command to execute Lua-Code on the current Environment</summary>
-		public readonly static RoutedUICommand ExecuteCommandCommand = new RoutedUICommand("ExecuteCommand", "ExecuteCommand", typeof(PpsTracePane));
-
-
-		private readonly IPpsWindowPaneManager paneManager;
+			
 		private readonly IPpsWindowPaneHost paneHost;
+		private readonly PpsTraceEnvironment traceEnvironment;
 		private readonly PpsUICommandCollection commands;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Trace pane constructor</summary>
-		/// <param name="paneManager"></param>
 		/// <param name="paneHost"></param>
-		public PpsTracePane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
+		public PpsTracePane(IPpsWindowPaneHost paneHost)
 		{
-			this.paneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
 			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
+			traceEnvironment = new PpsTraceEnvironment(paneHost);
 
 			InitializeComponent();
 
@@ -68,102 +103,22 @@ namespace TecWare.PPSn.UI
 				RemoveLogicalChildHandler = RemoveLogicalChild
 			};
 
-			//commands.AddButton("100:100", "CopySelected", CopySelectedTraceItemsCommand, "InZwischenable", "Kopiert alle markierten Einträge in die Zwischenablage.");
+			commands.AddButton("100;100", "Save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
+			commands.AddButton("100;200", "Copy", ApplicationCommands.Copy, "Kopieren", "Kopiert alle markierten Einträge in die Zwischenablage.");
 
-			CommandBindings.Add(
-				new CommandBinding(ExecuteCommandCommand,
-					async (sender, e) =>
-					{
-						try
-						{
-							var ret = (await Environment.CompileAsync((string)e.Parameter, "TracePaneCommand.lua", true)).Run(Environment);
-							if (ret.Count == 0)
-								Environment.Log.Append(PpsLogType.Debug, $"Command \"{(string)e.Parameter}\" executed without result.");
-							else
-								Environment.Log.Append(PpsLogType.Debug, $"Command \"{(string)e.Parameter}\" returned: \"{ret.ToString()}\".");
-						}
-						catch (Exception ex)
-						{
-							Environment.Log.Append(PpsLogType.Fail, ex, $"Command \"{(string)e.Parameter}\" threw an Exception.");
-						}
-					},
-					(sender, e) => e.CanExecute = !String.IsNullOrWhiteSpace((string)e.Parameter)
-				)
-			);
-			CommandBindings.Add(
-				new CommandBinding(ApplicationCommands.Copy,
-					(sender, e) =>
-					{
-						if (e.Parameter != null)
-							CopyToClipboard(e.Parameter);
-						else if (e.OriginalSource is PpsTracePane pt
-								&& pt.Content is Grid grid
-								&& grid.Children.Count > 0
-								&& grid.Children[0] is ListBox exc)
-							CopyToClipboard(exc.SelectedItem);
-						e.Handled = true;
-					},
-					(sender, e) => e.CanExecute = true
-				)
-			);
-			CommandBindings.Add(
-				new CommandBinding(ApplicationCommands.SaveAs,
-					(sender, e) =>
-					{
 
-						if (e.Source is PpsTracePane)
-							if (((PpsTracePane)e.Source).Content is Grid)
-								if (((Grid)((PpsTracePane)e.Source).Content).Children.Count > 0)
-									if (((Grid)((PpsTracePane)e.Source).Content).Children[0] is ListBox exc)
-									{
-										var list = exc.Items;
-
-										var openFileDialog = new SaveFileDialog
-										{
-											Filter = "TraceLog | *.csv;",
-											DefaultExt = ".csv",
-											CheckFileExists = false,
-											CheckPathExists = true,
-											AddExtension = true
-										};
-										if (openFileDialog.ShowDialog() == true)
-										{
-											if (File.Exists(openFileDialog.FileName))
-												if (MessageBox.Show("Die Datei existiert bereits. Möchten Sie überschreiben?", "Warnung", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
-												{
-													e.Handled = true;
-													return;
-												}
-
-											var file = new StreamWriter(openFileDialog.FileName);
-											foreach (var itm in list)
-											{
-												if (itm is PpsExceptionItem pei)
-													file.WriteLine($"{pei.Type};{pei.Stamp};\"{ExceptionFormatter.FormatPlainText(pei.Exception)}\"");
-												else
-													file.WriteLine($"{((dynamic)itm).Type};{((dynamic)itm).Stamp};\"{((dynamic)itm).Message}\"");
-											}
-											foreach (var statistic in Environment.Statistics)
-											{
-												if (!statistic.HasData)
-													continue;
-												var en = statistic.History.GetEnumerator();
-												var historic = 0;
-												en.Reset();
-												while (en.MoveNext())
-												{
-													file.WriteLine($"{statistic.Name};{DateTime.Now.AddSeconds(historic)};{en.Current}");
-													historic--;
-												}
-											}
-											file.Close();
-										}
-									}
-						e.Handled = true;
-					},
-					(sender, e) => e.CanExecute = true
-				)
-			);
+			CommandBindings.Add(new CommandBinding(ApplicationCommands.Open,
+				(sender, e) => { ExecuteCommandAsync(ConsoleCommandTextBox.Text).SpawnTask(Environment); e.Handled = true; },
+				(sender, e) => e.CanExecute = !String.IsNullOrEmpty(ConsoleCommandTextBox.Text)
+			));
+			CommandBindings.Add(new CommandBinding(ApplicationCommands.SaveAs,
+				(sender, e) => { SaveTrace(); e.Handled = true; }
+			));
+			CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy,
+				(sender, e) => { CopyToClipboard(e.Parameter); e.Handled = true; },
+				(sender, e) => e.CanExecute = e.Parameter != null || logList.SelectedItem != null
+			));
+		
 		} // ctor
 
 		void IDisposable.Dispose()
@@ -175,7 +130,7 @@ namespace TecWare.PPSn.UI
 		#region -- IPpsWindowPane members ---------------------------------------------
 
 		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args)
-			=> PpsWindowPaneCompareResult.Same;
+			=> PpsWindowPaneCompareResult.Same; // only one trace, per window
 
 		Task IPpsWindowPane.LoadAsync(LuaTable args)
 		{
@@ -190,19 +145,109 @@ namespace TecWare.PPSn.UI
 		string IPpsWindowPane.SubTitle => "Anwendungsereignisse";
 
 		object IPpsWindowPane.Control => this;
-		IPpsWindowPaneManager IPpsWindowPane.PaneManager => paneManager;
 		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
 		PpsUICommandCollection IPpsWindowPane.Commands => commands;
 
 		bool IPpsWindowPane.HasSideBar => false;
 		bool IPpsWindowPane.IsDirty => false;
 		IPpsDataInfo IPpsWindowPane.CurrentData => null;
-		string IPpsWindowPane.HelpKey => null;
+		string IPpsWindowPane.HelpKey => "PpsnTracePane";
 
 		#endregion
 
-		private void CopyToClipboard(object item)
-			=> Clipboard.SetText(TraceToString(item)); // ToDo: enable Html/RichText/PlainText
+		#region -- Execute Command ----------------------------------------------------
+
+		private async Task ExecuteCommandAsync(string command)
+		{
+			try
+			{
+				var chunk = await Environment.CompileAsync(command, "command.lua", true);
+
+				var r = chunk.Run(traceEnvironment);
+
+				// print result
+				var i = 0;
+				foreach (var c in r)
+					Environment.Log.Append(PpsLogType.Debug, $"${i++}: {c}");
+			}
+			catch (LuaParseException ex)
+			{
+				Environment.Log.Append(PpsLogType.Fail, String.Format("Could not parse command: {0}", ex.Message));
+			}
+			catch (Exception ex)
+			{
+				Environment.Log.Append(PpsLogType.Fail, ex, String.Format("Command \"{0}\" threw an Exception: {1}", command, ex.Message));
+			}
+		} // proc ExecuteCommandAsync
+
+		#endregion
+
+		#region -- Copy, SaveAs -------------------------------------------------------
+
+		private void SaveTrace()
+		{
+			var openFileDialog = new SaveFileDialog
+			{
+				Filter = "TraceLog | *.csv;",
+				DefaultExt = ".csv",
+				CheckFileExists = false,
+				CheckPathExists = true,
+				AddExtension = true
+			};
+
+			if (openFileDialog.ShowDialog() != true)
+				return;
+
+			if (File.Exists(openFileDialog.FileName)
+				&& MessageBox.Show("Die Datei existiert bereits. Möchten Sie überschreiben?", "Warnung", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+				return;
+
+			using (var sw = new StreamWriter(openFileDialog.FileName))
+			{
+				// write log content
+				if (Environment.Log is PpsTraceLog log)
+				{
+					foreach (var c in log.OfType<PpsTraceItemBase>())
+					{
+						sw.Write(c.Type);
+						sw.Write(';');
+						sw.Write(c.Stamp.ToString("G"));
+						sw.Write(';');
+
+						if (c is PpsExceptionItem exi)
+						{
+							sw.Write('"');
+							sw.Write(ExceptionFormatter.FormatPlainText(exi.Exception).Replace("\"", "\"\""));
+							sw.Write('"');
+						}
+						else
+							sw.Write(c.Message.Replace("\"", "\"\""));
+						sw.WriteLine();
+					}
+				}
+				else
+					sw.WriteLine("Log is not a trace log?");
+
+				// write statistics
+				foreach (var statistic in Environment.Statistics)
+				{
+					if (!statistic.HasData)
+						continue;
+					var en = statistic.History.GetEnumerator();
+					var historic = 0;
+					en.Reset();
+					while (en.MoveNext())
+					{
+						sw.WriteLine($"{statistic.Name};{DateTime.Now.AddSeconds(historic)};{en.Current}");
+						historic--;
+					}
+				}
+			}
+		} // proc SaveTrace
+
+		#endregion
+
+		#region -- Copy To Clipboard --------------------------------------------------
 
 		private string TraceToString(object item)
 		{
@@ -222,18 +267,25 @@ namespace TecWare.PPSn.UI
 					ExceptionFormatter.FormatPlainText(ret, exc.Exception);
 
 					return ret.ToString();
-				case null:
-					return "<null>";
 				default:
-					return String.Empty;
+					return null;
 			}
 		} // func TraceToString
 
+		private void CopyToClipboard(object item)
+		{
+			var clipText = TraceToString(item ?? logList.SelectedItem);
+			if (clipText != null)
+				Clipboard.SetText(clipText);
+		} // proc CopyToClipboard
+
+		#endregion
+		
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, commands?.GetEnumerator());
 
 		/// <summary>Access the environment</summary>
-		public PpsEnvironment Environment => (PpsEnvironment)paneManager.Shell;
+		public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager.Shell;
 	} // class PpsTracePane
 
 	#endregion

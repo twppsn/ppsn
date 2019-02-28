@@ -316,7 +316,7 @@
 				</RowDefinition.Style>
 			</RowDefinition>
 		</Grid.RowDefinitions>
-		<ListBox Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}" Style="{StaticResource PPSnTraceListBoxStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+		<ListBox x:Name="logList" Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}" Style="{StaticResource PPSnTraceListBoxStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid>
@@ -324,7 +324,7 @@
 							<ContextMenu>
 								<MenuItem Command="ApplicationCommands.Copy" CommandParameter="{Binding}"/>
 								<Separator />
-								<MenuItem Command="ApplicationCommands.SaveAs" CommandParameter="{Binding}"/>
+								<MenuItem Command="ApplicationCommands.SaveAs" />
 							</ContextMenu>
 						</Grid.ContextMenu>
 						<Grid.ColumnDefinitions>
@@ -377,14 +377,13 @@
 				<ColumnDefinition Width="auto"/>
 			</Grid.ColumnDefinitions>
 			<Label Content="Console: " Margin="0,0,6,0"/>
-			<TextBox Grid.Column="1" x:Name="ConsoleCommandTextBox">
+			<TextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" FontFamily="Consolas">
 				<TextBox.InputBindings>
-					<KeyBinding Command="{x:Static local:PpsTracePane.ExecuteCommandCommand}" CommandParameter="{Binding ElementName=ConsoleCommandTextBox, Path=Text}" Key="Return" />
+					<KeyBinding Command="{x:Static ApplicationCommands.Open}" Key="Return" />
+					<KeyBinding Command="{x:Static ApplicationCommands.Delete}" Key="Esc" />
 				</TextBox.InputBindings>
 			</TextBox>
-			<ui:PpsButton Grid.Column="2" Content="Ausführen" Margin="6,0,0,0"
-						  Command="{x:Static local:PpsTracePane.ExecuteCommandCommand}"
-						  CommandParameter="{Binding ElementName=ConsoleCommandTextBox, Path=Text}" />
+			<ui:PpsButton Grid.Column="2" Content="Ausführen" Margin="6,0,0,0" Command="{x:Static ApplicationCommands.Open}" />
 		</Grid>
 		<ToggleButton Grid.Row="2" x:Name="ShowStatisticsButton" IsChecked="True" Focusable="False">
 			<ToggleButton.Style>

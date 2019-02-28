@@ -734,6 +734,12 @@ namespace TecWare.PPSn
 		} // func CompileAsync
 
 		#endregion
+
+		/// <summary></summary>
+		/// <param name="task"></param>
+		/// <param name="shell"></param>
+		public static void SpawnTask(this Task task, PpsShell shell)
+			=> task.ContinueWith(t => shell.ShowException(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
 	} // class PpsShellExtensions
 
 	#endregion

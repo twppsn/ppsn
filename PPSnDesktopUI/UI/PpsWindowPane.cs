@@ -95,8 +95,6 @@ namespace TecWare.PPSn.UI
 		object Control { get; }
 
 		/// <summary>Access the pane host.</summary>
-		IPpsWindowPaneManager PaneManager { get; }
-		/// <summary>Access the pane host.</summary>
 		IPpsWindowPaneHost PaneHost { get; }
 		/// <summary>Commands attached to the pane.</summary>
 		PpsUICommandCollection Commands { get; }

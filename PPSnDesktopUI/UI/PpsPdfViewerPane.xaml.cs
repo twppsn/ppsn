@@ -35,7 +35,6 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		private readonly IPpsWindowPaneManager paneManager;
 		private readonly IPpsWindowPaneHost paneHost;
 
 		private PdfReader loadedDocument = null;
@@ -45,9 +44,8 @@ namespace TecWare.PPSn.UI
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Pane constructor, that gets called by the host.</summary>
-		public PpsPdfViewerPane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
+		public PpsPdfViewerPane(IPpsWindowPaneHost paneHost)
 		{
-			this.paneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
 			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
 
 			var commands = new PpsUICommandCollection
@@ -231,7 +229,6 @@ namespace TecWare.PPSn.UI
 		bool IPpsWindowPane.IsDirty => false;
 
 		object IPpsWindowPane.Control => this;
-		IPpsWindowPaneManager IPpsWindowPane.PaneManager => paneManager;
 		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
 		string IPpsWindowPane.HelpKey => null;
 		IPpsDataInfo IPpsWindowPane.CurrentData => dataInfo;

@@ -167,7 +167,7 @@ namespace TecWare.PPSn.UI
 			if (pane == null)
 				return false;
 
-			if (pane.PaneManager == this)
+			if (pane.PaneHost.PaneManager == this)
 				return ActivatePaneHost(FindPaneHost(pane, true));
 			else
 				return Environment.ActivatePane(pane);

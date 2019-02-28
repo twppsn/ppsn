@@ -844,7 +844,7 @@ namespace TecWare.PPSn
 		/// <param name="pane"></param>
 		/// <returns></returns>
 		public bool ActivatePane(IPpsWindowPane pane)
-			=> pane?.PaneManager.ActivatePane(pane) ?? false;
+			=> pane?.PaneHost.PaneManager.ActivatePane(pane) ?? false;
 
 		/// <summary>Loads a new pane in a new window.</summary>
 		/// <param name="paneType"></param>
@@ -1317,7 +1317,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region ---- Statistics -------------------------------------------------------
+		#region -- Statistics ---------------------------------------------------------
 
 		/// <summary>Class for performant keeping of statistical values</summary>
 		public class CircularBuffer : IEnumerable<long>, INotifyCollectionChanged
@@ -1487,22 +1487,6 @@ namespace TecWare.PPSn
 		public List<StatisticElement> Statistics => statistics;
 
 		#endregion Statistics
-
-		#region -- remove --
-
-		[LuaMember]
-		public void LoadPdf(string guid)
-		{
-			var obj = GetObject(new Guid(guid ?? "F83EA1D1-0248-4880-8FB9-6121960B3FF5"));
-			GetWindows().First().OpenPaneAsync(typeof(PpsPdfViewerPane), PpsOpenPaneMode.NewPane,
-				new LuaTable
-				{
-					["Object"] = obj
-				}
-			).AwaitTask();
-		}
-
-		#endregion
 
 		/// <summary>Internal Id of the environment.</summary>
 		[LuaMember]
