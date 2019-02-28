@@ -2001,25 +2001,10 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsObjectInfo -----------------------------------------------
-
-	/// <summary>Description of the object type.</summary>
-	public interface IPpsObjectInfo
-	{
-		///// <summary>Open the current obje</summary>
-		///// <returns></returns>
-		//Task OpenAsync();
-
-		/// <summary>Access the environment</summary>
-		PpsEnvironment Environment { get; }
-	} // interface IPpsObjectInfo
-	
-	#endregion
-
 	#region -- interface IPpsObject ---------------------------------------------------
 
 	/// <summary>Contract for objects (local and remote)</summary>
-	public interface IPpsObject : IDataRow, IDataColumns, IDataValues, IPpsObjectInfo, IPropertyReadOnlyDictionary, IDynamicMetaObjectProvider, INotifyPropertyChanged
+	public interface IPpsObject : IDataRow, IDataColumns, IDataValues, IPpsDataInfo, IPropertyReadOnlyDictionary, IDynamicMetaObjectProvider, INotifyPropertyChanged
 	{
 		/// <summary>Get the object content.</summary>
 		/// <returns>Load content of the object.</returns>
@@ -2044,6 +2029,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Sync root for an object.</summary>
 		object SyncRoot { get; }
+
+		PpsEnvironment Environment { get; }
 	} // interface IPpsObject
 
 	#endregion
@@ -2236,7 +2223,7 @@ namespace TecWare.PPSn
 	#region -- class PpsObjectBlobData ------------------------------------------------
 
 	/// <summary>Control byte based data.</summary>
-	public class PpsObjectBlobData : IPpsBlobObjectData, IPpsObjectDataAccessNotify
+	public class PpsObjectBlobData : IPpsBlobObjectData, IPpsDataStream, IPpsObjectDataAccessNotify
 	{
 		/// <summary>Tag for hash value</summary>
 		public const string HashTag = "Sha256";
@@ -2811,6 +2798,11 @@ namespace TecWare.PPSn
 		public string Typ => throw new NotImplementedException();
 
 		public string MimeType => throw new NotImplementedException();
+
+		Task<IPpsDataObject> IPpsDataInfo.LoadAsync()
+			=> throw new NotImplementedException();
+
+		string IPpsDataInfo.Name => Nr;
 	} // class PpsRevisionObject
 
 	#endregion
@@ -3832,7 +3824,11 @@ namespace TecWare.PPSn
 		public IPropertyReadOnlyDictionary RevisionTags => tags.RevisionProperties;
 
 		IEnumerable<PpsObjectTag> IPpsObject.Tags => tags;
-		
+
+		async Task<IPpsDataObject> IPpsDataInfo.LoadAsync()
+			=> await (await GetDataAsync<IPpsObjectData>()).AccessAsync();
+
+		string IPpsDataInfo.Name => Nr;
 
 		/// <summary>Is the meta data changed and not persisted in the local database.</summary>
 		public bool IsChanged => isDirty;

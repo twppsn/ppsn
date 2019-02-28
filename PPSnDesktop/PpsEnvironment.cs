@@ -1488,6 +1488,22 @@ namespace TecWare.PPSn
 
 		#endregion Statistics
 
+		#region -- remove --
+
+		[LuaMember]
+		public void LoadPdf(string guid)
+		{
+			var obj = GetObject(new Guid(guid ?? "F83EA1D1-0248-4880-8FB9-6121960B3FF5"));
+			GetWindows().First().OpenPaneAsync(typeof(PpsPdfViewerPane), PpsOpenPaneMode.NewPane,
+				new LuaTable
+				{
+					["Object"] = obj
+				}
+			).AwaitTask();
+		}
+
+		#endregion
+
 		/// <summary>Internal Id of the environment.</summary>
 		[LuaMember]
 		public int EnvironmentId => environmentId;
