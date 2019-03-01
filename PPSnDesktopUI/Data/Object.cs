@@ -76,6 +76,8 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Name of the object.</summary>
 		string Name { get; }
+		/// <summary></summary>
+		string MimeType { get; }
 	} // interface IPpsDataInfo
 
 	#endregion

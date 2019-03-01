@@ -181,8 +181,6 @@ namespace TecWare.PPSn.UI
 		{
 			base.OnPreviewMouseDown(e);
 
-			ResetCharmbar(e.Source);
-
 			if (!IsNavigatorVisible)
 				return;
 			PART_Navigator.OnPreview_MouseDown(e.OriginalSource);
@@ -198,22 +196,10 @@ namespace TecWare.PPSn.UI
 
 		protected override void OnWindowCaptionClicked()
 		{
-			ResetCharmbar(null);
-
 			if (!IsNavigatorVisible)
 				return;
 			PART_Navigator.OnPreview_MouseDown(null);
 		} // proc OnWindowCaptionClicked
-
-		private void ResetCharmbar(object mouseDownSource)
-		{
-			if (PART_Charmbar.CurrentContentType == PPSnCharmbarContentType.Default)
-				return;
-			else if (Object.Equals(mouseDownSource, PART_Charmbar))
-				return;
-
-			PART_Charmbar.CurrentContentType = PPSnCharmbarContentType.Default;
-		} // proc ResetCharmbar
 
 		#endregion
 

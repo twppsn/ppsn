@@ -1306,7 +1306,10 @@ namespace TecWare.PPSn
 			if (uri == null)
 				return CreateHttpCore(Request.BaseAddress);
 			else if (uri.IsAbsoluteUri)
-				throw new NotImplementedException();
+			{
+				var relativeUri = Request.BaseAddress.MakeRelativeUri(uri);
+				return CreateHttpCore(new Uri(Request.BaseAddress, relativeUri));
+			}
 			else // relative to base
 				return CreateHttpCore(new Uri(Request.BaseAddress, uri));
 		} // func CreateHttp

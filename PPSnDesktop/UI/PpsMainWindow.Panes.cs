@@ -23,7 +23,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Neo.IronLua;
-using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -183,6 +182,7 @@ namespace TecWare.PPSn.UI
 			{
 				SetValue(currentPaneHostPropertyKey, paneHost);
 				IsNavigatorVisible = false;
+				IsPaneVisible = true;
 			}
 			else
 				r = false;

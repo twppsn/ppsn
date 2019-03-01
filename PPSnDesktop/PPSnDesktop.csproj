@@ -45,7 +45,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DES.Core, Version=3.4.0.0, Culture=neutral, PublicKeyToken=65aa0de0ef4a3cd4, processorArchitecture=MSIL">
-      <HintPath>..\packages\TecWare.DES.Core.3.4.31-pre.307\lib\net47\DES.Core.dll</HintPath>
+      <HintPath>..\packages\TecWare.DES.Core.3.4.31\lib\net47\DES.Core.dll</HintPath>
     </Reference>
     <Reference Include="Markdig, Version=0.16.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Markdig.0.16.0\lib\net40\Markdig.dll</HintPath>
@@ -105,9 +105,6 @@
     <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Views.cs" />
     <Compile Include="UI\FieldFactory.cs" />
-    <Compile Include="UI\PpsCharmbarControl.xaml.cs">
-      <DependentUpon>PpsCharmbarControl.xaml</DependentUpon>
-    </Compile>
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsHelpPageViewer.cs" />
     <Compile Include="UI\PpsMainWindow.Panes.cs" />
@@ -187,10 +184,6 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Themes\Generic.xaml">
-      <SubType>Designer</SubType>
-      <Generator>XamlIntelliSenseFileGenerator</Generator>
-    </Page>
-    <Page Include="UI\PpsCharmbarControl.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
     </Page>
