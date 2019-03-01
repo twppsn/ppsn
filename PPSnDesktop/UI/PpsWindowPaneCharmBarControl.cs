@@ -138,10 +138,10 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- CurrentVisiblePane - Property --------------------------------------
+		#region -- CurrentPane - Property ---------------------------------------------
 
 		private static readonly DependencyPropertyKey currentPanePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPane), typeof(PpsWindowPaneObjectInfo), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurrentPaneChanged)));
-		public static readonly DependencyProperty CurrentVisiblePaneProperty = currentPanePropertyKey.DependencyProperty;
+		public static readonly DependencyProperty CurrentPaneProperty = currentPanePropertyKey.DependencyProperty;
 
 		private static void OnCurrentPaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsWindowPaneCharmBarControl)d).OnCurrentPaneChanged(e.NewValue, e.OldValue);
@@ -149,7 +149,7 @@ namespace TecWare.PPSn.UI
 		private void OnCurrentPaneChanged(object newValue, object oldValue)
 			=> IsPaneVisible = newValue != null;
 
-		public PpsWindowPaneObjectInfo CurrentPane { get => (PpsWindowPaneObjectInfo)GetValue(CurrentVisiblePaneProperty); private set => SetValue(currentPanePropertyKey, value); }
+		public PpsWindowPaneObjectInfo CurrentPane { get => (PpsWindowPaneObjectInfo)GetValue(CurrentPaneProperty); private set => SetValue(currentPanePropertyKey, value); }
 
 		#endregion
 
