@@ -22,7 +22,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
+using System.Windows.Media;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
@@ -966,6 +968,28 @@ namespace TecWare.PPSn.UI
 		
 		public static IValueConverter Default { get; } = new DateValueConverter();
 	} // class DateValueConverter
+
+	#endregion
+
+	#region -- class PreviewImageConverter --------------------------------------------
+
+	internal sealed class PreviewImageConverter : IValueConverter
+	{
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value is IPpsDataInfo data && targetType == typeof(ImageSource))
+			{
+				return null;
+			}
+			else
+				return DependencyProperty.UnsetValue;
+		} // func IValueConverter.Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static PreviewImageConverter Default { get; } = new PreviewImageConverter();
+	} // class PreviewImageConverter
 
 	#endregion
 }

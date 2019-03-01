@@ -462,6 +462,9 @@ namespace TecWare.PPSn
 		public virtual IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			=> this;
 
+		public IDataRowEnumerable ApplyFilter(string filterExpr)
+			=> ApplyFilter(PpsDataFilterExpression.Parse(filterExpr), null);
+
 		/// <summary>Apply a filter to the data selector.</summary>
 		/// <param name="expression">Filter expression.</param>
 		/// <param name="lookupNative"></param>

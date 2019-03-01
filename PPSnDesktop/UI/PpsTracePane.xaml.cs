@@ -67,6 +67,8 @@ namespace TecWare.PPSn.UI
 			public LuaTable Context { get; set; } = null;
 
 			[LuaMember]
+			public IPpsWindowPaneManager Window => paneHost.PaneManager;
+			[LuaMember]
 			public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager.Shell;
 		} // class PpsTraceEnvironment
 

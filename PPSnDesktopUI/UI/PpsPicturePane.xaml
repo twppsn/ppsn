@@ -21,7 +21,9 @@ specific language governing permissions and limitations under the Licence.
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
-	<UserControl.Resources>
+	<Image Source="{Binding CurrentImage}" />
+
+	<!--<UserControl.Resources>
 		<local:LuaValueConverter x:Key="ScaleConverter">
 			<![CDATA[
 					if value[1] ~= clr.System.Windows.DependencyProperty:UnsetValue then
@@ -46,9 +48,9 @@ specific language governing permissions and limitations under the Licence.
 			]]>
 		</local:LuaValueConverter>
 
-		<!--parms[0] = Control.Witdh: substract border(2 * 1pxl) and padding(2 * 3pxl)
+		--><!--parms[0] = Control.Witdh: substract border(2 * 1pxl) and padding(2 * 3pxl)
 		parms[1] = ratio: calc image height
-		returns Control.Height: add border(2 * 1pxl), padding(2 * 3pxl) and footer(19pxl)-->
+		returns Control.Height: add border(2 * 1pxl), padding(2 * 3pxl) and footer(19pxl)--><!--
 		<local:LuaValueConverter x:Key="PreviewHeightConverter">
 			<![CDATA[
 				local retval = 145.0;
@@ -194,7 +196,7 @@ specific language governing permissions and limitations under the Licence.
 			</Image.Triggers>
 		</Image>
 
-		<!--Button to make a Photo-->
+		--><!--Button to make a Photo--><!--
 		<uiC:PpsButton Command="{x:Static ApplicationCommands.New}"
 					   DisplayMode="Circle"
 					   GeometryName="camera"
@@ -206,7 +208,7 @@ specific language governing permissions and limitations under the Licence.
 					   ToolTip="Foto aufnehmen"
 					   Visibility="{Binding SelectedCamera, RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Converter={x:Static local:PpsConverter.Visibility}}" />
 
-		<!--Button to open Camera settings-->
+		--><!--Button to open Camera settings--><!--
 		<ToggleButton x:Name="CameraSettingsToggleButton"
 					  Focusable="False"
 					  Width="60" Height="60"
@@ -246,7 +248,7 @@ specific language governing permissions and limitations under the Licence.
 			</ToggleButton.Template>
 		</ToggleButton>
 
-		<!--this is the control for Camera Settings-->
+		--><!--this is the control for Camera Settings--><!--
 		<Popup PlacementTarget="{Binding ElementName=CameraSettingsToggleButton}" Placement="Left" HorizontalOffset="60"
 			   IsOpen="{Binding ElementName=CameraSettingsToggleButton, Path=IsChecked, Mode=TwoWay}" StaysOpen="False"
 			   AllowsTransparency="True" PopupAnimation="Scroll"
@@ -310,7 +312,7 @@ specific language governing permissions and limitations under the Licence.
 			<Image x:Name="CurrentObjectImageMax"
 				   DataContext="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedAttachment, UpdateSourceTrigger=PropertyChanged,Mode=OneWay}"
 				   Source="{Binding LinkedObject.DataLazy.RawData}">
-				<!-- RK: Image can handle byte[] as source -->
+				--><!-- RK: Image can handle byte[] as source --><!--
 			</Image>
 			<InkCanvas Cursor="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkEditCursor}"
 					   Width="{Binding ElementName=CurrentObjectImageMax, Path=Source.Width}"
@@ -664,5 +666,5 @@ specific language governing permissions and limitations under the Licence.
 				</ControlTemplate>
 			</ToggleButton.Template>
 		</ToggleButton>
-	</Grid>
+	</Grid>-->
 </UserControl>
