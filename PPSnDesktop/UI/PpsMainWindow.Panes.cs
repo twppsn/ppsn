@@ -182,6 +182,7 @@ namespace TecWare.PPSn.UI
 			{
 				SetValue(currentPaneHostPropertyKey, paneHost);
 				IsNavigatorVisible = false;
+				IsPaneVisible = true;
 			}
 			else
 				r = false;

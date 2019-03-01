@@ -422,7 +422,6 @@
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*"/>
 				<!--Bindings do use type converters though-->
-				<ColumnDefinition Width="{Binding Source={StaticResource PPSnCharmBarColumnWidth}, Mode=OneTime}"/>
 			</Grid.ColumnDefinitions>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="auto"/>
@@ -430,21 +429,6 @@
 			</Grid.RowDefinitions>
 
 			<ContentPresenter Grid.Row="1" Content="{Binding CurrentPaneHost, Mode=OneWay}"/>
-
-			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" Grid.RowSpan="2" DataContext="{Binding CharmObject}">
-				<uiL:PpsCharmbarControl.Style>
-					<Style TargetType="{x:Type UserControl}">
-						<Style.Triggers>
-							<DataTrigger Binding="{Binding CurrentPaneHost, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1},	Mode=OneWay}">
-								<DataTrigger.Value>
-									<x:Null/>
-								</DataTrigger.Value>
-								<Setter Property="Visibility" Value="Hidden"/>
-							</DataTrigger>
-						</Style.Triggers>
-					</Style>
-				</uiL:PpsCharmbarControl.Style>
-			</uiL:PpsCharmbarControl>
 		</Grid>
 
 		<Grid Grid.Row="3" Grid.ColumnSpan="3" Background="{StaticResource PPSnWindowFooterBrush}">
