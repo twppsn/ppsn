@@ -18,6 +18,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -52,7 +53,7 @@ namespace TecWare.PPSn.UI
 			get => image;
 			set
 			{
-				if (Equals(image, value))
+				if (!Equals(image, value))
 				{
 					image = value;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Image)));
@@ -139,9 +140,35 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- CurrentVisiblePane - Property --------------------------------------
+
+		private static readonly DependencyPropertyKey currentVisiblePanePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentVisiblePane), typeof(PpsWindowPaneObjectInfo), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurrentVisiblePaneChanged)));
+		public static readonly DependencyProperty CurrentVisiblePaneProperty = currentVisiblePanePropertyKey.DependencyProperty;
+
+		private static void OnCurrentVisiblePaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsWindowPaneCharmBarControl)d).OnCurrentVisiblePaneChanged(e.NewValue, e.OldValue);
+
+		private void OnCurrentVisiblePaneChanged(object newValue, object oldValue)
+			=> IsPaneVisible = newValue != null;
+
+		public PpsWindowPaneObjectInfo CurrentVisiblePane { get => (PpsWindowPaneObjectInfo)GetValue(CurrentVisiblePaneProperty); private set => SetValue(currentVisiblePanePropertyKey, value); }
+
+		#endregion
+
+		#region -- IsPaneVisible - Property -------------------------------------------
+
+		private static readonly DependencyPropertyKey isPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsPaneVisible), typeof(bool), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(false));
+		public static readonly DependencyProperty IsInfoVisibleProperty = isPaneVisiblePropertyKey.DependencyProperty;
+
+		public bool IsPaneVisible { get => (bool)GetValue(IsInfoVisibleProperty); private set => SetValue(isPaneVisiblePropertyKey, value); }
+
+		#endregion
+
+		public readonly static RoutedUICommand ChangeContentCommand = new RoutedUICommand("ChangeContent", "ChangeContent", typeof(PpsWindowPaneCharmBarControl));
+
 		public PpsWindowPaneCharmBarControl()
 		{
-			helpPage = new PpsWindowPaneObjectInfo() { Text = "Hilfe", Image = "H" };
+			helpPage = new PpsWindowPaneObjectInfo() { Text = "Hilfe", Image = "helpCircle" };
 
 			helpPageViewer = new PpsHelpPageViewer();
 			helpPage.Content = helpPageViewer; // todo: add to logical tree
@@ -155,14 +182,30 @@ namespace TecWare.PPSn.UI
 			};
 			ppsObjectPanes = new PpsWindowPaneObjectInfo[]
 			{
-				new PpsWindowPaneObjectInfo() { Text = "Notizen", Content = ppsTagsEditors[0] },
-				new PpsWindowPaneObjectInfo() { Text = "Tags", Content = ppsTagsEditors[1] },
-				new PpsWindowPaneObjectInfo() { Text = "Attribute", Content = ppsTagsEditors[2] },
-				new PpsWindowPaneObjectInfo() { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3] }
+				new PpsWindowPaneObjectInfo() { Text = "Notizen", Content = ppsTagsEditors[0], Image = "noteOutline" },
+				new PpsWindowPaneObjectInfo() { Text = "Tags", Content = ppsTagsEditors[1], Image = "hashTag" },
+				new PpsWindowPaneObjectInfo() { Text = "Attribute", Content = ppsTagsEditors[2], Image = "tagText" },
+				new PpsWindowPaneObjectInfo() { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" }
 			};
 
 			SetViews(null);
+
+			CommandBindings.Add(
+				new CommandBinding(ChangeContentCommand,
+					(sender, e) =>
+					{
+						if(e.Parameter is PpsWindowPaneObjectInfo pane)
+							ChangeVisiblePane(pane);
+						e.Handled = true;
+					},
+					(sender, e) => e.CanExecute = true
+				)
+			);
+
 		} // ctor
+
+		private void ChangeVisiblePane(PpsWindowPaneObjectInfo pane)
+			=> CurrentVisiblePane = object.Equals(pane, CurrentVisiblePane) ? null : pane;
 
 		private void ClearObject(object data)
 		{
@@ -187,18 +230,12 @@ namespace TecWare.PPSn.UI
 
 		private void SetViews(IEnumerable<PpsWindowPaneObjectInfo> views)
 		{
-			SetValue(viewsPropertyKey, 
-				views ==null 
+			SetValue(viewsPropertyKey,
+				views == null
 				? new PpsWindowPaneObjectInfo[] { helpPage }
 				: views.Concat(new PpsWindowPaneObjectInfo[] { helpPage })
 			);
 		} // proc SetViews
-
-		private void CmdButton_Click(object sender, RoutedEventArgs e)
-		{
-			e.Handled = true;
-		}
-
 
 		static PpsWindowPaneCharmBarControl()
 		{
