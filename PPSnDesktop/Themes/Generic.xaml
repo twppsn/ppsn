@@ -151,17 +151,25 @@
 																	<Trigger Property="IsPressed" Value="True">
 																		<Trigger.EnterActions>
 																			<BeginStoryboard>
-																				<Storyboard TargetName="scaleTransform" Duration="0:00:0.1">
-																					<DoubleAnimation Storyboard.TargetProperty="ScaleX" To="0.9" />
-																					<DoubleAnimation Storyboard.TargetProperty="ScaleY" To="0.9" />
+																				<Storyboard>
+																					<DoubleAnimation Storyboard.TargetName="scaleTransform"
+																									 Storyboard.TargetProperty="ScaleX"
+																									 From="1" To="0.9" Duration="0:00:0.1" />
+																					<DoubleAnimation Storyboard.TargetName="scaleTransform"
+																									 Storyboard.TargetProperty="ScaleY"
+																									 From="1" To="0.9" Duration="0:00:0.1" />
 																				</Storyboard>
 																			</BeginStoryboard>
 																		</Trigger.EnterActions>
 																		<Trigger.ExitActions>
 																			<BeginStoryboard>
-																				<Storyboard TargetName="scaleTransform" Duration="0:00:0.05">
-																					<DoubleAnimation Storyboard.TargetProperty="ScaleX" To="1" />
-																					<DoubleAnimation Storyboard.TargetProperty="ScaleY" To="1" />
+																				<Storyboard>
+																					<DoubleAnimation Storyboard.TargetName="scaleTransform"
+																									 Storyboard.TargetProperty="ScaleX"
+																									 From="0.9" To="1" Duration="0:00:0.05" />
+																					<DoubleAnimation Storyboard.TargetName="scaleTransform"
+																									 Storyboard.TargetProperty="ScaleY"
+																									 From="0.9" To="1" Duration="0:00:0.05" />
 																				</Storyboard>
 																			</BeginStoryboard>
 																		</Trigger.ExitActions>
