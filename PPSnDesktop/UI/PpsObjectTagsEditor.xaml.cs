@@ -49,21 +49,21 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsTagsEditor ----------------------------------------------------
+	#region -- class PpsObjectTagsEditor ----------------------------------------------
 
 	/// <summary>Tag editor user control.</summary>
-	public partial class PpsTagsEditor : UserControl
+	public partial class PpsObjectTagsEditor : UserControl
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty TagClassProperty = DependencyProperty.Register(nameof(TagClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(PpsObjectTagClass.Deleted, TagClassChanged));
-		public static readonly DependencyProperty ObjectProperty = DependencyProperty.Register(nameof(Object), typeof(PpsObject), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(ObjectChanged));
+		public static readonly DependencyProperty TagClassProperty = DependencyProperty.Register(nameof(TagClass), typeof(PpsObjectTagClass), typeof(PpsObjectTagsEditor), new FrameworkPropertyMetadata(PpsObjectTagClass.Deleted, TagClassChanged));
+		public static readonly DependencyProperty ObjectProperty = DependencyProperty.Register(nameof(Object), typeof(PpsObject), typeof(PpsObjectTagsEditor), new FrameworkPropertyMetadata(ObjectChanged));
 
-		private readonly static DependencyPropertyKey tagsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(TagsSource), typeof(ListCollectionView), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(null));
+		private readonly static DependencyPropertyKey tagsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(TagsSource), typeof(ListCollectionView), typeof(PpsObjectTagsEditor), new FrameworkPropertyMetadata(null));
 		public readonly static DependencyProperty TagsSourceProperty = tagsSourcePropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary></summary>
-		public PpsTagsEditor()
+		public PpsObjectTagsEditor()
 		{
 			InitializeComponent();
 		} // ctor
@@ -97,10 +97,10 @@ namespace TecWare.PPSn.UI
 		} // proc RefreshTagsSource
 
 		private static void TagClassChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsTagsEditor)d).RefreshTagsSource();
+			=> ((PpsObjectTagsEditor)d).RefreshTagsSource();
 
 		private static void ObjectChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsTagsEditor)d).RefreshTagsSource();
+			=> ((PpsObjectTagsEditor)d).RefreshTagsSource();
 		
 		private void tagAttributes_AddNewItemFactory(object sender, AddNewItemFactoryEventArgs args)
 		{
@@ -112,7 +112,7 @@ namespace TecWare.PPSn.UI
 		public PpsObject Object { get => (PpsObject)GetValue(ObjectProperty); set => SetValue(ObjectProperty, value); }
 
 		public ListCollectionView TagsSource { get => (ListCollectionView)GetValue(TagsSourceProperty); }
-	} // class PpsTagsEditor
+	} // class PpsObjectTagsEditor
 
 	#endregion
 

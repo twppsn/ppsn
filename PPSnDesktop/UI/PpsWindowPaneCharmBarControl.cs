@@ -84,7 +84,7 @@ namespace TecWare.PPSn.UI
 		private readonly PpsHelpPageViewer helpPageViewer;
 
 		private readonly PpsWindowPaneObjectInfo[] ppsObjectPanes;
-		private readonly PpsTagsEditor[] ppsTagsEditors; 
+		private readonly PpsObjectTagsEditor[] ppsTagsEditors; 
 
 		#region -- CurrentData - Property ---------------------------------------------
 
@@ -173,12 +173,12 @@ namespace TecWare.PPSn.UI
 			helpPageViewer = new PpsHelpPageViewer();
 			helpPage.Content = helpPageViewer; // todo: add to logical tree
 
-			ppsTagsEditors = new PpsTagsEditor[]
+			ppsTagsEditors = new PpsObjectTagsEditor[]
 			{
-				new PpsTagsEditor() { TagClass = PpsObjectTagClass.Note },
-				new PpsTagsEditor() { TagClass = PpsObjectTagClass.Tag },
-				new PpsTagsEditor() { TagClass = PpsObjectTagClass.Text },
-				new PpsTagsEditor() { TagClass = PpsObjectTagClass.Date },
+				new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Note },
+				new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Tag },
+				new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Text },
+				new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Date },
 			};
 			ppsObjectPanes = new PpsWindowPaneObjectInfo[]
 			{
