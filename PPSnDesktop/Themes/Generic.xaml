@@ -83,13 +83,18 @@
 							<ColumnDefinition Width="Auto" />
 							<ColumnDefinition Width="Auto" />
 						</Grid.ColumnDefinitions>
-						<Border x:Name="borderContent" Grid.ColumnSpan="2" Background="Beige" Padding="0,0,50,0" HorizontalAlignment="Right" Width="0"	Visibility="Collapsed">
+						<Border x:Name="borderContent" Grid.ColumnSpan="2" Background="{DynamicResource PPSnPopUpBackgroundBrush}"
+								Margin="8,0,0,0" Padding="0,0,64,0" HorizontalAlignment="Right" Width="0" Visibility="Collapsed">
 							<Grid DataContext="{Binding CurrentPane, RelativeSource={RelativeSource TemplatedParent}}">
 								<Grid.RowDefinitions>
-									<RowDefinition />
+									<RowDefinition Height="32" />
 									<RowDefinition />
 								</Grid.RowDefinitions>
-								<TextBlock Grid.Row="0" Text="{Binding Text, Mode=OneWay}" FontSize="20" />
+								<uiC:PpsGeometryImage GeometryName="{Binding Image, Mode=OneWay}" GeometryCircled="False"
+													  Width="20" Height="20" Margin="6,0,0,0" HorizontalAlignment="Left"
+													  Foreground="{DynamicResource PPSnActionButtonBrush}" Opacity=".65" />
+								<TextBlock Grid.Row="0" Text="{Binding Text, Mode=OneWay}" VerticalAlignment="Center" Margin="32,0,0,0"
+										   FontSize="18" Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
 								<ContentPresenter Grid.Row="1" Content="{Binding Content, Mode=OneWay}" />
 							</Grid>
 						</Border>
@@ -113,35 +118,62 @@
 								</ItemsControl.ItemContainerStyle>
 								<ItemsControl.ItemTemplate>
 									<DataTemplate DataType="ui:PpsWindowPaneObjectInfo">
-										<ToggleButton Command="{x:Static ui:PpsWindowPaneCharmBarControl.ChangeContentCommand}"
-													  CommandParameter="{Binding}"
-													  ToolTip="{Binding Text}">
-											<ToggleButton.Content>
+										<Button Command="{x:Static ui:PpsWindowPaneCharmBarControl.ChangeContentCommand}"
+												CommandParameter="{Binding}"
+												ToolTip="{Binding Text}">
+											<Button.Content>
 												<uiC:PpsGeometryImage GeometryName="{Binding Image}" GeometryCircled="False"
 																	  Foreground="{DynamicResource PPSnActionButtonBrush}" />
-											</ToggleButton.Content>
-											<ToggleButton.Style>
-												<Style TargetType="{x:Type ToggleButton}">
+											</Button.Content>
+											<Button.Style>
+												<Style TargetType="{x:Type Button}">
 													<Setter Property="Focusable" Value="False" />
 													<Setter Property="Height" Value="48" />
 													<Setter Property="Opacity" Value=".65" />
 													<Setter Property="Template">
 														<Setter.Value>
-															<ControlTemplate TargetType="{x:Type ToggleButton}">
-																<Border x:Name="border" Background="Transparent" Padding="10">
-																	<ContentPresenter />
+															<ControlTemplate TargetType="{x:Type Button}">
+																<Border x:Name="border" Background="Transparent" Padding="9"
+																		BorderBrush="Transparent" BorderThickness="0,0,4,0">
+																	<ContentPresenter>
+																		<ContentPresenter.RenderTransform>
+																			<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
+																		</ContentPresenter.RenderTransform>
+																	</ContentPresenter>
 																</Border>
 																<ControlTemplate.Triggers>
 																	<Trigger Property="IsMouseOver" Value="True">
 																		<Setter Property="Opacity" Value="1" />
 																	</Trigger>
+																	<DataTrigger Binding="{Binding IsActive}" Value="True">
+																		<Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PPSnMarkerBrush}"/>
+																	</DataTrigger>
+																	<Trigger Property="IsPressed" Value="True">
+																		<Trigger.EnterActions>
+																			<BeginStoryboard>
+																				<Storyboard TargetName="scaleTransform" Duration="0:00:0.1">
+																					<DoubleAnimation Storyboard.TargetProperty="ScaleX" To="0.9" />
+																					<DoubleAnimation Storyboard.TargetProperty="ScaleY" To="0.9" />
+																				</Storyboard>
+																			</BeginStoryboard>
+																		</Trigger.EnterActions>
+																		<Trigger.ExitActions>
+																			<BeginStoryboard>
+																				<Storyboard TargetName="scaleTransform" Duration="0:00:0.05">
+																					<DoubleAnimation Storyboard.TargetProperty="ScaleX" To="1" />
+																					<DoubleAnimation Storyboard.TargetProperty="ScaleY" To="1" />
+																				</Storyboard>
+																			</BeginStoryboard>
+																		</Trigger.ExitActions>
+																	</Trigger>
+
 																</ControlTemplate.Triggers>
 															</ControlTemplate>
 														</Setter.Value>
 													</Setter>
 												</Style>
-											</ToggleButton.Style>
-										</ToggleButton>
+											</Button.Style>
+										</Button>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
@@ -155,7 +187,7 @@
 										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
 											<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
 										</ObjectAnimationUsingKeyFrames>
-										<DoubleAnimation Storyboard.TargetProperty="Width" To="480" DecelerationRatio=".6" Duration="0:00:.4"/>
+										<DoubleAnimation Storyboard.TargetProperty="Width" To="480" DecelerationRatio=".6" Duration="0:00:.3"/>
 									</Storyboard>
 								</BeginStoryboard>
 							</DataTrigger.EnterActions>
@@ -180,7 +212,7 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ui:PpsHelpPageViewer">
-					<FlowDocumentScrollViewer Document="{TemplateBinding Document}" />
+					<FlowDocumentScrollViewer Document="{TemplateBinding Document}" VerticalScrollBarVisibility="Auto"/>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
