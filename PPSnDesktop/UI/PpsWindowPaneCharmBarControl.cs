@@ -13,6 +13,7 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -31,9 +32,22 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private string text = null;
-		private object image = null;
-		private object content = null;
+		private readonly PpsWindowPaneCharmBarControl owner;
+
+		private string text;
+		private object image;
+		private object content;
+
+		public PpsWindowPaneObjectInfo(PpsWindowPaneCharmBarControl owner, string text = null, object image = null, object content = null)
+		{
+			this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
+			this.text = text;
+			this.image = image;
+			this.content = content;
+		} // ctor
+
+		internal void FireActiveChanged()
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsActive)));
 
 		public string Text
 		{
@@ -73,6 +87,8 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // prop Content
+
+		public bool IsActive => owner.CurrentPane == this;
 	} // class PpsWindowPaneObjectInfo
 
 	#endregion
@@ -144,10 +160,15 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty CurrentVisiblePaneProperty = currentPanePropertyKey.DependencyProperty;
 
 		private static void OnCurrentPaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsWindowPaneCharmBarControl)d).OnCurrentPaneChanged(e.NewValue, e.OldValue);
+			=> ((PpsWindowPaneCharmBarControl)d).OnCurrentPaneChanged((PpsWindowPaneObjectInfo)e.NewValue, (PpsWindowPaneObjectInfo)e.OldValue);
 
-		private void OnCurrentPaneChanged(object newValue, object oldValue)
-			=> IsPaneVisible = newValue != null;
+		private void OnCurrentPaneChanged(PpsWindowPaneObjectInfo newValue, PpsWindowPaneObjectInfo oldValue)
+		{
+			IsPaneVisible = newValue != null;
+
+			newValue?.FireActiveChanged();
+			oldValue?.FireActiveChanged();
+		} // func OnCurrentPaneChanged
 
 		public PpsWindowPaneObjectInfo CurrentPane { get => (PpsWindowPaneObjectInfo)GetValue(CurrentVisiblePaneProperty); private set => SetValue(currentPanePropertyKey, value); }
 
@@ -166,7 +187,7 @@ namespace TecWare.PPSn.UI
 
 		public PpsWindowPaneCharmBarControl()
 		{
-			helpPage = new PpsWindowPaneObjectInfo() { Text = "Hilfe", Image = "helpCircle" };
+			helpPage = new PpsWindowPaneObjectInfo(this) { Text = "Hilfe", Image = "helpCircle" };
 
 			helpPageViewer = new PpsHelpPageViewer();
 			helpPage.Content = helpPageViewer; // todo: add to logical tree
@@ -180,10 +201,10 @@ namespace TecWare.PPSn.UI
 			};
 			ppsObjectPanes = new PpsWindowPaneObjectInfo[]
 			{
-				new PpsWindowPaneObjectInfo() { Text = "Notizen", Content = ppsTagsEditors[0], Image = "noteOutline" },
-				new PpsWindowPaneObjectInfo() { Text = "Tags", Content = ppsTagsEditors[1], Image = "hashTag" },
-				new PpsWindowPaneObjectInfo() { Text = "Attribute", Content = ppsTagsEditors[2], Image = "tagText" },
-				new PpsWindowPaneObjectInfo() { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" }
+				new PpsWindowPaneObjectInfo(this) { Text = "Notizen", Content = ppsTagsEditors[0], Image = "noteOutline" },
+				new PpsWindowPaneObjectInfo(this) { Text = "Tags", Content = ppsTagsEditors[1], Image = "hashTag" },
+				new PpsWindowPaneObjectInfo(this) { Text = "Attribute", Content = ppsTagsEditors[2], Image = "tagText" },
+				new PpsWindowPaneObjectInfo(this) { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" }
 			};
 
 			SetViews(null);

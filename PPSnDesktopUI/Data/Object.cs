@@ -16,6 +16,8 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Neo.IronLua;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Data
 {
@@ -56,7 +58,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsDataLoad -------------------------------------------------
+	#region -- interface IPpsDataInfo -------------------------------------------------
 
 	/// <summary></summary>
 	public interface IPpsDataInfo
@@ -65,9 +67,16 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		Task<IPpsDataObject> LoadAsync();
 
+		/// <summary>Create a pane for the object.</summary>
+		/// <param name="paneManager"></param>
+		/// <param name="newPaneMode"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		Task<IPpsWindowPane> OpenPaneAsync(IPpsWindowPaneManager paneManager = null, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null);
+
 		/// <summary>Name of the object.</summary>
 		string Name { get; }
-	} // interface IPpsDataLoad
+	} // interface IPpsDataInfo
 
 	#endregion
 }

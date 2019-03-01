@@ -43,6 +43,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
@@ -2775,6 +2776,9 @@ namespace TecWare.PPSn
 			}
 		} // UpdateObjectFromXml
 
+		public Task<IPpsWindowPane> OpenPaneAsync(IPpsWindowPaneManager paneManager = null, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null)
+			=> throw new NotImplementedException();
+
 		public Task<IPpsObjectData> GetDataAsync() => throw new NotImplementedException();
 
 		public override IReadOnlyList<IDataColumn> Columns => localObject.Columns;
@@ -3507,17 +3511,24 @@ namespace TecWare.PPSn
 			}
 		} // proc SaveObjectDataInformationAsync
 
-		[Obsolete("falsche verantwortung, sollte eine command action machen")]
-		public Task ViewAsync(object target)
+		private Type GetPaneTypeFromObject()
 		{
-			return ShellExecute();
-		} // proc ViewAsync
+			if (Typ == PpsEnvironment.AttachmentObjectTyp) // select editor for the attachment
+			{
+				if (MimeType.StartsWith("image/"))
+					return Environment.GetPaneTypeFromString("picture");
+				else if (MimeType == MimeTypes.Application.Pdf)
+					return Environment.GetPaneTypeFromString("pdf");
+				else
+					return null;
+			}
+			else // default is mask
+				return Environment.GetPaneTypeFromString("mask");
+		} // func GetPaneTypeFromObject
 
-
-		[Obsolete("falsche verantwortung")]
-		public async Task ShellExecute()
+		private async Task OpenWithShellAsync()
 		{
-			var fileName = this.RevisionTags.GetProperty(PpsObjectBlobData.FileNameTag, (string)null);
+			var fileName = RevisionTags.GetProperty(PpsObjectBlobData.FileNameTag, (string)null);
 			if (String.IsNullOrEmpty(fileName))
 			{
 				await Environment.MsgBoxAsync("Datei kann nicht angezeigt werden. Anzeige Programm konnte nicht zugeordnet werden.");
@@ -3546,7 +3557,39 @@ namespace TecWare.PPSn
 			}
 			else
 				await Environment.MsgBoxAsync("Datei kann nicht angezeigt werden. Daten können nicht gelesen werden.");
-		} // proc ShellExecute
+		} // func OpenWithShellAsync
+
+		/// <summary>Open the object with the correct pane.</summary>
+		/// <param name="paneManager"></param>
+		/// <param name="newPaneMode"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public Task<IPpsWindowPane> OpenPaneAsync(IPpsWindowPaneManager paneManager = null, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null)
+		{
+			if (paneManager == null)
+				paneManager = environment.GetDefaultPaneManager(); // use default pane manager
+
+			// get pane type for the new pane
+			var paneType = GetPaneTypeFromObject();
+			if (paneType != null)
+			{
+				// ensure arguments
+				if (arguments == null)
+					arguments = new LuaTable();
+
+				// set object
+				arguments["Object"] = this;
+
+				// construct pane
+				return paneManager.OpenPaneAsync(paneType, newPaneMode, arguments);
+			}
+			else if (newPaneMode == PpsOpenPaneMode.Default
+				|| newPaneMode == PpsOpenPaneMode.NewMainWindow
+				|| newPaneMode == PpsOpenPaneMode.NewSingleWindow) // use shell execute
+				return OpenWithShellAsync().ContinueWith<IPpsWindowPane>(t => null, TaskContinuationOptions.OnlyOnRanToCompletion);
+			else
+				return null;
+		} // proc OpenPaneAsync
 
 		#endregion
 

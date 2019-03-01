@@ -923,6 +923,16 @@ namespace TecWare.PPSn
 			}
 		} // prop Panes
 
+		/// <summary>Return a pane manager</summary>
+		/// <returns></returns>
+		public IPpsWindowPaneManager GetDefaultPaneManager()
+		{
+			// get the current window
+			var w = GetWindows().FirstOrDefault(c => c.IsActive);
+			// or the environment
+			return (IPpsWindowPaneManager)w ?? this;
+		} // func GetDefaultPaneManager
+
 		PpsShellWpf IPpsWindowPaneManager.Shell => this;
 		bool IPpsWindowPaneManager.IsActive => false;
 
