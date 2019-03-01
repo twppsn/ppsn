@@ -66,7 +66,7 @@ namespace TecWare.PPSn.UI
 			get => content;
 			set
 			{
-				if (Equals(content, value))
+				if (!Equals(content, value))
 				{
 					content = value;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Content)));
@@ -142,16 +142,16 @@ namespace TecWare.PPSn.UI
 
 		#region -- CurrentVisiblePane - Property --------------------------------------
 
-		private static readonly DependencyPropertyKey currentVisiblePanePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentVisiblePane), typeof(PpsWindowPaneObjectInfo), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurrentVisiblePaneChanged)));
-		public static readonly DependencyProperty CurrentVisiblePaneProperty = currentVisiblePanePropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey currentPanePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPane), typeof(PpsWindowPaneObjectInfo), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurrentPaneChanged)));
+		public static readonly DependencyProperty CurrentVisiblePaneProperty = currentPanePropertyKey.DependencyProperty;
 
-		private static void OnCurrentVisiblePaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsWindowPaneCharmBarControl)d).OnCurrentVisiblePaneChanged(e.NewValue, e.OldValue);
+		private static void OnCurrentPaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsWindowPaneCharmBarControl)d).OnCurrentPaneChanged(e.NewValue, e.OldValue);
 
-		private void OnCurrentVisiblePaneChanged(object newValue, object oldValue)
+		private void OnCurrentPaneChanged(object newValue, object oldValue)
 			=> IsPaneVisible = newValue != null;
 
-		public PpsWindowPaneObjectInfo CurrentVisiblePane { get => (PpsWindowPaneObjectInfo)GetValue(CurrentVisiblePaneProperty); private set => SetValue(currentVisiblePanePropertyKey, value); }
+		public PpsWindowPaneObjectInfo CurrentPane { get => (PpsWindowPaneObjectInfo)GetValue(CurrentVisiblePaneProperty); private set => SetValue(currentPanePropertyKey, value); }
 
 		#endregion
 
@@ -205,7 +205,7 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		private void ChangeVisiblePane(PpsWindowPaneObjectInfo pane)
-			=> CurrentVisiblePane = object.Equals(pane, CurrentVisiblePane) ? null : pane;
+			=> CurrentPane = Equals(pane, CurrentPane) ? null : pane;
 
 		private void ClearObject(object data)
 		{

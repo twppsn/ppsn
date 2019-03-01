@@ -84,7 +84,14 @@
 							<ColumnDefinition Width="Auto" />
 						</Grid.ColumnDefinitions>
 						<Border x:Name="borderContent" Grid.ColumnSpan="2" Background="Beige" Padding="0,0,50,0" HorizontalAlignment="Right" Width="0"	Visibility="Collapsed">
-							<TextBlock Text="{Binding CurrentVisiblePane.Text, RelativeSource={RelativeSource TemplatedParent}}" FontSize="20" />
+							<Grid DataContext="{Binding CurrentPane, RelativeSource={RelativeSource TemplatedParent}}">
+								<Grid.RowDefinitions>
+									<RowDefinition />
+									<RowDefinition />
+								</Grid.RowDefinitions>
+								<TextBlock Grid.Row="0" Text="{Binding Text, Mode=OneWay}" FontSize="20" />
+								<ContentPresenter Grid.Row="1" Content="{Binding Content, Mode=OneWay}" />
+							</Grid>
 						</Border>
 						<StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="48" Margin="0,0,0,72" >
 							<TextBlock Text="{TemplateBinding ObjectName}">
