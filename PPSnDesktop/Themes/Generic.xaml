@@ -15,9 +15,8 @@
 						<Grid>
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition />
-								<ColumnDefinition Width="50" />
+								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
-
 							<ContentPresenter Grid.Column="0" Content="{TemplateBinding Control}" />
 							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" x:Name="PART_CharmBar" />
 						</Grid>
@@ -79,34 +78,92 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ui:PpsWindowPaneCharmBarControl">
-					<StackPanel Orientation="Vertical" Background="Yellow">
-						<TextBlock Text="{TemplateBinding ObjectName}">
-							<TextBlock.LayoutTransform>
-								<RotateTransform Angle="-90" />
-							</TextBlock.LayoutTransform>
-							<TextBlock.ContextMenu>
-								<ContextMenu>
-									<MenuItem Header="Name Kopieren" Command="{x:Static ApplicationCommands.Copy}" />
-									<MenuItem Header="ObjektId kopieren" Command="{x:Static ApplicationCommands.Copy}" CommandParameter="todo" />
-								</ContextMenu>
-							</TextBlock.ContextMenu>
-						</TextBlock>
-						<ItemsControl ItemsSource="{TemplateBinding Views}">
-							<ItemsControl.ItemContainerStyle>
-								<Style TargetType="{x:Type ContentPresenter}">
-									<Setter Property="Margin" Value="0,16,0,0" />
-								</Style>
-							</ItemsControl.ItemContainerStyle>
-							<ItemsControl.ItemTemplate>
-								<DataTemplate DataType="ui:PpsWindowPaneObjectInfo">
-									<ToggleButton Content="{Binding Image}"
-												  ToolTip="{Binding Text}"
-												  Click="CmdButton_Click"
-												  Height="40"/>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</StackPanel>
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+						<Border x:Name="borderContent" Grid.ColumnSpan="2" Background="Beige" Padding="0,0,50,0" HorizontalAlignment="Right" Width="0"	Visibility="Collapsed">
+							<TextBlock Text="{Binding CurrentVisiblePane.Text, RelativeSource={RelativeSource TemplatedParent}}" FontSize="20" />
+						</Border>
+						<StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="48" Margin="0,0,0,72" >
+							<TextBlock Text="{TemplateBinding ObjectName}">
+								<TextBlock.LayoutTransform>
+									<RotateTransform Angle="-90" />
+								</TextBlock.LayoutTransform>
+								<TextBlock.ContextMenu>
+									<ContextMenu>
+										<MenuItem Header="Name Kopieren" Command="{x:Static ApplicationCommands.Copy}" />
+										<MenuItem Header="ObjektId kopieren" Command="{x:Static ApplicationCommands.Copy}" CommandParameter="todo" />
+									</ContextMenu>
+								</TextBlock.ContextMenu>
+							</TextBlock>
+							<ItemsControl ItemsSource="{TemplateBinding Views}">
+								<ItemsControl.ItemContainerStyle>
+									<Style TargetType="{x:Type ContentPresenter}">
+										<Setter Property="Margin" Value="0,6,0,0" />
+									</Style>
+								</ItemsControl.ItemContainerStyle>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate DataType="ui:PpsWindowPaneObjectInfo">
+										<ToggleButton Command="{x:Static ui:PpsWindowPaneCharmBarControl.ChangeContentCommand}"
+													  CommandParameter="{Binding}"
+													  ToolTip="{Binding Text}">
+											<ToggleButton.Content>
+												<uiC:PpsGeometryImage GeometryName="{Binding Image}" GeometryCircled="False"
+																	  Foreground="{DynamicResource PPSnActionButtonBrush}" />
+											</ToggleButton.Content>
+											<ToggleButton.Style>
+												<Style TargetType="{x:Type ToggleButton}">
+													<Setter Property="Focusable" Value="False" />
+													<Setter Property="Height" Value="48" />
+													<Setter Property="Opacity" Value=".65" />
+													<Setter Property="Template">
+														<Setter.Value>
+															<ControlTemplate TargetType="{x:Type ToggleButton}">
+																<Border x:Name="border" Background="Transparent" Padding="10">
+																	<ContentPresenter />
+																</Border>
+																<ControlTemplate.Triggers>
+																	<Trigger Property="IsMouseOver" Value="True">
+																		<Setter Property="Opacity" Value="1" />
+																	</Trigger>
+																</ControlTemplate.Triggers>
+															</ControlTemplate>
+														</Setter.Value>
+													</Setter>
+												</Style>
+											</ToggleButton.Style>
+										</ToggleButton>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</StackPanel>
+					</Grid>
+					<ControlTemplate.Triggers>
+						<DataTrigger Binding="{Binding IsPaneVisible, RelativeSource={RelativeSource Self}}" Value="True">
+							<DataTrigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard TargetName="borderContent">
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+											<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+										</ObjectAnimationUsingKeyFrames>
+										<DoubleAnimation Storyboard.TargetProperty="Width" To="480" DecelerationRatio=".6" Duration="0:00:.4"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard TargetName="borderContent">
+										<DoubleAnimation Storyboard.TargetProperty="Width" To="0" AccelerationRatio=".4" Duration="0:00:.3" />
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+											<DiscreteObjectKeyFrame KeyTime="0:00:.3" Value="{x:Static Visibility.Collapsed}" />
+										</ObjectAnimationUsingKeyFrames>
+									</Storyboard>
+								</BeginStoryboard>
+							</DataTrigger.ExitActions>
+						</DataTrigger>
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
