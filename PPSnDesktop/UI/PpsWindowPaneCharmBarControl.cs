@@ -132,9 +132,7 @@ namespace TecWare.PPSn.UI
 			=> ((PpsWindowPaneCharmBarControl)d).OnHelpKeyChanged((string)e.NewValue);
 
 		private void OnHelpKeyChanged(string newValue)
-		{
-			//helpPage = newValue;
-		} // proc OnHelpKeyChanged
+			=> helpPageViewer.HelpKey = newValue;
 
 		public string HelpKey { get => (string)GetValue(HelpKeyProperty); set => SetValue(HelpKeyProperty, value); }
 
@@ -201,7 +199,6 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = true
 				)
 			);
-
 		} // ctor
 
 		private void ChangeVisiblePane(PpsWindowPaneObjectInfo pane)

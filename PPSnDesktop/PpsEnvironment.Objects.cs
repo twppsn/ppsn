@@ -4976,7 +4976,6 @@ order by t_liefnr.value desc
 			}
 		} // func GetCachedObjectOrCreate
 
-
 		/// <summary></summary>
 		/// <param name="localId"></param>
 		/// <param name="throwException"></param>
@@ -4992,6 +4991,17 @@ order by t_liefnr.value desc
 		[LuaMember]
 		public PpsObject GetObject(Guid guid, bool throwException = false)
 			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useGuid, throwException);
+
+		public async Task<PpsObject> GetObjectAsync(PpsDataFilterExpression filter, bool throwException = false)
+		{
+			var obj = await Task.Run(() => GetViewData(new PpsShellGetList("local.objects")
+			{
+				Columns = new PpsDataColumnExpression[] { new PpsDataColumnExpression("Id") },
+				Filter = filter ?? throw new ArgumentNullException(nameof(filter))
+			}).FirstOrDefault());
+
+			return obj != null ? GetObject((long)obj[0], throwException) : null;
+		} // func GetObjectAsync
 
 		/// <summary></summary>
 		/// <param name="objectTyp"></param>

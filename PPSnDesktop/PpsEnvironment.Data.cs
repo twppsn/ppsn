@@ -3826,7 +3826,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-
 		#region -- GetViewData ----------------------------------------------------------
 
 		/// <summary></summary>

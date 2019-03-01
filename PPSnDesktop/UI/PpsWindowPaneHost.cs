@@ -121,6 +121,10 @@ namespace TecWare.PPSn.UI
 			SetValue(hasPaneSideBarPropertyKey, false);
 			SetValue(currentPanePropertyKey, null);
 
+			// clear document
+			charmBarControl.CurrentData = null;
+			charmBarControl.HelpKey = null;
+
 			return r;
 		} // func UnloadAsync
 
