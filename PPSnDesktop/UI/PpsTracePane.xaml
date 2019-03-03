@@ -196,7 +196,7 @@
 		</Grid.RowDefinitions>
 		<ListBox x:Name="logList" Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}"
 				 Style="{DynamicResource PPSnListBoxStyle}" ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"
-				 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+				 ScrollViewer.HorizontalScrollBarVisibility="Disabled" AlternationCount="2">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Background="Transparent" TextBlock.FontSize="14">
