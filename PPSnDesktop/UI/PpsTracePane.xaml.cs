@@ -100,9 +100,8 @@ namespace TecWare.PPSn.UI
 				RemoveLogicalChildHandler = RemoveLogicalChild
 			};
 
-			commands.AddButton("100;100", "Save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
-			commands.AddButton("100;200", "Copy", ApplicationCommands.Copy, "Kopieren", "Kopiert alle markierten Einträge in die Zwischenablage.");
-
+			commands.AddButton("100;100", "save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
+			commands.AddButton("100;200", "copy", ApplicationCommands.Copy, "Kopieren", "Kopiere markierte Einträge in die Zwischenablage.");
 
 			CommandBindings.Add(new CommandBinding(ApplicationCommands.Open,
 				(sender, e) => { ExecuteCommandAsync(ConsoleCommandTextBox.Text).SpawnTask(Environment); e.Handled = true; },
@@ -115,7 +114,6 @@ namespace TecWare.PPSn.UI
 				(sender, e) => { CopyToClipboard(e.Parameter); e.Handled = true; },
 				(sender, e) => e.CanExecute = e.Parameter != null || logList.SelectedItem != null
 			));
-		
 		} // ctor
 
 		void IDisposable.Dispose()

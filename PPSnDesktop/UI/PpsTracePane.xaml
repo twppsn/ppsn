@@ -20,128 +20,6 @@
 			</CollectionViewSource.SortDescriptions>
 		</CollectionViewSource>
 
-		<Style x:Key="PPSnTraceAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
-			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-			<Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
-			<Setter Property="Margin" Value="0,0,0,1"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="SnapsToDevicePixels" Value="True"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ListBoxItem}">
-						<Grid>
-							<Border x:Name="panelBorder" Padding="6,1" Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-								<ContentPresenter />
-							</Border>
-							<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False"
-								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-						</Grid>
-						<ControlTemplate.Triggers>
-							<Trigger Property="ItemsControl.AlternationIndex" Value="1">
-								<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
-							</Trigger>
-							<Trigger Property="IsSelected" Value="True">
-								<Setter Property="Opacity" TargetName="showSelection" Value="1" />
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-
-		<Style x:Key="PPSnTraceScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
-			<Setter Property="PanningMode" Value="Both"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ScrollViewer}">
-						<Grid x:Name="Grid" Background="{TemplateBinding Background}">
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="*"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<Grid.RowDefinitions>
-								<RowDefinition Height="*"/>
-								<RowDefinition Height="Auto"/>
-							</Grid.RowDefinitions>
-							<ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Grid.RowSpan="2"
-												CanContentScroll="{TemplateBinding CanContentScroll}" 
-												CanHorizontallyScroll="False"
-												CanVerticallyScroll="False" 
-												ContentTemplate="{TemplateBinding ContentTemplate}" 
-												Content="{TemplateBinding Content}" 
-												Margin="{TemplateBinding Padding}"/>
-							<ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0" Orientation="Vertical"
-								   AutomationProperties.AutomationId="VerticalScrollBar"
-								   IsTabStop="False"
-								   Cursor="Arrow"
-								   Minimum="0" 
-								   Maximum="{TemplateBinding ScrollableHeight}" 
-								   Opacity="0"
-								   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" 
-								   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
-								   ViewportSize="{TemplateBinding ViewportHeight}"/>
-							<ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Column="0" Grid.Row="1" Orientation="Horizontal"
-								   AutomationProperties.AutomationId="HorizontalScrollBar"
-								   IsTabStop="False"
-								   Cursor="Arrow"
-								   Minimum="0"
-								   Maximum="{TemplateBinding ScrollableWidth}"
-								   Opacity="0"
-								   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" 
-								   Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
-								   ViewportSize="{TemplateBinding ViewportWidth}"/>
-						</Grid>
-						<ControlTemplate.Triggers>
-							<EventTrigger RoutedEvent="ScrollViewer.MouseEnter">
-								<EventTrigger.Actions>
-									<BeginStoryboard>
-										<Storyboard>
-											<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.75" Duration="0:0:0.4"/>
-											<DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.75" Duration="0:0:0.4"/>
-										</Storyboard>
-									</BeginStoryboard>
-								</EventTrigger.Actions>
-							</EventTrigger>
-
-							<EventTrigger RoutedEvent="ScrollViewer.MouseLeave">
-								<EventTrigger.Actions>
-									<BeginStoryboard>
-										<Storyboard>
-											<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity" From=".75" To="0.0" Duration="0:0:0.2"/>
-											<DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity" From=".75" To="0.0" Duration="0:0:0.2"/>
-										</Storyboard>
-									</BeginStoryboard>
-								</EventTrigger.Actions>
-							</EventTrigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-
-		<Style x:Key="PPSnTraceListBoxStyle" TargetType="{x:Type ListBox}">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="SnapsToDevicePixels" Value="True"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="AlternationCount" Value="2"/>
-			<Setter Property="ItemContainerStyle" Value="{StaticResource PPSnTraceAlternatingListBoxItemStyle}"/>
-			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ListBox}">
-						<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
-								Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-							<ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnTraceScrollViewerStyle}">
-								<ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-							</ScrollViewer>
-						</Border>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-
 		<local:PpsTraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
 			<local:PpsTraceItemTemplateSelector.NullTemplate>
 				<DataTemplate>
@@ -287,7 +165,7 @@
 		</local:PpsTraceItemTemplateSelector>
 	</UserControl.Resources>
 
-	<Grid Margin="16,24,16,16">
+	<Grid Margin="16,24,16,16" FocusManager.FocusedElement="{Binding ElementName=ConsoleCommandTextBox}">
 		<Grid.RowDefinitions>
 			<RowDefinition/>
 			<RowDefinition Height="auto"/>
@@ -316,10 +194,12 @@
 				</RowDefinition.Style>
 			</RowDefinition>
 		</Grid.RowDefinitions>
-		<ListBox x:Name="logList" Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}" Style="{StaticResource PPSnTraceListBoxStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+		<ListBox x:Name="logList" Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}"
+				 Style="{DynamicResource PPSnListBoxStyle}" ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"
+				 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid>
+					<Grid Background="Transparent" TextBlock.FontSize="14">
 						<Grid.ContextMenu>
 							<ContextMenu>
 								<MenuItem Command="ApplicationCommands.Copy" CommandParameter="{Binding}"/>
@@ -344,7 +224,7 @@
 											<Canvas Width="24" Height="24">
 												<Path x:Name="typeImagePath" Data="{StaticResource debugPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
 											</Canvas>
-											<ControlTemplate.Triggers>
+											<!--<ControlTemplate.Triggers>
 												<DataTrigger Binding="{Binding Type}" Value="1">
 													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}"/>
 												</DataTrigger>
@@ -357,7 +237,7 @@
 												<DataTrigger Binding="{Binding Type}" Value="4">
 													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}"/>
 												</DataTrigger>
-											</ControlTemplate.Triggers>
+											</ControlTemplate.Triggers>-->
 										</ControlTemplate>
 									</ContentControl.Template>
 								</ContentControl>
@@ -377,7 +257,7 @@
 				<ColumnDefinition Width="auto"/>
 			</Grid.ColumnDefinitions>
 			<Label Content="Console: " Margin="0,0,6,0"/>
-			<TextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" FontFamily="Consolas">
+			<TextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" FontFamily="Consolas" VerticalContentAlignment="Center">
 				<TextBox.InputBindings>
 					<KeyBinding Command="{x:Static ApplicationCommands.Open}" Key="Return" />
 					<KeyBinding Command="{x:Static ApplicationCommands.Delete}" Key="Esc" />
@@ -385,7 +265,8 @@
 			</TextBox>
 			<ui:PpsButton Grid.Column="2" Content="Ausführen" Margin="6,0,0,0" Command="{x:Static ApplicationCommands.Open}" />
 		</Grid>
-		<ToggleButton Grid.Row="2" x:Name="ShowStatisticsButton" IsChecked="True" Focusable="False">
+		
+		<!--<ToggleButton Grid.Row="2" x:Name="ShowStatisticsButton" IsChecked="True" Focusable="False">
 			<ToggleButton.Style>
 				<Style TargetType="ToggleButton">
 					<Setter Property="Content" Value="Statistiken anzeigen"/>
@@ -396,8 +277,9 @@
 					</Style.Triggers>
 				</Style>
 			</ToggleButton.Style>
-		</ToggleButton>
-		<ListBox Grid.Row="3" ItemsSource="{Binding Statistics}">
+		</ToggleButton>-->
+		
+		<!--<ListBox Grid.Row="3" ItemsSource="{Binding Statistics}">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
 					<UniformGrid Columns="3" />
@@ -437,6 +319,6 @@
 					</Grid>
 				</DataTemplate>
 			</ListBox.ItemTemplate>
-		</ListBox>
+		</ListBox>-->
 	</Grid>
 </UserControl>
