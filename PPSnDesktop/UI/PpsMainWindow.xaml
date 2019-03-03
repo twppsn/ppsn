@@ -334,22 +334,6 @@
 					  HorizontalAlignment="Right"
 					  Height="26"
 					  Width="34" />
-		<Label x:Name="PART_User" Grid.Column="2" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Height="18" Margin="0,6,24,0"
-			   VerticalContentAlignment="Center" Cursor="Hand"
-			   Content="{Binding Environment.UsernameDisplay}"
-			   Foreground="{StaticResource PPSnWindowForegroundBrush}"
-			   ContextMenuService.HasDropShadow="False"
-			   ContextMenuService.PlacementTarget="{Binding ElementName=PART_User}"
-			   ContextMenuService.Placement="Left"
-			   ContextMenuService.HorizontalOffset="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}"
-			   ContextMenuService.VerticalOffset="24" >
-			<Label.ContextMenu>
-				<ContextMenu>
-					<MenuItem Header="Anmelden" Command="{x:Static ui:PpsWindow.LoginCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
-					<MenuItem Header="Abmelden" Command="{x:Static ui:PpsWindow.LogoutCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
-				</ContextMenu>
-			</Label.ContextMenu>
-		</Label>
 
 		<uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,32,16">
 			<uiL:PpsNavigatorControl.Style>
@@ -431,15 +415,17 @@
 			<ContentPresenter Grid.Row="1" Content="{Binding CurrentPaneHost, Mode=OneWay}"/>
 		</Grid>
 
+		<!--StatusBar-->
 		<Grid Grid.Row="3" Grid.ColumnSpan="3" Background="{StaticResource PPSnWindowFooterBrush}">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="2*"/>
 				<ColumnDefinition Width="1*"/>
 				<ColumnDefinition Width="auto"/>
+				<ColumnDefinition Width="auto"/>
 				<ColumnDefinition Width="32"/>
 			</Grid.ColumnDefinitions>
 
-			<Button x:Name="showTraceButton" Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+			<Button Grid.Column="0" Focusable="False" Foreground="White"
 					Content="{Binding Environment.Traces.LastTrace.Message,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"
 					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
 					ToolTipService.InitialShowDelay="750"
@@ -515,7 +501,12 @@
 			<TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0" TextWrapping="NoWrap" IsHitTestVisible="False"/>
 
-			<Viewbox Grid.Column="2" Height="17" Opacity=".9">
+			<ui:PpsGeometryImage Grid.Column="2" GeometryName="account" GeometryCircled="False"
+								 Foreground="White" Opacity=".8" HorizontalAlignment="Left" Margin="32,3,0,3" />
+			<TextBlock Grid.Column="2" Text="{Binding Environment.UsernameDisplay}" HorizontalAlignment="Left" VerticalAlignment="Center"
+					   Margin="54,0,64,0" MinWidth="72" Foreground="White" />
+
+			<Viewbox Grid.Column="3" Height="17" Opacity=".9">
 				<ContentControl Focusable="False">
 					<ContentControl.Template>
 						<ControlTemplate>
@@ -571,7 +562,7 @@
 				</ContentControl>
 			</Viewbox>
 
-			<Viewbox x:Name="PART_SizeGripper" Grid.Column="3" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+			<Viewbox x:Name="PART_SizeGripper" Grid.Column="4" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
 				<Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
 					<Image.Tag>
 						<ui:PpsWindowHitTest HitTest="17"/>
