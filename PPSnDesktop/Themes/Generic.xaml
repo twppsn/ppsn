@@ -18,7 +18,7 @@
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 							<ContentPresenter Grid.Column="0" Content="{TemplateBinding Control}" />
-							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" x:Name="PART_CharmBar" />
+							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" x:Name="PART_CharmBar" Focusable="False"/>
 						</Grid>
 
 						<ContentControl Content="{Binding PaneProgress.CurrentText, RelativeSource={RelativeSource TemplatedParent}}">
@@ -115,7 +115,7 @@
 								</ContextMenu>
 							</TextBlock.ContextMenu>
 						</TextBlock>
-						<ItemsControl Grid.Column="1" Grid.Row="1" ItemsSource="{TemplateBinding Views}">
+						<ItemsControl Grid.Column="1" Grid.Row="1" ItemsSource="{TemplateBinding Views}" Focusable="False">
 							<ItemsControl.ItemContainerStyle>
 								<Style TargetType="{x:Type ContentPresenter}">
 									<Setter Property="Margin" Value="0,6,0,0" />
