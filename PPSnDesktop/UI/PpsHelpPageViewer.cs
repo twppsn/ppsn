@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using Neo.Markdig.Xaml;
 using TecWare.PPSn.Data;
 
@@ -69,6 +70,17 @@ namespace TecWare.PPSn.UI
 		{
 			SetValue(progressStackPropertyKey, new PpsProgressStack(Dispatcher));
 			ClearHelpPage();
+
+			CommandBindings.Add(
+				new CommandBinding(ApplicationCommands.Open,
+					(sender, e) =>
+					{
+						EditHelpPage();
+						e.Handled = true;
+					},
+					(sender, e) => e.CanExecute = true
+				)
+			);
 		} // ctor
 
 		public override void OnApplyTemplate()
@@ -97,6 +109,11 @@ namespace TecWare.PPSn.UI
 				currentHelpPage = null;
 			}
 		} // proc ClearHelpPage
+
+		private void EditHelpPage()
+		{
+			MessageBox.Show("ToDo");
+		} // proc EditHelpPage
 
 		private async Task RefreshHelpPageAsync()
 		{
