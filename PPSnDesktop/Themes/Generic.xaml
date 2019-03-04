@@ -20,7 +20,6 @@
 							<ContentPresenter Grid.Column="0" Content="{TemplateBinding Control}" />
 							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" x:Name="PART_CharmBar" Focusable="False"/>
 						</Grid>
-
 						<ContentControl Content="{Binding PaneProgress.CurrentText, RelativeSource={RelativeSource TemplatedParent}}">
 							<ContentControl.Resources>
 								<SolidColorBrush x:Key="ProgressBackGroundBrush" Color="{DynamicResource PPSnDesktopColor}" Opacity=".75" />
@@ -74,6 +73,8 @@
 		</Setter>
 	</Style>
 
+	<ui:PpsWindowPaneCharmBarWidthConverter x:Key="charmBarWidthConverter" />
+
 	<Style TargetType="ui:PpsWindowPaneCharmBarControl">
 		<Setter Property="Template">
 			<Setter.Value>
@@ -87,8 +88,15 @@
 							<RowDefinition />
 							<RowDefinition />
 						</Grid.RowDefinitions>
-						<Border x:Name="borderContent" Grid.ColumnSpan="2" Grid.RowSpan="2" Background="{DynamicResource PPSnPopUpBackgroundBrush}"
-								Margin="8,0,0,0" Padding="0,0,64,0" HorizontalAlignment="Right" Width="0" Visibility="Collapsed">
+						<Border x:Name="AnimatedBorder" Width="0" Height="0" Visibility="Hidden" />
+						<Border x:Name="ContentBorder" Grid.ColumnSpan="2" Grid.RowSpan="2" Background="{DynamicResource PPSnPopUpBackgroundBrush}"
+								Margin="8,0,0,0" Padding="0,0,64,0" HorizontalAlignment="Right" Visibility="Collapsed">
+							<Border.Width>
+								<MultiBinding Converter="{StaticResource charmBarWidthConverter}">
+									<Binding Path="Width" ElementName="AnimatedBorder" />
+									<Binding Path="Parent" RelativeSource="{RelativeSource TemplatedParent}" />
+								</MultiBinding>
+							</Border.Width>
 							<Grid DataContext="{Binding CurrentPane, RelativeSource={RelativeSource TemplatedParent}}">
 								<Grid.RowDefinitions>
 									<RowDefinition Height="32" />
@@ -145,19 +153,19 @@
 						<DataTrigger Binding="{Binding IsPaneVisible, RelativeSource={RelativeSource Self}}" Value="True">
 							<DataTrigger.EnterActions>
 								<BeginStoryboard>
-									<Storyboard TargetName="borderContent">
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentBorder" Storyboard.TargetProperty="Visibility">
 											<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
 										</ObjectAnimationUsingKeyFrames>
-										<DoubleAnimation Storyboard.TargetProperty="Width" To="480" DecelerationRatio=".6" Duration="0:00:.3"/>
+										<DoubleAnimation Storyboard.TargetName="AnimatedBorder" Storyboard.TargetProperty="Width" To="1" DecelerationRatio=".6" Duration="0:00:.3"/>
 									</Storyboard>
 								</BeginStoryboard>
 							</DataTrigger.EnterActions>
 							<DataTrigger.ExitActions>
 								<BeginStoryboard>
-									<Storyboard TargetName="borderContent">
-										<DoubleAnimation Storyboard.TargetProperty="Width" To="0" AccelerationRatio=".6" Duration="0:00:.3" />
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="AnimatedBorder" Storyboard.TargetProperty="Width" To="0" DecelerationRatio=".6" Duration="0:00:.3"/>
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentBorder" Storyboard.TargetProperty="Visibility">
 											<DiscreteObjectKeyFrame KeyTime="0:00:.3" Value="{x:Static Visibility.Collapsed}" />
 										</ObjectAnimationUsingKeyFrames>
 									</Storyboard>
@@ -174,7 +182,20 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ui:PpsHelpPageViewer">
-					<FlowDocumentScrollViewer Document="{TemplateBinding Document}" VerticalScrollBarVisibility="Auto"/>
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="32" />
+							<RowDefinition />
+						</Grid.RowDefinitions>
+						<uiC:PpsButton Content="Bearbeiten"
+									   Command="{x:Static ApplicationCommands.Open}"
+									   HorizontalAlignment="Left"
+									   Background="Transparent" BorderBrush="Transparent"
+									   Focusable="False"
+									   Margin="24,0,0,0"
+									   FontSize="14" />
+						<FlowDocumentScrollViewer Grid.Row="1" Margin="0,6,0,0" Document="{TemplateBinding Document}" VerticalScrollBarVisibility="Auto" />
+					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
