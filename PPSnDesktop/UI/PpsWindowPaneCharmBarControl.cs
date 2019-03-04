@@ -16,9 +16,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.PPSn.Data;
 
@@ -187,7 +189,7 @@ namespace TecWare.PPSn.UI
 
 		public PpsWindowPaneCharmBarControl()
 		{
-			helpPage = new PpsWindowPaneObjectInfo(this) { Text = "Hilfe", Image = "helpCircle" };
+			helpPage = new PpsWindowPaneObjectInfo(this) { Text = "Hilfe", Image = "help" };
 
 			helpPageViewer = new PpsHelpPageViewer();
 			helpPage.Content = helpPageViewer; // todo: add to logical tree
@@ -260,4 +262,25 @@ namespace TecWare.PPSn.UI
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(typeof(PpsWindowPaneCharmBarControl)));
 		} // cstor
 	} // class PpsWindowPaneCharmBarControl
+
+	#region -- class PpsWindowPaneCharmBarWidthConverter ------------------------------
+
+	/// <summary>calculate the width of CharmBarControl when property-pane is visible.</summary>
+	internal sealed class PpsWindowPaneCharmBarWidthConverter : IMultiValueConverter
+	{
+		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		{
+			var animatedWidth = (double)values[0];
+			if(values[1] is FrameworkElement element)
+				return animatedWidth * element.ActualWidth / 3.00;
+
+			return animatedWidth * 480.00;
+		} // func IValueConverter.Convert
+
+		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+	} // class PpsWindowPaneCharmBarWidthConverter
+
+	#endregion
+
 }
