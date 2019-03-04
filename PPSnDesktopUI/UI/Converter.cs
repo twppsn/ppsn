@@ -33,6 +33,8 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public static class PpsConverter
 	{
+		/// <summary>Dummy converter for debug proposes.</summary>
+		public static IValueConverter Dummy => DummyConverter.Default;
 		/// <summary>Wpf-Value Converter.</summary>
 		public static IValueConverter NumericValue => NumericValueConverter.Default;
 		/// <summary>Wpf-Value Converter.</summary>
@@ -64,6 +66,35 @@ namespace TecWare.PPSn.UI
 		/// <summary>Concats Name,Vorname.</summary>
 		public static IMultiValueConverter Name => NameConverter.Default;
 	} // class PpsConverter
+
+	#endregion
+
+	#region -- class DummyConverter ---------------------------------------------------
+
+	internal sealed class DummyConverter : IValueConverter
+	{
+		private DummyConverter()
+		{
+		} // ctor
+
+		private static object NoConvert(object value, Type targetType)
+		{
+			if (value is null)
+				return null;
+			else if (value.GetType() == targetType)
+				return value;
+			else
+				return DependencyProperty.UnsetValue;
+		} // func NoConvert
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+			=> NoConvert(value, targetType);
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> NoConvert(value, targetType);
+
+		public static DummyConverter Default { get; } = new DummyConverter();
+	} // class DummyConverter
 
 	#endregion
 

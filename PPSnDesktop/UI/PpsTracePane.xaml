@@ -224,26 +224,26 @@
 											<Canvas Width="24" Height="24">
 												<Path x:Name="typeImagePath" Data="{StaticResource debugPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
 											</Canvas>
-											<!--<ControlTemplate.Triggers>
-												<DataTrigger Binding="{Binding Type}" Value="1">
+											<ControlTemplate.Triggers>
+												<DataTrigger Binding="{Binding Type}" Value="Information">
 													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}"/>
 												</DataTrigger>
-												<DataTrigger Binding="{Binding Type}" Value="2">
+												<DataTrigger Binding="{Binding Type}" Value="Warning">
 													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}"/>
 												</DataTrigger>
-												<DataTrigger Binding="{Binding Type}" Value="3">
+												<DataTrigger Binding="{Binding Type}" Value="Fail">
 													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource closeOctagonPathGeometry}"/>
 												</DataTrigger>
-												<DataTrigger Binding="{Binding Type}" Value="4">
+												<DataTrigger Binding="{Binding Type}" Value="Exception">
 													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}"/>
 												</DataTrigger>
-											</ControlTemplate.Triggers>-->
+											</ControlTemplate.Triggers>
 										</ControlTemplate>
 									</ContentControl.Template>
 								</ContentControl>
 							</Viewbox>
 						</Border>
-						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.MM.yyyy  HH:mm:ss}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=G}" VerticalAlignment="Center" Margin="8,0,0,0"/>
 						<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
 										HorizontalAlignment="Left" Margin="8,4,24,0" />
 					</Grid>
