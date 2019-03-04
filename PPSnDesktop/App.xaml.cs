@@ -15,11 +15,13 @@
 #endregion
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Markup;
 using System.Windows.Threading;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -206,6 +208,8 @@ namespace TecWare.PPSn
 			);
 
 			ParseArguments(e, out var environment, out var userCred);
+
+			FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
 			StartApplicationAsync(environment, userCred)
 				.ContinueWith(t =>
