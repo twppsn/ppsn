@@ -1451,37 +1451,37 @@ namespace TecWare.PPSn
 				new StatisticElement("ObjectStore Alive", () =>
 				{
 					var alive = 0;
-					//foreach(var obj in objectStore)
-					//	if (obj.TryGetTarget(out var tmp))
-					//		alive++;
+					foreach(var obj in objectStore)
+						if (obj.TryGetTarget(out var tmp))
+							alive++;
 					return alive;
 				}),
 				new StatisticElement("ObjectStore Dead", () =>
 				{
 					var alive = 0;
-					//foreach(var obj in objectStore)
-					//	if (!obj.TryGetTarget(out var tmp))
-					//		alive++;
+					foreach(var obj in objectStore)
+						if (!obj.TryGetTarget(out var tmp))
+							alive++;
 					return alive;
 				}),
 				new StatisticElement("Cached Tables Alive", () =>
 				{
 					var alive = 0;
-					//var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
-					//var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
-					//foreach(var obj in cachedTables.Values)
-					//	if (obj.TryGetTarget(out var tmp))
-					//		alive++;
+					var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
+					var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
+					foreach(var obj in cachedTables.Values)
+						if (obj.TryGetTarget(out var tmp))
+							alive++;
 					return alive;
 				}),
 				new StatisticElement("Cached Tables Dead", () =>
 				{
 					var alive = 0;
-					//var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
-					//var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
-					//foreach(var obj in cachedTables.Values)
-					//	if (!obj.TryGetTarget(out var tmp))
-					//		alive++;
+					var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
+					var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
+					foreach(var obj in cachedTables.Values)
+						if (!obj.TryGetTarget(out var tmp))
+							alive++;
 					return alive;
 				})
 			};

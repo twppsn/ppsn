@@ -238,6 +238,8 @@ namespace TecWare.PPSn.UI
 
 		private void SetObject(object data)
 		{
+			SetValue(objectNamePropertyKey, (data as IPpsDataInfo)?.Name);
+
 			if (data is PpsObject obj) // object info
 			{
 				foreach (var t in ppsTagsEditors)
@@ -257,30 +259,36 @@ namespace TecWare.PPSn.UI
 			);
 		} // proc SetViews
 
+		// -- Static ----------------------------------------------------------
+
+		#region -- class PpsWindowPaneCharmBarWidthConverter ------------------------------
+
+		/// <summary>calculate the width of CharmBarControl when property-pane is visible.</summary>
+		private sealed class PpsWindowPaneCharmBarWidthConverter : IMultiValueConverter
+		{
+			object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+			{
+				var animatedWidth = (double)values[0];
+				if (values[1] is FrameworkElement element)
+					return animatedWidth * element.ActualWidth / 3.00;
+
+				return animatedWidth * 480.00;
+			} // func IValueConverter.Convert
+
+			object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+				=> throw new NotSupportedException();
+		} // class PpsWindowPaneCharmBarWidthConverter
+
+		#endregion
+
 		static PpsWindowPaneCharmBarControl()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(typeof(PpsWindowPaneCharmBarControl)));
 		} // cstor
+		
+		/// <summary></summary>
+		public static IMultiValueConverter WithConverter { get; } = new PpsWindowPaneCharmBarWidthConverter();
 	} // class PpsWindowPaneCharmBarControl
 
-	#region -- class PpsWindowPaneCharmBarWidthConverter ------------------------------
-
-	/// <summary>calculate the width of CharmBarControl when property-pane is visible.</summary>
-	internal sealed class PpsWindowPaneCharmBarWidthConverter : IMultiValueConverter
-	{
-		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-		{
-			var animatedWidth = (double)values[0];
-			if(values[1] is FrameworkElement element)
-				return animatedWidth * element.ActualWidth / 3.00;
-
-			return animatedWidth * 480.00;
-		} // func IValueConverter.Convert
-
-		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-			=> throw new NotSupportedException();
-	} // class PpsWindowPaneCharmBarWidthConverter
-
-	#endregion
 
 }

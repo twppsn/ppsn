@@ -426,7 +426,7 @@
 			</Grid.ColumnDefinitions>
 
 			<Button Grid.Column="0" Focusable="False" Foreground="White"
-					Content="{Binding Environment.Traces.LastTrace.Message,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"
+					Content="{Binding Environment.Log.LastTrace.Message,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"
 					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
 					ToolTipService.InitialShowDelay="750"
 					ToolTipService.ShowDuration="10000">
@@ -434,7 +434,7 @@
 					<ToolTip Placement="Top" VerticalOffset="-16" Margin="16,0" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
 						<ListBox Style="{StaticResource PPSnListBoxStyle}" Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
 							<ListBox.ItemsSource>
-								<Binding Path="Environment.Traces" Converter="{x:Static uiO:PpsConverter.TakeListItems}">
+								<Binding Path="Environment.Log" Converter="{x:Static uiO:PpsConverter.TakeListItems}">
 									<Binding.ConverterParameter>
 										<uiO:TakeListItemsConverterParameter MaxItems="10" LastItems="true" />
 									</Binding.ConverterParameter>

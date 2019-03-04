@@ -59,8 +59,7 @@ namespace TecWare.PPSn.UI
 			}
 
 			#endregion
-
-
+			
 			protected override object OnIndex(object key)
 				=> base.OnIndex(key) ?? Context?.GetValue(key) ?? paneHost.PaneManager.Shell.GetValue(key);
 
