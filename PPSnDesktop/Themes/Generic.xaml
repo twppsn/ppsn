@@ -210,4 +210,33 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style TargetType="ui:PpsWindowPaneStrip">
+		<Setter Property="ItemsPanel">
+			<Setter.Value>
+				<ItemsPanelTemplate>
+					<ui:PpsWindowPaneStripPanel />
+				</ItemsPanelTemplate>
+			</Setter.Value>
+		</Setter>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate>
+					<ItemsPresenter />
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+	
+	<Style TargetType="ui:PpsWindowPaneStripItem">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate>
+					<Border BorderThickness="3" BorderBrush="Red" MinHeight="20">
+						<ContentPresenter />
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>

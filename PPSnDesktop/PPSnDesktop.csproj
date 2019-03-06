@@ -130,6 +130,7 @@
     </Compile>
     <Compile Include="UI\PpsWindowPaneCharmBarControl.cs" />
     <Compile Include="UI\PpsWindowPaneHost.cs" />
+    <Compile Include="UI\PpsWindowPaneStrip.cs" />
     <EmbeddedResource Include="Properties\Resources.en.resx">
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>

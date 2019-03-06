@@ -92,7 +92,8 @@ namespace TecWare.PPSn
 
 	#region -- class BooleanBox -------------------------------------------------------
 
-	internal static class BooleanBox
+	/// <summary>Boolean box helper</summary>
+	public static class BooleanBox
 	{
 		public static object GetObject(bool value)
 			=> value ? True : False;
