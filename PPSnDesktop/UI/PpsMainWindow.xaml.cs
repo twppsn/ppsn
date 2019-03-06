@@ -18,6 +18,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using TecWare.PPSn.Controls;
 
@@ -28,9 +29,13 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
+		/// <summary>Move to next pane.</summary>
 		public readonly static RoutedCommand NextPaneCommand = new RoutedCommand("NextPane", typeof(PpsMainWindow));
+		/// <summary>Move to previous pane.</summary>
 		public readonly static RoutedCommand PrevPaneCommand = new RoutedCommand("PrevPane", typeof(PpsMainWindow));
+		/// <summary>Go to a secific pane.</summary>
 		public readonly static RoutedCommand GoToPaneCommand = new RoutedCommand("GoToPane", typeof(PpsMainWindow));
+		/// <summary>Close a pane.</summary>
 		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
 
 		public readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register(nameof(IsNavigatorVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false, NavigatorVisibleChanged));
@@ -126,10 +131,7 @@ namespace TecWare.PPSn.UI
 						if (e.Parameter is PpsWindowPaneHost paneHost)
 							ActivatePaneHost(paneHost);
 					},
-					(sender, e) =>
-					{
-						e.CanExecute = true;
-					}
+					(sender, e) => { e.CanExecute = e.Parameter is PpsWindowPaneHost; }
 				)
 			);
 			CommandBindings.Add(
@@ -247,5 +249,10 @@ namespace TecWare.PPSn.UI
 			get => (bool)GetValue(IsPaneVisibleProperty);
 			set => SetValue(IsPaneVisibleProperty, value);
 		} // prop NavigatorState
+		
+		static PpsMainWindow()
+		{
+			EventManager.RegisterClassHandler(typeof(PpsMainWindow), Selector.SelectedEvent, new RoutedEventHandler(OnWindowPaneHostItemSelected));
+		} // sctor
 	} // class PpsMainWindow
 }

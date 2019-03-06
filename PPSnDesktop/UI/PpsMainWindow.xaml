@@ -83,12 +83,12 @@
 			<RowDefinition Height="200" />
 		</Grid.RowDefinitions>
 
-		<uiL:PpsWindowPaneStrip Grid.Row="4" ItemsSource="{Binding PaneHosts}">
+		<uiL:PpsWindowPaneStrip x:Name="paneStrip" Grid.Row="4" ItemsSource="{Binding PaneHosts}">
 			<uiL:PpsWindowPaneStrip.ItemTemplate>
 				<DataTemplate DataType="ui:PpsWindowPaneHost">
 					<TextBlock >
 						<Run Text="Tab:"/>
-						<Run Text="{Binding Title}" />
+						<Run Text="{Binding Title,Mode=OneWay}" />
 					</TextBlock>
 				</DataTemplate>
 			</uiL:PpsWindowPaneStrip.ItemTemplate>

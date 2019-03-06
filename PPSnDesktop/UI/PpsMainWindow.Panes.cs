@@ -21,6 +21,8 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using Neo.IronLua;
 
@@ -32,6 +34,10 @@ namespace TecWare.PPSn.UI
 	{
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
+		// panes are sorted
+		// 1. fixed
+		// 2. normal
+		// new normal will be added between 1 and 2 or before a defined pane.
 		private readonly List<PpsWindowPaneHost> panes = new List<PpsWindowPaneHost>();
 
 		#region -- IReadOnlyList<IPpsWindowPane> members ------------------------------
@@ -45,9 +51,36 @@ namespace TecWare.PPSn.UI
 		public int IndexOf(PpsWindowPaneHost pane)
 			=> panes.IndexOf(pane);
 
-		public void AddPane(PpsWindowPaneHost pane)
+		private int GetPaneDefaultPosition(PpsWindowPaneHostState paneState, PpsWindowPaneHost relatedPane)
 		{
-			panes.Add(pane);
+			if (paneState == PpsWindowPaneHostState.IsFixed // fixed pane
+				|| paneState == PpsWindowPaneHostState.Root) // root pane
+			{
+				for (var i = 0; i < panes.Count; i++)
+				{
+					if (panes[i].State != PpsWindowPaneHostState.IsFixed)
+						return i;
+				}
+				return 0;
+			}
+			else
+			{
+				// find related pane index
+				var idx = panes.IndexOf(relatedPane);
+				if (idx == -1)
+					return panes.Count;
+				else if (panes[idx].State != PpsWindowPaneHostState.IsFixed)
+					return idx;
+				else
+					return GetPaneDefaultPosition(PpsWindowPaneHostState.Root, null);
+			}
+		} // func GetPaneDefaultPosition
+
+		public void AddPane(PpsWindowPaneHost pane, PpsWindowPaneHost relatedPane)
+		{
+			// insert pane on correct position
+			panes.Insert(GetPaneDefaultPosition(pane.State, relatedPane), pane);
+
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, pane));
 		} // proc AddPane
 
@@ -217,9 +250,18 @@ namespace TecWare.PPSn.UI
 			return ActivatePaneHost(paneHosts[index]);
 		} // func ActivateNextPane
 
+		private static void OnWindowPaneHostItemSelected(object sender, RoutedEventArgs e)
+		{
+			if (e.OriginalSource is ContentControl stripItem)
+				((PpsMainWindow)sender).ActivatePaneHost((PpsWindowPaneHost)stripItem.Content);
+		} //  // proc OnWindowPaneHostItemSelected
+
 		#endregion
 
 		#region -- OpenPaneAsync ------------------------------------------------------
+
+		private PpsWindowPaneHostState GetDefaultPaneState(Type paneType)
+			=> PpsWindowPaneHostState.Root;
 
 		private async Task<IPpsWindowPane> LoadPaneInternAsync(Type paneType, LuaTable arguments)
 		{
@@ -228,12 +270,12 @@ namespace TecWare.PPSn.UI
 			var oldPaneHost = CurrentPaneHost;
 
 			// Build the new pane host
-			var newPaneHost = new PpsWindowPaneHost();
+			var newPaneHost = new PpsWindowPaneHost(GetDefaultPaneState(paneType));
 
 			try
 			{
 				// add pane and show it, progress handling should be done by the Load
-				paneHosts.AddPane(newPaneHost);
+				paneHosts.AddPane(newPaneHost, FindPaneHost(arguments.GetMemberValue("RelatedPane") as IPpsWindowPane, false));
 				ActivatePaneHost(newPaneHost);
 
 				// load the pane
@@ -368,7 +410,7 @@ namespace TecWare.PPSn.UI
 					throw new ArgumentOutOfRangeException(nameof(pane), "Pane is not a member of this PaneManager.");
 			}
 			else
-			return null;
+				return null;
 		} // func FindPaneHost
 
 		public IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments)
@@ -387,9 +429,21 @@ namespace TecWare.PPSn.UI
 		private void OnCurrentPaneHostChanged(PpsWindowPaneHost newValue, PpsWindowPaneHost oldValue)
 		{
 			if (oldValue != null)
+			{
+				// remove HasPaneSideBar listener
 				hasPaneSideBarPropertyDescriptor.RemoveValueChanged(oldValue, OnCurrentPaneHostSideBarChanged);
+
+				// mark unselected
+				Selector.SetIsSelected(paneStrip.ItemContainerGenerator.ContainerFromItem(oldValue), false);
+			}
 			if (newValue != null)
+			{
+				// listen to HasPaneSideBar
 				hasPaneSideBarPropertyDescriptor.AddValueChanged(newValue, OnCurrentPaneHostSideBarChanged);
+
+				// mark selected
+				Selector.SetIsSelected(paneStrip.ItemContainerGenerator.ContainerFromItem(newValue), true);
+			}
 
 			RefreshSideIsVisibleProperty();
 		} // proc OnCurrentPaneHostChanged

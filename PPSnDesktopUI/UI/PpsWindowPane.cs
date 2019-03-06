@@ -104,7 +104,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
 		bool IsDirty { get; }
-
+		
 		/// <summary>Help key for the current pane.</summary>
 		string HelpKey { get; }
 	} // interface IPpsWindowPane
@@ -153,7 +153,7 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments = null);
 
-		/// <summary>Pane enumeration.</summary>
+		/// <summary>Pane enumeration of this pane manager and child pane manager.</summary>
 		IEnumerable<IPpsWindowPane> Panes { get; }
 
 		/// <summary>Access the environment.</summary>
@@ -255,7 +255,7 @@ namespace TecWare.PPSn.UI
 			if (arguments != null && arguments.Mode != null)
 				return Procs.ChangeType<PpsOpenPaneMode>(arguments.Mode);
 
-			return paneManager.Shell.GetOptionalValue("NewPaneMode", false) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
+			return paneManager.Shell.GetOptionalValue("NewPaneMode", true) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
 		} // func GetDefaultPaneMode
 
 		/// <summary>Loads a generic wpf window pane <see cref="PpsGenericWpfWindowPane"/>.</summary>

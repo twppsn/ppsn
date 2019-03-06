@@ -2025,9 +2025,6 @@ namespace TecWare.PPSn
 		///// <summary>Base object typ, classification.</summary>
 		//IPpsObjectInfo Info { get; }
 
-		/// <summary>Datatyp of object body.</summary>
-		string MimeType { get; }
-
 		/// <summary>Sync root for an object.</summary>
 		object SyncRoot { get; }
 

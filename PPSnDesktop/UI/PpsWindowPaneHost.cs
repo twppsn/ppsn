@@ -22,6 +22,20 @@ using Neo.IronLua;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- enum PpsPaneHostState --------------------------------------------------
+
+	public enum PpsWindowPaneHostState
+	{
+		/// <summary>This pane host is marked as not closable.</summary>
+		IsFixed,
+		/// <summary>This pane host is a normal pane-host.</summary>
+		Root,
+		/// <summary>A to a root pane related pane.</summary>
+		Related
+	} // enum PpsPaneHostState
+
+	#endregion
+
 	#region -- class PpsWindowPaneHost ------------------------------------------------
 
 	/// <summary>Host for panes to support Progress, Load and CharmBar.</summary>
@@ -33,7 +47,7 @@ namespace TecWare.PPSn.UI
 
 		private static readonly DependencyPropertyKey paneProgressPropertyKey = DependencyProperty.RegisterReadOnly(nameof(PaneProgress), typeof(PpsProgressStack), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty PaneProgressProperty = paneProgressPropertyKey.DependencyProperty;
-		private static readonly DependencyPropertyKey hasPaneSideBarPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasPaneSideBar), typeof(bool), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(false));
+		private static readonly DependencyPropertyKey hasPaneSideBarPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasPaneSideBar), typeof(bool), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasPaneSideBarProperty = hasPaneSideBarPropertyKey.DependencyProperty;
 
 		private static readonly DependencyPropertyKey titlePropertyKey = DependencyProperty.RegisterReadOnly(nameof(Title), typeof(string), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
@@ -44,13 +58,23 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 		private static readonly DependencyPropertyKey controlPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Control), typeof(object), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty ControlProperty = controlPropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey isFixedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFixed), typeof(bool), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty IsFixedProperty = isFixedPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private PpsWindowPaneCharmBarControl charmBarControl;
+		private readonly PpsWindowPaneHostState paneState;
 
 		public PpsWindowPaneHost()
+			: this(PpsWindowPaneHostState.Root)
 		{
+		} // ctor
+
+		public PpsWindowPaneHost(PpsWindowPaneHostState paneState)
+		{
+			this.paneState = paneState;
 			SetValue(paneProgressPropertyKey, new PpsProgressStack(Dispatcher));
+			SetValue(isFixedPropertyKey, paneState == PpsWindowPaneHostState.IsFixed);
 		} // ctor
 
 		public override void OnApplyTemplate()
@@ -165,7 +189,10 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		public IPpsWindowPaneManager PaneManager { get; private set; }
 		/// <summary></summary>
-		public bool HasPaneSideBar => (bool)GetValue(HasPaneSideBarProperty); 
+		public bool HasPaneSideBar => BooleanBox.GetBool(GetValue(HasPaneSideBarProperty));
+
+		/// <summary>Is this pane closable</summary>
+		public bool IsFixed => BooleanBox.GetBool(GetValue(IsFixedProperty));
 
 		/// <summary>Current title of the pane.</summary>
 		public string Title => (string)GetValue(TitleProperty);
@@ -175,6 +202,9 @@ namespace TecWare.PPSn.UI
 		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 		/// <summary>Current control</summary>
 		public object Control => GetValue(ControlProperty);
+
+		/// <summary>Pane state classification.</summary>
+		internal PpsWindowPaneHostState State => paneState;
 
 		static PpsWindowPaneHost()
 		{

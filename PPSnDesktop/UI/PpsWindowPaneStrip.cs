@@ -18,6 +18,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 
 namespace TecWare.PPSn.UI
 {
@@ -25,7 +26,7 @@ namespace TecWare.PPSn.UI
 
 	internal class PpsWindowPaneStripItem : ContentControl
 	{
-		#region -- ISelected - Property -----------------------------------------------
+		#region -- IsSelected - Property ----------------------------------------------
 
 #pragma warning disable CS0108 // Member hides inherited member; missing new keyword
 		public static readonly DependencyProperty IsSelectedProperty = Selector.IsSelectedProperty.AddOwner(typeof(PpsWindowPaneStripItem), 
@@ -59,6 +60,19 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		private bool Select()
+		{
+			IsSelected = true; // mark as selected
+			return true;
+		} // proc Select
+
+		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+		{
+			if((e.Source == this || !IsSelected) && Select())
+				e.Handled = true;
+			base.OnMouseLeftButtonDown(e);
+		} // proc OnMouseLeftButtonDown
+
 		private PpsWindowPaneStrip StripParent
 			=> ItemsControl.ItemsControlFromItemContainer(this) as PpsWindowPaneStrip;
 
@@ -80,7 +94,7 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsWindowPaneStrip -----------------------------------------------
 
-	internal sealed class PpsWindowPaneStrip : Selector
+	internal sealed class PpsWindowPaneStrip : ItemsControl
 	{
 		#region -- Container Element generation ---------------------------------------
 
@@ -92,14 +106,6 @@ namespace TecWare.PPSn.UI
 
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsWindowPaneStripItem;
-
-		protected override void PrepareContainerForItemOverride(DependencyObject element, object item)
-		{
-			base.PrepareContainerForItemOverride(element, item);
-		}
-
-		protected override void ClearContainerForItemOverride(DependencyObject element, object item) 
-			=> base.ClearContainerForItemOverride(element, item);
 
 		#endregion
 
