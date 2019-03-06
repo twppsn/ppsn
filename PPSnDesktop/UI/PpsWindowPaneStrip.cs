@@ -15,10 +15,12 @@
 #endregion
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace TecWare.PPSn.UI
 {
@@ -59,7 +61,7 @@ namespace TecWare.PPSn.UI
 		} // prop IsSelected
 
 		#endregion
-
+		
 		private bool Select()
 		{
 			IsSelected = true; // mark as selected
@@ -86,8 +88,59 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsWindowPaneStripItem -------------------------------------------
 
-	internal class PpsWindowPaneStripPanel : StackPanel
+	internal class PpsWindowPaneStripPanel : Panel
 	{
+		protected override Size ArrangeOverride(Size arrangeSize)
+		{
+			var left = 0.0;
+			foreach (var cur in InternalChildren.Cast<PpsWindowPaneStripItem>().Where(c => c.Visibility == Visibility.Visible))
+			{
+				var sz = cur.DesiredSize;
+				cur.Arrange(new Rect(left, 0.0, sz.Width, sz.Height));
+				left += sz.Width;
+			}
+			return new Size(left, arrangeSize.Height);
+		} // func ArrangeOverride
+
+		private bool IsOverflowItem(double remainingWidth, Size size)
+			=> remainingWidth < size.Width;
+
+		protected override Size MeasureOverride(Size constraint)
+		{
+			var isOverflow = false;
+			var remainingWidth =constraint.Width;
+			var isInfinity = Double.IsInfinity(remainingWidth);
+			var sumWidth = 0.0;
+			var maxHeight = 0.0;
+
+			// arrage tab items horizontal
+			foreach (var cur in InternalChildren.Cast<PpsWindowPaneStripItem>())
+			{
+				// measure control
+				cur.Measure(new Size(Double.PositiveInfinity, constraint.Height));
+				var sz = cur.DesiredSize;
+				if (isOverflow || (!isInfinity && IsOverflowItem(remainingWidth, sz)))
+				{
+					if (cur.IsSelected) // selected is hidden
+					{
+						// todo:
+					}
+					else
+						cur.Visibility = Visibility.Collapsed;
+					isOverflow = true;
+				}
+				else
+				{
+					cur.Visibility = Visibility.Visible;
+					if (!isInfinity)
+						remainingWidth -= sz.Width;
+					sumWidth += sz.Width;
+					maxHeight = Math.Max(sz.Height, maxHeight);
+				}
+			}
+
+			return new Size(sumWidth, maxHeight);
+		} // func MeasureOverride
 	} // class PpsWindowPaneStripPanel
 
 	#endregion
