@@ -54,6 +54,8 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty TitleProperty = titlePropertyKey.DependencyProperty;
 		private static readonly DependencyPropertyKey subTitlePropertyKey = DependencyProperty.RegisterReadOnly(nameof(SubTitle), typeof(string), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty SubTitleProperty = subTitlePropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey imagePropertyKey = DependencyProperty.RegisterReadOnly(nameof(Image), typeof(object), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty ImageProperty = imagePropertyKey.DependencyProperty;
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 		private static readonly DependencyPropertyKey controlPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Control), typeof(object), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
@@ -105,6 +107,7 @@ namespace TecWare.PPSn.UI
 
 				SetValue(titlePropertyKey, newPane.Title);
 				SetValue(subTitlePropertyKey, newPane.SubTitle);
+				SetValue(imagePropertyKey, newPane.Image);
 				SetValue(commandsPropertyKey, newPane.Commands);
 				SetValue(controlPropertyKey, newPane.Control);
 				SetValue(hasPaneSideBarPropertyKey, newPane.HasSideBar);
@@ -162,6 +165,9 @@ namespace TecWare.PPSn.UI
 				case nameof(IPpsWindowPane.SubTitle):
 					SetValue(subTitlePropertyKey, CurrentPane.SubTitle);
 					break;
+				case nameof(IPpsWindowPane.Image):
+					SetValue(imagePropertyKey, CurrentPane.Image);
+					break;
 				case nameof(IPpsWindowPane.Commands):
 					SetValue(commandsPropertyKey, CurrentPane.Commands);
 					break;
@@ -198,6 +204,8 @@ namespace TecWare.PPSn.UI
 		public string Title => (string)GetValue(TitleProperty);
 		/// <summary>Current subtitle of the pane.</summary>
 		public string SubTitle => (string)GetValue(SubTitleProperty);
+		/// <summary>Image of the window pane.</summary>
+		public object Image => GetValue(ImageProperty);
 		/// <summary>Current commands of the pane</summary>
 		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 		/// <summary>Current control</summary>

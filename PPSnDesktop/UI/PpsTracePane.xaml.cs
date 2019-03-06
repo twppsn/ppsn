@@ -137,6 +137,7 @@ namespace TecWare.PPSn.UI
 
 		string IPpsWindowPane.Title => "System";
 		string IPpsWindowPane.SubTitle => "Anwendungsereignisse";
+		object IPpsWindowPane.Image => null;
 
 		object IPpsWindowPane.Control => this;
 		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;

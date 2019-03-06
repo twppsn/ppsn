@@ -310,6 +310,7 @@ namespace TecWare.PPSn.UI
 
 		string IPpsWindowPane.Title => "Bildeditor";
 		string IPpsWindowPane.SubTitle => subTitle;
+		object IPpsWindowPane.Image => null;
 
 		bool IPpsWindowPane.HasSideBar => false;
 		object IPpsWindowPane.Control => this;

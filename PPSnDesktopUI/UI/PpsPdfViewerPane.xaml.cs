@@ -224,6 +224,7 @@ namespace TecWare.PPSn.UI
 			=> Task.FromResult(ClosePdf());
 
 		string IPpsWindowPane.Title => "PDF-Viewer";
+		object IPpsWindowPane.Image => null;
 
 		bool IPpsWindowPane.HasSideBar => false;
 		bool IPpsWindowPane.IsDirty => false;

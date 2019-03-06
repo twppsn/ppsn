@@ -63,17 +63,15 @@ namespace TecWare.PPSn
 			try
 			{
 				var acceptedMimeType = isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml;
-				using (var r = await Request.GetResponseAsync(path, acceptedMimeType))
-				{
-					return await r.GetXmlStreamAsync(acceptedMimeType,
-						new XmlReaderSettings()
-						{
-							Async = true,
-							IgnoreComments = !isXaml,
-							IgnoreWhitespace = !isXaml
-						}
-					);
-				}
+				var r = await Request.GetResponseAsync(path, acceptedMimeType);
+				return await r.GetXmlStreamAsync(acceptedMimeType,
+					new XmlReaderSettings()
+					{
+						Async = true,
+						IgnoreComments = !isXaml,
+						IgnoreWhitespace = !isXaml
+					}
+				);
 			}
 			catch (WebException e)
 			{

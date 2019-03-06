@@ -34,6 +34,7 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata("Pane title"));
 		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(object), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
 
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
@@ -113,7 +114,9 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Title of the window pane</summary>
 		public string Title { get => (string)GetValue(TitleProperty);  set => SetValue(TitleProperty, value); } 
 		/// <summary>SubTitle of the window pane</summary>
-		public string SubTitle { get => (string)GetValue(SubTitleProperty);  set => SetValue(SubTitleProperty, value); } 
+		public string SubTitle { get => (string)GetValue(SubTitleProperty);  set => SetValue(SubTitleProperty, value); }
+		/// <summary>SubTitle of the window pane</summary>
+		public object Image { get => GetValue(ImageProperty); set => SetValue(ImageProperty, value); }
 		/// <summary>Has this control a sidebar element.</summary>
 		public bool HasSideBar { get => BooleanBox.GetBool(GetValue(HasSideBarProperty)); set => SetValue(HasSideBarProperty, BooleanBox.GetObject(value)); }
 	

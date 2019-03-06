@@ -212,6 +212,7 @@
 	</Style>
 
 	<Style TargetType="ui:PpsWindowPaneStrip">
+		<Setter Property="MinWidth" Value="100" />
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
@@ -221,7 +222,7 @@
 		</Setter>
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate>
+				<ControlTemplate TargetType="ui:PpsWindowPaneStrip">
 					<ItemsPresenter />
 				</ControlTemplate>
 			</Setter.Value>
@@ -231,7 +232,7 @@
 	<Style TargetType="ui:PpsWindowPaneStripItem">
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate>
+				<ControlTemplate TargetType="ui:PpsWindowPaneStripItem">
 					<Border BorderThickness="3" BorderBrush="Red" MinHeight="20">
 						<ContentPresenter />
 					</Border>

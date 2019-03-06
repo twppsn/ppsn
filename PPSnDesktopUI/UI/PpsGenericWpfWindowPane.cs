@@ -764,7 +764,7 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Title
 
-			/// <summary>SubTitle of the pane</summary>
+		/// <summary>SubTitle of the pane</summary>
 		[LuaMember]
 		public string SubTitle
 		{
@@ -775,6 +775,17 @@ namespace TecWare.PPSn.UI
 				Control.SubTitle = value;
 			}
 		} // prop SubTitle
+
+		[LuaMember]
+		public object Image
+		{
+			get => Control?.Image;
+			set
+			{
+				CheckControl();
+				Control.Image = value;
+			}
+		}
 
 		bool IPpsWindowPane.HasSideBar => Control?.HasSideBar ?? false;
 
