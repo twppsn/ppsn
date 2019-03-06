@@ -27,7 +27,7 @@ using TecWare.PPSn.Data;
 namespace TecWare.PPSn.UI
 {
 	/// <summary></summary>
-	public class PpsNavigatorModel : LuaTable
+	public class PpsNavigatorModel : LuaTable, IPpsWindowPane
 	{
 		#region -- class CurrentSearchTextExpression ----------------------------------
 
@@ -363,7 +363,8 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		private readonly PpsMainWindow windowModel;
+		private readonly IPpsWindowPaneHost paneHost;
+		private readonly PpsNavigatorControl navigatorControl;
 
 		private CollectionViewSource views;
 		private CollectionViewSource actions;
@@ -388,9 +389,10 @@ namespace TecWare.PPSn.UI
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsNavigatorModel(PpsMainWindow windowModel)
+		public PpsNavigatorModel(IPpsWindowPaneHost paneHost)
 		{
-			this.windowModel = windowModel;
+			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
+			navigatorControl = new PpsNavigatorControl { DataContext = this };
 
 			// Create a view for the actions
 			actions = new CollectionViewSource();
@@ -638,6 +640,35 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- Pane Title ---------------------------------------------------------
+
+		Task IPpsWindowPane.LoadAsync(LuaTable args)
+			=> Task.CompletedTask;
+
+		Task<bool> IPpsWindowPane.UnloadAsync(bool? commit)
+			=> Task.FromResult(true);
+
+		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args)
+			=> PpsWindowPaneCompareResult.Same; // only one per window
+
+		void IDisposable.Dispose() { }
+		
+		string IPpsWindowPane.Title => "Navigation";
+		string IPpsWindowPane.SubTitle => "PPSn Application Title";
+		object IPpsWindowPane.Image => null;
+
+		bool IPpsWindowPane.HasSideBar => false;
+		object IPpsWindowPane.Control => navigatorControl;
+
+		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
+		PpsUICommandCollection IPpsWindowPane.Commands => null;
+		IPpsDataInfo IPpsWindowPane.CurrentData => null;
+
+		bool IPpsWindowPane.IsDirty => false;
+		string IPpsWindowPane.HelpKey => "PpsNavigator";
+
+		#endregion
+
 		private void ShowViewsDescription(bool show)
 		{
 			if (show == viewsShowDescription)
@@ -648,13 +679,13 @@ namespace TecWare.PPSn.UI
 
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? Environment.GetValue(key); // inherit from the environment
-
+		
 		/// <summary>The environment, that is the owner of this window.</summary>
 		[LuaMember(nameof(Environment))]
-		public PpsEnvironment Environment => windowModel.Environment;
+		public PpsEnvironment Environment => Window.Environment;
 
 		[LuaMember(nameof(Window))]
-		public PpsMainWindow Window => windowModel;
+		public PpsMainWindow Window => (PpsMainWindow)paneHost.PaneManager;
 
 		/// <summary>Selected item</summary>
 		[LuaMember(nameof(CurrentItem))]

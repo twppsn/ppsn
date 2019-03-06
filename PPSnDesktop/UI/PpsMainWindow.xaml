@@ -83,10 +83,10 @@
 			<RowDefinition Height="200" />
 		</Grid.RowDefinitions>
 
-		<uiL:PpsWindowPaneStrip x:Name="paneStrip" Grid.Row="4" ItemsSource="{Binding PaneHosts}">
+		<uiL:PpsWindowPaneStrip x:Name="paneStrip" Grid.Row="4" Grid.ColumnSpan="3" ItemsSource="{Binding PaneHosts}" Height="50">
 			<uiL:PpsWindowPaneStrip.ItemTemplate>
 				<DataTemplate DataType="ui:PpsWindowPaneHost">
-					<TextBlock >
+					<TextBlock VerticalAlignment="Center">
 						<Run Text="Tab:"/>
 						<Run Text="{Binding Title,Mode=OneWay}" />
 					</TextBlock>
@@ -138,9 +138,9 @@
 				<ColumnDefinition Width="54" />
 				<ColumnDefinition />
 			</Grid.ColumnDefinitions>
-			<Button Grid.Column="0" Width="48" Height="48" Margin="6,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Focusable="False"
+			<!--<Button Grid.Column="0" Width="48" Height="48" Margin="6,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Focusable="False"
 					Style="{StaticResource NavigatorToggleButtonStyle}"
-					Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" />
+					Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" />-->
 			<TextBlock x:Name="PART_Title" Grid.Column="1" Text="{StaticResource PPSnApplicationTitle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="18" />
 			<StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,26,0,0" Width="144">
 				<StackPanel.Style>
@@ -347,7 +347,7 @@
 					  Height="26"
 					  Width="34" />
 
-		<uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,32,16">
+		<!--<uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,32,16">
 			<uiL:PpsNavigatorControl.Style>
 				<Style TargetType="{x:Type UserControl}">
 					<Style.Triggers>
@@ -365,7 +365,7 @@
 					</Style.Triggers>
 				</Style>
 			</uiL:PpsNavigatorControl.Style>
-		</uiL:PpsNavigatorControl>
+		</uiL:PpsNavigatorControl>-->
 
 		<ToolBar Grid.Column="1" Grid.Row="1" ItemsSource="{Binding CurrentPaneHost.Commands}">
 			<ToolBar.Style>

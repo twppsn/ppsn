@@ -35,13 +35,7 @@ namespace TecWare.PPSn.UI
 		{
 			InitializeComponent();
 		} // ctor
-
-		public void Init(PpsMainWindow windowModel)
-		{
-			SetValue(NavigatorModelPropertyKey, new PpsNavigatorModel(windowModel));
-			DataContext = NavigatorModel;
-		} // proc Init
-
+			
 		#endregion
 
 		public void OnPreview_MouseDown(object originalSource)

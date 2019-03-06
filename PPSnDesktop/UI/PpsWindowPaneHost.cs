@@ -27,7 +27,7 @@ namespace TecWare.PPSn.UI
 	public enum PpsWindowPaneHostState
 	{
 		/// <summary>This pane host is marked as not closable.</summary>
-		IsFixed,
+		Fixed,
 		/// <summary>This pane host is a normal pane-host.</summary>
 		Root,
 		/// <summary>A to a root pane related pane.</summary>
@@ -76,7 +76,7 @@ namespace TecWare.PPSn.UI
 		{
 			this.paneState = paneState;
 			SetValue(paneProgressPropertyKey, new PpsProgressStack(Dispatcher));
-			SetValue(isFixedPropertyKey, paneState == PpsWindowPaneHostState.IsFixed);
+			SetValue(isFixedPropertyKey, paneState == PpsWindowPaneHostState.Fixed);
 		} // ctor
 
 		public override void OnApplyTemplate()

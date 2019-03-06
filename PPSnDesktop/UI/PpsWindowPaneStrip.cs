@@ -96,7 +96,7 @@ namespace TecWare.PPSn.UI
 			foreach (var cur in InternalChildren.Cast<PpsWindowPaneStripItem>().Where(c => c.Visibility == Visibility.Visible))
 			{
 				var sz = cur.DesiredSize;
-				cur.Arrange(new Rect(left, 0.0, sz.Width, sz.Height));
+				cur.Arrange(new Rect(left, (arrangeSize.Height - sz.Height) / 2, sz.Width, sz.Height));
 				left += sz.Width;
 			}
 			return new Size(left, arrangeSize.Height);
@@ -108,7 +108,7 @@ namespace TecWare.PPSn.UI
 		protected override Size MeasureOverride(Size constraint)
 		{
 			var isOverflow = false;
-			var remainingWidth =constraint.Width;
+			var remainingWidth = constraint.Width;
 			var isInfinity = Double.IsInfinity(remainingWidth);
 			var sumWidth = 0.0;
 			var maxHeight = 0.0;

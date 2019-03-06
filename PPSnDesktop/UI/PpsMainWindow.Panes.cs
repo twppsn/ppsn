@@ -53,15 +53,15 @@ namespace TecWare.PPSn.UI
 
 		private int GetPaneDefaultPosition(PpsWindowPaneHostState paneState, PpsWindowPaneHost relatedPane)
 		{
-			if (paneState == PpsWindowPaneHostState.IsFixed // fixed pane
+			if (paneState == PpsWindowPaneHostState.Fixed // fixed pane
 				|| paneState == PpsWindowPaneHostState.Root) // root pane
 			{
 				for (var i = 0; i < panes.Count; i++)
 				{
-					if (panes[i].State != PpsWindowPaneHostState.IsFixed)
+					if (panes[i].State != PpsWindowPaneHostState.Fixed)
 						return i;
 				}
-				return 0;
+				return panes.Count;
 			}
 			else
 			{
@@ -69,7 +69,7 @@ namespace TecWare.PPSn.UI
 				var idx = panes.IndexOf(relatedPane);
 				if (idx == -1)
 					return panes.Count;
-				else if (panes[idx].State != PpsWindowPaneHostState.IsFixed)
+				else if (panes[idx].State != PpsWindowPaneHostState.Fixed)
 					return idx;
 				else
 					return GetPaneDefaultPosition(PpsWindowPaneHostState.Root, null);
@@ -214,7 +214,6 @@ namespace TecWare.PPSn.UI
 			if (paneHost != null)
 			{
 				SetValue(currentPaneHostPropertyKey, paneHost);
-				IsNavigatorVisible = false;
 				IsPaneVisible = true;
 			}
 			else
@@ -261,7 +260,7 @@ namespace TecWare.PPSn.UI
 		#region -- OpenPaneAsync ------------------------------------------------------
 
 		private PpsWindowPaneHostState GetDefaultPaneState(Type paneType)
-			=> PpsWindowPaneHostState.Root;
+			=>  paneType == typeof(PpsNavigatorModel) ? PpsWindowPaneHostState.Fixed : PpsWindowPaneHostState.Root;
 
 		private async Task<IPpsWindowPane> LoadPaneInternAsync(Type paneType, LuaTable arguments)
 		{
@@ -442,7 +441,9 @@ namespace TecWare.PPSn.UI
 				hasPaneSideBarPropertyDescriptor.AddValueChanged(newValue, OnCurrentPaneHostSideBarChanged);
 
 				// mark selected
-				Selector.SetIsSelected(paneStrip.ItemContainerGenerator.ContainerFromItem(newValue), true);
+				var container = paneStrip.ItemContainerGenerator.ContainerFromItem(newValue);
+				if (container != null)
+					Selector.SetIsSelected(container, true);
 			}
 
 			RefreshSideIsVisibleProperty();
