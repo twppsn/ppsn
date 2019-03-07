@@ -229,7 +229,7 @@
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="33"/>
 							<ColumnDefinition />
-							<ColumnDefinition MinWidth="1120"/>
+							<ColumnDefinition MinWidth="220"/>
 						</Grid.ColumnDefinitions>
 						
 						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="Yellow" BorderBrush="Black" BorderThickness="0,1,0,0" />
