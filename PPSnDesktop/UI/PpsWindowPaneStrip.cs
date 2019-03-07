@@ -115,13 +115,14 @@ namespace TecWare.PPSn.UI
 		protected override Size ArrangeOverride(Size arrangeSize)
 		{
 			var left = 0.0;
+			var stretchHeight = VerticalAlignment == VerticalAlignment.Stretch;
 			foreach (var cur in InternalChildren.Cast<PpsWindowPaneStripItem>().Where(c => c.Visibility == Visibility.Visible))
 			{
 				var sz = cur.DesiredSize;
-				cur.Arrange(new Rect(left, (arrangeSize.Height - sz.Height) / 2, sz.Width, sz.Height));
+				cur.Arrange(new Rect(left, 0, sz.Width, stretchHeight ? arrangeSize.Height : sz.Height));
 				left += sz.Width;
 			}
-			return new Size(left, arrangeSize.Height);
+			return new Size(arrangeSize.Width, arrangeSize.Height);
 		} // func ArrangeOverride
 
 		private bool IsOverflowItem(double remainingWidth, Size size)

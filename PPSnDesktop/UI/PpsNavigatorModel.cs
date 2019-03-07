@@ -590,14 +590,14 @@ namespace TecWare.PPSn.UI
 			if (CurrentView == null) // create view from local view
 			{
 				dataSource = new PpsShellGetList("local.objects");
-				exprView = PpsDataFilterTrueExpression.True;
-				exprFilter = PpsDataFilterTrueExpression.True;
+				exprView = PpsDataFilterExpression.True;
+				exprFilter = PpsDataFilterExpression.True;
 			}
 			else // create a different view, could be remote
 			{
 				dataSource = new PpsShellGetList(CurrentView.ViewId);
 				exprView = CurrentView.ViewFilterExpression;
-				exprFilter = currentFilter?.FilterExpression ?? PpsDataFilterTrueExpression.True;
+				exprFilter = currentFilter?.FilterExpression ?? PpsDataFilterExpression.True;
 
 				if (currentOrder != null)
 				{
@@ -611,7 +611,7 @@ namespace TecWare.PPSn.UI
 			// add search expression
 			exprSearch = currentSearchTextExpression is SearchExpression currentSearchExpression
 				? currentSearchExpression.FilterExpression
-				: PpsDataFilterTrueExpression.True;
+				: PpsDataFilterExpression.True;
 
 			// combine the contitions
 			dataSource.Filter = PpsDataFilterExpression.Combine(exprView, exprFilter, exprSearch);

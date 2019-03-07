@@ -677,8 +677,8 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public override DataTemplate GetDataTemplate(object data, DependencyObject container) 
-			=> throw new NotImplementedException();
+		public override DataTemplate GetDataTemplate(object data, DependencyObject container)
+			=> null;
 
 		//string key = null;
 

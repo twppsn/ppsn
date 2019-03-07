@@ -565,10 +565,10 @@ specific language governing permissions and limitations under the Licence.
 				 ItemsSource="{Binding VisibleViews}"
 				 IsSynchronizedWithCurrentItem="True"
 				 Style="{StaticResource NavigatorViewsListBoxStyle}"/>
-		<!--<uiC:DataListControl Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
+		<uiC:DataListControl Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
 							 ItemsSource="{Binding Items}"
 							 Style="{StaticResource PPSnListBoxStyle}"
-							 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"/>-->
+							 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"/>
 		<!--temporary removed-->
 		<!--ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>-->
 
