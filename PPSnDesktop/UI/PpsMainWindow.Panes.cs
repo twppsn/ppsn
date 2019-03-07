@@ -17,12 +17,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using Neo.IronLua;
 
@@ -50,6 +51,15 @@ namespace TecWare.PPSn.UI
 
 		public int IndexOf(PpsWindowPaneHost pane)
 			=> panes.IndexOf(pane);
+
+		public void Move(int oldIndex, int newIndex)
+		{
+			var item = panes[oldIndex];
+			panes.RemoveAt(oldIndex);
+			panes.Insert(newIndex, item);
+
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Move, item, oldIndex, newIndex));
+		} // proc Move
 
 		private int GetPaneDefaultPosition(PpsWindowPaneHostState paneState, PpsWindowPaneHost relatedPane)
 		{
@@ -175,6 +185,18 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public partial class PpsMainWindow : IPpsWindowPaneManager
 	{
+		#region -- class RenderHostPaneConverter --------------------------------------
+
+		private sealed class RenderHostPaneConverter : IValueConverter
+		{
+			object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+				=> value is PpsWindowPaneHost paneHost ? paneHost.Render(80, 80) : null;
+
+			object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) 
+				=> throw new NotSupportedException();
+		}
+		#endregion
+
 #pragma warning disable IDE1006 // Naming Styles
 		private readonly static DependencyPropertyKey currentPaneHostPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPaneHost), typeof(PpsWindowPaneHost), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurrentPaneHostChanged)));
 		internal readonly static DependencyProperty CurrentPaneHostProperty = currentPaneHostPropertyKey.DependencyProperty;
@@ -182,7 +204,9 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyPropertyKey paneHostsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(PaneHosts), typeof(PpsPaneCollection), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null));
 		internal readonly static DependencyProperty PaneHostsProperty = paneHostsPropertyKey.DependencyProperty;
 
-		private readonly static PropertyDescriptor hasPaneSideBarPropertyDescriptor = DependencyPropertyDescriptor.FromProperty(PpsWindowPaneHost.HasPaneSideBarProperty, typeof(PpsWindowPaneHost));
+		// first item is last selected
+		private readonly static DependencyPropertyKey selectionOrderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectionOrder), typeof(IReadOnlyList<PpsWindowPaneHost>), typeof(PpsMainWindow), new FrameworkPropertyMetadata(new List<PpsWindowPaneHost>()));
+		internal readonly static DependencyProperty SelectionOrderProperty = selectionOrderPropertyKey.DependencyProperty;
 #pragma warning restore IDE1006 // Naming Styles
 
 		private readonly PpsPaneCollection paneHosts = new PpsPaneCollection();
@@ -254,6 +278,72 @@ namespace TecWare.PPSn.UI
 			if (e.OriginalSource is ContentControl stripItem)
 				((PpsMainWindow)sender).ActivatePaneHost((PpsWindowPaneHost)stripItem.Content);
 		} //  // proc OnWindowPaneHostItemSelected
+
+		private static void OnPaneStripItemMove(object sender, PpsWindowPaneStripItemMoveArgs e)
+			=> ((PpsMainWindow)sender).MovePaneHost(e.NewIndex, e.OldIndex);
+
+		private void MovePaneHost(int newIndex, int oldIndex)
+			=> paneHosts.Move(oldIndex, newIndex);
+
+		#endregion
+
+		#region -- Selection Order ----------------------------------------------------
+
+		private void AppendFromSelectionOrder(PpsWindowPaneHost paneHost)
+		{
+			var selectionOrder = SelectionOrderIntern;
+			if (!selectionOrder.Contains(paneHost))
+				selectionOrder.Add(paneHost);
+		} // proc AppendFromSelectionOrder
+
+		private void RemoveFromSelectionOrder(PpsWindowPaneHost paneHost)
+		{
+			SelectionOrderIntern.Remove(paneHost);
+		} // proc RemoveFromSelectionOrder
+
+		private void RefreshSelectionOrder()
+		{
+			var selectionOrder = SelectionOrderIntern;
+			var toRemove = new List<PpsWindowPaneHost>(selectionOrder);
+
+			foreach(var pane in paneHosts)
+			{
+				if (selectionOrder.Contains(pane))
+					toRemove.Remove(pane);
+				else
+					selectionOrder.Add(pane);
+			}
+
+			foreach (var pane in toRemove)
+				selectionOrder.Remove(pane);
+		} // proc RefreshSelectionOrder
+
+		private void PushInSelectionOrder(PpsWindowPaneHost paneHost)
+		{
+			var selectionOrder = SelectionOrderIntern;
+			var currentIndex = selectionOrder.IndexOf(paneHost);
+			if (currentIndex != 0)
+			{
+				selectionOrder.RemoveAt(currentIndex);
+				selectionOrder.Insert(0, paneHost);
+			}
+		} // proc PushInSelectionOrder
+
+		private void PaneHosts_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			switch (e.Action)
+			{
+				case NotifyCollectionChangedAction.Add:
+					AppendFromSelectionOrder((PpsWindowPaneHost)e.NewItems[0]);
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					RemoveFromSelectionOrder((PpsWindowPaneHost)e.OldItems[0]);
+					break;
+				case NotifyCollectionChangedAction.Reset:
+					RefreshSelectionOrder();
+					break;
+			}
+		} // event PaneHosts_CollectionChanged
 
 		#endregion
 
@@ -429,39 +519,35 @@ namespace TecWare.PPSn.UI
 		{
 			if (oldValue != null)
 			{
-				// remove HasPaneSideBar listener
-				hasPaneSideBarPropertyDescriptor.RemoveValueChanged(oldValue, OnCurrentPaneHostSideBarChanged);
-
 				// mark unselected
 				Selector.SetIsSelected(paneStrip.ItemContainerGenerator.ContainerFromItem(oldValue), false);
 			}
 			if (newValue != null)
 			{
-				// listen to HasPaneSideBar
-				hasPaneSideBarPropertyDescriptor.AddValueChanged(newValue, OnCurrentPaneHostSideBarChanged);
-
 				// mark selected
 				var container = paneStrip.ItemContainerGenerator.ContainerFromItem(newValue);
 				if (container != null)
 					Selector.SetIsSelected(container, true);
+				// update selection order
+				PushInSelectionOrder(newValue);
 			}
-
-			RefreshSideIsVisibleProperty();
 		} // proc OnCurrentPaneHostChanged
 
-		private void OnCurrentPaneHostSideBarChanged(object sender, EventArgs e)
-			=> RefreshSideIsVisibleProperty();
-
 		#endregion
-		
+
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>
 		internal PpsWindowPaneHost CurrentPaneHost => (PpsWindowPaneHost)GetValue(CurrentPaneHostProperty);
 		/// <summary>List with the current open panes.</summary>
 		//internal IReadOnlyList<PpsWindowPaneHost> PaneHosts => paneHosts;
 		internal PpsPaneCollection PaneHosts => (PpsPaneCollection)GetValue(PaneHostsProperty);
 
+		private List<PpsWindowPaneHost> SelectionOrderIntern => (List<PpsWindowPaneHost>)SelectionOrder;
+		internal IReadOnlyList<PpsWindowPaneHost> SelectionOrder => (IReadOnlyList<PpsWindowPaneHost>)GetValue(SelectionOrderProperty);
+
 		IEnumerable<IPpsWindowPane> IPpsWindowPaneManager.Panes
 			=> paneHosts.Select(c => c.CurrentPane);
+
+		public static IValueConverter PaneHostToImage { get; } = new RenderHostPaneConverter();
 	} // class PpsMainWindow
 
 	#endregion

@@ -94,7 +94,7 @@
 			</uiL:PpsWindowPaneStrip.ItemTemplate>
 		</uiL:PpsWindowPaneStrip>
 
-		<Rectangle Grid.RowSpan="3" HorizontalAlignment="Left" Fill="{StaticResource PPSnSideBarBackgroundBrush}">
+		<!--<Rectangle Grid.RowSpan="3" HorizontalAlignment="Left" Fill="{StaticResource PPSnSideBarBackgroundBrush}">
 			<Rectangle.Style>
 				<Style TargetType="Rectangle">
 					<Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}" />
@@ -131,7 +131,7 @@
 					</Style.Triggers>
 				</Style>
 			</Rectangle.Style>
-		</Rectangle>
+		</Rectangle>-->
 
 		<Grid Grid.RowSpan="2" Width="{StaticResource PPSnSideBarIncreasedWidth}">
 			<Grid.ColumnDefinitions>
@@ -592,5 +592,31 @@
 				</Viewbox.Style>
 			</Viewbox>
 		</Grid>
+
+		<ui:PpsPopup x:Name="windowPanePopup" Placement="Center">
+			<ui:PpsPopupContent Header="Offene Daten">
+				<ListBox ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True" MinHeight="100" MinWidth="100">
+					<ListBox.ItemTemplate>
+						<DataTemplate DataType="{x:Type uiL:PpsWindowPaneHost}">
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="80" />
+									<ColumnDefinition />
+								</Grid.ColumnDefinitions>
+								<Grid.RowDefinitions>
+									<RowDefinition />
+									<RowDefinition />
+								</Grid.RowDefinitions>
+
+								<Image Source="{Binding Converter={x:Static uiL:PpsMainWindow.PaneHostToImage}}" />
+
+								<TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}" FontWeight="Bold" />
+								<TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding SubTitle}" />
+							</Grid>							
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+			</ui:PpsPopupContent>
+		</ui:PpsPopup>
 	</Grid>
 </ui:PpsWindow>

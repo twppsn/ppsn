@@ -24,6 +24,26 @@ using System.Windows.Media;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- class PpsWindowPaneStripItemMoveArgs -----------------------------------
+
+	internal sealed class PpsWindowPaneStripItemMoveArgs : RoutedEventArgs
+	{
+		private readonly int oldIndex;
+		private readonly int newIndex;
+
+		public PpsWindowPaneStripItemMoveArgs(int oldIndex, int newIndex)
+			: base(PpsWindowPaneStrip.ItemMoveEvent)
+		{
+			this.oldIndex = oldIndex;
+			this.newIndex = newIndex;
+		} // ctor
+
+		public int OldIndex => oldIndex;
+		public int NewIndex => newIndex;
+	} // class PpsWindowPaneStripItemMoveArgs
+	
+	#endregion
+
 	#region -- class PpsWindowPaneStripItem -------------------------------------------
 
 	internal class PpsWindowPaneStripItem : ContentControl
@@ -31,7 +51,7 @@ namespace TecWare.PPSn.UI
 		#region -- IsSelected - Property ----------------------------------------------
 
 #pragma warning disable CS0108 // Member hides inherited member; missing new keyword
-		public static readonly DependencyProperty IsSelectedProperty = Selector.IsSelectedProperty.AddOwner(typeof(PpsWindowPaneStripItem), 
+		public static readonly DependencyProperty IsSelectedProperty = Selector.IsSelectedProperty.AddOwner(typeof(PpsWindowPaneStripItem),
 			new FrameworkPropertyMetadata(BooleanBox.False, FrameworkPropertyMetadataOptions.AffectsParentMeasure | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault | FrameworkPropertyMetadataOptions.Journal, OnIsSelectedChanged));
 #pragma warning restore CS0108 // Member hides inherited member; missing new keyword
 
@@ -61,7 +81,7 @@ namespace TecWare.PPSn.UI
 		} // prop IsSelected
 
 		#endregion
-		
+
 		private bool Select()
 		{
 			IsSelected = true; // mark as selected
@@ -70,13 +90,15 @@ namespace TecWare.PPSn.UI
 
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if((e.Source == this || !IsSelected) && Select())
+			if ((e.Source == this || !IsSelected) && Select())
 				e.Handled = true;
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
 
 		private PpsWindowPaneStrip StripParent
 			=> ItemsControl.ItemsControlFromItemContainer(this) as PpsWindowPaneStrip;
+
+		public bool IsFixed => ((PpsWindowPaneHost)Content).IsFixed;
 
 		static PpsWindowPaneStripItem()
 		{
@@ -105,6 +127,24 @@ namespace TecWare.PPSn.UI
 		private bool IsOverflowItem(double remainingWidth, Size size)
 			=> remainingWidth < size.Width;
 
+		private int FindLastVisiblePosition(PpsWindowPaneStripItem item, double totalWidth)
+		{
+			var remainingWidth = totalWidth;
+			var newIndex = 0;
+			var currentItemSize = item.DesiredSize;
+
+			foreach (var cur in InternalChildren.OfType<PpsWindowPaneStripItem>().TakeWhile(c => c != item))
+			{
+				if (!cur.IsFixed && IsOverflowItem(remainingWidth, currentItemSize))
+					return newIndex;
+
+				remainingWidth -= cur.DesiredSize.Width;
+				newIndex++;
+			}
+
+			return -1;
+		} // func FindLastVisiblePosition
+
 		protected override Size MeasureOverride(Size constraint)
 		{
 			var isOverflow = false;
@@ -114,6 +154,7 @@ namespace TecWare.PPSn.UI
 			var maxHeight = 0.0;
 
 			// arrage tab items horizontal
+			var currentIndex = 0;
 			foreach (var cur in InternalChildren.Cast<PpsWindowPaneStripItem>())
 			{
 				// measure control
@@ -123,7 +164,10 @@ namespace TecWare.PPSn.UI
 				{
 					if (cur.IsSelected) // selected is hidden
 					{
-						// todo:
+						// find measure new offset
+						var newIndex = FindLastVisiblePosition(cur, constraint.Width);
+						if (newIndex >= 0 && newIndex < currentIndex) // reorder item
+							RaiseEvent(new PpsWindowPaneStripItemMoveArgs(currentIndex, newIndex));
 					}
 					else
 						cur.Visibility = Visibility.Collapsed;
@@ -137,6 +181,7 @@ namespace TecWare.PPSn.UI
 					sumWidth += sz.Width;
 					maxHeight = Math.Max(sz.Height, maxHeight);
 				}
+				currentIndex++;
 			}
 
 			return new Size(sumWidth, maxHeight);
@@ -146,6 +191,8 @@ namespace TecWare.PPSn.UI
 	#endregion
 
 	#region -- class PpsWindowPaneStrip -----------------------------------------------
+
+	internal delegate void PpsWindowPaneStripItemMoveEventEventHandler(object sender, PpsWindowPaneStripItemMoveArgs e);
 
 	internal sealed class PpsWindowPaneStrip : ItemsControl
 	{
@@ -162,8 +209,12 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		public static readonly RoutedEvent ItemMoveEvent;
+
 		static PpsWindowPaneStrip()
 		{
+			ItemMoveEvent = EventManager.RegisterRoutedEvent("", RoutingStrategy.Bubble, typeof(PpsWindowPaneStripItemMoveEventEventHandler), typeof(PpsWindowPaneStripItem));
+
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsWindowPaneStrip), new FrameworkPropertyMetadata(typeof(PpsWindowPaneStrip)));
 		} // ctor
 	} // class PpsWindowPaneStrip

@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.PPSn.Controls;
 
@@ -37,11 +38,11 @@ namespace TecWare.PPSn.UI
 		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
 
 		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
-		private readonly static DependencyPropertyKey isSideBarVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsSideBarVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(true));
-		public readonly static DependencyProperty IsSideBarVisibleProperty = isSideBarVisiblePropertyKey.DependencyProperty;
-
+		
 		private int windowIndex = -1;                                       // settings key
 		private PpsWindowApplicationSettings settings;                      // current settings for the window
+
+		private Task<bool> unloadTask = null;
 
 		#region -- Ctor/Dtor -------------------------------------------------------------
 
@@ -52,6 +53,8 @@ namespace TecWare.PPSn.UI
 			InitializeComponent();
 
 			SetValue(paneHostsPropertyKey, paneHosts);
+
+			paneHosts.CollectionChanged += PaneHosts_CollectionChanged;
 
 			// initialize settings
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
@@ -130,14 +133,13 @@ namespace TecWare.PPSn.UI
 
 			#endregion
 
-			this.DataContext = this;
+			DataContext = this;
 
+			// start navigator pane
 			OpenPaneAsync(typeof(PpsNavigatorModel), PpsOpenPaneMode.NewPane).SpawnTask(Environment);
 			
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 		} // ctor
-
-		private Task<bool> unloadTask = null;
 
 		protected override void OnClosing(CancelEventArgs e)
 		{
@@ -160,11 +162,51 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		private void RefreshSideIsVisibleProperty()
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
 		{
-			var show = CurrentPaneHost != null && CurrentPaneHost.HasPaneSideBar;
-			SetValue(isSideBarVisiblePropertyKey, show);
-		} // proc RefreshSideIsVisibleProperty
+			if (e.Key == Key.Tab && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+			{
+				var collectionView = CollectionViewSource.GetDefaultView(SelectionOrder);
+				collectionView.Refresh();
+
+				if (!windowPanePopup.IsOpen)
+				{
+					windowPanePopup.IsOpen = true; // open popup
+					// move first
+					collectionView.MoveCurrentToFirst();
+				}
+
+				// move next per key down
+				if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0)
+				{
+					if (!collectionView.MoveCurrentToPrevious())
+						collectionView.MoveCurrentToLast();
+				}
+				else
+				{
+					if (!collectionView.MoveCurrentToNext())
+						collectionView.MoveCurrentToFirst();
+				}
+				
+				e.Handled = true;
+			}
+		} // proc OnPreviewKeyDown
+
+		protected override void OnPreviewKeyUp(KeyEventArgs e)
+		{
+			if (e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl)
+			{
+				if (windowPanePopup.IsOpen)
+				{
+					var collectionView = CollectionViewSource.GetDefaultView(SelectionOrder);
+					if (collectionView.CurrentItem is PpsWindowPaneHost paneHost)
+						ActivatePaneHost(paneHost);
+					windowPanePopup.IsOpen = false; // close popup
+				}
+				e.Handled = true;
+			}
+			base.OnPreviewKeyUp(e);
+		} // proc OnPreviewPopup
 
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
@@ -172,8 +214,6 @@ namespace TecWare.PPSn.UI
 		public int WindowIndex => windowIndex;
 		/// <summary>Access to the current environment,</summary>
 		public PpsEnvironment Environment => (PpsEnvironment)Shell;
-
-		public bool IsSideBarVisible => (bool)GetValue(IsSideBarVisibleProperty);
 
 		public bool IsPaneVisible
 		{
@@ -184,6 +224,7 @@ namespace TecWare.PPSn.UI
 		static PpsMainWindow()
 		{
 			EventManager.RegisterClassHandler(typeof(PpsMainWindow), Selector.SelectedEvent, new RoutedEventHandler(OnWindowPaneHostItemSelected));
+			EventManager.RegisterClassHandler(typeof(PpsMainWindow), PpsWindowPaneStrip.ItemMoveEvent, new PpsWindowPaneStripItemMoveEventEventHandler(OnPaneStripItemMove));
 		} // sctor
 	} // class PpsMainWindow
 }

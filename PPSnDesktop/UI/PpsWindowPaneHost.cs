@@ -18,6 +18,8 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Neo.IronLua;
 
 namespace TecWare.PPSn.UI
@@ -185,6 +187,22 @@ namespace TecWare.PPSn.UI
 					break;
 			}
 		} // proc CurrentPanePropertyChanged
+
+		public ImageSource Render(int pixelWidth, int pixelHeight, double dpiX = 96.0, double dpiY = 96.0)
+		{
+			var ctrlSize = new Size(ActualWidth, ActualHeight);
+			var targetBmp = new RenderTargetBitmap((int)ctrlSize.Width, (int)ctrlSize.Height, dpiX, dpiY, PixelFormats.Pbgra32);
+			targetBmp.Render(this);
+
+			var aspectX = pixelWidth / ctrlSize.Width;
+			var aspectY = pixelHeight / ctrlSize.Height;
+			var aspect = aspectX < aspectY ? aspectX : aspectY;
+
+			var transformed = new TransformedBitmap(targetBmp, new ScaleTransform(aspect, aspect));
+			transformed.Freeze();
+
+			return transformed;
+		} // func Render
 
 		IPpsProgressFactory IPpsWindowPaneHost.Progress => PaneProgress;
 
