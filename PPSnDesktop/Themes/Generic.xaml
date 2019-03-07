@@ -222,9 +222,26 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStrip}">
-					<Border BorderBrush="Black" BorderThickness="0,0,0,1" Padding="100,0,200,0">
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition MinWidth="250" />
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition />
+							<RowDefinition Height="7" />
+						</Grid.RowDefinitions>
+						<Border Grid.ColumnSpan="2" Grid.Row="1" Background="Yellow" BorderBrush="Black" BorderThickness="0,1,0,0" />
 						<ItemsPresenter />
-					</Border>
+						<uiC:PpsButton Grid.Column="1"
+									   Width="32"
+									   HorizontalAlignment="Left"
+									   Foreground="Black"
+									   GeometryName="chevronDownThin"
+									   DisplayMode="Image"
+									   GeometrySize="24"
+									   ImageOpacity="1" />
+					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
@@ -234,7 +251,7 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStripItem}">
-					<Border x:Name="itemBorder" BorderBrush="Black" BorderThickness="0,0,1,1" Margin="0,0,0,-1">
+					<Border x:Name="itemBorder" BorderBrush="Red" BorderThickness="0,0,1,1" Margin="0,0,0,-1">
 						<Grid>
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition />
@@ -242,10 +259,12 @@
 							</Grid.ColumnDefinitions>
 							<ContentPresenter TextBlock.FontSize="14" />
 							<uiC:PpsButton x:Name="closeButton"
-										   Width="36" Foreground="Black"
 										   Grid.Column="1"
 										   Command="{x:Static ui:PpsMainWindow.ClosePaneCommand}"
 										   CommandParameter="{TemplateBinding Content}"
+										   Width="32"
+										   Visibility="Hidden"
+										   Foreground="Black"
 										   GeometryName="closePane"
 										   DisplayMode="Image"
 										   GeometrySize="24"
@@ -256,8 +275,23 @@
 						<Trigger Property="IsSelected" Value="True">
 							<Setter TargetName="itemBorder" Property="Background"  Value="Yellow"/>
 							<Setter TargetName="itemBorder" Property="BorderThickness"  Value="0,0,1,0"/>
+							<Setter TargetName="itemBorder" Property="Padding" Value="0,0,0,1"/>
 						</Trigger>
-
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsSelected" Value="True" />
+								<Condition SourceName="closeButton" Property="IsEnabled" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter TargetName="closeButton" Property="Visibility" Value="Visible"/>
+						</MultiTrigger>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsSelected" Value="False" />
+								<Condition SourceName="itemBorder" Property="IsMouseOver" Value="True" />
+								<Condition SourceName="closeButton" Property="IsEnabled" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter TargetName="closeButton" Property="Visibility" Value="Visible"/>
+						</MultiTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
