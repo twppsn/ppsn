@@ -413,6 +413,8 @@ namespace TecWare.PPSn
 					return typeof(PpsPdfViewerPane);
 				case "picture":
 					return typeof(PpsPicturePane);
+				case "markdown":
+					return typeof(PpsMarkdownPane);
 				default:
 					return Neo.IronLua.LuaType.GetType(paneType, lateAllowed: false).Type;
 			}

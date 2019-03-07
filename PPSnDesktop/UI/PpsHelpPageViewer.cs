@@ -22,7 +22,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using Neo.IronLua;
 using Neo.Markdig.Xaml;
-using TecWare.DE.Networking;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -121,13 +120,13 @@ namespace TecWare.PPSn.UI
 				// create a new page
 				using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 				{
-					helpObj = await environment.CreateNewObjectAsync(Guid.NewGuid(), "HelpKey", HelpKey, true, "text/markdown");
+					helpObj = await environment.CreateNewObjectAsync(Guid.NewGuid(), PpsEnvironment.HelpKeyTyp, HelpKey, true, "text/markdown");
 					trans.Commit();
 				}
 			}
 
 			if (helpObj != null)
-				await helpObj.OpenPaneAsync(windowPane.PaneHost.PaneManager, PpsOpenPaneMode.NewPane, new LuaTable { ["Object"] = helpObj });
+				await helpObj.OpenPaneAsync(environment.GetDefaultPaneManager(), PpsOpenPaneMode.NewPane, new LuaTable { ["Object"] = helpObj });
 		} // proc EditHelpPageAsync
 
 		private async Task RefreshHelpPageAsync()
@@ -160,7 +159,7 @@ namespace TecWare.PPSn.UI
 		private Task<PpsObject> GetCurrentHelpPageObjectAsync()
 		{
 			return environment.GetObjectAsync(PpsDataFilterExpression.Combine(
-				PpsDataFilterExpression.Compare("TYP", PpsDataFilterCompareOperator.Equal, "HelpKey"),
+				PpsDataFilterExpression.Compare("TYP", PpsDataFilterCompareOperator.Equal, PpsEnvironment.HelpKeyTyp),
 				PpsDataFilterExpression.Compare("NR", PpsDataFilterCompareOperator.Equal, HelpKey)
 			));
 		} // func GetCurrentHelpPageObjectAsync

@@ -2379,6 +2379,8 @@ namespace TecWare.PPSn
 			newRawData = null;
 			newHash = null;
 
+			aot.NotifyDataChanged(this);
+
 			rawData.Reset();
 		} // func CommitAsync
 
@@ -3510,12 +3512,15 @@ namespace TecWare.PPSn
 
 		private Type GetPaneTypeFromObject()
 		{
-			if (Typ == PpsEnvironment.AttachmentObjectTyp) // select editor for the attachment
+			if (Typ == PpsEnvironment.AttachmentObjectTyp // select editor for the attachment
+				|| Typ == PpsEnvironment.HelpKeyTyp)
 			{
 				if (MimeType.StartsWith("image/"))
 					return Environment.GetPaneTypeFromString("picture");
 				else if (MimeType == MimeTypes.Application.Pdf)
 					return Environment.GetPaneTypeFromString("pdf");
+				else if (MimeType.StartsWith("text/markdown"))
+					return Environment.GetPaneTypeFromString("markdown");
 				else
 					return null;
 			}
@@ -4234,6 +4239,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Object typ for blob data.</summary>
 		public static string AttachmentObjectTyp = "attachments";
+		public static string HelpKeyTyp = "helpkey";
 
 		private readonly PpsActiveObjectDataImplementation activeObjectData;
 

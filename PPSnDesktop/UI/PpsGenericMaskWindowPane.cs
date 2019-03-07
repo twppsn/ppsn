@@ -288,6 +288,6 @@ namespace TecWare.PPSn.UI
 		[LuaMember]
 		public PpsObject Object => obj;
 
-		public new PpsEnvironment Shell => (PpsEnvironment)Shell;
+		public new PpsEnvironment Shell => (PpsEnvironment)base.Shell;
 	} // class PpsGenericMaskWindowPane
 }
