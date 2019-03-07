@@ -58,7 +58,7 @@ namespace TecWare.PPSn.UI
 			panes.RemoveAt(oldIndex);
 			panes.Insert(newIndex, item);
 
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Move, item, oldIndex, newIndex));
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 		} // proc Move
 
 		private int GetPaneDefaultPosition(PpsWindowPaneHostState paneState, PpsWindowPaneHost relatedPane)

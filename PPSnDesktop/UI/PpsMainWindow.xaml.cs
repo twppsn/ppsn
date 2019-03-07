@@ -57,8 +57,8 @@ namespace TecWare.PPSn.UI
 			paneHosts.CollectionChanged += PaneHosts_CollectionChanged;
 			paneStrip.ItemContainerGenerator.StatusChanged += paneStrip_ItemContainerGenerator_StatusChanged;
 			
-// initialize settings
-settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
+			// initialize settings
+			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 		
 			#region -- set basic command bindings --
 			CommandBindings.Add(

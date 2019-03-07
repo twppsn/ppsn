@@ -15,13 +15,14 @@
 #endregion
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using Neo.IronLua;
 using Neo.Markdig.Xaml;
+using TecWare.DE.Networking;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -75,10 +76,10 @@ namespace TecWare.PPSn.UI
 				new CommandBinding(ApplicationCommands.Open,
 					(sender, e) =>
 					{
-						EditHelpPage();
+						EditHelpPageAsync().SpawnTask(environment);
 						e.Handled = true;
 					},
-					(sender, e) => e.CanExecute = true
+					(sender, e) => e.CanExecute = HelpKey != null
 				)
 			);
 		} // ctor
@@ -110,22 +111,33 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc ClearHelpPage
 
-		private void EditHelpPage()
+		private async Task EditHelpPageAsync()
 		{
-			MessageBox.Show("ToDo");
-		} // proc EditHelpPage
+			var windowPane = PpsEnvironment.GetCurrentPane(this);
+
+			var helpObj = await GetCurrentHelpPageObjectAsync();
+			if (helpObj == null)
+			{
+				// create a new page
+				using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+				{
+					helpObj = await environment.CreateNewObjectAsync(Guid.NewGuid(), "HelpKey", HelpKey, true, "text/markdown");
+					trans.Commit();
+				}
+			}
+
+			if (helpObj != null)
+				await helpObj.OpenPaneAsync(windowPane.PaneHost.PaneManager, PpsOpenPaneMode.NewPane, new LuaTable { ["Object"] = helpObj });
+		} // proc EditHelpPageAsync
 
 		private async Task RefreshHelpPageAsync()
 		{
-			var helpObj = await environment.GetObjectAsync(PpsDataFilterExpression.Combine(
-				PpsDataFilterExpression.Compare("TYP", PpsDataFilterCompareOperator.Equal, "HelpKey"),
-				PpsDataFilterExpression.Compare("NR", PpsDataFilterCompareOperator.Equal, HelpKey)
-			));
+			var helpObj = await GetCurrentHelpPageObjectAsync();
 
 			ClearHelpPage();
 			if (helpObj == null) // load empty help page
 			{
-				SetValue(documentPropertyKey, CreateNoHelpKeyDocument());
+				SetValue(documentPropertyKey, CreateNoHelpDocument());
 			}
 			else // parse help content
 			{
@@ -145,6 +157,14 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc RefreshHelpPageAsync
 
+		private Task<PpsObject> GetCurrentHelpPageObjectAsync()
+		{
+			return environment.GetObjectAsync(PpsDataFilterExpression.Combine(
+				PpsDataFilterExpression.Compare("TYP", PpsDataFilterCompareOperator.Equal, "HelpKey"),
+				PpsDataFilterExpression.Compare("NR", PpsDataFilterCompareOperator.Equal, HelpKey)
+			));
+		} // func GetCurrentHelpPageObjectAsync
+
 		private async Task RenderPageContentAsync()
 		{
 			var blob = (IPpsBlobObjectData)currentHelpPage.ObjectData;
@@ -161,6 +181,7 @@ namespace TecWare.PPSn.UI
 
 		private static FlowDocument CreateNoHelpKeyDocument()
 			=> MarkdownXaml.ToFlowDocument("*Es wurde kein HelpKey gesetzt*");
+
 		private static FlowDocument CreateNoHelpDocument()
 			=> MarkdownXaml.ToFlowDocument("*Keine Dokunment hinterlegt*");
 	} //class PpsHelpPageViewer

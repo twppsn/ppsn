@@ -143,7 +143,7 @@ namespace TecWare.PPSn.UI
 				newIndex++;
 			}
 
-			return -1;
+			return newIndex - 1;
 		} // func FindLastVisiblePosition
 
 		protected override Size MeasureOverride(Size constraint)
@@ -168,10 +168,14 @@ namespace TecWare.PPSn.UI
 						// find measure new offset
 						var newIndex = FindLastVisiblePosition(cur, constraint.Width);
 						if (newIndex >= 0 && newIndex < currentIndex) // reorder item
+						{
 							RaiseEvent(new PpsWindowPaneStripItemMoveArgs(currentIndex, newIndex));
+							Dispatcher.BeginInvoke(new Action(InvalidateMeasure));
+							break;
+						}
 					}
 					else
-						cur.Visibility = Visibility.Collapsed;
+						cur.Visibility = Visibility.Hidden;
 					isOverflow = true;
 				}
 				else

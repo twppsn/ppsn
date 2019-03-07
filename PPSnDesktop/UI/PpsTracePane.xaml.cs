@@ -58,6 +58,12 @@ namespace TecWare.PPSn.UI
 				obj.OpenPaneAsync(paneHost.PaneManager).AwaitTask();
 			}
 
+			[LuaMember]
+			public void StartStat()
+			{
+				Environment["collectStatistics"] = true;
+			} // proc StartState
+
 			#endregion
 			
 			protected override object OnIndex(object key)
