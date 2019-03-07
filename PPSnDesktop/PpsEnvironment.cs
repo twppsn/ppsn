@@ -499,6 +499,7 @@ namespace TecWare.PPSn
 
 		private readonly PpsEnvironmentCollection<PpsActionDefinition> actions;
 		private readonly PpsEnvironmentCollection<PpsViewDefinition> views;
+		private readonly PpsEnvironmentCollection<PpsDataListItemDefinition> templateDefinitions;
 
 		private readonly PpsProgressStack backgroundProgress;
 		private readonly PpsProgressStack forgroundProgress;
@@ -524,6 +525,7 @@ namespace TecWare.PPSn
 
 			actions = new PpsEnvironmentCollection<PpsActionDefinition>(this);
 			views = new PpsEnvironmentCollection<PpsViewDefinition>(this);
+			templateDefinitions = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
 
 			CompileOptions = new LuaCompileOptions()
 			{
@@ -678,24 +680,22 @@ namespace TecWare.PPSn
 		#endregion
 
 		public override DataTemplate GetDataTemplate(object data, DependencyObject container)
-			=> null;
+		{
+			string key = null;
+			if (data is LuaTable t)
+				key = t.GetMemberValue("Typ") as string;
+			else if (data is PpsObject o)
+				key = o.Typ;
+			else
+				key = ((dynamic)data).Typ;
 
-		//string key = null;
+			if (key == null)
+				return null;
 
-		//	if (item is LuaTable t)
-		//		key = t.GetMemberValue("Typ") as string;
-		//	else if (item is PpsObject o)
-		//		key = o.Typ;
-		//	else
-		//		key = ((dynamic) item).Typ;
-
-		//	if (key == null)
-		//		return null;
-
-		//	var typeDef = shell.DataListItemTypes[key];
-		//	return typeDef?.FindTemplate(item) ?? defaultTemplate;
-
-
+			var typeDef = templateDefinitions[key];
+			return typeDef?.FindTemplate(data);
+		} // func GetDataTemplate
+		
 		protected override IPpsProgress CreateProgressCore(bool blockUI)
 			=> BackgroundProgressState.CreateProgress(false); 
 

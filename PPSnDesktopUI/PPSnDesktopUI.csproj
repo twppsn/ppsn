@@ -138,7 +138,6 @@
     <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Controls\UndoManagerListBox.cs" />
     <Compile Include="Data\DataFilter.cs" />
-    <Compile Include="Data\DataListItemDefinition.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

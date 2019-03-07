@@ -46,7 +46,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="container"></param>
 		/// <returns></returns>
 		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-			=> shell.GetDataTemplate(item, container);
+			=> shell.GetDataTemplate(item, container) ?? defaultTemplate;
 	} // class PpsDataListTemplateSelector
 
 	#endregion

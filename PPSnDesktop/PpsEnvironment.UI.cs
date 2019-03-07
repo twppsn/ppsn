@@ -17,23 +17,118 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
-using System.Windows.Threading;
-using System.Xaml;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
+	#region -- class PpsDataListItemDefinition ----------------------------------------
+
+	internal sealed class PpsDataListItemDefinition : PpsEnvironmentDefinition
+	{
+		#region -- class TemplateItem -----------------------------------------------------
+
+		private sealed class TemplateItem : IComparable<TemplateItem>
+		{
+			private readonly DataTemplate template;         // template of the row
+			private readonly Func<object, bool> condition;  // condition if the template is for this item
+			private readonly int priority;                  // select order
+			private readonly string onlineViewId;           // view, that returns extended data for the row
+
+			public TemplateItem(int priority, Func<object, bool> condition, string onlineViewId, DataTemplate template)
+			{
+				this.priority = priority;
+				this.condition = condition;
+				this.onlineViewId = onlineViewId;
+				this.template = template ?? throw new ArgumentNullException(nameof(template));
+
+			} // ctor
+
+			public int CompareTo(TemplateItem other)
+				=> Priority - other.Priority;
+
+			/// <summary>Runs the condition, if the template is accepted.</summary>
+			/// <param name="item"></param>
+			/// <returns></returns>
+			public bool SelectTemplate(dynamic item)
+			{
+				if (condition == null)
+					return template != null;
+				else
+					return condition(item);
+			} // func SelectTemplate
+
+			public string OnlineViewId => onlineViewId;
+			public int Priority => priority;
+			public DataTemplate Template => template;
+		} // class TemplateItem
+
+		#endregion
+
+		private readonly List<TemplateItem> templates = new List<TemplateItem>();
+
+		internal PpsDataListItemDefinition(PpsEnvironment environment, string key)
+			: base(environment, key)
+		{
+		} // ctor
+
+		private async Task<Func<object, bool>> ReadConditionAsync(XmlReader xml)
+		{
+			var condition = await Environment.CompileLambdaAsync<Func<object, bool>>(xml, true, "Item");
+			await xml.ReadEndElementAsync();
+			return condition;
+		} // func ReadConditionAsync
+
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="priority"></param>
+		/// <returns></returns>
+		public async Task<int> AppendTemplateAsync(XmlReader xml, int priority)
+		{
+			// get base attributes
+			priority = xml.GetAttribute("priority", priority + 1);
+			var onlineViewId = xml.GetAttribute("viewId", String.Empty);
+
+			// read start element
+			await xml.ReadAsync();
+
+			// read optional condition
+			var condition =
+				await xml.ReadOptionalStartElementAsync(StuffUI.xnCondition)
+					? await ReadConditionAsync(xml)
+					: null;
+
+			// read template
+			var template = await PpsXamlParser.LoadAsync<DataTemplate>(xml.ReadElementAsSubTree());
+
+			var templateItem = new TemplateItem(priority, condition, onlineViewId, template);
+
+			// insert the item in order of the priority
+			var index = templates.BinarySearch(templateItem);
+			if (index < 0)
+				templates.Insert(~index, templateItem);
+			else
+				templates.Insert(index, templateItem);
+
+			return priority;
+		} // proc AppendTemplate
+
+		/// <summary></summary>
+		/// <param name="item"></param>
+		/// <returns></returns>
+		public DataTemplate FindTemplate(dynamic item)
+			=> templates.FirstOrDefault(c => c.SelectTemplate(item))?.Template;
+	} // class PpsDataListItemType
+
+	#endregion
+
 	#region -- class PpsEnvironment ---------------------------------------------------
 
 	public partial class PpsEnvironment : IPpsXamlCode
@@ -104,7 +199,7 @@ namespace TecWare.PPSn
 
 		private async Task RefreshTemplatesAsync()
 		{
-			//var priority = 1;
+			var priority = 1;
 
 			using (var xml = PpsXmlPosition.CreateLinePositionReader(await OpenXmlDocumentAsync("wpf/templates.xaml", true, true)))
 			{
@@ -137,14 +232,14 @@ namespace TecWare.PPSn
 								break;
 							}
 
-							//var templateDefinition = templateDefinitions[key];
-							//if (templateDefinition == null)
-							//{
-							//	templateDefinition = new PpsDataListItemDefinition(this, key);
-							//	templateDefinitions.AppendItem(templateDefinition);
-							//}
-							//priority = await templateDefinition.AppendTemplateAsync(xml, priority);
-							//await xml.ReadEndElementAsync();
+							var templateDefinition = templateDefinitions[key];
+							if (templateDefinition == null)
+							{
+								templateDefinition = new PpsDataListItemDefinition(this, key);
+								templateDefinitions.AppendItem(templateDefinition);
+							}
+							priority = await templateDefinition.AppendTemplateAsync(xml, priority);
+							await xml.ReadEndElementAsync();
 
 							await xml.SkipAsync();
 						}

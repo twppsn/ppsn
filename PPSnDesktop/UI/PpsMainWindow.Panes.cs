@@ -528,10 +528,21 @@ namespace TecWare.PPSn.UI
 				var container = paneStrip.ItemContainerGenerator.ContainerFromItem(newValue);
 				if (container != null)
 					Selector.SetIsSelected(container, true);
+
 				// update selection order
 				PushInSelectionOrder(newValue);
 			}
 		} // proc OnCurrentPaneHostChanged
+
+		private void paneStrip_ItemContainerGenerator_StatusChanged(object sender, EventArgs e)
+		{
+			if (paneStrip.ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated && CurrentPaneHost != null)
+			{
+				var container = paneStrip.ItemContainerGenerator.ContainerFromItem(CurrentPaneHost);
+				if (container != null)
+					Selector.SetIsSelected(container, true);
+			}
+		} // event paneStrip_ItemContainerGenerator_StatusChanged
 
 		#endregion
 
