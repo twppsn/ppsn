@@ -1386,6 +1386,7 @@ namespace TecWare.PPSn
 			private CircularBuffer history;
 			private long max = 0;
 			private readonly Func<long, string> formatValue;
+			private readonly int historyCount;
 
 			/// <summary>For keeping the UI up to Date</summary>
 			public event PropertyChangedEventHandler PropertyChanged;
@@ -1401,6 +1402,7 @@ namespace TecWare.PPSn
 				this.request = request;
 				this.history = new CircularBuffer(historyCount);
 				this.formatValue = formatValue;
+				this.historyCount = historyCount;
 			}
 
 			/// <summary>Captures the actual Value</summary>
@@ -1429,6 +1431,8 @@ namespace TecWare.PPSn
 			public string CurrentValue => formatValue != null ? formatValue(history.Last()) : history.Last().ToString();
 			/// <summary>False, if the Statistic was never activated</summary>
 			public bool HasData => history.HasData;
+
+			public int HistoryCount => historyCount;
 		}
 
 		private DispatcherTimer statisticsTimer;
