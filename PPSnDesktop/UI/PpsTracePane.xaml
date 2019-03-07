@@ -7,7 +7,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
 			 xmlns:local="clr-namespace:TecWare.PPSn.UI"
-			 mc:Ignorable="d" 
+			 mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300" Background="Transparent">
 	<UserControl.Resources>
 		<sys:Double x:Key="maxScrollHeight">300</sys:Double>
@@ -165,11 +165,11 @@
 		</local:PpsTraceItemTemplateSelector>
 	</UserControl.Resources>
 
-	<Grid Margin="16,24,16,16" FocusManager.FocusedElement="{Binding ElementName=ConsoleCommandTextBox}">
+	<Grid Margin="16,24,16,16">
 		<Grid.RowDefinitions>
 			<RowDefinition/>
 			<RowDefinition Height="auto"/>
-			<RowDefinition>
+			<!--<RowDefinition>
 				<RowDefinition.Style>
 					<Style TargetType="{x:Type RowDefinition}">
 						<Setter Property="Height" Value="0" />
@@ -180,8 +180,8 @@
 						</Style.Triggers>
 					</Style>
 				</RowDefinition.Style>
-			</RowDefinition>
-			<RowDefinition>
+			</RowDefinition>-->
+			<!--<RowDefinition>
 				<RowDefinition.Style>
 					<Style TargetType="{x:Type RowDefinition}">
 						<Setter Property="Height" Value="Auto" />
@@ -192,8 +192,10 @@
 						</Style.Triggers>
 					</Style>
 				</RowDefinition.Style>
-			</RowDefinition>
+			</RowDefinition>-->
+			<RowDefinition Height="auto" />
 		</Grid.RowDefinitions>
+
 		<ListBox x:Name="logList" Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}"
 				 Style="{DynamicResource PPSnListBoxStyle}" ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"
 				 ScrollViewer.HorizontalScrollBarVisibility="Disabled" AlternationCount="2">
@@ -250,20 +252,38 @@
 				</DataTemplate>
 			</ListBox.ItemTemplate>
 		</ListBox>
+
 		<Grid Grid.Row="1" Margin="0,6,0,6">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="auto"/>
-				<ColumnDefinition/>
+				<ColumnDefinition Width="6*"/>
 				<ColumnDefinition Width="auto"/>
+				<ColumnDefinition Width="4*"/>
 			</Grid.ColumnDefinitions>
-			<Label Content="Console: " Margin="0,0,6,0"/>
-			<TextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" FontFamily="Consolas" VerticalContentAlignment="Center">
+			<TextBlock Text="Console:" Foreground="{DynamicResource PPSnWindowForegroundBrush}" VerticalAlignment="Center" />
+			<ui:PpsTextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" Height="23" Margin="6,0">
 				<TextBox.InputBindings>
 					<KeyBinding Command="{x:Static ApplicationCommands.Open}" Key="Return" />
 					<KeyBinding Command="{x:Static ApplicationCommands.Delete}" Key="Esc" />
 				</TextBox.InputBindings>
-			</TextBox>
-			<ui:PpsButton Grid.Column="2" Content="Ausführen" Margin="6,0,0,0" Command="{x:Static ApplicationCommands.Open}" />
+			</ui:PpsTextBox>
+			<ui:PpsButton Grid.Column="2" Content="Ausführen" Command="{x:Static ApplicationCommands.Open}" />
+			<CheckBox Grid.Column="3" x:Name="ShowStatisticCheckBox" Content="Statistiken anzeigen" Margin="32,0,0,0">
+				<CheckBox.Style>
+					<Style TargetType="{x:Type CheckBox}" BasedOn="{StaticResource PPSnCheckBoxStyle}">
+						<Setter Property="Visibility" Value="Collapsed" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding collectStatistics}" Value="True">
+								<Setter Property="Visibility" Value="Visible" />
+							</DataTrigger>
+							<DataTrigger Binding="{Binding collectStatistics}" Value="False">
+								<Setter Property="IsChecked" Value="False" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</CheckBox.Style>
+			</CheckBox>
+
 		</Grid>
 		
 		<!--<ToggleButton Grid.Row="2" x:Name="ShowStatisticsButton" IsChecked="True" Focusable="False">
@@ -278,7 +298,75 @@
 				</Style>
 			</ToggleButton.Style>
 		</ToggleButton>-->
-		
+
+		<ItemsControl Grid.Row="2" ItemsSource="{Binding Statistics}" Focusable="False">
+			<ItemsControl.Style>
+				<Style TargetType="{x:Type ItemsControl}">
+					<Setter Property="Visibility" Value="Collapsed" />
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding IsChecked, ElementName=ShowStatisticCheckBox}" Value="True">
+							<Setter Property="Visibility" Value="Visible" />
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</ItemsControl.Style>
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<UniformGrid Columns="3" />
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
+			<ItemsControl.ItemContainerStyle>
+				<Style TargetType="{x:Type ContentPresenter}">
+					<Setter Property="Margin" Value="0,6,24,0" />
+				</Style>
+			</ItemsControl.ItemContainerStyle>
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<Grid HorizontalAlignment="Left" TextBlock.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
+						<ListBox MaxWidth="404" Height="90" ItemsSource="{Binding History}"
+								 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+								 BorderBrush="{DynamicResource PPSnPopUpBorderBrush}" Background="Transparent">
+							<ListBox.ItemContainerStyle>
+								<Style TargetType="{x:Type ListBoxItem}">
+									<Setter Property="Margin" Value="1,0,1,0"/>
+									<Setter Property="Focusable" Value="False"/>
+									<Setter Property="Template">
+										<Setter.Value>
+											<ControlTemplate TargetType="{x:Type ListBoxItem}">
+												<ContentPresenter VerticalAlignment="Bottom" />
+											</ControlTemplate>
+										</Setter.Value>
+									</Setter>
+								</Style>
+							</ListBox.ItemContainerStyle>
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<Rectangle Fill="{DynamicResource PPSnMarkerBrush}" Width="6" Height="{Binding}" MinHeight=".1" VerticalAlignment="Bottom">
+										<Rectangle.LayoutTransform>
+											<ScaleTransform ScaleY="{Binding RelativeSource={RelativeSource AncestorType=ListBox,Mode=FindAncestor}, Path=DataContext.Factor}" />
+										</Rectangle.LayoutTransform>
+									</Rectangle>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+							<ListBox.ItemsPanel>
+								<ItemsPanelTemplate>
+									<VirtualizingStackPanel IsItemsHost="True" Orientation="Horizontal" />
+								</ItemsPanelTemplate>
+							</ListBox.ItemsPanel>
+							<!--<ListBox.ItemsPanel>
+								<ItemsPanelTemplate>
+									<UniformGrid Columns="{Binding HistoryCount}" />
+								</ItemsPanelTemplate>
+							</ListBox.ItemsPanel>-->
+						</ListBox>
+						<TextBlock Text="{Binding MaxValue}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6,0,0,0"/>
+						<TextBlock Text="{Binding Name}" HorizontalAlignment="Center" VerticalAlignment="Top" />
+						<TextBlock Text="{Binding CurrentValue}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,6,0"/>
+					</Grid>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+
 		<!--<ListBox Grid.Row="3" ItemsSource="{Binding Statistics}">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
@@ -288,7 +376,10 @@
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid>
-						<ListBox Style="{x:Null}" ItemsSource="{Binding History}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" Width="510" Height="80">
+						<ListBox Style="{x:Null}" 
+								 ItemsSource="{Binding History}"
+								 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+								 ScrollViewer.VerticalScrollBarVisibility="Disabled" Width="510" Height="80">
 							<ListBox.ItemTemplate>
 								<DataTemplate>
 									<Rectangle Fill="Red" StrokeThickness="0"
@@ -320,5 +411,6 @@
 				</DataTemplate>
 			</ListBox.ItemTemplate>
 		</ListBox>-->
+
 	</Grid>
 </UserControl>
