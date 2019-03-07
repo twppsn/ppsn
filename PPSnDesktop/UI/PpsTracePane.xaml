@@ -256,9 +256,9 @@
 		<Grid Grid.Row="1" Margin="0,6,0,6">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="auto"/>
-				<ColumnDefinition Width="6*"/>
+				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="auto"/>
-				<ColumnDefinition Width="4*"/>
+				<ColumnDefinition Width="auto"/>
 			</Grid.ColumnDefinitions>
 			<TextBlock Text="Console:" Foreground="{DynamicResource PPSnWindowForegroundBrush}" VerticalAlignment="Center" />
 			<ui:PpsTextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" Height="23" Margin="6,0">
