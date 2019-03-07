@@ -212,7 +212,6 @@
 	</Style>
 
 	<Style TargetType="ui:PpsWindowPaneStrip">
-		<Setter Property="MinWidth" Value="100" />
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
@@ -222,8 +221,10 @@
 		</Setter>
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="ui:PpsWindowPaneStrip">
-					<ItemsPresenter />
+				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStrip}">
+					<Border BorderBrush="Black" BorderThickness="0,0,0,1" Padding="100,0,200,0">
+						<ItemsPresenter />
+					</Border>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
@@ -232,10 +233,32 @@
 	<Style TargetType="ui:PpsWindowPaneStripItem">
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="ui:PpsWindowPaneStripItem">
-					<Border BorderThickness="3" BorderBrush="Red" MinHeight="20">
-						<ContentPresenter />
+				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStripItem}">
+					<Border x:Name="itemBorder" BorderBrush="Black" BorderThickness="0,0,1,1" Margin="0,0,0,-1">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition />
+								<ColumnDefinition Width="Auto" />
+							</Grid.ColumnDefinitions>
+							<ContentPresenter TextBlock.FontSize="14" />
+							<uiC:PpsButton x:Name="closeButton"
+										   Width="36" Foreground="Black"
+										   Grid.Column="1"
+										   Command="{x:Static ui:PpsMainWindow.ClosePaneCommand}"
+										   CommandParameter="{TemplateBinding Content}"
+										   GeometryName="closePane"
+										   DisplayMode="Image"
+										   GeometrySize="24"
+										   ImageOpacity="1" />
+						</Grid>
 					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsSelected" Value="True">
+							<Setter TargetName="itemBorder" Property="Background"  Value="Yellow"/>
+							<Setter TargetName="itemBorder" Property="BorderThickness"  Value="0,0,1,0"/>
+						</Trigger>
+
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>

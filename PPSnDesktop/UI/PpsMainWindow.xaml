@@ -83,13 +83,10 @@
 			<RowDefinition Height="200" />
 		</Grid.RowDefinitions>
 
-		<uiL:PpsWindowPaneStrip x:Name="paneStrip" Grid.Row="4" Grid.ColumnSpan="3" ItemsSource="{Binding PaneHosts}" Height="50">
+		<uiL:PpsWindowPaneStrip x:Name="paneStrip" Grid.Row="4" Grid.ColumnSpan="3" ItemsSource="{Binding PaneHosts}" Height="36">
 			<uiL:PpsWindowPaneStrip.ItemTemplate>
 				<DataTemplate DataType="ui:PpsWindowPaneHost">
-					<TextBlock VerticalAlignment="Center">
-						<Run Text="Tab:"/>
-						<Run Text="{Binding Title,Mode=OneWay}" />
-					</TextBlock>
+					<TextBlock Text="{Binding Title,Mode=OneWay}" VerticalAlignment="Center" />
 				</DataTemplate>
 			</uiL:PpsWindowPaneStrip.ItemTemplate>
 		</uiL:PpsWindowPaneStrip>
