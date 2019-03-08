@@ -18,8 +18,10 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Neo.IronLua;
 
 namespace TecWare.PPSn.UI
@@ -41,6 +43,10 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsWindowPaneHost ------------------------------------------------
 
 	/// <summary>Host for panes to support Progress, Load and CharmBar.</summary>
+	[
+	TemplatePart(Name = "PART_CharmBar", Type = typeof(PpsWindowPaneCharmBarControl)),
+	TemplatePart(Name = "PART_Control", Type = typeof(ContentPresenter))
+	]
 	internal class PpsWindowPaneHost : Control, IPpsWindowPaneHost
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -67,6 +73,7 @@ namespace TecWare.PPSn.UI
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private PpsWindowPaneCharmBarControl charmBarControl;
+		private ContentPresenter controlPresenter;
 		private readonly PpsWindowPaneHostState paneState;
 
 		public PpsWindowPaneHost()
@@ -86,6 +93,7 @@ namespace TecWare.PPSn.UI
 			base.OnApplyTemplate();
 
 			charmBarControl = (PpsWindowPaneCharmBarControl)GetTemplateChild("PART_CharmBar");
+			controlPresenter = (ContentPresenter)GetTemplateChild("PART_Control");
 
 			var currentPane = CurrentPane;
 			if (currentPane != null)
@@ -94,6 +102,15 @@ namespace TecWare.PPSn.UI
 				charmBarControl.HelpKey = currentPane.HelpKey;
 			}
 		} // proc OnApplyTemplate
+
+		public void OnActivated()
+		{
+			Dispatcher.BeginInvoke(new Action<bool>(UpdateFocus), DispatcherPriority.ApplicationIdle, true);
+		} // proc OnActivated
+		
+		public void OnDeactivated()
+		{
+		} // proc OnDeactivated
 
 		public async Task<IPpsWindowPane> LoadAsync(IPpsWindowPaneManager paneManager, Type paneType, LuaTable arguments)
 		{
@@ -122,6 +139,9 @@ namespace TecWare.PPSn.UI
 
 				SetValue(currentPanePropertyKey, newPane);
 
+				// update focus, if it takes to long to load the pane
+				UpdateFocus(false);
+
 				return newPane;
 			}
 			catch
@@ -133,6 +153,22 @@ namespace TecWare.PPSn.UI
 				throw;
 			}
 		} // func LoadAsync
+
+		private void UpdateFocus(bool setLogical)
+		{
+			if (setLogical) // activate the element within the parent focus scope
+				FocusManager.SetFocusedElement(FocusManager.GetFocusScope(this), this);
+
+			// if the element is focused
+			if (controlPresenter != null && IsFocused && !IsKeyboardFocusWithin)
+			{
+				var moveKeyboard = FocusManager.GetFocusedElement(controlPresenter);
+				if (moveKeyboard == null)
+					controlPresenter?.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+				else
+					Keyboard.Focus(moveKeyboard);
+			}
+		} // proc UpdateFocus
 
 		public async Task<bool> UnloadAsync(bool? commit)
 		{

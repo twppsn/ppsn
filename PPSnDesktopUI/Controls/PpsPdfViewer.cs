@@ -281,6 +281,11 @@ namespace TecWare.PPSn.Controls
 			dpiScaleFactor = new Point(dpi.DpiScaleX, dpi.DpiScaleY);
 		} // ctor
 
+		static PpsPdfViewer()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsPdfViewer), new FrameworkPropertyMetadata(typeof(PpsPdfViewer)));
+		}
+
 		#endregion
 
 		#region -- Unit Calculation ---------------------------------------------------
