@@ -424,12 +424,27 @@ namespace TecWare.PPSn
 
 		#region -- Command Service ----------------------------------------------------
 
+		private static bool inCommandExecute = false;
+
 		private static void CanExecuteCommandHandlerImpl(object sender, PpsShellWpf environment, CanExecuteRoutedEventArgs e)
 		{
 			if (e.Command is PpsCommandBase c)
 			{
 				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
 				e.Handled = true;
+			}
+			else if (!inCommandExecute && !e.Handled && e.Command is RoutedCommand rc && e.Source != Keyboard.FocusedElement)
+			{
+				inCommandExecute = true;
+				try
+				{
+					e.CanExecute = rc.CanExecute(e.Parameter, Keyboard.FocusedElement);
+					e.Handled = true;
+				}
+				finally
+				{
+					inCommandExecute = false;
+				}
 			}
 		} // func CanExecuteCommandHandlerImpl
 
@@ -439,6 +454,19 @@ namespace TecWare.PPSn
 			{
 				c.ExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
 				e.Handled = true;
+			}
+			else if (!inCommandExecute && !e.Handled && e.Command is RoutedCommand rc && e.Source != Keyboard.FocusedElement)
+			{
+				inCommandExecute = true;
+				try
+				{
+					rc.Execute(e.Parameter, Keyboard.FocusedElement);
+					e.Handled = true;
+				}
+				finally
+				{
+					inCommandExecute = false;
+				}
 			}
 		} // func CanExecuteCommandHandlerImpl
 

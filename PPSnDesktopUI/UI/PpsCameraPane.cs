@@ -20,7 +20,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AForge.Video.DirectShow;
 
-namespace TecWare.PPSn.Controls
+namespace TecWare.PPSn.UI
 {
 	/// <summary>This Class adds a German Translation to the Enum of CameraControlProperty</summary>
 	public static class CameraControlPropertyExtensions

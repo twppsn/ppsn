@@ -80,7 +80,6 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-			
 		private readonly PpsTraceEnvironment traceEnvironment;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -94,19 +93,24 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
-			Commands.AddButton("100;100", "save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
-			Commands.AddButton("100;200", "copy", ApplicationCommands.Copy, "Kopieren", "Kopiere markierte Einträge in die Zwischenablage.");
+			Commands.AddButton("100;100", "save",
+				new PpsCommand(
+					ctx => SaveTrace(),
+					ctx => true
+				),
+				"Speichern", "Speichere alle Log in eine Datei."
+			);
+			Commands.AddButton("100;200", "copy",
+				new PpsCommand(
+					ctx => CopyToClipboard(ctx.Parameter),
+					ctx => ctx.Parameter != null || logList.SelectedItem != null
+				),
+				"Kopieren", "Kopiere markierte Einträge in die Zwischenablage."
+			);
 
 			CommandBindings.Add(new CommandBinding(ApplicationCommands.Open,
 				(sender, e) => { ExecuteCommandAsync(ConsoleCommandTextBox.Text).SpawnTask(Environment); e.Handled = true; },
 				(sender, e) => e.CanExecute = !String.IsNullOrEmpty(ConsoleCommandTextBox.Text)
-			));
-			CommandBindings.Add(new CommandBinding(ApplicationCommands.SaveAs,
-				(sender, e) => { SaveTrace(); e.Handled = true; }
-			));
-			CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy,
-				(sender, e) => { CopyToClipboard(e.Parameter); e.Handled = true; },
-				(sender, e) => e.CanExecute = e.Parameter != null || logList.SelectedItem != null
 			));
 		} // ctor
 
@@ -243,6 +247,15 @@ namespace TecWare.PPSn.UI
 		} // proc CopyToClipboard
 
 		#endregion
+
+		protected override void OnKeyUp(KeyEventArgs e)
+		{
+			if (e.Key == Key.F6)
+			{
+				var l = ApplicationCommands.SaveAs.CanExecute(null, null);
+			}
+			base.OnKeyUp(e);
+		}
 		
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
