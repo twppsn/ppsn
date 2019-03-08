@@ -14,15 +14,14 @@
 //
 #endregion
 using System;
-using System.ComponentModel;
 using System.IO;
 using System.Threading.Tasks;
-using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using Neo.IronLua;
 using Neo.Markdig.Xaml;
 using TecWare.DE.Data;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -128,31 +127,23 @@ namespace TecWare.PPSn.UI
 		public bool IsDirty { get => isDirty; set => Set(ref isDirty, value, nameof(IsDirty)); }
 	} // class PpsMarkdownDocumentModel
 
-	public partial class PpsMarkdownPane : UserControl, IPpsWindowPane
+	public partial class PpsMarkdownPane : PpsWindowPaneControl
 	{
-		private readonly IPpsWindowPaneHost paneHost;
-
-		private readonly PpsUICommandCollection commands;
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="paneHost"></param>
 		public PpsMarkdownPane(IPpsWindowPaneHost paneHost)
+			: base(paneHost)
 		{
-			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
-
-			commands = new PpsUICommandCollection
-			{
-				AddLogicalChildHandler = AddLogicalChild,
-				RemoveLogicalChildHandler = RemoveLogicalChild
-			};
-
-			commands.AddButton("100;100", "save", ApplicationCommands.Save, "Speichern", "Speichert die Änderungen");
+			Commands.AddButton("100;100", "save", ApplicationCommands.Save, "Speichern", "Speichert die Änderungen");
 
 			InitializeComponent();
 		} // ctor
 
 		/// <summary></summary>
-		public void Dispose()
+		/// <param name="disposing"></param>
+		protected override void Dispose(bool disposing)
 		{
 			if (DataContext is IDisposable d)
 			{
@@ -161,17 +152,20 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc Dispose
 
-		#region -- IPpsWindowPane -----------------------------------------------------
+		#endregion
 
-		private event PropertyChangedEventHandler PropertyChanged;
-		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add => PropertyChanged += value; remove => PropertyChanged -= value; }
+		#region -- WindowPane ---------------------------------------------------------
 
-		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args)
-		{
-			return PpsWindowPaneCompareResult.Reload;
-		} // func IPpsWindowPane.CompareArguments
+		/// <summary></summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		protected override PpsWindowPaneCompareResult CompareArguments(LuaTable args)
+			=> PpsWindowPaneCompareResult.Reload;
 
-		async Task IPpsWindowPane.LoadAsync(LuaTable args)
+		/// <summary></summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		protected override async Task OnLoadAsync(LuaTable args)
 		{
 			DataContext = null;
 
@@ -179,34 +173,23 @@ namespace TecWare.PPSn.UI
 			await doc.LoadAsync(this);
 			DataContext = doc;
 
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IPpsWindowPane.CurrentData)));
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IPpsWindowPane.SubTitle)));
-		} // proc IPpsWindowPane.LoadAsync
+			NotifyWindowPanePropertyChanged(nameof(IPpsWindowPane.CurrentData));
+		} // proc OnLoadAsync
 
-		Task<bool> IPpsWindowPane.UnloadAsync(bool? commit)
+		/// <summary></summary>
+		/// <param name="commit"></param>
+		/// <returns></returns>
+		protected override Task<bool> OnUnloadAsync(bool? commit)
 		{
 			CurrentDocument?.Dispose();
 			return Task.FromResult(true);
-		} // func IPpsWindowPane.UnloadAsync
-
-		string IPpsWindowPane.Title => "Markdown Editor";
-		string IPpsWindowPane.SubTitle => CurrentDocument?.Data.Name;
+		} // proc OnUnloadAsync
 
 		private PpsMarkdownDocumentModel CurrentDocument => (PpsMarkdownDocumentModel)DataContext;
 
-		object IPpsWindowPane.Image => null;
-
-		bool IPpsWindowPane.HasSideBar => false;
-
-		object IPpsWindowPane.Control => this;
-		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
-
-		PpsUICommandCollection IPpsWindowPane.Commands => commands;
-
-		IPpsDataInfo IPpsWindowPane.CurrentData => CurrentDocument?.Data;
-
-		bool IPpsWindowPane.IsDirty => CurrentDocument?.IsDirty ?? false;
-		string IPpsWindowPane.HelpKey => "PpsMarkdownPane";
+		/// <summary></summary>
+		protected override IPpsDataInfo CurrentData
+			=> CurrentDocument?.Data;
 
 		#endregion
 

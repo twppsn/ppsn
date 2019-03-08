@@ -134,6 +134,7 @@
     <Compile Include="UI\PpsPdfViewerPane.xaml.cs">
       <DependentUpon>PpsPdfViewerPane.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\PpsWindowPaneControl.cs" />
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />

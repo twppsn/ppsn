@@ -14,29 +14,19 @@
 //
 #endregion
 using System;
-using System.Collections;
-using System.ComponentModel;
 using System.IO;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
 	/// <summary>Panel to view pdf-data.</summary>
-	public partial class PpsPdfViewerPane : UserControl, IPpsWindowPane
+	public partial class PpsPdfViewerPane : PpsWindowPaneControl
 	{
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsPdfViewerPane), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(OnSubTitleChanged)));
-		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsPdfViewerPane), new FrameworkPropertyMetadata(null));
-		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-
-		private readonly IPpsWindowPaneHost paneHost;
-
 		private PdfReader loadedDocument = null;
 		private IPpsDataInfo dataInfo = null;
 		private IPpsDataObject dataAccess = null;
@@ -45,26 +35,13 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Pane constructor, that gets called by the host.</summary>
 		public PpsPdfViewerPane(IPpsWindowPaneHost paneHost)
+			: base(paneHost)
 		{
-			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
-
-			var commands = new PpsUICommandCollection
-			{
-				AddLogicalChildHandler = AddLogicalChild,
-				RemoveLogicalChildHandler = RemoveLogicalChild
-			};
-			SetValue(commandsPropertyKey, commands);
-
 			InitializeComponent();
 
 			// add commands
-			commands.AddButton("100;100", "print", new PpsAsyncCommand(ctx => PrintAsync(ctx), ctx => CanPrint(ctx)), "Drucken", "Druckt die Pdf-Datei.");
+			Commands.AddButton("100;100", "print", new PpsAsyncCommand(ctx => PrintAsync(ctx), ctx => CanPrint(ctx)), "Drucken", "Druckt die Pdf-Datei.");
 		} // ctor
-
-		/// <summary></summary>
-		public void Dispose()
-		{
-		} // proc Dispose
 
 		#endregion
 
@@ -117,7 +94,7 @@ namespace TecWare.PPSn.UI
 						SetLoadedDocument(await Task.Run(() => PdfReader.Open(bytes, name: dataInfo.Name)));
 					}
 
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IPpsWindowPane.CurrentData)));
+					NotifyWindowPanePropertyChanged(nameof(IPpsWindowPane.CurrentData));
 				}
 				catch
 				{
@@ -204,51 +181,34 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- IPpsWindowPane implementation --------------------------------------
+		#region -- WindowPane - implementation ----------------------------------------
 
-		private event PropertyChangedEventHandler PropertyChanged;
-		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add => PropertyChanged += value; remove => PropertyChanged -= value; }
-		
-		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args)
-		{
-			return PpsWindowPaneCompareResult.Reload;
-		} // func IPpsWindowPane.CompareArguments
+		/// <summary>
+		/// </summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		protected override PpsWindowPaneCompareResult CompareArguments(LuaTable args)
+			=> PpsWindowPaneCompareResult.Reload;
 
-		Task IPpsWindowPane.LoadAsync(LuaTable args)
+		/// <summary></summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		protected override Task OnLoadAsync(LuaTable args)
 		{
 			ClosePdf();
 			return OpenPdfAsync(args.GetMemberValue("Object") ?? args.GetMemberValue("FileName"));
-		} // proc IPpsWindowPane.LoadAsync
+		} // proc OnLoadAsync
 
-		Task<bool> IPpsWindowPane.UnloadAsync(bool? commit)
+		/// <summary></summary>
+		/// <param name="commit"></param>
+		/// <returns></returns>
+		protected override Task<bool> OnUnloadAsync(bool? commit)
 			=> Task.FromResult(ClosePdf());
 
-		string IPpsWindowPane.Title => "PDF-Viewer";
-		object IPpsWindowPane.Image => null;
-
-		bool IPpsWindowPane.HasSideBar => false;
-		bool IPpsWindowPane.IsDirty => false;
-
-		object IPpsWindowPane.Control => this;
-		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
-		string IPpsWindowPane.HelpKey => null;
-		IPpsDataInfo IPpsWindowPane.CurrentData => dataInfo;
+		/// <summary></summary>
+		protected override IPpsDataInfo CurrentData 
+			=> dataInfo;
 
 		#endregion
-
-		/// <summary>Extent logical child collection with commands</summary>
-		protected override IEnumerator LogicalChildren
-			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
-
-		private static void OnSubTitleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsPdfViewerPane)d).OnSubTitleChanged();
-
-		private void OnSubTitleChanged()
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SubTitle)));
-
-		/// <summary>Sub-title of the pdf data.</summary>
-		public string SubTitle { get => (string)GetValue(SubTitleProperty); set => SetValue(SubTitleProperty, value); }
-		/// <summary>Command bar.</summary>
-		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 	} // class PpsPdfViewerPane 
 }

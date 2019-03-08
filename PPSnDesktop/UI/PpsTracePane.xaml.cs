@@ -29,6 +29,7 @@ using System.Windows.Input;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -36,7 +37,7 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsTracePane -----------------------------------------------------
 
 	/// <summary>Pane to display trace messages.</summary>
-	internal sealed partial class PpsTracePane : UserControl, IPpsWindowPane
+	internal sealed partial class PpsTracePane : PpsWindowPaneControl
 	{
 		#region -- class PpsTraceEnvironment ------------------------------------------
 
@@ -79,34 +80,22 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		// ignore any property changed, because all properties are static
-		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
 			
-		private readonly IPpsWindowPaneHost paneHost;
 		private readonly PpsTraceEnvironment traceEnvironment;
-		private readonly PpsUICommandCollection commands;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Trace pane constructor</summary>
 		/// <param name="paneHost"></param>
 		public PpsTracePane(IPpsWindowPaneHost paneHost)
+			: base(paneHost)
 		{
-			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
 			traceEnvironment = new PpsTraceEnvironment(paneHost);
 
 			InitializeComponent();
 
-			Resources[PpsWindowPaneHelper.WindowPaneService] = this;
-
-			commands = new PpsUICommandCollection
-			{
-				AddLogicalChildHandler = AddLogicalChild,
-				RemoveLogicalChildHandler = RemoveLogicalChild
-			};
-
-			commands.AddButton("100;100", "save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
-			commands.AddButton("100;200", "copy", ApplicationCommands.Copy, "Kopieren", "Kopiere markierte Einträge in die Zwischenablage.");
+			Commands.AddButton("100;100", "save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
+			Commands.AddButton("100;200", "copy", ApplicationCommands.Copy, "Kopieren", "Kopiere markierte Einträge in die Zwischenablage.");
 
 			CommandBindings.Add(new CommandBinding(ApplicationCommands.Open,
 				(sender, e) => { ExecuteCommandAsync(ConsoleCommandTextBox.Text).SpawnTask(Environment); e.Handled = true; },
@@ -117,44 +106,15 @@ namespace TecWare.PPSn.UI
 			));
 			CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy,
 				(sender, e) => { CopyToClipboard(e.Parameter); e.Handled = true; },
-				(sender, e) => {
-					e.CanExecute = e.Parameter != null || logList.SelectedItem != null;
-					}
+				(sender, e) => e.CanExecute = e.Parameter != null || logList.SelectedItem != null
 			));
 		} // ctor
 
-		void IDisposable.Dispose()
-		{
-		} // proc Dispose
-
-		#endregion
-
-		#region -- IPpsWindowPane members ---------------------------------------------
-
-		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args)
-			=> PpsWindowPaneCompareResult.Same; // only one trace, per window
-
-		Task IPpsWindowPane.LoadAsync(LuaTable args)
+		protected override Task OnLoadAsync(LuaTable args)
 		{
 			DataContext = Environment; // set environment to DataContext
 			return Task.CompletedTask;
-		} // proc LoadAsync
-
-		Task<bool> IPpsWindowPane.UnloadAsync(bool? commit)
-			=> Task.FromResult(true);
-
-		string IPpsWindowPane.Title => "System";
-		string IPpsWindowPane.SubTitle => "Anwendungsereignisse";
-		object IPpsWindowPane.Image => null;
-
-		object IPpsWindowPane.Control => this;
-		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
-		PpsUICommandCollection IPpsWindowPane.Commands => commands;
-
-		bool IPpsWindowPane.HasSideBar => false;
-		bool IPpsWindowPane.IsDirty => false;
-		IPpsDataInfo IPpsWindowPane.CurrentData => null;
-		string IPpsWindowPane.HelpKey => "PpsnTracePane";
+		} // proc OnLoadAsync
 
 		#endregion
 
@@ -285,10 +245,10 @@ namespace TecWare.PPSn.UI
 		#endregion
 		
 		protected override IEnumerator LogicalChildren
-			=> Procs.CombineEnumerator(base.LogicalChildren, commands?.GetEnumerator());
+			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
 
 		/// <summary>Access the environment</summary>
-		public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager.Shell;
+		public PpsEnvironment Environment => (PpsEnvironment)PaneHost.PaneManager.Shell;
 	} // class PpsTracePane
 
 	#endregion
