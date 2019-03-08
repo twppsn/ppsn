@@ -16,10 +16,17 @@
 								<ColumnDefinition />
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
-							<ContentPresenter Grid.Column="0" Content="{TemplateBinding Control}" />
-							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" x:Name="PART_CharmBar" Focusable="False"/>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="38" />
+								<RowDefinition />
+							</Grid.RowDefinitions>
+							<Border Grid.ColumnSpan="2" Background="{DynamicResource PPSnSideBarBackgroundBrush}" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,1">
+								<ToolBar ItemsSource="{TemplateBinding Commands}" Style="{DynamicResource PpsPaneToolBarStyle}" />
+							</Border>
+							<ContentPresenter Grid.Row="1" Content="{TemplateBinding Control}" />
+							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" Focusable="False"/>
 						</Grid>
-						<ContentControl Content="{Binding PaneProgress.CurrentText, RelativeSource={RelativeSource TemplatedParent}}">
+						<ContentControl Grid.ColumnSpan="2" Grid.RowSpan="2" Content="{Binding PaneProgress.CurrentText, RelativeSource={RelativeSource TemplatedParent}}">
 							<ContentControl.Resources>
 								<SolidColorBrush x:Key="ProgressBackGroundBrush" Color="{DynamicResource PPSnDesktopColor}" Opacity=".75" />
 							</ContentControl.Resources>
@@ -224,28 +231,29 @@
 					<Grid>
 						<Grid.RowDefinitions>
 							<RowDefinition />
-							<RowDefinition Height="7" />
+							<RowDefinition Height="2" />
 						</Grid.RowDefinitions>
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="33"/>
 							<ColumnDefinition />
 							<ColumnDefinition Width="224"/>
 						</Grid.ColumnDefinitions>
-						
-						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="Yellow" BorderBrush="Black" BorderThickness="0,1,0,0" />
-						
-						<Rectangle Width="1" HorizontalAlignment="Right" Fill="Black" />
+
+						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="{DynamicResource PPSnSideBarBackgroundBrush}" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,1,0,0" />
+
+						<Rectangle Width="1" HorizontalAlignment="Right" Fill="{DynamicResource PPSnSeparatorBrush}" />
 						
 						<DockPanel Grid.Column="1">
 							<Border DockPanel.Dock="Left" Padding="0,0,32,0">
 								<ItemsPresenter />
 							</Border>
-							<uiC:PpsButton Width="32" DockPanel.Dock="Left"
+							<uiC:PpsButton DockPanel.Dock="Left"
+										   Width="32"
 										   Margin="-32,0,0,0"
-										   Foreground="Black"
+										   Foreground="{DynamicResource PPSnWindowForegroundBrush}"
 										   GeometryName="chevronDownThin"
 										   DisplayMode="Image"
-										   GeometrySize="24"
+										   GeometrySize="20"
 										   ImageOpacity="1" />
 							<Rectangle Fill="Transparent">
 								<Rectangle.Tag>
@@ -312,7 +320,7 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStripItem}">
-					<Border x:Name="itemBorder" BorderBrush="Black" BorderThickness="0,0,1,1" Margin="0,0,0,-1">
+					<Border x:Name="itemBorder" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,0,1,1" Margin="0,0,0,-1">
 						<Grid Background="Transparent">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition />
@@ -325,7 +333,7 @@
 										   CommandParameter="{TemplateBinding Content}"
 										   Width="32"
 										   Visibility="Hidden"
-										   Foreground="Black"
+										   Foreground="{DynamicResource PPSnWindowForegroundBrush}"
 										   GeometryName="closePane"
 										   DisplayMode="Image"
 										   GeometrySize="24"
@@ -334,16 +342,16 @@
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsSelected" Value="True">
-							<Setter TargetName="itemBorder" Property="Background"  Value="Yellow"/>
-							<Setter TargetName="itemBorder" Property="BorderThickness"  Value="0,0,1,0"/>
-							<Setter TargetName="itemBorder" Property="Padding" Value="0,0,0,1"/>
+							<Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource PPSnSideBarBackgroundBrush}" />
+							<Setter TargetName="itemBorder" Property="BorderThickness"  Value="0,0,1,0" />
+							<Setter TargetName="itemBorder" Property="Padding" Value="0,0,0,1" />
 						</Trigger>
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="IsSelected" Value="True" />
 								<Condition SourceName="closeButton" Property="IsEnabled" Value="True" />
 							</MultiTrigger.Conditions>
-							<Setter TargetName="closeButton" Property="Visibility" Value="Visible"/>
+							<Setter TargetName="closeButton" Property="Visibility" Value="Visible" />
 						</MultiTrigger>
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
@@ -351,7 +359,7 @@
 								<Condition Property="IsMouseOver" Value="True" />
 								<Condition SourceName="closeButton" Property="IsEnabled" Value="True" />
 							</MultiTrigger.Conditions>
-							<Setter TargetName="closeButton" Property="Visibility" Value="Visible"/>
+							<Setter TargetName="closeButton" Property="Visibility" Value="Visible" />
 						</MultiTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>

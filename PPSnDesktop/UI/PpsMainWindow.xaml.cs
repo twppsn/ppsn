@@ -112,7 +112,7 @@ namespace TecWare.PPSn.UI
 					(sender, e) =>
 					{
 						e.Handled = true;
-						PART_PaneListPopUp.IsOpen = false;
+						//PART_PaneListPopUp.IsOpen = false;
 						if (e.Parameter is PpsWindowPaneHost paneHost)
 							ActivatePaneHost(paneHost);
 					},
@@ -124,7 +124,7 @@ namespace TecWare.PPSn.UI
 					(sender, e) =>
 					{
 						e.Handled = true;
-						PART_PaneListPopUp.IsOpen = false;
+						//PART_PaneListPopUp.IsOpen = false;
 						if (e.Parameter is PpsWindowPaneHost paneHost && !paneHost.IsFixed)
 							UnloadPaneHostAsync(paneHost, null).AwaitTask();
 					},
