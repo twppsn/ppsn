@@ -80,6 +80,13 @@
 			<uiL:PpsWindowPaneStrip.ItemTemplate>
 				<DataTemplate DataType="ui:PpsWindowPaneHost">
 					<Grid>
+						<Grid.ToolTip>
+							<TextBlock>
+								<Run Text="{Binding Title,Mode=OneWay}" FontWeight="Bold" />
+								<LineBreak/>
+								<Run Text="{Binding SubTitle,Mode=OneWay}" />
+							</TextBlock>
+						</Grid.ToolTip>
 						<ui:PpsGeometryImage GeometryName="{Binding Image, Mode=OneWay, TargetNullValue='gotoPane'}"
 											 GeometryCircled="False"
 											 Width="24"
@@ -89,7 +96,7 @@
 											 VerticalAlignment="Center"
 											 SnapsToDevicePixels="True"
 											 Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
-						<TextBlock Text="{Binding Title,Mode=OneWay}" VerticalAlignment="Center" Margin="34,0,6,0" />
+						<TextBlock Text="{Binding SubTitle,Mode=OneWay}" VerticalAlignment="Center" Margin="34,0,6,0" />
 					</Grid>
 				</DataTemplate>
 			</uiL:PpsWindowPaneStrip.ItemTemplate>

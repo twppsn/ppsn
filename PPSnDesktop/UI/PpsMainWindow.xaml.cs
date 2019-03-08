@@ -34,6 +34,8 @@ namespace TecWare.PPSn.UI
 		public readonly static RoutedCommand PrevPaneCommand = new RoutedCommand("PrevPane", typeof(PpsMainWindow));
 		/// <summary>Go to a secific pane.</summary>
 		public readonly static RoutedCommand GoToPaneCommand = new RoutedCommand("GoToPane", typeof(PpsMainWindow));
+		/// <summary>Create the pane in a single pane window.</summary>
+		public readonly static RoutedCommand UndockPaneCommand = new RoutedCommand("UndockPane", typeof(PpsMainWindow));
 		/// <summary>Close a pane.</summary>
 		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
 
@@ -61,16 +63,6 @@ namespace TecWare.PPSn.UI
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 		
 			#region -- set basic command bindings --
-			CommandBindings.Add(
-				new CommandBinding(LoginCommand,
-					(sender, e) =>
-					{
-						e.Handled = true;
-					},
-					(sender, e) => e.CanExecute = true //!Environment.IsAuthentificated
-				)
-			);
-			
 			CommandBindings.Add(
 				new CommandBinding(TraceLogCommand,
 					async (sender, e) =>
@@ -117,6 +109,17 @@ namespace TecWare.PPSn.UI
 							ActivatePaneHost(paneHost);
 					},
 					(sender, e) => { e.CanExecute = e.Parameter is PpsWindowPaneHost ph; }
+				)
+			);
+			CommandBindings.Add(
+				new CommandBinding(UndockPaneCommand,
+					(sender, e) =>
+					{
+						if (e.Parameter is PpsWindowPaneHost paneHost)
+							UndockWindowPane(paneHost);
+						e.Handled = true;
+					},
+					(sender, e) => { e.CanExecute = e.Parameter is PpsWindowPaneHost ph && ph.IsFixed; }
 				)
 			);
 			CommandBindings.Add(

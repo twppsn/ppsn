@@ -75,7 +75,7 @@ namespace TecWare.PPSn.UI
 			=> CurrentPane != null && CurrentPane.EqualPane(paneType, arguments) ? CurrentPane : null;
 
 		bool IPpsWindowPaneManager.ActivatePane(IPpsWindowPane pane)
-				=> pane == CurrentPane ? Activate() : false;
+			=> pane == CurrentPane ? Activate() : false;
 
 		IPpsWindowPane IPpsWindowPaneManager.FindOpenPane(Type paneType, LuaTable arguments)
 			=> FindOpenPane(paneType, arguments);

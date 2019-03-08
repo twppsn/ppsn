@@ -101,6 +101,8 @@ namespace TecWare.PPSn.UI
 				charmBarControl.CurrentData = currentPane.CurrentData;
 				charmBarControl.HelpKey = currentPane.HelpKey;
 			}
+
+			UpdateFocus(false);
 		} // proc OnApplyTemplate
 
 		public void OnActivated()
@@ -122,27 +124,7 @@ namespace TecWare.PPSn.UI
 				using (var progress = this.DisableUI("Lade..."))
 					await newPane.LoadAsync(arguments);
 
-				newPane.PropertyChanged += CurrentPanePropertyChanged;
-
-				SetValue(titlePropertyKey, newPane.Title);
-				SetValue(subTitlePropertyKey, newPane.SubTitle);
-				SetValue(imagePropertyKey, newPane.Image);
-				SetValue(commandsPropertyKey, newPane.Commands);
-				SetValue(controlPropertyKey, newPane.Control);
-				SetValue(hasPaneSideBarPropertyKey, newPane.HasSideBar);
-
-				if (charmBarControl != null)
-				{
-					charmBarControl.CurrentData = newPane.CurrentData;
-					charmBarControl.HelpKey = newPane.HelpKey;
-				}
-
-				SetValue(currentPanePropertyKey, newPane);
-
-				// update focus, if it takes to long to load the pane
-				UpdateFocus(false);
-
-				return newPane;
+				return SetWindowPane(newPane);
 			}
 			catch
 			{
@@ -160,7 +142,7 @@ namespace TecWare.PPSn.UI
 				FocusManager.SetFocusedElement(FocusManager.GetFocusScope(this), this);
 
 			// if the element is focused
-			if (controlPresenter != null && IsFocused && !IsKeyboardFocusWithin)
+			if (controlPresenter != null && IsFocused && !controlPresenter.IsKeyboardFocusWithin)
 			{
 				var moveKeyboard = FocusManager.GetFocusedElement(controlPresenter);
 				if (moveKeyboard == null)
@@ -177,7 +159,39 @@ namespace TecWare.PPSn.UI
 				return true;
 
 			var r = await pane.UnloadAsync(commit);
+			if (r)
+				ClearWindowPane(pane);
 
+			return r;
+		} // func UnloadAsync
+
+		private IPpsWindowPane SetWindowPane(IPpsWindowPane newPane)
+		{
+			newPane.PropertyChanged += CurrentPanePropertyChanged;
+
+			SetValue(titlePropertyKey, newPane.Title);
+			SetValue(subTitlePropertyKey, newPane.SubTitle);
+			SetValue(imagePropertyKey, newPane.Image);
+			SetValue(commandsPropertyKey, newPane.Commands);
+			SetValue(controlPropertyKey, newPane.Control);
+			SetValue(hasPaneSideBarPropertyKey, newPane.HasSideBar);
+
+			if (charmBarControl != null)
+			{
+				charmBarControl.CurrentData = newPane.CurrentData;
+				charmBarControl.HelpKey = newPane.HelpKey;
+			}
+
+			SetValue(currentPanePropertyKey, newPane);
+
+			// update focus, if it takes to long to load the pane
+			UpdateFocus(false);
+
+			return newPane;
+		} // proc SetWindowPane
+
+		private void ClearWindowPane(IPpsWindowPane pane)
+		{			
 			// remove object from memory
 			pane.PropertyChanged -= CurrentPanePropertyChanged;
 			pane.Dispose();
@@ -189,9 +203,20 @@ namespace TecWare.PPSn.UI
 			// clear document
 			charmBarControl.CurrentData = null;
 			charmBarControl.HelpKey = null;
+		} // proc ClearWindowPane
 
-			return r;
-		} // func UnloadAsync
+		public void MoveWindowPane(PpsWindowPaneHost targetPaneHost)
+		{
+			var pane = CurrentPane;
+			if (pane == null)
+				return;
+
+			// remove window from current host
+			ClearWindowPane(pane);
+
+			// copy window pane to new host
+			targetPaneHost.SetWindowPane(pane);
+		} // proc MoveWindowPane
 
 		private void CurrentPanePropertyChanged(object sender, PropertyChangedEventArgs e)
 		{

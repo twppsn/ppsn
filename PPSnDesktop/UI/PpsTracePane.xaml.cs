@@ -117,7 +117,9 @@ namespace TecWare.PPSn.UI
 			));
 			CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy,
 				(sender, e) => { CopyToClipboard(e.Parameter); e.Handled = true; },
-				(sender, e) => e.CanExecute = e.Parameter != null || logList.SelectedItem != null
+				(sender, e) => {
+					e.CanExecute = e.Parameter != null || logList.SelectedItem != null;
+					}
 			));
 		} // ctor
 

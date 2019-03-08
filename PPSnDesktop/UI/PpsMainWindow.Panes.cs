@@ -516,6 +516,16 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		private void UndockWindowPane(PpsWindowPaneHost paneHost)
+		{
+			var newWindow = new PpsSingleWindow(Environment, false);
+			paneHost.MoveWindowPane(newWindow.paneHost);
+			newWindow.Show();
+
+			RemoveLogicalChild(paneHost);
+			paneHosts.RemovePane(paneHost);
+		} // proc UndockWindowPane
+
 		private static void OnCurrentPaneHostChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsMainWindow)d).OnCurrentPaneHostChanged((PpsWindowPaneHost)e.NewValue, (PpsWindowPaneHost)e.OldValue);
 
