@@ -26,6 +26,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -365,6 +366,8 @@ namespace TecWare.PPSn.UI
 			{
 				// add pane and show it, progress handling should be done by the Load
 				paneHosts.AddPane(newPaneHost, FindPaneHost(arguments.GetMemberValue("RelatedPane") as IPpsWindowPane, false));
+				AddLogicalChild(newPaneHost);
+
 				ActivatePaneHost(newPaneHost);
 
 				// load the pane
@@ -451,6 +454,7 @@ namespace TecWare.PPSn.UI
 						SetValue(currentPaneHostPropertyKey, null);
 				}
 
+				RemoveLogicalChild(paneHost);
 				paneHosts.RemovePane(paneHost);
 
 				return true;
@@ -521,6 +525,7 @@ namespace TecWare.PPSn.UI
 			{
 				// mark unselected
 				Selector.SetIsSelected(paneStrip.ItemContainerGenerator.ContainerFromItem(oldValue), false);
+				oldValue.OnDeactivated();
 			}
 			if (newValue != null)
 			{
@@ -531,6 +536,9 @@ namespace TecWare.PPSn.UI
 
 				// update selection order
 				PushInSelectionOrder(newValue);
+
+				// mark activated
+				newValue.OnActivated();
 			}
 		} // proc OnCurrentPaneHostChanged
 
@@ -557,6 +565,9 @@ namespace TecWare.PPSn.UI
 
 		IEnumerable<IPpsWindowPane> IPpsWindowPaneManager.Panes
 			=> paneHosts.Select(c => c.CurrentPane);
+
+		protected override IEnumerator LogicalChildren
+			=> Procs.CombineEnumerator(base.LogicalChildren, paneHosts.GetEnumerator());
 
 		public static IValueConverter PaneHostToImage { get; } = new RenderHostPaneConverter();
 	} // class PpsMainWindow

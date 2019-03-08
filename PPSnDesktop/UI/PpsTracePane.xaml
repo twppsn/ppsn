@@ -8,7 +8,8 @@
              xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
 			 xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			 mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300" Background="Transparent">
+             d:DesignHeight="300" d:DesignWidth="300" Background="Transparent"
+			 FocusManager.FocusedElement="{Binding ElementName=ConsoleCommandTextBox,Mode=OneTime}">
 	<UserControl.Resources>
 		<sys:Double x:Key="maxScrollHeight">300</sys:Double>
 		<sys:Double x:Key="collapsedScrollHeight">19</sys:Double>

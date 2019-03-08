@@ -16,8 +16,8 @@
 								<ColumnDefinition />
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
-							<ContentPresenter Grid.Column="0" Content="{TemplateBinding Control}" />
-							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" x:Name="PART_CharmBar" Focusable="False"/>
+							<ContentPresenter x:Name="PART_Control" Grid.Column="0" Content="{TemplateBinding Control}" FocusManager.IsFocusScope="true" KeyboardNavigation.TabNavigation="Cycle" />
+							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" x:Name="PART_CharmBar"/>
 						</Grid>
 						<ContentControl Content="{Binding PaneProgress.CurrentText, RelativeSource={RelativeSource TemplatedParent}}">
 							<ContentControl.Resources>
