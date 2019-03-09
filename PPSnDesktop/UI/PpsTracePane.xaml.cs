@@ -81,7 +81,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		private readonly PpsTraceEnvironment traceEnvironment;
-
+		
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Trace pane constructor</summary>
