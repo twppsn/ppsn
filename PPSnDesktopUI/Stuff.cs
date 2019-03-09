@@ -30,10 +30,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Xml.Linq;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
@@ -457,7 +459,23 @@ namespace TecWare.PPSn
 
 		internal static void PrintEventTreeToConsole(DependencyObject current)
 				=> Debug.Print(GetDependencyObjectTree(new StringBuilder("UI Tree:").AppendLine(), "U ", current, GetUIParent).ToString());
-	
+
+		/// <summary></summary>
+		/// <param name="ui"></param>
+		/// <param name="shell"></param>
+		/// <param name="target"></param>
+		/// <param name="command"></param>
+		public static void AddCommandBinding(this UIElement ui, PpsShellWpf shell, object target, PpsCommandBase command)
+			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, target, command));
+
+		/// <summary></summary>
+		/// <param name="ui"></param>
+		/// <param name="shell"></param>
+		/// <param name="command"></param>
+		/// <param name="commandImpl"></param>
+		public static void AddCommandBinding(this UIElement ui, PpsShellWpf shell, RoutedCommand command, PpsCommandBase commandImpl)
+			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, command, commandImpl));
+
 		#region -- remove after update DES --
 
 		#endregion

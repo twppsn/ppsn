@@ -93,25 +93,29 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
-			Commands.AddButton("100;100", "save",
+			Commands.AddButton("100;100", "save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
+			Commands.AddButton("100;200", "copy", ApplicationCommands.Copy, "Kopieren", "Kopiere markierte Einträge in die Zwischenablage.");
+
+			this.AddCommandBinding(Environment, ApplicationCommands.SaveAs,
 				new PpsCommand(
-					ctx => SaveTrace(),
-					ctx => true
-				),
-				"Speichern", "Speichere alle Log in eine Datei."
-			);
-			Commands.AddButton("100;200", "copy",
-				new PpsCommand(
-					ctx => CopyToClipboard(ctx.Parameter),
-					ctx => ctx.Parameter != null || logList.SelectedItem != null
-				),
-				"Kopieren", "Kopiere markierte Einträge in die Zwischenablage."
+					 ctx => SaveTrace()
+				)
 			);
 
-			CommandBindings.Add(new CommandBinding(ApplicationCommands.Open,
-				(sender, e) => { ExecuteCommandAsync(ConsoleCommandTextBox.Text).SpawnTask(Environment); e.Handled = true; },
-				(sender, e) => e.CanExecute = !String.IsNullOrEmpty(ConsoleCommandTextBox.Text)
-			));
+			this.AddCommandBinding(Environment, ApplicationCommands.Copy,
+				new PpsCommand(
+					 ctx => CopyToClipboard(ctx.Parameter),
+					 ctx => CanCopyToClipboard(ctx.Parameter)
+				)
+			);
+
+			this.AddCommandBinding(
+				Environment, ApplicationCommands.Open,
+				new PpsAsyncCommand(
+					ctx => ExecuteCommandAsync(ConsoleCommandTextBox.Text),
+					ctx => !String.IsNullOrEmpty(ConsoleCommandTextBox.Text)
+				)
+			);
 		} // ctor
 
 		protected override Task OnLoadAsync(LuaTable args)
@@ -239,6 +243,9 @@ namespace TecWare.PPSn.UI
 			}
 		} // func TraceToString
 
+		private bool CanCopyToClipboard(object item)
+			=> item != null || logList.SelectedItem != null;
+
 		private void CopyToClipboard(object item)
 		{
 			var clipText = TraceToString(item ?? logList.SelectedItem);
@@ -248,15 +255,6 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		protected override void OnKeyUp(KeyEventArgs e)
-		{
-			if (e.Key == Key.F6)
-			{
-				var l = ApplicationCommands.SaveAs.CanExecute(null, null);
-			}
-			base.OnKeyUp(e);
-		}
-		
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
 

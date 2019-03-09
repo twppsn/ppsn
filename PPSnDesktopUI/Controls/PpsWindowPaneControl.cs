@@ -124,7 +124,8 @@ namespace TecWare.PPSn.Controls
 			return new PpsUICommandCollection
 			{
 				AddLogicalChildHandler = AddLogicalChild,
-				RemoveLogicalChildHandler = RemoveLogicalChild
+				RemoveLogicalChildHandler = RemoveLogicalChild,
+				DefaultCommandTarget = this
 			};
 		} // func CreateCommandBar
 

@@ -29,15 +29,15 @@ namespace TecWare.PPSn.UI
 	public partial class PpsMainWindow : PpsWindow
 	{
 		/// <summary>Move to next pane.</summary>
-		public readonly static RoutedCommand NextPaneCommand = new RoutedCommand("NextPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand NextPaneCommand = new RoutedUICommand("Nächstes", "NextPane", typeof(PpsMainWindow));
 		/// <summary>Move to previous pane.</summary>
-		public readonly static RoutedCommand PrevPaneCommand = new RoutedCommand("PrevPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand PrevPaneCommand = new RoutedUICommand("Vorheriges", "PrevPane", typeof(PpsMainWindow));
 		/// <summary>Go to a secific pane.</summary>
-		public readonly static RoutedCommand GoToPaneCommand = new RoutedCommand("GoToPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand GoToPaneCommand = new RoutedUICommand("Gehe zu", "GoToPane", typeof(PpsMainWindow));
 		/// <summary>Create the pane in a single pane window.</summary>
-		public readonly static RoutedCommand UndockPaneCommand = new RoutedCommand("UndockPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand UndockPaneCommand = new RoutedUICommand("InFenster", "UndockPane", typeof(PpsMainWindow));
 		/// <summary>Close a pane.</summary>
-		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand ClosePaneCommand = new RoutedUICommand("Schließen", "ClosePane", typeof(PpsMainWindow), new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.F4, ModifierKeys.Control) }));
 
 		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
 		

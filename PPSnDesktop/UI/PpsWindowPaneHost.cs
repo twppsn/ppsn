@@ -84,6 +84,7 @@ namespace TecWare.PPSn.UI
 		public PpsWindowPaneHost(PpsWindowPaneHostState paneState)
 		{
 			this.paneState = paneState;
+
 			SetValue(paneProgressPropertyKey, new PpsProgressStack(Dispatcher));
 			SetValue(isFixedPropertyKey, paneState == PpsWindowPaneHostState.Fixed);
 		} // ctor
