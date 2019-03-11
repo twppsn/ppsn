@@ -30,10 +30,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Xml.Linq;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
@@ -417,25 +419,21 @@ namespace TecWare.PPSn
 			}
 		} // func ChangeTypeWithConverter
 
-		internal static void PrintVisualTreeToConsole(DependencyObject current)
+		private static StringBuilder GetDependencyObjectTree(StringBuilder sb, string prefix, DependencyObject current, Func<DependencyObject, DependencyObject> next)
 		{
-			Debug.Print("Visual Tree:");
-			while (current != null)
+			while(current != null)
 			{
-				Debug.Print("V {0}: {1}", current.GetType().Name, current.GetName() ?? "<null>");
-				current = GetVisualParent(current);
+				sb.AppendFormat("{0}{1}: {2}", prefix, current.GetType().Name, current.GetName() ?? "<null>").AppendLine();
+				current = next(current);
 			}
-		} // proc PrintVisualTreeToConsole
+			return sb;
+		} // func GetDependencyObjectTree
+
+		internal static void PrintVisualTreeToConsole(DependencyObject current)
+			=> Debug.Print(GetDependencyObjectTree(new StringBuilder("Visual Tree:").AppendLine(), "V ", current, GetVisualParent).ToString());
 
 		internal static void PrintLogicalTreeToConsole(DependencyObject current)
-		{
-			Debug.Print("Logical Tree:");
-			while (current != null)
-			{
-				Debug.Print("L {0}: {1}", current.GetType().Name, current.GetName() ?? "<null>");
-				current = GetLogicalParent(current);
-			}
-		} // proc PrintVisualTreeToConsole
+			=> Debug.Print(GetDependencyObjectTree(new StringBuilder("Logical Tree:").AppendLine(), "L ", current, GetLogicalParent).ToString());
 
 		private static DependencyObject InvokeGetUIParent<T>(DependencyObject current)
 			where T : class
@@ -460,14 +458,23 @@ namespace TecWare.PPSn
 		} // func GetUIParent
 
 		internal static void PrintEventTreeToConsole(DependencyObject current)
-		{
-			Debug.Print("UI Tree:");
-			while (current != null)
-			{
-				Debug.Print("U {0}: {1}", current.GetType().Name, current.GetName() ?? "<null>");
-				current = GetUIParent(current);
-			}
-		} // proc PrintVisualTreeToConsole
+				=> Debug.Print(GetDependencyObjectTree(new StringBuilder("UI Tree:").AppendLine(), "U ", current, GetUIParent).ToString());
+
+		/// <summary></summary>
+		/// <param name="ui"></param>
+		/// <param name="shell"></param>
+		/// <param name="target"></param>
+		/// <param name="command"></param>
+		public static void AddCommandBinding(this UIElement ui, PpsShellWpf shell, object target, PpsCommandBase command)
+			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, target, command));
+
+		/// <summary></summary>
+		/// <param name="ui"></param>
+		/// <param name="shell"></param>
+		/// <param name="command"></param>
+		/// <param name="commandImpl"></param>
+		public static void AddCommandBinding(this UIElement ui, PpsShellWpf shell, RoutedCommand command, PpsCommandBase commandImpl)
+			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, command, commandImpl));
 
 		#region -- remove after update DES --
 

@@ -208,9 +208,9 @@
 					<Grid Background="Transparent" TextBlock.FontSize="14">
 						<Grid.ContextMenu>
 							<ContextMenu>
-								<MenuItem Command="ApplicationCommands.Copy" CommandParameter="{Binding}"/>
+								<MenuItem Command="{x:Static ApplicationCommands.Copy}" CommandParameter="{Binding}"/>
 								<Separator />
-								<MenuItem Command="ApplicationCommands.SaveAs" />
+								<MenuItem Command="{x:Static ApplicationCommands.SaveAs}" />
 							</ContextMenu>
 						</Grid.ContextMenu>
 						<Grid.ColumnDefinitions>

@@ -54,6 +54,7 @@ namespace TecWare.PPSn.Controls
 		protected override void OnInitialized(EventArgs e)
 		{
 			var env = PpsShellWpf.GetShell(this);
+
 			CommandManager.AddExecutedHandler(this, env.DefaultExecutedHandler);
 			CommandManager.AddCanExecuteHandler(this, env.DefaultCanExecuteHandler);
 

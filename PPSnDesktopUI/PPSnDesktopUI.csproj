@@ -101,7 +101,7 @@
   <ItemGroup>
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
-    <Compile Include="Controls\PpsCameraPane.cs" />
+    <Compile Include="UI\PpsCameraPane.cs" />
     <Compile Include="Controls\PpsCircularListBox.cs" />
     <Compile Include="Controls\PpsComboBox.cs" />
     <Compile Include="Controls\PpsGeometryImage.cs" />

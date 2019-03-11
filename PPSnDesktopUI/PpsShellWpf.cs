@@ -426,7 +426,7 @@ namespace TecWare.PPSn
 
 		private static void CanExecuteCommandHandlerImpl(object sender, PpsShellWpf environment, CanExecuteRoutedEventArgs e)
 		{
-			if (e.Command is PpsCommandBase c)
+			if (!e.Handled && e.Command is PpsCommandBase c)
 			{
 				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
 				e.Handled = true;
@@ -435,7 +435,7 @@ namespace TecWare.PPSn
 
 		private static void ExecutedCommandHandlerImpl(object sender, PpsShellWpf environment, ExecutedRoutedEventArgs e)
 		{
-			if (e.Command is PpsCommandBase c)
+			if (!e.Handled && e.Command is PpsCommandBase c)
 			{
 				c.ExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
 				e.Handled = true;

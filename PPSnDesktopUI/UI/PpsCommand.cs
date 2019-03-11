@@ -194,6 +194,48 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		/// <param name="commandContext"></param>
 		public abstract void ExecuteCommand(PpsCommandContext commandContext);
+
+		/// <summary></summary>
+		/// <param name="shell"></param>
+		/// <param name="target"></param>
+		/// <param name="command"></param>
+		/// <returns></returns>
+		public static CommandBinding CreateBinding(PpsShellWpf shell, object target, PpsCommandBase command)
+		{
+			return new CommandBinding(command,
+				(sender, e) =>
+				{
+					command.ExecuteCommand(new PpsCommandContext(shell, target ?? e.OriginalSource, e.Source, e.Parameter));
+					e.Handled = true;
+				},
+				(sender, e) =>
+				{
+					e.CanExecute = command.CanExecuteCommand(new PpsCommandContext(shell, target ?? e.OriginalSource, e.Source, e.Parameter));
+					e.Handled = true;
+				}
+			);
+		} // func CreateBinding
+
+		/// <summary></summary>
+		/// <param name="shell"></param>
+		/// <param name="command"></param>
+		/// <param name="commandImpl"></param>
+		/// <returns></returns>
+		public static CommandBinding CreateBinding(PpsShellWpf shell, RoutedCommand command, PpsCommandBase commandImpl)
+		{
+			return new CommandBinding(command,
+				(sender, e) =>
+				{
+					commandImpl.ExecuteCommand(new PpsCommandContext(shell, e.OriginalSource, e.Source, e.Parameter));
+					e.Handled = true;
+				},
+				(sender, e) =>
+				{
+					e.CanExecute = commandImpl.CanExecuteCommand(new PpsCommandContext(shell, e.OriginalSource, e.Source, e.Parameter));
+					e.Handled = true;
+				}
+			);
+		} // func CreateBinding
 	} // class PpsCommandBase
 
 	#endregion
@@ -354,7 +396,7 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		/// <param name="command"></param>
 		/// <param name="canExecute"></param>
-		public PpsAsyncCommand(Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute)
+		public PpsAsyncCommand(Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute = null)
 			: base(canExecute)
 		{
 			this.command = command;
@@ -727,7 +769,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>Command collection to hold a list of commands.</summary>
 	public class PpsUICommandCollection : Collection<PpsUICommand>, INotifyCollectionChanged
 	{
-		private static PpsUICommand[] seperator = new PpsUICommand[] { null };
+		private static readonly PpsUICommand[] seperator = new PpsUICommand[] { null };
 
 		/// <summary>Called if the command is changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
@@ -736,6 +778,8 @@ namespace TecWare.PPSn.UI
 		public PpsUICommandLogicalChildDelegate AddLogicalChildHandler;
 		/// <summary></summary>
 		public PpsUICommandLogicalChildDelegate RemoveLogicalChildHandler;
+		/// <summary></summary>
+		public IInputElement DefaultCommandTarget;
 		
 		/// <summary>Add a simple command button to the collection.</summary>
 		/// <param name="order"></param>
@@ -743,14 +787,17 @@ namespace TecWare.PPSn.UI
 		/// <param name="command"></param>
 		/// <param name="displayText"></param>
 		/// <param name="description"></param>
+		/// <param name="commandParameter"></param>
 		/// <returns></returns>
-		public PpsUICommandButton AddButton(string order, string image, ICommand command, string displayText, string description)
+		public PpsUICommandButton AddButton(string order, string image, ICommand command, string displayText, string description, object commandParameter = null)
 		{
 			var tmp = new PpsUICommandButton()
 			{
 				Order = PpsCommandOrder.Parse(order),
 				Image = image,
 				Command = command,
+				CommandParameter = commandParameter,
+				CommandTarget = DefaultCommandTarget,
 				DisplayText = displayText,
 				Description = description
 			};

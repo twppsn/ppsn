@@ -247,31 +247,32 @@ namespace TecWare.PPSn.UI
 			return r;
 		} // func ActivatePaneHost
 
-		public bool ActivateNextPane(bool forward)
+		public bool ActivateNextPane(bool forward, bool useSelectionOrder)
 		{
 			var currentPaneHost = CurrentPaneHost;
 			if (currentPaneHost == null)
 				return false;
 
 			// get index
-			var index = paneHosts.IndexOf(currentPaneHost);
+			var hostList = useSelectionOrder ? SelectionOrder : paneHosts;
+			var index = ((IList)hostList).IndexOf(currentPaneHost);
 			if (forward)
 			{
 				index++;
-				if (index >= paneHosts.Count)
+				if (index >= hostList.Count)
 					index = 0;
 			}
 			else
 			{
 				index--;
 				if (index < 0)
-					index = paneHosts.Count - 1;
+					index = hostList.Count - 1;
 			}
 
-			if (currentPaneHost == paneHosts[index])
+			if (currentPaneHost == hostList[index])
 				return false;
 
-			return ActivatePaneHost(paneHosts[index]);
+			return ActivatePaneHost(hostList[index]);
 		} // func ActivateNextPane
 
 		private static void OnWindowPaneHostItemSelected(object sender, RoutedEventArgs e)
@@ -449,7 +450,7 @@ namespace TecWare.PPSn.UI
 				if (CurrentPaneHost == paneHost)
 				{
 					if (paneHosts.Count > 1)
-						ActivateNextPane(true);
+						ActivateNextPane(true, true);
 					else
 						SetValue(currentPaneHostPropertyKey, null);
 				}
@@ -479,6 +480,12 @@ namespace TecWare.PPSn.UI
 				return true;
 			}
 		} // proc UnloadPaneAsync
+
+		private PpsWindowPaneHost GetPaneFromParameter(object parameter)
+			=> parameter is PpsWindowPaneHost paneHost ? paneHost : CurrentPaneHost;
+
+		private bool CanUnloadPane(PpsWindowPaneHost paneHost)
+			=> !(paneHost is null || paneHost.PaneProgress.IsActive || paneHost.IsFixed);
 
 		#endregion
 
@@ -518,12 +525,18 @@ namespace TecWare.PPSn.UI
 
 		private void UndockWindowPane(PpsWindowPaneHost paneHost)
 		{
-			var newWindow = new PpsSingleWindow(Environment, false);
-			paneHost.MoveWindowPane(newWindow.paneHost);
-			newWindow.Show();
+			// deactive pane
+			if (CurrentPaneHost == paneHost)
+				ActivateNextPane(false, true);
 
+			// remove pane from current scope
 			RemoveLogicalChild(paneHost);
 			paneHosts.RemovePane(paneHost);
+
+			// create new window and move pane
+			var newWindow = new PpsSingleWindow(Environment, false);
+			paneHost.MoveWindowPane(newWindow, newWindow.paneHost);
+			newWindow.Show();
 		} // proc UndockWindowPane
 
 		private static void OnCurrentPaneHostChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -534,7 +547,9 @@ namespace TecWare.PPSn.UI
 			if (oldValue != null)
 			{
 				// mark unselected
-				Selector.SetIsSelected(paneStrip.ItemContainerGenerator.ContainerFromItem(oldValue), false);
+				var container = paneStrip.ItemContainerGenerator.ContainerFromItem(oldValue);
+				if (container != null)
+					Selector.SetIsSelected(container, false);
 				oldValue.OnDeactivated();
 			}
 			if (newValue != null)

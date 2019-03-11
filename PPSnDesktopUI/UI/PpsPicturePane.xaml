@@ -11,7 +11,7 @@ under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
 specific language governing permissions and limitations under the Licence.
 -->
-<UserControl x:Class="TecWare.PPSn.UI.PpsPicturePane"
+<uiC:PpsWindowPaneControl x:Class="TecWare.PPSn.UI.PpsPicturePane"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -20,6 +20,7 @@ specific language governing permissions and limitations under the Licence.
 			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls"
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 mc:Ignorable="d" 
+			Title="Bildeditor"
              d:DesignHeight="300" d:DesignWidth="300">
 	<Image Source="{Binding CurrentImage}" />
 
@@ -667,4 +668,4 @@ specific language governing permissions and limitations under the Licence.
 			</ToggleButton.Template>
 		</ToggleButton>
 	</Grid>-->
-</UserControl>
+</uiC:PpsWindowPaneControl>

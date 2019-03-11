@@ -84,6 +84,7 @@ namespace TecWare.PPSn.UI
 		public PpsWindowPaneHost(PpsWindowPaneHostState paneState)
 		{
 			this.paneState = paneState;
+
 			SetValue(paneProgressPropertyKey, new PpsProgressStack(Dispatcher));
 			SetValue(isFixedPropertyKey, paneState == PpsWindowPaneHostState.Fixed);
 		} // ctor
@@ -101,6 +102,9 @@ namespace TecWare.PPSn.UI
 				charmBarControl.CurrentData = currentPane.CurrentData;
 				charmBarControl.HelpKey = currentPane.HelpKey;
 			}
+
+			CommandManager.AddExecutedHandler(this, PaneManager.Shell.DefaultExecutedHandler);
+			CommandManager.AddCanExecuteHandler(this, PaneManager.Shell.DefaultCanExecuteHandler);
 
 			UpdateFocus(false);
 		} // proc OnApplyTemplate
@@ -205,7 +209,7 @@ namespace TecWare.PPSn.UI
 			charmBarControl.HelpKey = null;
 		} // proc ClearWindowPane
 
-		public void MoveWindowPane(PpsWindowPaneHost targetPaneHost)
+		public void MoveWindowPane(IPpsWindowPaneManager targetPaneManager, PpsWindowPaneHost targetPaneHost)
 		{
 			var pane = CurrentPane;
 			if (pane == null)
@@ -215,6 +219,7 @@ namespace TecWare.PPSn.UI
 			ClearWindowPane(pane);
 
 			// copy window pane to new host
+			targetPaneHost.PaneManager = targetPaneManager;
 			targetPaneHost.SetWindowPane(pane);
 		} // proc MoveWindowPane
 

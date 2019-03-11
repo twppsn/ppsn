@@ -7,6 +7,8 @@
 	xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
 	<Style TargetType="ui:PpsWindowPaneHost">
+		<Setter Property="FocusManager.IsFocusScope" Value="True" />
+		<Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ui:PpsWindowPaneHost">
@@ -23,7 +25,7 @@
 							<Border Grid.ColumnSpan="2" Background="{DynamicResource PPSnSideBarBackgroundBrush}" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,1"  FocusManager.IsFocusScope="true" KeyboardNavigation.TabNavigation="Cycle">
 								<ToolBar ItemsSource="{TemplateBinding Commands}" Style="{DynamicResource PpsPaneToolBarStyle}" />
 							</Border>
-							<ContentPresenter Grid.Row="1" x:Name="PART_Control" Content="{TemplateBinding Control}" FocusManager.IsFocusScope="true" KeyboardNavigation.TabNavigation="Cycle" />
+							<ContentPresenter Grid.Row="1" x:Name="PART_Control" Content="{TemplateBinding Control}" />
 							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" FocusManager.IsFocusScope="True"/>
 						</Grid>
 						<ContentControl Grid.ColumnSpan="2" Grid.RowSpan="2" Content="{Binding PaneProgress.CurrentText, RelativeSource={RelativeSource TemplatedParent}}">

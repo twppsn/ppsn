@@ -17,18 +17,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Neo.IronLua;
-using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -50,7 +48,7 @@ namespace TecWare.PPSn.UI
 	#endregion
 
 	/// <summary>Pciture view and editor for one image or a list of images</summary>
-	public partial class PpsPicturePane : UserControl, IPpsWindowPane
+	public partial class PpsPicturePane : PpsWindowPaneControl
 	{
 		#region -- HasList - Property -------------------------------------------------
 
@@ -115,13 +113,6 @@ namespace TecWare.PPSn.UI
 		/// <summary>Picture source argument for the load process</summary>
 		public const string PicturePaneSourceArgument = "Source";
 
-		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-
-		private readonly IPpsWindowPaneHost paneHost;
-		private readonly PpsUICommandCollection commands;
-
-		private string subTitle = null;
 		private IPpsDataInfo currentPictureInfo = null;
 		private IPpsDataObject currentPicture = null;
 		private IPpsPicturePaneSource picturePaneSource = null; // gets the picture pane source
@@ -131,19 +122,9 @@ namespace TecWare.PPSn.UI
 		/// <summary>initializes the cameras, the settings and the events</summary>
 		/// <param name="paneHost"></param>
 		public PpsPicturePane(IPpsWindowPaneHost paneHost)
+			:base(paneHost)
 		{
-			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
-
 			InitializeComponent();
-
-			// add command
-			commands = new PpsUICommandCollection()
-			{
-				AddLogicalChildHandler = AddLogicalChild,
-				RemoveLogicalChildHandler = RemoveLogicalChild
-			};
-
-			Resources[PpsWindowPaneHelper.WindowPaneService] = this;
 
 			DataContext = this;
 
@@ -167,14 +148,14 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		/// <summary></summary>
-		public void Dispose()
-		{
-		} // proc Dispose
+		/// <param name="disposing"></param>
+		protected override void Dispose(bool disposing) 
+			=> base.Dispose(disposing);
 
 		/// <summary>Loads the content of the panel</summary>
 		/// <param name="args">Load arguments for the picture pane, it is possible to set one object and/or a list of objects.</param>
 		/// <returns></returns>
-		public async Task LoadAsync(LuaTable args)
+		protected override async Task OnLoadAsync(LuaTable args)
 		{
 			// check for a picture source
 			picturePaneSource = args[PicturePaneSourceArgument] as IPpsPicturePaneSource;
@@ -204,25 +185,22 @@ namespace TecWare.PPSn.UI
 				await OpenPictureAsync(args["Object"] as IPpsDataInfo);
 
 			if (args["SubTitle"] is string subTitle)
-			{
-				this.subTitle = subTitle;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IPpsWindowPane.SubTitle)));
-			}
-		} // proc LoadAsync
+				SubTitle = subTitle;
+		} // proc OnLoadAsync
 
 		/// <summary>Used to destroy the Panel - if there a unsaved changes the user is asked</summary>
 		/// <param name="commit">to fulfill the interface</param>
 		/// <returns></returns>
-		public Task<bool> UnloadAsync(bool? commit = null)
+		protected override Task<bool> OnUnloadAsync(bool? commit = null)
 		{
 			Images = null;
 			return ClosePictureAsync(commit);
-		} // func UnloadAsync
+		} // func OnUnloadAsync
 
 		/// <summary></summary>
 		/// <param name="otherArguments"></param>
 		/// <returns></returns>
-		public PpsWindowPaneCompareResult CompareArguments(LuaTable otherArguments)
+		protected override PpsWindowPaneCompareResult CompareArguments(LuaTable otherArguments)
 		{
 			// check source
 			var otherPicturePaneSource = otherArguments[PicturePaneSourceArgument] as IPpsPicturePaneSource;
@@ -261,11 +239,11 @@ namespace TecWare.PPSn.UI
 			// load image
 			currentPictureInfo = open;
 			currentPicture = await open.LoadAsync();
-			currentPicture.DisableUI = () => paneHost.DisableUI("Bild wird bearbeitet...");
+			currentPicture.DisableUI = () => PaneHost.DisableUI("Bild wird bearbeitet...");
 			currentPicture.DataChanged += CurrentImage_DataChanged;
 
 			// update pane host
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IPpsWindowPane.CurrentData)));
+			NotifyWindowPanePropertyChanged(nameof(IPpsWindowPane.CurrentData));
 
 			// load image
 			await RefreshCurrentImageAsync();
@@ -296,7 +274,7 @@ namespace TecWare.PPSn.UI
 			}
 			currentPictureInfo = null;
 
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IPpsWindowPane.CurrentData)));
+			NotifyWindowPanePropertyChanged(nameof(IPpsWindowPane.CurrentData));
 
 			return Task.FromResult(true);
 		} // proc ClosePictureAsync
@@ -306,31 +284,8 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- IPpsWindowPane members ---------------------------------------------
-
-		string IPpsWindowPane.Title => "Bildeditor";
-		string IPpsWindowPane.SubTitle => subTitle;
-		object IPpsWindowPane.Image => null;
-
-		bool IPpsWindowPane.HasSideBar => false;
-		object IPpsWindowPane.Control => this;
-		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
-		PpsUICommandCollection IPpsWindowPane.Commands => commands;
-		string IPpsWindowPane.HelpKey => "PpsPicturePane";
-
-		IPpsDataInfo IPpsWindowPane.CurrentData => currentPictureInfo;
-
-		/// <summary>Is the current loaded image changed.</summary>
-		public bool IsDirty => false;
-
-		#endregion
-
 		/// <summary></summary>
-		protected override IEnumerator LogicalChildren
-			=> Procs.CombineEnumerator(base.LogicalChildren, commands?.GetEnumerator());
-
-		/// <summary></summary>
-		public PpsShellWpf Shell => paneHost.PaneManager.Shell;
+		public PpsShellWpf Shell => PaneHost.PaneManager.Shell;
 
 
 

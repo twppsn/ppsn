@@ -21,6 +21,7 @@ using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
@@ -29,15 +30,23 @@ namespace TecWare.PPSn.UI
 	public partial class PpsMainWindow : PpsWindow
 	{
 		/// <summary>Move to next pane.</summary>
-		public readonly static RoutedCommand NextPaneCommand = new RoutedCommand("NextPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand NextPaneCommand = new RoutedUICommand("Nächstes", "NextPane", typeof(PpsMainWindow),
+				new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.Right, ModifierKeys.Control | ModifierKeys.Alt) })
+		);
 		/// <summary>Move to previous pane.</summary>
-		public readonly static RoutedCommand PrevPaneCommand = new RoutedCommand("PrevPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand PrevPaneCommand = new RoutedUICommand("Vorheriges", "PrevPane", typeof(PpsMainWindow),
+				new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.Left, ModifierKeys.Control | ModifierKeys.Alt) })
+		);
 		/// <summary>Go to a secific pane.</summary>
-		public readonly static RoutedCommand GoToPaneCommand = new RoutedCommand("GoToPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand GoToPaneCommand = new RoutedUICommand("Gehe zu", "GoToPane", typeof(PpsMainWindow));
 		/// <summary>Create the pane in a single pane window.</summary>
-		public readonly static RoutedCommand UndockPaneCommand = new RoutedCommand("UndockPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand UndockPaneCommand = new RoutedUICommand("InFenster", "UndockPane", typeof(PpsMainWindow), 
+			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.F5, ModifierKeys.Control) })
+		);
 		/// <summary>Close a pane.</summary>
-		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand ClosePaneCommand = new RoutedUICommand("Schließen", "ClosePane", typeof(PpsMainWindow), 
+			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.F4, ModifierKeys.Control) })
+		);
 
 		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
 		
@@ -61,77 +70,49 @@ namespace TecWare.PPSn.UI
 			
 			// initialize settings
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
-		
+
 			#region -- set basic command bindings --
-			CommandBindings.Add(
-				new CommandBinding(TraceLogCommand,
-					async (sender, e) =>
-					{
-						e.Handled = true;
-						await OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewPane, null);
-					}
+			this.AddCommandBinding(Environment, TraceLogCommand,
+				new PpsAsyncCommand(
+					ctx => OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewPane)
 				)
 			);
 
-			CommandBindings.Add(
-				new CommandBinding(NextPaneCommand,
-					(sender, e) =>
-					{
-						e.Handled = true;
-						ActivateNextPane(true);
-					},
-					(sender, e) =>
-					{
-						e.CanExecute = paneHosts.IndexOf(CurrentPaneHost) < PaneHosts.Count - 1;
-					}
+			this.AddCommandBinding(Environment, NextPaneCommand,
+				new PpsCommand(
+					ctx => ActivateNextPane(true, false),
+					ctx => paneHosts.IndexOf(CurrentPaneHost) < PaneHosts.Count - 1
 				)
 			);
-			CommandBindings.Add(
-				new CommandBinding(PrevPaneCommand,
-					(sender, e) =>
-					{
-						e.Handled = true;
-						ActivateNextPane(false);
-					},
-					(sender, e) =>
-					{
-						e.CanExecute = paneHosts.IndexOf(CurrentPaneHost) > 0;
-					}
+			this.AddCommandBinding(Environment, PrevPaneCommand,
+				new PpsCommand(
+					ctx => ActivateNextPane(false, false),
+					ctx => paneHosts.IndexOf(CurrentPaneHost) > 0
 				)
 			);
-			CommandBindings.Add(
-				new CommandBinding(GoToPaneCommand,
-					(sender, e) =>
+			this.AddCommandBinding(Environment, GoToPaneCommand,
+				new PpsCommand(
+					ctx =>
 					{
-						e.Handled = true;
-						//PART_PaneListPopUp.IsOpen = false;
-						if (e.Parameter is PpsWindowPaneHost paneHost)
+						if (ctx.Parameter is PpsWindowPaneHost paneHost)
 							ActivatePaneHost(paneHost);
 					},
-					(sender, e) => { e.CanExecute = e.Parameter is PpsWindowPaneHost ph; }
+					ctx => ctx.Parameter is PpsWindowPaneHost 
 				)
 			);
-			CommandBindings.Add(
-				new CommandBinding(UndockPaneCommand,
-					(sender, e) =>
-					{
-						if (e.Parameter is PpsWindowPaneHost paneHost)
-							UndockWindowPane(paneHost);
-						e.Handled = true;
-					},
-					(sender, e) => { e.CanExecute = e.Parameter is PpsWindowPaneHost ph && ph.IsFixed; }
+
+
+			this.AddCommandBinding(Environment, UndockPaneCommand,
+				new PpsCommand(
+					ctx => UndockWindowPane(GetPaneFromParameter(ctx.Parameter)),
+					ctx => !(GetPaneFromParameter(ctx.Parameter)?.IsFixed ?? true)
 				)
 			);
-			CommandBindings.Add(
-				new CommandBinding(ClosePaneCommand,
-					(sender, e) =>
-					{
-						e.Handled = true;
-						//PART_PaneListPopUp.IsOpen = false;
-						if (e.Parameter is PpsWindowPaneHost paneHost && !paneHost.IsFixed)
-							UnloadPaneHostAsync(paneHost, null).AwaitTask();
-					},
-					(sender, e) => e.CanExecute =  e.Parameter is PpsWindowPaneHost paneHost ? !paneHost.PaneProgress.IsActive && !paneHost.IsFixed : false
+
+			this.AddCommandBinding(Environment, ClosePaneCommand,
+				new PpsAsyncCommand(
+					ctx => UnloadPaneHostAsync(GetPaneFromParameter(ctx.Parameter), null),
+					ctx => CanUnloadPane(GetPaneFromParameter(ctx.Parameter))
 				)
 			);
 

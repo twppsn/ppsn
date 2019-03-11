@@ -80,6 +80,21 @@ namespace TecWare.PPSn.Controls
 		{
 		}
 
+		#if DEBUG
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyUp(KeyEventArgs e)
+		{
+			if (e.Key == Key.F9)
+				StuffUI.PrintLogicalTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+			else if (e.Key == Key.F8)
+				StuffUI.PrintVisualTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+			else if (e.Key == Key.F7)
+				StuffUI.PrintEventTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+			base.OnKeyUp(e);
+		}
+#endif
+
 		/// <summary>Current environment of the window.</summary>
 		public PpsShellWpf Shell
 		{
