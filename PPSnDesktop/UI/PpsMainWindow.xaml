@@ -87,16 +87,17 @@
 								<Run Text="{Binding SubTitle,Mode=OneWay}" />
 							</TextBlock>
 						</Grid.ToolTip>
-						<ui:PpsGeometryImage GeometryName="{Binding Image, Mode=OneWay, TargetNullValue='gotoPane'}"
+						<ui:PpsGeometryImage GeometryName="{Binding Image, Mode=OneWay, TargetNullValue='pane'}"
 											 GeometryCircled="False"
-											 Width="24"
-											 Height="24"
-											 Margin="5,0,0,0"
+											 Width="19"
+											 Height="19"
+											 Margin="6,0,0,0"
 											 HorizontalAlignment="Left"
 											 VerticalAlignment="Center"
 											 SnapsToDevicePixels="True"
-											 Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
-						<TextBlock Text="{Binding SubTitle,Mode=OneWay}" VerticalAlignment="Center" Margin="34,0,6,0" />
+											 Foreground="{DynamicResource PPSnImageBrush}"
+											 Opacity=".75"/>
+						<TextBlock Text="{Binding SubTitle,Mode=OneWay}" MaxWidth="164" VerticalAlignment="Center" Margin="32,0,6,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
 					</Grid>
 				</DataTemplate>
 			</uiL:PpsWindowPaneStrip.ItemTemplate>
@@ -123,16 +124,8 @@
 					</Style.Triggers>
 				</Style>
 			</Grid.Style>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="*"/>
-				<!--Bindings do use type converters though-->
-			</Grid.ColumnDefinitions>
-			<Grid.RowDefinitions>
-				<RowDefinition Height="auto"/>
-				<RowDefinition Height="*"/>
-			</Grid.RowDefinitions>
 
-			<ContentPresenter Grid.Row="1" Content="{Binding CurrentPaneHost, Mode=OneWay}"/>
+			<ContentPresenter Content="{Binding CurrentPaneHost, Mode=OneWay}"/>
 		</Grid>
 
 		<!--StatusBar-->
@@ -301,7 +294,66 @@
 			</Viewbox>
 		</Grid>
 
-		<ui:PpsPopup x:Name="windowPanePopup" Placement="Center">
+		<Popup x:Name="windowPanePopup" Placement="Center" AllowsTransparency="True">
+			<Grid SnapsToDevicePixels="True">
+				<Rectangle Fill="Black" Opacity=".75" />
+				<ListBox x:Name="windowPanePopupListBox" ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True"
+						 Style="{StaticResource PPSnListBoxStyle}"
+						 Background="Transparent" Margin="16" Focusable="False" MaxWidth="636">
+					<ListBox.ItemsPanel>
+						<ItemsPanelTemplate>
+							<WrapPanel Orientation="Horizontal" MaxWidth="{Binding MaxWidth, ElementName=windowPanePopupListBox}"/>
+						</ItemsPanelTemplate>
+					</ListBox.ItemsPanel>
+					<ListBox.ItemTemplate>
+						<DataTemplate DataType="{x:Type uiL:PpsWindowPaneHost}">
+							<Grid Width="200">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="24" />
+									<ColumnDefinition />
+								</Grid.ColumnDefinitions>
+								<Grid.RowDefinitions>
+									<RowDefinition Height="Auto" />
+									<RowDefinition Height="Auto" />
+								</Grid.RowDefinitions>
+								<ui:PpsGeometryImage GeometryName="{Binding Image, Mode=OneWay,TargetNullValue='pane'}" GeometryCircled="False"
+													 Foreground="White" />
+								<TextBlock Grid.Column="1" LineHeight="12" LineStackingStrategy="BlockLineHeight" Margin="3,0,0,0"
+										   Foreground="White" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+									<Run Text="{Binding Title, Mode=OneWay}" FontWeight="Bold" />
+									<LineBreak/>
+									<Run Text="{Binding SubTitle, Mode=OneWay}" />
+								</TextBlock>
+								<Border Grid.ColumnSpan="2" Grid.Row="1" Margin="0,3,0,0" Background="{StaticResource PPSnWindowBackgroundBrush}">
+									<Image Source="{Binding Converter={x:Static uiL:PpsMainWindow.PaneHostToImage}}" />
+								</Border>
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+					<ListBox.ItemContainerStyle>
+						<Style TargetType="{x:Type ListBoxItem}">
+							<Setter Property="Padding" Value="0" />
+							<Setter Property="Template">
+								<Setter.Value>
+									<ControlTemplate TargetType="{x:Type ListBoxItem}">
+										<Border x:Name="border" BorderBrush="Transparent" BorderThickness="2" Background="Transparent" Padding="4">
+											<ContentPresenter />
+										</Border>
+										<ControlTemplate.Triggers>
+											<Trigger Property="IsSelected" Value="True">
+												<Setter TargetName="border" Property="BorderBrush" Value="White" />
+											</Trigger>
+										</ControlTemplate.Triggers>
+									</ControlTemplate>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</ListBox.ItemContainerStyle>
+				</ListBox>
+			</Grid>
+		</Popup>
+		
+		<ui:PpsPopup x:Name="windowPanePopup_A" Placement="Center">
 			<ui:PpsPopupContent Header="Offene Daten">
 				<ListBox ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True" MinHeight="100" MinWidth="100">
 					<ListBox.ItemTemplate>
@@ -327,6 +379,32 @@
 			</ui:PpsPopupContent>
 		</ui:PpsPopup>
 
+
+		<ui:PpsPopup x:Name="windowPanePopup_o" Placement="Center">
+			<ui:PpsPopupContent Header="Offene Daten">
+				<ListBox ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True" MinHeight="100" MinWidth="100">
+					<ListBox.ItemTemplate>
+						<DataTemplate DataType="{x:Type uiL:PpsWindowPaneHost}">
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="80" />
+									<ColumnDefinition />
+								</Grid.ColumnDefinitions>
+								<Grid.RowDefinitions>
+									<RowDefinition />
+									<RowDefinition />
+								</Grid.RowDefinitions>
+
+								<Image Source="{Binding Converter={x:Static uiL:PpsMainWindow.PaneHostToImage}}" />
+
+								<TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}" FontWeight="Bold" />
+								<TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding SubTitle}" />
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+			</ui:PpsPopupContent>
+		</ui:PpsPopup>
 
 	</Grid>
 

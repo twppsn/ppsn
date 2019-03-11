@@ -166,6 +166,28 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		// ToDo: Calculate Width of Current Screen (like WinForm)
+		private double GetScreenWidth()
+		{
+			var presentationSource = PresentationSource.FromVisual(this);
+			var m = presentationSource.CompositionTarget.TransformToDevice;
+			var dpiWidthFactor = m.M11;
+			return SystemParameters.PrimaryScreenWidth * dpiWidthFactor;
+		} // func GetScreenWidth
+
+		private double CalculatePaneHostListMaxWidth(int items)
+		{
+			// ScreenWidth
+			var availableWidth = GetScreenWidth();
+			// reduce Margin
+			availableWidth -= 256;
+			// fixe Breite für ein Item
+			var itemWidth = 212d;
+			// maximale Items Horizontal
+			var maxColumns = Math.Floor(availableWidth / itemWidth);
+			return maxColumns * itemWidth;
+		} // func CalculatePaneHostListColumns
+
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 		{
 			if (e.Key == Key.Tab && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
@@ -175,6 +197,7 @@ namespace TecWare.PPSn.UI
 
 				if (!windowPanePopup.IsOpen)
 				{
+					windowPanePopupListBox.MaxWidth = CalculatePaneHostListMaxWidth(SelectionOrder.Count);
 					windowPanePopup.IsOpen = true; // open popup
 					// move first
 					collectionView.MoveCurrentToFirst();
