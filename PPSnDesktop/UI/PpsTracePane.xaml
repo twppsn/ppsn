@@ -11,6 +11,7 @@
              d:DesignHeight="300" d:DesignWidth="300" Background="Transparent"
 			 Title="System"
 			 SubTitle="Ereignisse"
+			 Image="appEvents"
 			 FocusManager.FocusedElement="{Binding ElementName=ConsoleCommandTextBox,Mode=OneTime}">
 	<UserControl.Resources>
 		<sys:Double x:Key="maxScrollHeight">300</sys:Double>
@@ -168,7 +169,7 @@
 		</local:PpsTraceItemTemplateSelector>
 	</UserControl.Resources>
 
-	<Grid Margin="16,24,16,16">
+	<Grid Margin="16,16,16,16">
 		<Grid.RowDefinitions>
 			<RowDefinition/>
 			<RowDefinition Height="auto"/>
@@ -231,16 +232,18 @@
 											</Canvas>
 											<ControlTemplate.Triggers>
 												<DataTrigger Binding="{Binding Type}" Value="Information">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}"/>
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}" />
+													<Setter TargetName="typeImagePath" Property="Fill" Value="SteelBlue" />
 												</DataTrigger>
 												<DataTrigger Binding="{Binding Type}" Value="Warning">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}"/>
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}" />
 												</DataTrigger>
 												<DataTrigger Binding="{Binding Type}" Value="Fail">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource closeOctagonPathGeometry}"/>
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource closeOctagonPathGeometry}" />
 												</DataTrigger>
 												<DataTrigger Binding="{Binding Type}" Value="Exception">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}"/>
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}" />
+													<Setter TargetName="typeImagePath" Property="Fill" Value="Red" />
 												</DataTrigger>
 											</ControlTemplate.Triggers>
 										</ControlTemplate>
@@ -256,7 +259,7 @@
 			</ListBox.ItemTemplate>
 		</ListBox>
 
-		<Grid Grid.Row="1" Margin="0,6,0,6">
+		<Grid Grid.Row="1" Margin="0,12,0,6">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="auto"/>
 				<ColumnDefinition Width="*"/>
