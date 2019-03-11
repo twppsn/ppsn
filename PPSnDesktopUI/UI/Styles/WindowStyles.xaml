@@ -48,7 +48,6 @@ specific language governing permissions and limitations under the Licence.
 	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="Blue"/>
 	<SolidColorBrush x:Key="PPSnPopUpBorderBrush" Color="DarkBlue"/>
 
-
 	<SolidColorBrush x:Key="PPSnImageBrush" Color="Brown"/>
 	<SolidColorBrush x:Key="PPSnSideBarBackgroundBrush" Color="#445369"/>
 
@@ -62,11 +61,12 @@ specific language governing permissions and limitations under the Licence.
 	<sys:Double x:Key="PPSnPaneBorderSizeLeft">32</sys:Double>
 	<sys:Double x:Key="PPSnPaneBorderSizeRight">32</sys:Double>
 	<sys:Double x:Key="PPSnCharmBarColumnWidth">48</sys:Double>
+
 	<Style x:Key="PpsWindow" TargetType="{x:Type ui:PpsWindow}">
         <Setter Property="WindowStyle" Value="SingleBorderWindow"/>
         <Setter Property="ResizeMode" Value="CanResize"/>
-        <Setter Property="ActiveGlowColor" Value="{StaticResource PPSnWindowActiveGlowColor}"/>
-        <Setter Property="InactiveGlowColor" Value="{StaticResource PPSnWindowInActiveGlowColor}"/>
+        <Setter Property="ActiveGlowColor" Value="{DynamicResource PPSnWindowActiveGlowColor}"/>
+        <Setter Property="InactiveGlowColor" Value="{DynamicResource PPSnWindowInActiveGlowColor}"/>
     </Style>
 
     <Style x:Key="PpsFocusVisualStyle">
