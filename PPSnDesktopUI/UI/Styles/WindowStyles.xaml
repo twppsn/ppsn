@@ -74,7 +74,11 @@ specific language governing permissions and limitations under the Licence.
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Margin="0" StrokeThickness="1" StrokeDashArray="1 2" Stroke="{DynamicResource PPSnWindowForegroundBrush}" RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True"/>
+                    <Rectangle StrokeThickness="1"
+							   StrokeDashArray="1 2"
+							   Stroke="{DynamicResource PPSnMarkerBrush}"
+							   RenderOptions.EdgeMode="Aliased"
+							   SnapsToDevicePixels="True" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
