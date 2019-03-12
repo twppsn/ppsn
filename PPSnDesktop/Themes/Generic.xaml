@@ -3,6 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:ui="clr-namespace:TecWare.PPSn.UI"
 	xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+    xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 	xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
 	<Style TargetType="ui:PpsWindowPaneHost">
@@ -218,7 +219,11 @@
 		</Setter>
 	</Style>
 
+	<SolidColorBrush x:Key="PaneItemSeparatorBrush" Color="{DynamicResource PPSnAccentColor}" Opacity=".15" />
+	<SolidColorBrush x:Key="PaneItemBackgroundBrush" Color="{DynamicResource PPSnWindowHeaderColor}" />
+
 	<Style TargetType="ui:PpsWindowPaneStrip">
+		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
@@ -229,33 +234,58 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStrip}">
-					<Grid>
+					<Grid Background="{StaticResource PaneItemBackgroundBrush}">
 						<Grid.RowDefinitions>
 							<RowDefinition />
 							<RowDefinition Height="2" />
 						</Grid.RowDefinitions>
 						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="33"/>
+							<ColumnDefinition Width="Auto" />
 							<ColumnDefinition />
 							<ColumnDefinition Width="224"/>
 						</Grid.ColumnDefinitions>
 
-						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="{DynamicResource PPSnSideBarBackgroundBrush}" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,1,0,0" />
+						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="{DynamicResource PPSnWindowBackgroundBrush}"
+								BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,1,0,0" />
 
-						<Rectangle Width="1" HorizontalAlignment="Right" Fill="{DynamicResource PPSnSeparatorBrush}" />
-						
+						<Border x:Name="leftBorder" Width="38" BorderThickness="0,0,1,0" BorderBrush="{StaticResource PaneItemSeparatorBrush}" Background="Transparent">
+							<Border.Tag>
+								<uiC:PpsWindowHitTest HitTest="2" />
+							</Border.Tag>
+						</Border>
+
 						<DockPanel Grid.Column="1">
 							<Border DockPanel.Dock="Left" Padding="0,0,32,0">
 								<ItemsPresenter />
 							</Border>
-							<uiC:PpsButton DockPanel.Dock="Left"
-										   Width="32"
-										   Margin="-32,0,0,0"
-										   Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-										   GeometryName="chevronDownThin"
-										   DisplayMode="Image"
-										   GeometrySize="20"
-										   ImageOpacity="1" />
+
+							<ToggleButton x:Name="showPaneListToggleButton" DockPanel.Dock="Left" Width="32" Margin="-32,0,0,0" Focusable="False">
+								<ToggleButton.Style>
+									<Style TargetType="{x:Type ToggleButton}">
+										<Setter Property="Background" Value="Transparent" />
+										<Setter Property="Template">
+											<Setter.Value>
+												<ControlTemplate TargetType="{x:Type ToggleButton}">
+													<Grid Background="{TemplateBinding Background}">
+														<uiC:PpsGeometryImage GeometryName="chevronDownThin" GeometryCircled="False"
+																			  Width="20" Height="20"
+																			  Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
+													</Grid>
+													<ControlTemplate.Triggers>
+														<Trigger Property="IsMouseOver" Value="True">
+															<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+														</Trigger>
+														<Trigger Property="IsPressed" Value="True">
+															<Setter Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}" />
+														</Trigger>
+													</ControlTemplate.Triggers>
+												</ControlTemplate>
+											</Setter.Value>
+										</Setter>
+									</Style>
+								</ToggleButton.Style>
+							</ToggleButton>
+
 							<Rectangle Fill="Transparent">
 								<Rectangle.Tag>
 									<uiC:PpsWindowHitTest HitTest="2" />
@@ -305,11 +335,113 @@
 									   Height="26"
 									   HorizontalAlignment="Right"
 									   VerticalAlignment="Top" />
+
+						<Popup PlacementTarget="{Binding ElementName=showPaneListToggleButton}" Placement="Left" HorizontalOffset="-32" VerticalOffset="38"
+							   IsOpen="{Binding IsChecked, ElementName=showPaneListToggleButton}" MaxHeight="600" StaysOpen="False">
+							<Popup.Resources>
+								<Storyboard x:Key="ClosePopupStoryboard">
+									<BooleanAnimationUsingKeyFrames Storyboard.TargetProperty="IsChecked" Storyboard.Target="{Binding ElementName=showPaneListToggleButton}">
+										<DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+									</BooleanAnimationUsingKeyFrames>
+								</Storyboard>
+							</Popup.Resources>
+							<ListBox ItemsSource="{Binding PaneHosts}" Style="{DynamicResource PPSnListBoxStyle}" BorderThickness="1" BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}" >
+								<ListBox.ItemTemplate>
+									<DataTemplate DataType="{x:Type ui:PpsWindowPaneHost}">
+										<Button Command="{x:Static ui:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}">
+											<Button.Content>
+												<TextBlock Foreground="{DynamicResource PPSnWindowForegroundBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxWidth="300">
+													<Run Text="{Binding Title, Mode=OneWay,Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
+													<Run Text=" "/>
+													<Run Text="{Binding SubTitle, Mode=OneWay, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
+												</TextBlock>
+											</Button.Content>
+											<Button.Style>
+												<Style TargetType="{x:Type Button}">
+													<Setter Property="Template">
+														<Setter.Value>
+															<ControlTemplate TargetType="{x:Type Button}">
+																<Grid Background="Transparent">
+																	<Grid.ColumnDefinitions>
+																		<ColumnDefinition Width="24" />
+																		<ColumnDefinition />
+																	</Grid.ColumnDefinitions>
+																	<uiC:PpsGeometryImage x:Name="CurrentPaneMarker" GeometryName="checked" GeometryCircled="False" Width="16" Visibility="Hidden"/>
+																	<ContentPresenter Grid.Column="1" VerticalAlignment="Center" />
+																</Grid>
+																<ControlTemplate.Triggers>
+																	<DataTrigger Binding="{Binding Control.IsVisible}" Value="True">
+																		<Setter TargetName="CurrentPaneMarker" Property="Visibility" Value="Visible" />
+																	</DataTrigger>
+																</ControlTemplate.Triggers>
+															</ControlTemplate>
+														</Setter.Value>
+													</Setter>
+												</Style>
+											</Button.Style>
+											<Button.Triggers>
+												<EventTrigger RoutedEvent="Button.Click">
+													<BeginStoryboard Storyboard="{StaticResource ClosePopupStoryboard}" />
+												</EventTrigger>
+											</Button.Triggers>
+										</Button>
+									</DataTemplate>
+								</ListBox.ItemTemplate>
+								<ListBox.ItemContainerStyle>
+									<Style TargetType="{x:Type ListBoxItem}">
+										<Setter Property="Background" Value="Transparent" />
+										<Setter Property="Focusable" Value="False" />
+										<Setter Property="Template">
+											<Setter.Value>
+												<ControlTemplate TargetType="{x:Type ListBoxItem}">
+													<Grid Height="36" Background="{TemplateBinding Background}">
+														<Grid.ColumnDefinitions>
+															<ColumnDefinition />
+															<ColumnDefinition Width="32" />
+														</Grid.ColumnDefinitions>
+														<ContentPresenter x:Name="content" />
+														<uiC:PpsButton x:Name="closeButton"
+																	   Grid.Column="1"
+																	   Command="{x:Static ui:PpsMainWindow.ClosePaneCommand}"
+																	   CommandParameter="{TemplateBinding Content}"
+																	   Visibility="Hidden"
+																	   Foreground="{DynamicResource PPSnWindowForegroundBrush}"
+																	   GeometryName="closePane"
+																	   DisplayMode="Image"
+																	   GeometrySize="24"
+																	   ImageOpacity="1">
+															<Button.Triggers>
+																<EventTrigger RoutedEvent="Button.Click">
+																	<BeginStoryboard Storyboard="{StaticResource ClosePopupStoryboard}" />
+																</EventTrigger>
+															</Button.Triggers>
+														</uiC:PpsButton>
+													</Grid>
+													<ControlTemplate.Triggers>
+														<Trigger Property="IsMouseOver" Value="True">
+															<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+														</Trigger>
+														<MultiTrigger>
+															<MultiTrigger.Conditions>
+																<Condition Property="IsMouseOver" Value="True" />
+																<Condition SourceName="closeButton" Property="IsEnabled" Value="True" />
+															</MultiTrigger.Conditions>
+															<Setter TargetName="closeButton" Property="Visibility" Value="Visible" />
+														</MultiTrigger>
+													</ControlTemplate.Triggers>
+												</ControlTemplate>
+											</Setter.Value>
+										</Setter>
+									</Style>
+								</ListBox.ItemContainerStyle>
+							</ListBox>
+						</Popup>
 					</Grid>
 					<ControlTemplate.Triggers>
 						<DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized" >
 							<Setter TargetName="buttonMaximize" Property="GeometryName" Value="windowRestore" />
 							<Setter TargetName="buttonMaximize" Property="ToolTip" Value="Verkleinern" />
+							<Setter TargetName="leftBorder" Property="Visibility" Value="Collapsed" />
 						</DataTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
@@ -321,13 +453,13 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStripItem}">
-					<Border x:Name="itemBorder" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,0,1,1" Margin="0,0,0,-1">
+					<Border x:Name="itemBorder" BorderBrush="{StaticResource PaneItemSeparatorBrush}" BorderThickness="0,0,1,0" Margin="0,0,0,-1">
 						<Grid Background="Transparent">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition />
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
-							<ContentPresenter TextBlock.FontSize="14" />
+							<ContentPresenter />
 							<uiC:PpsButton x:Name="closeButton"
 										   Grid.Column="1"
 										   Command="{x:Static ui:PpsMainWindow.ClosePaneCommand}"
@@ -343,9 +475,7 @@
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsSelected" Value="True">
-							<Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource PPSnSideBarBackgroundBrush}" />
-							<Setter TargetName="itemBorder" Property="BorderThickness"  Value="0,0,1,0" />
-							<Setter TargetName="itemBorder" Property="Padding" Value="0,0,0,1" />
+							<Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource PPSnWindowBackgroundBrush}" />
 						</Trigger>
 						<MultiTrigger>
 							<MultiTrigger.Conditions>

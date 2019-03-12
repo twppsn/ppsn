@@ -6,7 +6,8 @@
              xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			 Title="Markdown Editor"
-			 SubTitle="{Binding Data.Name}"
+			 SubTitle="{Binding Data.Nr}"
+			 Image="squareEdit"
 			 IsDirty="{Binding IsDirty}"
 			 mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -18,7 +19,7 @@
 			<ColumnDefinition Width="2*" />
 			<ColumnDefinition Width="1*" />
 		</Grid.ColumnDefinitions>
-		<TextBox Grid.Column="0" FontFamily="Consolas" TextWrapping="Wrap" AcceptsReturn="True" AcceptsTab="True" Text="{Binding Text,UpdateSourceTrigger=PropertyChanged}" />
+		<TextBox Grid.Column="0" FontFamily="Consolas" BorderThickness="0" Padding="6" TextWrapping="Wrap" AcceptsReturn="True" AcceptsTab="True" Text="{Binding Text,UpdateSourceTrigger=PropertyChanged}" />
 		<FlowDocumentScrollViewer Grid.Column="1" Document="{Binding Document}" VerticalScrollBarVisibility="Auto" />
 	</Grid>
 </pps:PpsWindowPaneControl>

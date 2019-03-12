@@ -146,14 +146,11 @@ namespace TecWare.PPSn.UI
 			return newIndex - 1;
 		} // func FindLastVisiblePosition
 
-		//private int test = 0;
 		protected override Size MeasureOverride(Size constraint)
 		{
 			var isOverflow = false;
 			var remainingWidth = constraint.Width;
 			var isInfinity = Double.IsInfinity(remainingWidth);
-
-			//System.Diagnostics.Debug.Print(String.Format("--->   {0} -- {1}  {2}", test++, remainingWidth, isInfinity));
 
 			var sumWidth = 0.0;
 			var maxHeight = 0.0;

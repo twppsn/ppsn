@@ -191,7 +191,7 @@ namespace TecWare.PPSn.UI
 		private sealed class RenderHostPaneConverter : IValueConverter
 		{
 			object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
-				=> value is PpsWindowPaneHost paneHost ? paneHost.Render(80, 80) : null;
+				=> value is PpsWindowPaneHost paneHost ? paneHost.Render(200, 112) : null;
 
 			object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) 
 				=> throw new NotSupportedException();
