@@ -17,7 +17,7 @@
 		</MultiBinding>
 	</ui:PpsWindow.Title>-->
 
-	<ui:PpsWindow.Resources>
+	<!--<ui:PpsWindow.Resources>
 		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{uiO:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination=Black, SourcePart=0.75}" />
 		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{uiO:AlphaBlendColor Source={StaticResource PPSnActionButtonColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
 
@@ -56,18 +56,18 @@
 						<ControlTemplate.Triggers>
 							<Trigger Property="IsMouseOver" Value="true">
 								<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
-								<!--<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>-->
+								<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
 							</Trigger>
 							<Trigger Property="IsPressed" Value="true">
 								<Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-								<!--<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>-->
+								<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
 							</Trigger>
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
 				</Setter.Value>
 			</Setter>
 		</Style>
-	</ui:PpsWindow.Resources>
+	</ui:PpsWindow.Resources>-->
 
 	<Grid Background="{StaticResource PPSnWindowBackgroundBrush}">
 		<Grid.RowDefinitions>
@@ -103,7 +103,7 @@
 			</uiL:PpsWindowPaneStrip.ItemTemplate>
 		</uiL:PpsWindowPaneStrip>
 
-		<Grid Grid.Row="1">
+		<!--<Grid Grid.Row="1">
 			<Grid.Style>
 				<Style TargetType="{x:Type Grid}">
 					<Style.Triggers>
@@ -126,7 +126,9 @@
 			</Grid.Style>
 
 			<ContentPresenter Content="{Binding CurrentPaneHost, Mode=OneWay}"/>
-		</Grid>
+		</Grid>-->
+
+		<ContentPresenter Grid.Row="1" Content="{Binding CurrentPaneHost, Mode=OneWay}" />
 
 		<!--StatusBar-->
 		<Grid Grid.Row="2" Background="{StaticResource PPSnWindowFooterBrush}">
@@ -184,10 +186,9 @@
 				</Button.Template>
 			</Button>
 
-			<ProgressBar Grid.Column="1" Maximum="1000" Value="{Binding Environment.StatusOfProxy.ActualItem.Progress,Mode=OneWay}" Margin="6,3" BorderThickness="0"
-						 Foreground="{StaticResource ButtonDarkerBorderBrush}" Background="{StaticResource ButtonDarkerBackGroundBrush}"
-						 ToolTipService.InitialShowDelay="750"
-						 ToolTipService.ShowDuration="10000">
+			<ProgressBar Grid.Column="1" Value="{Binding Environment.StatusOfProxy.ActualItem.Progress,Mode=OneWay}" Maximum="1000"
+						 Margin="6,3" Foreground="MediumSeaGreen" Background="WhiteSmoke"
+						 ToolTipService.InitialShowDelay="750" ToolTipService.ShowDuration="10000">
 				<ProgressBar.ToolTip>
 					<ToolTip Placement="Top" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
 						<ListBox ItemsSource="{Binding Environment.StatusOfProxy.TopTen, IsAsync=True}" Style="{StaticResource PPSnListBoxStyle}"
@@ -202,22 +203,33 @@
 				</ProgressBar.ToolTip>
 				<ProgressBar.Style>
 					<Style TargetType="{x:Type ProgressBar}">
-						<Setter Property="Visibility" Value="Visible"/>
-						<Style.Triggers>
-							<DataTrigger Binding="{Binding Environment.StatusOfProxy.ActualItem}" Value="{x:Null}">
-								<Setter Property="Visibility" Value="Hidden" />
-							</DataTrigger>
-						</Style.Triggers>
+						<Setter Property="Visibility" Value="Visible" />
+						<Setter Property="Template">
+							<Setter.Value>
+								<ControlTemplate TargetType="ProgressBar">
+									<Grid x:Name="PART_Track" Background="{TemplateBinding Background}">
+										<Rectangle x:Name="PART_Indicator" HorizontalAlignment="Left" Fill="{TemplateBinding Foreground}" Margin="3" />
+										<TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName,Mode=OneWay}"
+												   Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0"
+												   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+
+									</Grid>
+									<ControlTemplate.Triggers>
+										<DataTrigger Binding="{Binding Environment.StatusOfProxy.ActualItem}" Value="{x:Null}">
+											<Setter Property="Visibility" Value="Hidden" />
+										</DataTrigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Setter.Value>
+						</Setter>
 					</Style>
 				</ProgressBar.Style>
 			</ProgressBar>
-			<TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
-					   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0" TextWrapping="NoWrap" IsHitTestVisible="False"/>
 
 			<ui:PpsGeometryImage Grid.Column="2" GeometryName="account" GeometryCircled="False"
 								 Foreground="White" Opacity=".8" HorizontalAlignment="Left" Margin="32,3,0,3" />
 			<TextBlock Grid.Column="2" Text="{Binding Environment.UsernameDisplay}" HorizontalAlignment="Left" VerticalAlignment="Center"
-					   Margin="54,0,64,0" MinWidth="72" Foreground="White" />
+					   Margin="54,0,64,0" MinWidth="96" Foreground="White" />
 
 			<Viewbox Grid.Column="3" Height="17" Opacity=".9">
 				<ContentControl Focusable="False">
@@ -354,59 +366,6 @@
 			</Grid>
 		</Popup>
 		
-		<ui:PpsPopup x:Name="windowPanePopup_A" Placement="Center">
-			<ui:PpsPopupContent Header="Offene Daten">
-				<ListBox ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True" MinHeight="100" MinWidth="100">
-					<ListBox.ItemTemplate>
-						<DataTemplate DataType="{x:Type uiL:PpsWindowPaneHost}">
-							<Grid>
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="80" />
-									<ColumnDefinition />
-								</Grid.ColumnDefinitions>
-								<Grid.RowDefinitions>
-									<RowDefinition />
-									<RowDefinition />
-								</Grid.RowDefinitions>
-
-								<Image Source="{Binding Converter={x:Static uiL:PpsMainWindow.PaneHostToImage}}" />
-
-								<TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}" FontWeight="Bold" />
-								<TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding SubTitle}" />
-							</Grid>
-						</DataTemplate>
-					</ListBox.ItemTemplate>
-				</ListBox>
-			</ui:PpsPopupContent>
-		</ui:PpsPopup>
-
-
-		<ui:PpsPopup x:Name="windowPanePopup_o" Placement="Center">
-			<ui:PpsPopupContent Header="Offene Daten">
-				<ListBox ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True" MinHeight="100" MinWidth="100">
-					<ListBox.ItemTemplate>
-						<DataTemplate DataType="{x:Type uiL:PpsWindowPaneHost}">
-							<Grid>
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="80" />
-									<ColumnDefinition />
-								</Grid.ColumnDefinitions>
-								<Grid.RowDefinitions>
-									<RowDefinition />
-									<RowDefinition />
-								</Grid.RowDefinitions>
-
-								<Image Source="{Binding Converter={x:Static uiL:PpsMainWindow.PaneHostToImage}}" />
-
-								<TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Title}" FontWeight="Bold" />
-								<TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding SubTitle}" />
-							</Grid>
-						</DataTemplate>
-					</ListBox.ItemTemplate>
-				</ListBox>
-			</ui:PpsPopupContent>
-		</ui:PpsPopup>
-
 	</Grid>
 
 

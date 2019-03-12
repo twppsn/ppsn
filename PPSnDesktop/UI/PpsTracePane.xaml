@@ -169,7 +169,7 @@
 		</local:PpsTraceItemTemplateSelector>
 	</UserControl.Resources>
 
-	<Grid Margin="16,16,16,16">
+	<Grid Margin="16,16,0,16">
 		<Grid.RowDefinitions>
 			<RowDefinition/>
 			<RowDefinition Height="auto"/>
@@ -200,9 +200,8 @@
 			<RowDefinition Height="auto" />
 		</Grid.RowDefinitions>
 
-		<ListBox x:Name="logList" Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}"
-				 Style="{DynamicResource PPSnListBoxStyle}" ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"
-				 ScrollViewer.HorizontalScrollBarVisibility="Disabled" AlternationCount="2">
+		<ListBox x:Name="logList" ItemsSource="{Binding Source={StaticResource SortedTraces}}"
+				 Style="{DynamicResource PPSnListBoxStyle}" ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" >
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Background="Transparent" TextBlock.FontSize="14">
