@@ -164,8 +164,21 @@ namespace TecWare.PPSn.UI
 			availableWidth -= 256;
 			// fixe Breite für ein Item
 			var itemWidth = 212d;
-			// maximale Items Horizontal
+			// max items horizontal
 			var maxColumns = Math.Floor(availableWidth / itemWidth);
+			// make it more compact, up to 4 lines
+			var columns = 0;
+			if (items > 4)
+			{
+				if (items <= 12)
+					columns = items / 2 + (items % 2 > 0 ? 1 : 0);
+				else if (items <= 18)
+					columns = items / 3 + (items % 3 > 0 ? 1 : 0);
+				else
+					columns = items / 4 + (items % 4 > 0 ? 1 : 0);
+				if (columns < maxColumns)
+					maxColumns = columns;
+			}
 			return maxColumns * itemWidth;
 		} // func CalculatePaneHostListColumns
 

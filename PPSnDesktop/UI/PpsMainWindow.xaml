@@ -294,6 +294,7 @@
 			</Viewbox>
 		</Grid>
 
+		<!--Navigation geöffnete PaneHosts-->
 		<Popup x:Name="windowPanePopup" Placement="Center" AllowsTransparency="True">
 			<Grid SnapsToDevicePixels="True">
 				<Rectangle Fill="Black" Opacity=".75" />
