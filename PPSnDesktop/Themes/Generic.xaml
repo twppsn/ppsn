@@ -219,7 +219,8 @@
 		</Setter>
 	</Style>
 
-	<SolidColorBrush x:Key="PaneItemSeparatorBrush" Color="{DynamicResource PPSnAccentColor}" Opacity=".15"/>
+	<SolidColorBrush x:Key="PaneItemSeparatorBrush" Color="{DynamicResource PPSnAccentColor}" Opacity=".15" />
+	<SolidColorBrush x:Key="PaneItemBackgroundBrush" Color="{DynamicResource PPSnWindowHeaderColor}" />
 
 	<Style TargetType="ui:PpsWindowPaneStrip">
 		<Setter Property="SnapsToDevicePixels" Value="True" />
@@ -233,7 +234,7 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStrip}">
-					<Grid Background="#D8D8D8">
+					<Grid Background="{StaticResource PaneItemBackgroundBrush}">
 						<Grid.RowDefinitions>
 							<RowDefinition />
 							<RowDefinition Height="2" />
@@ -244,7 +245,8 @@
 							<ColumnDefinition Width="224"/>
 						</Grid.ColumnDefinitions>
 
-						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="{DynamicResource PPSnWindowBackgroundBrush}" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,1,0,0" />
+						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="{DynamicResource PPSnWindowBackgroundBrush}"
+								BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,1,0,0" />
 
 						<Border x:Name="leftBorder" Width="38" BorderThickness="0,0,1,0" BorderBrush="{StaticResource PaneItemSeparatorBrush}" Background="Transparent">
 							<Border.Tag>
