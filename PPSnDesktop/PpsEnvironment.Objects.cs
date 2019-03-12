@@ -3159,6 +3159,7 @@ namespace TecWare.PPSn
 			using (var r = await (await EnqueuePullRevisionAsync(-1)).ForegroundAsync())
 			using (var src = r.GetResponseStream())
 			{
+				//var d = src.ReadInArray();
 
 				var headerLengthString = r.Headers["ppsn-header-length"];
 				if (String.IsNullOrEmpty(headerLengthString)

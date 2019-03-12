@@ -323,7 +323,7 @@
 										   Foreground="White" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
 									<Run Text="{Binding Title, Mode=OneWay}" FontWeight="Bold" />
 									<LineBreak/>
-									<Run Text="{Binding SubTitle, Mode=OneWay}" />
+									<Run Text="{Binding SubTitle, Mode=OneWay}" FontWeight="Thin" />
 								</TextBlock>
 								<Border Grid.ColumnSpan="2" Grid.Row="1" Margin="0,3,0,0" Background="{StaticResource PPSnWindowBackgroundBrush}">
 									<Image Source="{Binding Converter={x:Static uiL:PpsMainWindow.PaneHostToImage}}" />

@@ -147,19 +147,10 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		// ToDo: Calculate Width of Current Screen (like WinForm)
-		private double GetScreenWidth()
-		{
-			var presentationSource = PresentationSource.FromVisual(this);
-			var m = presentationSource.CompositionTarget.TransformToDevice;
-			var dpiWidthFactor = m.M11;
-			return SystemParameters.PrimaryScreenWidth * dpiWidthFactor;
-		} // func GetScreenWidth
-
 		private double CalculatePaneHostListMaxWidth(int items)
 		{
 			// ScreenWidth
-			var availableWidth = GetScreenWidth();
+			var availableWidth = GetWorkingArea().Width;
 			// reduce Margin
 			availableWidth -= 256;
 			// fixe Breite für ein Item

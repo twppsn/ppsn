@@ -1942,6 +1942,8 @@ namespace TecWare.PPSn.Server.Sql
 					case TypeCode.Object:
 						if (dataType == typeof(Guid))
 							parameter.DbType = DbType.Guid;
+						else
+							parameter.DbType = DbType.Int32;
 						break;
 				}
 			} // proc InitSqlParameter

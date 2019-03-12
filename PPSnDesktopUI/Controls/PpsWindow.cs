@@ -95,6 +95,30 @@ namespace TecWare.PPSn.Controls
 		}
 #endif
 
+		/// <summary></summary>
+		/// <returns></returns>
+		public Rect GetWorkingArea()
+		{
+			var presentationSource = PresentationSource.FromVisual(this);
+			var rc = new RECT { Left = (int)Left, Top = (int)Top, Right = (int)(Left + ActualWidth), Bottom = (int)(Top + ActualHeight) };
+			var hMonitor = NativeMethods.MonitorFromRect(ref rc, MonitorOptions.MONITOR_DEFAULTTONEAREST);
+
+			// get the metrics of the monitor
+			var monitorInfo = new MONITORINFO
+			{
+				cbSize = Marshal.SizeOf(typeof(MONITORINFO))
+			};
+			if (!NativeMethods.GetMonitorInfo(hMonitor, ref monitorInfo))
+				throw new Win32Exception();
+
+			var rcWork = new Rect(monitorInfo.rcWork.Left, monitorInfo.rcWork.Top, monitorInfo.rcWork.Width, monitorInfo.rcWork.Height);
+			var transformToDevice = presentationSource.CompositionTarget.TransformFromDevice;
+			return new Rect(
+				transformToDevice.Transform(rcWork.TopLeft),
+				transformToDevice.Transform(rcWork.BottomRight)
+			);
+		} // func GetWorkingArea
+
 		/// <summary>Current environment of the window.</summary>
 		public PpsShellWpf Shell
 		{

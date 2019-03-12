@@ -22,11 +22,11 @@
 								<RowDefinition Height="38" />
 								<RowDefinition />
 							</Grid.RowDefinitions>
-							<Border Grid.ColumnSpan="2" Background="{DynamicResource PPSnSideBarBackgroundBrush}" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,1"  FocusManager.IsFocusScope="true" KeyboardNavigation.TabNavigation="Cycle">
+							<Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,1"  FocusManager.IsFocusScope="true" KeyboardNavigation.TabNavigation="Cycle">
 								<ToolBar ItemsSource="{TemplateBinding Commands}" Style="{DynamicResource PpsPaneToolBarStyle}" />
 							</Border>
 							<ContentPresenter Grid.Row="1" x:Name="PART_Control" Content="{TemplateBinding Control}" />
-							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" FocusManager.IsFocusScope="True"/>
+							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" Focusable="False"/>
 						</Grid>
 						<ContentControl Grid.ColumnSpan="2" Grid.RowSpan="2" Content="{Binding PaneProgress.CurrentText, RelativeSource={RelativeSource TemplatedParent}}">
 							<ContentControl.Resources>
