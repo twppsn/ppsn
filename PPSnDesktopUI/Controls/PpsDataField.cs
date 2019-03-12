@@ -175,12 +175,9 @@ namespace TecWare.PPSn.Controls
 		{
 			if (datasetName != null)
 			{
-				//var info = sp.GetService<PpsEnvironment>(true).ObjectInfos[datasetName, throwException];
-				//if (info != null)
-				//{
-				//	dataset = info.GetDocumentDefinitionAsync().AwaitTask();
-				//	return true;
-				//}
+				var info = sp.GetService<IPpsDataSetProvider>(throwException);
+				dataset = info?.TryGetDataSetDefinition(datasetName, throwException);
+				return dataset != null;
 			}
 			else if (throwException)
 				throw new ArgumentNullException(nameof(datasetName));
@@ -236,7 +233,7 @@ namespace TecWare.PPSn.Controls
 				columnExpression, 
 				PpsDataFieldBinding.CombinePath(BindingPath, columnExpression), 
 				out var fieldInfo
-			) 
+			)
 				? fieldInfo 
 				: throw new ArgumentOutOfRangeException(nameof(fieldExpression), fieldExpression, "Could not resolve field expression.");
 		} // func ReolveDataFieldInfo

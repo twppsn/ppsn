@@ -477,24 +477,30 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			private static void PrepareSynchronizationColumns(PpsDataTableDefinition table, StringBuilder command, string primaryKeyPrefix = null)
+			private static void PrepareSynchronizationColumns(PpsDataTableDefinition syncTable, PpsSqlTableInfo sourceTable, StringBuilder command, string primaryKeyPrefix = null)
 			{
-				foreach (var col in table.Columns)
+				foreach (var col in syncTable.Columns)
 				{
 					var colInfo = ((PpsDataColumnServerDefinition)col).GetColumnDescription<PpsSqlColumnInfo>();
 					if (colInfo != null)
 					{
-						if (primaryKeyPrefix != null && colInfo.IsPrimaryKey)
-							command.Append(',').Append(primaryKeyPrefix).Append('[');
+						if (colInfo.Table == sourceTable)
+						{
+							if (primaryKeyPrefix != null && colInfo.IsPrimaryKey)
+								command.Append(',').Append(primaryKeyPrefix).Append('[');
+							else
+								command.Append(",d.[");
+
+							command.Append(colInfo.Name).Append(']')
+							  .Append(" AS [").Append(col.Name).Append(']');
+						}
 						else
-							command.Append(",d.[");
-						command.Append(colInfo.Name).Append(']')
-							.Append(" AS [").Append(col.Name).Append(']');
+							throw new ArgumentException($"Column '{colInfo.TableColumnName}' is not definied in table '{sourceTable.QualifiedName}.");
 					}
 				}
 
 				// add revision hint
-				if (table.Name == "ObjectTags")
+				if (syncTable.Name == "ObjectTags")
 				{
 					command.Append(",CASE WHEN d.[ObjRId] IS NOT NULL THEN d.[Class] ELSE NULL END AS [LocalClass]");
 					command.Append(",CASE WHEN d.[ObjRId] IS NOT NULL THEN d.[Value] ELSE NULL END AS [LocalValue]");
@@ -506,7 +512,7 @@ namespace TecWare.PPSn.Server.Sql
 				// build command string for change table
 				var command = new StringBuilder("SELECT ct.sys_change_operation,ct.sys_change_version");
 
-				PrepareSynchronizationColumns(table, command, "ct.");
+				PrepareSynchronizationColumns(table, tableInfo, command, "ct.");
 
 				command.Append(" FROM ")
 					.Append("changetable(changes ").Append(tableInfo.SqlQualifiedName).Append(',').Append(lastSyncId).Append(") as Ct ")
@@ -520,7 +526,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var command = new StringBuilder("SELECT 'I',cast(" + startCurrentSyncId.ToString() + " as bigint)");
 
-				PrepareSynchronizationColumns(table, command);
+				PrepareSynchronizationColumns(table, tableInfo, command);
 
 				command.Append(" FROM ")
 					.Append(tableInfo.SqlQualifiedName)

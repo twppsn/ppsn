@@ -33,7 +33,11 @@ namespace TecWare.PPSn.Data
 			this.columns = columns;
 		} // ctor
 
-		private IDataColumn FindColumnForUser(string columnToken)
+		/// <summary></summary>
+		/// <param name="columns"></param>
+		/// <param name="columnToken"></param>
+		/// <returns></returns>
+		protected static IDataColumn FindColumnForUser(IDataColumns columns, string columnToken)
 		{
 			foreach (var col in columns.Columns)
 			{
@@ -49,7 +53,7 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		protected override Tuple<string, Type> LookupColumn(string columnToken)
 		{
-			var col = FindColumnForUser(columnToken);
+			var col = FindColumnForUser(columns, columnToken);
 			return col != null
 				? new Tuple<string, Type>(col.Name, col.DataType)
 				: null;

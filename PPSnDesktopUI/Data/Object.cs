@@ -81,4 +81,18 @@ namespace TecWare.PPSn.Data
 	} // interface IPpsDataInfo
 
 	#endregion
+
+	#region -- interface IPpsDataSetProvider ------------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsDataSetProvider
+	{
+		/// <summary></summary>
+		/// <param name="datasetName"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		PpsDataSetDefinition TryGetDataSetDefinition(string datasetName, bool throwException = false);
+	} // interface IPpsDataSetProvider
+
+	#endregion
 }

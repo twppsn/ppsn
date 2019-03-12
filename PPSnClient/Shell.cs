@@ -653,7 +653,7 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public LuaShellTable Parent => parentShellTable;
 		/// <summary>Access to the current environemnt.</summary>
-		[LuaMember]
+		[LuaMember("Environment")]
 		public PpsShell Shell => shell;
 	} // class LuaShellTable
 

@@ -250,14 +250,17 @@ namespace TecWare.PPSn
 					switch (cmd)
 					{
 						case 'u':
-							userName = arg.Substring(2).Trim('\"', '\'');
+							userName = arg.Substring(2);
 							break;
 						case 'p':
-							userPass = arg.Substring(2).Trim('\"', '\'');
+							userPass = arg.Substring(2);
 							break;
 						case 'a':
-							var environmentname = arg.Substring(2).Trim('\"', '\'');
+							var environmentname = arg.Substring(2);
 							environment = environmentsInfos.Value.FirstOrDefault(c => String.Compare(c.Name, environmentname, StringComparison.OrdinalIgnoreCase) == 0);
+							break;
+						case 'l': // enforce load of an remote assembly
+							Task.Run(() => PpsEnvironment.LoadAssemblyFromLocalAsync(arg.Substring(2))).Wait();
 							break;
 					}
 				}

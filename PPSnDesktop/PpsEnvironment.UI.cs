@@ -106,7 +106,7 @@ namespace TecWare.PPSn
 					: null;
 
 			// read template
-			var template = await PpsXamlParser.LoadAsync<DataTemplate>(xml.ReadElementAsSubTree());
+			var template = await PpsXamlParser.LoadAsync<DataTemplate>(xml.ReadElementAsSubTree(), new PpsXamlReaderSettings { ServiceProvider = Environment });
 
 			var templateItem = new TemplateItem(priority, condition, onlineViewId, template);
 

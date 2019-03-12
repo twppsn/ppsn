@@ -1061,8 +1061,7 @@ namespace TecWare.PPSn.Server.Wpf
 					return; // next table
 				}
 
-				var primaryKey = table.PrimaryKey as PpsDataColumnServerDefinition;
-				if (primaryKey == null)
+				if (!(table.PrimaryKey is PpsDataColumnServerDefinition primaryKey))
 				{
 					msg.WriteLine("Primary is null or has no field definition.");
 					return;

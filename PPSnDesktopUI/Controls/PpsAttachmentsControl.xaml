@@ -24,7 +24,7 @@ specific language governing permissions and limitations under the Licence.
 			 BorderBrush="{StaticResource PPSnSeparatorBrush}"
              d:DesignHeight="300" d:DesignWidth="300">
 	<Grid>
-		<Grid.RowDefinitions>
+		<!--<Grid.RowDefinitions>
 			<RowDefinition Height="auto"/>
 			<RowDefinition/>
 		</Grid.RowDefinitions>
@@ -185,6 +185,6 @@ specific language governing permissions and limitations under the Licence.
 					</MultiDataTrigger>
 				</Style.Triggers>
 			</Style>
-		</Grid.Style>
+		</Grid.Style>-->
 	</Grid>
 </UserControl>

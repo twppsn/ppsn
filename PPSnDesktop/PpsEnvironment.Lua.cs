@@ -100,6 +100,16 @@ namespace TecWare.PPSn
 
 		#region -- LuaHelper ----------------------------------------------------------
 
+		[LuaMember("require")]
+		private LuaResult LuaRequire(object arg)
+		{
+			if (arg is string path)
+				return LuaRequire(this, path);
+			else
+				throw new ArgumentException("string as argument expected.");
+		} // func LuaRequire
+
+
 		[LuaMember("require", true)]
 		private LuaResult LuaRequire(LuaTable self, string path)
 		{
@@ -108,7 +118,7 @@ namespace TecWare.PPSn
 
 			if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) // load assembly
 			{
-				return new LuaResult(LoadAssemblyFromUri(webRequest.Request.CreateFullUri(path)));
+				return new LuaResult(LoadAssemblyFromUriAsync(webRequest.Request.CreateFullUri(path)).AwaitTask());
 			}
 			else // load lua script
 			{

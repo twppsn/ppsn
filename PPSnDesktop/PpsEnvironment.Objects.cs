@@ -4137,7 +4137,7 @@ namespace TecWare.PPSn
 
 			#endregion
 
-			private PpsEnvironment environment;
+			private readonly PpsEnvironment environment;
 			private List<WeakReference<PpsObjectDataAccessImplementation>> dataAccess = new List<WeakReference<PpsObjectDataAccessImplementation>>();
 
 			#region -- Ctor/Dtor ------------------------------------------------------
@@ -4327,6 +4327,7 @@ namespace TecWare.PPSn
 			private const string ColumnStaticPrefix = "s_";
 			private const string ColumnJoinPrefix = "t_";
 
+			private const string StaticId = "ID";
 			private const string StaticNr = "NR";
 			private const string StaticTyp = "TYP";
 
@@ -4415,7 +4416,8 @@ namespace TecWare.PPSn
 							}
 							break;
 						default:
-							if (String.Compare(virtualColumn, StaticNr, StringComparison.OrdinalIgnoreCase) == 0 ||
+							if (String.Compare(virtualColumn, StaticId, StringComparison.OrdinalIgnoreCase) == 0 ||
+								String.Compare(virtualColumn, StaticNr, StringComparison.OrdinalIgnoreCase) == 0 ||
 								String.Compare(virtualColumn, StaticTyp, StringComparison.OrdinalIgnoreCase) == 0)
 							{
 								type = ObjectViewColumnType.Static;
@@ -5096,6 +5098,9 @@ order by t_liefnr.value desc
 		#endregion
 
 		#region -- Object Info --------------------------------------------------------
+
+		PpsDataSetDefinition IPpsDataSetProvider.TryGetDataSetDefinition(string datasetName, bool throwException)
+			=> ObjectInfos[datasetName, throwException]?.GetDocumentDefinitionAsync().AwaitTask();
 
 		/// <summary>Active objects data.</summary>
 		[LuaMember]

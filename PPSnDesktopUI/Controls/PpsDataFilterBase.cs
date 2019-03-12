@@ -111,7 +111,6 @@ namespace TecWare.PPSn.Controls
 		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			((PpsDataFilterBase)d).UpdateFilteredList();
-			throw new NotImplementedException();
 			//if (e.NewValue is PpsDataCollectionView pdcv)
 			//	pdcv.CurrentChanged += (s, et) => ((PpsDataFilterBase)d).UpdateFilteredList();
 		}

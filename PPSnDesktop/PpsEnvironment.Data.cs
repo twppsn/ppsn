@@ -16,7 +16,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
@@ -41,7 +40,6 @@ using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
-using TecWare.PPSn.Properties;
 
 namespace TecWare.PPSn
 {
@@ -289,13 +287,13 @@ namespace TecWare.PPSn
 		/// <summary>Is called if a value gets changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private readonly PpsMasterDataTable owner;
+		private readonly PpsMasterDataTable table;
 		private readonly object rowId;
 		private readonly object[] values;
 
 		internal PpsMasterDataRow(PpsMasterDataTable owner, IDataRecord r)
 		{
-			this.owner = owner;
+			this.table = owner;
 			this.values = new object[owner.Columns.Count];
 
 			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
@@ -315,13 +313,13 @@ namespace TecWare.PPSn
 
 		internal void UpdateValues(IPpsDataRowOperationArguments arguments)
 		{
-			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
+			var primaryKeyIndex = table.GetPrimaryKeyColumnIndex();
 			for (var i = 0; i < values.Length; i++)
 			{
 				if (!Equals(values[i], arguments[i]))
 				{
 					values[i] = arguments[i];
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(owner.Columns[i].Name));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(table.Columns[i].Name));
 				}
 			}
 		} // func UpdateValues
@@ -331,13 +329,13 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is PpsMasterDataRow r
-				? (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Equals(RowId, r.RowId))
+				? (ReferenceEquals(this, obj) || table.Definition == r.table.Definition && Equals(RowId, r.RowId))
 				: false;
 
 		/// <summary>Hashcode for the current datarow.</summary>
 		/// <returns></returns>
 		public override int GetHashCode()
-			=> owner.Definition.GetHashCode() ^ RowId.GetHashCode();
+			=> table.Definition.GetHashCode() ^ RowId.GetHashCode();
 
 		/// <summary></summary>
 		/// <param name="columnName"></param>
@@ -349,10 +347,10 @@ namespace TecWare.PPSn
 				return true;
 			else
 			{
-				var rel = owner.Definition.Relations[columnName, false];
+				var rel = table.Definition.Relations[columnName, false];
 				if (rel != null)
 				{
-					value = owner.CreateRelation(rel, values[rel.ParentColumn.Index]);
+					value = table.CreateRelation(rel, values[rel.ParentColumn.Index]);
 					return true;
 				}
 				else
@@ -364,12 +362,12 @@ namespace TecWare.PPSn
 		} // func TryGetProperty
 
 		private PpsMasterDataRow GetParentRow(int index, PpsDataColumnDefinition column)
-			=> owner.MasterData.GetTable(column.ParentColumn.Table)
+			=> table.MasterData.GetTable(column.ParentColumn.Table)
 				?.GetRowById(values[index].ChangeType<long>());
 
 		bool IDataValues2.TryGetRelatedDataRow(int index, out IDataRow row)
 		{
-			var columnInfo = owner.GetColumnDefinition(index);
+			var columnInfo = table.GetColumnDefinition(index);
 			if (columnInfo.IsRelationColumn)
 			{
 				row = GetParentRow(index, columnInfo);
@@ -384,7 +382,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Access the column decriptions.</summary>
 		public override IReadOnlyList<IDataColumn> Columns
-			=> owner.Columns;
+			=> table.Columns;
 
 		/// <summary>Return a column of this datarow.</summary>
 		/// <param name="index"></param>
@@ -396,7 +394,7 @@ namespace TecWare.PPSn
 				var value = values[index];
 				if (value != null)
 				{
-					var column = owner.GetColumnDefinition(index);
+					var column = table.GetColumnDefinition(index);
 					if (column.IsRelationColumn) // return the related row
 						return GetParentRow(index, column);
 					else
@@ -407,10 +405,29 @@ namespace TecWare.PPSn
 			}
 		} // prop this
 
+		/// <summary>Access table of this row.</summary>
+		public PpsMasterDataTable Table => table;
 		/// <summary>Master data rows, own there data.</summary>
 		public override bool IsDataOwner => true;
 		/// <summary>Internal flag for batch updates.</summary>
 		internal bool IsTouched { get; set; } = false;
+
+		/// <summary>Is this row only local.</summary>
+		public bool IsLocal
+		{
+			get
+			{
+				switch (rowId)
+				{
+					case int i:
+						return i < 0;
+					case long l:
+						return l < 0;
+					default:
+						return false;
+				}
+			}
+		} // func IsLocal
 
 		/// <summary>Return key value for this row.</summary>
 		public object RowId => rowId;
@@ -495,19 +512,84 @@ namespace TecWare.PPSn
 
 		private sealed class PpsMasterDataFilterVisitor : PpsSqLiteFilterVisitor
 		{
-			public PpsMasterDataFilterVisitor(IDataColumns columns)
-				: base(columns)
+			#region -- struct Joins ---------------------------------------------------
+
+			private struct Joins
 			{
+				public void AppendJoin(StringBuilder sb)
+				{
+					sb.Append(" LEFT OUTER JOIN main.[").Append(Right.Table.Name).Append("] ")
+						.Append(PrefixRight)
+						.Append(" ON (")
+						.Append(PrefixLeft).Append(".[").Append(Left.Name).Append(']')
+						.Append('=')
+						.Append(PrefixRight).Append(".[").Append(Right.Name).Append(']')
+						.Append(")");
+				} // proc AppendJoin
+
+				public string PrefixLeft;
+				public PpsDataColumnDefinition Left;
+				public string PrefixRight;
+				public PpsDataColumnDefinition Right;
+			} // struct Joins
+
+			#endregion
+
+			private readonly PpsMasterDataTable table;
+			private readonly List<Joins> joins = new List<Joins>();
+
+			public PpsMasterDataFilterVisitor(PpsMasterDataTable table)
+				: base(table)
+			{
+				this.table = table;
 			} // ctor
+
+			private string UpdateJoins(string parentPrefix, PpsDataColumnDefinition childColumn, PpsDataColumnDefinition parentColumn)
+			{
+				var idx = joins.FindIndex(c => c.Left == childColumn && c.Right == parentColumn);
+				if (idx < 0)
+				{
+					var p = "r" + joins.Count.ToString();
+					joins.Add(new Joins { PrefixLeft = parentPrefix, PrefixRight = p, Left = childColumn, Right = parentColumn });
+					return p;
+				}
+				else
+					return joins[idx].PrefixRight;
+			} // func UpdateJoins
+
+			private Tuple<string, Type> ResolveReferencedColumn(string[] columnPath)
+			{
+				var currentPrefix = "d";
+				var currentColumn = (PpsDataColumnDefinition)FindColumnForUser(table, columnPath[0]);
+				var index = 1;
+				while (index < columnPath.Length)
+				{
+					var parentColumn = currentColumn.ParentColumn;
+					if (parentColumn == null)
+						throw new ArgumentException(); // todo: exception
+
+					currentPrefix = UpdateJoins(currentPrefix, currentColumn, parentColumn);
+
+					// find current column
+					currentColumn = (PpsDataColumnDefinition)FindColumnForUser(parentColumn.Table, columnPath[index]);
+					if (currentColumn == null)
+						throw new ArgumentException(); // todo: exception
+
+					index++;
+				}
+
+				return new Tuple<string, Type>(currentPrefix + "." + currentColumn.Name, currentColumn.DataType);
+			} // func ResolveReferencedColumn
 
 			protected override Tuple<string, Type> LookupColumn(string columnToken)
 			{
-				if (String.IsNullOrEmpty(columnToken))
+				if (String.IsNullOrEmpty(columnToken)) // generate full text column
 				{
 					NeedFullTextColumn = true;
 					return new Tuple<string, Type>("__FULLTEXT__", typeof(string));
 				}
-				return base.LookupColumn(columnToken);
+
+				return ResolveReferencedColumn(columnToken.Split('.'));
 			} // func LookupColumn
 
 			protected override Tuple<string, Type> LookupDateColumn(string columnToken)
@@ -515,6 +597,12 @@ namespace TecWare.PPSn
 
 			protected override Tuple<string, Type> LookupNumberColumn(string columnToken)
 				=> base.LookupNumberColumn(columnToken);
+
+			public void AppendJoins(StringBuilder sb)
+			{
+				foreach (var j in joins)
+					j.AppendJoin(sb);
+			} // proc AppendJoins
 
 			public bool NeedFullTextColumn { get; private set; } = false;
 		} // class PpsMasterDataFilterVisitor
@@ -527,6 +615,7 @@ namespace TecWare.PPSn
 		{
 			private readonly PpsMasterDataTable table;
 			private readonly PpsDataFilterExpression filter;
+			//private readonly PpsDataJoinExpression
 
 			public PpsMasterDataTableResult(PpsMasterDataTable table, PpsDataFilterExpression filter)
 			{
@@ -548,6 +637,8 @@ namespace TecWare.PPSn
 				try
 				{
 					var filterVisitor = new PpsMasterDataFilterVisitor(table);
+					
+					// create where
 					var where = filterVisitor.CreateFilter(filter);
 
 					var commandText = table.PrepareCommandText(
@@ -563,6 +654,10 @@ namespace TecWare.PPSn
 						}
 					);
 
+					// append joins
+					filterVisitor.AppendJoins(commandText);
+
+					// add where condition
 					commandText.Append(" WHERE ");
 					commandText.Append(where);
 					command.CommandText = commandText.ToString();
@@ -656,7 +751,7 @@ namespace TecWare.PPSn
 					first = false;
 				else
 					commandText.Append(',');
-				commandText.Append('[')
+				commandText.Append("d.[")
 					.Append(c.Name)
 					.Append(']');
 			}
@@ -664,7 +759,7 @@ namespace TecWare.PPSn
 			appendVirtualColumns?.Invoke(commandText);
 
 			// build from
-			commandText.Append(" FROM main.[").Append(Definition.Name).Append(']');
+			commandText.Append(" FROM main.[").Append(Definition.Name).Append("] d");
 			return commandText;
 		} // proc PrepareCommandText
 

@@ -201,6 +201,7 @@ namespace TecWare.PPSn.Data
 
 		private static Exception CreateJoinTypeException(string expr)
 			=> throw new ArgumentOutOfRangeException(nameof(expr), expr, "Invalid join expression.");
+		
 		#endregion
 
 		#region -- Parse --------------------------------------------------------------

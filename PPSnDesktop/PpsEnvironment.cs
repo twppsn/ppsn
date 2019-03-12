@@ -483,7 +483,7 @@ namespace TecWare.PPSn
 	/// <summary>Base class for the ppsn-Desktop rich client. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
 	/// engine.</summary>
-	public partial class PpsEnvironment : PpsShellWpf, IPpsWindowPaneManager, IServiceProvider
+	public partial class PpsEnvironment : PpsShellWpf, IPpsWindowPaneManager, IPpsDataSetProvider, IServiceProvider
 	{
 		private readonly App app;
 		private readonly int environmentId;             // unique id of the environment
@@ -686,6 +686,8 @@ namespace TecWare.PPSn
 				key = t.GetMemberValue("Typ") as string;
 			else if (data is PpsObject o)
 				key = o.Typ;
+			else if (data is PpsMasterDataRow r)
+				key = "Master." + r.Table.Definition.Name;
 			else
 				key = ((dynamic)data).Typ;
 
@@ -709,10 +711,9 @@ namespace TecWare.PPSn
 
 			masterData.CheckOfflineCache(); // start download
 
-			await RefreshDefaultResourcesAsync();
-			await RefreshTemplatesAsync();
-
-			await RefreshNavigatorAsync();
+			await RefreshDefaultResourcesAsync(); // styles
+			await RefreshNavigatorAsync(); // environment
+			await RefreshTemplatesAsync(); // datatemplates
 		} // proc OnSystemOnlineAsync
 
 		/// <summary>Is called when the system changes the state to offline.</summary>
@@ -722,9 +723,8 @@ namespace TecWare.PPSn
 			Trace.WriteLine("[Environment] System goes offline.");
 
 			await RefreshDefaultResourcesAsync();
-			await RefreshTemplatesAsync();
-
 			await RefreshNavigatorAsync();
+			await RefreshTemplatesAsync();
 		} // proc OnSystemOfflineAsync
 
 		#endregion
@@ -945,7 +945,10 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public override object GetService(Type serviceType)
 		{
-			return base.GetService(serviceType);
+			if (serviceType == typeof(IPpsDataSetProvider))
+				return this;
+			else
+				return base.GetService(serviceType);
 		} // func GetService
 
 		#endregion
@@ -1549,13 +1552,35 @@ namespace TecWare.PPSn
 		[LuaMember(nameof(ForegroundProgressState))]
 		public PpsProgressStack ForegroundProgressState => forgroundProgress;
 
-		//// -- Static --------------------------------------------------------------
+		// -- Static ----------------------------------------------------------
+
+		#region -- class DynamicReferencedAssembly ------------------------------------
+
+		private class DynamicReferencedAssembly : IEquatable<AssemblyName>
+		{
+			public DynamicReferencedAssembly(Uri uri, AssemblyName name)
+			{
+				Uri = uri ?? throw new ArgumentNullException(nameof(uri));
+				Name = name ?? throw new ArgumentNullException(nameof(uri));
+			} // ctor
+
+			public bool Equals(AssemblyName other)
+				=> CompareAssemblyName(Name, other);
+
+			public AssemblyName Name { get; }
+			public Uri Uri { get; }
+
+			public Assembly Loaded { get; set; } = null;
+			public DateTime LastWriteTime { get; set; } = DateTime.MinValue;
+		} // class DynamicReferencedAssembly
+
+		#endregion
 
 		private static object environmentCounterLock = new object();
 		private static int environmentCounter = 1;
 
 		private static readonly Regex internalUri = new Regex(@"^ppsn\d+.local$", RegexOptions.Compiled);
-		private static Dictionary<AssemblyName, Uri> referencedAssemblies = new Dictionary<AssemblyName, Uri>(); // list with referenced assemblies for the resolver
+		private static List<DynamicReferencedAssembly> dynamicReferencedAssemblies = new List<DynamicReferencedAssembly>(); // list with referenced assemblies for the resolver
 
 		static PpsEnvironment()
 		{
@@ -1563,43 +1588,71 @@ namespace TecWare.PPSn
 			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
 		} // ctor 
 
-		private static Uri FindReferencedAssemblySource(AssemblyName name)
+		private static bool CompareAssemblyName(AssemblyName a, AssemblyName b)
+			=> String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase) == 0
+				&& a.Version == b.Version;
+
+		private static DynamicReferencedAssembly FindReferencedAssembly(AssemblyName name)
 		{
-			lock (referencedAssemblies)
+			lock (dynamicReferencedAssemblies)
 			{
 				return (
-					from c in referencedAssemblies
-					where CompareAssemblyName(name, c.Key)
-					select c.Value
+					from c in dynamicReferencedAssemblies
+					where c.Equals(name)
+					select c
+				).FirstOrDefault();
+			}
+		} // func FindReferencedAssembly
+
+		private static DynamicReferencedAssembly FindReferencedAssemblyByUri(Uri uri)
+		{
+			lock (dynamicReferencedAssemblies)
+			{
+				return (
+					from c in dynamicReferencedAssemblies
+					where WebRequestHelper.EqualUri(uri, c.Uri)
+					select c
 				).FirstOrDefault();
 			}
 		} // func FindReferencedAssemblySource
 
 		private static Assembly FindLoadedAssembly(AssemblyName name)
-			=> (
+		{
+			return (
 				from c in AppDomain.CurrentDomain.GetAssemblies()
 				where CompareAssemblyName(name, c.GetName())
 				select c
 			).FirstOrDefault();
+		} // func FindLoadedAssembly
 
-		private static bool CompareAssemblyName(AssemblyName a, AssemblyName b)
-			=> String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase) == 0
-				&& a.Version == b.Version;
-
-		private static Assembly RegisterReferencedAssemblySource(Uri baseUri, Assembly assembly)
+		private static void UpdateDynamicReferencedAssembly(Uri uri, AssemblyName referencedName, Assembly loadedAssembly, DateTime loadeLastWriteTime)
 		{
-			lock (referencedAssemblies)
+			var item = FindReferencedAssembly(referencedName);
+			if (item == null)
 			{
-				foreach (var referenced in assembly.GetReferencedAssemblies())
-				{
-					if (FindLoadedAssembly(referenced) == null
-						&& FindReferencedAssemblySource(referenced) == null)
-					{
-						// we only support DLL-extension
-						var referencedUri = new Uri(baseUri, new Uri(referenced.Name + ".dll", UriKind.Relative));
-						referencedAssemblies[referenced] = referencedUri;
-					}
-				}
+				item = new DynamicReferencedAssembly(uri, referencedName);
+				dynamicReferencedAssemblies.Add(item);
+			}
+
+			if (loadedAssembly != null)
+			{
+				item.Loaded = loadedAssembly;
+				item.LastWriteTime = loadeLastWriteTime;
+			}
+		} // porc UpdateDynamicReferencedAssembly
+
+		private static Assembly RegisterReferencedAssemblySource(Uri baseUri, Assembly assembly, DateTime modifiedDate)
+		{
+			// Registers all referenced assemblies to an currently loaded assembly.
+			// This is needed the load the references lazy.
+			lock (dynamicReferencedAssemblies)
+			{
+				// add self
+				UpdateDynamicReferencedAssembly(baseUri, assembly.GetName(), assembly, modifiedDate);
+
+				// add references
+				foreach (var referencedName in assembly.GetReferencedAssemblies())
+					UpdateDynamicReferencedAssembly(new Uri(baseUri, new Uri(referencedName.Name + ".dll", UriKind.Relative)), referencedName, null, DateTime.MinValue);
 			}
 
 			return assembly;
@@ -1612,26 +1665,88 @@ namespace TecWare.PPSn
 			var asm = FindLoadedAssembly(name);
 			if (asm == null)
 			{
-				var uri = FindReferencedAssemblySource(name);
-				if (uri != null)
-					return LoadAssemblyFromUri(uri);
+				var ra = FindReferencedAssembly(name);
+				if (ra != null)
+				{
+					if (ra.Loaded != null)
+						asm = ra.Loaded;
+					else
+						asm = LoadAssemblyFromUriAsync(ra.Uri).AwaitTask();
+				}
 			}
 
 			return asm;
 		} // func CurrentDomain_AssemblyResolve
 
-		private static Assembly LoadAssemblyFromUri(Uri uri)
+		private static async Task<Assembly> LoadAssemblyFromUriAsync(Uri uri)
 		{
-			// check for environment uri
-			if (!internalUri.IsMatch(uri.Host))
+			// check for environment uri, we need an absolute and local uri
+			if (!(uri.IsAbsoluteUri && (uri.IsFile || internalUri.IsMatch(uri.Host))))
 				throw new ArgumentOutOfRangeException(nameof(uri), uri, "Invalid uri to load an assembly.");
 
+			// check if loaded
+			var ra = FindReferencedAssemblyByUri(uri);
+			if (ra?.Loaded != null)
+				return ra.Loaded;
+
 			// get the binary
-			var request = WebRequest.Create(uri);
-			using (var response = request.GetResponse())
-			using (var src = response.GetResponseStream())
-				return RegisterReferencedAssemblySource(uri, Assembly.Load(src.ReadInArray()));
-		} // func LoadAssemblyFromUri
+			if (uri.IsFile) // load from file
+			{
+				var fiDll = new FileInfo(uri.AbsolutePath);
+				var fiPdb = new FileInfo(Path.ChangeExtension(uri.AbsolutePath, ".pdb"));
+				if (!fiDll.Exists)
+					return null;
+
+				using (var srcDll = fiDll.OpenRead())
+				using (var srcPdb = fiPdb?.OpenRead())
+				{
+					var asm = Assembly.Load(
+						await srcDll.ReadInArrayAsync(),
+						srcPdb == null ? null : await srcPdb.ReadInArrayAsync()
+					);
+
+					return RegisterReferencedAssemblySource(uri, asm, fiDll.LastWriteTime);
+				}
+			}
+			else // load from web source
+			{
+				var env = GetEnvironment();
+				if (env == null)
+					throw new InvalidOperationException("No environment found to load an remote assembly.");
+
+				// create assembly cache directory
+				var assemblyCache = new DirectoryInfo(Path.Combine(env.LocalPath.FullName, "assemblies"));
+				if (!assemblyCache.Exists)
+					assemblyCache.Create();
+
+				// fetch from server
+				using (var r = await env.Request.GetResponseAsync(env.Request.MakeRelative(uri)))
+				{
+					var fileInfo = r.GetContentDisposition();
+					var modificationDate = fileInfo.ModificationDate?.DateTime ?? DateTime.MinValue;
+
+					var targetFile = new FileInfo(Path.Combine(assemblyCache.FullName, fileInfo.FileName));
+
+					// download file in cache
+					if (!targetFile.Exists || modificationDate == DateTime.MinValue || targetFile.LastWriteTime < modificationDate)
+					{
+						using (var src = await r.Content.ReadAsStreamAsync())
+						using (var dst = targetFile.OpenWrite())
+							await src.CopyToAsync(dst);
+
+						if (modificationDate > DateTime.MinValue)
+							targetFile.LastAccessTime = modificationDate;
+					}
+
+					// get assembly name
+					var name = AssemblyName.GetAssemblyName(targetFile.FullName);
+					return RegisterReferencedAssemblySource(uri, FindLoadedAssembly(name) ?? Assembly.LoadFile(targetFile.FullName), modificationDate);
+				}
+			}
+		} // func LoadAssemblyFromUriAsync
+
+		public static Task LoadAssemblyFromLocalAsync(string fileName)
+			=> LoadAssemblyFromUriAsync(new Uri("file://" + fileName.Replace('\\', '/')));
 
 		/// <summary>Get the Environment, that is attached to the current application.</summary>
 		/// <returns></returns>

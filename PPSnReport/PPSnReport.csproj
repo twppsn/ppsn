@@ -13,10 +13,10 @@
 	  <None Include="..\PPSnCore\ppsn.licenseheader" Link="ppsn.licenseheader" />
 	</ItemGroup>
 	<ItemGroup>
-	  <PackageReference Include="Markdig" Version="0.15.7" />
+	  <PackageReference Include="Markdig" Version="0.16.0" />
 	  <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
 	  <PackageReference Include="NeoLua" Version="1.3.9-beta.1" />
-	  <PackageReference Include="TecWare.DES.Core" Version="3.4.31-pre.314" />
+	  <PackageReference Include="TecWare.DES.Core" Version="3.4.31" />
 	</ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">

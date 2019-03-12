@@ -34,6 +34,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Xml.Linq;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
@@ -477,6 +478,14 @@ namespace TecWare.PPSn
 			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, command, commandImpl));
 
 		#region -- remove after update DES --
+
+		public static string MakeRelative(this DEHttpClient client, Uri uri)
+		{
+			if (!uri.IsAbsoluteUri)
+				return uri.ToString();
+
+			return client.BaseAddress.MakeRelativeUri(uri).ToString();
+		} // func MakeRelative
 
 		#endregion
 	} // class StuffUI
