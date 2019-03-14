@@ -19,12 +19,23 @@
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 							<Grid.RowDefinitions>
-								<RowDefinition Height="38" />
+								<RowDefinition Height="Auto" />
 								<RowDefinition />
 							</Grid.RowDefinitions>
-							<Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,1"
+							<Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource PPSnSeparatorBrush}" Background="{DynamicResource PPSnSideBarBackgroundBrush}"
+									Height="38" BorderThickness="0,0,0,1" Padding="0,0,0,1"
 									FocusManager.IsFocusScope="true" KeyboardNavigation.TabNavigation="Cycle">
-								<ToolBar ItemsSource="{TemplateBinding Commands}" Style="{DynamicResource PpsPaneToolBarStyle}" />
+								<ToolBar x:Name="paneToolBar" ItemsSource="{TemplateBinding Commands}" Style="{DynamicResource PpsPaneToolBarStyle}" />
+								<Border.Style>
+									<Style TargetType="{x:Type Border}">
+										<Setter Property="Visibility" Value="Visible"/>
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding ElementName=paneToolBar, Path=HasItems}" Value="False">
+												<Setter Property="Visibility" Value="Collapsed" />
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</Border.Style>
 							</Border>
 							<ContentPresenter Grid.Row="1" x:Name="PART_Control" Content="{TemplateBinding Control}" />
 							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" Focusable="False"/>
@@ -96,7 +107,7 @@
 							<RowDefinition />
 						</Grid.RowDefinitions>
 						<Border x:Name="AnimatedBorder" Width="0" Height="0" Visibility="Hidden" />
-						<Border x:Name="ContentBorder" Grid.ColumnSpan="2" Grid.RowSpan="2" Background="{DynamicResource PPSnPopUpBackgroundBrush}"
+						<Border x:Name="ContentBorder" Grid.ColumnSpan="2" Grid.RowSpan="2" Background="{DynamicResource PPSnSideBarBackgroundBrush}"
 								Margin="8,0,0,0" Padding="0,0,64,0" HorizontalAlignment="Right" Visibility="Collapsed">
 							<Border.Width>
 								<MultiBinding Converter="{x:Static ui:PpsWindowPaneCharmBarControl.WithConverter}">
@@ -246,7 +257,7 @@
 							<ColumnDefinition Width="224"/>
 						</Grid.ColumnDefinitions>
 
-						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="{DynamicResource PPSnWindowBackgroundBrush}"
+						<Border Grid.ColumnSpan="3" Grid.Row="1" Background="{DynamicResource PPSnSideBarBackgroundBrush}"
 								BorderBrush="{DynamicResource PPSnSeparatorBrush}" BorderThickness="0,1,0,0" />
 
 						<Border x:Name="leftBorder" Width="38" BorderThickness="0,0,1,0" BorderBrush="{StaticResource PaneItemSeparatorBrush}" Background="Transparent">
@@ -476,7 +487,7 @@
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsSelected" Value="True">
-							<Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource PPSnWindowBackgroundBrush}" />
+							<Setter TargetName="itemBorder" Property="Background" Value="{DynamicResource PPSnSideBarBackgroundBrush}" />
 						</Trigger>
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
