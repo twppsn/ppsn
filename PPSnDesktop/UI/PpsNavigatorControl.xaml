@@ -27,214 +27,6 @@ specific language governing permissions and limitations under the Licence.
 	<UserControl.Resources>
 		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.95}" />
 
-		<Style x:Key="NavigatorViewsListBoxStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
-			<Style.Resources>
-				<Style x:Key="NavigatorViewsToggleButtonStyle" TargetType="{x:Type ToggleButton}">
-					<Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
-					<Setter Property="BorderThickness" Value="0"/>
-					<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-					<Setter Property="Template">
-						<Setter.Value>
-							<ControlTemplate TargetType="{x:Type ToggleButton}">
-								<Border x:Name="contentBorder" BorderThickness="0" Background="Transparent" Padding="0,0,16,0" >
-									<Grid>
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="16"/>
-											<ColumnDefinition Width="18"/>
-											<ColumnDefinition/>
-										</Grid.ColumnDefinitions>
-										<Rectangle x:Name="selectedMarker" Fill="{StaticResource PPSnMarkerBrush}" Width="4" HorizontalAlignment="Left" Opacity="0"/>
-										<Viewbox x:Name="imageBox" Grid.Column="1" Height="18" Opacity=".75">
-											<Canvas Width="24" Height="24">
-												<Path Data="{Binding DisplayImage, Mode=OneTime, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
-													  Fill="{StaticResource PPSnActionButtonBrush}"/>
-											</Canvas>
-										</Viewbox>
-										<TextBlock x:Name="description" Grid.Column="2" Text="{Binding DisplayName}" Foreground="{TemplateBinding Foreground}"
-												   Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
-									</Grid>
-								</Border>
-
-								<ControlTemplate.Triggers>
-									<Trigger Property="IsMouseOver" Value="True">
-										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
-										<Setter TargetName="imageBox" Property="Opacity" Value="1" />
-									</Trigger>
-									<Trigger Property="IsPressed" Value="True">
-										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-										<Setter TargetName="imageBox" Property="Opacity" Value="1" />
-									</Trigger>
-									<Trigger Property="IsChecked" Value="True">
-										<Setter Property="Opacity" TargetName="selectedMarker" Value="1"/>
-									</Trigger>
-									<DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBox}}, Path=DataContext.ViewsShowDescription}">
-										<DataTrigger.Value>
-											<sys:Boolean>false</sys:Boolean>
-										</DataTrigger.Value>
-										<Setter TargetName="contentBorder" Property="ToolTip" Value="{Binding DisplayName}"/>
-									</DataTrigger>
-								</ControlTemplate.Triggers>
-							</ControlTemplate>
-						</Setter.Value>
-					</Setter>
-				</Style>
-
-				<Style TargetType="{x:Type ListBoxItem}">
-					<!--Focus Button in Container!-->
-					<Setter Property="Focusable" Value="False"/>
-					<Setter Property="Template">
-						<Setter.Value>
-							<ControlTemplate TargetType="{x:Type ListBoxItem}">
-								<Grid>
-									<Grid.RowDefinitions>
-										<RowDefinition Height="auto"/>
-										<RowDefinition Height="38"/>
-									</Grid.RowDefinitions>
-									<Border x:Name="SeparatorBorder" Height="2" BorderThickness="0,1,0,0" Margin="16,3,16,2"
-											BorderBrush="{StaticResource PPSnSeparatorBrush}"
-											RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" />
-									<ToggleButton Grid.Row="1" Style="{StaticResource NavigatorViewsToggleButtonStyle}"
-												  IsChecked="{Binding IsSelected,RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" />
-								</Grid>
-								<ControlTemplate.Triggers>
-									<DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
-										<Setter TargetName="SeparatorBorder" Property="Visibility" Value="Collapsed"/>
-									</DataTrigger>
-									<DataTrigger Binding="{Binding DataContext.ViewsShowDescription,RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}" Value="false">
-										<DataTrigger.EnterActions>
-											<BeginStoryboard>												
-												<Storyboard Storyboard.TargetName="SeparatorBorder" Storyboard.TargetProperty="Opacity">
-													<DoubleAnimation To="0"	Duration="{StaticResource PPSnShrinkStoryDuration}" />
-												</Storyboard>
-											</BeginStoryboard>
-										</DataTrigger.EnterActions>
-										<DataTrigger.ExitActions>
-											<BeginStoryboard>
-												<Storyboard Storyboard.TargetName="SeparatorBorder" Storyboard.TargetProperty="Opacity">
-													<DoubleAnimation To="1"	Duration="{StaticResource PPSnShrinkStoryDuration}" />
-												</Storyboard>
-											</BeginStoryboard>
-										</DataTrigger.ExitActions>
-									</DataTrigger>
-								</ControlTemplate.Triggers>
-							</ControlTemplate>
-						</Setter.Value>
-					</Setter>
-				</Style>
-			</Style.Resources>
-			
-			<Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ListBox}">
-						<Grid>
-							<Grid.RowDefinitions>
-								<RowDefinition Height="Auto"/>
-								<RowDefinition Height="*"/>
-							</Grid.RowDefinitions>
-							<ToggleButton Command="{Binding ToggleShowViewDescription}" Width="30" Height="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="11,0,0,4"
-										  Focusable="False" ClickMode="Press">
-								<ToggleButton.Template>
-									<ControlTemplate TargetType="{x:Type ToggleButton}">
-										<Grid x:Name="rootGrid" Background="Transparent">
-											<uiC:PpsGeometryImage GeometryName="menu" GeometryCircled="false" Foreground="{StaticResource PPSnWindowForegroundBrush}" Width="24" Height="24" />
-										</Grid>
-										<ControlTemplate.Triggers>
-											<Trigger Property="IsMouseOver" Value="True">
-												<Setter TargetName="rootGrid" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
-											</Trigger>
-										</ControlTemplate.Triggers>
-									</ControlTemplate>
-								</ToggleButton.Template>
-							</ToggleButton>
-							<TextBlock x:Name="headerBorder" Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="46,0,0,6"
-									   FontSize="15" FontWeight="SemiBold" />
-							<ScrollViewer Grid.Row="1" Focusable="false" Padding="0" Style="{StaticResource PPSnScrollViewerStyle}" HorizontalScrollBarVisibility="Disabled">
-								<ItemsPresenter SnapsToDevicePixels="True"/>
-							</ScrollViewer>
-						</Grid>
-						<ControlTemplate.Triggers>
-							<DataTrigger Binding="{Binding ViewsShowDescription}" Value="false">
-								<DataTrigger.EnterActions>
-									<BeginStoryboard>
-										<Storyboard>
-											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarShrinkedWidth}"
-															 AccelerationRatio=".4"
-															 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-										</Storyboard>
-									</BeginStoryboard>
-									<BeginStoryboard>
-										<Storyboard Storyboard.TargetName="headerBorder">
-											<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-												<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
-											</ObjectAnimationUsingKeyFrames>
-										</Storyboard>
-									</BeginStoryboard>
-								</DataTrigger.EnterActions>
-								<DataTrigger.ExitActions>
-									<BeginStoryboard>
-										<Storyboard>
-											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}"
-															 AccelerationRatio=".4"
-															 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-										</Storyboard>
-									</BeginStoryboard>
-									<BeginStoryboard>
-										<Storyboard Storyboard.TargetName="headerBorder">
-											<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-												<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
-											</ObjectAnimationUsingKeyFrames>
-										</Storyboard>
-									</BeginStoryboard>
-								</DataTrigger.ExitActions>
-							</DataTrigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-
-		<Style x:Key="NavigatorOrderButtonStyle" TargetType="{x:Type ToggleButton}">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-			<Setter Property="Margin" Value="0,0,6,0" />
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="IsThreeState" Value="True"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="Focusable" Value="False"/>
-			<Setter Property="IsTabStop" Value="False"/>
-			<Setter Property="IsChecked" Value="{x:Null}"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ToggleButton}">
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition />
-								<ColumnDefinition Width="12"/>
-							</Grid.ColumnDefinitions>
-							<Border x:Name="PART_Content" Grid.Column="0" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-								<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
-							</Border>
-							<Path x:Name="PART_Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden" Fill="{TemplateBinding Foreground}"/>
-						</Grid>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsChecked" Value="True">
-								<Setter TargetName="PART_Arrow" Property="Visibility" Value="Visible"/>
-								<Setter TargetName="PART_Arrow" Property="Data" Value="M 0 7 L 5 2 L 10 7 Z"/>
-							</Trigger>
-							<Trigger Property="IsChecked" Value="False">
-								<Setter TargetName="PART_Arrow" Property="Visibility" Value="Visible"/>
-								<Setter TargetName="PART_Arrow" Property="Data" Value="M 0 2 L 5 7 L 10 2 Z"/>
-							</Trigger>
-							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="PART_Content" Property="Background"  Value="{StaticResource PPSnMouseOverBrush}" />
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-
 		<Style x:Key="NavigatorSearchBoxStyle" TargetType="{x:Type TextBox}">
 			<Setter Property="Tag" Value="{x:Static uiL:PpsNavigatorSearchBoxState.Collapsed}"/>
 			<Setter Property="FontSize" Value="16"/>
@@ -335,6 +127,240 @@ specific language governing permissions and limitations under the Licence.
 			</Setter>
 		</Style>
 
+		<Style x:Key="NavigatorViewsListBoxStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
+			<Style.Resources>
+				<Style x:Key="NavigatorViewsToggleButtonStyle" TargetType="{x:Type ToggleButton}">
+					<Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
+					<Setter Property="BorderThickness" Value="0"/>
+					<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+					<Setter Property="Template">
+						<Setter.Value>
+							<ControlTemplate TargetType="{x:Type ToggleButton}">
+								<Border x:Name="contentBorder" BorderThickness="0" Background="Transparent" Padding="0,0,16,0" >
+									<Grid>
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="16"/>
+											<ColumnDefinition Width="18"/>
+											<ColumnDefinition/>
+										</Grid.ColumnDefinitions>
+										<Rectangle x:Name="selectedMarker" Fill="{StaticResource PPSnMarkerBrush}" Width="4" HorizontalAlignment="Left" Opacity="0"/>
+										<uiC:PpsGeometryImage x:Name="imageBox" Grid.Column="1"
+															  GeometryName="{Binding DisplayImage, Mode=OneTime}"
+															  GeometryCircled="false"
+															  Opacity=".75"
+															  Foreground="{StaticResource PPSnActionButtonBrush}" />
+										<TextBlock x:Name="description" Grid.Column="2" Text="{Binding DisplayName}" Foreground="{TemplateBinding Foreground}"
+												   Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
+									</Grid>
+								</Border>
+
+								<ControlTemplate.Triggers>
+									<Trigger Property="IsMouseOver" Value="True">
+										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+										<Setter TargetName="imageBox" Property="Opacity" Value="1" />
+									</Trigger>
+									<Trigger Property="IsPressed" Value="True">
+										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+										<Setter TargetName="imageBox" Property="Opacity" Value="1" />
+									</Trigger>
+									<Trigger Property="IsChecked" Value="True">
+										<Setter Property="Opacity" TargetName="selectedMarker" Value="1"/>
+									</Trigger>
+									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBox}}, Path=DataContext.ViewsShowDescription}">
+										<DataTrigger.Value>
+											<sys:Boolean>false</sys:Boolean>
+										</DataTrigger.Value>
+										<Setter TargetName="contentBorder" Property="ToolTip" Value="{Binding DisplayName}"/>
+									</DataTrigger>
+								</ControlTemplate.Triggers>
+							</ControlTemplate>
+						</Setter.Value>
+					</Setter>
+				</Style>
+
+				<Style TargetType="{x:Type ListBoxItem}">
+					<!--Focus Button in Container!-->
+					<Setter Property="Focusable" Value="False"/>
+					<Setter Property="Template">
+						<Setter.Value>
+							<ControlTemplate TargetType="{x:Type ListBoxItem}">
+								<Grid>
+									<Grid.RowDefinitions>
+										<RowDefinition Height="auto"/>
+										<RowDefinition Height="38"/>
+									</Grid.RowDefinitions>
+									<Border x:Name="SeparatorBorder" Height="2" BorderThickness="0,1,0,0" Margin="16,3,16,2"
+											BorderBrush="{StaticResource PPSnSeparatorBrush}"
+											RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" />
+									<ToggleButton Grid.Row="1" Style="{StaticResource NavigatorViewsToggleButtonStyle}"
+												  IsChecked="{Binding IsSelected,RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" />
+								</Grid>
+								<ControlTemplate.Triggers>
+									<DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+										<Setter TargetName="SeparatorBorder" Property="Visibility" Value="Collapsed"/>
+									</DataTrigger>
+									<DataTrigger Binding="{Binding DataContext.ViewsShowDescription,RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}" Value="false">
+										<DataTrigger.EnterActions>
+											<BeginStoryboard>
+												<Storyboard Storyboard.TargetName="SeparatorBorder" Storyboard.TargetProperty="Opacity">
+													<DoubleAnimation To="0"	Duration="0:00:.3" />
+												</Storyboard>
+											</BeginStoryboard>
+										</DataTrigger.EnterActions>
+										<DataTrigger.ExitActions>
+											<BeginStoryboard><Storyboard Storyboard.TargetName="SeparatorBorder" Storyboard.TargetProperty="Opacity">
+													<DoubleAnimation To="1"	Duration="0:00:.3" />
+												</Storyboard>
+											</BeginStoryboard>
+										</DataTrigger.ExitActions>
+									</DataTrigger>
+								</ControlTemplate.Triggers>
+							</ControlTemplate>
+						</Setter.Value>
+					</Setter>
+				</Style>
+			</Style.Resources>
+
+			<Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ListBox}">
+						<Grid >
+							<Grid.RowDefinitions>
+								<RowDefinition Height="16" />
+								<RowDefinition Height="36" />
+								<RowDefinition />
+							</Grid.RowDefinitions>
+							<Rectangle x:Name="sideBarRect" StrokeThickness="0" Fill="{StaticResource PPSnSideBarBackgroundBrush}" Panel.ZIndex="-1"
+									   Grid.RowSpan="3" Width="{StaticResource PPSnSideBarIncreasedWidth}" HorizontalAlignment="Left"/>
+
+							<ToggleButton Command="{Binding ToggleShowViewDescription}" Grid.Row="1" Width="36" HorizontalAlignment="Left" Margin="8,0,0,0" Focusable="False" ClickMode="Press">
+								<ToggleButton.Template>
+									<ControlTemplate TargetType="{x:Type ToggleButton}">
+										<Grid x:Name="rootGrid" Background="Transparent">
+											<uiC:PpsGeometryImage GeometryName="menu" GeometryCircled="false" Foreground="{StaticResource PPSnWindowForegroundBrush}" Width="24" Height="24" />
+										</Grid>
+										<ControlTemplate.Triggers>
+											<Trigger Property="IsMouseOver" Value="True">
+												<Setter TargetName="rootGrid" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+											</Trigger>
+										</ControlTemplate.Triggers>
+									</ControlTemplate>
+								</ToggleButton.Template>
+							</ToggleButton>
+							<TextBlock x:Name="headerBorder" Grid.Row="1" Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="46,0,0,3"
+									   FontSize="15" FontWeight="SemiBold" />
+							<ScrollViewer Grid.Row="2" Style="{StaticResource PPSnScrollViewerStyle}" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+								<ItemsPresenter SnapsToDevicePixels="True"/>
+							</ScrollViewer>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<DataTrigger Binding="{Binding ViewsShowDescription}" Value="false">
+								<DataTrigger.EnterActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarShrinkedWidth}"
+															 AccelerationRatio=".4"
+															 Duration="0:00:.3"/>
+											<DoubleAnimation Storyboard.TargetName="sideBarRect" Storyboard.TargetProperty="Width" To="0"
+															 AccelerationRatio=".4"
+															 Duration="0:00:.3"/>
+											<ObjectAnimationUsingKeyFrames Storyboard.TargetName="headerBorder" Storyboard.TargetProperty="Visibility">
+												<DiscreteObjectKeyFrame KeyTime="0:00:.3" Value="{x:Static Visibility.Collapsed}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</BeginStoryboard>
+								</DataTrigger.EnterActions>
+								<DataTrigger.ExitActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}"
+															 AccelerationRatio=".4"
+															 Duration="0:00:.3"/>
+											<DoubleAnimation Storyboard.TargetName="sideBarRect" Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}"
+															 AccelerationRatio=".4"
+															 Duration="0:00:.3"/>
+											<ObjectAnimationUsingKeyFrames Storyboard.TargetName="headerBorder" Storyboard.TargetProperty="Visibility">
+												<DiscreteObjectKeyFrame KeyTime="0:00:0" Value="{x:Static Visibility.Visible}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</BeginStoryboard>
+								</DataTrigger.ExitActions>
+							</DataTrigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style x:Key="NavigatorOrderButtonStyle" TargetType="{x:Type ToggleButton}">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="Margin" Value="0,0,6,0" />
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="IsThreeState" Value="True"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="Focusable" Value="False"/>
+			<Setter Property="IsTabStop" Value="False"/>
+			<Setter Property="IsChecked" Value="{x:Null}"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition />
+								<ColumnDefinition Width="12"/>
+							</Grid.ColumnDefinitions>
+							<Border x:Name="PART_Content" Grid.Column="0" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+								<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+							</Border>
+							<Path x:Name="PART_Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden" Fill="{TemplateBinding Foreground}"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsChecked" Value="True">
+								<Setter TargetName="PART_Arrow" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="PART_Arrow" Property="Data" Value="M 0 7 L 5 2 L 10 7 Z"/>
+							</Trigger>
+							<Trigger Property="IsChecked" Value="False">
+								<Setter TargetName="PART_Arrow" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="PART_Arrow" Property="Data" Value="M 0 2 L 5 7 L 10 2 Z"/>
+							</Trigger>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="PART_Content" Property="Background"  Value="{StaticResource PPSnMouseOverBrush}" />
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		
+		<Style x:Key="NavigatorFilterButtonStyle" TargetType="{x:Type ToggleButton}">
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}" />
+			<Setter Property="BorderThickness" Value="0,0,0,4" />
+			<Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}" />
+			<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+			<Setter Property="Focusable" Value="False" />
+			<Setter Property="IsTabStop" Value="False" />
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+							<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,2,1"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsChecked" Value="True">
+								<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnMarkerBrush}"/>
+							</Trigger>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
 		<ui:LuaValueConverter x:Key="isDocOnServerConverter">
 			<![CDATA[
 			if cast(int, value) > 0 then
@@ -354,7 +380,7 @@ specific language governing permissions and limitations under the Licence.
 			]]>
 		</ui:LuaValueConverter>
 
-		<Style x:Key="PPSnDataListControlItemStyle" TargetType="{x:Type ListBoxItem}">
+		<!--<Style x:Key="PPSnDataListControlItemStyle" TargetType="{x:Type ListBoxItem}">
 			<Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
 			<Setter Property="Margin" Value="0,0,0,1"/>
 			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -404,7 +430,7 @@ specific language governing permissions and limitations under the Licence.
 								<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
 							</Trigger>
 							<Trigger Property="IsSelected" Value="True">
-								<!--<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>-->
+								--><!--<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>--><!--
 								<Setter Property="Opacity" TargetName="showSelection" Value="1"/>
 							</Trigger>
 
@@ -466,34 +492,7 @@ specific language governing permissions and limitations under the Licence.
 					</ControlTemplate>
 				</Setter.Value>
 			</Setter>
-		</Style>
-
-		<Style x:Key="NavigatorFilterButtonStyle" TargetType="{x:Type ToggleButton}">
-			<Setter Property="Background" Value="Transparent" />
-			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}" />
-			<Setter Property="BorderThickness" Value="0,0,0,4" />
-			<Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}" />
-			<Setter Property="FocusVisualStyle" Value="{x:Null}" />
-			<Setter Property="Focusable" Value="False" />
-			<Setter Property="IsTabStop" Value="False" />
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ToggleButton}">
-						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-							<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,2,1"/>
-						</Border>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsChecked" Value="True">
-								<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnMarkerBrush}"/>
-							</Trigger>
-							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
+		</Style>-->
 
 	</UserControl.Resources>
 
@@ -561,14 +560,16 @@ specific language governing permissions and limitations under the Licence.
 		<TextBox x:Name="PART_SearchBox" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Right" Width="340" Margin="0,12,0,8"
 				 Style="{StaticResource NavigatorSearchBoxStyle}"
 				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown"/>
-		<ListBox x:Name="PART_Views" Grid.Row="0" Grid.RowSpan="4" Margin="0,20,0,0"
+		<ListBox x:Name="PART_Views" Grid.RowSpan="5"
 				 ItemsSource="{Binding VisibleViews}"
 				 IsSynchronizedWithCurrentItem="True"
 				 Style="{StaticResource NavigatorViewsListBoxStyle}"/>
-		<uiC:DataListControl Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
+		<!--<uiC:DataListControl Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
 							 ItemsSource="{Binding Items}"
 							 Style="{StaticResource PPSnListBoxStyle}"
-							 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"/>
+							 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"/>-->
+		<uiC:DataListControl Grid.Column="2" Grid.Row="3" ItemsSource="{Binding Items}" IsSynchronizedWithCurrentItem="True" FontSize="14" />
+
 		<!--temporary removed-->
 		<!--ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>-->
 
