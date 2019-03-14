@@ -28,6 +28,7 @@ using TecWare.DE.Data;
 namespace TecWare.PPSn.Data
 {
 	/// <summary>Fetches data from a source page by page as a bindable collection.</summary>
+	[Obsolete("Use PpsDataRowEnumerableCollectionView")]
 	public sealed class PpsDataList : IList, INotifyCollectionChanged, INotifyPropertyChanged
 	{
 		#region -- class LuaItemTable -------------------------------------------------

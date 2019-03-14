@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows.Data;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -387,7 +388,7 @@ namespace TecWare.PPSn.Data
 	#region -- class PpsDataCollectionView --------------------------------------------
 
 	/// <summary>Special collection view for PpsDataTable, that supports IDataRowEnumerable</summary>
-	public class PpsDataCollectionView : ListCollectionView, IDataRowEnumerable
+	public class PpsDataCollectionView : ListCollectionView, IPpsDataRowViewFilter, IPpsDataRowViewSort
 	{
 		#region -- class DataRowEnumerator --------------------------------------------
 
@@ -419,6 +420,7 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		private readonly IDisposable detachView;
+		private PpsDataFilterExpression filterExpression = null;
 
 		/// <summary>Collection view for PpsDataTable's.</summary>
 		/// <param name="dataTable"></param>
@@ -468,39 +470,57 @@ namespace TecWare.PPSn.Data
 		} // proc OnCollectionChanged
 
 		/// <summary>Apply a sort expression to the collection view.</summary>
-		/// <param name="expressions"></param>
-		/// <param name="lookupNative"></param>
-		/// <returns></returns>
-		/// <remarks>This implementation is not stackable, like on requests.</remarks>
-		public IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
+		public IEnumerable<PpsDataOrderExpression> Sort
 		{
-			// update search expression
-			SortDescriptions.Clear();
-			foreach (var expr in expressions)
-				SortDescriptions.Add(new SortDescription(expr.Identifier, expr.Negate ? ListSortDirection.Descending : ListSortDirection.Ascending));
+			get => from s in SortDescriptions select new PpsDataOrderExpression(s.Direction != ListSortDirection.Ascending, s.PropertyName);
+			set
+			{
+				SortDescriptions.Clear();
+				if (value != null)
+				{
+					foreach (var s in value)
+						SortDescriptions.Add(new SortDescription(s.Identifier, s.Negate ? ListSortDirection.Descending : ListSortDirection.Ascending));
+				}
 
-			RefreshOrDefer();
-			
-			return this; // we do not create a new collectionview -> it should be unique for the current context
-		} // func ApplyFilter
+				RefreshOrDefer();
+			}
+		} // prop Sort
+
+		private bool allowSetFilter = false;
+
+		public override Predicate<object> Filter
+		{
+			get => base.Filter;
+			set
+			{
+				if (!allowSetFilter)
+					throw new NotSupportedException();
+				base.Filter = value;
+			}
+		} // prop Filter
 
 		/// <summary>Apply a filter to the collection view.</summary>
-		/// <param name="expression"></param>
-		/// <param name="lookupNative"></param>
-		/// <returns></returns>
-		/// <remarks>This implementation is not stackable, like on requests.</remarks>
-		public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
+		public PpsDataFilterExpression FilterExpression
 		{
-			Filter = PpsDataFilterVisitorDataRow.CreateDataRowFilter<object>(expression);
-			return this; // we do not create a new collectionview -> it should be unique for the current context
-		} // func ApplyFilter
-				
-		IDataRowEnumerable IDataRowEnumerable.ApplyColumns(IEnumerable<PpsDataColumnExpression> columns) 
-			=> throw new NotSupportedException(); // it is not allowed to touch columns
-
-		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
-			=> new DataRowEnumerator(base.GetEnumerator());
-
+			get => filterExpression ?? PpsDataFilterExpression.True;
+			set
+			{
+				if (filterExpression != value)
+				{
+					filterExpression = value;
+					allowSetFilter = true;
+					try
+					{
+						base.Filter = PpsDataFilterVisitorDataRow.CreateDataRowFilter<object>(filterExpression);
+					}
+					finally
+					{
+						allowSetFilter = false;
+					}
+				}
+			}
+		} // prop Filter
+		
 		/// <summary>Parent row, of the current filter.</summary>
 		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;
 		/// <summary>Get the DataView, that is filtered.</summary>

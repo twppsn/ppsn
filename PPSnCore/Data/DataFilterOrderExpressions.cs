@@ -99,6 +99,7 @@ namespace TecWare.PPSn.Data
 	#region -- class PpsDataFilterExpression ------------------------------------------
 
 	/// <summary></summary>
+	[TypeConverter(typeof(PpsDataFilterExpressionConverter))]
 	public abstract class PpsDataFilterExpression
 	{
 		/// <summary></summary>
@@ -656,6 +657,15 @@ namespace TecWare.PPSn.Data
 		/// <summary>Returns a expression, that is true.</summary>
 		public static PpsDataFilterExpression True => PpsDataFilterTrueExpression.Default;
 	} // class PpsDataFilterExpression
+
+	#endregion
+
+	#region -- class PpsDataFilterExpressionConverter ---------------------------------
+
+	/// <summary>Converts expressions</summary>
+	public class PpsDataFilterExpressionConverter : TypeConverter
+	{
+	} // class PpsDataFilterExpressionConverter
 
 	#endregion
 
