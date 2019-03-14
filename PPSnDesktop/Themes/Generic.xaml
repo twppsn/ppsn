@@ -270,7 +270,6 @@
 							<Border DockPanel.Dock="Left" Padding="0,0,32,0">
 								<ItemsPresenter />
 							</Border>
-
 							<ToggleButton x:Name="showPaneListToggleButton" DockPanel.Dock="Left" Width="32" Margin="-32,0,0,0" Focusable="False">
 								<ToggleButton.Style>
 									<Style TargetType="{x:Type ToggleButton}">
@@ -297,7 +296,6 @@
 									</Style>
 								</ToggleButton.Style>
 							</ToggleButton>
-
 							<Rectangle Fill="Transparent">
 								<Rectangle.Tag>
 									<uiC:PpsWindowHitTest HitTest="2" />
@@ -466,12 +464,13 @@
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStripItem}">
 					<Border x:Name="itemBorder" BorderBrush="{StaticResource PaneItemSeparatorBrush}" BorderThickness="0,0,1,0" Margin="0,0,0,-1">
-						<Grid Background="Transparent">
+						<Grid Background="Transparent" TextBlock.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition />
 								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
-							<ContentPresenter />
+							<ContentPresenter Margin="0,0,2,0"/>
+							<TextBlock x:Name="dirtyText" Text="*" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Hidden" />
 							<uiC:PpsButton x:Name="closeButton"
 										   Grid.Column="1"
 										   Command="{x:Static ui:PpsMainWindow.ClosePaneCommand}"
@@ -504,6 +503,9 @@
 							</MultiTrigger.Conditions>
 							<Setter TargetName="closeButton" Property="Visibility" Value="Visible" />
 						</MultiTrigger>
+						<DataTrigger Binding="{Binding CurrentPane.IsDirty}" Value="True">
+							<Setter TargetName="dirtyText" Property="Visibility" Value="Visible" />
+						</DataTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
