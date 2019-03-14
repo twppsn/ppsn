@@ -309,7 +309,7 @@
 		<!--Navigation geöffnete PaneHosts-->
 		<Popup x:Name="windowPanePopup" Placement="Center" AllowsTransparency="True">
 			<Grid SnapsToDevicePixels="True">
-				<Rectangle Fill="Black" Opacity=".75" />
+				<Rectangle Fill="Black" Opacity=".7" />
 				<ListBox x:Name="windowPanePopupListBox" ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True"
 						 Style="{StaticResource PPSnListBoxStyle}"
 						 Background="Transparent" Margin="16" Focusable="False" MaxWidth="636">
