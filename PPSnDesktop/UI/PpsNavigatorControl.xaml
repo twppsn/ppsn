@@ -203,13 +203,13 @@ specific language governing permissions and limitations under the Licence.
 										<DataTrigger.EnterActions>
 											<BeginStoryboard>
 												<Storyboard Storyboard.TargetName="SeparatorBorder" Storyboard.TargetProperty="Opacity">
-													<DoubleAnimation To="0"	Duration="0:00:.3" />
+													<DoubleAnimation To="0"	Duration="0:00:.2" />
 												</Storyboard>
 											</BeginStoryboard>
 										</DataTrigger.EnterActions>
 										<DataTrigger.ExitActions>
 											<BeginStoryboard><Storyboard Storyboard.TargetName="SeparatorBorder" Storyboard.TargetProperty="Opacity">
-													<DoubleAnimation To="1"	Duration="0:00:.3" />
+													<DoubleAnimation To="1"	Duration="0:00:.2" />
 												</Storyboard>
 											</BeginStoryboard>
 										</DataTrigger.ExitActions>
@@ -261,12 +261,12 @@ specific language governing permissions and limitations under the Licence.
 										<Storyboard>
 											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarShrinkedWidth}"
 															 AccelerationRatio=".4"
-															 Duration="0:00:.3"/>
+															 Duration="0:00:.2"/>
 											<DoubleAnimation Storyboard.TargetName="sideBarRect" Storyboard.TargetProperty="Width" To="0"
 															 AccelerationRatio=".4"
-															 Duration="0:00:.3"/>
+															 Duration="0:00:.2"/>
 											<ObjectAnimationUsingKeyFrames Storyboard.TargetName="headerBorder" Storyboard.TargetProperty="Visibility">
-												<DiscreteObjectKeyFrame KeyTime="0:00:.3" Value="{x:Static Visibility.Collapsed}"/>
+												<DiscreteObjectKeyFrame KeyTime="0:00:.2" Value="{x:Static Visibility.Collapsed}"/>
 											</ObjectAnimationUsingKeyFrames>
 										</Storyboard>
 									</BeginStoryboard>
@@ -276,10 +276,10 @@ specific language governing permissions and limitations under the Licence.
 										<Storyboard>
 											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}"
 															 AccelerationRatio=".4"
-															 Duration="0:00:.3"/>
+															 Duration="0:00:.2"/>
 											<DoubleAnimation Storyboard.TargetName="sideBarRect" Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}"
 															 AccelerationRatio=".4"
-															 Duration="0:00:.3"/>
+															 Duration="0:00:.2"/>
 											<ObjectAnimationUsingKeyFrames Storyboard.TargetName="headerBorder" Storyboard.TargetProperty="Visibility">
 												<DiscreteObjectKeyFrame KeyTime="0:00:0" Value="{x:Static Visibility.Visible}"/>
 											</ObjectAnimationUsingKeyFrames>

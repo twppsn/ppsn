@@ -104,6 +104,7 @@
     <Compile Include="Controls\PpsAttachmentsControl.xaml.cs">
       <DependentUpon>PpsAttachmentsControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\PpsListbox.cs" />
     <Compile Include="UI\PpsCameraPane.cs" />
     <Compile Include="Controls\PpsCircularListBox.cs" />
     <Compile Include="Controls\PpsComboBox.cs" />
@@ -241,6 +242,10 @@
     <Page Include="Controls\PpsDataFilterBase.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PpsListbox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\PpsPdfViewer.xaml">
       <Generator>MSBuild:Compile</Generator>

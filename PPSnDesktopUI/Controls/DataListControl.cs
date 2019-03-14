@@ -52,7 +52,7 @@ namespace TecWare.PPSn.Controls
 	#endregion
 
 	/// <summary>Spezial Control to display data list</summary>
-	public class DataListControl : ListBox
+	public class DataListControl : PpsListBox // test ListBox
 	{
 		/// <summary>Public constructor</summary>
 		public DataListControl()
