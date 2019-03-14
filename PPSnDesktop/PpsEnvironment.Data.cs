@@ -438,7 +438,7 @@ namespace TecWare.PPSn
 	#region -- class PpsMasterDataSelector --------------------------------------------
 
 	/// <summary>Base implementation of a data selector.</summary>
-	public abstract class PpsMasterDataSelector : IDataRowEnumerable, IDataColumns, INotifyCollectionChanged
+	public abstract class PpsMasterDataSelector : IDataRowEnumerable, ICollectionViewFactory, IDataColumns, INotifyCollectionChanged
 	{
 		/// <summary>Use only reset.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
@@ -494,6 +494,11 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public virtual IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
 			=> this;
+
+		/// <summary>Create a collection view for this selector.</summary>
+		/// <returns></returns>
+		public ICollectionView CreateView()
+			=> new PpsDataRowEnumerableCollectionView(this);
 
 		/// <summary>Columns of the rows.</summary>
 		public abstract IReadOnlyList<IDataColumn> Columns { get; }

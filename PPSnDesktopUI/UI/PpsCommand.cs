@@ -905,4 +905,18 @@ namespace TecWare.PPSn.UI
 	} // class PpsUICommandCollection
 
 	#endregion
+
+	#region -- interface IPpsCommandsSelector -----------------------------------------
+
+	/// <summary>Same as DataTemplateSelector only for command collections.</summary>
+	public interface IPpsCommandsSelector
+	{
+		/// <summary></summary>
+		/// <param name="item"></param>
+		/// <param name="container"></param>
+		/// <returns></returns>
+		PpsUICommandCollection SelectCommands(object item, DependencyObject container);
+	} // interface IPpsCommandsSelector
+
+	#endregion
 }

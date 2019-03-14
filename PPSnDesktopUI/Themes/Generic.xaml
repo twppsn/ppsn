@@ -18,6 +18,7 @@
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsStackSectionControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFilterBase.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataListControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsProgressControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsCircularListBox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsEditableListbox.xaml" />
