@@ -18,6 +18,7 @@ using System.Collections;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Markup;
 using TecWare.DE.Stuff;
@@ -100,17 +101,54 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region -- Commands - Property ------------------------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsCommandBarControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		/// <summary>Current command collection.</summary>
+		public PpsUICommandCollection Commands { get => (PpsUICommandCollection)GetValue(CommandsProperty); }
+
+		#endregion
+
+		#region -- ExternalCommands - Property ----------------------------------------
+
 		/// <summary></summary>
 		public static readonly DependencyProperty ExternalCommandsProperty = DependencyProperty.Register(nameof(ExternalCommands), typeof(PpsUICommandCollection), typeof(PpsCommandBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnExternalCommandsChanged)));
 
-		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsCommandBarControl),
-			new FrameworkPropertyMetadata(null,
-				FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender
-			)
-		);
+		private static void OnExternalCommandsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsCommandBarControl)d).OnExternalCommandsChanged((PpsUICommandCollection)e.NewValue, (PpsUICommandCollection)e.OldValue);
 
 		/// <summary></summary>
-		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		/// <returns></returns>
+		protected virtual void OnExternalCommandsChanged(PpsUICommandCollection newValue, PpsUICommandCollection oldValue)
+		{
+			CommandsView.RemoveCommands(oldValue);
+			CommandsView.AppendCommands(newValue);
+		} // proc OnExternalCommandsChanged
+
+		/// <summary>External defined command collection, they are merged with the main commands.</summary>
+		public PpsUICommandCollection ExternalCommands { get => (PpsUICommandCollection)GetValue(ExternalCommandsProperty); set => SetValue(ExternalCommandsProperty, value); }
+
+		#endregion
+
+		#region -- CommandsView - Property --------------------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		private static readonly DependencyPropertyKey commandsViewPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CommandsView), typeof(PpsUICommandsView), typeof(PpsCommandBarControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty CommandsViewProperty = commandsViewPropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		/// <summary>Combination of command collections.</summary>
+		public PpsUICommandsView CommandsView => (PpsUICommandsView)GetValue(CommandsViewProperty);
+
+		#endregion
+
+		#region -- Mode - Property ----------------------------------------------------
 
 		/// <summary>Sets the Style for the UI</summary>
 		public static readonly DependencyProperty ModeProperty = DependencyProperty.Register(nameof(Mode), typeof(PpsCommandBarMode), typeof(PpsCommandBarControl), 
@@ -121,20 +159,44 @@ namespace TecWare.PPSn.Controls
 			)
 		);
 
-		private readonly PpsUICommandCollection defaultCollection;
+		private static void OnModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsCommandBarControl)d).OnModeChanged((PpsCommandBarMode)e.NewValue, (PpsCommandBarMode)e.OldValue);
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected void OnModeChanged(PpsCommandBarMode newValue, PpsCommandBarMode oldValue)
+			=> RefreshItems();
+
+		/// <summary>Sets the Style for the UI</summary>
+		public PpsCommandBarMode Mode { get => (PpsCommandBarMode)GetValue(ModeProperty); set => SetValue(ModeProperty, value); }
+
+		#endregion
+
 		private ItemsControl itemsControl = null;
-		
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
 		/// <summary>standard constructor</summary>
 		public PpsCommandBarControl()
 		{
-			defaultCollection = new PpsUICommandCollection
+			SetValue(commandsPropertyKey, new PpsUICommandCollection
 			{
 				AddLogicalChildHandler = AddLogicalChild,
 				RemoveLogicalChildHandler = RemoveLogicalChild
-			};
+			});
 
-			SetValue(commandsPropertyKey, defaultCollection);
+			SetValue(commandsViewPropertyKey, new PpsUICommandsView(Commands));
 		} // ctor
+
+		static PpsCommandBarControl()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsCommandBarControl), new FrameworkPropertyMetadata(typeof(PpsCommandBarControl)));
+		}
+
+		#endregion
+
+		#region -- Templates ----------------------------------------------------------
 
 		/// <summary></summary>
 		public override void OnApplyTemplate()
@@ -152,43 +214,11 @@ namespace TecWare.PPSn.Controls
 				itemsControl.ItemTemplateSelector = new PpsCommandBarControlTemplateSelector(this);
 		} // proc RefreshItems
 
-
-		private static void OnExternalCommandsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsCommandBarControl)d).OnExternalCommandsChanged((PpsUICommandCollection)e.NewValue, (PpsUICommandCollection)e.OldValue);
-
-		/// <summary></summary>
-		/// <param name="newValue"></param>
-		/// <param name="oldValue"></param>
-		/// <returns></returns>
-		protected virtual void OnExternalCommandsChanged(PpsUICommandCollection newValue, PpsUICommandCollection  oldValue)
-			=> SetValue(commandsPropertyKey, newValue ?? defaultCollection);
-		
-		private static void OnModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsCommandBarControl)d).OnModeChanged((PpsCommandBarMode)e.NewValue, (PpsCommandBarMode)e.OldValue);
-
-		/// <summary></summary>
-		/// <param name="newValue"></param>
-		/// <param name="oldValue"></param>
-		protected void OnModeChanged(PpsCommandBarMode newValue, PpsCommandBarMode oldValue)
-			=> RefreshItems();
+		#endregion
 
 		/// <summary></summary>
 		protected override IEnumerator LogicalChildren
-			=> Commands == defaultCollection 
-				? Procs.CombineEnumerator(base.LogicalChildren, defaultCollection.GetEnumerator()) 
-				: base.LogicalChildren;
-
-		/// <summary>Current command collection.</summary>
-		public PpsUICommandCollection Commands { get => (PpsUICommandCollection)GetValue(CommandsProperty); }
-		/// <summary>External defined command collection.</summary>
-		public PpsUICommandCollection ExternalCommands { get => (PpsUICommandCollection)GetValue(ExternalCommandsProperty); set => SetValue(ExternalCommandsProperty, value); }
-		/// <summary>Sets the Style for the UI</summary>
-		public PpsCommandBarMode Mode { get => (PpsCommandBarMode)GetValue(ModeProperty); set => SetValue(ModeProperty, value); }
-		
-		static PpsCommandBarControl()
-		{
-			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsCommandBarControl), new FrameworkPropertyMetadata(typeof(PpsCommandBarControl)));
-		}
+			=> Procs.CombineEnumerator(base.LogicalChildren, Commands.GetEnumerator());
 	} // class PpsCommandBarControl
 
 	#endregion

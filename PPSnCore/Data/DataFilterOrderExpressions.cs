@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design.Serialization;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -665,6 +666,66 @@ namespace TecWare.PPSn.Data
 	/// <summary>Converts expressions</summary>
 	public class PpsDataFilterExpressionConverter : TypeConverter
 	{
+		/// <summary></summary>
+		/// <param name="context"></param>
+		/// <param name="sourceType"></param>
+		/// <returns></returns>
+		public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+		{
+			return typeof(PpsDataFilterExpression).IsAssignableFrom(sourceType)
+				|| sourceType == typeof(string)
+				|| base.CanConvertFrom(context, sourceType);
+		}// func CanConvertFrom
+
+		/// <summary></summary>
+		/// <param name="context"></param>
+		/// <param name="destinationType"></param>
+		/// <returns></returns>
+		public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
+		{
+			return destinationType == typeof(string)
+				|| base.CanConvertFrom(context, destinationType);
+		} // func CanConvertTo
+
+		/// <summary></summary>
+		/// <param name="context"></param>
+		/// <param name="culture"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+		{
+			switch (value)
+			{
+				case null:
+					return PpsDataFilterExpression.True;
+				case string s:
+					return PpsDataFilterExpression.Parse(s);
+				default:
+					throw GetConvertFromException(value);
+			}
+		} // func ConvertFrom
+
+		/// <summary></summary>
+		/// <param name="context"></param>
+		/// <param name="culture"></param>
+		/// <param name="value"></param>
+		/// <param name="destinationType"></param>
+		/// <returns></returns>
+		public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+		{
+			if (value == null)
+			{
+				if (destinationType == typeof(string))
+					return String.Empty;
+			}
+			else if (value is PpsDataFilterExpression expr)
+			{
+				if (destinationType == typeof(string))
+					return expr == PpsDataFilterExpression.True ? String.Empty : expr.ToString();
+			}
+
+			throw GetConvertToException(value, destinationType);
+		} // funcConvertTo
 	} // class PpsDataFilterExpressionConverter
 
 	#endregion
@@ -1246,9 +1307,12 @@ namespace TecWare.PPSn.Data
 			var args = new List<PpsDataFilterExpression>(arguments.Length);
 			foreach (var arg in arguments)
 			{
+				if (arg == null)
+					continue;
+
 				var c = arg.Reduce();
 
-				if (c.Type == this.Type)
+				if (c.Type == Type)
 					args.AddRange(((PpsDataFilterLogicExpression)c).Arguments);
 				else if (c.Type != PpsDataFilterExpressionType.True)
 					args.Add(c);
@@ -1400,7 +1464,7 @@ namespace TecWare.PPSn.Data
 					throw new NotImplementedException();
 			}
 		} // func CreateCompareFilter
-				
+
 		private string CreateDefaultCompareValue(string columnName, PpsDataFilterCompareOperator op, string value, bool useContains)
 		{
 			switch (op)
@@ -2283,7 +2347,7 @@ namespace TecWare.PPSn.Data
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public static bool RtDataRowSearchFullText(IDataRow row, string text, bool startsWith)
 			=> RtDataRowSearchFullText(row, text, startsWith, 0);
-		
+
 		private static bool RtDataRowSearchFullText(IDataRow row, string text, bool startsWith, int level)
 		{
 			if (row == null)
@@ -2525,7 +2589,7 @@ namespace TecWare.PPSn.Data
 					return CreateStringKeyValuePair(value.ToString());
 			}
 		} // func CreateStringKeyValuePair
-		
+
 		/// <summary></summary>
 		/// <param name="columns"></param>
 		/// <returns></returns>

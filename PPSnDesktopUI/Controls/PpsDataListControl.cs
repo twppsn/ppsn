@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -22,6 +23,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
+using System.Windows.Input;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 
@@ -35,10 +39,14 @@ namespace TecWare.PPSn.Controls
 		#region -- Commands - Property ------------------------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty CommandsProperty = DependencyProperty.Register(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsDataListItem), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCommandsChanged)));
+		public static readonly DependencyProperty CommandsProperty = DependencyProperty.Register(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsDataListItem), new FrameworkPropertyMetadata(new PropertyChangedCallback(OnCommandsChanged), new CoerceValueCallback(OnCoerceCommands)));
+
 		private static readonly DependencyPropertyKey hasCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasCommands), typeof(bool), typeof(PpsDataListItem), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasCommandsProperty = hasCommandsPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		private static object OnCoerceCommands(DependencyObject d, object baseValue)
+			=> baseValue ?? new PpsUICommandCollection();
 
 		private static void OnCommandsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataListItem)d).OnCommandsChanged((PpsUICommandCollection)e.NewValue, (PpsUICommandCollection)e.OldValue);
@@ -53,16 +61,25 @@ namespace TecWare.PPSn.Controls
 			if (newValue != null)
 				newValue.CollectionChanged += Commands_CollectionChanged;
 
-			UpdateHasCommands();
+			UpdateCommands();
 		} // proc OnCommandsChanged
 
 		private void Commands_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-			=> UpdateHasCommands();
+			=> UpdateCommands();
 
-		private void UpdateHasCommands()
+		private void UpdateCommands()
 		{
 			var commands = Commands;
 			SetValue(hasCommandsPropertyKey, commands != null && commands.Count > 0);
+
+			if (commands == null || commands.Count == 0)
+				SetValue(hasCommandsPropertyKey, false);
+			else 
+			{
+				SetValue(hasCommandsPropertyKey, true);
+				foreach (var cmd in Commands.OfType<PpsUICommandButton>())
+					cmd.CommandParameter = DataContext;
+			}
 		} // func UpdateHasCommands
 
 		/// <summary>Current commands for the item.</summary>
@@ -130,24 +147,61 @@ namespace TecWare.PPSn.Controls
 		#region -- UserFilterExpression, FilterExpression - Property ------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty FilterExpressionProperty = DependencyProperty.Register(nameof(FilterExpression), typeof(PpsDataFilterExpression), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null));
-		public static readonly DependencyProperty UserFilterExpressionProperty = DependencyProperty.Register(nameof(UserFilterExpression), typeof(PpsDataFilterExpression), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty FilterExpressionProperty = DependencyProperty.Register(nameof(FilterExpression), typeof(PpsDataFilterExpression), typeof(PpsDataListControl), new FrameworkPropertyMetadata(new PropertyChangedCallback(OnFilterExpressionChanged), new CoerceValueCallback(OnCoerceFilterExpression)));
+		public static readonly DependencyProperty UserFilterTextProperty = DependencyProperty.Register(nameof(UserTextExpression), typeof(string), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnUserFilterTextChanged)));
+
+		private static readonly DependencyPropertyKey isFilteredPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFiltered), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty IsFilteredProperty = isFilteredPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		private static object OnCoerceFilterExpression(DependencyObject d, object baseValue)
+			=> baseValue is PpsDataFilterExpression expr ? expr.Reduce() : PpsDataFilterExpression.True;
+
+		private static void OnFilterExpressionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataListControl)d).UpdateFilterExpression();
+
+		private static void OnUserFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataListControl)d).UpdateFilterExpression();
+
+		private void UpdateFilterExpression()
+		{
+			if (filterView != null && AllowFilter)
+			{
+				var expr = PpsDataFilterExpression.Combine(FilterExpression, PpsDataFilterExpression.Parse(UserTextExpression));
+				filterView.FilterExpression = expr;
+				SetValue(isFilteredPropertyKey, expr == PpsDataFilterExpression.True);
+			}
+			else
+			{
+				SetValue(isFilteredPropertyKey, false);
+				if (filterView != null)
+					filterView.FilterExpression = PpsDataFilterExpression.True;
+			}
+		} // proc UpdateFilterExpression
 
 		/// <summary>Filter the collection view.</summary>
 		public PpsDataFilterExpression FilterExpression { get => (PpsDataFilterExpression)GetValue(FilterExpressionProperty); set => SetValue(FilterExpressionProperty, value); }
-		/// <summary>Filter the collection view, this property is used by the template.</summary>
-		public PpsDataFilterExpression UserFilterExpression { get => (PpsDataFilterExpression)GetValue(UserFilterExpressionProperty); set => SetValue(UserFilterExpressionProperty, value); }
+		/// <summary>Filter the collection view, this property is used by the template. Type is string because we do not want to change the source e.g. spaces. </summary>
+		public string UserTextExpression { get => (string)GetValue(UserFilterTextProperty); set => SetValue(UserFilterTextProperty, value); }
+		/// <summary>Is the view filterd, currently.</summary>
+		public bool IsFiltered => BooleanBox.GetBool(GetValue(IsFilteredProperty));
 
 		#endregion
 
 		#region -- AllowFilter, IsFilterable - Property -------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty AllowFilterProperty = DependencyProperty.Register(nameof(AllowFilter), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty AllowFilterProperty = DependencyProperty.Register(nameof(AllowFilter), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(BooleanBox.True, new PropertyChangedCallback(OnAllowFilterChanged)));
+
 		private static readonly DependencyPropertyKey isFilterablePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFilterable), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(BooleanBox.True));
 		public static readonly DependencyProperty IsFilterableProperty = isFilterablePropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		private void UpdateFilterable()
+			=> SetValue(isFilterablePropertyKey, BooleanBox.GetObject(filterView != null && AllowFilter));
+
+		private static void OnAllowFilterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataListControl)d).UpdateFilterable();
 
 		/// <summary>Allow filter</summary>
 		public bool AllowFilter { get => BooleanBox.GetBool(GetValue(AllowFilterProperty)); set => SetValue(AllowFilterProperty, BooleanBox.GetObject(value)); }
@@ -157,20 +211,27 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		private IPpsDataRowViewFilter filterView = null;
+		private IPpsDataRowViewSort sortView = null;
+
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
 		public PpsDataListControl()
 		{
-			SetValue(listCommandsPropertyKey,
-				new PpsUICommandCollection
-				{
-					AddLogicalChildHandler = AddLogicalChild,
-					RemoveLogicalChildHandler = RemoveLogicalChild,
-					DefaultCommandTarget = this
-				}
-			);
+			SetValue(listCommandsPropertyKey, CreateCommands());
+			SetValue(itemCommandsPropertyKey, CreateCommands());
 		} // ctor
+
+		private PpsUICommandCollection CreateCommands()
+		{
+			return new PpsUICommandCollection
+			{
+				AddLogicalChildHandler = AddLogicalChild,
+				RemoveLogicalChildHandler = RemoveLogicalChild,
+				DefaultCommandTarget = this
+			};
+		} // func CoerceCommands
 
 		static PpsDataListControl()
 		{
@@ -178,6 +239,22 @@ namespace TecWare.PPSn.Controls
 		} // sctor
 
 		#endregion
+
+		/// <summary></summary>
+		/// <param name="oldValue"></param>
+		/// <param name="newValue"></param>
+		protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
+		{
+			base.OnItemsSourceChanged(oldValue, newValue);
+
+			// get view
+			var view = CollectionViewSource.GetDefaultView(newValue);
+			filterView = view as IPpsDataRowViewFilter;
+			sortView = view as IPpsDataRowViewSort;
+
+			UpdateFilterExpression();
+			UpdateFilterable();
+		} // proc OnItemsSourceChanged
 
 		#region -- Item Container -----------------------------------------------------
 
@@ -209,6 +286,10 @@ namespace TecWare.PPSn.Controls
 			=> item is PpsDataListItem;
 
 		#endregion
+
+		/// <summary></summary>
+		protected override IEnumerator LogicalChildren
+			=> Procs.CombineEnumerator(base.LogicalChildren, ListCommands.GetEnumerator(), ItemCommands.GetEnumerator());
 	} // class PpsDataListControl
 
 	#endregion
