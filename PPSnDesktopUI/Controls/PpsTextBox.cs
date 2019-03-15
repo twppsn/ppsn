@@ -68,10 +68,35 @@ namespace TecWare.PPSn.Controls
 		public static readonly RoutedCommand DropDownCommand = new RoutedCommand("DropDown", typeof(PpsTextBox));
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		private static readonly DependencyPropertyKey hasDropDownSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasDropDownSource), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty DropDownSourceProperty = DependencyProperty.Register(nameof(DropDownSource), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnDropDownSourceChanged)));
+		private static readonly DependencyPropertyKey hasDropDownSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasDropDownSource), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty HasDropDownSourceProperty = hasDropDownSourcePropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		#region -- ShowSelectionMode - Property ---------------------------------------
+
+		/// <summary>Add an Image</summary>
+		public static readonly DependencyProperty AdditionalImageProperty = DependencyProperty.Register(nameof(AdditionalImage), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnAdditionalImageChanged)));
+
+		/// <summary>The property defines an image, showing on right side</summary>
+		public object AdditionalImage { get => GetValue(AdditionalImageProperty); set => SetValue(AdditionalImageProperty, value); }
+
+		private static readonly DependencyPropertyKey hasAdditionalImagePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasAdditionalImage), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(BooleanBox.False));
+
+		/// <summary>Has TextBox an additional Image?</summary>
+		public static readonly DependencyProperty HasAdditionalImageProperty = hasAdditionalImagePropertyKey.DependencyProperty;
+
+		/// <summary></summary>
+		public bool HasAdditionalImage => BooleanBox.GetBool(GetValue(HasAdditionalImageProperty));
+
+		/// <summary></summary>
+		protected virtual void OnAdditionalImageChanged(object newValue, object oldValue)
+			=> SetValue(hasAdditionalImagePropertyKey, newValue != null);
+
+		private static void OnAdditionalImageChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsTextBox)d).OnAdditionalImageChanged(e.NewValue, e.OldValue);
+
+		#endregion
 
 		private IPpsTextBoxInputManager inputManager = null;
 		private object textEditor = null;

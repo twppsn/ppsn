@@ -52,8 +52,9 @@ specific language governing permissions and limitations under the Licence.
 	<SolidColorBrush x:Key="PPSnImageBrush" Color="Brown"/>
 	<SolidColorBrush x:Key="PPSnSideBarBackgroundBrush" Color="#445369"/>
 
-	<KeyTime x:Key="PPSnShrinkStoryKeyTime">0:00:.2</KeyTime>
-    <Duration x:Key="PPSnShrinkStoryDuration">0:00:.2</Duration>
+	<!--obsolete-->
+	<!--<KeyTime x:Key="PPSnShrinkStoryKeyTime">0:00:.2</KeyTime>
+    <Duration x:Key="PPSnShrinkStoryDuration">0:00:.2</Duration>-->
 
 	<sys:Double x:Key="PPSnSideBarIncreasedWidth">230</sys:Double>
 	<sys:Double x:Key="PPSnSideBarShrinkedWidth">50</sys:Double>

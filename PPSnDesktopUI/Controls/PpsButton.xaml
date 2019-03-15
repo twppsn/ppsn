@@ -16,7 +16,6 @@ specific language governing permissions and limitations under the Licence.
  					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<SolidColorBrush x:Key="PpsButtonBackgroundBrush" Color="{DynamicResource PPSnAccentColor}" Opacity="0.11"/>
-	<SolidColorBrush x:Key="PpsButtonTransparentBorderBrush" Color="{DynamicResource PPSnActionButtonColor}" Opacity="0.4"/>
 
 	<Style TargetType="{x:Type pps:PpsButton}">
 		<Setter Property="Focusable" Value="False" />
@@ -84,10 +83,11 @@ specific language governing permissions and limitations under the Licence.
 
 					<ControlTemplate.Triggers>
 						<Trigger Property="DisplayMode" Value="Rectangle">
-							<Setter Property="BorderThickness" Value="1" />
 							<Setter TargetName="InnerBorder" Property="Padding" Value="2,0,2,0" />
 							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="1" />
 							<Setter TargetName="ImageBox" Property="Margin" Value="3,0,0,0" />
+							<Setter Property="Focusable" Value="True" />
+							<Setter Property="BorderThickness" Value="1" />
 						</Trigger>
 
 						<MultiTrigger>
@@ -95,7 +95,6 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="DisplayMode" Value="Rectangle" />
 								<Condition Property="IsTransparentRectangle" Value="False" />
 							</MultiTrigger.Conditions>
-							<Setter Property="Focusable" Value="True" />
 							<Setter Property="Background" Value="{StaticResource PpsButtonBackgroundBrush}" />
 						</MultiTrigger>
 
@@ -104,9 +103,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="DisplayMode" Value="Rectangle" />
 								<Condition Property="IsTransparentRectangle" Value="True" />
 							</MultiTrigger.Conditions>
-							<Setter Property="Background" Value="Transparent" />
-							<Setter Property="BorderBrush" Value="{StaticResource PpsButtonTransparentBorderBrush}" />
-							<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}" />
+							<Setter Property="BorderBrush" Value="Transparent" />
 						</MultiTrigger>
 
 						<Trigger Property="DisplayMode" Value="Circle">
@@ -120,6 +117,8 @@ specific language governing permissions and limitations under the Licence.
 
 						<Trigger Property="HasContent" Value="False">
 							<Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
+							<Setter TargetName="ImageBox" Property="Margin" Value="0,0,0,0" />
+							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
 						</Trigger>
 
 						<Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
@@ -144,13 +143,25 @@ specific language governing permissions and limitations under the Licence.
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="DisplayMode" Value="Rectangle" />
+								<Condition Property="IsTransparentRectangle" Value="False" />
 								<Condition Property="IsMouseOver" Value="True" />
 								<Condition Property="IsMouseCaptured" Value="False" />
 							</MultiTrigger.Conditions>
 							<Setter Property="ImageOpacity" Value="1" />
 							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 						</MultiTrigger>
-								 
+
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="DisplayMode" Value="Rectangle" />
+								<Condition Property="IsTransparentRectangle" Value="True" />
+								<Condition Property="IsMouseOver" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter Property="ImageOpacity" Value="1" />
+							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnMouseOverBrush}" />
+							<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+						</MultiTrigger>
+
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="DisplayMode" Value="Rectangle" />
@@ -160,6 +171,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnButtonPressedBrush}" />
 							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}" />
 						</MultiTrigger>
+
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="DisplayMode" Value="Rectangle" />

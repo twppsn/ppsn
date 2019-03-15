@@ -88,6 +88,11 @@ namespace TecWare.PPSn.Controls
 		public bool HasCommands => BooleanBox.GetBool(GetValue(HasCommandsProperty));
 
 		#endregion
+
+		static PpsDataListItem()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataListItem), new FrameworkPropertyMetadata(typeof(PpsDataListItem)));
+		} // sctor
 	} // class PpsDataListItem
 
 	#endregion

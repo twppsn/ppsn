@@ -26,7 +26,7 @@
 									Height="38" BorderThickness="0,0,0,1" Padding="0,0,0,1"
 									FocusManager.IsFocusScope="true" KeyboardNavigation.TabNavigation="Cycle">
 								<ToolBar x:Name="paneToolBar" ItemsSource="{TemplateBinding Commands}" Style="{DynamicResource PpsPaneToolBarStyle}" />
-								<Border.Style>
+								<!--<Border.Style>
 									<Style TargetType="{x:Type Border}">
 										<Setter Property="Visibility" Value="Visible"/>
 										<Style.Triggers>
@@ -35,7 +35,7 @@
 											</DataTrigger>
 										</Style.Triggers>
 									</Style>
-								</Border.Style>
+								</Border.Style>-->
 							</Border>
 							<ContentPresenter Grid.Row="1" x:Name="PART_Control" Content="{TemplateBinding Control}" />
 							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" Focusable="False"/>

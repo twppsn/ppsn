@@ -200,7 +200,7 @@
 			<RowDefinition Height="auto" />
 		</Grid.RowDefinitions>
 
-		<ListBox x:Name="logList" ItemsSource="{Binding Source={StaticResource SortedTraces}}"
+		<!--<ListBox x:Name="logList" ItemsSource="{Binding Source={StaticResource SortedTraces}}"
 				 Style="{DynamicResource PPSnListBoxStyle}" ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" >
 			<ListBox.ItemTemplate>
 				<DataTemplate>
@@ -256,8 +256,65 @@
 					</Grid>
 				</DataTemplate>
 			</ListBox.ItemTemplate>
-		</ListBox>
+		</ListBox>-->
 
+		<ui:PpsListBox x:Name="logList" ItemsSource="{Binding Source={StaticResource SortedTraces}}" ShowSelectionMode="WhenFocused">
+			<ui:PpsListBox.ItemTemplate>
+				<DataTemplate>
+					<Grid Background="Transparent" TextBlock.FontSize="14">
+						<Grid.ContextMenu>
+							<ContextMenu>
+								<MenuItem Command="{x:Static ApplicationCommands.Copy}" CommandParameter="{Binding}"/>
+								<Separator />
+								<MenuItem Command="{x:Static ApplicationCommands.SaveAs}" />
+							</ContextMenu>
+						</Grid.ContextMenu>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="24"/>
+							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition/>
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" MinHeight="26"/>
+							<RowDefinition/>
+						</Grid.RowDefinitions>
+						<Border Height="24" Background="Transparent" ToolTip="{Binding Type}">
+							<Viewbox Height="22" Opacity=".75">
+								<ContentControl Focusable="False" >
+									<ContentControl.Template>
+										<ControlTemplate>
+											<Canvas Width="24" Height="24">
+												<Path x:Name="typeImagePath" Data="{StaticResource debugPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
+											</Canvas>
+											<ControlTemplate.Triggers>
+												<DataTrigger Binding="{Binding Type}" Value="Information">
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}" />
+													<Setter TargetName="typeImagePath" Property="Fill" Value="SteelBlue" />
+												</DataTrigger>
+												<DataTrigger Binding="{Binding Type}" Value="Warning">
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}" />
+												</DataTrigger>
+												<DataTrigger Binding="{Binding Type}" Value="Fail">
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource closeOctagonPathGeometry}" />
+												</DataTrigger>
+												<DataTrigger Binding="{Binding Type}" Value="Exception">
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}" />
+													<Setter TargetName="typeImagePath" Property="Fill" Value="Red" />
+												</DataTrigger>
+											</ControlTemplate.Triggers>
+										</ControlTemplate>
+									</ContentControl.Template>
+								</ContentControl>
+							</Viewbox>
+						</Border>
+						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=G}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+						<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
+										HorizontalAlignment="Left" Margin="8,4,24,0" />
+					</Grid>
+				</DataTemplate>
+			</ui:PpsListBox.ItemTemplate>
+		</ui:PpsListBox>
+		
 		<Grid Grid.Row="1" Margin="0,12,0,6">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="auto"/>

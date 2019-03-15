@@ -60,6 +60,7 @@ specific language governing permissions and limitations under the Licence.
 								<ColumnDefinition />
 								<ColumnDefinition Width="23" />
 								<ColumnDefinition Width="Auto" />
+								<ColumnDefinition Width="Auto" />
 							</Grid.ColumnDefinitions>
 							<Button x:Name="ClearButton"
 									Grid.Column="1"
@@ -71,14 +72,23 @@ specific language governing permissions and limitations under the Licence.
 									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
 							<pps:PpsButton x:Name="DropDownButton"
 										   Command="{x:Static pps:PpsTextBox.DropDownCommand}"
+										   Grid.Column="2"
+										   Width="23"
 										   DisplayMode="Image"
 										   GeometryName="comboxBoxChevron"
 										   GeometrySize="20"
-										   Grid.Column="2"
-										   Width="23"
 										   SnapsToDevicePixels="False"
 										   Foreground="{TemplateBinding Foreground}"
 										   Visibility="Collapsed" />
+							<pps:PpsGeometryImage x:Name="addedImage"
+												  Grid.Column="3"
+												  GeometryName="{TemplateBinding AdditionalImage}"
+												  GeometryCircled="False"
+												  Foreground="{TemplateBinding Foreground}"
+												  Opacity=".65"
+												  SnapsToDevicePixels="False"
+												  Margin="1,1,1,1"
+												  Visibility="Collapsed" />
 							<ScrollViewer x:Name="PART_ContentHost"
 										  Focusable="False"
 										  HorizontalScrollBarVisibility="Hidden"
@@ -101,7 +111,6 @@ specific language governing permissions and limitations under the Licence.
 									 Cursor="IBeam"
 									 Visibility="Hidden"
 									 Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsMandatoryFieldInfoStyle}}" />
-
 							<Popup PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}" Placement="Bottom" VerticalOffset="4" HorizontalOffset="8"
 								   IsOpen="{Binding HasInputError, RelativeSource={RelativeSource TemplatedParent},Mode=OneWay}" StaysOpen="False"
 								   AllowsTransparency="True" PopupAnimation="None" Focusable="False">
@@ -115,7 +124,8 @@ specific language governing permissions and limitations under the Licence.
 							
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsEnabled" Value="False">
-							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
+							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+							<Setter Property="BorderBrush" Value="{DynamicResource PPSnSeparatorBrush}" />
 						</Trigger>
 
 						<Trigger Property="AcceptsReturn" Value="True">
@@ -160,6 +170,10 @@ specific language governing permissions and limitations under the Licence.
 							</MultiTrigger.Conditions>
 							<Setter TargetName="RequiredInfo" Property="Visibility" Value="Visible"/>
 						</MultiTrigger>
+
+						<Trigger Property="HasAdditionalImage" Value="True">
+							<Setter TargetName="addedImage" Property="Visibility" Value="Visible" />
+						</Trigger>
 												
 		                <Trigger Property="Validation.HasError" Value="True">
 							<Setter Property="ToolTip" Value="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=(Validation.Errors)[0].ErrorContent}"/>

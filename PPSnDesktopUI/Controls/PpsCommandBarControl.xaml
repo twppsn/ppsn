@@ -87,13 +87,12 @@ specific language governing permissions and limitations under the Licence.
 							   Content="{Binding DisplayText}"
 							   ToolTip="{Binding Description}"
 							   GeometryName="{Binding Image}"
+							   GeometrySize="24"
 							   IsTransparentRectangle="True"
-							   Height="27"
-							   Margin="12,0,0,0" />
+							   Height="36"
+							   MinWidth="36"
+							   Margin="0,0,6,0" />
 			</DataTemplate>
-
-
-
 		</Style.Resources>
 	</Style>
 </ResourceDictionary>
