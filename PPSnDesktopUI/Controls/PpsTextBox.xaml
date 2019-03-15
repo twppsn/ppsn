@@ -124,7 +124,8 @@ specific language governing permissions and limitations under the Licence.
 							
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsEnabled" Value="False">
-							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
+							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+							<Setter Property="BorderBrush" Value="{DynamicResource PPSnSeparatorBrush}" />
 						</Trigger>
 
 						<Trigger Property="AcceptsReturn" Value="True">
