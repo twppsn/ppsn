@@ -13,18 +13,13 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
-using System.Windows.Input;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
@@ -100,7 +95,7 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsDataListControl -----------------------------------------------
 
 	/// <summary></summary>
-	public class PpsDataListControl : Selector
+	public class PpsDataListControl : ListBox
 	{
 		#region -- ListCommands - Property --------------------------------------------
 
@@ -119,10 +114,14 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey itemCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(ItemCommands), typeof(PpsUICommandCollection), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty ItemCommandsProperty = itemCommandsPropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey selectedItemCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedItemCommands), typeof(PpsUICommandCollection), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty SelectedItemCommandsProperty = selectedItemCommandsPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>Set commands for items.</summary>
 		public PpsUICommandCollection ItemCommands => (PpsUICommandCollection)GetValue(ItemCommandsProperty);
+		/// <summary>Commands of the the selected item.</summary>
+		public PpsUICommandCollection SelectedItemCommands => (PpsUICommandCollection)GetValue(SelectedItemCommandsProperty);
 
 		#endregion
 
@@ -149,11 +148,11 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- UserFilterExpression, FilterExpression - Property ------------------
+		#region -- UserFilterText, FilterExpression - Property ------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty FilterExpressionProperty = DependencyProperty.Register(nameof(FilterExpression), typeof(PpsDataFilterExpression), typeof(PpsDataListControl), new FrameworkPropertyMetadata(new PropertyChangedCallback(OnFilterExpressionChanged), new CoerceValueCallback(OnCoerceFilterExpression)));
-		public static readonly DependencyProperty UserFilterTextProperty = DependencyProperty.Register(nameof(UserTextExpression), typeof(string), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnUserFilterTextChanged)));
+		public static readonly DependencyProperty UserFilterTextProperty = DependencyProperty.Register(nameof(UserFilterText), typeof(string), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnUserFilterTextChanged)));
 
 		private static readonly DependencyPropertyKey isFilteredPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFiltered), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty IsFilteredProperty = isFilteredPropertyKey.DependencyProperty;
@@ -172,7 +171,7 @@ namespace TecWare.PPSn.Controls
 		{
 			if (filterView != null && AllowFilter)
 			{
-				var expr = PpsDataFilterExpression.Combine(FilterExpression, PpsDataFilterExpression.Parse(UserTextExpression));
+				var expr = PpsDataFilterExpression.Combine(FilterExpression, PpsDataFilterExpression.Parse(UserFilterText));
 				filterView.FilterExpression = expr;
 				SetValue(isFilteredPropertyKey, expr == PpsDataFilterExpression.True);
 			}
@@ -187,7 +186,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Filter the collection view.</summary>
 		public PpsDataFilterExpression FilterExpression { get => (PpsDataFilterExpression)GetValue(FilterExpressionProperty); set => SetValue(FilterExpressionProperty, value); }
 		/// <summary>Filter the collection view, this property is used by the template. Type is string because we do not want to change the source e.g. spaces. </summary>
-		public string UserTextExpression { get => (string)GetValue(UserFilterTextProperty); set => SetValue(UserFilterTextProperty, value); }
+		public string UserFilterText { get => (string)GetValue(UserFilterTextProperty); set => SetValue(UserFilterTextProperty, value); }
 		/// <summary>Is the view filterd, currently.</summary>
 		public bool IsFiltered => BooleanBox.GetBool(GetValue(IsFilteredProperty));
 
@@ -261,6 +260,20 @@ namespace TecWare.PPSn.Controls
 			UpdateFilterable();
 		} // proc OnItemsSourceChanged
 
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnSelectionChanged(SelectionChangedEventArgs e)
+		{
+			base.OnSelectionChanged(e);
+			if (SelectedItem == null)
+				SetValue(selectedItemCommandsPropertyKey, null);
+			else
+				SetValue(selectedItemCommandsPropertyKey, GetItemCommands(this, SelectedItem));
+		}  // proc OnSelectionChanged
+
+		private PpsUICommandCollection GetItemCommands(DependencyObject element, object item)
+			=> ItemCommandsSelector?.SelectCommands(item, element) ?? ItemCommands;
+
 		#region -- Item Container -----------------------------------------------------
 
 		/// <summary></summary>
@@ -275,7 +288,7 @@ namespace TecWare.PPSn.Controls
 		{
 			base.PrepareContainerForItemOverride(element, item);
 			if (element is PpsDataListItem container)
-				container.Commands = ItemCommandsSelector?.SelectCommands(item, element) ?? ItemCommands;
+				container.Commands = GetItemCommands(element, item);
 		} // proc PrepareContainerForItemOverride
 
 		/// <summary></summary>

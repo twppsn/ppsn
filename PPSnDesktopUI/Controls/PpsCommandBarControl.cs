@@ -113,10 +113,12 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- ExternalCommands - Property ----------------------------------------
+		#region -- BasicCommands, ExternalCommands - Property -------------------------
 
-		/// <summary></summary>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty BasicCommandsProperty = DependencyProperty.Register(nameof(BasicCommands), typeof(PpsUICommandCollection), typeof(PpsCommandBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnExternalCommandsChanged)));
 		public static readonly DependencyProperty ExternalCommandsProperty = DependencyProperty.Register(nameof(ExternalCommands), typeof(PpsUICommandCollection), typeof(PpsCommandBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnExternalCommandsChanged)));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private static void OnExternalCommandsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsCommandBarControl)d).OnExternalCommandsChanged((PpsUICommandCollection)e.NewValue, (PpsUICommandCollection)e.OldValue);
@@ -131,6 +133,8 @@ namespace TecWare.PPSn.Controls
 			CommandsView.AppendCommands(newValue);
 		} // proc OnExternalCommandsChanged
 
+		/// <summary>External defined command collection, they are merged with the main commands.</summary>
+		public PpsUICommandCollection BasicCommands { get => (PpsUICommandCollection)GetValue(BasicCommandsProperty); set => SetValue(BasicCommandsProperty, value); }
 		/// <summary>External defined command collection, they are merged with the main commands.</summary>
 		public PpsUICommandCollection ExternalCommands { get => (PpsUICommandCollection)GetValue(ExternalCommandsProperty); set => SetValue(ExternalCommandsProperty, value); }
 

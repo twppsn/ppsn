@@ -651,7 +651,7 @@ namespace TecWare.PPSn
 						{
 							if (filterVisitor.NeedFullTextColumn)
 							{
-								var expr = String.Join(" || ' ' || ", from c in table.Columns where c.DataType == typeof(string) select "COALESCE([" + c.Name + "],'')");
+								var expr = String.Join(" || ' ' || ", from c in table.Columns where c.DataType == typeof(string) select "COALESCE(d.[" + c.Name + "],'')");
 								if (String.IsNullOrEmpty(expr))
 									expr = "null";
 								sb.Append(',').Append(expr).Append(" AS __FULLTEXT__");

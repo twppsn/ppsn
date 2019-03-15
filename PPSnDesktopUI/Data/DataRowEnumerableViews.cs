@@ -130,7 +130,7 @@ namespace TecWare.PPSn.Data
 			if(sortDescriptions.Count > 0)
 				newEnumerable = newEnumerable.ApplyOrder(Sort);
 
-			return baseEnumerable.GetEnumerator();
+			return newEnumerable.GetEnumerator();
 		} // func GetDataRowEnumerator
 
 		private bool EnsureItem(int index)

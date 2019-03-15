@@ -23,7 +23,7 @@ specific language governing permissions and limitations under the Licence.
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsCommandBarControl}">
 					<ItemsControl x:Name="PART_ItemsControl"
-								  ItemsSource="{TemplateBinding Commands}"
+								  ItemsSource="{TemplateBinding CommandsView}"
 								  Focusable="{TemplateBinding Focusable}">
 						<ItemsControl.ItemsPanel>
 							<ItemsPanelTemplate>

@@ -33,11 +33,12 @@ specific language governing permissions and limitations under the Licence.
 							<ColumnDefinition x:Name="filterColumn" MinWidth="72" MaxWidth="276"/>
 						</Grid.ColumnDefinitions>
 
-						<ui:PpsCommandBarControl ExternalCommands="{TemplateBinding ListCommands}" Mode="TransparentRectangle" HorizontalAlignment="Left" />
+						<ui:PpsCommandBarControl BasicCommands="{TemplateBinding ListCommands}" ExternalCommands="{TemplateBinding SelectedItemCommands}" Mode="TransparentRectangle" HorizontalAlignment="Left" />
 
 						<ui:PpsTextBox x:Name="filterBox"
 									   Grid.Column="1"
 									   Height="23"
+									   Text="{Binding UserFilterText,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,Delay=300}"
 									   VerticalAlignment="Center"
 									   AdditionalImage="magnify" />
 
@@ -50,9 +51,6 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="filterBox" Property="Visibility" Value="Collapsed" />
 							<Setter TargetName="filterColumn" Property="MinWidth" Value="0" />
 							<Setter TargetName="filterColumn" Property="Width" Value="Auto" />
-						</Trigger>
-						<Trigger Property="AllowFilter" Value="False">
-							<Setter TargetName="filterBox" Property="IsEnabled" Value="False" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
@@ -67,18 +65,29 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type ListBoxItem}">
+				<ControlTemplate TargetType="{x:Type ui:PpsDataListItem}">
 					<Grid>
 						<Grid.RowDefinitions>
 							<RowDefinition />
 							<RowDefinition Height="2" />
+							<RowDefinition />
 						</Grid.RowDefinitions>
+						<Grid.ContextMenu>
+							<ContextMenu ItemsSource="{TemplateBinding Commands}" >
+								<ContextMenu.ItemTemplate>
+									<DataTemplate>
+										<TextBlock Text="{Binding DisplayText}" />
+									</DataTemplate>
+								</ContextMenu.ItemTemplate>
+							</ContextMenu>
+						</Grid.ContextMenu>
 						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<ContentPresenter Margin="6,1"/>
 						</Border>
 						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" RenderOptions.EdgeMode="Aliased" Opacity="0" />
 						<!--ItemSeparator-->
 						<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="{DynamicResource PPSnWindowBackgroundBrush}" />
+						<ui:PpsCommandBarControl Grid.Row="2" BasicCommands="{TemplateBinding Commands}" />
 					</Grid>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsFocused" Value="True">
