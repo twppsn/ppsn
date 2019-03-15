@@ -18,25 +18,79 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
 	<Style TargetType="{x:Type ui:PpsDataListControl}">
+		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsDataListControl}">
 					<Grid>
 						<Grid.RowDefinitions>
-							<RowDefinition Height="20" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
 							<RowDefinition />
 						</Grid.RowDefinitions>
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition />
-							<ColumnDefinition />
+							<ColumnDefinition x:Name="filterColumn" MinWidth="72" MaxWidth="276"/>
 						</Grid.ColumnDefinitions>
 
-						<TextBox Grid.Row="0" Grid.Column="1" />
-						<ItemsPresenter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" />
+						<ui:PpsCommandBarControl ExternalCommands="{TemplateBinding ListCommands}" Mode="TransparentRectangle" HorizontalAlignment="Left" />
+
+						<ui:PpsTextBox x:Name="filterBox"
+									   Grid.Column="1"
+									   Height="23"
+									   VerticalAlignment="Center"
+									   AdditionalImage="magnify" />
+
+						<Rectangle Grid.Row="1" Grid.ColumnSpan="2" StrokeThickness="0" Fill="{DynamicResource PPSnSeparatorBrush}" Height="1" Margin="0,0,0,6" />
+
+						<ItemsPresenter Grid.Row="2" Grid.ColumnSpan="2" />
 					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsFilterable" Value="False">
+							<Setter TargetName="filterBox" Property="Visibility" Value="Collapsed" />
+							<Setter TargetName="filterColumn" Property="MinWidth" Value="0" />
+							<Setter TargetName="filterColumn" Property="Width" Value="Auto" />
+						</Trigger>
+						<Trigger Property="AllowFilter" Value="False">
+							<Setter TargetName="filterBox" Property="IsEnabled" Value="False" />
+						</Trigger>
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
 	</Style>
-	
+
+	<Style TargetType="{x:Type ui:PpsDataListItem}">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="SnapsToDevicePixels" Value="True" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ListBoxItem}">
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition />
+							<RowDefinition Height="2" />
+						</Grid.RowDefinitions>
+						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+							<ContentPresenter Margin="6,1"/>
+						</Border>
+						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" RenderOptions.EdgeMode="Aliased" Opacity="0" />
+						<!--ItemSeparator-->
+						<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="{DynamicResource PPSnWindowBackgroundBrush}" />
+					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsFocused" Value="True">
+							<Setter TargetName="focusRect" Property="Opacity" Value="1" />
+						</Trigger>
+						<Trigger Property="IsSelected" Value="True">
+							<Setter Property="Background" Value="{DynamicResource PPSnSelectionBarBrush}" />
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
 </ResourceDictionary>

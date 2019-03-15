@@ -71,6 +71,11 @@ namespace TecWare.PPSn.Controls
 		public bool HasCommands => BooleanBox.GetBool(GetValue(HasCommandsProperty));
 
 		#endregion
+
+		static PpsDataListItem()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataListItem), new FrameworkPropertyMetadata(typeof(PpsDataListItem)));
+		} // sctor
 	} // class PpsDataListItem
 
 	#endregion
@@ -144,7 +149,7 @@ namespace TecWare.PPSn.Controls
 		#region -- AllowFilter, IsFilterable - Property -------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty AllowFilterProperty = DependencyProperty.Register(nameof(AllowFilter), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty AllowFilterProperty = DependencyProperty.Register(nameof(AllowFilter), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(true));
 		private static readonly DependencyPropertyKey isFilterablePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFilterable), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(BooleanBox.True));
 		public static readonly DependencyProperty IsFilterableProperty = isFilterablePropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
