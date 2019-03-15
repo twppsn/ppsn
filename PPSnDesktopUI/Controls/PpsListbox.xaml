@@ -68,23 +68,18 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="BorderThickness" Value="0" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsListBox}">
 					<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-						<ScrollViewer x:Name="scrollviewer" Focusable="false" Padding="{TemplateBinding Padding}" Style="{DynamicResource PPSnScrollViewerStyle}" >
+						<ScrollViewer x:Name="scrollviewer" Focusable="false" Padding="{TemplateBinding Padding}"
+									  Style="{DynamicResource PPSnScrollViewerStyle}" >
 							<ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
 						</ScrollViewer>
 					</Border>
-					<ControlTemplate.Triggers>
-						<Trigger Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled">
-							<Setter TargetName="scrollviewer" Property="VerticalScrollBarVisibility" Value="Disabled"/>
-						</Trigger>
-						<Trigger Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled">
-							<Setter TargetName="scrollviewer" Property="HorizontalScrollBarVisibility" Value="Disabled"/>
-						</Trigger>
-					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
