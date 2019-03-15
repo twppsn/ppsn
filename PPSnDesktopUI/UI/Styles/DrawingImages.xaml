@@ -43,9 +43,9 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="scannerPathGeometry" 
 				  Figures="M19.8,10.7L4.2,5L3.5,6.9L17.6,12H5A2,2 0 0,0 3,14V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V12.5C21,11.7 20.5,10.9 19.8,10.7M7,17H5V15H7V17M19,17H9V15H19V17Z" />
 
-	<!--delete-forever(mod)-->
+	<!--trash-can-outline, GreenTurtwig-->
 	<PathGeometry x:Key="deletePathGeometry" 
-	              Figures="M9.14 2 8 3 H3.6 V5 H20.4 V3 H16 L14.86 2 M5 6 V19.715 A2.33 2.286 0 0 0 7.33 22 H16.67 A2.33 2.286 0 0 0 19 19.715 V6 M9.87 10.37 12 12.49 l2.12 -2.12 1.41 1.41 -2.12 2.12 2.12 2.12 -1.41 1.41 L12 15.31 9.88 17.43 8.47 16.02 10.59 13.90 8.46 11.78 Z" />
+	              Figures="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z" />
 
 	<!--file-plus-->
 	<PathGeometry x:Key="filePlusPathGeometry"
