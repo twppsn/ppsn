@@ -11,8 +11,7 @@
              d:DesignHeight="300" d:DesignWidth="300" Background="Transparent"
 			 Title="System"
 			 SubTitle="Ereignisse"
-			 Image="appEvents"
-			 FocusManager.FocusedElement="{Binding ElementName=ConsoleCommandTextBox,Mode=OneTime}">
+			 Image="appEvents" >
 	<UserControl.Resources>
 		<sys:Double x:Key="maxScrollHeight">300</sys:Double>
 		<sys:Double x:Key="collapsedScrollHeight">19</sys:Double>
@@ -258,7 +257,7 @@
 			</ListBox.ItemTemplate>
 		</ListBox>-->
 
-		<ui:PpsListBox x:Name="logList" ItemsSource="{Binding Source={StaticResource SortedTraces}}" ShowSelectionMode="WhenFocused">
+		<ui:PpsListBox x:Name="logList" ItemsSource="{Binding Source={StaticResource SortedTraces}}">
 			<ui:PpsListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Background="Transparent" TextBlock.FontSize="14">
