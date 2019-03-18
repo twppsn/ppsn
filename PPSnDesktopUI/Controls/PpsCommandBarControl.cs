@@ -20,6 +20,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Markup;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
@@ -35,8 +36,8 @@ namespace TecWare.PPSn.Controls
 		Circle,
 		/// <summary>this is for Rectangular Buttons</summary>
 		Rectangle,
-		/// <summary>this is for Rectangular Buttons with transparent Background</summary>
-		TransparentRectangle
+		/// <summary>this is for Buttons which defines its DisplayMode self</summary>
+		Mixed
 	} // enum PpsCommandBarMode
 
 	#endregion
@@ -191,6 +192,10 @@ namespace TecWare.PPSn.Controls
 			});
 
 			SetValue(commandsViewPropertyKey, new PpsUICommandsView(Commands));
+
+			KeyboardNavigation.SetTabNavigation(this, KeyboardNavigationMode.Once);
+			KeyboardNavigation.SetDirectionalNavigation(this, KeyboardNavigationMode.Cycle);
+
 		} // ctor
 
 		static PpsCommandBarControl()

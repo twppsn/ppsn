@@ -17,14 +17,14 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style TargetType="{x:Type pps:PpsCommandBarControl}">
-		<Setter Property="HorizontalAlignment" Value="Right" />
+		<Setter Property="HorizontalAlignment" Value="Left" />
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsCommandBarControl}">
 					<ItemsControl x:Name="PART_ItemsControl"
 								  ItemsSource="{TemplateBinding CommandsView}"
-								  Focusable="{TemplateBinding Focusable}">
+								  Focusable="False">
 						<ItemsControl.ItemsPanel>
 							<ItemsPanelTemplate>
 								<WrapPanel />
@@ -77,21 +77,23 @@ specific language governing permissions and limitations under the Licence.
 							   Margin="12,0,0,0" />
 			</DataTemplate>
 
-			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey TransparentRectangle,{x:Null}}">
-				<Border Width="20" />
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Mixed,{x:Null}}">
+				<Border Width="11">
+					<Rectangle Width="1" StrokeThickness="0" Fill="{DynamicResource PPSnSeparatorBrush}" HorizontalAlignment="Center" Margin="0,6,0,6" />
+				</Border>
 			</DataTemplate>
-			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey TransparentRectangle,{x:Type uiO:PpsUICommandButton}}">
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Mixed,{x:Type uiO:PpsUICommandButton}}">
 				<pps:PpsButton Command="{Binding Command}"
 							   CommandParameter="{Binding CommandParameter}"
 							   CommandTarget="{Binding CommandTarget}"
 							   Content="{Binding DisplayText}"
 							   ToolTip="{Binding Description}"
 							   GeometryName="{Binding Image}"
+							   DisplayMode="{Binding DisplayMode}"
 							   GeometrySize="24"
-							   IsTransparentRectangle="True"
 							   Height="36"
 							   MinWidth="36"
-							   Margin="0,0,6,0" />
+							   Focusable="True" />
 			</DataTemplate>
 		</Style.Resources>
 	</Style>
