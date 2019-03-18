@@ -7,8 +7,10 @@
 	xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
 	<Style TargetType="ui:PpsWindowPaneHost">
-		<Setter Property="FocusManager.IsFocusScope" Value="True" />
-		<Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />
+		<!--<Setter Property="FocusManager.IsFocusScope" Value="True" />-->
+		<!--<Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />-->
+
+		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ui:PpsWindowPaneHost">
@@ -23,19 +25,8 @@
 								<RowDefinition />
 							</Grid.RowDefinitions>
 							<Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource PPSnSeparatorBrush}" Background="{DynamicResource PPSnSideBarBackgroundBrush}"
-									Height="38" BorderThickness="0,0,0,1" Padding="0,0,0,1"
-									FocusManager.IsFocusScope="true" KeyboardNavigation.TabNavigation="Cycle">
-								<ToolBar x:Name="paneToolBar" ItemsSource="{TemplateBinding Commands}" Style="{DynamicResource PpsPaneToolBarStyle}" />
-								<!--<Border.Style>
-									<Style TargetType="{x:Type Border}">
-										<Setter Property="Visibility" Value="Visible"/>
-										<Style.Triggers>
-											<DataTrigger Binding="{Binding ElementName=paneToolBar, Path=HasItems}" Value="False">
-												<Setter Property="Visibility" Value="Collapsed" />
-											</DataTrigger>
-										</Style.Triggers>
-									</Style>
-								</Border.Style>-->
+									Height="38" BorderThickness="0,0,0,1" Padding="0,0,0,1" >
+								<uiC:PpsCommandBarControl BasicCommands="{TemplateBinding Commands}" Mode="Mixed" Margin="32,0,0,0" />
 							</Border>
 							<ContentPresenter Grid.Row="1" x:Name="PART_Control" Content="{TemplateBinding Control}" />
 							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" Focusable="False"/>
@@ -208,8 +199,7 @@
 						<uiC:PpsButton Content="Bearbeiten"
 									   Command="{x:Static ApplicationCommands.Open}"
 									   HorizontalAlignment="Left"
-									   Background="Transparent" BorderBrush="Transparent"
-									   Focusable="False"
+									   DisplayMode="ImageAndText"
 									   Margin="24,0,0,0"
 									   FontSize="14" />
 						<FlowDocumentScrollViewer Grid.Row="1" Margin="0,6,0,0" Document="{TemplateBinding Document}" VerticalScrollBarVisibility="Auto" />
@@ -236,6 +226,7 @@
 
 	<Style TargetType="ui:PpsWindowPaneStrip">
 		<Setter Property="SnapsToDevicePixels" Value="True" />
+		<Setter Property="Focusable" Value="False" />
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
@@ -460,6 +451,7 @@
 	</Style>
 	
 	<Style TargetType="ui:PpsWindowPaneStripItem">
+		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsWindowPaneStripItem}">

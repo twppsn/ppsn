@@ -28,11 +28,13 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public enum PpsButtonDisplayType
 	{
-		/// <summary>Show as Rectangle with content and optional image.</summary>
+		/// <summary>Show as filled Rectangle with content and optional image.</summary>
 		Rectangle,
-		/// <summary>Image only, no content.</summary>
+		/// <summary>Image only, no visible content, no background.</summary>
 		Image,
-		/// <summary>Image inside circle with optional content.</summary>
+		/// <summary>Image (optional) and content, no background.</summary>
+		ImageAndText,
+		/// <summary>Image inside circle with optional content, no background.< /summary>
 		Circle
 	} // enum PpsButtonDisplayType
 
@@ -43,31 +45,86 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsButton : Button
 	{
+		#region -- DisplayMode - Property ---------------------------------------------
+
+		/// <summary>The type of representation</summary>
+		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Rectangle, new PropertyChangedCallback(DisplayModeChanged)));
+
+		/// <summary>The property defines the type of presentation</summary>
+		public PpsButtonDisplayType DisplayMode { get => (PpsButtonDisplayType)GetValue(DisplayModeProperty); set => SetValue(DisplayModeProperty, value); }
+
+		private static void DisplayModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsButton)d).DisplayModeChanged((PpsButtonDisplayType)e.NewValue, (PpsButtonDisplayType)e.OldValue);
+
+		private void DisplayModeChanged(PpsButtonDisplayType newValue, PpsButtonDisplayType oldValue)
+		{
+			SetValue(hasBackgroundPropertyKey, BooleanBox.GetObject(newValue == PpsButtonDisplayType.Rectangle));
+			SetValue(isCircledPropertyKey, BooleanBox.GetObject(newValue == PpsButtonDisplayType.Circle));
+		}
+
+		#endregion
+
+		#region -- GeometryName - Property --------------------------------------------
+
 		/// <summary>The name of the resource</summary>
 		public static readonly DependencyProperty GeometryNameProperty = PpsGeometryImage.GeometryNameProperty.AddOwner(typeof(PpsButton));
-		/// <summary>The diameter of the circle</summary>
-		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.Register(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(36.0));
-		/// <summary>The Brush to fill the circle</summary>
-		public static readonly DependencyProperty FillProperty = PpsGeometryImage.FillProperty.AddOwner(typeof(PpsButton));
-		/// <summary>The type of representation</summary>
-		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Rectangle));
-		/// <summary>The type of representation</summary>
-		public static readonly DependencyProperty ImageOpacityProperty = DependencyProperty.Register(nameof(ImageOpacity), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(0.65));
-		/// <summary>The property defines a transparent Background when DisplayMode is Rectangle</summary>
-		public static readonly DependencyProperty IsTransparentRectangleProperty = DependencyProperty.Register(nameof(IsTransparentRectangle), typeof(bool), typeof(PpsButton), new FrameworkPropertyMetadata(BooleanBox.False));
 
 		/// <summary>The property defines the resource to be loaded.</summary>
 		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
+
+		#endregion
+
+		#region -- GeometrySize - Property --------------------------------------------
+
+		/// <summary>The diameter of the circle</summary>
+		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.Register(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(36.0));
+
 		/// <summary>The property defines the diameter of the circle</summary>
 		public double GeometrySize { get => (double)GetValue(GeometrySizeProperty); set => SetValue(GeometrySizeProperty, value); }
+
+		#endregion
+
+		#region -- Fill - Property ----------------------------------------------------
+
+		/// <summary>The Brush to fill the circle</summary>
+		public static readonly DependencyProperty FillProperty = PpsGeometryImage.FillProperty.AddOwner(typeof(PpsButton));
+
 		/// <summary>The property defines the brush to fill the circle.</summary>
 		public Brush Fill { get => (Brush)GetValue(FillProperty); set => SetValue(FillProperty, value); }
-		/// <summary>The property defines the type of representation</summary>
-		public PpsButtonDisplayType DisplayMode { get => (PpsButtonDisplayType)GetValue(DisplayModeProperty); set => SetValue(DisplayModeProperty, value); }
+
+		#endregion
+
+		#region -- ImageOpacity - Property --------------------------------------------
+
+		/// <summary>The type of representation</summary>
+		public static readonly DependencyProperty ImageOpacityProperty = DependencyProperty.Register(nameof(ImageOpacity), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(0.65));
+
 		/// <summary>The property defines the Opacity of the image</summary>
 		public double ImageOpacity { get => (double)GetValue(ImageOpacityProperty); set => SetValue(ImageOpacityProperty, value); }
-		/// <summary>Rectangle has an Transparent Background?</summary>
-		public bool IsTransparentRectangle { get => BooleanBox.GetBool(GetValue(IsTransparentRectangleProperty)); set => SetValue(IsTransparentRectangleProperty, BooleanBox.GetObject(value)); }
+
+		#endregion
+
+		#region -- DisplayBackground - Property ---------------------------------------
+
+		private static readonly DependencyPropertyKey hasBackgroundPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasBackground), typeof(bool), typeof(PpsButton), new FrameworkPropertyMetadata(BooleanBox.True));
+		/// <summary>The property defines if element will be displayed like button</summary>
+		public static readonly DependencyProperty HasBackgroundProperty = hasBackgroundPropertyKey.DependencyProperty;
+
+		/// <summary>Display retangular Background</summary>
+		public bool HasBackground => BooleanBox.GetBool(GetValue(HasBackgroundProperty));
+
+		#endregion
+
+		#region -- IsCircled - Property -----------------------------------------
+
+		private static readonly DependencyPropertyKey isCircledPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsCircled), typeof(bool), typeof(PpsButton), new FrameworkPropertyMetadata(BooleanBox.False));
+		/// <summary>The property defines if element will be displayed with circle</summary>
+		public static readonly DependencyProperty IsCircledProperty = isCircledPropertyKey.DependencyProperty;
+
+		/// <summary>Show with circle</summary>
+		public bool IsCircled => BooleanBox.GetBool(GetValue(IsCircledProperty));
+
+		#endregion
 
 		static PpsButton()
 		{
