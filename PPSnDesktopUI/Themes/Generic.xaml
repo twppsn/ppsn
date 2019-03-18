@@ -6,7 +6,7 @@
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSharedResourceKey.xaml" />
-		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsCommandBarControl.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsCommandBar.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsButton.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsGeometryImage.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsPopup.xaml" />
@@ -18,7 +18,7 @@
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsStackSectionControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFilterBase.xaml" />
-		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataListControl.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataListBox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsProgressControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsCircularListBox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsEditableListbox.xaml" />

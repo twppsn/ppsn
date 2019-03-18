@@ -20,6 +20,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls.Primitives;
@@ -647,6 +648,19 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- class PpsUICommandSeperator --------------------------------------------
+
+	/// <summary>UI seperator</summary>
+	public sealed class PpsUICommandSeperator
+	{
+		private PpsUICommandSeperator() { }
+
+		/// <summary>Instance of seperator placeholder.</summary>
+		public static PpsUICommandSeperator Default { get; } = new PpsUICommandSeperator();
+	} // class PpsUICommandSeperator
+
+	#endregion
+
 	#region -- class PpsUICommand -----------------------------------------------------
 
 	/// <summary>Baseclass for a UI-Command implementation.</summary>
@@ -767,8 +781,6 @@ namespace TecWare.PPSn.UI
 	/// <summary>View object for command collections</summary>
 	public sealed class PpsUICommandsView : CollectionView
 	{       
-		private static readonly PpsUICommand[] seperator = new PpsUICommand[] { null };
-
 		private readonly List<PpsUICommand> viewCommands;
 		private readonly List<PpsUICommandCollection> commandCollections = new List<PpsUICommandCollection>();
 
@@ -921,13 +933,13 @@ namespace TecWare.PPSn.UI
 		/// <summary>Return enumerator to fetch current rows.</summary>
 		/// <returns></returns>
 		protected override IEnumerator GetEnumerator()
-			=> viewCommands.GetEnumerator();
+			=> viewCommands.Select(c => (object)c ?? PpsUICommandSeperator.Default).GetEnumerator();
 
 		/// <summary>Return the cached items.</summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
 		public override object GetItemAt(int index)
-			=> viewCommands[index];
+			=> (object)viewCommands[index] ?? PpsUICommandSeperator.Default;
 
 		/// <summary>Index odf the item</summary>
 		/// <param name="item"></param>

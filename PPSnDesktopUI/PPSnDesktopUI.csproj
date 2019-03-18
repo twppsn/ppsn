@@ -105,7 +105,7 @@
       <DependentUpon>PpsAttachmentsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\PpsListbox.cs" />
-    <Compile Include="Controls\PpsDataListControl.cs" />
+    <Compile Include="Controls\PpsDataListBox.cs" />
     <Compile Include="Data\DataRowEnumerableViews.cs" />
     <Compile Include="UI\PpsCameraPane.cs" />
     <Compile Include="Controls\PpsCircularListBox.cs" />
@@ -114,7 +114,7 @@
     <Compile Include="Controls\PpsPdfViewer.cs" />
     <Compile Include="Controls\PpsPopup.cs" />
     <Compile Include="Controls\PpsButton.cs" />
-    <Compile Include="Controls\PpsCommandBarControl.cs" />
+    <Compile Include="Controls\PpsCommandBar.cs" />
     <Compile Include="Controls\PpsDataField.cs" />
     <Compile Include="Controls\PpsDataFieldPanel.cs" />
     <Compile Include="Controls\PpsDataFilterBase.cs" />
@@ -144,7 +144,6 @@
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
-    <Compile Include="Controls\Toolbar.cs" />
     <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Controls\UndoManagerListBox.cs" />
     <Compile Include="Data\DataFilter.cs" />
@@ -224,7 +223,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Controls\PpsDataListControl.xaml">
+    <Page Include="Controls\PpsDataListBox.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -240,7 +239,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Controls\PpsCommandBarControl.xaml">
+    <Page Include="Controls\PpsCommandBar.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

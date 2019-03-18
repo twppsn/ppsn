@@ -18,12 +18,12 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:uiO="clr-namespace:TecWare.PPSn.UI"
 					xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
-	<Style TargetType="{x:Type ui:PpsDataListControl}">
+	<Style TargetType="{x:Type ui:PpsDataListBox}">
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type ui:PpsDataListControl}">
+				<ControlTemplate TargetType="{x:Type ui:PpsDataListBox}">
 					<Grid>
 						<Grid.RowDefinitions>
 							<RowDefinition Height="Auto" />
@@ -35,7 +35,7 @@ specific language governing permissions and limitations under the Licence.
 							<ColumnDefinition x:Name="filterColumn" MinWidth="72" MaxWidth="276"/>
 						</Grid.ColumnDefinitions>
 
-						<ui:PpsCommandBarControl BasicCommands="{TemplateBinding ListCommands}"
+						<ui:PpsCommandBar BasicCommands="{TemplateBinding ListCommands}"
 												 ExternalCommands="{TemplateBinding SelectedItemCommands}"
 												 Mode="Mixed" />
 						<ui:PpsTextBox x:Name="filterBox"
@@ -97,18 +97,18 @@ specific language governing permissions and limitations under the Licence.
 									<ItemContainerTemplate DataType="{x:Type uiO:PpsUICommandButton}">
 										<MenuItem Header="{Binding Path=DisplayText}" />
 									</ItemContainerTemplate>
-									<ItemContainerTemplate DataType="{x:Null}">
+									<ItemContainerTemplate DataType="{x:Type uiO:PpsUICommandSeperator}">
 										<Separator />
 									</ItemContainerTemplate>
 								</ContextMenu.Resources>
-								<ContextMenu.ItemContainerStyle>
+								<!--<ui:PpsContextMenu.ItemContainerStyle>
 									<Style TargetType="MenuItem">
 										<Setter Property="Command" Value="{Binding Command}" />
 										<Setter Property="CommandParameter" Value="{Binding CommandParameter}" />
 										<Setter Property="CommandTarget" Value="{Binding CommandTarget}" />
-										<!--<Setter Property="Header" Value="{Binding DisplayText}" />-->
+										--><!--<Setter Property="Header" Value="{Binding DisplayText}" />--><!--
 									</Style>
-								</ContextMenu.ItemContainerStyle>
+								</ui:PpsContextMenu.ItemContainerStyle>-->
 							</ContextMenu>
 						</Grid.ContextMenu>
 					</Grid>

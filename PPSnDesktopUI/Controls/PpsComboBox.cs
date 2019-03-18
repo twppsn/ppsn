@@ -31,9 +31,9 @@ namespace TecWare.PPSn.Controls
 		#region -- UserFilterText - Property ------------------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty UserFilterTextProperty = DependencyProperty.Register(nameof(UserFilterText), typeof(string), typeof(PpsDataListControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnUserFilterTextChanged)));
+		public static readonly DependencyProperty UserFilterTextProperty = DependencyProperty.Register(nameof(UserFilterText), typeof(string), typeof(PpsDataListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnUserFilterTextChanged)));
 
-		private static readonly DependencyPropertyKey isFilteredPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFiltered), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(BooleanBox.False));
+		private static readonly DependencyPropertyKey isFilteredPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFiltered), typeof(bool), typeof(PpsDataListBox), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty IsFilteredProperty = isFilteredPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
@@ -66,9 +66,9 @@ namespace TecWare.PPSn.Controls
 		#region -- AllowFilter, IsFilterable - Property -------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty AllowFilterProperty = PpsDataListControl.AllowFilterProperty.AddOwner(typeof(PpsComboBox), new FrameworkPropertyMetadata(BooleanBox.True, new PropertyChangedCallback(OnAllowFilterChanged)));
+		public static readonly DependencyProperty AllowFilterProperty = PpsDataListBox.AllowFilterProperty.AddOwner(typeof(PpsComboBox), new FrameworkPropertyMetadata(BooleanBox.True, new PropertyChangedCallback(OnAllowFilterChanged)));
 
-		private static readonly DependencyPropertyKey isFilterablePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFilterable), typeof(bool), typeof(PpsDataListControl), new FrameworkPropertyMetadata(BooleanBox.True));
+		private static readonly DependencyPropertyKey isFilterablePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFilterable), typeof(bool), typeof(PpsDataListBox), new FrameworkPropertyMetadata(BooleanBox.True));
 		public static readonly DependencyProperty IsFilterableProperty = isFilterablePropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 

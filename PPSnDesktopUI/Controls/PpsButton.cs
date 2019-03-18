@@ -34,7 +34,7 @@ namespace TecWare.PPSn.Controls
 		Image,
 		/// <summary>Image (optional) and content, no background.</summary>
 		ImageAndText,
-		/// <summary>Image inside circle with optional content, no background.< /summary>
+		/// <summary>Image inside circle with optional content, no background.</summary>
 		Circle
 	} // enum PpsButtonDisplayType
 
