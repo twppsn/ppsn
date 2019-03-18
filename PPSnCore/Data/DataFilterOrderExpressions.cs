@@ -1710,6 +1710,18 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		protected abstract Tuple<string, Type> LookupColumn(string columnToken);
 
+		/// <summary>Translate a column to is native name</summary>
+		/// <param name="columnToken"></param>
+		/// <returns></returns>
+		public string GetNativeColumnName(string columnToken)
+		{
+			if (String.IsNullOrEmpty(columnToken))
+				throw new ArgumentNullException(nameof(columnToken));
+
+			var r = LookupColumn(columnToken);
+			return r?.Item1;
+		} // func LookupColumn
+
 		#endregion
 
 		#region -- CreateLogicFilter --------------------------------------------------
@@ -2514,6 +2526,22 @@ namespace TecWare.PPSn.Data
 						return null;
 			}
 		} // func Parse
+
+		/// <summary></summary>
+		/// <param name="expr"></param>
+		/// <returns></returns>
+		public static IEnumerable<PpsDataOrderExpression> Combine(params IEnumerable<PpsDataOrderExpression>[] expr)
+		{
+			if (expr == null || expr.Length == 0)
+				return Array.Empty<PpsDataOrderExpression>();
+
+			var i = 0;
+			var r = expr[i];
+			while (++i < expr.Length)
+				r = Enumerable.Union(r, expr[i], CompareIdentifier);
+
+			return r;
+		} // func Combine
 
 		/// <summary></summary>
 		/// <param name="orders"></param>

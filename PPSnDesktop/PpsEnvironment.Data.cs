@@ -452,6 +452,8 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		protected abstract DbCommand PrepareCommand();
 
+		#region -- Collection implementation ------------------------------------------
+
 		/// <summary>Returns the rows for the prepared command.</summary>
 		/// <returns></returns>
 		public IEnumerator<IDataRow> GetEnumerator()
@@ -472,6 +474,10 @@ namespace TecWare.PPSn
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
+		#endregion
+
+		#region -- IDataRowEnumerable members -----------------------------------------
+
 		/// <summary>Apply an order to the data selector</summary>
 		/// <param name="expressions">Order expression.</param>
 		/// <param name="lookupNative">Native lookup.</param>
@@ -479,6 +485,15 @@ namespace TecWare.PPSn
 		public virtual IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			=> this;
 
+		/// <summary>Apply a order expresion.</summary>
+		/// <param name="orderExpr"></param>
+		/// <returns></returns>
+		public IDataRowEnumerable ApplyOrder(string orderExpr)
+			=> ApplyOrder(PpsDataOrderExpression.Parse(orderExpr), null);
+
+		/// <summary>Apply a filter expression.</summary>
+		/// <param name="filterExpr"></param>
+		/// <returns></returns>
 		public IDataRowEnumerable ApplyFilter(string filterExpr)
 			=> ApplyFilter(PpsDataFilterExpression.Parse(filterExpr), null);
 
@@ -493,7 +508,9 @@ namespace TecWare.PPSn
 		/// <param name="columns">Columns to return.</param>
 		/// <returns></returns>
 		public virtual IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
-			=> this;
+			=> this; // is not allowed
+
+		#endregion
 
 		/// <summary>Create a collection view for this selector.</summary>
 		/// <returns></returns>
@@ -620,12 +637,13 @@ namespace TecWare.PPSn
 		{
 			private readonly PpsMasterDataTable table;
 			private readonly PpsDataFilterExpression filter;
-			//private readonly PpsDataJoinExpression
+			private readonly PpsDataOrderExpression[] order;
 
-			public PpsMasterDataTableResult(PpsMasterDataTable table, PpsDataFilterExpression filter)
+			public PpsMasterDataTableResult(PpsMasterDataTable table, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
 			{
 				this.table = table ?? throw new ArgumentNullException(nameof(table));
 				this.filter = filter ?? PpsDataFilterExpression.True;
+				this.order = order ?? Array.Empty<PpsDataOrderExpression>();
 
 				table.MasterData.RegisterWeakDataRowChanged(table.Definition.Name, null, OnTableChanged);
 			} // ctor
@@ -642,16 +660,26 @@ namespace TecWare.PPSn
 				try
 				{
 					var filterVisitor = new PpsMasterDataFilterVisitor(table);
-					
+
 					// create where
-					var where = filterVisitor.CreateFilter(filter);
+					var sqlWhere = filterVisitor.CreateFilter(filter);
+
+					// create order
+					var sqlOrder = order.Length > 0 ? String.Join(",",
+						from cur in order
+						select filterVisitor.GetNativeColumnName(cur.Identifier) + (cur.Negate ? " DESC" : " ASC")
+					) : null;
 
 					var commandText = table.PrepareCommandText(
 						sb =>
 						{
 							if (filterVisitor.NeedFullTextColumn)
 							{
-								var expr = String.Join(" || ' ' || ", from c in table.Columns where c.DataType == typeof(string) select "COALESCE(d.[" + c.Name + "],'')");
+								var expr = String.Join(" || ' ' || ",
+									from c in table.Columns
+									where c.DataType == typeof(string)
+									select "COALESCE(d.[" + c.Name + "],'')"
+								);
 								if (String.IsNullOrEmpty(expr))
 									expr = "null";
 								sb.Append(',').Append(expr).Append(" AS __FULLTEXT__");
@@ -664,7 +692,15 @@ namespace TecWare.PPSn
 
 					// add where condition
 					commandText.Append(" WHERE ");
-					commandText.Append(where);
+					commandText.Append(sqlWhere);
+
+					// append order
+					if (sqlOrder != null)
+					{
+						commandText.Append(' ');
+						commandText.Append(sqlOrder);
+					}
+
 					command.CommandText = commandText.ToString();
 
 					return command;
@@ -677,7 +713,10 @@ namespace TecWare.PPSn
 			} // func PrepareCommand
 
 			public override IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
-				=> new PpsMasterDataTableResult(table, PpsDataFilterExpression.Combine(filter, expression));
+				=> new PpsMasterDataTableResult(table, PpsDataFilterExpression.Combine(filter, expression), order);
+
+			public override IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
+				=> new PpsMasterDataTableResult(table, filter, PpsDataOrderExpression.Combine(order, expressions).ToArray());
 
 			public override PpsMasterDataTable Table => table;
 			public override IReadOnlyList<IDataColumn> Columns => table.Columns;
@@ -836,14 +875,17 @@ namespace TecWare.PPSn
 		} // func CreateRow
 
 		internal PpsMasterDataSelector CreateRelation(PpsDataTableRelationDefinition relation, object key)
-			=> new PpsMasterDataTableResult(MasterData.GetTable(relation.ChildColumn.Table), PpsDataFilterExpression.Compare(relation.ChildColumn.Name, PpsDataFilterCompareOperator.Equal, PpsDataFilterCompareValueType.Integer, key));
+			=> new PpsMasterDataTableResult(MasterData.GetTable(relation.ChildColumn.Table), PpsDataFilterExpression.Compare(relation.ChildColumn.Name, PpsDataFilterCompareOperator.Equal, PpsDataFilterCompareValueType.Integer, key), null);
 
 		/// <summary></summary>
 		/// <param name="expression"></param>
 		/// <param name="lookupNative"></param>
 		/// <returns></returns>
 		public override IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
-			=> new PpsMasterDataTableResult(this, expression);
+			=> new PpsMasterDataTableResult(this, expression, null);
+
+		public override IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
+			=> base.ApplyOrder(expressions, lookupNative);
 
 		/// <summary>Columns</summary>
 		public override IReadOnlyList<IDataColumn> Columns => Definition.Columns;
@@ -851,6 +893,21 @@ namespace TecWare.PPSn
 		public override PpsMasterDataTable Table => this;
 		/// <summary></summary>
 		public PpsDataTableDefinition Definition { get; }
+
+		/// <summary>Add a filter expression.</summary>
+		/// <remarks>This is a bindable way to set a filter.</remarks>
+		/// <param name="filterExpr"></param>
+		/// <returns></returns>
+		public IDataRowEnumerable this[string filterExpr]
+			=> ApplyFilter(filterExpr);
+
+		/// <summary>Add a filter expression.</summary>
+		/// <remarks>This is a bindable way to set a filter.</remarks>
+		/// <param name="filterExpr"></param>
+		/// <param name="order"></param>
+		/// <returns></returns>
+		public IDataRowEnumerable this[string filterExpr, string order]
+			=> ApplyFilter(filterExpr).ApplyOrder(PpsDataOrderExpression.Parse(order));
 
 		/// <summary>The master data service.</summary>
 		public PpsMasterData MasterData { get; }
