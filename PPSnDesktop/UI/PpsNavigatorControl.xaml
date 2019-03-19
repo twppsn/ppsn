@@ -568,7 +568,8 @@ specific language governing permissions and limitations under the Licence.
 							 ItemsSource="{Binding Items}"
 							 Style="{StaticResource PPSnListBoxStyle}"
 							 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"/>-->
-		<uiC:DataListControl Grid.Column="2" Grid.Row="3" ItemsSource="{Binding Items}" IsSynchronizedWithCurrentItem="True" FontSize="14" />
+		<!--<uiC:DataListControl Grid.Column="2" Grid.Row="3" ItemsSource="{Binding Items}" IsSynchronizedWithCurrentItem="True" FontSize="14" />-->
+		<uiC:PpsDataListBox Grid.Column="2" Grid.Row="3" ItemsSource="{Binding Items}" IsSynchronizedWithCurrentItem="True" />
 
 		<!--temporary removed-->
 		<!--ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>-->

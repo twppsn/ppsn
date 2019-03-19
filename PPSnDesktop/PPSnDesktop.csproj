@@ -27,6 +27,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\PPSnDesktop.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -36,6 +37,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\PPSnDesktop.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>TecWare.PPSn.App</StartupObject>
@@ -160,7 +162,6 @@
       <Link>ppsn.licenseheader</Link>
     </None>
     <None Include="app.manifest" />
-    <None Include="MarkdigXaml.licenseheader" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -168,6 +169,9 @@
     </None>
     <AppDesigner Include="Properties\" />
     <None Include="Readme.md" />
+    <None Include="TecWare.PPSn.Desktop.nuspec">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

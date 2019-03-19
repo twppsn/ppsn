@@ -33,6 +33,7 @@ namespace TecWare.PPSn.Controls
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata("Pane title"));
+
 		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(object), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
 
@@ -40,12 +41,6 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 
 		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(false));
-
-		// for corrent Binding this Command must be a Property - not a Field
-		// todo: change, Interface and flags for the current options
-		private static readonly RoutedCommand setCharmCommand = new RoutedCommand("SetCharm", typeof(PpsGenericWpfControl));
-
-		public RoutedCommand SetCharmCommand { get { return setCharmCommand; } }
 
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 		
@@ -64,26 +59,6 @@ namespace TecWare.PPSn.Controls
 			SetValue(commandsPropertyKey, commands);
 
 			Focusable = false;
-
-			CommandBindings.Add(
-				new CommandBinding(setCharmCommand,
-					(sender, e) =>
-					{
-						((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"] ?? ((LuaTable)this.DataContext)["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
-					},
-					(sender, e) =>
-					{
-						e.CanExecute = true;
-					}
-				)
-			);
-
-			// set the initial Object for the CharmBar
-			DataContextChanged += (sender, e) =>
-			{
-				if ((DataContext != null) && (Pane != null))
-					((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"] ?? ((LuaTable)this.DataContext)["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
-			};
 		} // ctor
 
 		#endregion

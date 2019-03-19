@@ -716,7 +716,7 @@ namespace TecWare.PPSn
 				{
 					var contentDisposition = r.GetContentDisposition();
 					using (var sr = await r.GetTextReaderAsync(MimeTypes.Text.Plain))
-						return await request.Shell.CompileAsync(sr, contentDisposition.FileName, throwException, arguments);
+						return await request.Shell.CompileAsync(sr, contentDisposition.FileName.Trim('"'), throwException, arguments);
 				}
 			}
 			catch (Exception e)

@@ -55,7 +55,6 @@ namespace TecWare.PPSn.UI
 	/// <summary>Sub pane implementation</summary>
 	public class PpsGenericWpfChildPane : LuaShellTable, IPpsRequest, IPpsXamlCode, IPpsXamlDynamicProperties
 	{
-
 		/// <summary></summary>
 		/// <param name="parentPane"></param>
 		/// <param name="paneData"></param>
@@ -179,12 +178,10 @@ namespace TecWare.PPSn.UI
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Create the pane.</summary>
-		/// <param name="paneManager"></param>
 		/// <param name="paneHost"></param>
-		public PpsGenericWpfWindowPane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
-			: base(paneManager.Shell)
+		public PpsGenericWpfWindowPane(IPpsWindowPaneHost paneHost)
+			: base(paneHost.PaneManager.Shell)
 		{
-			PaneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
 			PaneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
 			
 			PaneManager.Shell.AddIdleAction(this);
@@ -776,6 +773,7 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop SubTitle
 
+		/// <summary>Image of the pane.</summary>
 		[LuaMember]
 		public object Image
 		{
@@ -801,7 +799,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Access the containing window.</summary>
 		[LuaMember]
-		public IPpsWindowPaneManager PaneManager { get; }
+		public IPpsWindowPaneManager PaneManager => PaneHost.PaneManager;
 		/// <summary>Access the containing host.</summary>
 		[LuaMember]
 		public IPpsWindowPaneHost PaneHost { get; }

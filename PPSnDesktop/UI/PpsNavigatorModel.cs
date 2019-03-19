@@ -654,7 +654,7 @@ namespace TecWare.PPSn.UI
 		void IDisposable.Dispose() { }
 		
 		string IPpsWindowPane.Title => "Navigation";
-		string IPpsWindowPane.SubTitle => "PPSn Application Title";
+		string IPpsWindowPane.SubTitle => Environment.GetResource("PPSnApplicationTitle", navigatorControl) as string;
 		object IPpsWindowPane.Image => null;
 
 		bool IPpsWindowPane.HasSideBar => false;
