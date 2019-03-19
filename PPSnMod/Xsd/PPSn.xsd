@@ -491,7 +491,7 @@
 
 	<xs:complexType name="objectItemType">
 		<xs:complexContent>
-			<xs:extension base="ConfigItemType">
+			<xs:extension base="ConfigLogItemType">
 				<xs:attribute name="nextNumber" type="xs:string" use="optional">
 					<xs:annotation>
 						<xs:documentation>Length or paddern to generate next number, if this value is not set, GetNextNumber must defined.</xs:documentation>
