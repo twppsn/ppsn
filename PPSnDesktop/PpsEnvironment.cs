@@ -738,12 +738,9 @@ namespace TecWare.PPSn
 		private async Task RefreshNavigatorAsync()
 		{
 			// clear the views
-			await Dispatcher.InvokeAsync(() =>
-			{
-				views.Clear();
-				actions.Clear();
-			});
-
+			views.Clear();
+			actions.Clear();
+		
 			try
 			{
 				// get the views from storage

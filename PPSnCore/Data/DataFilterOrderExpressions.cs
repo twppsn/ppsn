@@ -2566,6 +2566,9 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		public static IEqualityComparer<PpsDataOrderExpression> CompareIdentifier { get; } = new CompareIdentifierImpl();
+
+		/// <summary></summary>
+		public static PpsDataOrderExpression[] Empty { get; } = Array.Empty<PpsDataOrderExpression>();
 	} // class PpsDataOrderExpression
 
 	#endregion

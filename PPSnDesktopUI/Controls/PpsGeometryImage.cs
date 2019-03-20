@@ -46,7 +46,7 @@ namespace TecWare.PPSn.Controls
 			if (e.NewValue is string resName)
 				resource = Application.Current.TryFindResource($"{resName}PathGeometry") ?? Application.Current.TryFindResource(resName);
 
-			image.Geometry = resource != null ? (Geometry)resource : Geometry.Empty;
+			image.Geometry = resource  as Geometry ?? Geometry.Empty;
 			image.HasGeometry = resource != null;
 		} // proc OnImageNameChanged
 
