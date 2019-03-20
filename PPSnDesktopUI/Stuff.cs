@@ -461,6 +461,8 @@ namespace TecWare.PPSn
 		internal static void PrintEventTreeToConsole(DependencyObject current)
 				=> Debug.Print(GetDependencyObjectTree(new StringBuilder("UI Tree:").AppendLine(), "U ", current, GetUIParent).ToString());
 
+		#region -- Commands -----------------------------------------------------------
+
 		/// <summary></summary>
 		/// <param name="ui"></param>
 		/// <param name="shell"></param>
@@ -476,6 +478,40 @@ namespace TecWare.PPSn
 		/// <param name="commandImpl"></param>
 		public static void AddCommandBinding(this UIElement ui, PpsShellWpf shell, RoutedCommand command, PpsCommandBase commandImpl)
 			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, command, commandImpl));
+
+		/// <summary>Executes a command</summary>
+		/// <param name="commandSource"></param>
+		/// <param name="inputElement"></param>
+		/// <returns></returns>
+		public static bool Execute(this ICommandSource commandSource, IInputElement inputElement)
+		{
+			var command = commandSource.Command;
+			if (command != null)
+			{
+				var commandParameter = commandSource.CommandParameter;
+				var commandTarget = commandSource.CommandTarget ?? inputElement;
+
+				if (command is RoutedCommand rc)
+				{
+					if (rc.CanExecute(commandParameter, commandTarget))
+					{
+						rc.Execute(commandParameter, commandTarget);
+						return true;
+					}
+				}
+				else
+				{
+					if (command.CanExecute(commandParameter))
+					{
+						command.Execute(commandParameter);
+						return true;
+					}
+				}
+			}
+			return false;
+		} // func Execute
+
+		#endregion
 
 		#region -- remove after update DES --
 

@@ -20,6 +20,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Input;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
@@ -77,12 +78,28 @@ namespace TecWare.PPSn.Controls
 			}
 		} // func UpdateHasCommands
 
+		private PpsUICommandButton GetDefaultCommand()
+			=> Commands?.OfType<PpsUICommandButton>().FirstOrDefault();
+
 		/// <summary>Current commands for the item.</summary>
 		public PpsUICommandCollection Commands { get => (PpsUICommandCollection)GetValue(CommandsProperty); set => SetValue(CommandsProperty, value); }
 		/// <summary>Are there commands in the collection.</summary>
 		public bool HasCommands => BooleanBox.GetBool(GetValue(HasCommandsProperty));
 
 		#endregion
+
+		/// <summary>Execute default command.</summary>
+		/// <param name="e"></param>
+		protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
+		{
+			if (!e.Handled)
+			{
+				var defaultCommand = GetDefaultCommand();
+				if (defaultCommand != null && defaultCommand.Execute(this))
+					e.Handled = true;
+			}
+			base.OnMouseDoubleClick(e);
+		} // proc OnMouseDoubleClick
 
 		static PpsDataListItem()
 		{
@@ -92,7 +109,7 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
-	#region -- class PpsDataListBox -----------------------------------------------
+	#region -- class PpsDataListBox ---------------------------------------------------
 
 	/// <summary></summary>
 	public class PpsDataListBox : ListBox
