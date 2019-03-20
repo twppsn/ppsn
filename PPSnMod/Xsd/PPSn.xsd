@@ -707,6 +707,11 @@
 										<xs:documentation>Displayname of the action.</xs:documentation>
 									</xs:annotation>
 								</xs:attribute>
+								<xs:attribute name="description" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Tooltip of the action.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
 								<xs:attribute name="displayImage" type="xs:string" use="optional">
 									<xs:annotation>
 										<xs:documentation>Displayimage of the action.</xs:documentation>

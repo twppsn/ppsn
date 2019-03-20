@@ -3994,12 +3994,22 @@ namespace TecWare.PPSn
 		public override IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
 			=> GetRemoteViewData(arguments);
 
-		protected IEnumerable<IDataRow> GetRemoteViewData(PpsShellGetList arguments)
+		private IEnumerable<IDataRow> GetRemoteViewData(PpsShellGetList arguments)
 		{
+			const string masterDataPrefix = "masterdata.";
 			if (arguments.ViewId.StartsWith("local.", StringComparison.OrdinalIgnoreCase)) // it references the local db
 			{
 				if (arguments.ViewId == "local.objects")
 					return CreateObjectFilter(arguments);
+				else if (arguments.ViewId.StartsWith(masterDataPrefix, StringComparison.OrdinalIgnoreCase))
+				{
+					var view = (IDataRowEnumerable)MasterData.GetTable(arguments.ViewId.Substring(masterDataPrefix.Length));
+					if (!PpsDataFilterExpression.IsEmpty(arguments.Filter))
+						view = view.ApplyFilter(arguments.Filter);
+					if (!PpsDataOrderExpression.IsEmpty(arguments.Order))
+						view = view.ApplyOrder(arguments.Order);
+					return view;
+				}
 				else
 				{
 					var exc = new ArgumentOutOfRangeException();

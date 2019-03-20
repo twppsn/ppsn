@@ -575,8 +575,7 @@ namespace TecWare.PPSn
 		/// <param name="returnOnException"></param>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		public T RunScriptWithReturn<T>(LuaChunk chunk, LuaTable env, T? returnOnException, params object[] arguments)
-			where T : struct
+		public T RunScriptWithReturn<T>(LuaChunk chunk, LuaTable env, T returnOnException, params object[] arguments)
 		{
 			var r = chunk != null
 				? RunScript(chunk, env, false, arguments)
@@ -584,8 +583,8 @@ namespace TecWare.PPSn
 
 			if (r.Count == 0)
 			{
-				if (returnOnException.HasValue)
-					return returnOnException.Value;
+				if (returnOnException != null)
+					return returnOnException;
 				else
 					throw new ArgumentNullException("chunk");
 			}

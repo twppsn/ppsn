@@ -97,7 +97,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controls\ComboBoxBehavior.cs" />
-    <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\PpsAttachmentsControl.xaml.cs">
       <DependentUpon>PpsAttachmentsControl.xaml</DependentUpon>
     </Compile>

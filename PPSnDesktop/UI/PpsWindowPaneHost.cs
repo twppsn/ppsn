@@ -23,6 +23,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Neo.IronLua;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {
@@ -45,6 +46,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>Host for panes to support Progress, Load and CharmBar.</summary>
 	[
 	TemplatePart(Name = "PART_CharmBar", Type = typeof(PpsWindowPaneCharmBarControl)),
+	TemplatePart(Name = "PART_CommandBar", Type = typeof(PpsCommandBar)),
 	TemplatePart(Name = "PART_Control", Type = typeof(ContentPresenter))
 	]
 	internal class PpsWindowPaneHost : Control, IPpsWindowPaneHost
@@ -72,8 +74,10 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty IsFixedProperty = isFixedPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		private PpsWindowPaneCharmBarControl charmBarControl;
-		private ContentPresenter controlPresenter;
+		private PpsWindowPaneCharmBarControl charmBarControl = null;
+		private PpsCommandBar commandBar = null;
+		private ContentPresenter controlPresenter = null;
+
 		private readonly PpsWindowPaneHostState paneState;
 
 		public PpsWindowPaneHost()
@@ -95,6 +99,7 @@ namespace TecWare.PPSn.UI
 
 			charmBarControl = (PpsWindowPaneCharmBarControl)GetTemplateChild("PART_CharmBar");
 			controlPresenter = (ContentPresenter)GetTemplateChild("PART_Control");
+			commandBar = (PpsCommandBar)GetTemplateChild("PART_CommandBar");
 
 			var currentPane = CurrentPane;
 			if (currentPane != null)

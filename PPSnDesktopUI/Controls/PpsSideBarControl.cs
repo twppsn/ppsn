@@ -14,13 +14,10 @@
 //
 #endregion
 using System;
-using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Markup;
 
 namespace TecWare.PPSn.Controls
 {

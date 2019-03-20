@@ -4238,8 +4238,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		/// <summary>Object typ for blob data.</summary>
+		/// <summary>Object type for blob data.</summary>
 		public static string AttachmentObjectTyp = "attachments";
+		/// <summary>Object type for help pages</summary>
 		public static string HelpKeyTyp = "helpkey";
 
 		private readonly PpsActiveObjectDataImplementation activeObjectData;
@@ -4315,10 +4316,9 @@ namespace TecWare.PPSn
 
 		#region -- class PpsObjectGenerator -----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class PpsObjectGenerator : IEnumerable<IDataRow>
+		private sealed class PpsObjectGenerator : IEnumerable<IDataRow>, IDataRowEnumerable, ICollectionViewFactory
 		{
+#pragma warning disable IDE1006 // Naming Styles
 			private const string AllColumns = "s_all";
 			private const string NumberColumns = "s_number";
 			private const int NumberClass = 1;
@@ -4331,40 +4331,7 @@ namespace TecWare.PPSn
 			private const string StaticId = "ID";
 			private const string StaticNr = "NR";
 			private const string StaticTyp = "TYP";
-
-			#region -- class ObjectViewFilterVisitor ----------------------------------------
-
-			///////////////////////////////////////////////////////////////////////////////
-			/// <summary></summary>
-			private sealed class ObjectViewFilterVisitor : PpsDataFilterVisitorSql
-			{
-				private readonly PpsObjectGenerator owner;
-
-				public ObjectViewFilterVisitor(PpsObjectGenerator owner)
-				{
-					this.owner = owner;
-				} // ctor
-
-				private string RegisterColumn(string columnToken, string nullToken, int @class)
-					=> owner.RegisterColumn(String.IsNullOrEmpty(columnToken) ? nullToken : columnToken, @class);
-
-				protected override Tuple<string, Type> LookupDateColumn(string columnToken)
-					=> new Tuple<string, Type>(RegisterColumn(columnToken, DateColumns, DateClass), typeof(DateTime));
-
-				protected override Tuple<string, Type> LookupNumberColumn(string columnToken)
-					=> new Tuple<string, Type>(RegisterColumn(columnToken, NumberColumns, NumberClass), typeof(string));
-
-				protected override Tuple<string, Type> LookupColumn(string columnToken)
-					=> new Tuple<string, Type>(RegisterColumn(columnToken, AllColumns, 0), typeof(string));
-
-				protected override string LookupNativeExpression(string key)
-					=> "1=1"; // not supported
-
-				protected override string CreateDateString(DateTime value)
-					=> "datetime('" + value.ToString("s") + "')";
-			} // class ObjectViewFilterVisitor
-
-			#endregion
+#pragma warning restore IDE1006 // Naming Styles
 
 			#region -- class ObjectViewColumn -----------------------------------------------
 
@@ -4515,65 +4482,114 @@ namespace TecWare.PPSn
 
 			#endregion
 
+			#region -- class ObjectViewFilterVisitor ----------------------------------------
+
+			private sealed class ObjectViewFilterVisitor : PpsDataFilterVisitorSql
+			{
+				private readonly List<ObjectViewColumn> columnInfos = new List<ObjectViewColumn>();
+
+				public ObjectViewFilterVisitor()
+				{
+					RegisterColumn(AllColumns, 0); // register always "s_all"
+				} // ctor
+
+				public string RegisterColumn(string virtualColumn, int classification)
+				{
+					// find the column definiton
+					var columnInfo = columnInfos.FirstOrDefault(c => c.Equals(virtualColumn, classification));
+					if (columnInfo == null) // create new column info
+						columnInfos.Add(columnInfo = new ObjectViewColumn(virtualColumn, classification));
+
+					return columnInfo.ColumnAlias;
+				} // func RegisterColumn
+
+				public string CreateSqlOrder(string identifier, bool negate)
+					=> RegisterColumn(identifier, 0) + (negate ? " DESC" : " ASC");
+
+				private string RegisterColumn(string columnToken, string nullToken, int @class)
+					=> RegisterColumn(String.IsNullOrEmpty(columnToken) ? nullToken : columnToken, @class);
+
+				protected override Tuple<string, Type> LookupDateColumn(string columnToken)
+					=> new Tuple<string, Type>(RegisterColumn(columnToken, DateColumns, DateClass), typeof(DateTime));
+
+				protected override Tuple<string, Type> LookupNumberColumn(string columnToken)
+					=> new Tuple<string, Type>(RegisterColumn(columnToken, NumberColumns, NumberClass), typeof(string));
+
+				protected override Tuple<string, Type> LookupColumn(string columnToken)
+					=> new Tuple<string, Type>(RegisterColumn(columnToken, AllColumns, 0), typeof(string));
+
+				protected override string LookupNativeExpression(string key)
+					=> "1=1"; // not supported
+
+				protected override string CreateDateString(DateTime value)
+					=> "datetime('" + value.ToString("s") + "')";
+
+				public IEnumerable<ObjectViewColumn> GetAllKeyColumns()
+					=> columnInfos.Where(c => c.Type == ObjectViewColumnType.Key);
+
+				public IEnumerable<ObjectViewColumn> ColumnInfos => columnInfos;
+			} // class ObjectViewFilterVisitor
+
+			#endregion
+
 			private readonly PpsEnvironment environment;
 			private readonly SQLiteConnection localStoreConnection;
 
-			private List<ObjectViewColumn> columnInfos = new List<ObjectViewColumn>();
-			private string whereCondition = null;
-			private string orderCondition = null;
-			private long limitStart = -1;
-			private long limitCount = -1;
+			private readonly PpsDataFilterExpression filterCondition = null;
+			private readonly PpsDataOrderExpression[] orderCondition = null;
+			private readonly long limitStart = -1;
+			private readonly long limitCount = -1;
 
-			public PpsObjectGenerator(PpsEnvironment environment, SQLiteConnection localStoreConnection)
+			public PpsObjectGenerator(PpsEnvironment environment, SQLiteConnection localStoreConnection, PpsDataFilterExpression filterCondition, IEnumerable<PpsDataOrderExpression> orderCondition, long limitStart, long limitCount)
 			{
 				this.environment = environment;
 				this.localStoreConnection = localStoreConnection;
 
-				RegisterColumn(AllColumns, 0); // register always "s_all"
+				this.filterCondition = filterCondition ?? PpsDataFilterExpression.True;
+				this.orderCondition = orderCondition?.ToArray() ?? PpsDataOrderExpression.Empty;
 			} // ctor
 
-			private string RegisterColumn(string virtualColumn, int classification)
+			public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			{
-				// find the column definiton
-				var columnInfo = columnInfos.FirstOrDefault(c => c.Equals(virtualColumn, classification));
-				if (columnInfo == null) // create new column info
-					columnInfos.Add(columnInfo = new ObjectViewColumn(virtualColumn, classification));
-
-				return columnInfo.ColumnAlias;
-			} // func RegisterColumn
-
-			private string CreateSqlOrder(string identifier, bool negate)
-				=> RegisterColumn(identifier, 0) + (negate ? " DESC" : " ASC");
-
-			public void ApplyFilter(PpsDataFilterExpression filter)
-			{
-				if (filter == PpsDataFilterExpression.True)
-					whereCondition = null;
-				else
-					whereCondition = new ObjectViewFilterVisitor(this).CreateFilter(filter);
+				return new PpsObjectGenerator(environment, localStoreConnection,
+					PpsDataFilterExpression.Combine(filterCondition, expression),
+					orderCondition,
+					limitStart,
+					limitCount
+				);
 			} // proc ApplyFilter
 
-			public void ApplyOrder(IEnumerable<PpsDataOrderExpression> orders)
+			public IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			{
-				if (orders == null)
-					orderCondition = null;
-				else
-					orderCondition = String.Join(",", from o in orders where !String.IsNullOrEmpty(o.Identifier) select CreateSqlOrder(o.Identifier, o.Negate));
+				return new PpsObjectGenerator(environment, localStoreConnection,
+					filterCondition,
+					PpsDataOrderExpression.Combine(orderCondition, expressions),
+					limitStart,
+					limitCount
+				);
 			} // proc ApplyOrder
 
-			public void ApplyLimit(long startAt, long count)
-			{
-				this.limitStart = startAt;
-				this.limitCount = count;
-			} // proc ApplyLimit
+			public IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
+				=> this;
 
-			private IEnumerable<ObjectViewColumn> GetAllKeyColumns()
-				=> columnInfos.Where(c => c.Type == ObjectViewColumnType.Key);
+			public IDataRowEnumerable ApplyLimit(long startAt, long count)
+			{
+				return new PpsObjectGenerator(environment, localStoreConnection,
+					filterCondition,
+					orderCondition,
+					startAt,
+					count
+				);
+			} // proc ApplyLimit
 
 			private SQLiteCommand CreateCommand()
 			{
-				// build complete sql expression
+				var columnManager = new ObjectViewFilterVisitor();
+
+				// create sql command
 				var cmd = new StringBuilder();
+				var sqlWhere = columnManager.CreateFilter(filterCondition);
+				var sqlOrder = String.Join(",", from o in orderCondition where !String.IsNullOrEmpty(o.Identifier) select columnManager.CreateSqlOrder(o.Identifier, o.Negate));
 
 				cmd.Append("SELECT ");
 
@@ -4590,7 +4606,7 @@ namespace TecWare.PPSn
 				cmd.Append("group_concat('S' || s_all.Id || ':' || s_all.Key || ':' || ifnull(s_all.LocalClass , s_all.Class) ||  '=' || replace(ifnull(s_all.LocalValue, s_all.Value), char(10), ' '), char(10)) as [Values]");
 
 				// generate dynamic columns
-				foreach (var c in GetAllKeyColumns())
+				foreach (var c in columnManager.GetAllKeyColumns())
 				{
 					cmd.Append(',')
 						.Append(c.CreateWhereExpression());
@@ -4599,15 +4615,15 @@ namespace TecWare.PPSn
 				cmd.AppendLine().Append("FROM main.[Objects] o");
 
 				// create left outer joins
-				foreach (var c in columnInfos)
+				foreach (var c in columnManager.ColumnInfos)
 				{
 					if (c.Type != ObjectViewColumnType.Static)
 						cmd.AppendLine().Append(c.CreateLeftOuterJoinExpression());
 				}
 
 				// add the where condition
-				if (!String.IsNullOrEmpty(whereCondition))
-					cmd.AppendLine().Append("WHERE ").Append(whereCondition);
+				if (!String.IsNullOrEmpty(sqlWhere))
+					cmd.AppendLine().Append("WHERE ").Append(sqlWhere);
 
 				// create the group by
 				cmd.AppendLine().Append("GROUP BY ");
@@ -4620,7 +4636,7 @@ namespace TecWare.PPSn
 						cmd.Append(',');
 					cmd.Append(ColumnStaticPrefix).Append(c.Name);
 				}
-				foreach (var c in GetAllKeyColumns())
+				foreach (var c in columnManager.GetAllKeyColumns())
 				{
 					cmd.Append(',');
 					cmd.Append(c.ColumnAlias);
@@ -4628,9 +4644,9 @@ namespace TecWare.PPSn
 
 				// order by condition
 				cmd.AppendLine();
-				if (String.IsNullOrEmpty(orderCondition))
-					orderCondition = "o.DocumentLastWrite DESC";
-				cmd.Append("ORDER BY ").Append(orderCondition);
+				if (String.IsNullOrEmpty(sqlOrder))
+					sqlOrder = "o.DocumentLastWrite DESC";
+				cmd.Append("ORDER BY ").Append(sqlOrder);
 
 				// add limit
 				if (limitStart != -1 || limitCount != -1)
@@ -4661,20 +4677,15 @@ order by t_liefnr.value desc
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
+
+			public ICollectionView CreateView()
+				=> new PpsDataRowEnumerableCollectionView(this);
 		} // class PpsObjectGenerator
 
 		#endregion
 
 		private IEnumerable<IDataRow> CreateObjectFilter(PpsShellGetList arguments)
-		{
-			var gn = new PpsObjectGenerator(this, LocalConnection);
-
-			gn.ApplyFilter(arguments.Filter);
-			gn.ApplyOrder(arguments.Order);
-			gn.ApplyLimit(arguments.Start, arguments.Count);
-
-			return gn;
-		} // func CreateObjectFilter
+			=> new PpsObjectGenerator(this, LocalConnection, arguments.Filter, arguments.Order, arguments.Start, arguments.Count);
 
 		#endregion
 

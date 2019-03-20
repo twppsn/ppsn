@@ -776,13 +776,22 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- interface IPpsUICommandsList -------------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsUICommandsList : IEnumerable<PpsUICommand>, INotifyCollectionChanged
+	{
+	} // interface IPpsUICommandsList
+
+	#endregion
+
 	#region -- class PpsUICommandsView ------------------------------------------------
 
 	/// <summary>View object for command collections</summary>
-	public sealed class PpsUICommandsView : CollectionView
+	public sealed class PpsUICommandsView : CollectionView, IPpsUICommandsList
 	{       
 		private readonly List<PpsUICommand> viewCommands;
-		private readonly List<PpsUICommandCollection> commandCollections = new List<PpsUICommandCollection>();
+		private readonly List<IPpsUICommandsList> commandCollections = new List<IPpsUICommandsList>();
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -809,7 +818,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Add a list of commands to merge it with the current commands.</summary>
 		/// <param name="commands"></param>
-		public void AppendCommands(PpsUICommandCollection commands)
+		public void AppendCommands(IPpsUICommandsList commands)
 		{
 			if (commands == null || commandCollections.Contains(commands))
 				return;
@@ -822,7 +831,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Remove a command collection.</summary>
 		/// <param name="commands"></param>
-		public void RemoveCommands(PpsUICommandCollection commands)
+		public void RemoveCommands(IPpsUICommandsList commands)
 		{
 			if (commands != null && commandCollections.Remove(commands))
 			{
@@ -833,7 +842,7 @@ namespace TecWare.PPSn.UI
 
 		private void Commands_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
-			if (sender is PpsUICommandCollection commands
+			if (sender is IPpsUICommandsList commands
 				&& commandCollections.Contains(commands))
 			{
 				switch (e.Action)
@@ -842,7 +851,7 @@ namespace TecWare.PPSn.UI
 						AppendCommand((PpsUICommand)e.NewItems[0]);
 						break;
 					case NotifyCollectionChangedAction.Remove:
-						RemoveCommand((PpsUICommand)e.NewItems[0]);
+						RemoveCommand((PpsUICommand)e.OldItems[0]);
 						break;
 					case NotifyCollectionChangedAction.Reset:
 						RefreshOrDefer();
@@ -860,8 +869,11 @@ namespace TecWare.PPSn.UI
 
 		private void AppendCommand(PpsUICommand cmd)
 		{
-			if (viewCommands.Contains(cmd))
+			if (!viewCommands.Contains(cmd))
+			{
 				AppendCommandCore(cmd);
+				RefreshOrDefer();
+			}
 		} // proc AppendCommand
 
 		private int AppendCommandCore(PpsUICommand cmd)
@@ -877,6 +889,7 @@ namespace TecWare.PPSn.UI
 				viewCommands.Insert(index, null);
 
 			viewCommands.Insert(index, cmd);
+
 			return index;
 		} // proc AppendCommandCore
 
@@ -886,12 +899,13 @@ namespace TecWare.PPSn.UI
 			if (index == -1)
 				return;
 
+			viewCommands.RemoveAt(index);
 			if (index == Count && index > 0 && viewCommands[index - 1] == null) // remove group before
 				viewCommands.RemoveAt(index - 1);
 			else if (index < Count && viewCommands[index] == null) // remove group after
 				viewCommands.RemoveAt(index);
 
-			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			RefreshOrDefer();
 		} // proc RemoveCommand
 
 		#endregion
@@ -929,11 +943,14 @@ namespace TecWare.PPSn.UI
 
 			base.RefreshOverride();
 		} // proc RefreshOverride
-
+		
 		/// <summary>Return enumerator to fetch current rows.</summary>
 		/// <returns></returns>
 		protected override IEnumerator GetEnumerator()
 			=> viewCommands.Select(c => (object)c ?? PpsUICommandSeperator.Default).GetEnumerator();
+
+		IEnumerator<PpsUICommand> IEnumerable<PpsUICommand>.GetEnumerator()
+			=> viewCommands.Where(c => c != null).GetEnumerator();
 
 		/// <summary>Return the cached items.</summary>
 		/// <param name="index"></param>
@@ -965,7 +982,7 @@ namespace TecWare.PPSn.UI
 	public delegate void PpsUICommandLogicalChildDelegate(object child);
 
 	/// <summary>Command collection to hold a list of commands.</summary>
-	public class PpsUICommandCollection : Collection<PpsUICommand>, INotifyCollectionChanged, ICollectionViewFactory
+	public class PpsUICommandCollection : Collection<PpsUICommand>, IPpsUICommandsList, INotifyCollectionChanged, ICollectionViewFactory
 	{
 
 		/// <summary>Called if the command is changed.</summary>
@@ -1058,6 +1075,9 @@ namespace TecWare.PPSn.UI
 			base.InsertItem(index, item);
 			AddLogicalChildHandler?.Invoke(this[index]);
 
+			// add events
+			item.OrderChanged += Item_OrderChanged;
+
 			// force rebuild, templates will not show up correctly
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
 		} // proc InsertItem
@@ -1068,6 +1088,7 @@ namespace TecWare.PPSn.UI
 		{
 			var item = this[index];
 
+			item.OrderChanged -= Item_OrderChanged;
 			base.RemoveItem(index);
 
 			RemoveLogicalChildHandler?.Invoke(item);
@@ -1075,6 +1096,15 @@ namespace TecWare.PPSn.UI
 			// force rebuild, templates will not show up correctly
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index));
 		} // proc RemoveItem
+
+		private void Item_OrderChanged(object sender, EventArgs e)
+		{
+			if (sender is PpsUICommand item)
+			{
+				Remove(item);
+				Add(item);
+			}
+		} // event Item_OrderChanged
 
 		/// <summary></summary>
 		/// <param name="index"></param>
@@ -1088,7 +1118,7 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		/// <returns></returns>
 		public ICollectionView CreateView()
-			=> CollectionViewSource.GetDefaultView(new PpsUICommandsView(this));
+			=> new PpsUICommandsView(this);
 
 		internal static int FindCommandInsertIndex(PpsCommandOrder cmdOrder, IReadOnlyList<PpsUICommand> commands)
 		{

@@ -48,6 +48,7 @@ namespace TecWare.PPSn.UI
 			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.F4, ModifierKeys.Control) })
 		);
 
+		/// <summary>Is the a pane visible</summary>
 		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
 		
 		private int windowIndex = -1;                                       // settings key
@@ -57,6 +58,8 @@ namespace TecWare.PPSn.UI
 
 		#region -- Ctor/Dtor -------------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="windowIndex"></param>
 		public PpsMainWindow(int windowIndex)
 		{
 			this.windowIndex = windowIndex;
@@ -121,11 +124,13 @@ namespace TecWare.PPSn.UI
 			DataContext = this;
 
 			// start navigator pane
-			OpenPaneAsync(typeof(PpsNavigatorModel), PpsOpenPaneMode.NewPane).SpawnTask(Environment);
-			
+			OpenPaneAsync(typeof(PpsNavigatorPane), PpsOpenPaneMode.NewPane).SpawnTask(Environment);
+
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="e"></param>
 		protected override void OnClosing(CancelEventArgs e)
 		{
 			if (unloadTask != null) // currently unloading

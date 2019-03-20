@@ -186,6 +186,7 @@ namespace TecWare.PPSn
 
 		private readonly string displayName;
 		private readonly string displayImage;
+		private readonly string description;
 		private readonly bool isHidden;
 		private readonly LuaChunk condition;
 		private readonly LuaChunk code;
@@ -193,8 +194,9 @@ namespace TecWare.PPSn
 		internal PpsActionDefinition(PpsEnvironment environment, XElement xCur, ref int priority)
 			: base(environment, xCur.GetAttribute("name", String.Empty))
 		{
-			displayName = xCur.GetAttribute("displayName", this.Name);
+			displayName = xCur.GetAttribute("displayName", Name);
 			displayImage = xCur.GetAttribute("displayImage", "star");
+			description = xCur.GetAttribute("description", null);
 			isHidden = xCur.GetAttribute("isHidden", false);
 			Priority = priority = xCur.GetAttribute("priority", priority + 1);
 
@@ -207,8 +209,8 @@ namespace TecWare.PPSn
 		/// <summary>Can this command applied to this context.</summary>
 		/// <param name="context"></param>
 		/// <returns></returns>
-		public bool CheckCondition(LuaTable context)
-			=> condition == null ? true : (bool)Environment.RunScriptWithReturn<bool>(condition, context, false);
+		public object CheckCondition(LuaTable context)
+			=> condition == null ? BooleanBox.True : Environment.RunScriptWithReturn<object>(condition, context, false);
 
 		/// <summary>Execute command on this context.</summary>
 		/// <param name="context"></param>
@@ -230,6 +232,8 @@ namespace TecWare.PPSn
 		public string DisplayName => displayName;
 		/// <summary>Display image of the command.</summary>
 		public string DisplayImage => displayImage;
+		/// <summary>Tooltip of the command.</summary>
+		public string Description => description;
 		/// <summary>Sort order of the command.</summary>
 		public int Priority { get; }
 		/// <summary>Is this an always hidden command.</summary>

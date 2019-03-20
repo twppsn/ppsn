@@ -333,7 +333,7 @@ namespace TecWare.PPSn.UI
 				=> GetActionFromParameter(parameter)?.Execute(model);
 
 			bool ICommand.CanExecute(object parameter)
-				=> GetActionFromParameter(parameter)?.CheckCondition(model) ?? true;
+				=> true; // GetActionFromParameter(parameter)?.CheckCondition(model) ?? true;
 		} // class RunActionCommand
 
 		#endregion
@@ -375,8 +375,8 @@ namespace TecWare.PPSn.UI
 		private PpsOrderView currentOrder;
 		private bool sortAscending = true;
 
-		private PpsDataList items;
-		private ICollectionView itemsView;
+		//private PpsDataList items;
+		//private ICollectionView itemsView;
 
 		private readonly SearchActionCommand searchActionCommand;
 		private CurrentSearchTextExpression currentSearchTextExpression = EmptyExpression.Instance;
@@ -408,9 +408,9 @@ namespace TecWare.PPSn.UI
 			views.View.CurrentChanged += (sender, e) => UpdateCurrentView((PpsViewDefinition)views.View.CurrentItem);
 
 			// init data list
-			items = new PpsDataList(Environment);
-			itemsView = CollectionViewSource.GetDefaultView(items);
-			itemsView.CurrentChanged += (sender, e) => RefreshActions();
+			//items = new PpsDataList(Environment);
+			//itemsView = CollectionViewSource.GetDefaultView(items);
+			//itemsView.CurrentChanged += (sender, e) => RefreshActions();
 
 			// Create Command
 			toggleShowViewDescriptionCommand = new ToggleShowViewDescriptionCommand(this);
@@ -430,10 +430,11 @@ namespace TecWare.PPSn.UI
 
 		private bool FilterAction(object item)
 		{
-			var action = item as PpsActionDefinition;
-			return action != null &&
-				!action.IsHidden &&
-				action.CheckCondition(this);
+			return true;
+			//var action = item as PpsActionDefinition;
+			//return action != null &&
+			//	!action.IsHidden &&
+			//	action.CheckCondition(this);
 		} // func FilterAction
 
 		private bool FilterView(object item)
@@ -621,7 +622,7 @@ namespace TecWare.PPSn.UI
 		private async Task RefreshDataAsync()
 		{
 			var dataSource = await Window.Dispatcher.InvokeAsync(CreateDataSource);
-			await items.Reset(dataSource);
+			//await items.Reset(dataSource);
 		} // proc RefreshDataAsync
 
 		#endregion
@@ -677,6 +678,9 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged(nameof(ViewsShowDescription));
 		} // proc ShowViewsDescription
 
+		/// <summary>Map env</summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? Environment.GetValue(key); // inherit from the environment
 		
@@ -689,7 +693,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Selected item</summary>
 		[LuaMember(nameof(CurrentItem))]
-		public object CurrentItem => itemsView?.CurrentItem;
+		public object CurrentItem => null; // itemsView?.CurrentItem;
 		/// <summary>Points to the current special view, that is selected.</summary>
 		[LuaMember(nameof(CurrentView))]
 		public PpsViewDefinition CurrentView => views?.View.CurrentItem as PpsViewDefinition;
@@ -702,7 +706,7 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		public ICollectionView VisibleActions => actions.View;
 		/// <summary>Data Items</summary>
-		public ICollectionView Items => itemsView;
+		public ICollectionView Items => null; // itemsView;
 
 		/// <summary>Current SearchText</summary>
 		[LuaMember(nameof(CurrentSearchText))]

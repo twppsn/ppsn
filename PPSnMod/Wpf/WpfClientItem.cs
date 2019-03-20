@@ -845,6 +845,7 @@ namespace TecWare.PPSn.Server.Wpf
 				{
 					var displayName = x.GetAttribute<string>("displayName", null);
 					var displayImage = x.GetAttribute<string>("displayImage", "star");
+					var description = x.GetAttribute<string>("description", null);
 					var securityToken = x.GetAttribute<string>("securityToken", null);
 
 					if (String.IsNullOrEmpty(displayName) ||
@@ -861,6 +862,8 @@ namespace TecWare.PPSn.Server.Wpf
 					xml.WriteAttributeString("name", x.GetAttribute<string>("name", displayName));
 					xml.WriteAttributeString("displayName", displayName);
 					xml.WriteAttributeString("displayImage", displayImage);
+					if (description != null)
+						xml.WriteAttributeString("description", description);
 
 					posPriority = priority + 1;
 					xml.WriteAttributeString("priority", priority.ToString());

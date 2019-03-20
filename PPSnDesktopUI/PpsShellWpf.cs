@@ -45,7 +45,35 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsShellWpf -------------------------------------------------
+	#region -- class PpsDataListTemplateSelector --------------------------------------
+
+	/// <summary>Template selector for object templates</summary>
+	public class PpsDataListTemplateSelector : DataTemplateSelector
+	{
+		private readonly PpsShellWpf shell;
+		private readonly DataTemplate defaultTemplate;
+
+		/// <summary></summary>
+		/// <param name="shell"></param>
+		public PpsDataListTemplateSelector(PpsShellWpf shell)
+		{
+			this.shell = shell;
+
+			defaultTemplate = shell.FindResource<DataTemplate>("DefaultListTemplate");
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="item"></param>
+		/// <param name="container"></param>
+		/// <returns></returns>
+		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+			=> shell.GetDataTemplate(item, container) ?? defaultTemplate;
+	} // class PpsDataListTemplateSelector
+
+	#endregion
+
+
+	#region -- class PpsShellWpf ------------------------------------------------------
 
 	/// <summary></summary>
 	public abstract class PpsShellWpf : PpsShell, IPpsXamlCode

@@ -18,6 +18,7 @@ using System.Collections;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
 using TecWare.DE.Stuff;
@@ -128,8 +129,8 @@ namespace TecWare.PPSn.Controls
 		/// <returns></returns>
 		protected virtual void OnExternalCommandsChanged(PpsUICommandCollection newValue, PpsUICommandCollection oldValue)
 		{
-			CommandsView.RemoveCommands(oldValue);
-			CommandsView.AppendCommands(newValue);
+			CommandsView.RemoveCommands((IPpsUICommandsList)CollectionViewSource.GetDefaultView(oldValue));
+			CommandsView.AppendCommands((IPpsUICommandsList)CollectionViewSource.GetDefaultView(newValue));
 		} // proc OnExternalCommandsChanged
 
 		/// <summary>External defined command collection, they are merged with the main commands.</summary>
@@ -193,7 +194,6 @@ namespace TecWare.PPSn.Controls
 
 			KeyboardNavigation.SetTabNavigation(this, KeyboardNavigationMode.Once);
 			KeyboardNavigation.SetDirectionalNavigation(this, KeyboardNavigationMode.Cycle);
-
 		} // ctor
 
 		static PpsCommandBar()
