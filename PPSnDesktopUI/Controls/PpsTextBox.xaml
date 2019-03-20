@@ -31,7 +31,16 @@ specific language governing permissions and limitations under the Licence.
 		</Grid>
 	</ControlTemplate>
 
+	<ContextMenu x:Key="PpsTextBoxContextMenu">
+		<MenuItem Command="{x:Static ApplicationCommands.Cut}" />
+		<MenuItem Command="{x:Static ApplicationCommands.Copy}" />
+		<MenuItem Command="{x:Static ApplicationCommands.Paste}" />
+		<Separator />
+		<MenuItem Command="{x:Static ApplicationCommands.SelectAll}" />
+	</ContextMenu>
+
 	<Style TargetType="{x:Type pps:PpsTextBox}">
+		<Setter Property="ContextMenu" Value="{StaticResource PpsTextBoxContextMenu}" />
 		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="Padding" Value="2,0"/>

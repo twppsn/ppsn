@@ -144,9 +144,21 @@ namespace TecWare.PPSn.Controls
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>Do have any commands.</summary>
-		public PpsUICommandCollection HasCommands => (PpsUICommandCollection)GetValue(HasCommandsProperty);
+		public bool HasCommands => BooleanBox.GetBool(GetValue(HasCommandsProperty));
 
 		#endregion
+
+		#region -- AllowCommands - Property -------------------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty AllowCommandsProperty = DependencyProperty.Register(nameof(AllowCommands), typeof(bool), typeof(PpsDataListBox), new FrameworkPropertyMetadata(BooleanBox.True));
+
+		public bool AllowCommands { get => BooleanBox.GetBool(GetValue(AllowCommandsProperty)); set => SetValue(AllowCommandsProperty, BooleanBox.GetObject(value)); }
+
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		#endregion
+
 
 		#region -- UserFilterText, FilterExpression - Property ------------------------
 

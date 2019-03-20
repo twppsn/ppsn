@@ -73,7 +73,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty HasDropDownSourceProperty = hasDropDownSourcePropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		#region -- ShowSelectionMode - Property ---------------------------------------
+		#region -- AdditionalImage - Property -----------------------------------------
 
 		/// <summary>Add an Image</summary>
 		public static readonly DependencyProperty AdditionalImageProperty = DependencyProperty.Register(nameof(AdditionalImage), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnAdditionalImageChanged)));
