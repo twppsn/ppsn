@@ -112,6 +112,7 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsDataListBox ---------------------------------------------------
 
 	/// <summary></summary>
+	[TemplatePart(Name = "PART_FilterBox", Type = typeof(PpsTextBox))]
 	public class PpsDataListBox : ListBox
 	{
 		#region -- ListCommands - Property --------------------------------------------
@@ -175,7 +176,6 @@ namespace TecWare.PPSn.Controls
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		#endregion
-
 
 		#region -- UserFilterText, FilterExpression - Property ------------------------
 
@@ -247,6 +247,8 @@ namespace TecWare.PPSn.Controls
 		private IPpsDataRowViewFilter filterView = null;
 		private IPpsDataRowViewSort sortView = null;
 
+		private PpsTextBox filterBox = null;
+
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
@@ -264,7 +266,15 @@ namespace TecWare.PPSn.Controls
 				RemoveLogicalChildHandler = RemoveLogicalChild,
 				DefaultCommandTarget = this
 			};
-		} // func CoerceCommands
+		} // func CreateCommands
+
+		/// <summary></summary>
+		public override void OnApplyTemplate()
+		{
+			base.OnApplyTemplate();
+
+			filterBox = GetTemplateChild("PART_FilterBox") as PpsTextBox;
+		} // proc OnApplyTemplate
 
 		static PpsDataListBox()
 		{
@@ -302,6 +312,23 @@ namespace TecWare.PPSn.Controls
 
 		private PpsUICommandCollection GetItemCommands(DependencyObject element, object item)
 			=> ItemCommandsSelector?.SelectCommands(item, element) ?? ItemCommands;
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		{
+			if (filterBox != null && IsFilterable)
+			{
+				if (e.Key >= Key.A && e.Key <= Key.Z
+					|| e.Key >= Key.D0 && e.Key <= Key.D9)
+				{
+					if (!filterBox.IsKeyboardFocusWithin
+						&& IsKeyboardFocusWithin) // move focus to textbox
+						filterBox.Focus();
+				}
+			}
+			base.OnPreviewKeyDown(e);
+		} // proc OnPreviewKeyDown
 
 		#region -- Item Container -----------------------------------------------------
 

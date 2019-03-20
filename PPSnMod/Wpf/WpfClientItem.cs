@@ -864,6 +864,7 @@ namespace TecWare.PPSn.Server.Wpf
 					xml.WriteAttributeString("displayImage", displayImage);
 					if (description != null)
 						xml.WriteAttributeString("description", description);
+					xml.WriteAttributeString("isHidden", (priority < 0).ChangeType<string>());
 
 					posPriority = priority + 1;
 					xml.WriteAttributeString("priority", priority.ToString());

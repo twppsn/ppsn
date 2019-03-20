@@ -238,7 +238,7 @@ namespace TecWare.PPSn
 		public int Priority { get; }
 		/// <summary>Is this an always hidden command.</summary>
 		public bool IsHidden => isHidden;
-	} // class PpsMainActionDefinition
+	} // class PpsActionDefinition
 
 	#endregion
 }

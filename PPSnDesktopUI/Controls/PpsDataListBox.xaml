@@ -47,7 +47,7 @@ specific language governing permissions and limitations under the Licence.
 											  Mode="Mixed"
 											  MinHeight="36" />
 							<!--sum(Height, Margin.Top, Margin.Bottom) = commandBar.MinHeight!-->
-							<ui:PpsTextBox x:Name="filterBox"
+							<ui:PpsTextBox x:Name="PART_FilterBox"
 										   Grid.Column="1"
 										   Text="{Binding UserFilterText,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,Delay=300}"
 										   Height="23"
@@ -68,7 +68,7 @@ specific language governing permissions and limitations under the Licence.
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsFilterable" Value="False">
-							<Setter TargetName="filterBox" Property="Visibility" Value="Collapsed" />
+							<Setter TargetName="PART_FilterBox" Property="Visibility" Value="Collapsed" />
 							<Setter TargetName="filterColumn" Property="MinWidth" Value="0" />
 							<Setter TargetName="filterColumn" Property="Width" Value="Auto" />
 						</Trigger>
