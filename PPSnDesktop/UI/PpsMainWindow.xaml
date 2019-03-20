@@ -80,15 +80,15 @@
 		<uiL:PpsWindowPaneStrip x:Name="paneStrip" Height="36" ItemsSource="{Binding PaneHosts}">
 			<uiL:PpsWindowPaneStrip.ItemTemplate>
 				<DataTemplate DataType="ui:PpsWindowPaneHost">
-					<Grid>
+					<Grid Background="Transparent">
 						<Grid.ToolTip>
 							<TextBlock>
-								<Run Text="{Binding Title,Mode=OneWay}" FontWeight="Bold" />
+								<Run Text="{Binding Title,Mode=OneWay,TargetNullValue='Ohne Titel',FallbackValue='Ohne Titel'}" FontWeight="Bold" />
 								<LineBreak/>
-								<Run Text="{Binding SubTitle,Mode=OneWay}" />
+								<Run Text="{Binding SubTitle,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}" />
 							</TextBlock>
 						</Grid.ToolTip>
-						<ui:PpsGeometryImage GeometryName="{Binding Image, Mode=OneWay, TargetNullValue='pane'}"
+						<ui:PpsGeometryImage GeometryName="{Binding Image,Mode=OneWay,TargetNullValue='pane'}"
 											 GeometryCircled="False"
 											 Width="19"
 											 Height="19"
@@ -98,7 +98,8 @@
 											 SnapsToDevicePixels="True"
 											 Foreground="{DynamicResource PPSnImageBrush}"
 											 Opacity=".75"/>
-						<TextBlock Text="{Binding SubTitle,Mode=OneWay}" MaxWidth="164" VerticalAlignment="Center" Margin="32,0,6,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+						<TextBlock Text="{Binding SubTitle,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
+								   MaxWidth="164" VerticalAlignment="Center" Margin="32,0,6,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
 					</Grid>
 				</DataTemplate>
 			</uiL:PpsWindowPaneStrip.ItemTemplate>
