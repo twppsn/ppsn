@@ -72,13 +72,13 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="filterColumn" Property="MinWidth" Value="0" />
 							<Setter TargetName="filterColumn" Property="Width" Value="Auto" />
 						</Trigger>
-						<Trigger Property="HasCommands" Value="False">
+						<Trigger Property="AllowCommands" Value="False">
 							<Setter TargetName="commandBar" Property="Visibility" Value="Collapsed" />
 						</Trigger>
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="IsFilterable" Value="False" />
-								<Condition Property="HasCommands" Value="False" />
+								<Condition Property="AllowCommands" Value="False" />
 							</MultiTrigger.Conditions>
 							<Setter TargetName="separatorRect" Property="Visibility" Value="Collapsed" />
 						</MultiTrigger>
