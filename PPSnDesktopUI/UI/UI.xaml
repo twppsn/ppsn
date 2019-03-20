@@ -15,9 +15,9 @@ specific language governing permissions and limitations under the Licence.
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="Styles/PpsContextMenu.xaml" />
 		<ResourceDictionary Source="Styles/WindowStyles.xaml" />
 		<ResourceDictionary Source="Styles/Templates.xaml" />
 		<ResourceDictionary Source="Styles/DrawingImages.xaml" />
-
 	</ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>
