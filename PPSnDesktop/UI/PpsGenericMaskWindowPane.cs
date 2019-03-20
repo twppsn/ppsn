@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
-using System.Windows.Input;
 using System.Xml;
 using Neo.IronLua;
 using TecWare.PPSn.Controls;
@@ -39,8 +38,12 @@ namespace TecWare.PPSn.UI
 		private PpsObjectDataSet data; // data object
 		private IPpsObjectDataAccess dataAccess; // access token to the data object
 
-		public PpsGenericMaskWindowPane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
-			: base(paneManager, paneHost)
+		#region -- Ctor/Dtor/Load/Unload ----------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="paneHost"></param>
+		public PpsGenericMaskWindowPane(IPpsWindowPaneHost paneHost)
+			: base(paneHost)
 		{
 			idleActionToken = Shell.AddIdleAction(
 				elapsed =>
@@ -57,6 +60,8 @@ namespace TecWare.PPSn.UI
 			);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -64,6 +69,9 @@ namespace TecWare.PPSn.UI
 			base.Dispose(disposing);
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="otherArgumens"></param>
+		/// <returns></returns>
 		public override PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)
 		{
 			var r = base.CompareArguments(otherArgumens);
@@ -75,9 +83,14 @@ namespace TecWare.PPSn.UI
 			return r;
 		} // func CompareArguments
 
+		/// <summary>Return the parser service for the dynamic-xaml.</summary>
+		/// <returns></returns>
 		protected override PpsParserService[] GetRootParserServices()
 			=> new PpsParserService[] { new PpsDataSetResolver(Data) };
 
+		/// <summary></summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
 		protected override async Task LoadInternAsync(LuaTable arguments)
 		{
 			async Task CreateNewObjectAsync()
@@ -106,7 +119,7 @@ namespace TecWare.PPSn.UI
 					await CreateNewObjectAsync();
 
 				data = await obj.GetDataAsync<PpsObjectDataSet>();
-	
+
 				// register events, owner, and in the openDocuments dictionary
 				dataAccess = await data.AccessAsync(arguments);
 				dataAccess.DisableUI = new Func<IDisposable>(() => DisableUI("Verarbeite Daten...", -1));
@@ -222,8 +235,11 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged(nameof(RedoView));
 			OnPropertyChanged(nameof(Data));
 			OnDataChanged();
-		} // porc InitializeData
+		} // proc InitializeData
 
+		/// <summary></summary>
+		/// <param name="commit"></param>
+		/// <returns></returns>
 		public override async Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
 			if (data != null && data.IsDirty)
@@ -238,12 +254,14 @@ namespace TecWare.PPSn.UI
 			return await base.UnloadAsync(commit);
 		} // func UnloadAsync
 
-		/// <summary></summary>
-		protected virtual void OnDataChanged()
-		{
-			CallMemberDirect("OnDataChanged", Array.Empty<object>(), ignoreNilFunction: true);
-		} // proc OnDataChanged
+		#endregion
 
+		/// <summary>Is the data changed.</summary>
+		protected virtual void OnDataChanged()
+			=> CallMemberDirect("OnDataChanged", Array.Empty<object>(), ignoreNilFunction: true);
+
+		/// <summary>Store the data in a file. For debug proposes.</summary>
+		/// <param name="fileName"></param>
 		[LuaMember]
 		public void CommitToDisk(string fileName)
 		{
@@ -251,6 +269,8 @@ namespace TecWare.PPSn.UI
 				data.Write(xml);
 		} // proc CommitToDisk
 
+		/// <summary>Enforce commit of data to local store.</summary>
+		/// <returns></returns>
 		[LuaMember]
 		public async Task CommitEditAsync()
 		{
@@ -260,6 +280,8 @@ namespace TecWare.PPSn.UI
 			Debug.Print("Saved Document.");
 		} // proc CommitEdit
 
+		/// <summary>Push data to server.</summary>
+		/// <returns></returns>
 		[LuaMember]
 		public async Task PushDataAsync()
 		{
@@ -274,7 +296,8 @@ namespace TecWare.PPSn.UI
 				await Shell.ShowExceptionAsync(ExceptionShowFlags.None, ex, "Veröffentlichung ist fehlgeschlagen.");
 			}
 		} // proc PushDataAsync
-				
+
+		/// <summary>UndoManager of the dataset.</summary>
 		[LuaMember]
 		public PpsUndoManager UndoManager => data.UndoManager;
 
@@ -283,11 +306,14 @@ namespace TecWare.PPSn.UI
 		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
 		public ICollectionView RedoView => redoView.View;
 
+		/// <summary>Access the data.</summary>
 		[LuaMember]
 		public PpsDataSet Data => data;
+		/// <summary>Access loaded object.</summary>
 		[LuaMember]
 		public PpsObject Object => obj;
-
+		/// <summary>Access the environment.</summary>
+		[LuaMember("Environment")]
 		public new PpsEnvironment Shell => (PpsEnvironment)base.Shell;
 	} // class PpsGenericMaskWindowPane
 }

@@ -268,6 +268,8 @@ namespace TecWare.PPSn.Data
 			/// <summary></summary>
 			/// <returns></returns>
 			public abstract IEnumerable<PpsTableExpression> GetTables();
+			/// <summary></summary>
+			public abstract bool IsValid { get; }
 		} // class PpsExpressionPart
 
 		#endregion
@@ -300,6 +302,8 @@ namespace TecWare.PPSn.Data
 			public TTABLE Table => table;
 			/// <summary>Alias of this table.</summary>
 			public string Alias => alias;
+			/// <summary>Check the table.</summary>
+			public override bool IsValid => table != null;
 		} // class PpsTableExpression
 
 		#endregion
@@ -356,6 +360,9 @@ namespace TecWare.PPSn.Data
 			public PpsDataJoinStatement[] Statement => onStatement;
 			/// <summary>Type</summary>
 			public PpsDataJoinType Type => type;
+
+			/// <summary></summary>
+			public override bool IsValid => left != null && left.IsValid && right != null && right.IsValid;
 		} // class PpsJoinExpression
 
 		#endregion
@@ -582,6 +589,9 @@ namespace TecWare.PPSn.Data
 				}
 			}
 		} // func GetTables
+
+		/// <summary>Is this expression valid.</summary>
+		public bool IsValid => root?.IsValid ?? false;
 	} // class PpsJoinExpression
 
 	#endregion

@@ -459,7 +459,11 @@ namespace TecWare.PPSn.Server
 					=> null;
 
 				public Task<PpsDataSelector> CreateSelectorAsync()
-					=> Task.Run(() => new PpsViewJoinVisitor(this).Visit(this));
+				{
+					if (!IsValid)
+						throw new InvalidOperationException("Expression is not valid.");
+					return Task.Run(() => new PpsViewJoinVisitor(this).Visit(this));
+				} // func CreateSelectorAsync
 			} // class PpsStringJoinExpression
 
 			#endregion
@@ -487,6 +491,10 @@ namespace TecWare.PPSn.Server
 
 				// create selector
 				var selectorInfo = new PpsViewJoinExpression(this, select, throwException);
+				if (!selectorInfo.IsValid && !throwException)
+					return null;
+
+				// create selector
 				var selector = await selectorInfo.CreateSelectorAsync();
 				if (selector == null)
 					return null;

@@ -304,9 +304,9 @@ namespace TecWare.PPSn.Data
 		/// <param name="x"></param>
 		protected override void Read(XElement x)
 		{
-			originalTemplate = x.Element("o")?.Value;
-			currentTemplate = x.Element("c")?.Value ?? PpsDataRow.NotSet;
-			formattedValue = x.Element("f")?.Value;
+			originalTemplate = x?.Element("o")?.Value;
+			currentTemplate = x?.Element("c")?.Value ?? PpsDataRow.NotSet;
+			formattedValue = x?.Element("f")?.Value;
 
 			parsedValue = null; // invalidate the template
 		} // proc Read

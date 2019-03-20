@@ -307,7 +307,7 @@ namespace TecWare.PPSn.UI
 				using (var r = await request.Request.GetResponseAsync(paneUri.ToString(), String.Join(";", MimeTypes.Application.Xaml, MimeTypes.Text.Lua, MimeTypes.Text.Plain)))
 				{
 					// read the file name
-					arguments["_filename"] = r.GetContentDisposition().FileName;
+					arguments["_filename"] = r.GetContentDisposition().FileName.Trim('"');
 
 					// check content
 					var contentType = r.Content.Headers.ContentType;

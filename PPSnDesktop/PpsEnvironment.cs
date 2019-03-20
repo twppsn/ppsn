@@ -506,7 +506,7 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, App app)
+		internal PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, App app)
 			: base(new Lua(), app.Resources)
 		{
 			this.app = app;
@@ -1725,7 +1725,7 @@ namespace TecWare.PPSn
 					var fileInfo = r.GetContentDisposition();
 					var modificationDate = fileInfo.ModificationDate?.DateTime ?? DateTime.MinValue;
 
-					var targetFile = new FileInfo(Path.Combine(assemblyCache.FullName, fileInfo.FileName));
+					var targetFile = new FileInfo(Path.Combine(assemblyCache.FullName, fileInfo.FileName.Trim('"')));
 
 					// download file in cache
 					if (!targetFile.Exists || modificationDate == DateTime.MinValue || targetFile.LastWriteTime < modificationDate)

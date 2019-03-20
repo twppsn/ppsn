@@ -430,10 +430,10 @@ namespace TecWare.PPSn.Server
 
 		private void BeginReadConfigurationReport(IDEConfigLoading config)
 		{
-			var currentNode = XConfigNode.GetElement(Server.Configuration, config.ConfigNew, PpsStuff.xnReports);
+			var currentNode = XConfigNode.Create(Server.Configuration, config.ConfigNew).Element(PpsStuff.xnReports);
 
-			var systemPath = currentNode.GetAttribute<string>("system") ?? throw new DEConfigurationException(currentNode.Element, "@system is empty.");
-			var basePath = currentNode.GetAttribute<string>("base") ?? throw new DEConfigurationException(currentNode.Element, "@base is empty.");
+			var systemPath = currentNode.GetAttribute<string>("system") ?? throw new DEConfigurationException(currentNode.Data, "@system is empty.");
+			var basePath = currentNode.GetAttribute<string>("base") ?? throw new DEConfigurationException(currentNode.Data, "@base is empty.");
 			var logPath = currentNode.GetAttribute<string>("logs");
 			var workPath = currentNode.GetAttribute<string>("work");
 
