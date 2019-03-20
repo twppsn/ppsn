@@ -21,7 +21,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
-					<StackPanel Orientation="Vertical" />
+					<StackPanel />
 				</ItemsPanelTemplate>
 			</Setter.Value>
 		</Setter>
@@ -49,6 +49,7 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style TargetType="pps:PpsSideBarGroup">
+		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarGroup}">
@@ -71,8 +72,17 @@ specific language governing permissions and limitations under the Licence.
 											  TextElement.FontSize="14"
 											  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
 											  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,1,1,1'}"
-											  VerticalAlignment="Center">
-							</ContentPresenter>
+											  VerticalAlignment="Center" />
+							<!--custom visual focus-->
+							<Rectangle x:Name="focusRect"
+									   Grid.ColumnSpan="2"
+									   Margin="6,0,0,0"
+									   Stroke="{DynamicResource PPSnMarkerBrush}"
+									   StrokeThickness="1"
+									   StrokeDashArray="1 2"
+									   RenderOptions.EdgeMode="Aliased"
+									   SnapsToDevicePixels="True"
+									   Opacity="0" />
 						</Grid>
 						<ItemsPresenter />
 					</StackPanel>
@@ -82,6 +92,9 @@ specific language governing permissions and limitations under the Licence.
 						</Trigger>
 						<Trigger Property="IsMouseOver" SourceName="HeaderGrid" Value="True">
 							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnMouseOverBrush}" />
+						</Trigger>
+						<Trigger Property="IsFocused" Value="True">
+							<Setter TargetName="focusRect" Property="Opacity" Value="1" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
@@ -163,18 +176,15 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
-	<Style x:Key="{x:Static pps:PpsSideBarItemsBase.PpsSideBarSeparator}" TargetType="Separator">
-		<Setter Property="Margin" Value="16,3,16,2" />
+	<Style x:Key="{x:Static pps:PpsSideBarItemsBase.PpsSideBarSeparator}" TargetType="{x:Type Separator}">
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Separator}">
-					<Border Height="2"
-							BorderBrush="{DynamicResource PPSnSeparatorBrush}"
-							BorderThickness="0,1,0,0"
-							RenderOptions.EdgeMode="Aliased"
-							SnapsToDevicePixels="True" />
+					<Rectangle Height="1" Margin="16,3,16,3" StrokeThickness="0" Fill="{DynamicResource PPSnSeparatorBrush}" RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" />
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+
 </ResourceDictionary>
