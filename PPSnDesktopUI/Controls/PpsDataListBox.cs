@@ -144,7 +144,7 @@ namespace TecWare.PPSn.Controls
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>Do have any commands.</summary>
-		public PpsUICommandCollection HasCommands => (PpsUICommandCollection)GetValue(HasCommandsProperty);
+		public bool HasCommands => BooleanBox.GetBool(GetValue(HasCommandsProperty));
 
 		#endregion
 
