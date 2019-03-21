@@ -647,53 +647,6 @@
 					  Height="26"
 					  Width="34" />
 
-		<uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,32,16">
-			<uiL:PpsNavigatorControl.Style>
-				<Style TargetType="{x:Type UserControl}">
-					<Style.Triggers>
-						<DataTrigger Binding="{Binding Path=IsNavigatorVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}">
-							<DataTrigger.Value>
-								<sys:Boolean>false</sys:Boolean>
-							</DataTrigger.Value>
-							<DataTrigger.EnterActions>
-								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
-							</DataTrigger.EnterActions>
-							<DataTrigger.ExitActions>
-								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
-							</DataTrigger.ExitActions>
-						</DataTrigger>
-					</Style.Triggers>
-				</Style>
-			</uiL:PpsNavigatorControl.Style>
-		</uiL:PpsNavigatorControl>
-
-		<ToolBar Grid.Column="1" Grid.Row="1" ItemsSource="{Binding CurrentPaneHost.Commands}">
-			<ToolBar.Style>
-				<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PpsPaneToolBarStyle}" >
-					<Setter Property="Visibility" Value="Collapsed"/>
-					<Style.Triggers>
-						<Trigger Property="HasItems" Value="true">
-							<Setter Property="Visibility" Value="Visible"/>
-						</Trigger>
-						<DataTrigger Binding="{Binding Path=IsPaneVisible}">
-							<DataTrigger.Value>
-								<sys:Boolean>false</sys:Boolean>
-							</DataTrigger.Value>
-							<DataTrigger.EnterActions>
-								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
-							</DataTrigger.EnterActions>
-							<DataTrigger.ExitActions>
-								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
-							</DataTrigger.ExitActions>
-						</DataTrigger>
-						<DataTrigger Binding="{Binding Path=CurrentPaneHost.PaneProgress.IsActive}" Value="True">
-							<Setter Property="IsEnabled" Value="False"/>
-						</DataTrigger>
-					</Style.Triggers>
-				</Style>
-			</ToolBar.Style>
-		</ToolBar>
-
 		<Grid Grid.Row="2" Grid.ColumnSpan="3">
 			<Grid.Style>
 				<Style TargetType="{x:Type Grid}">

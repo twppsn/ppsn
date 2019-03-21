@@ -334,11 +334,21 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged(nameof(ItemsView));
 		} // proc RefreshItems
 
-		public Task<(bool, object)> ExecuteMarcoAsync(string code)
+		[
+		LuaMember(nameof(ExecuteAction)),
+		Description("Executes the action by name.")
+		]
+		public LuaResult ExecuteAction(string actionName)
 		{
-			var actionDefinition = Environment.Actions[code, false];
+			var (isExecuted, result) = ExecuteMarcoAsync(actionName).AwaitTask();
+			return new LuaResult(isExecuted, new LuaResult(result));
+		} // func ExecuteAction
+
+		public Task<(bool, object)> ExecuteMarcoAsync(string actionName)
+		{
+			var actionDefinition = Environment.Actions[actionName, false];
 			if (actionDefinition == null)
-				return Task.FromResult((false, (object)String.Format("Befehl {0} nicht gefunden.", code)));
+				return Task.FromResult((false, (object)String.Format("Befehl {0} nicht gefunden.", actionName)));
 
 			if (!RunActionCommand.IsTrue(actionDefinition.CheckCondition(this)))
 				return Task.FromResult((false, (object)String.Format("Befehl {0} ist nicht aktiv.", actionDefinition.DisplayName)));
@@ -406,6 +416,18 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // prop CurrentView
+		  /// <summary>Current SearchText</summary>
+		[LuaMember(nameof(CurrentSearchText))]
+		public string CurrentSearchText
+		{
+			get => pane.itemList?.UserFilterText;
+			set
+			{
+				if (pane.itemList != null)
+					pane.itemList.UserFilterText = value;
+			}
+		} // func CurrentSearchText
+
 	} // class PpsNavigatorDataModel
 
 	#endregion

@@ -287,6 +287,8 @@ namespace TecWare.PPSn.Controls
 			base.OnApplyTemplate();
 
 			filterBox = GetTemplateChild("PART_FilterBox") as PpsTextBox;
+			if (filterBox != null)
+				filterBox.InputBindings.Add(new KeyBinding(PpsControlCommands.ClearCommand, new KeyGesture(Key.Escape)));
 		} // proc OnApplyTemplate
 
 		/// <summary>Access filter box.</summary>

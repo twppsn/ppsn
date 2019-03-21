@@ -111,8 +111,6 @@ namespace TecWare.PPSn.Controls
 				(sender, e) => { e.CanExecute = CanExecuteDropDownCommand; e.Handled = true; }
 			));
 
-			InputBindings.Add(new KeyBinding(PpsControlCommands.ClearCommand, new KeyGesture(Key.Escape)));
-
 			inputErrorTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
 			{
 				IsEnabled = false
