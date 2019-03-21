@@ -152,8 +152,17 @@ namespace TecWare.PPSn.Server
 						}
 						else
 						{
-							Log.Info("Remove pooled connection: {0} after {1:N0}", cur.DataSourceName, unchecked(Environment.TickCount - cur.CreatedAt));
-							pooledConnections.RemoveAt(i);
+							var msg = String.Format("Remove pooled connection: {0} after {1:N0}", cur.DataSourceName, unchecked(Environment.TickCount - cur.CreatedAt));
+							try
+							{
+								cur.Clear();
+								pooledConnections.RemoveAt(i);
+								Log.Info(msg);
+							}
+							catch (Exception e)
+							{
+								Log.Except(msg, e);
+							}
 						}
 					}
 					return null;
