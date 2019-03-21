@@ -116,6 +116,9 @@ namespace TecWare.PPSn.UI
 					ctx => !String.IsNullOrEmpty(ConsoleCommandTextBox.Text)
 				)
 			);
+
+			var collectionView = CollectionViewSource.GetDefaultView(Environment.Log);
+			collectionView.SortDescriptions.Add(new SortDescription(nameof(PpsTraceItemBase.Stamp), ListSortDirection.Descending));
 		} // ctor
 
 		protected override Task OnLoadAsync(LuaTable args)

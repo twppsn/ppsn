@@ -205,6 +205,7 @@ namespace TecWare.PPSn.UI
 				itemsSource.View.CurrentChanged -= CurrentItemChanged;
 
 			itemsSource = new CollectionViewSource {
+				// Source = Environment.MasterData.GetTable("Objects") 
 				Source = Environment.GetViewData(new PpsShellGetList(viewId) { Filter = baseFilterExpr })
 			};
 

@@ -488,6 +488,7 @@ namespace TecWare.PPSn.Data
 
 		private bool allowSetFilter = false;
 
+		/// <summary>Filter expression</summary>
 		public override Predicate<object> Filter
 		{
 			get => base.Filter;
@@ -519,7 +520,7 @@ namespace TecWare.PPSn.Data
 					}
 				}
 			}
-		} // prop Filter
+		} // prop FilterExpression
 		
 		/// <summary>Parent row, of the current filter.</summary>
 		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;

@@ -28,26 +28,46 @@ namespace TecWare.PPSn.Data
 {
 	#region -- class PpsTraceItemBase -------------------------------------------------
 
-	/// <summary></summary>
-	public abstract class PpsTraceItemBase
+	/// <summary>Base contract for trace log items</summary>
+	public abstract class PpsTraceItemBase : ICompareDateTime, ICompareFulltext
 	{
+		/// <summary>Create a log item.</summary>
 		public PpsTraceItemBase()
 		{
 		} // ctor
 
+		/// <summary>Hash contains only Type and Message.</summary>
+		/// <returns></returns>
 		public override int GetHashCode()
 			=> Type.GetHashCode() ^ Message.GetHashCode();
 
+		/// <summary>Compare type and message.</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is PpsTraceItemBase item && (item.Type == Type && item.Message == Message);
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> $"{Type}: {Message}";
 
-		public DateTime Stamp { get; } = DateTime.Now;
-		public abstract string Message { get; }
+		bool ICompareFulltext.SearchText(string text, bool startsWith)
+		{
+			if (Message == null)
+				return false;
+			return startsWith ? Message.StartsWith(text, StringComparison.CurrentCultureIgnoreCase) : Message.IndexOf(text, StringComparison.CurrentCultureIgnoreCase) >= 0;
+		} // func ICompareFulltext.SearchText
 
+		bool ICompareDateTime.SearchDate(DateTime minDate, DateTime maxDate)
+			=> minDate <= Stamp && Stamp <= maxDate;
+
+		/// <summary>Classification of the log item.</summary>
 		public abstract PpsLogType Type { get; }
+		/// <summary>Timestamp of occur.</summary>
+		public DateTime Stamp { get; } = DateTime.Now;
+		/// <summary>Text of the log item.</summary>
+		public abstract string Message { get; }
 	} // class PpsTraceItem
 
 	#endregion
@@ -164,7 +184,7 @@ namespace TecWare.PPSn.Data
 
 	/// <summary>Collection for all collected events in the application. It connects 
 	/// to the trace listener and catches exceptions.</summary>
-	public sealed class PpsTraceLog : IList, INotifyCollectionChanged, INotifyPropertyChanged, IPpsLogger, ILogger, IPpsIdleAction, IDisposable
+	public sealed class PpsTraceLog : IList, INotifyCollectionChanged, INotifyPropertyChanged, IPpsLogger, ILogger, IPpsIdleAction, ICollectionViewFactory, IDisposable
 	{
 		/// <summary>Maximal number of trace items</summary>
 		public const int MaxTraceItems = 1 << 19;
@@ -253,7 +273,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 		
+		/// <summary>Notification for new log events.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
+		/// <summary>Notification for property changes.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsEnvironment environment;
@@ -463,7 +485,10 @@ namespace TecWare.PPSn.Data
 		#region -- IEnumerable Member -------------------------------------------------
 
 		IEnumerator IEnumerable.GetEnumerator()
-			=> items.GetEnumerator(); 
+			=> items.GetEnumerator();
+
+		ICollectionView ICollectionViewFactory.CreateView()
+			=> new PpsTypedListCollectionView<PpsTraceItemBase>(this);
 
 		#endregion
 

@@ -16,13 +16,6 @@
 		<sys:Double x:Key="maxScrollHeight">300</sys:Double>
 		<sys:Double x:Key="collapsedScrollHeight">19</sys:Double>
 
-		<CollectionViewSource x:Key="SortedTraces" Source="{Binding Log}"
-							  IsLiveFilteringRequested="True">
-			<CollectionViewSource.SortDescriptions>
-				<cm:SortDescription PropertyName="Stamp" Direction="Descending" />
-			</CollectionViewSource.SortDescriptions>
-		</CollectionViewSource>
-
 		<local:PpsTraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
 			<local:PpsTraceItemTemplateSelector.NullTemplate>
 				<DataTemplate>
@@ -175,7 +168,7 @@
 			<RowDefinition Height="auto" />
 		</Grid.RowDefinitions>
 
-		<ui:PpsDataListBox x:Name="logList" ItemsSource="{Binding Source={StaticResource SortedTraces}}" AllowCommands="False">
+		<ui:PpsDataListBox x:Name="logList" ItemsSource="{Binding Log}" AllowCommands="False">
 			<ui:PpsDataListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid Background="Transparent" TextBlock.FontSize="14">
@@ -240,7 +233,7 @@
 				<ColumnDefinition Width="auto"/>
 				<ColumnDefinition Width="auto"/>
 			</Grid.ColumnDefinitions>
-			<TextBlock Text="Console:" Foreground="{DynamicResource PPSnWindowForegroundBrush}" VerticalAlignment="Center" />
+			<TextBlock Text="Befehl:" Foreground="{DynamicResource PPSnWindowForegroundBrush}" VerticalAlignment="Center" />
 			<ui:PpsTextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" Height="23" Margin="6,0">
 				<TextBox.InputBindings>
 					<KeyBinding Command="{x:Static ApplicationCommands.Open}" Key="Return" />

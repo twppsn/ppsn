@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Data;
 using TecWare.DE.Data;
 
@@ -51,6 +52,19 @@ namespace TecWare.PPSn.Data
 	/// <summary>CollectionView for IDataRowEnumerable's</summary>
 	public class PpsDataRowEnumerableCollectionView : CollectionView, IPpsDataRowViewFilter, IPpsDataRowViewSort
 	{
+		#region -- enum CurrentEnumeratorState ----------------------------------------
+
+		private enum CurrentEnumeratorState
+		{
+			None,
+			ReadFirstRow,
+			ReadBlock,
+			Fetching,
+			Closed
+		} // enum CurentEnumeratorState
+
+		#endregion
+
 		#region -- class CachedRowEnumerator ------------------------------------------
 
 		private sealed class CachedRowEnumerator : IEnumerator
@@ -58,13 +72,13 @@ namespace TecWare.PPSn.Data
 			private readonly PpsDataRowEnumerableCollectionView parent;
 			private readonly List<IDataRow> cachedRows;
 			private int currentIndex = -1;
-
+			
 			public CachedRowEnumerator(PpsDataRowEnumerableCollectionView parent, List<IDataRow> cachedRows)
 			{
 				this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
 				this.cachedRows = cachedRows ?? throw new ArgumentNullException(nameof(cachedRows));
 			} // ctor
-						
+
 			public void Reset()
 				=> currentIndex = -1;
 
@@ -81,12 +95,58 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class WaitForCachedRowsEnumerator ----------------------------------
+
+		private class WaitForCachedRowsEnumerator : IEnumerator
+		{
+			private readonly CachedRowEnumerable parent;
+
+			public WaitForCachedRowsEnumerator(CachedRowEnumerable parent)
+			{
+				this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+			} // ctor
+
+			public void Reset()			{ }
+
+			public bool MoveNext()
+			{
+				if (parent.Parent != null)
+					throw new InvalidOperationException();
+
+				return false;
+			} // func MoveNext
+
+			public object Current => null;
+		} // class WaitForCachedRowsEnumerator
+
+		#endregion
+
+		#region  -- class CachedRowEnumerable -----------------------------------------
+
+		private class CachedRowEnumerable : IEnumerable
+		{
+			private PpsDataRowEnumerableCollectionView parent = null;
+
+			public IEnumerator GetEnumerator()
+			{
+				return parent == null
+					? new WaitForCachedRowsEnumerator(this)
+					: parent.GetEnumerator();
+			} // func GetEnumerator
+
+			public PpsDataRowEnumerableCollectionView Parent { get => parent; set => parent = value; }
+		} // class DataRowEnumerableDummy
+
+		#endregion
+
+		private readonly CachedRowEnumerable cachedRowEnumerable;
 		private readonly IDataRowEnumerable baseEnumerable;
 		private readonly int blockFetchSize = 100;
 
 		private IEnumerator<IDataRow> currentEnumerator = null; // current row source
-		private bool currentEnumeratorDisposed = false; // is the end is reached
+		private CurrentEnumeratorState currentEnumeratorState = CurrentEnumeratorState.None; // state of the read process
 		private List<IDataRow> currentFetchedRows = null; // cache for the currently readed rows
+		private Exception fetchException = null;
 
 		private readonly SortDescriptionCollection sortDescriptions = new SortDescriptionCollection();
 		private PpsDataFilterExpression filterExpression = null;
@@ -95,10 +155,12 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Create a collection-view for the IDataRowEnumerable</summary>
 		/// <param name="collection"></param>
-		public PpsDataRowEnumerableCollectionView(IDataRowEnumerable collection) 
-			: base(collection)
+		public PpsDataRowEnumerableCollectionView(IDataRowEnumerable collection)
+			: base(new CachedRowEnumerable())
 		{
 			baseEnumerable = collection ?? throw new ArgumentNullException(nameof(collection));
+
+			cachedRowEnumerable = (CachedRowEnumerable)base.SourceCollection;
 
 			// todo: hook baseEnumerable.CollectionChanged
 
@@ -116,7 +178,7 @@ namespace TecWare.PPSn.Data
 		private void ResetDataRowEnumerator()
 		{
 			currentEnumerator = null;
-			currentEnumeratorDisposed = false;
+			currentEnumeratorState = CurrentEnumeratorState.None;
 			currentFetchedRows = null;
 		} // proc ResetDataRowEnumerator
 
@@ -127,51 +189,102 @@ namespace TecWare.PPSn.Data
 			if (filterExpression != null && filterExpression != PpsDataFilterExpression.True)
 				newEnumerable = newEnumerable.ApplyFilter(filterExpression);
 
-			if(sortDescriptions.Count > 0)
+			if (sortDescriptions.Count > 0)
 				newEnumerable = newEnumerable.ApplyOrder(Sort);
 
 			return newEnumerable.GetEnumerator();
 		} // func GetDataRowEnumerator
 
+		private async Task StartEnumeratorAsync()
+		{
+			currentFetchedRows = new List<IDataRow>();
+			currentEnumeratorState = CurrentEnumeratorState.ReadFirstRow;
+
+			currentEnumerator = await Task.Run(() => GetDataRowEnumerator());
+
+			currentEnumeratorState = CurrentEnumeratorState.Fetching;
+			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+		} // proc StartEnumerator
+
+		private static (List<IDataRow>, bool) FetchBlockCore(IEnumerator<IDataRow> enumerator, int rowsToRead)
+		{
+			var collectedRows = new List<IDataRow>(rowsToRead);
+			while (rowsToRead-- > 0)
+			{
+				if (enumerator.MoveNext())
+					collectedRows.Add(enumerator.Current);
+				else
+				{
+					enumerator.Dispose();
+					return (collectedRows, true);
+				}
+			}
+			return (collectedRows, false);
+		} // func FetchBlockCore
+
+		private async Task FetchBlockAsync(int readToCount)
+		{
+			currentEnumeratorState = CurrentEnumeratorState.ReadBlock;
+
+			// fetch block in background
+			var (rows, isEof) = await Task.Run(() => FetchBlockCore(currentEnumerator, readToCount - currentFetchedRows.Count));
+
+			// update view
+			currentFetchedRows.AddRange(rows);
+			currentEnumeratorState = isEof ? CurrentEnumeratorState.Closed : CurrentEnumeratorState.Fetching;
+			if (isEof)
+				currentEnumerator = null;
+
+			// notify changes
+			if (rows.Count > 0)
+			{
+				OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+				OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			}
+		} // proc FetchBlock
+
+		private void CheckResult(Task task)
+		{
+			task.ContinueWith(
+				t => CloseEnumerator(t.Exception.InnerException),
+				TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously
+			);
+		} // proc CheckResult
+
+		private void CloseEnumerator(Exception innerException = null)
+		{
+			try { currentEnumerator.Dispose(); }
+			catch { }
+			currentEnumerator = null;
+			currentEnumeratorState = CurrentEnumeratorState.Closed;
+			fetchException = innerException;
+		} // proc CloseEnumerator
+
 		private bool EnsureItem(int index)
 		{
 			// enumeration is finished
-			if (currentEnumeratorDisposed)
-				return index < (currentFetchedRows?.Count ?? 0);
-
-			// start enumeration
-			if (currentEnumerator == null)
+			switch (currentEnumeratorState)
 			{
-				currentEnumerator = GetDataRowEnumerator();
-				currentFetchedRows = new List<IDataRow>();
-			}
+				case CurrentEnumeratorState.None: // start
+					if (currentEnumerator == null)
+						CheckResult(StartEnumeratorAsync());
+					break;
 
-			if (index >= currentFetchedRows.Count) // do we need to fetch a next block
-			{
-				var changed = false;
-				var readToCount = ((index / blockFetchSize) + 1) * blockFetchSize;
-				while (currentFetchedRows.Count < readToCount)
-				{
-					if (currentEnumerator.MoveNext())
-					{
-						currentFetchedRows.Add(currentEnumerator.Current);
-						changed = true;
-					}
-					else
-					{
-						currentEnumerator.Dispose();
-						currentEnumerator = null;
-						currentEnumeratorDisposed = true;
-						break;
-					}
-				}
+				case CurrentEnumeratorState.ReadFirstRow:
+				case CurrentEnumeratorState.ReadBlock: // in async read block
+					break;
+				case CurrentEnumeratorState.Fetching: // fetch current block
+					if (index >= currentFetchedRows.Count) // do we need to fetch a next block
+						CheckResult(FetchBlockAsync(((index / blockFetchSize) + 1) * blockFetchSize));
+					break;
 
-				// notify changes
-				if (changed)
-				{
-					OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
-					OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-				}
+				case CurrentEnumeratorState.Closed:
+					if (fetchException != null)
+						throw new AggregateException(fetchException);
+					break;
+
+				default:
+					throw new InvalidOperationException();
 			}
 
 			return index < currentFetchedRows.Count;
@@ -209,7 +322,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Index odf the item</summary>
 		/// <param name="item"></param>
 		/// <returns></returns>
-		public override int IndexOf(object item) 
+		public override int IndexOf(object item)
 			=> currentFetchedRows?.IndexOf((IDataRow)item) ?? -1;
 
 		/// <summary>Test if this collection has items</summary>

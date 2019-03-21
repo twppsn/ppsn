@@ -1843,7 +1843,9 @@ namespace TecWare.PPSn.Data
 				}
 				else // select spezific column
 				{
-					var propertyInfo = CurrentRowParameter.Type.GetRuntimeProperty(memberName)
+					var propertyInfo = CurrentRowParameter.Type.GetRuntimeProperties()
+							.Where(c => String.Compare(c.Name, memberName, StringComparison.OrdinalIgnoreCase) == 0)
+							.FirstOrDefault()
 						?? throw new ArgumentNullException(nameof(memberName), $"Property {memberName} not declared in type {CurrentRowParameter.Type.Name}.");
 					return Expression.Property(CurrentRowParameter, propertyInfo);
 				}
@@ -1900,7 +1902,7 @@ namespace TecWare.PPSn.Data
 			else if (typeTo.IsAssignableFrom(expr.Type))
 				return Expression.Convert(expr, typeTo);
 			else
-				return Expression.Convert(Expression.Call(procsChangeTypeMethodInfo, expr, Expression.Constant(typeTo)), typeTo);
+				return Expression.Convert(Expression.Call(procsChangeTypeMethodInfo, Expression.Convert(expr, typeof(object)), Expression.Constant(typeTo)), typeTo);
 		} // func ConvertTo
 
 		private static Expression CreateCompareTextFilterStartsWith(Expression left, ConstantExpression right)
@@ -1913,7 +1915,8 @@ namespace TecWare.PPSn.Data
 		} // func CreateCompareTextFilterStartsWith
 
 		private static Expression CreateCompareTextFilterContains(ExpressionType expressionType, Expression left, Expression right)
-			=> Expression.MakeBinary(expressionType,
+		{
+			return Expression.MakeBinary(expressionType,
 				Expression.Call(
 					Expression.Coalesce(ConvertTo(left, typeof(string)), Expression.Constant(String.Empty)), stringIndexOfMethodInfo,
 						ConvertTo(right, typeof(string)),
@@ -1921,6 +1924,7 @@ namespace TecWare.PPSn.Data
 				),
 				Expression.Constant(0)
 			);
+		} // func CreateCompareTextFilterContains
 
 		private static Expression CreateCompareTextFilterCompare(ExpressionType expressionType, Expression left, Expression right)
 		{
@@ -2432,7 +2436,7 @@ namespace TecWare.PPSn.Data
 
 			return predicateExpr.Compile();
 		} // func CreateDataRowFilter
-	} // class PpsDataFilterVisitorDataRow
+	} // class PpsDataFilterVisitorLambda
 
 	#endregion
 

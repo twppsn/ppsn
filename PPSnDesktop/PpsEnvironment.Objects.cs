@@ -1886,7 +1886,7 @@ namespace TecWare.PPSn
 		{
 			get
 			{
-				RefreshTags(true);
+				RefreshTags(false);
 				return tags.Count;
 			}
 		} // prop TagCount
@@ -2277,6 +2277,7 @@ namespace TecWare.PPSn
 		private async Task LoadDataAsync()
 		{
 			loadedRawData = await baseObj.LoadObjectDataInformationAsync() ?? DBNull.Value;
+			await Task.Run(() => baseObj.Tags.RefreshTags(false));
 			loadedHash = baseObj.RevisionTags.GetProperty(HashTag, null);
 			newRawData = null;
 			newHash = null;
