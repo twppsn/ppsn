@@ -13,6 +13,7 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using System;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Linq;
@@ -194,13 +195,25 @@ namespace TecWare.PPSn.Controls
 			=> ((PpsDataListBox)d).UpdateFilterExpression();
 
 		private static void OnUserFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataListBox)d).UpdateFilterExpression();
+			=> ((PpsDataListBox)d).OnUserFilterTextChanged((string)e.NewValue, (string)e.OldValue);
 
-		private void UpdateFilterExpression()
+		/// <summary>User filter is changed.</summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnUserFilterTextChanged(string newValue, string oldValue)
+			=> UpdateFilterExpression();
+
+		/// <summary>Convert filter-text to expresion</summary>
+		/// <returns></returns>
+		protected virtual PpsDataFilterExpression GetUserFilterExpression()
+			=> PpsDataFilterExpression.Parse(UserFilterText);
+
+		/// <summary>Refresh filter</summary>
+		protected void UpdateFilterExpression()
 		{
 			if (filterView != null && AllowFilter)
 			{
-				var expr = PpsDataFilterExpression.Combine(FilterExpression, PpsDataFilterExpression.Parse(UserFilterText));
+				var expr = PpsDataFilterExpression.Combine(FilterExpression, GetUserFilterExpression());
 				filterView.FilterExpression = expr;
 				SetValue(isFilteredPropertyKey, expr == PpsDataFilterExpression.True);
 			}
@@ -212,7 +225,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc UpdateFilterExpression
 
-		/// <summary>Filter the collection view.</summary>
+		/// <summary>Static filter for the collection view.</summary>
 		public PpsDataFilterExpression FilterExpression { get => (PpsDataFilterExpression)GetValue(FilterExpressionProperty); set => SetValue(FilterExpressionProperty, value); }
 		/// <summary>Filter the collection view, this property is used by the template. Type is string because we do not want to change the source e.g. spaces. </summary>
 		public string UserFilterText { get => (string)GetValue(UserFilterTextProperty); set => SetValue(UserFilterTextProperty, value); }
@@ -275,6 +288,9 @@ namespace TecWare.PPSn.Controls
 
 			filterBox = GetTemplateChild("PART_FilterBox") as PpsTextBox;
 		} // proc OnApplyTemplate
+
+		/// <summary>Access filter box.</summary>
+		protected PpsTextBox Filterbox => filterBox;
 
 		static PpsDataListBox()
 		{

@@ -19,6 +19,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using Neo.IronLua;
@@ -27,6 +28,124 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- enum PpsNavigationFilterMode -------------------------------------------
+
+	internal enum PpsNavigationFilterMode
+	{
+		None,
+		Filter,
+		Macro,
+		Lua
+	} // enum FilterMode
+
+	#endregion
+
+	#region -- class PpsNavigationExecuteEventArgs ------------------------------------
+
+	internal class PpsNavigationExecuteEventArgs : RoutedEventArgs
+	{
+		public PpsNavigationExecuteEventArgs(RoutedEvent routedEvent, string command)
+			: base(routedEvent)
+		{
+			this.Command = command;
+		} // ctor
+
+		public string Command { get; }
+		public bool IsFailed { get; set; } = false;
+	} // class PpsNavigationExecuteEventArgs
+
+	internal delegate void PpsNavigationExecuteEventHandler(object sender, PpsNavigationExecuteEventArgs e);
+
+	#endregion
+
+	#region -- class PpsNavigationListBox ---------------------------------------------
+
+	internal class PpsNavigationListBox : PpsDataListBox
+	{
+		public static readonly RoutedEvent ExecuteMacroEvent = EventManager.RegisterRoutedEvent("Macro", RoutingStrategy.Bubble, typeof(PpsNavigationExecuteEventHandler), typeof(PpsNavigationListBox));
+		public static readonly RoutedEvent ExecuteLuaEvent = EventManager.RegisterRoutedEvent("Lua", RoutingStrategy.Bubble, typeof(PpsNavigationExecuteEventHandler), typeof(PpsNavigationListBox));
+
+		#region -- FilterMode - property ----------------------------------------------
+
+		private static readonly DependencyPropertyKey filterModePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilterMode), typeof(PpsNavigationFilterMode), typeof(PpsNavigationListBox), new FrameworkPropertyMetadata(PpsNavigationFilterMode.None));
+		public static readonly DependencyProperty FilterModeProperty = filterModePropertyKey.DependencyProperty;
+
+		public PpsNavigationFilterMode FilterMode => (PpsNavigationFilterMode)GetValue(FilterModeProperty);
+
+		#endregion
+
+		public PpsNavigationListBox()
+		{
+			CommandBindings.Add(new CommandBinding(PpsControlCommands.ExecuteCommand,
+				(sender, e) =>
+				{
+					switch (FilterMode)
+					{
+						case PpsNavigationFilterMode.Macro:
+							if (TryExecute(ExecuteMacroEvent, GetMacroText(UserFilterText)))
+								ClearValue(UserFilterTextProperty);
+							break;
+						case PpsNavigationFilterMode.Lua:
+							if (TryExecute(ExecuteLuaEvent, GetLuaText(UserFilterText)))
+								ClearValue(UserFilterTextProperty);
+							break;
+					}
+					e.Handled = true;
+				},
+				(sender, e) =>
+				{
+					e.CanExecute = FilterMode == PpsNavigationFilterMode.Lua || FilterMode == PpsNavigationFilterMode.Macro;
+					e.Handled = true;
+				}
+			));
+		} // ctor
+
+		private string GetLuaText(string userFilterText)
+			=> userFilterText.Substring(2);
+
+		private string GetMacroText(string userFilterText)
+			=> userFilterText.Substring(1).Trim();
+
+		private bool TryExecute(RoutedEvent ev, string command)
+		{
+			var e = new PpsNavigationExecuteEventArgs(ev, command);
+			RaiseEvent(e);
+			return e.Handled && !e.IsFailed;
+		} // func TryExecute
+
+		public override void OnApplyTemplate()
+		{
+			base.OnApplyTemplate();
+
+			Filterbox.InputBindings.Add(new KeyBinding(PpsControlCommands.ExecuteCommand, new KeyGesture(Key.Enter)));
+		} // proc OnApplyTemplate
+
+		protected override void OnUserFilterTextChanged(string newValue, string oldValue)
+		{
+			if (!String.IsNullOrEmpty(newValue) && newValue.Length > 2)
+			{
+				if (newValue[0] == '.') // macro
+				{
+					if (newValue[1] == ':') // lua
+						SetValue(filterModePropertyKey, PpsNavigationFilterMode.Lua);
+					else
+						SetValue(filterModePropertyKey, PpsNavigationFilterMode.Macro);
+				}
+				else
+					SetValue(filterModePropertyKey, PpsNavigationFilterMode.Filter);
+			}
+			else
+				SetValue(filterModePropertyKey, PpsNavigationFilterMode.None);
+
+			base.OnUserFilterTextChanged(newValue, oldValue);
+		} // proc OnUserFilterTextChanged
+
+		protected override PpsDataFilterExpression GetUserFilterExpression()
+			=> FilterMode == PpsNavigationFilterMode.Filter ? base.GetUserFilterExpression() : PpsDataFilterExpression.True;
+	} // class PpsNavigationListBox
+
+	#endregion
+
 	#region -- class PpsNavigatorDataModel --------------------------------------------
 
 	internal sealed class PpsNavigatorDataModel : LuaShellTable
@@ -88,8 +207,8 @@ namespace TecWare.PPSn.UI
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsNavigatorDataModel(PpsNavigatorPane pane, PpsUICommandCollection  globalCommands, PpsUICommandCollection listCommands, PpsUICommandCollection itemCommands)
-			:base(pane.PaneHost.PaneManager.Shell)
+		public PpsNavigatorDataModel(PpsNavigatorPane pane, PpsUICommandCollection globalCommands, PpsUICommandCollection listCommands, PpsUICommandCollection itemCommands)
+			: base(pane.PaneHost.PaneManager.Shell)
 		{
 			this.pane = pane ?? throw new ArgumentNullException(nameof(pane));
 
@@ -111,7 +230,7 @@ namespace TecWare.PPSn.UI
 
 		private void FilterView(object sender, FilterEventArgs e)
 			=> e.Accepted = e.Item is PpsViewDefinition view ? view.IsVisible : false;
-		
+
 		#endregion
 
 		#region -- Actions ------------------------------------------------------------
@@ -204,7 +323,8 @@ namespace TecWare.PPSn.UI
 			if (itemsSource?.View != null)
 				itemsSource.View.CurrentChanged -= CurrentItemChanged;
 
-			itemsSource = new CollectionViewSource {
+			itemsSource = new CollectionViewSource
+			{
 				// Source = Environment.MasterData.GetTable("Objects") 
 				Source = Environment.GetViewData(new PpsShellGetList(viewId) { Filter = baseFilterExpr })
 			};
@@ -213,6 +333,29 @@ namespace TecWare.PPSn.UI
 
 			OnPropertyChanged(nameof(ItemsView));
 		} // proc RefreshItems
+
+		public Task<(bool, object)> ExecuteMarcoAsync(string code)
+		{
+			var actionDefinition = Environment.Actions[code, false];
+			if (actionDefinition == null)
+				return Task.FromResult((false, (object)String.Format("Befehl {0} nicht gefunden.", code)));
+
+			if (!RunActionCommand.IsTrue(actionDefinition.CheckCondition(this)))
+				return Task.FromResult((false, (object)String.Format("Befehl {0} ist nicht aktiv.", actionDefinition.DisplayName)));
+
+			return Task.FromResult((true, (object)actionDefinition.Execute(this)));
+		} // func ExecuteMarcoAsync
+
+		public async Task<LuaResult> ExecuteCodeAsync(string code)
+		{
+			// replace equal with message box
+			if (code.StartsWith("="))
+				code = "return " + code.Substring(1);
+
+			// compile code
+			var chunk = await Environment.CompileAsync(code, "searchbox.lua", true);
+			return chunk.Run(this);
+		} // proc ExecuteCode
 
 		private void CurrentItemChanged(object sender, EventArgs e)
 		{
@@ -275,7 +418,49 @@ namespace TecWare.PPSn.UI
 			: base(paneHost)
 		{
 			InitializeComponent();
+
+			AddHandler(PpsNavigationListBox.ExecuteMacroEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
+			AddHandler(PpsNavigationListBox.ExecuteLuaEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
 		} // ctor
+
+		private void ShowResult(LuaResult result)
+		{
+			if (result.Count > 0)
+			{
+				var msg = String.Format("Ergebnis:\n{0}", result);
+				Model.Environment.ShowMessage(msg);
+			}
+		} // proc ShowResult
+
+		private void OnExecuteEvent(object sender, PpsNavigationExecuteEventArgs e)
+		{
+			try
+			{
+				if (e.RoutedEvent == PpsNavigationListBox.ExecuteMacroEvent)
+				{
+					var (executed, res) = Model.ExecuteMarcoAsync(e.Command).AwaitTask();
+					if (executed)
+						ShowResult(new LuaResult(res));
+					else
+					{
+						Model.Environment.ShowMessage(res is string msg ? msg : String.Format("Befehl '{0}' nicht ausgeführt.", e.Command));
+						e.IsFailed = true;
+					}
+				}
+				else if (e.RoutedEvent == PpsNavigationListBox.ExecuteLuaEvent)
+					ShowResult(Model.ExecuteCodeAsync(e.Command).AwaitTask());
+			}
+			catch (LuaParseException ex)
+			{
+				e.IsFailed = true;
+				Model.Environment.ShowMessage(String.Format("Syntax: {0} at {1}", ex.Message, ex.Index + 2));
+			}
+			catch (Exception ex)
+			{
+				e.IsFailed = true;
+				Model.Environment.ShowException(ExceptionShowFlags.None, ex, "Execution failed.\n" + ex.GetBaseException().Message);
+			}
+		} // proc OnExecuteEvent
 
 		protected override async Task OnLoadAsync(LuaTable args)
 		{
@@ -286,7 +471,7 @@ namespace TecWare.PPSn.UI
 
 		private void SideBarFilterChanged(object sender, PpsSideBarFilterChangedEventArgs e)
 			=> Model.CurrentView = e.NewFilter as PpsViewDefinition;
-		
+
 		public PpsNavigatorDataModel Model => (PpsNavigatorDataModel)DataContext;
 	} // class PpsNavigatorPane
 

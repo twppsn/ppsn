@@ -355,8 +355,11 @@ namespace TecWare.PPSn.Data
 			get => filterExpression;
 			set
 			{
-				filterExpression = value;
-				RefreshOrDefer();
+				if (filterExpression != value)
+				{
+					filterExpression = value;
+					RefreshOrDefer();
+				}
 			}
 		} // prop Filter
 
