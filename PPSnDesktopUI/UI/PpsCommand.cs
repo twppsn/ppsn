@@ -984,7 +984,6 @@ namespace TecWare.PPSn.UI
 	/// <summary>Command collection to hold a list of commands.</summary>
 	public class PpsUICommandCollection : Collection<PpsUICommand>, IPpsUICommandsList, INotifyCollectionChanged, ICollectionViewFactory
 	{
-
 		/// <summary>Called if the command is changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 

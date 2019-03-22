@@ -657,10 +657,16 @@ namespace TecWare.PPSn
 				public bool TryGetProperty(string name, out object value)
 					=> (value = headers.Get(name)) != null;
 
+				private static DateTime GetNowWithoutTicks()
+				{
+					var n = DateTime.Now;
+					return new DateTime(n.Year, n.Month, n.Day, n.Hour, n.Minute, n.Second, n.Kind);
+				} // func GetNowWithoutTicks
+
 				public Stream Content => data;
 				public string ContentType => contentType;
 				public long ContentLength => data.Length;
-				public DateTime LastModification => DateTime.TryParse(headers[HttpResponseHeader.LastModified], out var lastModified) ? lastModified : DateTime.Now;
+				public DateTime LastModification => DateTime.TryParse(headers[HttpResponseHeader.LastModified], out var lastModified) ? lastModified : GetNowWithoutTicks();
 			} // class PpsOfflineItemDataImplementation
 
 			#endregion
@@ -1208,6 +1214,8 @@ namespace TecWare.PPSn
 		private PpsWebProxy webProxy; // remote download/upload manager
 		private ProxyStatus statusOfProxy;  // interface for the transaction manager
 
+		private static readonly Dictionary<string, FileInfo> localResourceMap = new Dictionary<string, FileInfo>();
+
 		#region -- Web Request --------------------------------------------------------
 
 		/// <summary>Core function that gets called on a request.</summary>
@@ -1294,7 +1302,12 @@ namespace TecWare.PPSn
 		/// <param name="task">Out: the Task returning the item.</param>
 		/// <returns>True if successfull.</returns>
 		protected internal virtual bool TryGetOfflineObject(WebRequest request, out IPpsProxyTask task)
-			=> masterData.TryGetOfflineCacheFile(Request.BaseAddress.MakeRelativeUri(request.RequestUri), out task);
+		{
+			var relativeUri = Request.BaseAddress.MakeRelativeUri(request.RequestUri);
+
+			// ask local database
+			return masterData.TryGetOfflineCacheFile(relativeUri, out task);
+		} // func TryGetOfflineObject
 
 		#endregion
 
@@ -1319,6 +1332,12 @@ namespace TecWare.PPSn
 		public PpsWebProxy WebProxy => webProxy;
 
 		public ProxyStatus StatusOfProxy => statusOfProxy;
+
+		internal static void LoadLocalResourceMap(string resourceMapFile)
+		{
+			// every line in resource map has
+
+		} // proc LoadLocalResourceMap
 	} // class PpsEnvironment
 
 	#endregion

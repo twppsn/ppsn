@@ -40,7 +40,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Input to the Control</summary>
 		new public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnItemsSourceChanged), new CoerceValueCallback(OnItemsSourceCoerceValue)));
 
-		private static readonly DependencyPropertyKey FilteredItemsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredItemsSource), typeof(IEnumerable<IDataRow>), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null));
+		private static readonly DependencyPropertyKey FilteredItemsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredItemsSource), typeof(object), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null));
 		/// <summary>Filtered Output</summary>
 		public static readonly DependencyProperty FilteredItemsSourceProperty = FilteredItemsSourcePropertyKey.DependencyProperty;
 
@@ -96,7 +96,13 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			var expr = String.IsNullOrWhiteSpace(FilterText) ? PpsDataFilterExpression.True : PpsDataFilterExpression.Parse(FilterText);
-			SetValue(FilteredItemsSourcePropertyKey, ((IDataRowEnumerable)ItemsSource).ApplyFilter(expr));
+			if (ItemsSource is IPpsDataRowViewFilter filterAble)
+			{
+				filterAble.FilterExpression = expr;
+				SetValue(FilteredItemsSourcePropertyKey, ItemsSource);
+			}
+			else
+				SetValue(FilteredItemsSourcePropertyKey, ItemsSource);
 		} // proc UpdateFilteredList
 
 		/// <summary>Constructor - initializes the Commands</summary>

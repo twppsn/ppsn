@@ -52,6 +52,7 @@ namespace TecWare.PPSn
 
 		private PpsEnvironment currentEnvironment = null;
 
+		/// <summary>Start application</summary>
 		public App()
 		{
 			DispatcherUnhandledException += App_DispatcherUnhandledException;
@@ -61,7 +62,7 @@ namespace TecWare.PPSn
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
 
-		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, NetworkCredential _userInfo = null)
+		internal async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, NetworkCredential _userInfo = null)
 		{
 			var environment = _environment;
 			var userInfo = _userInfo;
@@ -192,6 +193,8 @@ namespace TecWare.PPSn
 		private static string GetNativeLibrariesPath()
 			=> Path.Combine(Path.GetDirectoryName(typeof(App).Assembly.Location), IntPtr.Size == 8 ? "x64" : "x86");
 
+		/// <summary>Start application</summary>
+		/// <param name="e"></param>
 		protected override void OnStartup(StartupEventArgs e)
 		{
 			// upgrade settings
@@ -222,6 +225,8 @@ namespace TecWare.PPSn
 			base.OnStartup(e);
 		} // proc OnStartup
 
+		/// <summary>Close application tasks.</summary>
+		/// <param name="e"></param>
 		protected override void OnExit(ExitEventArgs e)
 		{
 			base.OnExit(e);
@@ -260,7 +265,12 @@ namespace TecWare.PPSn
 							environment = environmentsInfos.Value.FirstOrDefault(c => String.Compare(c.Name, environmentname, StringComparison.OrdinalIgnoreCase) == 0);
 							break;
 						case 'l': // enforce load of an remote assembly
-							Task.Run(() => PpsEnvironment.LoadAssemblyFromLocalAsync(arg.Substring(2))).Wait();
+							var path = arg.Substring(2);
+							if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+								|| path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+								Task.Run(() => PpsEnvironment.LoadAssemblyFromLocalAsync(arg.Substring(2))).Wait();
+							else if (path.EndsWith(".resmap"))
+								;
 							break;
 					}
 				}
