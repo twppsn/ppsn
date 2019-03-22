@@ -83,6 +83,10 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="openFolderPathGeometry" 
 				  Figures="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z" />
 
+	<!-- folder-open-outline-->
+	<PathGeometry x:Key="openFolderOutlinePathGeometry" 
+				  Figures="M6.1,10L4,18V8H21A2,2 0 0,0 19,6H12L10,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H19C19.9,20 20.7,19.4 20.9,18.5L23.2,10H6.1M19,18H6L7.6,12H20.6L19,18Z" />
+
 	<!-- book-open-->
 	<PathGeometry x:Key="openBookPathGeometry" 
 				  Figures="M13,12H20V13.5H13M13,9.5H20V11H13M13,14.5H20V16H13M21,4H3A2,2 0 0,0 1,6V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V6A2,2 0 0,0 21,4M21,19H12V6H21" />
@@ -164,8 +168,11 @@ specific language governing permissions and limitations under the Licence.
 				  Figures="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" />
 
 	<!-- plus-->
+	<!--<PathGeometry x:Key="plusPathGeometry" 
+				  Figures="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />-->
+	<!-- plus, mod-->
 	<PathGeometry x:Key="plusPathGeometry" 
-				  Figures="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+				  Figures="M20,13 H13 V20 H11 V13 H4 V11 H11 V4 H13 V11 H20 V13Z" />
 
 	<!-- account-->
 	<PathGeometry x:Key="accountPathGeometry" 

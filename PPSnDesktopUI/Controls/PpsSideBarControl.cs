@@ -417,9 +417,46 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsSideBarControl : PpsSideBarItemsBase
 	{
+		#region -- AllowToggleSelection - Property ------------------------------------
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty AllowToggleSelectionProperty = DependencyProperty.Register(nameof(AllowToggleSelection), typeof(bool), typeof(PpsSideBarControl), new FrameworkPropertyMetadata(BooleanBox.True));
+
+		public bool AllowToggleSelection { get => BooleanBox.GetBool(GetValue(AllowToggleSelectionProperty)); set => SetValue(AllowToggleSelectionProperty, BooleanBox.GetObject(value)); }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+		#endregion
+
+		#region -- AllowShrink, IsShrunken - Properties -------------------------------
+
+		/// <summary>This property allow the sidebar to expand and shrink.</summary>
+		public static readonly DependencyProperty AllowShrinkProperty = DependencyProperty.Register(nameof(AllowShrink), typeof(bool), typeof(PpsSideBarControl), new FrameworkPropertyMetadata(BooleanBox.False));
+
+		/// <summary>Gets or sets a value indicating whether sidebar shrink is allowed.</summary>
+		public bool AllowShrink { get => BooleanBox.GetBool(GetValue(AllowShrinkProperty)); set => SetValue(AllowShrinkProperty, BooleanBox.GetObject(value)); }
+
+		private static readonly DependencyPropertyKey isShrunkenPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsShrunken), typeof(bool), typeof(PpsSideBarControl), new FrameworkPropertyMetadata(BooleanBox.False));
+
+		/// <summary>Is SideBar shrunken?</summary>
+		public static readonly DependencyProperty IsShrunkenProperty = isShrunkenPropertyKey.DependencyProperty;
+
+		/// <summary>Is SideBar shrunken?</summary>
+		public bool IsShrunken => BooleanBox.GetBool(GetValue(IsShrunkenProperty));
+
+		#endregion
+
 		/// <summary></summary>
-		public static readonly DependencyProperty AllowToggleSelectionProperty = DependencyProperty.Register(nameof(AllowToggleSelection), typeof(bool), typeof(PpsSideBarControl), new FrameworkPropertyMetadata(true));
-		
+		public PpsSideBarControl()
+		{
+			CommandBindings.Add(new CommandBinding(
+				NavigationCommands.Zoom,
+				(sender, e) =>
+				{
+					SetValue(isShrunkenPropertyKey, !IsShrunken);
+					e.Handled = true;
+				},
+				(sender, e) => e.CanExecute = AllowShrink)
+			);
+		} // ctor
+
 		/// <summary></summary>
 		/// <param name="item"></param>
 		/// <returns></returns>
@@ -428,9 +465,6 @@ namespace TecWare.PPSn.Controls
 			|| item is PpsSideBarPanel
 			|| item is PpsSideBarPanelFilter
 			|| item is Separator;
-
-		/// <summary></summary>
-		public bool AllowToggleSelection { get => BooleanBox.GetBool(GetValue(AllowToggleSelectionProperty)); set => SetValue(AllowToggleSelectionProperty, BooleanBox.GetObject(value)); }
 
 		internal static PpsSideBarControl GetSideBarControl(DependencyObject d)
 		{
@@ -832,6 +866,31 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey hasHeaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasHeader), typeof(bool), typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasHeaderProperty = hasHeaderPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		#region -- Image - Property ---------------------------------------------------
+
+		/// <summary>Add an Image</summary>
+		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(object), typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnImageChanged)));
+
+		/// <summary>The property defines an image, showing on left side</summary>
+		public object Image { get => GetValue(ImageProperty); set => SetValue(ImageProperty, value); }
+
+		private static readonly DependencyPropertyKey hasImagePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasImage), typeof(bool), typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(BooleanBox.False));
+
+		/// <summary>Has Panel an Image?</summary>
+		public static readonly DependencyProperty HasImageProperty = hasImagePropertyKey.DependencyProperty;
+
+		/// <summary></summary>
+		public bool HasImage => BooleanBox.GetBool(GetValue(HasImageProperty));
+
+		/// <summary></summary>
+		protected virtual void OnImageChanged(object newValue, object oldValue)
+			=> SetValue(hasImagePropertyKey, newValue != null);
+
+		private static void OnImageChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsSideBarPanelFilter)d).OnImageChanged(e.NewValue, e.OldValue);
+
+		#endregion
 
 		private static void OnIsSelectedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{

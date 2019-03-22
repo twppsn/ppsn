@@ -24,14 +24,17 @@ specific language governing permissions and limitations under the Licence.
 						 Title="Navigator"
 						 SubTitle="{DynamicResource PPSnApplicationTitle}"
 						 d:DesignHeight="450" d:DesignWidth="800">
-	<ui:PpsSideBarControl ItemsSource="{Binding ViewsView}" AllowToggleSelection="True" SelectedFilterChanged="SideBarFilterChanged" IsSynchronizedWithCurrentItem="True">
+	<ui:PpsSideBarControl ItemsSource="{Binding ViewsView}" IsSynchronizedWithCurrentItem="True" SelectedFilterChanged="SideBarFilterChanged" AllowToggleSelection="True" AllowShrink="True">
 		<ui:PpsSideBarControl.ItemTemplate>
 			<DataTemplate DataType="{x:Type data:PpsViewDefinition}">
-				<ui:PpsSideBarPanelFilter Header="{Binding DisplayName}" Filter="{Binding}" />
+				<ui:PpsSideBarPanelFilter Header="{Binding DisplayName}" Filter="{Binding}" Image="{Binding DisplayImage}" />
 			</DataTemplate>
 		</ui:PpsSideBarControl.ItemTemplate>
 		<ui:PpsSideBarControl.Content>
-			<local:PpsNavigationListBox x:Name="itemList" ItemsSource="{Binding ItemsView}" IsSynchronizedWithCurrentItem="True" ItemTemplateSelector="{Binding Environment.DefaultDataTemplateSelector}" />
+			<local:PpsNavigationListBox x:Name="itemList"
+										ItemsSource="{Binding ItemsView}"
+										IsSynchronizedWithCurrentItem="True"
+										ItemTemplateSelector="{Binding Environment.DefaultDataTemplateSelector}" />
 		</ui:PpsSideBarControl.Content>
 	</ui:PpsSideBarControl>
 </ui:PpsWindowPaneControl>
