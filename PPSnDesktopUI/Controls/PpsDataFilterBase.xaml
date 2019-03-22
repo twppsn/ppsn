@@ -125,7 +125,7 @@ specific language governing permissions and limitations under the Licence.
 							<Border BorderThickness="{TemplateBinding BorderThickness}"
 									BorderBrush="{DynamicResource PPSnControlFocusedBorderBrush}"
 									Background="{TemplateBinding Background}">
-								<Grid>
+								<Grid Background="Red">
 									<Grid.RowDefinitions>
 										<RowDefinition Height="33"/>
 										<RowDefinition/>
@@ -145,6 +145,7 @@ specific language governing permissions and limitations under the Licence.
 															  Foreground="Black" Opacity=".65" SnapsToDevicePixels="False" Margin="1,1,1,1" />
 									</Grid>
 									<ListBox x:Name="PART_FilteredItemsListBox"
+											 Background="Red"
 											 Grid.Row="1"
 											 Focusable="False"
 											 VirtualizingStackPanel.VirtualizationMode="Recycling"
@@ -203,13 +204,13 @@ specific language governing permissions and limitations under the Licence.
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type pps:PpsDataFilterList}">
-						<Grid SnapsToDevicePixels="True">
+						<Grid Background="Red" SnapsToDevicePixels="True">
 							<Grid.RowDefinitions>
 								<RowDefinition Height="Auto"/>
 								<RowDefinition/>
 							</Grid.RowDefinitions>
 							<Grid x:Name="FilterBox"
-								  Background="{DynamicResource PPSnControlBackgroundBrush}"
+								  Background="WhiteSmoke"
 								  HorizontalAlignment="Right"
 								  Width="{StaticResource FixSearchBoxWidth}"
 								  Height="23"
@@ -219,6 +220,7 @@ specific language governing permissions and limitations under the Licence.
 									<ColumnDefinition Width="20"/>
 								</Grid.ColumnDefinitions>
 								<pps:PpsTextBox x:Name="FilterTextBox"
+												
 												BorderThickness="0"
 												Background="Transparent"
 												MaxLength="128"
@@ -230,6 +232,7 @@ specific language governing permissions and limitations under the Licence.
 													  SnapsToDevicePixels="False" Margin="1,2,1,2" />
 							</Grid>
 							<ListBox x:Name="PART_FilteredItemsListBox"
+									 Background="Red"
 									 IsSynchronizedWithCurrentItem="{TemplateBinding IsSynchronizedWithCurrentItem}"
 									 SelectedValue="{Binding Path=SelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
 									 Focusable="True"
