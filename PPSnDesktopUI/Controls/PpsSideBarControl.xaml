@@ -13,8 +13,12 @@ specific language governing permissions and limitations under the Licence.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:sys="clr-namespace:System;assembly=mscorlib"
 					xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
+
+	<sys:Double x:Key="SideBarIncreasedWidth">230</sys:Double>
+	<sys:Double x:Key="SideBarShrinkedWidth">48</sys:Double>
 
 	<Style TargetType="{x:Type pps:PpsSideBarControl}">
 		<Setter Property="Focusable" Value="False" />
@@ -33,16 +37,60 @@ specific language governing permissions and limitations under the Licence.
 							<ColumnDefinition Width="auto" />
 							<ColumnDefinition />
 						</Grid.ColumnDefinitions>
-						<Border	Width="{DynamicResource PPSnSideBarIncreasedWidth}" Background="{DynamicResource PPSnSideBarBackgroundBrush}">
-							<ItemsPresenter Margin="0,16,0,0"/>
+						<Border	x:Name="SideBarBorder" Width="{StaticResource SideBarIncreasedWidth}" HorizontalAlignment="Left" Background="{DynamicResource PPSnSideBarBackgroundBrush}">
+							<Grid>
+								<Grid.RowDefinitions>
+									<RowDefinition Height="Auto" />
+									<RowDefinition />
+								</Grid.RowDefinitions>
+								<pps:PpsButton x:Name="ShrinkButton"
+											   Command="{x:Static NavigationCommands.Zoom}"
+											   DisplayMode="Image"
+											   GeometryName="menu"
+											   GeometrySize="24"
+											   ImageOpacity="1"
+											   Width="32"
+											   Height="32"
+											   HorizontalAlignment="Left"
+											   Margin="8,6,0,0"
+											   Foreground="{DynamicResource PPSnWindowForegroundBrush}"
+											   ToolTip="Verkleinern"
+											   Focusable="False" />
+								<ItemsPresenter x:Name="Presenter" Grid.Row="1" />
+							</Grid>
 						</Border>
 						<ContentPresenter Grid.Column="1"
-										  Margin="32,0"
+										  Margin="32,16,0,16"
 										  Content="{TemplateBinding SelectedContent}" 
 										  ContentTemplate="{TemplateBinding SelectedContentTemplate}" 
 										  ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"
 										  ContentStringFormat="{TemplateBinding SelectedContentStringFormat}" />
 					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="AllowShrink" Value="False">
+							<Setter TargetName="ShrinkButton" Property="Visibility" Value="Collapsed" />
+							<Setter TargetName="Presenter" Property="Margin" Value="0,24,0,0" />
+						</Trigger>
+						<Trigger Property="IsShrunken" Value="True">
+							<Setter TargetName="ShrinkButton" Property="ToolTip" Value="Erweitern" />
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="SideBarBorder" Storyboard.TargetProperty="(Border.Width)"
+														 To="{StaticResource SideBarShrinkedWidth}" AccelerationRatio=".4" Duration="0:00:.2"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+							<Trigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="SideBarBorder" Storyboard.TargetProperty="(Border.Width)"
+														 To="{StaticResource SideBarIncreasedWidth}" DecelerationRatio=".4" Duration="0:00:.3"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.ExitActions>
+						</Trigger>
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
@@ -145,15 +193,27 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarPanelFilter}">
 					<Grid x:Name="HeaderGrid" Height="36" Background="Transparent">
 						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="16" />
+							<ColumnDefinition Width="15" />
+							<ColumnDefinition Width="Auto" />
 							<ColumnDefinition />
 						</Grid.ColumnDefinitions>
-						<Border x:Name="selectionMarker"
-								Width="4"
-								HorizontalAlignment="Left"
-								Background="{DynamicResource PPSnMarkerBrush}"
-								Visibility="Hidden" />
-						<ContentPresenter Grid.Column="1"
+						<Rectangle x:Name="SelectionMarker"
+								   Width="4"
+								   HorizontalAlignment="Left"
+								   StrokeThickness="0"
+								   Fill="{DynamicResource PPSnMarkerBrush}"
+								   SnapsToDevicePixels="True"
+								   RenderOptions.EdgeMode="Aliased"
+								   Opacity="0" />
+						<pps:PpsGeometryImage x:Name="ImageBox" Grid.Column="1"
+											  GeometryName="{TemplateBinding Image}"
+											  GeometryCircled="false"
+											  Width="18"
+											  Margin="0,0,15,0"
+											  Opacity=".75"
+											  Foreground="{DynamicResource PPSnActionButtonBrush}" />
+						<ContentPresenter x:Name="Presenter"
+										  Grid.Column="2"
 										  Content="{TemplateBinding Header}" 
 										  ContentTemplate="{TemplateBinding HeaderTemplate}"  			  
 										  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}" 
@@ -165,11 +225,18 @@ specific language governing permissions and limitations under the Licence.
 					</Grid>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsSelected" Value="True">
-							<Setter TargetName="selectionMarker" Property="Visibility" Value="Visible" />
+							<Setter TargetName="SelectionMarker" Property="Opacity" Value="1" />
 						</Trigger>
-						<Trigger Property="IsMouseOver" SourceName="HeaderGrid" Value="True">
-							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnMouseOverBrush}" />
+						<Trigger SourceName="HeaderGrid" Property="IsMouseOver" Value="True">
+							<Setter TargetName="HeaderGrid" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+							<Setter TargetName="ImageBox" Property="Opacity" Value="1" />
 						</Trigger>
+						<Trigger Property="HasImage" Value="False">
+							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
+						</Trigger>
+						<DataTrigger Binding="{Binding IsShrunken, RelativeSource={RelativeSource AncestorType={x:Type pps:PpsSideBarControl}}}" Value="True">
+							<Setter TargetName="HeaderGrid" Property="ToolTip" Value="{Binding Content, ElementName=Presenter}" />
+						</DataTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
@@ -177,10 +244,21 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style x:Key="{x:Static pps:PpsSideBarItemsBase.PpsSideBarSeparator}" TargetType="{x:Type Separator}">
+		<Setter Property="Foreground" Value="Blue" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Separator}">
-					<Rectangle Height="1" Margin="16,3,16,3" StrokeThickness="0" Fill="{DynamicResource PPSnSeparatorBrush}" RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" />
+					<Rectangle Height="1"
+							   Margin="16,3,16,3"
+							   StrokeThickness="0"
+							   Fill="{TemplateBinding Foreground}"
+							   RenderOptions.EdgeMode="Aliased"
+							   SnapsToDevicePixels="True" />
+					<ControlTemplate.Triggers>
+						<DataTrigger Binding="{Binding IsShrunken, RelativeSource={RelativeSource AncestorType={x:Type pps:PpsSideBarControl}}}" Value="True">
+							<Setter Property="Foreground" Value="Transparent" />
+						</DataTrigger>
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
