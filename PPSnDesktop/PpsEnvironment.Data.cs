@@ -100,6 +100,10 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public interface IPpsDataRowOperationArguments : IPropertyEnumerableDictionary, IDataRecord
 	{
+		/// <summary>Is this value changed during the operation.</summary>
+		/// <param name="columnIndex"></param>
+		/// <returns></returns>
+		bool IsValueChanged(int columnIndex);
 	} // IPpsDataRowOperationArguments
 
 	#endregion
@@ -316,7 +320,7 @@ namespace TecWare.PPSn
 			var primaryKeyIndex = table.GetPrimaryKeyColumnIndex();
 			for (var i = 0; i < values.Length; i++)
 			{
-				if (!Equals(values[i], arguments[i]))
+				if (arguments.IsValueChanged(i) && !Equals(values[i], arguments[i]))
 				{
 					values[i] = arguments[i];
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(table.Columns[i].Name));
@@ -478,18 +482,18 @@ namespace TecWare.PPSn
 
 		#region -- IDataRowEnumerable members -----------------------------------------
 
+		/// <summary>Apply a order expresion.</summary>
+		/// <param name="orderExpr"></param>
+		/// <returns></returns>
+		public IDataRowEnumerable ApplyOrder(string orderExpr)
+			=> ApplyOrder(PpsDataOrderExpression.Parse(orderExpr), null);
+
 		/// <summary>Apply an order to the data selector</summary>
 		/// <param name="expressions">Order expression.</param>
 		/// <param name="lookupNative">Native lookup.</param>
 		/// <returns></returns>
 		public virtual IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			=> this;
-
-		/// <summary>Apply a order expresion.</summary>
-		/// <param name="orderExpr"></param>
-		/// <returns></returns>
-		public IDataRowEnumerable ApplyOrder(string orderExpr)
-			=> ApplyOrder(PpsDataOrderExpression.Parse(orderExpr), null);
 
 		/// <summary>Apply a filter expression.</summary>
 		/// <param name="filterExpr"></param>
@@ -795,9 +799,11 @@ namespace TecWare.PPSn
 					first = false;
 				else
 					commandText.Append(',');
-				commandText.Append("d.[")
-					.Append(c.Name)
-					.Append(']');
+
+				if (c.Name == PpsMasterData.RowIdColumnName)
+					commandText.Append("rowid");
+				else
+					commandText.Append("d.[").Append(c.Name).Append(']');
 			}
 
 			appendVirtualColumns?.Invoke(commandText);
@@ -884,8 +890,12 @@ namespace TecWare.PPSn
 		public override IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> new PpsMasterDataTableResult(this, expression, null);
 
+		/// <summary>Apply a order expression to the table</summary>
+		/// <param name="expressions"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
 		public override IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
-			=> base.ApplyOrder(expressions, lookupNative);
+			=> new PpsMasterDataTableResult(this, null, expressions.ToArray());
 
 		/// <summary>Columns</summary>
 		public override IReadOnlyList<IDataColumn> Columns => Definition.Columns;
@@ -923,6 +933,8 @@ namespace TecWare.PPSn
 		/// <summary>Name of the master data schema</summary>
 		public const string MasterDataSchema = "masterData";
 
+		/// <summary></summary>
+		public const string RowIdColumnName = "_rowId";
 		private const string refreshColumnName = "_IsUpdated"; // column for update hints
 
 		#region -- class PpsMasterDataMetaObject --------------------------------------
@@ -999,7 +1011,7 @@ namespace TecWare.PPSn
 
 		private PpsDataSetDefinitionDesktop schema;
 		private bool? schemaIsOutDated = null;
-		private DateTime lastSynchronizationSchema = DateTime.MinValue; // last synchronization of the schema
+		private readonly DateTime lastSynchronizationSchema = DateTime.MinValue; // last synchronization of the schema
 		private DateTime lastSynchronizationStamp = DateTime.MinValue;  // last synchronization stamp
 		private bool isSynchronizationStarted = false; // number of sync processes
 		private bool isObjectTagsDirty = true; // synchronize object tags
@@ -1167,7 +1179,7 @@ namespace TecWare.PPSn
 
 			foreach (var column in remoteColumns)
 			{
-				if (String.Compare(column.Name, "_rowId", StringComparison.OrdinalIgnoreCase) == 0)
+				if (String.Compare(column.Name, RowIdColumnName, StringComparison.OrdinalIgnoreCase) == 0)
 					continue; // ignore rowId column
 
 				AppendSqlIdentifier(commandText, column.Name).Append(' ');
@@ -1206,7 +1218,7 @@ namespace TecWare.PPSn
 
 			foreach (var remoteColumn in remoteColumns)
 			{
-				if (String.Compare(remoteColumn.Name, "_rowId", StringComparison.OrdinalIgnoreCase) == 0)
+				if (String.Compare(remoteColumn.Name, RowIdColumnName, StringComparison.OrdinalIgnoreCase) == 0)
 					continue; // ignore rowId column
 
 				var found = false;
@@ -1492,6 +1504,9 @@ namespace TecWare.PPSn
 				IEnumerator IEnumerable.GetEnumerator()
 					=> GetEnumerator();
 
+				public bool IsValueChanged(int index)
+					=> table.Columns[index].Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, String.Empty) != "#";
+
 				public bool TryGetProperty(string name, out object value)
 				{
 					var idx = table.FindColumnIndex(name, false);
@@ -1655,7 +1670,11 @@ namespace TecWare.PPSn
 				var deleted = false;
 
 				// raise delete events
-				using (var cmd = Transaction.CreateNativeCommand($"SELECT [{Table.PrimaryKey.Name}] FROM main.[{Table.Name}] WHERE [" + refreshColumnName + "] is null"))
+				using (var cmd = Transaction.CreateNativeCommand(
+					"SELECT " +
+						(Table.PrimaryKey.Name == RowIdColumnName ? "rowid" : "[" + Table.PrimaryKey.Name + "]") +
+						" FROM main.[" + Table.Name + "] WHERE [" + refreshColumnName + "] is null"
+				))
 				using (var r = cmd.ExecuteReader(CommandBehavior.SingleResult))
 				{
 					while (r.Read())
@@ -2024,10 +2043,13 @@ namespace TecWare.PPSn
 						if (column == virtPrimaryKey)
 							virtPrimaryColumnIndex = i;
 
-						insertParameters[i] = insertCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
-						insertParameters[i].SourceColumn = column.Name;
-						updateParameters[i] = updateCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
-						updateParameters[i].SourceColumn = column.Name;
+						if (column.Name != RowIdColumnName)
+						{
+							insertParameters[i] = insertCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
+							insertParameters[i].SourceColumn = column.Name;
+							updateParameters[i] = updateCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
+							updateParameters[i].SourceColumn = column.Name;
+						}
 					}
 				}
 
@@ -2068,17 +2090,23 @@ namespace TecWare.PPSn
 					" WHERE [" + updateParameters[virtPrimaryColumnIndex].SourceColumn + "] = " + updateParameters[virtPrimaryColumnIndex].ParameterName;
 
 				// prepare exists
-				existCommand = (SQLiteCommand)transaction.CreateNativeCommand("SELECT EXISTS(SELECT * FROM main.[" + Table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id)");
+				existCommand = (SQLiteCommand)transaction.CreateNativeCommand("SELECT " +
+					(physPrimaryKey.Name == RowIdColumnName ? "rowid" : "[" + physPrimaryKey.Name + "]") +
+					" FROM main.[" + Table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id");
 				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(virtPrimaryKey.DataType));
 
 				// prepare delete
-				deleteCommand = (SQLiteCommand)transaction.CreateNativeCommand("DELETE FROM main.[" + Table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;");
-				deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(physPrimaryKey.DataType));
+				if (physPrimaryKey.Name != RowIdColumnName)
+				{
+					deleteCommand = (SQLiteCommand)transaction.CreateNativeCommand("DELETE FROM main.[" + Table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;");
+					deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(physPrimaryKey.DataType));
+				}
 
 				existCommand.Prepare();
 				insertCommand.Prepare();
 				updateCommand.Prepare();
-				deleteCommand.Prepare();
+				if (deleteCommand != null)
+					deleteCommand.Prepare();
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -2147,7 +2175,8 @@ namespace TecWare.PPSn
 					actionName = refreshColumnIndex == -1 ? "i" : "r";
 
 				existIdParameter.Value = DBNull.Value;
-				deleteIdParameter.Value = DBNull.Value;
+				if (deleteIdParameter != null)
+					deleteIdParameter.Value = DBNull.Value;
 
 				// collect columns
 				for (var i = 0; i < parameterValues.Length; i++)
@@ -2178,15 +2207,18 @@ namespace TecWare.PPSn
 				switch (actionName[0])
 				{
 					case 'r':
-						if (await RowExistsAsync())
+						var tmpKey = await RowExistsAsync();
+						if (tmpKey.HasValue)
+						{
+							parameterValues[physPrimaryColumnIndex] = tmpKey.Value.ToString();
 							goto case 'u';
+						}
 						else
 							goto case 'i';
 					case 'i':
 						// execute the command
 						await ExecuteCommandAsync(insertCommand);
 						// raise change event
-
 						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowInsert, Table, arguments[physPrimaryColumnIndex], null, arguments), false);
 						break;
 					case 'u':
@@ -2197,6 +2229,8 @@ namespace TecWare.PPSn
 						break;
 					case 'd':
 						// execute the command
+						if (deleteCommand == null)
+							throw new ArgumentException("Delete is not allowed with rowId as physical primary key.");
 						await ExecuteCommandAsync(deleteCommand);
 						// raise change event
 						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowDelete, Table, arguments[physPrimaryColumnIndex], null, null), false);
@@ -2204,19 +2238,10 @@ namespace TecWare.PPSn
 				}
 			} // proc ProcessCurrentNode
 
-			private async Task<bool> RowExistsAsync()
+			private async Task<long?> RowExistsAsync()
 			{
 				using (var r = await existCommand.ExecuteReaderExAsync(CommandBehavior.SingleRow))
-				{
-					if (r.Read())
-						return r.GetBoolean(0);
-					else
-					{
-						var exc = new ArgumentException();
-						exc.Data.Add("SQL-Command", existCommand.CommandText);
-						throw exc;
-					}
-				}
+					return r.Read() && !r.IsDBNull(0) ? r.GetInt64(0) : (long?)null;
 			} // func RowExistsAsync
 
 			private Task ExecuteCommandAsync(SQLiteCommand command)
@@ -2634,11 +2659,11 @@ namespace TecWare.PPSn
 		{
 			using (var cmd = connection.CreateCommand())
 			{
-				cmd.CommandText = "SELECT Path FROM main.OfflineCache " +
-					"WHERE ContentType IS NULL OR " +
-					"IFNULL(LocalContentSize,-2) <> ServerContentSize OR " +
-					"LocalContentLastModification is null OR " +
-					"LocalContentLastModification <> ServerContentLastModification";
+				cmd.CommandText = "SELECT [Path] FROM main.[OfflineCache] " +
+					"WHERE [ContentType] IS NULL OR " +
+					"IFNULL([LocalContentSize],-2) <> [ServerContentSize] OR " +
+					"[LocalContentLastModification] IS NULL OR " +
+					"[LocalContentLastModification] <> [ServerContentLastModification]";
 
 				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
@@ -2857,7 +2882,7 @@ namespace TecWare.PPSn
 		{
 			try
 			{
-				using (var command = new SQLiteCommand("SELECT [Path], [ContentType], [ContentEncoding], [Content], [LocalPath] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path  COLLATE NOCASE", connection))
+				using (var command = new SQLiteCommand("SELECT [Path], [ContentType], [ContentEncoding], [Content], [LocalPath], [DebugPath] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path  COLLATE NOCASE", connection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = requestUri.ParsePath();
 					using (var reader = command.ExecuteReaderEx(CommandBehavior.SingleRow))
@@ -2882,12 +2907,29 @@ namespace TecWare.PPSn
 							contentType = contentType + ";charset=" + readContentEncoding[0];
 
 						var isCompressedContent = readContentEncoding.Length > 1 && readContentEncoding[1] == "gzip"; // compression is marked on index 1
+						MemoryStream contentData = null;
+						string localPath = null;
+
+						if (!reader.IsDBNull(5)) // debug reference content
+						{
+							localPath = reader.GetString(5);
+							isCompressedContent = false; // is never compressed
+						}
+						else if (!reader.IsDBNull(4)) // content from a local file
+						{
+							localPath = GetLocalPath(reader.GetString(4));
+						}
+						else if (!reader.IsDBNull(3)) // inline content
+						{
+							contentData = (MemoryStream)reader.GetStream(3); // This method returns a newly created MemoryStream object.
+						}
+						
 						task = PpsDummyProxyHelper.GetProxyTask(
 							new PpsLocalStoreRequest(
 								new Uri(environment.Request.BaseAddress, requestUri),
 								requestUri,
-								(MemoryStream)reader.GetStream(3), // This method returns a newly created MemoryStream object.
-								reader.IsDBNull(4) ? null : GetLocalPath(reader.GetString(4)),
+								contentData, 
+								localPath,
 								contentType,
 								isCompressedContent
 							),
@@ -2995,6 +3037,24 @@ namespace TecWare.PPSn
 
 			return outputStream;
 		} // func UpdateOfflineData
+
+		/// <summary>Set debug path to a offline file.</summary>
+		/// <param name="remotePath"></param>
+		/// <param name="debugPath"></param>
+		public async Task UpdateDebugPathAsync(string remotePath, string debugPath)
+		{
+			if (debugPath != null && !Path.IsPathRooted(debugPath))
+				throw new ArgumentException("Only full paths are allowed.");
+
+			using (var trans = await CreateWriteTransactionAsync(false))
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[OfflineCache] SET [DebugPath] = @dpath WHERE [Path] = @path"))
+			{
+				cmd.AddParameter("@path", DbType.String).Value = remotePath;
+				cmd.AddParameter("@dpath", DbType.String).Value = (object)debugPath ?? DBNull.Value;
+
+				await cmd.ExecuteNonQueryExAsync();
+			}
+		} // proc UpdateDebugPathAsync
 
 		#endregion
 
@@ -3555,8 +3615,6 @@ namespace TecWare.PPSn
 
 		/// <summary><c>true</c>, if the sync process is started.</summary>
 		public bool IsSynchronizationStarted => isSynchronizationStarted;
-		[Obsolete("ConnectionAccess")]
-		public SQLiteConnection Connection => connection;
 
 		/// <summary></summary>
 		public PpsDataTableDefinition ObjectsTable => objectsTable.Value;
@@ -4074,11 +4132,6 @@ namespace TecWare.PPSn
 				? throw new PpsEnvironmentOnlineFailedException()
 				: false;
 		} // func ForceOnlineMode
-
-
-		/// <summary>Connection to the local datastore</summary>
-		[Obsolete("Use master data.")]
-		public SQLiteConnection LocalConnection => masterData.Connection;
 
 		/// <summary>Access to the local store for the synced data.</summary>
 		[LuaMember]

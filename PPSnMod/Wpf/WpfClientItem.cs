@@ -1291,7 +1291,10 @@ namespace TecWare.PPSn.Server.Wpf
 				await Task.Run(() =>
 				{
 					var id = r.GetProperty("id", "default");
-					r.WriteXml(ParseXamlTheme(id).Document, GetXamlContentType(r));
+					var data = ParseXamlTheme(id);
+					r.SetInlineFileName(r.RelativeSubPath);
+					r.SetLastModified(data.LastChanged);
+					r.WriteXml(data.Document, GetXamlContentType(r));
 				});
 				return true;
 			}
@@ -1302,12 +1305,23 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 			else if (r.RelativeSubPath == "templates.xaml")
 			{
-				await Task.Run(() => r.WriteXml(ParseXamlTemplates().Document, GetXamlContentType(r)));
+
+				await Task.Run(() =>
+				{
+					var data = ParseXamlTemplates();
+					r.SetInlineFileName(r.RelativeSubPath);
+					r.SetLastModified(data.LastChanged);
+					r.WriteXml(data.Document, GetXamlContentType(r));
+				});
 				return true;
 			}
 			else if (r.RelativeSubPath == "masterdata.xml")
 			{
-				await Task.Run(() => masterDataSetDefinition.WriteToDEContext(r, ConfigPath + "/masterdata.xml"));
+				await Task.Run(() =>
+				{
+					r.SetInlineFileName(r.RelativeSubPath);
+					masterDataSetDefinition.WriteToDEContext(r, ConfigPath + "/masterdata.xml");
+				});
 				return true;
 			}
 			else if (r.RelativeSubPath.EndsWith(".xaml")) // parse wpf template file
@@ -1317,6 +1331,8 @@ namespace TecWare.PPSn.Server.Wpf
 					 var paneFile = ParseXaml(r.RelativeSubPath);
 					 if (paneFile != null)
 					 {
+						 r.SetInlineFileName(r.RelativeSubPath);
+						 r.SetLastModified(paneFile.LastChanged);
 						 r.WriteXml(paneFile.Document, GetXamlContentType(r));
 						 return true;
 					 }

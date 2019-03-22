@@ -482,6 +482,7 @@ namespace TecWare.PPSn.UI
 						}
 					}
 
+					// todo: beist sich mit CanFilter
 					var viewFilter = collectionArgs.GetMemberValue("ViewFilter");
 					if (Lua.RtInvokeable(viewFilter))
 						collectionViewSource.Filter += (sender, e) => e.Accepted = Procs.ChangeType<bool>(new LuaResult(Lua.RtInvoke(viewFilter, e.Item)));

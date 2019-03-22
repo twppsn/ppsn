@@ -4262,16 +4262,14 @@ namespace TecWare.PPSn
 
 		#region -- class PpsObjectEnumerator -----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsObjectEnumerator : IEnumerator<PpsObject>, IDataColumns
 		{
 			private readonly PpsEnvironment environment;
-			private readonly SQLiteCommand command;
+			private readonly DbCommand command;
 			private DbDataReader reader;
 			private PpsObject current;
 
-			public PpsObjectEnumerator(PpsEnvironment environment, SQLiteCommand command)
+			public PpsObjectEnumerator(PpsEnvironment environment, DbCommand command)
 			{
 				this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
 				this.command = command ?? throw new ArgumentNullException(nameof(command));
@@ -4534,17 +4532,15 @@ namespace TecWare.PPSn
 			#endregion
 
 			private readonly PpsEnvironment environment;
-			private readonly SQLiteConnection localStoreConnection;
-
+			
 			private readonly PpsDataFilterExpression filterCondition = null;
 			private readonly PpsDataOrderExpression[] orderCondition = null;
 			private readonly long limitStart = -1;
 			private readonly long limitCount = -1;
 
-			public PpsObjectGenerator(PpsEnvironment environment, SQLiteConnection localStoreConnection, PpsDataFilterExpression filterCondition, IEnumerable<PpsDataOrderExpression> orderCondition, long limitStart, long limitCount)
+			public PpsObjectGenerator(PpsEnvironment environment, PpsDataFilterExpression filterCondition, IEnumerable<PpsDataOrderExpression> orderCondition, long limitStart, long limitCount)
 			{
 				this.environment = environment;
-				this.localStoreConnection = localStoreConnection;
 
 				this.filterCondition = filterCondition ?? PpsDataFilterExpression.True;
 				this.orderCondition = orderCondition?.ToArray() ?? PpsDataOrderExpression.Empty;
@@ -4552,7 +4548,7 @@ namespace TecWare.PPSn
 
 			public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			{
-				return new PpsObjectGenerator(environment, localStoreConnection,
+				return new PpsObjectGenerator(environment,
 					PpsDataFilterExpression.Combine(filterCondition, expression),
 					orderCondition,
 					limitStart,
@@ -4562,7 +4558,7 @@ namespace TecWare.PPSn
 
 			public IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			{
-				return new PpsObjectGenerator(environment, localStoreConnection,
+				return new PpsObjectGenerator(environment,
 					filterCondition,
 					PpsDataOrderExpression.Combine(orderCondition, expressions),
 					limitStart,
@@ -4575,7 +4571,7 @@ namespace TecWare.PPSn
 
 			public IDataRowEnumerable ApplyLimit(long startAt, long count)
 			{
-				return new PpsObjectGenerator(environment, localStoreConnection,
+				return new PpsObjectGenerator(environment,
 					filterCondition,
 					orderCondition,
 					startAt,
@@ -4583,7 +4579,7 @@ namespace TecWare.PPSn
 				);
 			} // proc ApplyLimit
 
-			private SQLiteCommand CreateCommand()
+			private DbCommand CreateCommand()
 			{
 				var columnManager = new ObjectViewFilterVisitor();
 
@@ -4658,7 +4654,8 @@ namespace TecWare.PPSn
 				}
 
 				var sqlCommand = cmd.ToString();
-				return new SQLiteCommand(sqlCommand, localStoreConnection);
+				
+				return environment.MasterData.CreateNativeCommand(sqlCommand);
 				/*
 select o.Id, o.ServerId, o.Guid, Typ, o.Nr, o.RemoteRevId, group_concat(t.Key || ':' || t.Class || '='  || t.Value, char(10)) as [Values]
 from Objects o 
@@ -4686,7 +4683,7 @@ order by t_liefnr.value desc
 		#endregion
 
 		private IEnumerable<IDataRow> CreateObjectFilter(PpsShellGetList arguments)
-			=> new PpsObjectGenerator(this, LocalConnection, arguments.Filter, arguments.Order, arguments.Start, arguments.Count);
+			=> new PpsObjectGenerator(this, arguments.Filter, arguments.Order, arguments.Start, arguments.Count);
 
 		#endregion
 

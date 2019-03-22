@@ -93,8 +93,8 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
-			Commands.AddButton("100;100", "save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
-			Commands.AddButton("100;200", "copy", ApplicationCommands.Copy, "Kopieren", "Kopiere markierte Einträge in die Zwischenablage.");
+			//Commands.AddButton("100;100", "save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
+			//Commands.AddButton("100;200", "copy", ApplicationCommands.Copy, "Kopieren", "Kopiere markierte Einträge in die Zwischenablage.");
 
 			this.AddCommandBinding(Environment, ApplicationCommands.SaveAs,
 				new PpsCommand(

@@ -161,165 +161,198 @@
 		</local:PpsTraceItemTemplateSelector>
 	</UserControl.Resources>
 
-	<Grid Margin="16,16,0,16">
-		<Grid.RowDefinitions>
-			<RowDefinition/>
-			<RowDefinition Height="auto"/>
-			<RowDefinition Height="auto" />
-		</Grid.RowDefinitions>
+	<ui:PpsSideBarControl AllowToggleSelection="False">
+		<ui:PpsSideBarPanel Header="Ereignisse">
+			<Grid Margin="16,16,0,16">
+				<Grid.RowDefinitions>
+					<RowDefinition/>
+					<RowDefinition Height="auto"/>
+					<RowDefinition Height="auto" />
+				</Grid.RowDefinitions>
 
-		<ui:PpsDataListBox x:Name="logList" ItemsSource="{Binding Log}" AllowCommands="False">
-			<ui:PpsDataListBox.ItemTemplate>
-				<DataTemplate>
-					<Grid Background="Transparent" TextBlock.FontSize="14">
-						<Grid.ContextMenu>
-							<ContextMenu>
-								<MenuItem Command="{x:Static ApplicationCommands.Copy}" CommandParameter="{Binding}"/>
-								<Separator />
-								<MenuItem Command="{x:Static ApplicationCommands.SaveAs}" />
-							</ContextMenu>
-						</Grid.ContextMenu>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="24"/>
-							<ColumnDefinition Width="auto"/>
-							<ColumnDefinition/>
-						</Grid.ColumnDefinitions>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto" MinHeight="26"/>
-							<RowDefinition/>
-						</Grid.RowDefinitions>
-						<Border Height="24" Background="Transparent" ToolTip="{Binding Type}">
-							<Viewbox Height="22" Opacity=".75">
-								<ContentControl Focusable="False" >
-									<ContentControl.Template>
-										<ControlTemplate>
-											<Canvas Width="24" Height="24">
-												<Path x:Name="typeImagePath" Data="{StaticResource debugPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
-											</Canvas>
-											<ControlTemplate.Triggers>
-												<DataTrigger Binding="{Binding Type}" Value="Information">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}" />
-													<Setter TargetName="typeImagePath" Property="Fill" Value="SteelBlue" />
-												</DataTrigger>
-												<DataTrigger Binding="{Binding Type}" Value="Warning">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}" />
-													<Setter TargetName="typeImagePath" Property="Fill" Value="Goldenrod" />
-												</DataTrigger>
-												<DataTrigger Binding="{Binding Type}" Value="Fail">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource closeOctagonPathGeometry}" />
-												</DataTrigger>
-												<DataTrigger Binding="{Binding Type}" Value="Exception">
-													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}" />
-													<Setter TargetName="typeImagePath" Property="Fill" Value="Red" />
-												</DataTrigger>
-											</ControlTemplate.Triggers>
-										</ControlTemplate>
-									</ContentControl.Template>
-								</ContentControl>
-							</Viewbox>
-						</Border>
-						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=G}" VerticalAlignment="Center" Margin="8,0,0,0"/>
-						<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
+				<ui:PpsDataListBox x:Name="logList" ItemsSource="{Binding Log}" AllowCommands="False">
+					<ui:PpsDataListBox.ListCommands>
+						<ui:PpsUICommandButton Order="100;100" DisplayText="Speichern" Image="save" Description="Speichere alle Log in eine Datei." Command="{x:Static ApplicationCommands.Save}" />
+					</ui:PpsDataListBox.ListCommands>
+					<ui:PpsDataListBox.ItemCommands>
+						<ui:PpsUICommandButton Order="110;100" DisplayText="Kopieren" Image="copy" Description="Kopiere markierte Einträge in die Zwischenablage." Command="{x:Static ApplicationCommands.Copy}" />
+					</ui:PpsDataListBox.ItemCommands>
+					<ui:PpsDataListBox.ItemTemplate>
+						<DataTemplate>
+							<Grid Background="Transparent" TextBlock.FontSize="14">
+								<Grid.ContextMenu>
+									<ContextMenu>
+										<MenuItem Command="{x:Static ApplicationCommands.Copy}" CommandParameter="{Binding}"/>
+										<Separator />
+										<MenuItem Command="{x:Static ApplicationCommands.SaveAs}" />
+									</ContextMenu>
+								</Grid.ContextMenu>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="24"/>
+									<ColumnDefinition Width="auto"/>
+									<ColumnDefinition/>
+								</Grid.ColumnDefinitions>
+								<Grid.RowDefinitions>
+									<RowDefinition Height="Auto" MinHeight="26"/>
+									<RowDefinition/>
+								</Grid.RowDefinitions>
+								<Border Height="24" Background="Transparent" ToolTip="{Binding Type}">
+									<Viewbox Height="22" Opacity=".75">
+										<ContentControl Focusable="False" >
+											<ContentControl.Template>
+												<ControlTemplate>
+													<Canvas Width="24" Height="24">
+														<Path x:Name="typeImagePath" Data="{StaticResource debugPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
+													</Canvas>
+													<ControlTemplate.Triggers>
+														<DataTrigger Binding="{Binding Type}" Value="Information">
+															<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}" />
+															<Setter TargetName="typeImagePath" Property="Fill" Value="SteelBlue" />
+														</DataTrigger>
+														<DataTrigger Binding="{Binding Type}" Value="Warning">
+															<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}" />
+															<Setter TargetName="typeImagePath" Property="Fill" Value="Goldenrod" />
+														</DataTrigger>
+														<DataTrigger Binding="{Binding Type}" Value="Fail">
+															<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource closeOctagonPathGeometry}" />
+														</DataTrigger>
+														<DataTrigger Binding="{Binding Type}" Value="Exception">
+															<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}" />
+															<Setter TargetName="typeImagePath" Property="Fill" Value="Red" />
+														</DataTrigger>
+													</ControlTemplate.Triggers>
+												</ControlTemplate>
+											</ContentControl.Template>
+										</ContentControl>
+									</Viewbox>
+								</Border>
+								<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=G}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+								<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
 										HorizontalAlignment="Left" Margin="8,4,24,0" />
-					</Grid>
-				</DataTemplate>
-			</ui:PpsDataListBox.ItemTemplate>
-		</ui:PpsDataListBox>
+							</Grid>
+						</DataTemplate>
+					</ui:PpsDataListBox.ItemTemplate>
+				</ui:PpsDataListBox>
+				<Grid Grid.Row="1" Margin="0,12,0,6">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="auto"/>
+						<ColumnDefinition Width="auto"/>
+					</Grid.ColumnDefinitions>
+					<TextBlock Text="Befehl:" Foreground="{DynamicResource PPSnWindowForegroundBrush}" VerticalAlignment="Center" />
+					<ui:PpsTextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" Height="23" Margin="6,0">
+						<TextBox.InputBindings>
+							<KeyBinding Command="{x:Static ApplicationCommands.Open}" Key="Return" />
+							<KeyBinding Command="{x:Static ApplicationCommands.Delete}" Key="Esc" />
+						</TextBox.InputBindings>
+					</ui:PpsTextBox>
+					<ui:PpsButton Grid.Column="2" Content="Ausführen" Command="{x:Static ApplicationCommands.Open}" />
+					<CheckBox Grid.Column="3" x:Name="ShowStatisticCheckBox" Content="Statistiken anzeigen" Margin="32,0,0,0">
+						<CheckBox.Style>
+							<Style TargetType="{x:Type CheckBox}" BasedOn="{StaticResource PPSnCheckBoxStyle}">
+								<Setter Property="Visibility" Value="Collapsed" />
+								<Style.Triggers>
+									<DataTrigger Binding="{Binding collectStatistics}" Value="True">
+										<Setter Property="Visibility" Value="Visible" />
+									</DataTrigger>
+									<DataTrigger Binding="{Binding collectStatistics}" Value="False">
+										<Setter Property="IsChecked" Value="False" />
+									</DataTrigger>
+								</Style.Triggers>
+							</Style>
+						</CheckBox.Style>
+					</CheckBox>
 
-		<Grid Grid.Row="1" Margin="0,12,0,6">
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="auto"/>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="auto"/>
-				<ColumnDefinition Width="auto"/>
-			</Grid.ColumnDefinitions>
-			<TextBlock Text="Befehl:" Foreground="{DynamicResource PPSnWindowForegroundBrush}" VerticalAlignment="Center" />
-			<ui:PpsTextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" Height="23" Margin="6,0">
-				<TextBox.InputBindings>
-					<KeyBinding Command="{x:Static ApplicationCommands.Open}" Key="Return" />
-					<KeyBinding Command="{x:Static ApplicationCommands.Delete}" Key="Esc" />
-				</TextBox.InputBindings>
-			</ui:PpsTextBox>
-			<ui:PpsButton Grid.Column="2" Content="Ausführen" Command="{x:Static ApplicationCommands.Open}" />
-			<CheckBox Grid.Column="3" x:Name="ShowStatisticCheckBox" Content="Statistiken anzeigen" Margin="32,0,0,0">
-				<CheckBox.Style>
-					<Style TargetType="{x:Type CheckBox}" BasedOn="{StaticResource PPSnCheckBoxStyle}">
-						<Setter Property="Visibility" Value="Collapsed" />
-						<Style.Triggers>
-							<DataTrigger Binding="{Binding collectStatistics}" Value="True">
-								<Setter Property="Visibility" Value="Visible" />
-							</DataTrigger>
-							<DataTrigger Binding="{Binding collectStatistics}" Value="False">
-								<Setter Property="IsChecked" Value="False" />
-							</DataTrigger>
-						</Style.Triggers>
-					</Style>
-				</CheckBox.Style>
-			</CheckBox>
+				</Grid>
 
-		</Grid>
-
-		<ItemsControl Grid.Row="2" ItemsSource="{Binding Statistics}" Focusable="False">
-			<ItemsControl.Style>
-				<Style TargetType="{x:Type ItemsControl}">
-					<Setter Property="Visibility" Value="Collapsed" />
-					<Style.Triggers>
-						<DataTrigger Binding="{Binding IsChecked, ElementName=ShowStatisticCheckBox}" Value="True">
-							<Setter Property="Visibility" Value="Visible" />
-						</DataTrigger>
-					</Style.Triggers>
-				</Style>
-			</ItemsControl.Style>
-			<ItemsControl.ItemsPanel>
-				<ItemsPanelTemplate>
-					<UniformGrid Columns="3" />
-				</ItemsPanelTemplate>
-			</ItemsControl.ItemsPanel>
-			<ItemsControl.ItemContainerStyle>
-				<Style TargetType="{x:Type ContentPresenter}">
-					<Setter Property="Margin" Value="0,6,24,0" />
-				</Style>
-			</ItemsControl.ItemContainerStyle>
-			<ItemsControl.ItemTemplate>
-				<DataTemplate>
-					<Grid HorizontalAlignment="Left" TextBlock.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
-						<ListBox MaxWidth="404" Height="90" ItemsSource="{Binding History}"
+				<ItemsControl Grid.Row="2" ItemsSource="{Binding Statistics}" Focusable="False">
+					<ItemsControl.Style>
+						<Style TargetType="{x:Type ItemsControl}">
+							<Setter Property="Visibility" Value="Collapsed" />
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding IsChecked, ElementName=ShowStatisticCheckBox}" Value="True">
+									<Setter Property="Visibility" Value="Visible" />
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</ItemsControl.Style>
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<UniformGrid Columns="3" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+					<ItemsControl.ItemContainerStyle>
+						<Style TargetType="{x:Type ContentPresenter}">
+							<Setter Property="Margin" Value="0,6,24,0" />
+						</Style>
+					</ItemsControl.ItemContainerStyle>
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Grid HorizontalAlignment="Left" TextBlock.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
+								<ListBox MaxWidth="404" Height="90" ItemsSource="{Binding History}"
 								 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
 								 BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}" Background="{DynamicResource PPSnControlBackgroundBrush}">
-							<ListBox.ItemContainerStyle>
-								<Style TargetType="{x:Type ListBoxItem}">
-									<Setter Property="Margin" Value="1,0,1,0"/>
-									<Setter Property="Focusable" Value="False"/>
-									<Setter Property="Template">
-										<Setter.Value>
-											<ControlTemplate TargetType="{x:Type ListBoxItem}">
-												<ContentPresenter VerticalAlignment="Bottom" />
-											</ControlTemplate>
-										</Setter.Value>
-									</Setter>
-								</Style>
-							</ListBox.ItemContainerStyle>
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<Rectangle Fill="{DynamicResource PPSnMarkerBrush}" Width="6" Height="{Binding}" MinHeight=".1" VerticalAlignment="Bottom">
-										<Rectangle.LayoutTransform>
-											<ScaleTransform ScaleY="{Binding DataContext.Factor,RelativeSource={RelativeSource AncestorType=ListBox},Mode=OneWay}" />
-										</Rectangle.LayoutTransform>
-									</Rectangle>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-							<ListBox.ItemsPanel>
-								<ItemsPanelTemplate>
-									<VirtualizingStackPanel IsItemsHost="True" Orientation="Horizontal" />
-								</ItemsPanelTemplate>
-							</ListBox.ItemsPanel>
-						</ListBox>
-						<TextBlock Text="{Binding MaxValue,Mode=OneWay}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6,0,0,0"/>
-						<TextBlock Text="{Binding Name,Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Top" />
-						<TextBlock Text="{Binding CurrentValue,Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,6,0"/>
-					</Grid>
-				</DataTemplate>
-			</ItemsControl.ItemTemplate>
-		</ItemsControl>
-	</Grid>
+									<ListBox.ItemContainerStyle>
+										<Style TargetType="{x:Type ListBoxItem}">
+											<Setter Property="Margin" Value="1,0,1,0"/>
+											<Setter Property="Focusable" Value="False"/>
+											<Setter Property="Template">
+												<Setter.Value>
+													<ControlTemplate TargetType="{x:Type ListBoxItem}">
+														<ContentPresenter VerticalAlignment="Bottom" />
+													</ControlTemplate>
+												</Setter.Value>
+											</Setter>
+										</Style>
+									</ListBox.ItemContainerStyle>
+									<ListBox.ItemTemplate>
+										<DataTemplate>
+											<Rectangle Fill="{DynamicResource PPSnMarkerBrush}" Width="6" Height="{Binding}" MinHeight=".1" VerticalAlignment="Bottom">
+												<Rectangle.LayoutTransform>
+													<ScaleTransform ScaleY="{Binding DataContext.Factor,RelativeSource={RelativeSource AncestorType=ListBox},Mode=OneWay}" />
+												</Rectangle.LayoutTransform>
+											</Rectangle>
+										</DataTemplate>
+									</ListBox.ItemTemplate>
+									<ListBox.ItemsPanel>
+										<ItemsPanelTemplate>
+											<VirtualizingStackPanel IsItemsHost="True" Orientation="Horizontal" />
+										</ItemsPanelTemplate>
+									</ListBox.ItemsPanel>
+								</ListBox>
+								<TextBlock Text="{Binding MaxValue,Mode=OneWay}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6,0,0,0"/>
+								<TextBlock Text="{Binding Name,Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Top" />
+								<TextBlock Text="{Binding CurrentValue,Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,6,0"/>
+							</Grid>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</Grid>
+		</ui:PpsSideBarPanel>
+		<Separator />
+		<ui:PpsSideBarPanel Header="Dateien">
+			<ui:PpsDataListBox ItemsSource="{Binding MasterData.OfflineCache}">
+				<ui:PpsDataListBox.ItemTemplate>
+					<DataTemplate>
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition />
+								<ColumnDefinition />
+								<ColumnDefinition />
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="16" />
+								<RowDefinition Height="Auto"/>
+							</Grid.RowDefinitions>
+							<TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Path}" />
+							<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LocalContentSize}"/>
+							<TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding LocalContentLastModification}"/>
+							<TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding DebugPath}" Margin="32,0,0,0"/>
+						</Grid>
+					</DataTemplate>
+				</ui:PpsDataListBox.ItemTemplate>
+			</ui:PpsDataListBox>
+		</ui:PpsSideBarPanel>
+	</ui:PpsSideBarControl>
 </ui:PpsWindowPaneControl>

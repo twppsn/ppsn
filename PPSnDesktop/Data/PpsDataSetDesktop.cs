@@ -488,6 +488,9 @@ namespace TecWare.PPSn.Data
 
 		private bool allowSetFilter = false;
 
+		/// <summary>Can filter is always false.</summary>
+		public override bool CanFilter => allowSetFilter;
+
 		/// <summary>Filter expression</summary>
 		public override Predicate<object> Filter
 		{
@@ -495,7 +498,7 @@ namespace TecWare.PPSn.Data
 			set
 			{
 				if (!allowSetFilter)
-					throw new NotSupportedException();
+					throw new NotSupportedException(); 
 				base.Filter = value;
 			}
 		} // prop Filter

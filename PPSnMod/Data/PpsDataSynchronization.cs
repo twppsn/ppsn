@@ -130,6 +130,64 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
+	#region -- class PpsDataSynchronizationFullBatch ----------------------------------
+
+	/// <summary>Synchronization batch implementation for a time stamp based synchronization.</summary>
+	public sealed class PpsDataSynchronizationFullBatch : IPpsDataSynchronizationBatch
+	{
+		private readonly IEnumerator<IDataRow> currentView;
+		private bool beforeFirstRow = true;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary>Synchronization batch implementation for a always full synchronization.</summary>
+		/// <param name="view">Server site view of the data.</param>
+		public PpsDataSynchronizationFullBatch(IEnumerable<IDataRow> view)
+		{
+			this.currentView = (view ?? throw new ArgumentNullException(nameof(view))).GetEnumerator();
+		} // ctor
+
+		/// <summary></summary>
+		public void Dispose()
+		{
+			currentView.Dispose();
+		} // proc Dispose
+
+		#endregion
+
+		/// <summary>Reset the enumerator</summary>
+		public void Reset()
+		{
+			beforeFirstRow = true;
+			currentView.Reset();
+		} // proc Reset
+
+		/// <summary>Move to the next row.</summary>
+		/// <returns><c>true</c>, if a new row is selected.</returns>
+		public bool MoveNext()
+		{
+			beforeFirstRow = false;
+			return currentView.MoveNext();
+		} // func MoveNext
+
+		/// <summary>Current row.</summary>
+		public IDataRow Current => beforeFirstRow ? throw new InvalidOperationException() : currentView.Current;
+		object IEnumerator.Current => currentView.Current;
+
+		/// <summary>Column description of the batch.</summary>
+		public IReadOnlyList<IDataColumn> Columns => ((IDataColumns)currentView).Columns;
+		/// <summary>Mode is always r</summary>
+		public char CurrentMode => 'r';
+
+		/// <summary>Sync id is alway 0.</summary>
+		public long CurrentSyncId => 0;
+
+		/// <summary>Is always <c>true</c>.</summary>
+		public bool IsFullSync => true;
+	} // class PpsDataSynchronizationFullBatch
+
+	#endregion
+
 	#region -- class PpsDataSynchronization -------------------------------------------
 
 	/// <summary>Synchronization batch for the client.</summary>
@@ -214,6 +272,13 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // proc ParseSynchronizationTimeStampArguments
 
+		private PpsDataSelector CreateSelector(string viewName)
+		{
+			var view = application.GetViewDefinition(viewName, true);
+			var selector = view.SelectorToken.CreateSelector(connection, null, true);
+			return selector;
+		} // func CreateSelector
+
 		/// <summary>Create a synchonization batch part for a internal view.</summary>
 		/// <param name="viewName">Name of the view.</param>
 		/// <param name="viewSyncColumn">Synchronization column.</param>
@@ -221,8 +286,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns>Synchronization batch part.</returns>
 		protected IPpsDataSynchronizationBatch CreateTimeStampBatchFromSelector(string viewName, string viewSyncColumn, long lastSyncId)
 		{
-			var view = application.GetViewDefinition(viewName, true);
-			var selector = view.SelectorToken.CreateSelector(connection, null, true);
+			var selector = CreateSelector(viewName);
 			if (lastSyncId > 0)
 			{
 				var timeStampDateTime = DateTime.FromFileTimeUtc(lastSyncId);
@@ -236,6 +300,15 @@ namespace TecWare.PPSn.Server.Data
 			return new PpsDataSynchronizationTimeStampBatch(selector, viewSyncColumn, lastSyncId);
 		} // proc CreateTimeStampBatchFromSelector
 
+		/// <summary>Create a synchonization batch part for a internal view.</summary>
+		/// <param name="viewName">Name of the view.</param>
+		/// <returns>Synchronization batch part.</returns>
+		protected IPpsDataSynchronizationBatch CreateFullBatchFromSelector(string viewName)
+		{
+			var selector = CreateSelector(viewName);
+			return new PpsDataSynchronizationFullBatch(selector);
+		} // proc CreateTimeStampBatchFromSelector
+
 		/// <summary>Create a synchronization batch part for the givven table.</summary>
 		/// <param name="table">Table to synchronize.</param>
 		/// <param name="syncType">Synchronization type, description.</param>
@@ -245,14 +318,20 @@ namespace TecWare.PPSn.Server.Data
 		{
 			ParseSynchronizationArguments(syncType, out var syncAlgorithm, out var syncArguments);
 
-			if (String.Compare(syncAlgorithm, "TimeStamp", StringComparison.OrdinalIgnoreCase) != 0)
-				throw new FormatException("Synchronization token (only timestamp is allowed).");
+			if (String.Compare(syncAlgorithm, "TimeStamp", StringComparison.OrdinalIgnoreCase) == 0)
+			{
+				// parse view and column
+				ParseSynchronizationTimeStampArguments(syncArguments, out var viewName, out var viewColumn);
 
-			// parse view and column
-			ParseSynchronizationTimeStampArguments(syncArguments, out var viewName, out var viewColumn);
-
-			// get the synchronization rows
-			return CreateTimeStampBatchFromSelector(viewName, viewColumn, lastSyncId);
+				// get the synchronization rows
+				return CreateTimeStampBatchFromSelector(viewName, viewColumn, lastSyncId);
+			}
+			else if (String.Compare(syncAlgorithm, "Full", StringComparison.OrdinalIgnoreCase) == 0)
+			{
+				return CreateFullBatchFromSelector(syncArguments);
+			}
+			else
+				throw new FormatException("Synchronization token (only timestamp or full is allowed).");
 		} // proc GenerateBatch
 
 		/// <summary>Access to Application</summary>

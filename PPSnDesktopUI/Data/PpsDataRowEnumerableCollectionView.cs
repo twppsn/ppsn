@@ -143,6 +143,7 @@ namespace TecWare.PPSn.Data
 		private readonly IDataRowEnumerable baseEnumerable;
 		private readonly int blockFetchSize = 100;
 
+		private uint enumeratorVersion = 0;
 		private IEnumerator<IDataRow> currentEnumerator = null; // current row source
 		private CurrentEnumeratorState currentEnumeratorState = CurrentEnumeratorState.None; // state of the read process
 		private List<IDataRow> currentFetchedRows = null; // cache for the currently readed rows
@@ -180,6 +181,7 @@ namespace TecWare.PPSn.Data
 			currentEnumerator = null;
 			currentEnumeratorState = CurrentEnumeratorState.None;
 			currentFetchedRows = null;
+			unchecked { enumeratorVersion++; }
 		} // proc ResetDataRowEnumerator
 
 		private IEnumerator<IDataRow> GetDataRowEnumerator()
@@ -195,15 +197,23 @@ namespace TecWare.PPSn.Data
 			return newEnumerable.GetEnumerator();
 		} // func GetDataRowEnumerator
 
-		private async Task StartEnumeratorAsync()
+		private async Task StartEnumeratorAsync(uint callEnumeratorVersion)
 		{
-			currentFetchedRows = new List<IDataRow>();
 			currentEnumeratorState = CurrentEnumeratorState.ReadFirstRow;
+			currentFetchedRows = new List<IDataRow>();
 
-			currentEnumerator = await Task.Run(() => GetDataRowEnumerator());
+			var tmp = await Task.Run(() => GetDataRowEnumerator());
 
-			currentEnumeratorState = CurrentEnumeratorState.Fetching;
-			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			if (enumeratorVersion == callEnumeratorVersion)
+			{
+				currentEnumerator = tmp;
+				currentEnumeratorState = CurrentEnumeratorState.Fetching;
+				OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			}
+			else
+			{
+				tmp.Dispose();
+			}
 		} // proc StartEnumerator
 
 		private static (List<IDataRow>, bool) FetchBlockCore(IEnumerator<IDataRow> enumerator, int rowsToRead)
@@ -222,24 +232,27 @@ namespace TecWare.PPSn.Data
 			return (collectedRows, false);
 		} // func FetchBlockCore
 
-		private async Task FetchBlockAsync(int readToCount)
+		private async Task FetchBlockAsync(int readToCount, uint callEnumeratorVersion)
 		{
 			currentEnumeratorState = CurrentEnumeratorState.ReadBlock;
 
 			// fetch block in background
 			var (rows, isEof) = await Task.Run(() => FetchBlockCore(currentEnumerator, readToCount - currentFetchedRows.Count));
 
-			// update view
-			currentFetchedRows.AddRange(rows);
-			currentEnumeratorState = isEof ? CurrentEnumeratorState.Closed : CurrentEnumeratorState.Fetching;
-			if (isEof)
-				currentEnumerator = null;
-
-			// notify changes
-			if (rows.Count > 0)
+			if (enumeratorVersion == callEnumeratorVersion)
 			{
-				OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
-				OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+				// update view
+				currentFetchedRows.AddRange(rows);
+				currentEnumeratorState = isEof ? CurrentEnumeratorState.Closed : CurrentEnumeratorState.Fetching;
+				if (isEof)
+					currentEnumerator = null;
+
+				// notify changes
+				if (rows.Count > 0)
+				{
+					OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+					OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+				}
 			}
 		} // proc FetchBlock
 
@@ -267,7 +280,7 @@ namespace TecWare.PPSn.Data
 			{
 				case CurrentEnumeratorState.None: // start
 					if (currentEnumerator == null)
-						CheckResult(StartEnumeratorAsync());
+						CheckResult(StartEnumeratorAsync(enumeratorVersion));
 					break;
 
 				case CurrentEnumeratorState.ReadFirstRow:
@@ -275,7 +288,7 @@ namespace TecWare.PPSn.Data
 					break;
 				case CurrentEnumeratorState.Fetching: // fetch current block
 					if (index >= currentFetchedRows.Count) // do we need to fetch a next block
-						CheckResult(FetchBlockAsync(((index / blockFetchSize) + 1) * blockFetchSize));
+						CheckResult(FetchBlockAsync(((index / blockFetchSize) + 1) * blockFetchSize, enumeratorVersion));
 					break;
 
 				case CurrentEnumeratorState.Closed:
