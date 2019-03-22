@@ -356,6 +356,21 @@ namespace TecWare.PPSn.Controls
 			base.OnPreviewKeyDown(e);
 		} // proc OnPreviewKeyDown
 
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyUp(KeyEventArgs e)
+		{
+			if (filterBox != null && IsFilterable && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && e.Key == Key.F)
+			{
+				if (!filterBox.IsKeyboardFocusWithin)
+				{
+					filterBox.Focus();
+					e.Handled = true;
+				}
+			}
+			base.OnKeyUp(e);
+		} // func OnKeyUp
+
 		#region -- Item Container -----------------------------------------------------
 
 		/// <summary></summary>

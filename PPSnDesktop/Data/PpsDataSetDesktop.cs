@@ -421,6 +421,8 @@ namespace TecWare.PPSn.Data
 
 		private readonly IDisposable detachView;
 		private PpsDataFilterExpression filterExpression = null;
+		private Predicate<object> filterCustomFunction = null;
+		private Predicate<object> filterExpressionFunction = null;
 
 		/// <summary>Collection view for PpsDataTable's.</summary>
 		/// <param name="dataTable"></param>
@@ -486,10 +488,32 @@ namespace TecWare.PPSn.Data
 			}
 		} // prop Sort
 
-		private bool allowSetFilter = false;
+		private bool setBaseFilter = false;
+
+		private bool CombinedFilterFunction(object item)
+			=> filterCustomFunction(item) && filterExpressionFunction(item);
+
+		private void UpdateBaseFilter()
+		{
+			setBaseFilter = true;
+			try
+			{
+				if (filterCustomFunction != null && filterExpressionFunction != null)
+					base.Filter = CombinedFilterFunction;
+				else if (filterCustomFunction != null)
+					base.Filter = filterCustomFunction;
+				else
+					base.Filter = filterExpressionFunction;
+
+			}
+			finally
+			{
+				setBaseFilter = false;
+			}
+		} // proc UpdateBaseFilter
 
 		/// <summary>Can filter is always false.</summary>
-		public override bool CanFilter => allowSetFilter;
+		public override bool CanFilter => true;
 
 		/// <summary>Filter expression</summary>
 		public override Predicate<object> Filter
@@ -497,9 +521,13 @@ namespace TecWare.PPSn.Data
 			get => base.Filter;
 			set
 			{
-				if (!allowSetFilter)
-					throw new NotSupportedException(); 
-				base.Filter = value;
+				if (setBaseFilter)
+					base.Filter = value;
+				else
+				{
+					filterCustomFunction = value;
+					UpdateBaseFilter();
+				}
 			}
 		} // prop Filter
 
@@ -512,15 +540,8 @@ namespace TecWare.PPSn.Data
 				if (filterExpression != value)
 				{
 					filterExpression = value;
-					allowSetFilter = true;
-					try
-					{
-						base.Filter = PpsDataFilterVisitorDataRow.CreateDataRowFilter<object>(filterExpression);
-					}
-					finally
-					{
-						allowSetFilter = false;
-					}
+					filterExpressionFunction = PpsDataFilterVisitorDataRow.CreateDataRowFilter<object>(filterExpression);
+					UpdateBaseFilter();
 				}
 			}
 		} // prop FilterExpression

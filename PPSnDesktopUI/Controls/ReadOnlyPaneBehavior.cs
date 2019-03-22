@@ -43,6 +43,8 @@ namespace TecWare.PPSn.Controls
 				tb.IsReadOnly = BooleanBox.GetBool(e.NewValue);
 			else if (d is PpsDataFilterCombo ds)
 				ds.IsReadOnly = BooleanBox.GetBool(e.NewValue);
+			else if (d is PpsComboBox cb)
+				cb.IsReadOnly = BooleanBox.GetBool(e.NewValue);
 			else if (d is CheckBox c)
 				c.IsEnabled = !BooleanBox.GetBool(e.NewValue);
 		} // proc ReadOnlyPropertyChanged

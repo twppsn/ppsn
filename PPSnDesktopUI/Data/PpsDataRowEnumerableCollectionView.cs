@@ -72,7 +72,7 @@ namespace TecWare.PPSn.Data
 			private readonly PpsDataRowEnumerableCollectionView parent;
 			private readonly List<IDataRow> cachedRows;
 			private int currentIndex = -1;
-			
+
 			public CachedRowEnumerator(PpsDataRowEnumerableCollectionView parent, List<IDataRow> cachedRows)
 			{
 				this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
@@ -106,7 +106,7 @@ namespace TecWare.PPSn.Data
 				this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
 			} // ctor
 
-			public void Reset()			{ }
+			public void Reset() { }
 
 			public bool MoveNext()
 			{
@@ -121,7 +121,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region  -- class CachedRowEnumerable -----------------------------------------
+		#region -- class CachedRowEnumerable ------------------------------------------
 
 		private class CachedRowEnumerable : IEnumerable
 		{
@@ -242,7 +242,17 @@ namespace TecWare.PPSn.Data
 			if (enumeratorVersion == callEnumeratorVersion)
 			{
 				// update view
-				currentFetchedRows.AddRange(rows);
+				if (Filter != null)
+				{
+					foreach (var r in rows)
+					{
+						if (Filter(r))
+							currentFetchedRows.Add(r);
+					}
+				}
+				else
+					currentFetchedRows.AddRange(rows);
+
 				currentEnumeratorState = isEof ? CurrentEnumeratorState.Closed : CurrentEnumeratorState.Fetching;
 				if (isEof)
 					currentEnumerator = null;
@@ -310,12 +320,16 @@ namespace TecWare.PPSn.Data
 		/*
 		 * This part override's all methods to avoid a call on EnumerableWrapper.
 		 */
-
+		
 		/// <summary>Refresh data</summary>
 		protected override void RefreshOverride()
 		{
 			ResetDataRowEnumerator();
-			base.RefreshOverride();
+
+			if (IsEmpty)
+				MoveCurrentToPosition(-1);
+
+			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 		} // proc RefreshOverride
 
 		/// <summary>Return enumerator to fetch current rows.</summary>
@@ -375,11 +389,6 @@ namespace TecWare.PPSn.Data
 				}
 			}
 		} // prop Filter
-
-		/// <summary>It is not allowed to set the filter property.</summary>
-		public sealed override bool CanFilter => false;
-		/// <summary>Ignore filter property</summary>
-		public sealed override Predicate<object> Filter { get => null; set => throw new NotSupportedException(); }
 
 		/// <summary>It is allowed to change the order with sort description.</summary>
 		public sealed override bool CanSort => true;

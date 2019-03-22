@@ -132,7 +132,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- GeometryName - property ---------------------------------------------
+		#region -- GeometryName - property --------------------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty GeometryNameProperty = PpsGeometryImage.GeometryNameProperty.AddOwner(typeof(PpsComboBox));
