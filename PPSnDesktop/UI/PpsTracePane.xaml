@@ -170,9 +170,9 @@
 					<RowDefinition Height="auto" />
 				</Grid.RowDefinitions>
 
-				<ui:PpsDataListBox x:Name="logList" ItemsSource="{Binding Log}" AllowCommands="False">
+				<ui:PpsDataListBox x:Name="logList" ItemsSource="{Binding Log}">
 					<ui:PpsDataListBox.ListCommands>
-						<ui:PpsUICommandButton Order="100;100" DisplayText="Speichern" Image="save" Description="Speichere alle Log in eine Datei." Command="{x:Static ApplicationCommands.Save}" />
+						<ui:PpsUICommandButton Order="100;100" DisplayText="Speichern" Image="save" Description="Speichere alle Log in eine Datei." Command="{x:Static ApplicationCommands.SaveAs}" />
 					</ui:PpsDataListBox.ListCommands>
 					<ui:PpsDataListBox.ItemCommands>
 						<ui:PpsUICommandButton Order="110;100" DisplayText="Kopieren" Image="copy" Description="Kopiere markierte Einträge in die Zwischenablage." Command="{x:Static ApplicationCommands.Copy}" />
@@ -333,6 +333,10 @@
 		<Separator />
 		<ui:PpsSideBarPanel Header="Dateien">
 			<ui:PpsDataListBox ItemsSource="{Binding MasterData.OfflineCache}">
+				<ui:PpsDataListBox.ItemCommands>
+					<ui:PpsUICommandButton Order="200;100" DisplayText="Assign..." Image="openFolder" Command="{x:Static local:PpsTracePane.AssignDebugTarget}" Description="Zuordnung einer Debugquelle" />
+					<ui:PpsUICommandButton Order="200;110" DisplayText="Clear" Image="openFolder" Command="{x:Static local:PpsTracePane.ClearDebugTarget}" Description="Zuordnung einer Debugquelle lösen" />
+				</ui:PpsDataListBox.ItemCommands>
 				<ui:PpsDataListBox.ItemTemplate>
 					<DataTemplate>
 						<Grid>

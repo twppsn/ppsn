@@ -43,6 +43,7 @@ namespace TecWare.PPSn.Server.Data
 	{
 		private readonly IEnumerator<IDataRow> currentView;
 		private readonly int syncIdColumnIndex;
+		private readonly bool isFull;
 
 		private readonly long lastSyncId;
 		private readonly long startTimeStamp;
@@ -55,14 +56,18 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="view">Server site view of the data.</param>
 		/// <param name="syncIdColumn">Column, that contains the syncid.</param>
 		/// <param name="lastSyncId">Last sync id of the client.</param>
-		public PpsDataSynchronizationTimeStampBatch(IEnumerable<IDataRow> view, string syncIdColumn, long lastSyncId)
+		/// <param name="isFull"></param>
+		public PpsDataSynchronizationTimeStampBatch(IEnumerable<IDataRow> view, string syncIdColumn, long lastSyncId, bool isFull)
 		{
-			this.currentView = (view ?? throw new ArgumentNullException(nameof(view))).GetEnumerator();
-			this.syncIdColumnIndex = syncIdColumn == null
+			currentView = (view ?? throw new ArgumentNullException(nameof(view))).GetEnumerator();
+			syncIdColumnIndex = syncIdColumn == null
 				? -1
 				: ((IDataColumns)currentView).FindColumnIndex(syncIdColumn, true);
+
 			this.lastSyncId = lastSyncId;
-			this.startTimeStamp = DateTime.Now.ToFileTimeUtc();
+			this.isFull = isFull;
+
+			startTimeStamp = DateTime.Now.ToFileTimeUtc();
 		} // ctor
 
 		/// <summary></summary>
@@ -125,7 +130,7 @@ namespace TecWare.PPSn.Server.Data
 		} // prop CurrentSyncId
 
 		/// <summary>Is always <c>false</c>.</summary>
-		public bool IsFullSync => false;
+		public bool IsFullSync => isFull;
 	} // class PpsDataSynchronizationTimeStampBatch
 
 	#endregion
@@ -136,14 +141,20 @@ namespace TecWare.PPSn.Server.Data
 	public sealed class PpsDataSynchronizationFullBatch : IPpsDataSynchronizationBatch
 	{
 		private readonly IEnumerator<IDataRow> currentView;
+		private readonly long newSyncId;
+		private readonly bool emitRows;
 		private bool beforeFirstRow = true;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Synchronization batch implementation for a always full synchronization.</summary>
 		/// <param name="view">Server site view of the data.</param>
-		public PpsDataSynchronizationFullBatch(IEnumerable<IDataRow> view)
+		/// <param name="newSyncId"></param>
+		/// <param name="lastSyncId"></param>
+		public PpsDataSynchronizationFullBatch(IEnumerable<IDataRow> view, long lastSyncId, long newSyncId)
 		{
+			this.newSyncId = newSyncId;
+			this.emitRows = lastSyncId != newSyncId;
 			this.currentView = (view ?? throw new ArgumentNullException(nameof(view))).GetEnumerator();
 		} // ctor
 
@@ -167,7 +178,7 @@ namespace TecWare.PPSn.Server.Data
 		public bool MoveNext()
 		{
 			beforeFirstRow = false;
-			return currentView.MoveNext();
+			return emitRows && currentView.MoveNext();
 		} // func MoveNext
 
 		/// <summary>Current row.</summary>
@@ -180,10 +191,10 @@ namespace TecWare.PPSn.Server.Data
 		public char CurrentMode => 'r';
 
 		/// <summary>Sync id is alway 0.</summary>
-		public long CurrentSyncId => 0;
+		public long CurrentSyncId => newSyncId;
 
 		/// <summary>Is always <c>true</c>.</summary>
-		public bool IsFullSync => true;
+		public bool IsFullSync => emitRows;
 	} // class PpsDataSynchronizationFullBatch
 
 	#endregion
@@ -297,16 +308,17 @@ namespace TecWare.PPSn.Server.Data
 					)
 				);
 			}
-			return new PpsDataSynchronizationTimeStampBatch(selector, viewSyncColumn, lastSyncId);
+			return new PpsDataSynchronizationTimeStampBatch(selector, viewSyncColumn, lastSyncId, false);
 		} // proc CreateTimeStampBatchFromSelector
 
 		/// <summary>Create a synchonization batch part for a internal view.</summary>
 		/// <param name="viewName">Name of the view.</param>
+		/// <param name="lastSyncId">Last synchronization stamp.</param>
 		/// <returns>Synchronization batch part.</returns>
-		protected IPpsDataSynchronizationBatch CreateFullBatchFromSelector(string viewName)
+		protected IPpsDataSynchronizationBatch CreateFullBatchFromSelector(string viewName, long lastSyncId)
 		{
 			var selector = CreateSelector(viewName);
-			return new PpsDataSynchronizationFullBatch(selector);
+			return new PpsDataSynchronizationFullBatch(selector, lastSyncId,selector.Version);
 		} // proc CreateTimeStampBatchFromSelector
 
 		/// <summary>Create a synchronization batch part for the givven table.</summary>
@@ -328,7 +340,7 @@ namespace TecWare.PPSn.Server.Data
 			}
 			else if (String.Compare(syncAlgorithm, "Full", StringComparison.OrdinalIgnoreCase) == 0)
 			{
-				return CreateFullBatchFromSelector(syncArguments);
+				return CreateFullBatchFromSelector(syncArguments, lastSyncId);
 			}
 			else
 				throw new FormatException("Synchronization token (only timestamp or full is allowed).");

@@ -322,11 +322,19 @@ namespace TecWare.PPSn.Controls
 		protected override void OnSelectionChanged(SelectionChangedEventArgs e)
 		{
 			base.OnSelectionChanged(e);
-			if (SelectedItem == null)
+
+			var selectedItem = SelectedItem;
+
+			if (selectedItem == null)
 				SetValue(selectedItemCommandsPropertyKey, null);
 			else
-				SetValue(selectedItemCommandsPropertyKey, GetItemCommands(this, SelectedItem));
-		}  // proc OnSelectionChanged
+			{
+				var cmds = GetItemCommands(this, selectedItem);
+				foreach (var c in cmds.OfType<PpsUICommandButton>())
+					c.CommandParameter = selectedItem;
+				SetValue(selectedItemCommandsPropertyKey, cmds);
+			}
+		} // proc OnSelectionChanged
 
 		private PpsUICommandCollection GetItemCommands(DependencyObject element, object item)
 			=> ItemCommandsSelector?.SelectCommands(item, element) ?? ItemCommands;

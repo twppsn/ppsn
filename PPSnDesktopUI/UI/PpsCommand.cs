@@ -943,7 +943,7 @@ namespace TecWare.PPSn.UI
 
 			base.RefreshOverride();
 		} // proc RefreshOverride
-		
+
 		/// <summary>Return enumerator to fetch current rows.</summary>
 		/// <returns></returns>
 		protected override IEnumerator GetEnumerator()

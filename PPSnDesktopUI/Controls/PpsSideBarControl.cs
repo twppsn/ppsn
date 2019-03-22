@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -462,6 +463,19 @@ namespace TecWare.PPSn.Controls
 
 		private static bool GetAllowToggleSelection(DependencyObject d)
 			=> GetSideBarControl(d)?.AllowToggleSelection ?? BooleanBox.GetBool(AllowToggleSelectionProperty.DefaultMetadata.DefaultValue);
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
+		{
+			if (SelectedItem == null && !AllowToggleSelection)
+			{
+				if (Items.Count > 0)
+					SelectedItem = Items[0];
+			}
+
+			base.OnItemsChanged(e);
+		} // proc OnItemsChanged
 
 		static PpsSideBarControl()
 		{

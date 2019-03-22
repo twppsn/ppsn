@@ -1214,8 +1214,6 @@ namespace TecWare.PPSn
 		private PpsWebProxy webProxy; // remote download/upload manager
 		private ProxyStatus statusOfProxy;  // interface for the transaction manager
 
-		private static readonly Dictionary<string, FileInfo> localResourceMap = new Dictionary<string, FileInfo>();
-
 		#region -- Web Request --------------------------------------------------------
 
 		/// <summary>Core function that gets called on a request.</summary>

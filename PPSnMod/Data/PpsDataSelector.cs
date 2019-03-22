@@ -387,6 +387,8 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary>by default we do not know the number of items</summary>
 		public virtual int Count => -1;
+		/// <summary>Data version for full synchronization (it shows if the base datasource has changed).</summary>
+		public virtual long Version => 0;
 
 		/// <summary>DataSource of the selector</summary>
 		public PpsDataSource DataSource => connection.DataSource;
@@ -697,6 +699,7 @@ namespace TecWare.PPSn.Server.Data
 	public sealed class PpsGenericSelector<T> : PpsDataSelector
 	{
 		private readonly string viewId;
+		private readonly long dataVersion;
 		private readonly IEnumerable<T> enumerable;
 		private readonly PpsApplication application;
 
@@ -709,10 +712,11 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="viewId"></param>
 		/// <param name="enumerable"></param>
 		/// <param name="columns"></param>
-		public PpsGenericSelector(IPpsConnectionHandle connection, string viewId, IEnumerable<T> enumerable, AliasColumn[] columns = null) 
+		public PpsGenericSelector(IPpsConnectionHandle connection, string viewId, long dataVersion, IEnumerable<T> enumerable, AliasColumn[] columns = null)
 			: base(connection, columns ?? GetAllColumns(viewId, connection.DataSource.Application))
 		{
 			this.viewId = viewId;
+			this.dataVersion = dataVersion;
 			this.enumerable = enumerable;
 			this.application = connection.DataSource.Application;
 		} // ctor
@@ -784,7 +788,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="columns"></param>
 		/// <returns></returns>
 		protected override PpsDataSelector ApplyColumnsCore(AliasColumn[] columns)
-			=> new PpsGenericSelector<T>(Connection, viewId, enumerable, columns);
+			=> new PpsGenericSelector<T>(Connection, viewId, dataVersion, enumerable, columns);
 
 		#endregion
 
@@ -802,7 +806,7 @@ namespace TecWare.PPSn.Server.Data
 		public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 		{
 			var predicate = PpsDataFilterVisitorLambda.CompileTypedFilter<T>(expression);
-			return new PpsGenericSelector<T>(Connection, viewId, enumerable.Where(new Func<T, bool>(predicate)));
+			return new PpsGenericSelector<T>(Connection, viewId, dataVersion, enumerable.Where(new Func<T, bool>(predicate)));
 		} // func ApplyFilter
 
 		/// <summary></summary>
@@ -813,8 +817,9 @@ namespace TecWare.PPSn.Server.Data
 			=> throw new NotSupportedException(); // base.ApplyOrder(expressions, lookupNative);
 
 		/// <summary></summary>
-		public override int Count
-			=> enumerable is IList l ? l.Count : base.Count;
+		public override int Count => enumerable is IList l ? l.Count : base.Count;
+		/// <summary></summary>
+		public override long Version => dataVersion;
 	} // class PpsGenericSelector
 
 	#endregion

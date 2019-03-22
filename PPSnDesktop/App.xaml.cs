@@ -269,8 +269,8 @@ namespace TecWare.PPSn
 							if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
 								|| path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
 								Task.Run(() => PpsEnvironment.LoadAssemblyFromLocalAsync(arg.Substring(2))).Wait();
-							else if (path.EndsWith(".resmap"))
-								;
+							else
+							{ }
 							break;
 					}
 				}

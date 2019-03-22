@@ -429,6 +429,7 @@ namespace TecWare.PPSn.Server.Wpf
 		#endregion
 
 		private readonly PpsApplication application;
+		private readonly long offlineFileVersion;
 
 		private PpsDataSetServerDefinition masterDataSetDefinition;
 		private ParsedXamlFile defaultTheme = null;
@@ -442,7 +443,8 @@ namespace TecWare.PPSn.Server.Wpf
 		public WpfClientItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
-			this.application = sp.GetService<PpsApplication>(true);
+			application = sp.GetService<PpsApplication>(true);
+			offlineFileVersion = DateTime.Now.ToFileTimeUtc();
 
 			sp.GetService<IServiceContainer>(true).AddService(typeof(WpfClientItem), this);
 		} // ctor
@@ -974,7 +976,7 @@ namespace TecWare.PPSn.Server.Wpf
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
 		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource.SystemConnection, "wpf.sync", GetApplicationFileList());
+			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource.SystemConnection, "wpf.sync", offlineFileVersion, GetApplicationFileList());
 
 		#endregion
 

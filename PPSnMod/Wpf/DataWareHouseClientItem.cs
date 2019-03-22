@@ -36,7 +36,7 @@ namespace TecWare.PPSn.Server.Wpf
 		public DataWareHouseClientItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
-			this.application = sp.GetService<PpsApplication>(true);
+			application = sp.GetService<PpsApplication>(true);
 		} // ctor
 
 		#region -- PpsExcelReportItem -----------------------------------------------------
@@ -164,7 +164,7 @@ namespace TecWare.PPSn.Server.Wpf
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
 		public PpsDataSelector GetReportItemsSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource.SystemConnection, "bi.reports", GetExcelReportItems());
+			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource.SystemConnection, "bi.reports", application.CurrentViewsVersion, GetExcelReportItems());
 
 		#endregion
 	} // class ExcelCientItem

@@ -746,7 +746,7 @@ namespace TecWare.PPSn.Server
 		#endregion
 
 		private PpsSqlExDataSource mainDataSource;
-
+		private long viewsVersion;
 		private readonly Dictionary<string, PpsFieldDescription> fieldDescription = new Dictionary<string, PpsFieldDescription>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, PpsViewDescription> viewController = new Dictionary<string, PpsViewDescription>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, PpsDataSetServerDefinition> datasetDefinitions = new Dictionary<string, PpsDataSetServerDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -799,6 +799,8 @@ namespace TecWare.PPSn.Server
 			DependencyElement.RegisterList(fieldDeclarationList, RegisterField); // register all fields
 			DependencyElement.RegisterList(viewDeclarationList, RegisterView); // register all views
 			DependencyElement.RegisterList(datasetDeclarationList, RegisterDataSet); // register all datasets
+
+			viewsVersion = DateTime.Now.ToFileTimeUtc();
 		} // proc BeginEndConfigurationData
 
 		#endregion
@@ -906,7 +908,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
 		public PpsDataSelector GetViewDefinitionSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsViewDescription>(dataSource.SystemConnection, "sys.views", GetViewDefinitions());
+			=> new PpsGenericSelector<PpsViewDescription>(dataSource.SystemConnection, "sys.views", viewsVersion, GetViewDefinitions());
 
 		/// <summary></summary>
 		/// <param name="name"></param>
@@ -1069,5 +1071,7 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Main data source, MS Sql Server</summary>
 		public PpsDataSource MainDataSource => mainDataSource;
+		/// <summary></summary>
+		public long CurrentViewsVersion => viewsVersion;
 	} // class PpsApplication
 }

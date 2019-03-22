@@ -108,6 +108,178 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsDataRowOperationArguments -------------------------------------
+
+	/// <summary>Base implementation for row change.</summary>
+	public abstract class PpsDataRowOperationArguments : IPpsDataRowOperationArguments
+	{
+		private readonly PpsDataTableDefinition table;
+
+		/// <summary></summary>
+		/// <param name="table"></param>
+		protected PpsDataRowOperationArguments(PpsDataTableDefinition table)
+		{
+			this.table = table ?? throw new ArgumentNullException(nameof(table));
+		} // ctor
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public IEnumerator<PropertyValue> GetEnumerator()
+		{
+			for (var i = 0; i < table.Columns.Count; i++)
+			{
+				if (IsValueChanged(i))
+				{
+					var v = GetValue(i);
+					var t = table.Columns[i].DataType;
+					if (v != null)
+						v = Procs.ChangeType(v, t);
+
+					yield return new PropertyValue(table.Columns[i].Name, t, v);
+				}
+			}
+		} // func GetEnumerator
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
+		public abstract bool IsValueChanged(int index);
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public bool TryGetProperty(string name, out object value)
+		{
+			var idx = table.FindColumnIndex(name, false);
+			if (idx >= 0 && IsValueChanged(idx))
+			{
+				value = GetValue(idx);
+				return true;
+			}
+			else
+			{
+				value = null;
+				return false;
+			}
+		} // func TryGetProperty
+
+		/// <summary></summary>
+		/// <param name="i"></param>
+		/// <returns></returns>
+		protected abstract object GetValueCore(int i);
+
+		/// <summary></summary>
+		/// <param name="i"></param>
+		/// <returns></returns>
+		public object GetValue(int i)
+		{
+			var v = GetValueCore(i);
+			if (v == null)
+				return null;
+			else if (table.Columns[i].IsExtended)
+			{
+				var type = table.Columns[i].DataType;
+				if (typeof(PpsObjectExtendedValue) == type
+					|| typeof(PpsMasterDataExtendedValue) == type)
+					return Procs.ChangeType(v, typeof(long));
+				else
+					return v;
+			}
+			else
+				return Procs.ChangeType(v, table.Columns[i].DataType);
+		} // func GetValue
+
+		#region -- IDataRecord members ------------------------------------------------
+		
+		string IDataRecord.GetName(int i)
+			=> table.Columns[i].Name;
+
+		int IDataRecord.GetValues(object[] values)
+		{
+			for (var i = 0; i < values.Length; i++)
+				values[i] = GetValue(i);
+			return values.Length;
+		} // func GetValues
+
+		int IDataRecord.GetOrdinal(string name)
+			=> table.FindColumnIndex(name, false);
+
+		Type IDataRecord.GetFieldType(int i)
+			=> table.Columns[i].DataType;
+
+		string IDataRecord.GetDataTypeName(int i)
+			=> table.Columns[i].DataType.Name;
+
+		bool IDataRecord.GetBoolean(int i)
+			=> GetValue(i).ChangeType<bool>();
+
+		byte IDataRecord.GetByte(int i)
+			=> GetValue(i).ChangeType<byte>();
+
+		long IDataRecord.GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)
+			=> throw new NotImplementedException();
+		char IDataRecord.GetChar(int i)
+			=> throw new NotImplementedException();
+		long IDataRecord.GetChars(int i, long fieldoffset, char[] buffer, int bufferoffset, int length)
+			=> throw new NotImplementedException();
+
+		Guid IDataRecord.GetGuid(int i)
+			=> GetValue(i).ChangeType<Guid>();
+
+		short IDataRecord.GetInt16(int i)
+			=> GetValue(i).ChangeType<short>();
+		int IDataRecord.GetInt32(int i)
+			=> GetValue(i).ChangeType<int>();
+		long IDataRecord.GetInt64(int i)
+			=> GetValue(i).ChangeType<long>();
+
+		float IDataRecord.GetFloat(int i)
+			=> GetValue(i).ChangeType<float>();
+		double IDataRecord.GetDouble(int i)
+			=> GetValue(i).ChangeType<double>();
+		string IDataRecord.GetString(int i)
+			=> GetValue(i).ChangeType<string>();
+
+		decimal IDataRecord.GetDecimal(int i)
+			=> GetValue(i).ChangeType<decimal>();
+
+		DateTime IDataRecord.GetDateTime(int i)
+			=> GetValue(i).ChangeType<DateTime>();
+		IDataReader IDataRecord.GetData(int i)
+			=> throw new NotSupportedException();
+
+		bool IDataRecord.IsDBNull(int i)
+			=> GetValue(i) == null;
+
+		int IDataRecord.FieldCount => table.Columns.Count;
+
+		/// <summary></summary>
+		/// <param name="i"></param>
+		/// <returns></returns>
+		public object this[int i]
+			=> GetValue(i);
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public object this[string name]
+		{
+			get
+			{
+				var idx = table.FindColumnIndex(name, false);
+				return idx == -1 ? null : GetValue(idx);
+			}
+		} // prop this
+
+		#endregion
+	} // class PpsDataRowOperationArguments
+
+	#endregion
+
 	#region -- class PpsDataRowOperationEventArgs -------------------------------------
 
 	/// <summary>Row based event</summary>
@@ -295,19 +467,21 @@ namespace TecWare.PPSn
 		private readonly object rowId;
 		private readonly object[] values;
 
-		internal PpsMasterDataRow(PpsMasterDataTable owner, IDataRecord r)
+		internal PpsMasterDataRow(PpsMasterDataTable table, IPpsDataRowOperationArguments r)
 		{
-			this.table = owner;
-			this.values = new object[owner.Columns.Count];
+			this.table = table;
 
-			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
+			values = new object[table.Columns.Count];
+
+			// initial read
+			var primaryKeyIndex = table.GetPrimaryKeyColumnIndex();
 			for (var i = 0; i < values.Length; i++)
 			{
 				var v = r.GetValue(i);
 				if (primaryKeyIndex == i)
 				{
 					if (v == null || v == DBNull.Value)
-						throw new ArgumentNullException(owner.Columns[primaryKeyIndex].Name, "Null primary columns are not allowed.");
+						throw new ArgumentNullException(table.Columns[primaryKeyIndex].Name, "Null primary columns are not allowed.");
 					rowId = v;
 				}
 
@@ -320,10 +494,14 @@ namespace TecWare.PPSn
 			var primaryKeyIndex = table.GetPrimaryKeyColumnIndex();
 			for (var i = 0; i < values.Length; i++)
 			{
-				if (arguments.IsValueChanged(i) && !Equals(values[i], arguments[i]))
+				if (primaryKeyIndex != i && arguments.IsValueChanged(i))
 				{
-					values[i] = arguments[i];
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(table.Columns[i].Name));
+					var v = arguments.GetValue(i);
+					if (!Equals(values[i], v))
+					{
+						values[i] = v;
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(table.Columns[i].Name));
+					}
 				}
 			}
 		} // func UpdateValues
@@ -467,7 +645,7 @@ namespace TecWare.PPSn
 			{
 				var primaryKeyColumnIndex = Table.GetPrimaryKeyColumnIndex();
 				while (r.Read())
-					yield return Table.CreateRow(primaryKeyColumnIndex, r);
+					yield return Table.CreateRow(primaryKeyColumnIndex, Table.GetRowDataRecord(r, false));
 			}
 		} // func GetEnumerator
 
@@ -728,6 +906,53 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- class DataRecordRowArguments ---------------------------------------
+
+		private sealed class DataRecordRowArguments : PpsDataRowOperationArguments
+		{
+			private readonly PpsDataTableDefinition table;
+			private readonly IDataRecord r;
+
+			public DataRecordRowArguments(PpsDataTableDefinition table, IDataRecord r)
+				: base(table)
+			{
+				this.r = r ?? throw new ArgumentNullException(nameof(table));
+			}
+
+			public override bool IsValueChanged(int index)
+				=> index >= 0 && index < r.FieldCount;
+
+			protected override object GetValueCore(int i)
+				=> r.IsDBNull(i) ? null : r.GetValue(i);
+		} // class DataRecordRowArguments
+
+		#endregion
+
+		#region -- class DataValuesRowArguments ---------------------------------------
+
+		private sealed class DataValuesRowArguments : PpsDataRowOperationArguments
+		{
+			private readonly PpsDataTableDefinition table;
+			private readonly object[] values;
+
+			public DataValuesRowArguments(PpsDataTableDefinition table, IDataRecord r)
+				: base(table)
+			{
+				if (r == null)
+					throw new ArgumentNullException(nameof(table));
+				values = new object[r.FieldCount];
+				r.GetValues(values);
+			} // ctor
+
+			public override bool IsValueChanged(int index)
+				=> index >= 0 && index < values.Length;
+
+			protected override object GetValueCore(int i)
+				=> values[i] is DBNull ? null : values[i];
+		} // class DataValuesRowArguments
+
+		#endregion
+
 		private readonly Dictionary<object, WeakReference<PpsMasterDataRow>> cachedRows = new Dictionary<object, WeakReference<PpsMasterDataRow>>();
 		private readonly object dataRowChangedToken;
 
@@ -774,7 +999,9 @@ namespace TecWare.PPSn
 						if (args is PpsDataRowOperationEventArgs e
 						  && cachedRows.TryGetValue(e.RowId, out var cur)
 						  && cur.TryGetTarget(out var row))
-							row.UpdateValues(e.Arguments);
+						{
+							row.UpdateValues(e.Arguments ?? GetRowData(e.RowId));
+						}
 					}
 					break;
 				case PpsDataRowOperation.RowDelete:
@@ -822,38 +1049,52 @@ namespace TecWare.PPSn
 			return MasterData.CreateNativeCommand(commandText.ToString());
 		} // func PrepareCommand
 
+		private IPpsDataRowOperationArguments GetRowData(object key)
+		{
+			var commandText = PrepareCommandText(null);
+			var primaryKeyName = Definition.PrimaryKey.Name;
+			commandText.Append(" WHERE [")
+				.Append(primaryKeyName == PpsMasterData.RowIdColumnName ? "rowid" : "[" + primaryKeyName + "]")
+				.Append("] = @Key");
+
+			using (var cmd = MasterData.CreateNativeCommand(commandText.ToString()))
+			{
+				cmd.AddParameter("@key").Value = key;
+
+				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
+				{
+					if (r.Read())
+						return GetRowDataRecord(r, true);
+					else
+						return null;
+				}
+			} // using cmd
+		} // func GetRowData
+
+		internal IPpsDataRowOperationArguments GetRowDataRecord(DbDataReader r, bool createCopy) 
+			=> createCopy ? (IPpsDataRowOperationArguments)new DataValuesRowArguments(Definition, r) : new DataRecordRowArguments(Definition, r);
+
 		/// <summary></summary>
 		/// <param name="key"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
 		public PpsMasterDataRow GetRowById(long key, bool throwException = false)
 		{
+			// find row
 			lock (cachedRows)
 			{
 				if (cachedRows.TryGetValue(key, out var rowRef) && rowRef.TryGetTarget(out var row) && row != null)
 					return row;
 			}
 
-			var commandText = PrepareCommandText(null);
-			commandText.Append(" WHERE [")
-				.Append(Definition.PrimaryKey.Name)
-				.Append("] = @Key");
-
-			using (var cmd = MasterData.CreateNativeCommand(commandText.ToString()))
-			{
-				cmd.AddParameter("@key").Value = key;
-				var primaryKeyColumnIndex = GetPrimaryKeyColumnIndex();
-
-				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
-				{
-					if (r.Read())
-						return CreateRow(primaryKeyColumnIndex, r);
-					else if (throwException)
-						throw new ArgumentException($"Could not seek row with key '{key}' in table '{Definition.Name}'.");
-					else
-						return null;
-				}
-			} // using cmd
+			// load row
+			var rowData = GetRowData(key);
+			if (rowData != null)
+				return CreateRow(GetPrimaryKeyColumnIndex(), rowData);
+			else if (throwException)
+				throw new ArgumentException($"Could not seek row with key '{key}' in table '{Definition.Name}'.");
+			else
+				return null;
 		} // func GetRowById
 
 		/// <summary>Returns the primary key index.</summary>
@@ -864,13 +1105,16 @@ namespace TecWare.PPSn
 		internal PpsDataColumnDefinition GetColumnDefinition(int index)
 			=> Definition.Columns[index];
 
-		internal PpsMasterDataRow CreateRow(int primaryKeyColumnIndex, IDataRecord r)
+		internal PpsMasterDataRow CreateRow(int primaryKeyColumnIndex, IPpsDataRowOperationArguments r)
 		{
 			lock (cachedRows)
 			{
-				var key = r.GetInt64(primaryKeyColumnIndex);
+				var key = r.GetValue(primaryKeyColumnIndex).ChangeType<long>();
 				if (cachedRows.TryGetValue(key, out var rowRef) && rowRef.TryGetTarget(out var row) && row != null)
+				{
+					row.UpdateValues(r);
 					return row;
+				}
 				else
 				{
 					row = new PpsMasterDataRow(Table, r);
@@ -1475,148 +1719,24 @@ namespace TecWare.PPSn
 
 		private abstract class ProcessBatchBase : IDisposable
 		{
-			#region -- class PpsDataRowOperationArgument ------------------------------
+			#region -- class PpsDataRowOperationBatchArguments ------------------------------
 
-			private sealed class PpsDataRowOperationArgument : IPpsDataRowOperationArguments
+			private sealed class PpsDataRowOperationBatchArguments : PpsDataRowOperationArguments
 			{
 				private readonly PpsDataTableDefinition table;
 				private readonly string[] parameterValues;
 
-				public PpsDataRowOperationArgument(PpsDataTableDefinition table, string[] parameterValues)
+				public PpsDataRowOperationBatchArguments(PpsDataTableDefinition table, string[] parameterValues)
+					:base(table)
 				{
-					this.table = table ?? throw new ArgumentNullException(nameof(table));
 					this.parameterValues = parameterValues ?? throw new ArgumentNullException(nameof(table));
 				} // ctor
 
-				public IEnumerator<PropertyValue> GetEnumerator()
-				{
-					for (var i = 0; i < parameterValues.Length; i++)
-					{
-						var v = (object)parameterValues[i];
-						var t = table.Columns[i].DataType;
-						if (v != null)
-							v = Procs.ChangeType(v, t);
-
-						yield return new PropertyValue(table.Columns[i].Name, t, v);
-					}
-				} // func GetEnumerator
-
-				IEnumerator IEnumerable.GetEnumerator()
-					=> GetEnumerator();
-
-				public bool IsValueChanged(int index)
+				public override bool IsValueChanged(int index)
 					=> table.Columns[index].Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, String.Empty) != "#";
 
-				public bool TryGetProperty(string name, out object value)
-				{
-					var idx = table.FindColumnIndex(name, false);
-					if (idx >= 0 && idx < parameterValues.Length)
-					{
-						value = parameterValues[idx];
-						return true;
-					}
-					else
-					{
-						value = null;
-						return false;
-					}
-				} // func TryGetProperty
-
-				public string GetName(int i)
-					=> table.Columns[i].Name;
-
-				public object GetValue(int i)
-				{
-					if (i >= 0 && i < parameterValues.Length)
-					{
-						if (parameterValues[i] == null)
-							return null;
-						else if (table.Columns[i].IsExtended)
-						{
-							var type = table.Columns[i].DataType;
-							if (typeof(PpsObjectExtendedValue) == type
-								|| typeof(PpsMasterDataExtendedValue) == type)
-								return Procs.ChangeType(parameterValues[i], typeof(long));
-							else
-								return parameterValues[i];
-						}
-						else
-							return Procs.ChangeType(parameterValues[i], table.Columns[i].DataType);
-					}
-					else
-						return null;
-				} // func GetValue
-
-				public int GetValues(object[] values)
-				{
-					for (var i = 0; i < values.Length; i++)
-						values[i] = GetValue(i);
-					return values.Length;
-				} // func GetValues
-
-				public int GetOrdinal(string name)
-					=> table.FindColumnIndex(name, false);
-
-				public Type GetFieldType(int i)
-					=> table.Columns[i].DataType;
-
-				public string GetDataTypeName(int i)
-					=> GetFieldType(i).Name;
-
-				public bool GetBoolean(int i)
-					=> GetValue(i).ChangeType<bool>();
-
-				public byte GetByte(int i)
-					=> GetValue(i).ChangeType<byte>();
-
-				public long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)
-					=> throw new NotImplementedException();
-				public char GetChar(int i)
-					=> throw new NotImplementedException();
-				public long GetChars(int i, long fieldoffset, char[] buffer, int bufferoffset, int length)
-					=> throw new NotImplementedException();
-
-				public Guid GetGuid(int i)
-					=> GetValue(i).ChangeType<Guid>();
-
-				public short GetInt16(int i)
-					=> GetValue(i).ChangeType<short>();
-				public int GetInt32(int i)
-					=> GetValue(i).ChangeType<int>();
-				public long GetInt64(int i)
-					=> GetValue(i).ChangeType<long>();
-
-				public float GetFloat(int i)
-					=> GetValue(i).ChangeType<float>();
-				public double GetDouble(int i)
-					=> GetValue(i).ChangeType<double>();
-				public string GetString(int i)
-					=> GetValue(i).ChangeType<string>();
-
-				public decimal GetDecimal(int i)
-					=> GetValue(i).ChangeType<decimal>();
-
-				public DateTime GetDateTime(int i)
-					=> GetValue(i).ChangeType<DateTime>();
-				public IDataReader GetData(int i)
-					=> throw new NotSupportedException();
-
-				public bool IsDBNull(int i)
-					=> GetValue(i) == null;
-
-				public int FieldCount => table.Columns.Count;
-
-				public object this[int i]
-					=> GetValue(i);
-
-				public object this[string name]
-				{
-					get
-					{
-						var idx = table.FindColumnIndex(name, false);
-						return idx == -1 ? null : GetValue(idx);
-					}
-				} // prop this
+				protected override object GetValueCore(int i) 
+					=> parameterValues[i];
 			} // class PpsDataRowOperationArgument
 
 			#endregion
@@ -1799,7 +1919,7 @@ namespace TecWare.PPSn
 			/// <param name="parameterValues"></param>
 			/// <returns></returns>
 			protected IPpsDataRowOperationArguments CreateOperationArguments(string[] parameterValues)
-				=> new PpsDataRowOperationArgument(Table, parameterValues);
+				=> new PpsDataRowOperationBatchArguments(Table, parameterValues);
 
 			#endregion
 
@@ -1999,6 +2119,7 @@ namespace TecWare.PPSn
 			private readonly SQLiteCommand deleteCommand;
 			private readonly SQLiteParameter deleteIdParameter;
 
+			private readonly bool isPrimaryKeyRowId;
 			private readonly int refreshColumnIndex = -1;
 
 			#region -- Ctor/Dtor ----------------------------------------------------
@@ -2090,13 +2211,14 @@ namespace TecWare.PPSn
 					" WHERE [" + updateParameters[virtPrimaryColumnIndex].SourceColumn + "] = " + updateParameters[virtPrimaryColumnIndex].ParameterName;
 
 				// prepare exists
+				isPrimaryKeyRowId = physPrimaryKey.Name == RowIdColumnName;
 				existCommand = (SQLiteCommand)transaction.CreateNativeCommand("SELECT " +
-					(physPrimaryKey.Name == RowIdColumnName ? "rowid" : "[" + physPrimaryKey.Name + "]") +
+					(isPrimaryKeyRowId ? "rowid" : "[" + physPrimaryKey.Name + "]") +
 					" FROM main.[" + Table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id");
 				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(virtPrimaryKey.DataType));
 
 				// prepare delete
-				if (physPrimaryKey.Name != RowIdColumnName)
+				if (!isPrimaryKeyRowId)
 				{
 					deleteCommand = (SQLiteCommand)transaction.CreateNativeCommand("DELETE FROM main.[" + Table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;");
 					deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(physPrimaryKey.DataType));
@@ -2218,6 +2340,8 @@ namespace TecWare.PPSn
 					case 'i':
 						// execute the command
 						await ExecuteCommandAsync(insertCommand);
+						if (isPrimaryKeyRowId)
+							parameterValues[physPrimaryColumnIndex] = ((SQLiteConnection)Transaction.Connection).LastInsertRowId.ToString();
 						// raise change event
 						Transaction.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowInsert, Table, arguments[physPrimaryColumnIndex], null, arguments), false);
 						break;
@@ -3039,9 +3163,10 @@ namespace TecWare.PPSn
 		} // func UpdateOfflineData
 
 		/// <summary>Set debug path to a offline file.</summary>
+		/// <param name="rowId"></param>
 		/// <param name="remotePath"></param>
 		/// <param name="debugPath"></param>
-		public async Task UpdateDebugPathAsync(string remotePath, string debugPath)
+		public async Task UpdateDebugPathAsync(object rowId, string remotePath, string debugPath)
 		{
 			if (debugPath != null && !Path.IsPathRooted(debugPath))
 				throw new ArgumentException("Only full paths are allowed.");
@@ -3053,6 +3178,10 @@ namespace TecWare.PPSn
 				cmd.AddParameter("@dpath", DbType.String).Value = (object)debugPath ?? DBNull.Value;
 
 				await cmd.ExecuteNonQueryExAsync();
+
+				trans.RaiseOperationEvent(new PpsDataRowOperationEventArgs(PpsDataRowOperation.RowUpdate, FindTable("OfflineCache", true), rowId, null, null));
+
+				trans.Commit();
 			}
 		} // proc UpdateDebugPathAsync
 

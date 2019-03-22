@@ -39,6 +39,9 @@ namespace TecWare.PPSn.UI
 	/// <summary>Pane to display trace messages.</summary>
 	internal sealed partial class PpsTracePane : PpsWindowPaneControl
 	{
+		public static readonly RoutedCommand AssignDebugTarget = new RoutedCommand("Assign", typeof(PpsTracePane));
+		public static readonly RoutedCommand ClearDebugTarget = new RoutedCommand("Clear", typeof(PpsTracePane));
+
 		#region -- class PpsTraceEnvironment ------------------------------------------
 
 		private sealed class PpsTraceEnvironment : LuaTable
@@ -93,9 +96,6 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
-			//Commands.AddButton("100;100", "save", ApplicationCommands.SaveAs, "Speichern", "Speichere alle Log in eine Datei.");
-			//Commands.AddButton("100;200", "copy", ApplicationCommands.Copy, "Kopieren", "Kopiere markierte Einträge in die Zwischenablage.");
-
 			this.AddCommandBinding(Environment, ApplicationCommands.SaveAs,
 				new PpsCommand(
 					 ctx => SaveTrace()
@@ -114,6 +114,21 @@ namespace TecWare.PPSn.UI
 				new PpsAsyncCommand(
 					ctx => ExecuteCommandAsync(ConsoleCommandTextBox.Text),
 					ctx => !String.IsNullOrEmpty(ConsoleCommandTextBox.Text)
+				)
+			);
+
+			this.AddCommandBinding(Environment, AssignDebugTarget,
+				new PpsAsyncCommand(
+					ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, false),
+					ctx => ctx.Parameter is PpsMasterDataRow
+				)
+			);
+
+
+			this.AddCommandBinding(Environment, ClearDebugTarget,
+				new PpsAsyncCommand(
+					ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, true),
+					ctx => ctx.Parameter is PpsMasterDataRow row && row.GetProperty("DebugPath", null) != null
 				)
 			);
 
@@ -255,6 +270,45 @@ namespace TecWare.PPSn.UI
 			if (clipText != null)
 				Clipboard.SetText(clipText);
 		} // proc CopyToClipboard
+
+		#endregion
+
+		#region -- UpdateDebugTarget --------------------------------------------------
+
+		private string GetDebugTargetFileName(string path, string currentDebugTarget)
+		{
+			var queryIndex = path.IndexOf('?');
+			var name = queryIndex >= 0 ? Path.GetFileName(path.Substring(0, queryIndex)) : Path.GetFileName(path);
+
+			var openDialog = new OpenFileDialog
+			{
+				Title = "Assign Debug Target to " + name,
+				Filter = name + "|" + name,
+				FileName = currentDebugTarget,
+				CheckFileExists = true
+			};
+
+			if (openDialog.ShowDialog() != true)
+				return null;
+			return openDialog.FileName;
+		} // func GetDebugTargetFileName
+
+		private async Task UpdateDebugTargetAsync(PpsMasterDataRow row, bool clear)
+		{
+			var path = row.GetProperty("Path", String.Empty);
+			if (String.IsNullOrEmpty(path))
+				return;
+
+			var newFileName = clear ? null : GetDebugTargetFileName(path, row.GetProperty("DebugPath", null));
+			try
+			{
+				await Environment.MasterData.UpdateDebugPathAsync(row.RowId, path, newFileName);
+			}
+			catch (Exception e)
+			{
+				Environment.ShowException(e);
+			}
+		} // proc UpdateDebugTargetAsync
 
 		#endregion
 
