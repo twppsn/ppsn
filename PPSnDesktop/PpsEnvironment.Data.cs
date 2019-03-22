@@ -1053,9 +1053,9 @@ namespace TecWare.PPSn
 		{
 			var commandText = PrepareCommandText(null);
 			var primaryKeyName = Definition.PrimaryKey.Name;
-			commandText.Append(" WHERE [")
+			commandText.Append(" WHERE ")
 				.Append(primaryKeyName == PpsMasterData.RowIdColumnName ? "rowid" : "[" + primaryKeyName + "]")
-				.Append("] = @Key");
+				.Append(" = @Key");
 
 			using (var cmd = MasterData.CreateNativeCommand(commandText.ToString()))
 			{
