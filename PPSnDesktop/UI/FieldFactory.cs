@@ -315,7 +315,7 @@ namespace TecWare.PPSn.UI
 
 		private LuaWpfCreator CreateSelector(IPpsDataFieldReadOnlyProperties properties)
 		{
-			dynamic combobox = LuaWpfCreator.CreateFactory(new LuaUI(), typeof(PpsDataFilterCombo));
+			dynamic combobox = LuaWpfCreator.CreateFactory(new LuaUI(), typeof(PpsComboBox));
 
 			if (properties.TryGetProperty<bool>("Nullable", out var tmpNullable))
 				combobox.IsNullable = tmpNullable;
@@ -340,11 +340,11 @@ namespace TecWare.PPSn.UI
 			{
 				combobox.ItemTemplate = Environment.FindResource<DataTemplate>(templateResource);
 
-				if (properties.TryGetProperty("SelectedValueTemplateResourceKey", out var selectedValueResourceKey)
-					|| table.Definition.Meta.TryGetProperty("Wpf.SelectedValueTemplateResourceKey", out selectedValueResourceKey))
-					combobox.SelectedValueTemplate = Environment.FindResource<DataTemplate>(selectedValueResourceKey);
-				else
-					combobox.SelectedValueTemplate = combobox.ItemTemplate;
+				//if (properties.TryGetProperty("SelectedValueTemplateResourceKey", out var selectedValueResourceKey)
+				//	|| table.Definition.Meta.TryGetProperty("Wpf.SelectedValueTemplateResourceKey", out selectedValueResourceKey))
+				//	combobox.SelectedValueTemplate = Environment.FindResource<DataTemplate>(selectedValueResourceKey);
+				//else
+				//	combobox.SelectedValueTemplate = combobox.ItemTemplate;
 			}
 
 			return combobox;

@@ -879,7 +879,7 @@ namespace TecWare.PPSn
 					// append order
 					if (sqlOrder != null)
 					{
-						commandText.Append(' ');
+						commandText.Append(" ORDER BY ");
 						commandText.Append(sqlOrder);
 					}
 
@@ -910,7 +910,6 @@ namespace TecWare.PPSn
 
 		private sealed class DataRecordRowArguments : PpsDataRowOperationArguments
 		{
-			private readonly PpsDataTableDefinition table;
 			private readonly IDataRecord r;
 
 			public DataRecordRowArguments(PpsDataTableDefinition table, IDataRecord r)
@@ -932,7 +931,6 @@ namespace TecWare.PPSn
 
 		private sealed class DataValuesRowArguments : PpsDataRowOperationArguments
 		{
-			private readonly PpsDataTableDefinition table;
 			private readonly object[] values;
 
 			public DataValuesRowArguments(PpsDataTableDefinition table, IDataRecord r)
