@@ -59,7 +59,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsComboBoxItemStyle}" />
-		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="BorderThickness" Value="1" />
 		<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
 		<Setter Property="GeometryName" Value="comboxBoxChevron" />
 		<Setter Property="Background" Value="{DynamicResource PPSnControlBackgroundBrush}" />

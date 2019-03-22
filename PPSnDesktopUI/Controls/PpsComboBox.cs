@@ -68,7 +68,7 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty AllowFilterProperty = PpsDataListBox.AllowFilterProperty.AddOwner(typeof(PpsComboBox), new FrameworkPropertyMetadata(BooleanBox.True, new PropertyChangedCallback(OnAllowFilterChanged)));
 
-		private static readonly DependencyPropertyKey isFilterablePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFilterable), typeof(bool), typeof(PpsDataListBox), new FrameworkPropertyMetadata(BooleanBox.True));
+		private static readonly DependencyPropertyKey isFilterablePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFilterable), typeof(bool), typeof(PpsComboBox), new FrameworkPropertyMetadata(BooleanBox.True));
 		public static readonly DependencyProperty IsFilterableProperty = isFilterablePropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 

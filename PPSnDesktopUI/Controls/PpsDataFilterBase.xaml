@@ -130,7 +130,7 @@ specific language governing permissions and limitations under the Licence.
 										<RowDefinition Height="33"/>
 										<RowDefinition/>
 									</Grid.RowDefinitions>
-									<Grid Background="White" HorizontalAlignment="Right" Width="{StaticResource FixSearchBoxWidth}" Margin="6">
+									<Grid Background="WhiteSmoke" HorizontalAlignment="Right" Width="{StaticResource FixSearchBoxWidth}" Margin="6">
 										<Grid.ColumnDefinitions>
 											<ColumnDefinition/>
 											<ColumnDefinition Width="20"/>

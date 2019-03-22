@@ -104,8 +104,9 @@ specific language governing permissions and limitations under the Licence.
 					<StackPanel>
 						<Grid x:Name="HeaderGrid" Height="36" Background="Transparent">
 							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="16" />
+								<ColumnDefinition Width="15" />
 								<ColumnDefinition />
+								<ColumnDefinition Width="8" />
 							</Grid.ColumnDefinitions>
 							<Border x:Name="selectionMarker"
 									Width="4"
@@ -119,15 +120,14 @@ specific language governing permissions and limitations under the Licence.
 											  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 											  TextElement.FontSize="14"
 											  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-											  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,1,1,1'}"
+											  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,0,0,0'}"
 											  VerticalAlignment="Center" />
 							<!--custom visual focus-->
 							<Rectangle x:Name="focusRect"
-									   Grid.ColumnSpan="2"
-									   Margin="6,0,0,0"
+									   Grid.ColumnSpan="3"
 									   Stroke="{DynamicResource PPSnMarkerBrush}"
 									   StrokeThickness="1"
-									   StrokeDashArray="1 2"
+									   StrokeDashArray="2 1"
 									   RenderOptions.EdgeMode="Aliased"
 									   SnapsToDevicePixels="True"
 									   Opacity="0" />
@@ -151,13 +151,15 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style TargetType="pps:PpsSideBarPanel">
+		<Setter Property="FocusVisualStyle" Value="{DynamicResource PpsFocusVisualStyle}" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarPanel}">
 					<Grid x:Name="HeaderGrid" Height="36" Background="Transparent">
 						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="16" />
+							<ColumnDefinition Width="15" />
 							<ColumnDefinition />
+							<ColumnDefinition Width="8" />
 						</Grid.ColumnDefinitions>
 						<Border x:Name="selectionMarker"
 								Width="4"
@@ -171,7 +173,7 @@ specific language governing permissions and limitations under the Licence.
 										  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 										  TextElement.FontSize="14"
 										  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent}, Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,1,1,1'}"
+										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent}, Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,0,0,0'}"
 										  VerticalAlignment="Center" />
 					</Grid>
 					<ControlTemplate.Triggers>
@@ -188,6 +190,7 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style TargetType="pps:PpsSideBarPanelFilter">
+		<Setter Property="FocusVisualStyle" Value="{DynamicResource PpsFocusVisualStyle}" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarPanelFilter}">
@@ -196,6 +199,7 @@ specific language governing permissions and limitations under the Licence.
 							<ColumnDefinition Width="15" />
 							<ColumnDefinition Width="Auto" />
 							<ColumnDefinition />
+							<ColumnDefinition Width="8" />
 						</Grid.ColumnDefinitions>
 						<Rectangle x:Name="SelectionMarker"
 								   Width="4"
@@ -220,7 +224,7 @@ specific language governing permissions and limitations under the Licence.
 										  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 										  TextElement.FontSize="14"
 										  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,1,1,1'}"
+										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,0,0,0'}"
 										  VerticalAlignment="Center" />
 					</Grid>
 					<ControlTemplate.Triggers>
@@ -244,7 +248,7 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style x:Key="{x:Static pps:PpsSideBarItemsBase.PpsSideBarSeparator}" TargetType="{x:Type Separator}">
-		<Setter Property="Foreground" Value="Blue" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnSeparatorBrush}" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Separator}">
