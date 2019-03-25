@@ -263,7 +263,6 @@
 							</Style>
 						</CheckBox.Style>
 					</CheckBox>
-
 				</Grid>
 
 				<ItemsControl Grid.Row="2" ItemsSource="{Binding Statistics}" Focusable="False">

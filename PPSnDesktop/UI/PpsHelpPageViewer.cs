@@ -26,7 +26,7 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
-	public class PpsHelpPageViewer : Control
+	internal class PpsHelpPageViewer : Control
 	{
 		private PpsEnvironment environment;
 		private IPpsObjectDataAccess currentHelpPage = null;
@@ -87,7 +87,7 @@ namespace TecWare.PPSn.UI
 		{
 			base.OnApplyTemplate();
 
-			environment = (PpsEnvironment)PpsShellWpf.GetShell(this);
+			environment = PpsEnvironment.GetEnvironment(this);
 			if (HelpKey != null)
 				BeginUpdateHelpPage();
 		} // proc OnApplyTemplate
@@ -112,8 +112,6 @@ namespace TecWare.PPSn.UI
 
 		private async Task EditHelpPageAsync()
 		{
-			var windowPane = PpsEnvironment.GetCurrentPane(this);
-
 			var helpObj = await GetCurrentHelpPageObjectAsync();
 			if (helpObj == null)
 			{

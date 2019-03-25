@@ -74,6 +74,8 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
 		public PpsNavigationListBox()
 		{
 			CommandBindings.Add(new CommandBinding(PpsControlCommands.ExecuteCommand,
@@ -99,6 +101,10 @@ namespace TecWare.PPSn.UI
 				}
 			));
 		} // ctor
+
+		#endregion
+
+		#region -- Lua/Marcor execution -----------------------------------------------
 
 		private string GetLuaText(string userFilterText)
 			=> userFilterText.Substring(2);
@@ -142,6 +148,8 @@ namespace TecWare.PPSn.UI
 
 		protected override PpsDataFilterExpression GetUserFilterExpression()
 			=> FilterMode == PpsNavigationFilterMode.Filter ? base.GetUserFilterExpression() : PpsDataFilterExpression.True;
+
+		#endregion
 	} // class PpsNavigationListBox
 
 	#endregion

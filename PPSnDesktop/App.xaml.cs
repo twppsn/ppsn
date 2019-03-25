@@ -309,6 +309,7 @@ namespace TecWare.PPSn
 			PpsShell.SetShell(env);
 		} // proc SetEnvironment
 
+		/// <summary>Return the current environemnt</summary>
 		public PpsEnvironment Environment => currentEnvironment;
 	} // class App
 }
