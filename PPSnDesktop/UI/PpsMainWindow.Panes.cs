@@ -102,6 +102,7 @@ namespace TecWare.PPSn.UI
 		} // proc AddPane
 
 		/// <summary></summary>
+		/// <param name="paneType"></param>
 		/// <param name="arguments"></param>
 		/// <param name="compatibleAllowed"></param>
 		/// <returns></returns>

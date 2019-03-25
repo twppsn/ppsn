@@ -679,6 +679,10 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary>Get template for the specific object.</summary>
+		/// <param name="data"></param>
+		/// <param name="container"></param>
+		/// <returns></returns>
 		public override DataTemplate GetDataTemplate(object data, DependencyObject container)
 		{
 			string key = null;
@@ -688,9 +692,7 @@ namespace TecWare.PPSn
 				key = o.Typ;
 			else if (data is PpsMasterDataRow r)
 				key = "Master." + r.Table.Definition.Name;
-			else
-				key = ((dynamic)data).Typ;
-
+			
 			if (key == null)
 				return null;
 
@@ -698,6 +700,9 @@ namespace TecWare.PPSn
 			return typeDef?.FindTemplate(data);
 		} // func GetDataTemplate
 		
+		/// <summary>Create progessbar for background tasks.</summary>
+		/// <param name="blockUI"></param>
+		/// <returns></returns>
 		protected override IPpsProgress CreateProgressCore(bool blockUI)
 			=> BackgroundProgressState.CreateProgress(false); 
 
@@ -1742,27 +1747,16 @@ namespace TecWare.PPSn
 			}
 		} // func LoadAssemblyFromUriAsync
 
+		/// <summary>Pre load an assembly.</summary>
+		/// <param name="fileName"></param>
+		/// <returns></returns>
 		public static Task LoadAssemblyFromLocalAsync(string fileName)
 			=> LoadAssemblyFromUriAsync(new Uri("file://" + fileName.Replace('\\', '/')));
 
 		/// <summary>Get the Environment, that is attached to the current application.</summary>
 		/// <returns></returns>
-		public static PpsEnvironment GetEnvironment()
-			=> (PpsEnvironment)Application.Current?.TryFindResource(PpsShellWpf.ShellService);
-
-		private static IPpsWindowPane GetCurrentPaneCore(FrameworkElement ui)
-			=> (IPpsWindowPane)ui.TryFindResource(PpsWindowPaneHelper.WindowPaneService);
-
-		/// <summary>Get the current pane from the ui element.</summary>
-		/// <param name="ui"></param>
-		/// <returns></returns>
-		public static IPpsWindowPane GetCurrentPane(FrameworkElement ui)
-			=> GetCurrentPaneCore(ui) ?? GetCurrentPane();
-
-		/// <summary>Get the current pane from the focused element.</summary>
-		/// <returns></returns>
-		public static IPpsWindowPane GetCurrentPane()
-			=> GetCurrentPaneCore(Keyboard.FocusedElement as FrameworkElement);
+		public static PpsEnvironment GetEnvironment(DependencyObject dependencyObject = null)
+			=> GetShell<PpsEnvironment>(dependencyObject);
 	} // class PpsEnvironment
 
 	#endregion

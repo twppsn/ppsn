@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,7 +28,6 @@ using System.Xaml;
 using System.Xml;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Controls;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -45,44 +45,82 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsDataListTemplateSelector --------------------------------------
-
-	/// <summary>Template selector for object templates</summary>
-	public class PpsDataListTemplateSelector : DataTemplateSelector
-	{
-		private readonly PpsShellWpf shell;
-		private readonly DataTemplate defaultTemplate;
-
-		/// <summary></summary>
-		/// <param name="shell"></param>
-		public PpsDataListTemplateSelector(PpsShellWpf shell)
-		{
-			this.shell = shell;
-
-			defaultTemplate = shell.FindResource<DataTemplate>("DefaultListTemplate");
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="item"></param>
-		/// <param name="container"></param>
-		/// <returns></returns>
-		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-			=> shell.GetDataTemplate(item, container) ?? defaultTemplate;
-	} // class PpsDataListTemplateSelector
-
-	#endregion
-
-
 	#region -- class PpsShellWpf ------------------------------------------------------
 
 	/// <summary></summary>
 	public abstract class PpsShellWpf : PpsShell, IPpsXamlCode
 	{
-		/// <summary>Resource key for the environment</summary>
-		public const string ShellService = "PpsEnvironmentService";
+		#region -- class InstanceKey --------------------------------------------------
+
+		/// <summary>Special key to select templates.</summary>
+		private sealed class InstanceKey<T> : ResourceKey
+			where T : class
+		{
+			public InstanceKey()
+			{
+			} // ctor
+
+			public override int GetHashCode()
+				=> typeof(T).GetHashCode();
+
+			public override bool Equals(object obj)
+				=> obj is T;
+
+			public override Assembly Assembly => null;
+		} // class DefaultEnvironmentKeyImpl
+
+		#endregion
+
+		#region -- class DefaultResourceProvider --------------------------------------
+
+		private sealed class DefaultResourceProvider : ResourceDictionary
+		{
+			private readonly PpsShellWpf shell;
+
+			public DefaultResourceProvider(PpsShellWpf shell)
+			{
+				this.shell = shell;
+
+				Add(DefaultEnvironmentKey, shell); // register environment
+			} // ctor
+		} // class DefaultResourceProvider
+
+		#endregion
+
+		#region -- class DefaultStaticDataTemplateSelector ----------------------------
+
+		private sealed class DefaultStaticDataTemplateSelector : DataTemplateSelector
+		{
+			public DefaultStaticDataTemplateSelector()
+			{
+			} // ctor
+
+			public override DataTemplate SelectTemplate(object item, DependencyObject container)
+				=> GetShell<PpsShellWpf>(container)?.GetDataTemplate(item, container);
+		} // class DefaultStaticDataTemplateSelector
+
+		#endregion
+
+		#region -- class DefaultInstanceDataTemplateSelector --------------------------
+
+		private sealed class DefaultInstanceDataTemplateSelector : DataTemplateSelector
+		{
+			private readonly PpsShellWpf shell;
+
+			public DefaultInstanceDataTemplateSelector(PpsShellWpf shell)
+			{
+				this.shell = shell;
+			} // ctor
+
+			public override DataTemplate SelectTemplate(object item, DependencyObject container)
+				=> shell.GetDataTemplate(item, container);
+		} // class DefaultInstanceDataTemplateSelector
+
+		#endregion
 
 		private readonly Dispatcher currentDispatcher;
 		private readonly ResourceDictionary mainResources;
+		private readonly ResourceDictionary defaultResources;
 		private readonly InputManager inputManager;
 		private readonly SynchronizationContext synchronizationContext;
 
@@ -96,6 +134,9 @@ namespace TecWare.PPSn
 		{
 			this.mainResources = mainResources ?? throw new ArgumentNullException(nameof(mainResources));
 
+			defaultResources = new DefaultResourceProvider(this);
+			mainResources.MergedDictionaries.Add(defaultResources);
+
 			inputManager = InputManager.Current;
 			currentDispatcher = Dispatcher.CurrentDispatcher ?? throw new ArgumentNullException(nameof(Dispatcher.CurrentDispatcher));
 			synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
@@ -104,12 +145,9 @@ namespace TecWare.PPSn
 			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer(e);
 
+			DefaultDataTemplateSelector = new DefaultInstanceDataTemplateSelector(this);
 			DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, this, e));
 			DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, this, e));
-			DefaultDataTemplateSelector = new PpsDataListTemplateSelector(this);
-
-			// Register Service
-			mainResources[ShellService] = this;
 		} // ctor
 
 		/// <summary></summary>
@@ -118,7 +156,7 @@ namespace TecWare.PPSn
 		{
 			if (disposing)
 			{
-				mainResources.Remove(ShellService);
+				mainResources.MergedDictionaries.Remove(defaultResources);
 				inputManager.PreProcessInput -= preProcessInputEventHandler;
 			}
 		} // proc Dispose
@@ -237,7 +275,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public T FindResource<T>(object resourceKey)
 			where T : class
-			=> mainResources[resourceKey] as T;
+			=> defaultResources[resourceKey] as T;
 
 		/// <summary>Update a resource from a xml-source.</summary>
 		/// <param name="xamlSource"></param>
@@ -307,7 +345,7 @@ namespace TecWare.PPSn
 			{
 				// check resource key
 				if (resourceKey == null // no resource key to check, do not load
-					|| mainResources[resourceKey] == null) // no resource, might be imported
+					|| defaultResources[resourceKey] == null) // no resource, might be imported
 					throw;
 				else
 				{
@@ -323,7 +361,7 @@ namespace TecWare.PPSn
 
 			// update resource
 			//Debug.Print("UpdateResouce: ({1}){0}", resourceKey, resourceKey.GetType().Name);
-			mainResources[resourceKey] = resource;
+			defaultResources[resourceKey] = resource;
 			return resourceKey;
 		} // func UpdateResource
 
@@ -338,8 +376,8 @@ namespace TecWare.PPSn
 				return fe.TryFindResource(key);
 			else if (dependencyObject is FrameworkContentElement fce)
 				return fce.TryFindResource(key);
-			else 
-				return mainResources[key] ?? Application.Current.TryFindResource(key);
+			else
+				return defaultResources[key] ?? Application.Current.TryFindResource(key);
 		} // func GetResource
 
 		void IPpsXamlCode.CompileCode(Uri uri, string code)
@@ -396,7 +434,7 @@ namespace TecWare.PPSn
 		[LuaMember(nameof(AppendException))]
 		public void AppendException(Exception exception, string alternativeMessage = null)
 			=> ShowException(ExceptionShowFlags.Background, exception, alternativeMessage);
-		
+
 		/// <param name="text"></param>
 		/// <param name="button"></param>
 		/// <param name="image"></param>
@@ -423,10 +461,6 @@ namespace TecWare.PPSn
 		/// <param name="container"></param>
 		/// <returns></returns>
 		public abstract DataTemplate GetDataTemplate(object data, DependencyObject container);
-
-		/// <summary></summary>
-		[LuaMember]
-		public DataTemplateSelector DefaultDataTemplateSelector { get; }
 
 		/// <summary>Return the pane type from an pane type identifier.</summary>
 		/// <param name="paneType"></param>
@@ -536,16 +570,92 @@ namespace TecWare.PPSn
 
 		/// <summary>Default is utf-8</summary>
 		public sealed override Encoding Encoding => Encoding.UTF8;
-				
-		/// <summary>Get the environment, that is attached to the current ui-element.</summary>
-		/// <param name="ui"></param>
-		/// <returns></returns>
-		public static PpsShellWpf GetShell(FrameworkElement ui)
-			=> (PpsShellWpf)ui.FindResource(ShellService);
 
 		/// <summary>Lua ui-wpf framwework.</summary>
 		[LuaMember("UI")]
 		public LuaUI LuaUI { get; } = new LuaUI();
+
+		#region -- GetShell, GetCurrentPane -------------------------------------------
+
+		/// <summary>Get the environment, that is attached to the current element.</summary>
+		/// <param name="dependencyObject"></param>
+		/// <returns></returns>
+		public static PpsShellWpf GetShell(DependencyObject dependencyObject = null)
+			=> GetShell<PpsShellWpf>(dependencyObject);
+
+		/// <summary>Get the environment, that is attached to the current element.</summary>
+		/// <param name="dependencyObject"></param>
+		/// <returns></returns>
+		/// <typeparam name="T"></typeparam>
+		public static T GetShell<T>(DependencyObject dependencyObject = null)
+			where T : PpsShellWpf
+		{
+			switch (dependencyObject)
+			{
+				case null:
+					goto default;
+				case FrameworkElement fe:
+					return (T)fe.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
+				case FrameworkContentElement fce:
+					return (T)fce.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
+				default:
+					return (T)Application.Current.TryFindResource(DefaultEnvironmentKey);
+			}
+		} // func GetShell
+
+		private static T GetCurrentPaneCore<T>(DependencyObject dependencyObject)
+			where T : class, IPpsWindowPane
+		{
+			switch (dependencyObject)
+			{
+				case null:
+					return default(T);
+				case FrameworkElement fe:
+					return (T)fe.TryFindResource(CurrentWindowPaneKey);
+				case FrameworkContentElement fce:
+					return (T)fce.TryFindResource(CurrentWindowPaneKey);
+				default:
+					return default(T);
+			}
+		} // func GetCurrentPaneCore
+
+		/// <summary>Get the current pane from the focused element.</summary>
+		/// <returns></returns>
+		public static IPpsWindowPane GetCurrentPane()
+			=> GetCurrentPane<IPpsWindowPane>();
+
+		/// <summary>Get the current pane from the focused element.</summary>
+		/// <returns></returns>
+		/// <typeparam name="T"></typeparam>
+		public static T GetCurrentPane<T>()
+			where T : class, IPpsWindowPane
+			=> GetCurrentPaneCore<T>(Keyboard.FocusedElement as DependencyObject);
+
+		/// <summary>Get the environment, that is attached to the current element.</summary>
+		/// <param name="dependencyObject"></param>
+		/// <returns></returns>
+		public static IPpsWindowPane GetCurrentPane(DependencyObject dependencyObject)
+			=> GetCurrentPane<IPpsWindowPane>(dependencyObject);
+
+		/// <summary>Get the environment, that is attached to the current element.</summary>
+		/// <param name="dependencyObject"></param>
+		/// <returns></returns>
+		/// <typeparam name="T"></typeparam>
+		public static T GetCurrentPane<T>(DependencyObject dependencyObject)
+			where T : class, IPpsWindowPane
+			=> GetCurrentPaneCore<T>(dependencyObject) ?? GetCurrentPane<T>();
+
+		/// <summary>Resource key for the environment.</summary>
+		public static ResourceKey DefaultEnvironmentKey { get; } = new InstanceKey<PpsShellWpf>();
+		/// <summary>Resource key for the current pane.</summary>
+		public static ResourceKey CurrentWindowPaneKey { get; } = new InstanceKey<IPpsWindowPane>();
+		/// <summary>Template selection, that redirects to the GetDataTemplate function.</summary>
+		public static DataTemplateSelector StaticDataTemplateSelector => new DefaultStaticDataTemplateSelector();
+
+		/// <summary></summary>
+		public DataTemplateSelector DefaultDataTemplateSelector { get; }
+
+		#endregion
 	} // class PpsShellWpf
 
 	#endregion

@@ -276,6 +276,9 @@ namespace TecWare.PPSn
 		} // prop this
 
 		#endregion
+
+		/// <summary>Table definition for the arguments.</summary>
+		protected PpsDataTableDefinition Table => table;
 	} // class PpsDataRowOperationArguments
 
 	#endregion
@@ -1721,19 +1724,18 @@ namespace TecWare.PPSn
 
 			private sealed class PpsDataRowOperationBatchArguments : PpsDataRowOperationArguments
 			{
-				private readonly PpsDataTableDefinition table;
 				private readonly string[] parameterValues;
 
 				public PpsDataRowOperationBatchArguments(PpsDataTableDefinition table, string[] parameterValues)
-					:base(table)
+					: base(table)
 				{
 					this.parameterValues = parameterValues ?? throw new ArgumentNullException(nameof(table));
 				} // ctor
 
 				public override bool IsValueChanged(int index)
-					=> table.Columns[index].Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, String.Empty) != "#";
+					=> Table.Columns[index].Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, String.Empty) != "#";
 
-				protected override object GetValueCore(int i) 
+				protected override object GetValueCore(int i)
 					=> parameterValues[i];
 			} // class PpsDataRowOperationArgument
 
