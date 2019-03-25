@@ -19,10 +19,20 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Input;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsComboBoxItem --------------------------------------------------
+
+	/// <summary>Item container for the data list.</summary>
+	public class PpsComboBoxItem : ComboBoxItem
+	{
+	} // class PpsComboBoxItem
+
+	#endregion
+
 	#region -- class PpsComboBox ------------------------------------------------------
 
 	/// <summary></summary>
@@ -144,6 +154,8 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		private IPpsDataRowViewFilter filterView = null;
+		private const string FilterBoxTemplateName = "PART_FilterBox";
+		private PpsTextBox filterBox;
 
 		bool IPpsNullableControl.CanClear => IsEnabled && IsNullable && SelectedIndex >= 0;
 
@@ -167,6 +179,42 @@ namespace TecWare.PPSn.Controls
 			UpdateFilterExpression();
 			UpdateFilterable();
 		} // proc OnItemsSourceChanged
+
+		/// <summary></summary>
+		public override void OnApplyTemplate()
+		{
+			base.OnApplyTemplate();
+
+			if (GetTemplateChild(FilterBoxTemplateName) is PpsTextBox box)
+				filterBox = box;
+		} // proc OnApplyTemplate
+
+		/// <summary></summary>
+		protected override void OnDropDownOpened(EventArgs e)
+		{
+			base.OnDropDownOpened(e);
+			if (IsFilterable)
+			{
+				//var focusScope = FocusManager.GetFocusScope(filterBox);
+				//FocusManager.SetFocusedElement(focusScope, filterBox);
+				//var xxx = Keyboard.Focus(filterBox);
+			}
+		} // proc OnDropDownOpened
+
+		#region -- Item Container -----------------------------------------------------
+
+		/// <summary></summary>
+		/// <returns></returns>
+		protected override DependencyObject GetContainerForItemOverride()
+			=> new PpsComboBoxItem();
+
+		/// <summary></summary>
+		/// <param name="item"></param>
+		/// <returns></returns>
+		protected override bool IsItemItsOwnContainerOverride(object item)
+			=> item is PpsComboBoxItem;
+
+		#endregion
 
 		static PpsComboBox()
 		{
