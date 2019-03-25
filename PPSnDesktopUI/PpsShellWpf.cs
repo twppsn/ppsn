@@ -381,7 +381,22 @@ namespace TecWare.PPSn
 		} // func GetResource
 
 		void IPpsXamlCode.CompileCode(Uri uri, string code)
-			=> throw new NotSupportedException(); // todo: load environment extensions
+			=> CompileCodeForXaml(this, uri, code);
+
+		/// <summary></summary>
+		/// <param name="self"></param>
+		/// <param name="uri"></param>
+		/// <param name="code"></param>
+		public void CompileCodeForXaml(LuaTable self, Uri uri, string code)
+		{
+			var request = self as IPpsRequest ?? this;
+
+			var compileTask =
+				code != null
+				? CompileAsync(code, uri?.OriginalString ?? "dummy.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
+				: request.CompileAsync(uri, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+			compileTask.AwaitTask().Run(self, self);
+		} // proc CompileCode
 
 		#endregion
 

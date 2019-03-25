@@ -85,13 +85,7 @@ namespace TecWare.PPSn.UI
 		#region -- IPpsXamlCode members -----------------------------------------------
 
 		void IPpsXamlCode.CompileCode(Uri uri, string code)
-		{
-			var compileTask =
-				code != null
-				? Shell.CompileAsync(code, uri?.OriginalString ?? "dummy.lua", true)
-				: this.CompileAsync(uri, true);
-			compileTask.AwaitTask().Run(this);
-		} // proc CompileCode
+			=> ShellWpf.CompileCodeForXaml(this, uri, code);
 		
 		#endregion
 
@@ -710,15 +704,9 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#region -- IPpsXamlCode members -----------------------------------------------
-		
+
 		void IPpsXamlCode.CompileCode(Uri uri, string code)
-		{
-			var compileTask =
-				code != null
-				? Shell.CompileAsync(code, uri?.OriginalString ?? "dummy.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
-				: this.CompileAsync(uri, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-			compileTask.AwaitTask().Run(this, this);
-		} // proc CompileCode
+			=> ((PpsShellWpf)Shell).CompileCodeForXaml(this, uri, code);
 		
 		#endregion
 

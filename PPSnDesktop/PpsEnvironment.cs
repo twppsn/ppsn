@@ -29,11 +29,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Threading;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -69,7 +67,7 @@ namespace TecWare.PPSn
 		protected PpsEnvironmentDefinition(PpsEnvironment environment, string name)
 		{
 			if (String.IsNullOrEmpty(name))
-				throw new ArgumentNullException("name");
+				throw new ArgumentNullException(nameof(name));
 			this.environment = environment;
 			this.name = name;
 		} // ctor
@@ -499,7 +497,7 @@ namespace TecWare.PPSn
 
 		private readonly PpsEnvironmentCollection<PpsActionDefinition> actions;
 		private readonly PpsEnvironmentCollection<PpsViewDefinition> views;
-		private readonly PpsEnvironmentCollection<PpsDataListItemDefinition> templateDefinitions;
+		private readonly PpsEnvironmentCollection<PpsDataTemplateDefinition> templateDefinitions;
 
 		private readonly PpsProgressStack backgroundProgress;
 		private readonly PpsProgressStack forgroundProgress;
@@ -525,7 +523,7 @@ namespace TecWare.PPSn
 
 			actions = new PpsEnvironmentCollection<PpsActionDefinition>(this);
 			views = new PpsEnvironmentCollection<PpsViewDefinition>(this);
-			templateDefinitions = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
+			templateDefinitions = new PpsEnvironmentCollection<PpsDataTemplateDefinition>(this);
 
 			CompileOptions = new LuaCompileOptions()
 			{
@@ -686,18 +684,21 @@ namespace TecWare.PPSn
 		public override DataTemplate GetDataTemplate(object data, DependencyObject container)
 		{
 			string key = null;
-			if (data is LuaTable t)
+
+			if (data is LuaTable t) // get type property from table as key
 				key = t.GetMemberValue("Typ") as string;
-			else if (data is PpsObject o)
+			else if (data is PpsObject o) // is 
 				key = o.Typ;
 			else if (data is PpsMasterDataRow r)
 				key = "Master." + r.Table.Definition.Name;
-			
+			else if (data is string k)
+				key = k;
+
 			if (key == null)
 				return null;
 
-			var typeDef = templateDefinitions[key];
-			return typeDef?.FindTemplate(data);
+			var templInfo = templateDefinitions[key];
+			return templInfo?.FindTemplate(data, container);
 		} // func GetDataTemplate
 		
 		/// <summary>Create progessbar for background tasks.</summary>
@@ -1526,11 +1527,14 @@ namespace TecWare.PPSn
 		public DirectoryInfo LocalPath => localDirectory;
 
 		/// <summary>List of actions defined for an context.</summary>
-		[LuaMember(nameof(Actions))]
+		[LuaMember]
 		public PpsEnvironmentCollection<PpsActionDefinition> Actions => actions;
 		/// <summary>Navigator views.</summary>
-		[LuaMember(nameof(Views))]
+		[LuaMember]
 		public PpsEnvironmentCollection<PpsViewDefinition> Views => views;
+		/// <summary>Registered global templates</summary>
+		[LuaMember]
+		public PpsEnvironmentCollection<PpsDataTemplateDefinition> Templates => templateDefinitions;
 
 		/// <summary>The current mode of the environment.</summary>
 		public PpsEnvironmentMode CurrentMode { get; private set; } = PpsEnvironmentMode.None;
@@ -1542,10 +1546,12 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public bool IsOnline => CurrentState == PpsEnvironmentState.Online;
 
+		/// <summary>Access trace log</summary>
 		[LuaMember]
 		public override IPpsLogger Log => traceLog;
 		
 		/// <summary>Test if Network is present.</summary>
+		[LuaMember]
 		public bool IsNetworkPresent
 			=> System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
 

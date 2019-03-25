@@ -15,10 +15,12 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -26,57 +28,184 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
+using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn
 {
-	#region -- class PpsDataListItemDefinition ----------------------------------------
+	#region -- class PpsDataTemplateDefinition ----------------------------------------
 
-	internal sealed class PpsDataListItemDefinition : PpsEnvironmentDefinition
+	/// <summary>Template container.</summary>
+	public sealed class PpsDataTemplateDefinition : PpsEnvironmentDefinition
 	{
-		#region -- class TemplateItem -----------------------------------------------------
+		#region -- class TemplateSelectScope ------------------------------------------
+
+		private class TemplateSelectScope : IDynamicMetaObjectProvider
+		{
+			#region -- class TemplateSelectScopeMetaObject ----------------------------
+
+			/// <summary></summary>
+			private sealed class TemplateSelectScopeMetaObject : DynamicMetaObject
+			{
+				public TemplateSelectScopeMetaObject(LExpression expression, object value)
+					: base(expression, BindingRestrictions.Empty, value)
+				{
+				} // ctor
+
+				private DynamicMetaObject GetRawItemBinder()
+				{
+					if (Value is TemplateSelectScope scope)
+					{
+						var rawItemExpression = LExpression.Property(LExpression.Convert(Expression, typeof(TemplateSelectScope)), nameof(RawItem));
+						var restriction = BindingRestrictions.GetTypeRestriction(Expression, typeof(TemplateSelectScope));
+						return new DynamicMetaObject(rawItemExpression, restriction, scope.RawItem);
+					}
+					else
+						throw new NotSupportedException();
+				} // func GetRawItemBinder
+
+				public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+				{
+					if (String.Compare(binder.Name, nameof(RawItem), binder.IgnoreCase) == 0
+						|| String.Compare(binder.Name, nameof(Container), binder.IgnoreCase) == 0)
+						base.BindGetMember(binder);
+
+					if (!HasValue)
+						return binder.Defer(this);
+
+					// redirect to the item
+					return binder.FallbackGetMember(GetRawItemBinder());
+				} // func BindGetMember
+
+				public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args)
+				{
+					if (!HasValue)
+						return binder.Defer(this, args);
+
+					// redirect to the item
+					return binder.FallbackInvoke(GetRawItemBinder(), args);
+				} // func BindInvoke
+
+				public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
+				{
+					if (String.Compare(binder.Name, nameof(IsSmall), binder.IgnoreCase) == 0
+						|| String.Compare(binder.Name, nameof(IsLarge), binder.IgnoreCase) == 0)
+						return base.BindInvokeMember(binder, args);
+
+					if (!HasValue)
+						return binder.Defer(this, args);
+
+					// redirect to the item
+					return binder.FallbackInvokeMember(GetRawItemBinder(), args);
+				} // func BindInvokeMember
+
+				public override DynamicMetaObject BindGetIndex(GetIndexBinder binder, DynamicMetaObject[] indexes)
+				{
+					if (!HasValue)
+						return binder.Defer(this, indexes);
+
+					// redirect to the item
+					return binder.FallbackGetIndex(GetRawItemBinder(), indexes);
+				} // func BindGetIndex
+			} // class TemplateSelectScopeMetaObject
+
+			#endregion
+
+			private readonly object item;
+			private readonly DependencyObject container;
+
+			public TemplateSelectScope(object item, DependencyObject container)
+			{
+				this.item = item ?? throw new ArgumentNullException(nameof(item));
+				this.container = container ?? throw new ArgumentNullException(nameof(container));
+			} // proc TemplateSelectScope
+
+			DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(LExpression parameter)
+				=> new TemplateSelectScopeMetaObject(parameter, this);
+
+			public bool IsSmall()
+				=> false;
+
+			public bool IsLarge()
+				=> true;
+
+			public object Container => container;
+			public object RawItem => item;
+		} // class TemplateSelectScope
+
+		#endregion
+
+		#region -- class TemplateItem -------------------------------------------------
 
 		private sealed class TemplateItem : IComparable<TemplateItem>
 		{
 			private readonly DataTemplate template;         // template of the row
 			private readonly Func<object, bool> condition;  // condition if the template is for this item
 			private readonly int priority;                  // select order
-			private readonly string onlineViewId;           // view, that returns extended data for the row
 
-			public TemplateItem(int priority, Func<object, bool> condition, string onlineViewId, DataTemplate template)
+			public TemplateItem(int priority, Func<object, bool> condition, DataTemplate template)
 			{
 				this.priority = priority;
 				this.condition = condition;
-				this.onlineViewId = onlineViewId;
 				this.template = template ?? throw new ArgumentNullException(nameof(template));
-
 			} // ctor
 
 			public int CompareTo(TemplateItem other)
 				=> Priority - other.Priority;
 
-			/// <summary>Runs the condition, if the template is accepted.</summary>
-			/// <param name="item"></param>
-			/// <returns></returns>
-			public bool SelectTemplate(dynamic item)
-			{
-				if (condition == null)
-					return template != null;
-				else
-					return condition(item);
-			} // func SelectTemplate
+			public bool SelectTemplate(TemplateSelectScope scope)
+				=> condition?.Invoke(scope) ?? true;
 
-			public string OnlineViewId => onlineViewId;
 			public int Priority => priority;
 			public DataTemplate Template => template;
 		} // class TemplateItem
 
 		#endregion
 
+		#region -- class DefaultDataTemplateSelector ----------------------------------
+
+		private sealed class DefaultDataTemplateSelector : DataTemplateSelector
+		{
+			private readonly PpsDataTemplateDefinition templateDefinition;
+
+			public DefaultDataTemplateSelector(PpsDataTemplateDefinition templateDefinition)
+			{
+				this.templateDefinition = templateDefinition ?? throw new ArgumentNullException(nameof(templateDefinition));
+			}
+
+			public override DataTemplate SelectTemplate(object item, DependencyObject container)
+				=> templateDefinition.FindTemplate(item, container);
+		} // class DefaultDataTemplateSelector
+
+		#endregion
+
+		#region -- class TemplateCode -------------------------------------------------
+
+		private sealed class TemplateCode : LuaShellTable, IPpsXamlCode
+		{
+			public TemplateCode(PpsShellWpf shell) 
+				: base(shell)
+			{
+			} // ctor
+
+			#region -- IPpsXamlCode members -----------------------------------------------
+
+			void IPpsXamlCode.CompileCode(Uri uri, string code)
+				=> ((PpsShellWpf)Shell).CompileCodeForXaml(Shell, uri, code);
+			
+			#endregion
+		} // class TemplateCode
+
+		#endregion
+
+		private readonly DataTemplateSelector templateSelector;
+		private readonly TemplateCode templateCode;
 		private readonly List<TemplateItem> templates = new List<TemplateItem>();
 
-		internal PpsDataListItemDefinition(PpsEnvironment environment, string key)
+		internal PpsDataTemplateDefinition(PpsEnvironment environment, string key)
 			: base(environment, key)
 		{
+			templateSelector = new DefaultDataTemplateSelector(this);
+			templateCode = new TemplateCode(environment);
 		} // ctor
 
 		private async Task<Func<object, bool>> ReadConditionAsync(XmlReader xml)
@@ -94,7 +223,6 @@ namespace TecWare.PPSn
 		{
 			// get base attributes
 			priority = xml.GetAttribute("priority", priority + 1);
-			var onlineViewId = xml.GetAttribute("viewId", String.Empty);
 
 			// read start element
 			await xml.ReadAsync();
@@ -106,9 +234,9 @@ namespace TecWare.PPSn
 					: null;
 
 			// read template
-			var template = await PpsXamlParser.LoadAsync<DataTemplate>(xml.ReadElementAsSubTree(), new PpsXamlReaderSettings { ServiceProvider = Environment });
+			var template = await PpsXamlParser.LoadAsync<DataTemplate>(xml.ReadElementAsSubTree(), new PpsXamlReaderSettings { ServiceProvider = Environment, Code = templateCode });
 
-			var templateItem = new TemplateItem(priority, condition, onlineViewId, template);
+			var templateItem = new TemplateItem(priority, condition, template);
 
 			// insert the item in order of the priority
 			var index = templates.BinarySearch(templateItem);
@@ -120,12 +248,21 @@ namespace TecWare.PPSn
 			return priority;
 		} // proc AppendTemplate
 
-		/// <summary></summary>
-		/// <param name="item"></param>
+		/// <summary>Find template for the specific item.</summary>
+		/// <param name="item">Data item</param>
+		/// <param name="container">Container for the data item</param>
 		/// <returns></returns>
-		public DataTemplate FindTemplate(dynamic item)
-			=> templates.FirstOrDefault(c => c.SelectTemplate(item))?.Template;
-	} // class PpsDataListItemType
+		public DataTemplate FindTemplate(object item, DependencyObject container)
+		{
+			var scope = new TemplateSelectScope(item, container);
+			return templates.FirstOrDefault(c => c.SelectTemplate(scope))?.Template;
+		} // func FindTemplate
+
+		/// <summary>Returns the code fragment for the template.</summary>
+		public LuaTable Code => templateCode;
+		/// <summary>Return the template selector for this template class.</summary>
+		public DataTemplateSelector Selector => templateSelector;
+	} // class PpsDataListItemDefinition
 
 	#endregion
 
@@ -235,7 +372,7 @@ namespace TecWare.PPSn
 							var templateDefinition = templateDefinitions[key];
 							if (templateDefinition == null)
 							{
-								templateDefinition = new PpsDataListItemDefinition(this, key);
+								templateDefinition = new PpsDataTemplateDefinition(this, key);
 								templateDefinitions.AppendItem(templateDefinition);
 							}
 							priority = await templateDefinition.AppendTemplateAsync(xml, priority);
