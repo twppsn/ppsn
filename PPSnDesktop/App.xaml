@@ -7,6 +7,7 @@
 		<ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/PPSn.Desktop.UI;component/UI/UI.xaml" />
+				<ResourceDictionary Source="Themes\DefaultTemplates.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>

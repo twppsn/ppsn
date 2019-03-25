@@ -17,7 +17,6 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:ui="clr-namespace:TecWare.PPSn.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
-
 	<!--<ui:LuaValueConverter x:Key="CollapseInaktiveConverter">
 		<![CDATA[
 		if value ~= nil and value then

@@ -36,8 +36,12 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsComboBox ------------------------------------------------------
 
 	/// <summary></summary>
+	[TemplatePart(Name = FilterBoxTemplateName, Type = typeof(PpsTextBox))]
 	public class PpsComboBox : ComboBox, IPpsNullableControl
 	{
+		/// <summary>Template name for the filter box</summary>
+		public const string FilterBoxTemplateName = "PART_FilterBox";
+
 		#region -- UserFilterText - Property ------------------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -154,7 +158,6 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		private IPpsDataRowViewFilter filterView = null;
-		private const string FilterBoxTemplateName = "PART_FilterBox";
 		private PpsTextBox filterBox;
 
 		bool IPpsNullableControl.CanClear => IsEnabled && IsNullable && SelectedIndex >= 0;
@@ -213,6 +216,24 @@ namespace TecWare.PPSn.Controls
 		/// <returns></returns>
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsComboBoxItem;
+
+		/// <summary></summary>
+		/// <param name="element"></param>
+		/// <param name="item"></param>
+		protected override void PrepareContainerForItemOverride(DependencyObject element, object item)
+		{
+			base.PrepareContainerForItemOverride(element, item);
+
+			if (element is PpsComboBoxItem container)
+			{
+				if (container.ContentTemplate == null
+					&& container.ContentTemplateSelector == null
+					&& container.ContentStringFormat == null)
+				{
+					container.ContentTemplateSelector = PpsShellWpf.GetShell(this).DefaultDataTemplateSelector;
+				}
+			}
+		} // proc PrepareContainerForItemOverride
 
 		#endregion
 

@@ -386,8 +386,12 @@ namespace TecWare.PPSn.Controls
 			base.PrepareContainerForItemOverride(element, item);
 			if (element is PpsDataListItem container)
 			{
-				if (container.ContentTemplate == null && container.ContentTemplateSelector == null)
+				if (container.ContentTemplate == null
+					&& container.ContentTemplateSelector == null
+					&& container.ContentStringFormat == null)
+				{
 					container.ContentTemplateSelector = PpsShellWpf.GetShell(this).DefaultDataTemplateSelector;
+				}
 
 				container.Commands = GetItemCommands(element, item);
 			}

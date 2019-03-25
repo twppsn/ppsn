@@ -344,7 +344,7 @@ namespace TecWare.PPSn.UI
 				//	|| table.Definition.Meta.TryGetProperty("Wpf.SelectedValueTemplateResourceKey", out selectedValueResourceKey))
 				//	combobox.SelectedValueTemplate = Environment.FindResource<DataTemplate>(selectedValueResourceKey);
 				//else
-					combobox.SelectedValueTemplate = combobox.ItemTemplate;
+				//	combobox.SelectedValueTemplate = combobox.ItemTemplate;
 			}
 
 			return combobox;

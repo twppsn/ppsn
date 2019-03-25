@@ -677,30 +677,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		/// <summary>Get template for the specific object.</summary>
-		/// <param name="data"></param>
-		/// <param name="container"></param>
-		/// <returns></returns>
-		public override DataTemplate GetDataTemplate(object data, DependencyObject container)
-		{
-			string key = null;
-
-			if (data is LuaTable t) // get type property from table as key
-				key = t.GetMemberValue("Typ") as string;
-			else if (data is PpsObject o) // is 
-				key = o.Typ;
-			else if (data is PpsMasterDataRow r)
-				key = "Master." + r.Table.Definition.Name;
-			else if (data is string k)
-				key = k;
-
-			if (key == null)
-				return null;
-
-			var templInfo = templateDefinitions[key];
-			return templInfo?.FindTemplate(data, container);
-		} // func GetDataTemplate
-		
 		/// <summary>Create progessbar for background tasks.</summary>
 		/// <param name="blockUI"></param>
 		/// <returns></returns>
