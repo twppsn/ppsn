@@ -20,6 +20,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
@@ -29,6 +30,29 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Item container for the data list.</summary>
 	public class PpsComboBoxItem : ComboBoxItem
 	{
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnMouseEnter(MouseEventArgs e)
+		{
+			if (ParentComboBox != null && ParentComboBox.IsFilterable)
+			{
+				var focusAble = Focusable;
+				try
+				{
+					// OnMouseEnter will set focus by default, mark the container as not focusable
+					Focusable = false;
+					base.OnMouseEnter(e);
+				}
+				finally
+				{
+					Focusable = focusAble;
+				}
+			}
+			else
+				base.OnMouseEnter(e);
+		} // proc OnMouseEnter
+
+		internal PpsComboBox ParentComboBox => ItemsControl.ItemsControlFromItemContainer(this) as PpsComboBox;
 	} // class PpsComboBoxItem
 
 	#endregion
@@ -87,7 +111,7 @@ namespace TecWare.PPSn.Controls
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private void UpdateFilterable()
-			=> SetValue(isFilterablePropertyKey, BooleanBox.GetObject(filterView != null && AllowFilter));
+			=> SetValue(isFilterablePropertyKey, BooleanBox.GetObject(filterBox != null && filterView != null && AllowFilter));
 
 		private static void OnAllowFilterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsComboBox)d).UpdateFilterable();
@@ -188,21 +212,54 @@ namespace TecWare.PPSn.Controls
 		{
 			base.OnApplyTemplate();
 
-			if (GetTemplateChild(FilterBoxTemplateName) is PpsTextBox box)
-				filterBox = box;
+			filterBox = (PpsTextBox)GetTemplateChild(FilterBoxTemplateName);
+			if (filterBox != null)
+			{
+				filterBox.PreviewKeyDown += FilterBox_PreviewKeyDown;
+			}
+
+			UpdateFilterable();
 		} // proc OnApplyTemplate
 
+		private void FilterBox_PreviewKeyDown(object sender, KeyEventArgs e)
+		{
+			if (filterBox.IsKeyboardFocusWithin)
+			{
+				switch (e.Key)
+				{
+					case Key.Up:
+					case Key.Down:
+						OnKeyDown(e); // will change focus
+						filterBox.Focus(); // enforce focus
+						break;
+					case Key.Return:
+					case Key.Escape:
+						OnKeyDown(e);
+						break;
+				}
+			}
+		} // event FilterBox_PreviewKeyDown
+
 		/// <summary></summary>
+		/// <param name="e"></param>
 		protected override void OnDropDownOpened(EventArgs e)
 		{
 			base.OnDropDownOpened(e);
 			if (IsFilterable)
 			{
-				//var focusScope = FocusManager.GetFocusScope(filterBox);
-				//FocusManager.SetFocusedElement(focusScope, filterBox);
-				//var xxx = Keyboard.Focus(filterBox);
+				Focus();
+				Dispatcher.BeginInvoke(DispatcherPriority.Send, new Func<bool>(filterBox.Focus));
 			}
 		} // proc OnDropDownOpened
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnIsKeyboardFocusWithinChanged(DependencyPropertyChangedEventArgs e)
+		{
+			base.OnIsKeyboardFocusWithinChanged(e);
+			if (IsDropDownOpen && IsFilterable)
+				filterBox.Focus();
+		} // proc OnIsKeyboardFocusWithinChanged
 
 		#region -- Item Container -----------------------------------------------------
 

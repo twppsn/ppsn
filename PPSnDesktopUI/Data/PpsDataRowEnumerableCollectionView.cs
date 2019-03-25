@@ -354,7 +354,7 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Test if this collection has items</summary>
 		public override bool IsEmpty
-			=> EnsureItem(0);
+			=> !EnsureItem(0);
 
 		#endregion
 
