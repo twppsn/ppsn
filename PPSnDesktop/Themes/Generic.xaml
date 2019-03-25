@@ -99,7 +99,7 @@
 						</Grid.RowDefinitions>
 						<Border x:Name="AnimatedBorder" Width="0" Height="0" Visibility="Hidden" />
 						<Border x:Name="ContentBorder" Grid.ColumnSpan="2" Grid.RowSpan="2" Background="{DynamicResource PPSnSideBarBackgroundBrush}"
-								Margin="8,0,0,0" Padding="0,0,64,0" HorizontalAlignment="Right" Visibility="Collapsed">
+								Margin="0,0,0,0" Padding="0,0,64,0" HorizontalAlignment="Right" Visibility="Collapsed">
 							<Border.Width>
 								<MultiBinding Converter="{x:Static ui:PpsWindowPaneCharmBarControl.WithConverter}">
 									<Binding Path="Width" ElementName="AnimatedBorder" />

@@ -30,7 +30,6 @@ specific language governing permissions and limitations under the Licence.
 
 	<Style x:Key="PpsComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
-		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}"/>
 		<Setter Property="Control.Template">
 			<Setter.Value>
@@ -127,9 +126,16 @@ specific language governing permissions and limitations under the Licence.
 									MinWidth="{TemplateBinding FrameworkElement.ActualWidth}"
 									MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}"
 									SnapsToDevicePixels="True">
-								<ScrollViewer Style="{DynamicResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
-									<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
-								</ScrollViewer>
+								<Grid>
+									<Grid.RowDefinitions>
+										<RowDefinition Height="Auto" />
+										<RowDefinition />
+									</Grid.RowDefinitions>
+									<pps:PpsTextBox x:Name="PART_FilterBox" Height="23" Margin="6" AdditionalImage="magnify" />
+									<ScrollViewer Grid.Row="1" Style="{DynamicResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
+										<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+									</ScrollViewer>
+								</Grid>
 							</Border>
 						</Popup>
 					</Grid>

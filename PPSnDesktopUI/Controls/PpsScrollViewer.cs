@@ -260,6 +260,12 @@ namespace TecWare.PPSn.Controls
 		public double MaxScaleFactor { get => (double)GetValue(MaxScaleFactorProperty); set => SetValue(MaxScaleFactorProperty, value); }
 		/// <summary>Is zoom allowed.</summary>
 		public bool IsZoomAllowed { get => BooleanBox.GetBool(GetValue(IsZoomAllowedProperty)); set => SetValue(IsZoomAllowedProperty, BooleanBox.GetObject(value)); }
+
+		static PpsScrollViewer()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsScrollViewer), new FrameworkPropertyMetadata(typeof(PpsScrollViewer)));
+		} // sctor
+
 	} // class PpsScrollViewer
 
 	#endregion

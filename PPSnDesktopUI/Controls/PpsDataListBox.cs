@@ -387,7 +387,7 @@ namespace TecWare.PPSn.Controls
 			if (element is PpsDataListItem container)
 			{
 				if (container.ContentTemplate == null && container.ContentTemplateSelector == null)
-					container.ContentTemplateSelector = PpsShellWpf.GetShell().DefaultDataTemplateSelector;
+					container.ContentTemplateSelector = PpsShellWpf.GetShell(this).DefaultDataTemplateSelector;
 
 				container.Commands = GetItemCommands(element, item);
 			}
