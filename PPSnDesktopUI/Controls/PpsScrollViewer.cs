@@ -30,6 +30,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty MinScaleFactorProperty = DependencyProperty.Register(nameof(MinScaleFactor), typeof(double), typeof(PpsScrollViewer), new FrameworkPropertyMetadata(0.1));
 		public static readonly DependencyProperty MaxScaleFactorProperty = DependencyProperty.Register(nameof(MaxScaleFactor), typeof(double), typeof(PpsScrollViewer), new FrameworkPropertyMetadata(20.0));
 		public static readonly DependencyProperty IsZoomAllowedProperty = DependencyProperty.Register(nameof(IsZoomAllowed), typeof(bool), typeof(PpsScrollViewer), new FrameworkPropertyMetadata(false));
+		public static readonly DependencyProperty IsPanningAllowedProperty = DependencyProperty.Register(nameof(IsPanningAllowed), typeof(bool), typeof(PpsScrollViewer), new FrameworkPropertyMetadata(false));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		#region -- Transform primitives -----------------------------------------------
@@ -98,7 +99,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseWheel(MouseWheelEventArgs e)
 		{
-			if (!e.Handled)
+			if (!e.Handled && IsPanningAllowed)
 			{
 				if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
 				{
@@ -123,7 +124,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
-			if (Keyboard.Modifiers == ModifierKeys.None)
+			if (Keyboard.Modifiers == ModifierKeys.None && IsPanningAllowed)
 			{
 				if (Mouse.Capture(this, CaptureMode.Element))
 				{
@@ -139,7 +140,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
-			if (mouseTransformInfo != null)
+			if (mouseTransformInfo != null && IsPanningAllowed)
 			{
 				// check minimal movement
 				if (!mouseTransformInfo.IsStarted)
@@ -158,7 +159,6 @@ namespace TecWare.PPSn.Controls
 
 				e.Handled = true;
 			}
-
 			base.OnMouseMove(e);
 		} // proc OnMouseMove
 
@@ -166,7 +166,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseUp(MouseButtonEventArgs e)
 		{
-			if (Mouse.Captured == this)
+			if (Mouse.Captured == this && IsPanningAllowed)
 			{
 				mouseTransformInfo = null;
 				Mouse.Capture(null);
@@ -260,6 +260,8 @@ namespace TecWare.PPSn.Controls
 		public double MaxScaleFactor { get => (double)GetValue(MaxScaleFactorProperty); set => SetValue(MaxScaleFactorProperty, value); }
 		/// <summary>Is zoom allowed.</summary>
 		public bool IsZoomAllowed { get => BooleanBox.GetBool(GetValue(IsZoomAllowedProperty)); set => SetValue(IsZoomAllowedProperty, BooleanBox.GetObject(value)); }
+		/// <summary>Is panning allowed.</summary>
+		public bool IsPanningAllowed { get => BooleanBox.GetBool(GetValue(IsPanningAllowedProperty)); set => SetValue(IsPanningAllowedProperty, BooleanBox.GetObject(value)); }
 
 		static PpsScrollViewer()
 		{

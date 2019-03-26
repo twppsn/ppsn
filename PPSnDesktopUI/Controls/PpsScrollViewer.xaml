@@ -264,6 +264,7 @@
 												ContentTemplate="{TemplateBinding ContentTemplate}"
 												CanContentScroll="{TemplateBinding CanContentScroll}"
 												Margin="{TemplateBinding Padding}"
+												SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
 												Grid.ColumnSpan="2"
 												Grid.RowSpan="2" />
 						<ScrollBar x:Name="PART_HorizontalScrollBar"
