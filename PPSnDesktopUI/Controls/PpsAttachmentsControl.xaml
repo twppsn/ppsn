@@ -11,7 +11,7 @@ under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
 specific language governing permissions and limitations under the Licence.
 -->
-<UserControl x:Class="TecWare.PPSn.Controls.PpsAttachmentsControl"
+<UserControl x:Class="TecWare.PPSn.Controls.PpsAttachmentsControla"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 

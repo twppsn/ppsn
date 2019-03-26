@@ -107,6 +107,9 @@
     <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Views.cs" />
     <Compile Include="UI\FieldFactory.cs" />
+    <Compile Include="UI\PpsAttachmentsControl.xaml.cs">
+      <DependentUpon>PpsAttachmentsControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsHelpPageViewer.cs" />
     <Compile Include="UI\PpsMainWindow.Panes.cs" />
@@ -194,6 +197,10 @@
     <Page Include="Themes\Generic.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="UI\PpsAttachmentsControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsMainWindow.xaml">
       <SubType>Designer</SubType>

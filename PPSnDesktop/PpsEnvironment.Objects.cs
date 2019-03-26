@@ -68,7 +68,7 @@ namespace TecWare.PPSn
 	#region -- class PpsObjectLink ----------------------------------------------------
 
 	/// <summary>Represents a link</summary>
-	public sealed class PpsObjectLink
+	public sealed class PpsObjectLink : IPpsAttachmentItem
 	{
 		private readonly PpsObjectLinks parent;
 
@@ -172,7 +172,7 @@ namespace TecWare.PPSn
 		} // proc SetNewLinkToId
 
 		/// <summary>DecRef or removes this link from the list.</summary>
-		public void Remove()
+		public bool Remove()
 			=> parent.RemoveLink(this);
 
 		/// <summary>Object</summary>
@@ -204,6 +204,11 @@ namespace TecWare.PPSn
 			}
 		} // prop LinkToId
 
+		string IPpsAttachmentItem.Name => LinkTo.Nr;
+		bool IPpsAttachmentItem.IsReadOnly => false;
+		bool IPpsAttachmentItem.IsNull => false;
+		IPpsDataInfo IPpsAttachmentItem.LinkedObject => LinkTo;
+
 		/// <summary>Object reference to the object.</summary>
 		public PpsObject LinkTo => GetLinkedObject();
 
@@ -228,7 +233,7 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsObjectLinks : IList, IReadOnlyList<PpsObjectLink>, INotifyCollectionChanged
+	public sealed class PpsObjectLinks : IList, IReadOnlyList<PpsObjectLink>, INotifyCollectionChanged, IPpsAttachments
 	{
 		/// <summary>Notify for link list changes.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
@@ -513,7 +518,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Remove a link from this object.</summary>
 		/// <param name="link"></param>
-		public void RemoveLink(PpsObjectLink link)
+		public bool RemoveLink(PpsObjectLink link)
 		{
 			lock (parent.SyncRoot)
 			{
@@ -536,6 +541,7 @@ namespace TecWare.PPSn
 			}
 
 			OnCollectionReset();
+			return true;
 		} // proc RemoveLink
 
 		#endregion
@@ -640,6 +646,18 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- Attachments - member -----------------------------------------------
+
+		void IPpsAttachments.Append(IPpsDataInfo data)
+		{
+			if (data is PpsObject obj)
+				AppendLink(obj.Id);
+		} // proc IPpsAttachments.Append
+
+		bool IPpsAttachments.CanAdd => true;
+
+		#endregion
+
 		/// <summary></summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
@@ -668,11 +686,15 @@ namespace TecWare.PPSn
 			}
 		} // prop Count
 
-		IEnumerator IEnumerable.GetEnumerator()
+		IEnumerator<IPpsAttachmentItem> IEnumerable<IPpsAttachmentItem>.GetEnumerator() 
 			=> GetEnumerator();
 
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+		
 		/// <summary></summary>
 		public PpsObject Parent => parent;
+
 	} // class PpsObjectLinks
 
 	#endregion

@@ -388,7 +388,7 @@ namespace TecWare.PPSn.Data
 	#region -- class PpsDataCollectionView --------------------------------------------
 
 	/// <summary>Special collection view for PpsDataTable, that supports IDataRowEnumerable</summary>
-	public class PpsDataCollectionView : ListCollectionView, IPpsDataRowViewFilter, IPpsDataRowViewSort
+	public class PpsDataCollectionView : PpsFilterableListCollectionView, IPpsDataRowViewFilter, IPpsDataRowViewSort
 	{
 		#region -- class DataRowEnumerator --------------------------------------------
 
@@ -420,9 +420,6 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		private readonly IDisposable detachView;
-		private PpsDataFilterExpression filterExpression = null;
-		private Predicate<object> filterCustomFunction = null;
-		private Predicate<object> filterExpressionFunction = null;
 
 		/// <summary>Collection view for PpsDataTable's.</summary>
 		/// <param name="dataTable"></param>
@@ -471,81 +468,12 @@ namespace TecWare.PPSn.Data
 				CommitEdit();
 		} // proc OnCollectionChanged
 
-		/// <summary>Apply a sort expression to the collection view.</summary>
-		public IEnumerable<PpsDataOrderExpression> Sort
-		{
-			get => from s in SortDescriptions select new PpsDataOrderExpression(s.Direction != ListSortDirection.Ascending, s.PropertyName);
-			set
-			{
-				SortDescriptions.Clear();
-				if (value != null)
-				{
-					foreach (var s in value)
-						SortDescriptions.Add(new SortDescription(s.Identifier, s.Negate ? ListSortDirection.Descending : ListSortDirection.Ascending));
-				}
+		/// <summary></summary>
+		/// <param name="filterExpression"></param>
+		/// <returns></returns>
+		protected sealed override Predicate<object> CreateFilterPredicate(PpsDataFilterExpression filterExpression)
+			=> PpsDataFilterVisitorDataRow.CreateDataRowFilter<object>(filterExpression);
 
-				RefreshOrDefer();
-			}
-		} // prop Sort
-
-		private bool setBaseFilter = false;
-
-		private bool CombinedFilterFunction(object item)
-			=> filterCustomFunction(item) && filterExpressionFunction(item);
-
-		private void UpdateBaseFilter()
-		{
-			setBaseFilter = true;
-			try
-			{
-				if (filterCustomFunction != null && filterExpressionFunction != null)
-					base.Filter = CombinedFilterFunction;
-				else if (filterCustomFunction != null)
-					base.Filter = filterCustomFunction;
-				else
-					base.Filter = filterExpressionFunction;
-
-			}
-			finally
-			{
-				setBaseFilter = false;
-			}
-		} // proc UpdateBaseFilter
-
-		/// <summary>Can filter is always false.</summary>
-		public override bool CanFilter => true;
-
-		/// <summary>Filter expression</summary>
-		public override Predicate<object> Filter
-		{
-			get => base.Filter;
-			set
-			{
-				if (setBaseFilter)
-					base.Filter = value;
-				else
-				{
-					filterCustomFunction = value;
-					UpdateBaseFilter();
-				}
-			}
-		} // prop Filter
-
-		/// <summary>Apply a filter to the collection view.</summary>
-		public PpsDataFilterExpression FilterExpression
-		{
-			get => filterExpression ?? PpsDataFilterExpression.True;
-			set
-			{
-				if (filterExpression != value)
-				{
-					filterExpression = value;
-					filterExpressionFunction = PpsDataFilterVisitorDataRow.CreateDataRowFilter<object>(filterExpression);
-					UpdateBaseFilter();
-				}
-			}
-		} // prop FilterExpression
-		
 		/// <summary>Parent row, of the current filter.</summary>
 		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;
 		/// <summary>Get the DataView, that is filtered.</summary>
