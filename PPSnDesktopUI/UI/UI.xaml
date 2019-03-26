@@ -17,5 +17,6 @@ specific language governing permissions and limitations under the Licence.
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Styles/WindowStyles.xaml" />
 		<ResourceDictionary Source="Styles/DrawingImages.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsContextMenu.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>
