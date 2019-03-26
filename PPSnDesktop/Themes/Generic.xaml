@@ -346,7 +346,7 @@
 									</BooleanAnimationUsingKeyFrames>
 								</Storyboard>
 							</Popup.Resources>
-							<ListBox ItemsSource="{Binding PaneHosts}" Style="{DynamicResource PPSnListBoxStyle}" BorderThickness="1" BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}" >
+							<ListBox ItemsSource="{Binding PaneHosts}" Background="{DynamicResource PPSnControlBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}">
 								<ListBox.ItemTemplate>
 									<DataTemplate DataType="{x:Type ui:PpsWindowPaneHost}">
 										<Button Command="{x:Static ui:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}">
@@ -420,7 +420,7 @@
 													</Grid>
 													<ControlTemplate.Triggers>
 														<Trigger Property="IsMouseOver" Value="True">
-															<Setter Property="Background" Value="{DynamicResource PPSnSelectionBarBrush}" />
+															<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
 														</Trigger>
 														<MultiTrigger>
 															<MultiTrigger.Conditions>
@@ -498,6 +498,8 @@
 						<DataTrigger Binding="{Binding CurrentPane.IsDirty}" Value="True">
 							<Setter TargetName="dirtyText" Property="Visibility" Value="Visible" />
 						</DataTrigger>
+
+
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
