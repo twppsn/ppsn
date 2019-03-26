@@ -51,9 +51,9 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="filePlusPathGeometry"
 				  Figures="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M11,15V12H9V15H6V17H9V20H11V17H14V15H11Z" />
 
-	<!--file-import-->
-	<PathGeometry x:Key="fileImportPathGeometry"
-				  Figures="M6,2C4.89,2 4,2.9 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,3.5L18.5,9H13M10.05,11.22L12.88,14.05L15,11.93V19H7.93L10.05,16.88L7.22,14.05" />
+	<!--import, Austin Andrews-->
+	<PathGeometry x:Key="importPathGeometry"
+				  Figures="M14,12L10,8V11H2V13H10V16M20,18V6C20,4.89 19.1,4 18,4H6A2,2 0 0,0 4,6V9H6V6H18V18H6V15H4V18A2,2 0 0,0 6,20H18A2,2 0 0,0 20,18Z" />
 
 	<!--link-variant-->
 	<PathGeometry x:Key="linkPathGeometry" 
