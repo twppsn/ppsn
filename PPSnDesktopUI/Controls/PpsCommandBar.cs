@@ -177,6 +177,16 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region -- ButtonHeight - Property --------------------------------------------
+
+		/// <summary>Height of Buttons when Mode in mixed or rectangle</summary>
+		public static readonly DependencyProperty ButtonHeightProperty = DependencyProperty.Register(nameof(ButtonHeight), typeof(double), typeof(PpsCommandBar), new FrameworkPropertyMetadata(33.0));
+
+		/// <summary>The property defines the height of the buttons in mixed- and rectangle Mode</summary>
+		public double ButtonHeight { get => (double)GetValue(ButtonHeightProperty); set => SetValue(ButtonHeightProperty, value); }
+
+		#endregion
+
 		private ItemsControl itemsControl = null;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
