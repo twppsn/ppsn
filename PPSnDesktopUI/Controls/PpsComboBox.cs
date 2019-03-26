@@ -53,6 +53,12 @@ namespace TecWare.PPSn.Controls
 		} // proc OnMouseEnter
 
 		internal PpsComboBox ParentComboBox => ItemsControl.ItemsControlFromItemContainer(this) as PpsComboBox;
+
+		static PpsComboBoxItem()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsComboBoxItem), new FrameworkPropertyMetadata(typeof(PpsComboBoxItem)));
+		} // sctor
+
 	} // class PpsComboBoxItem
 
 	#endregion

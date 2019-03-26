@@ -17,46 +17,10 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:ui="clr-namespace:TecWare.PPSn.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
-	<!--<ui:LuaValueConverter x:Key="CollapseInaktiveConverter">
-		<![CDATA[
-		if value ~= nil and value then
-			return true;
-		else
-			return false;
-		end;
-		]]>
-	</ui:LuaValueConverter>-->
-
-	<Style x:Key="PpsComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
-		<Setter Property="SnapsToDevicePixels" Value="True"/>
-		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}"/>
-		<Setter Property="Control.Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type ComboBoxItem}">
-					<Border Name="ContentBorder" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Padding="4,0" MinHeight="29">
-						<ContentPresenter VerticalAlignment="Center" />
-					</Border>
-					<ControlTemplate.Triggers>
-						<Trigger Property="IsHighlighted" Value="True">
-							<Setter Property="Panel.Background" TargetName="ContentBorder" Value="{DynamicResource PPSnMouseOverBrush}"/>
-						</Trigger>
-						<!--<DataTrigger Binding="{Binding IsActive, Converter={StaticResource CollapseInaktiveConverter}, Mode=OneWay}">
-							<DataTrigger.Value>
-								<sys:Boolean>false</sys:Boolean>
-							</DataTrigger.Value>
-							<Setter Property="Panel.Visibility" TargetName="ContentBorder" Value="Collapsed"/>
-						</DataTrigger>-->
-					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
-
 	<Style TargetType="{x:Type pps:PpsComboBox}">
 		<Setter Property="ScrollViewer.CanContentScroll" Value="True "/>
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
-		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsComboBoxItemStyle}" />
 		<Setter Property="BorderThickness" Value="1" />
 		<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
 		<Setter Property="GeometryName" Value="comboxBoxChevron" />
@@ -130,10 +94,18 @@ specific language governing permissions and limitations under the Licence.
 										<RowDefinition Height="Auto" />
 										<RowDefinition />
 									</Grid.RowDefinitions>
-									<pps:PpsTextBox x:Name="PART_FilterBox" Height="23" Margin="6" AdditionalImage="magnify" />
-									<ScrollViewer Grid.Row="1" Style="{DynamicResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto" KeyboardNavigation.DirectionalNavigation="Contained" KeyboardNavigation.TabNavigation="Once">
+									<pps:PpsTextBox x:Name="PART_FilterBox"
+													Text="{Binding UserFilterText,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,Delay=300}"
+													Height="21"
+													Margin="6,6,6,6"
+													Width="250"
+													BorderThickness="0"
+													Background="#F6F6F6"
+													HorizontalAlignment="Right"
+													AdditionalImage="magnify" />
+									<pps:PpsScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" KeyboardNavigation.DirectionalNavigation="Contained" KeyboardNavigation.TabNavigation="Once">
 										<ItemsPresenter />
-									</ScrollViewer>
+									</pps:PpsScrollViewer>
 								</Grid>
 							</Border>
 						</Popup>
@@ -153,7 +125,10 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="IsEnabled" Value="False">
 							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
 						</Trigger>
-
+						<Trigger Property="IsFilterable" Value="False">
+							<Setter TargetName="PART_FilterBox" Property="Visibility" Value="Collapsed" />
+							<Setter  TargetName="PART_FilterBox" Property="IsEnabled" Value="False" />
+						</Trigger>
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="ComboBox.IsEditable" Value="False" />
@@ -200,6 +175,39 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
+	<Style TargetType="{x:Type pps:PpsComboBoxItem}">
+		<Setter Property="SnapsToDevicePixels" Value="True" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="Control.Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ComboBoxItem}">
+					<Grid>
+						<Border Name="ContentBorder" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Padding="6,0" MinHeight="29">
+							<ContentPresenter VerticalAlignment="Center" />
+						</Border>
+						<!--custom visual focus-->
+						<Rectangle x:Name="FocusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" StrokeDashArray="2 1"
+									   RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" Opacity="0" />
+					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsHighlighted" Value="True">
+							<Setter TargetName="ContentBorder" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+						</Trigger>
+						<MultiDataTrigger>
+							<MultiDataTrigger.Conditions>
+								<Condition Binding="{Binding IsHighlighted, RelativeSource={RelativeSource Self}}" Value="True" />
+								<Condition Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource Self}}" Value="True" />
+								<Condition Binding="{Binding IsFilterable,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsComboBox}}}" Value="True" />
+							</MultiDataTrigger.Conditions>
+							<Setter TargetName="FocusRect" Property="Opacity" Value="1" />
+						</MultiDataTrigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
 	<Style TargetType="{x:Type pps:PpsComboBoxToggleButton}">
 		<Setter Property="ClickMode" Value="Press" />
 		<Setter Property="Focusable" Value="False" />
@@ -240,5 +248,40 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<!--<ui:LuaValueConverter x:Key="CollapseInaktiveConverter">
+		<![CDATA[
+		if value ~= nil and value then
+			return true;
+		else
+			return false;
+		end;
+		]]>
+	</ui:LuaValueConverter>-->
+
+	<!--<Style x:Key="PpsComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}"/>
+		<Setter Property="Control.Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ComboBoxItem}">
+					<Border Name="ContentBorder" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Padding="4,0" MinHeight="29">
+						<ContentPresenter VerticalAlignment="Center" />
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsHighlighted" Value="True">
+							<Setter Property="Panel.Background" TargetName="ContentBorder" Value="{DynamicResource PPSnMouseOverBrush}"/>
+						</Trigger>
+						<DataTrigger Binding="{Binding IsActive, Converter={StaticResource CollapseInaktiveConverter}, Mode=OneWay}">
+							<DataTrigger.Value>
+								<sys:Boolean>false</sys:Boolean>
+							</DataTrigger.Value>
+							<Setter Property="Panel.Visibility" TargetName="ContentBorder" Value="Collapsed"/>
+						</DataTrigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>-->
 
 </ResourceDictionary>
