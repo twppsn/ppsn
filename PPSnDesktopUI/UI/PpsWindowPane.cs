@@ -173,9 +173,6 @@ namespace TecWare.PPSn.UI
 	/// <summary>Extensions for the Pane, or PaneControl</summary>
 	public static class PpsWindowPaneHelper
 	{
-		/// <summary>Resource key for the window pane.</summary>
-		public const string WindowPaneService = "PpsWindowPaneService";
-
 		#region -- Open Pane helper ---------------------------------------------------
 
 		/// <summary>Initializes a empty pane, it can only be used by a pane manager.</summary>

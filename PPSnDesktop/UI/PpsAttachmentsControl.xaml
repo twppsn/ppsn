@@ -18,9 +18,16 @@ specific language governing permissions and limitations under the Licence.
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
+			 xmlns:local="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 	<ui:PpsDataListBox x:Name="zusaList">
+		<ui:PpsDataListBox.ListCommands>
+			<ui:PpsUICommandButton Order="100;110" Image="filePlus" Command="{x:Static local:PpsAttachmentsControl.AddFromFileCommand}" Description="Fügt einen Anhang hinzu." />
+			<ui:PpsUICommandButton Order="100;120" Image="clipboardPaste" Command="{x:Static local:PpsAttachmentsControl.AddFromClipboardCommand}" Description="Füge ein Bild aus der Zwischenablage ein." />
+			<!--<ui:PpsUICommandButton Order="100;130" Image="link" Description="Fügt eine Verknüpfung hinzu." />-->
+			<!--<ui:PpsUICommandButton Order="110;110" Image="camera" Command="{x:Static local:PpsAttachmentsControl.AddFromCameraCommand}" Description="Fügt einen Bild von der Kamera hinzu." />-->
+		</ui:PpsDataListBox.ListCommands>
 		<ui:PpsDataListBox.ItemsPanel>
 			<ItemsPanelTemplate>
 				<WrapPanel Orientation="Horizontal" />
@@ -53,18 +60,22 @@ specific language governing permissions and limitations under the Licence.
 					</Border>
 					<DockPanel x:Name="panCommands" LastChildFill="False" HorizontalAlignment="Right" Margin="0,-6,-6,-6" Visibility="Hidden">
 						<ui:PpsButton DisplayMode="Circle"
-									   GeometryName="openInApp"
-									   GeometrySize="30"
-									   Foreground="{StaticResource PPSnWindowForegroundBrush}"
-									   Fill="{StaticResource PPSnWindowBackgroundBrush}"
-									   DockPanel.Dock="Top"/>
+									  Command="{x:Static local:PpsAttachmentsControl.OpenCommand}"
+									  CommandParameter="{Binding}"
+									  GeometryName="openInApp"
+									  GeometrySize="30"
+									  Foreground="{StaticResource PPSnWindowForegroundBrush}"
+									  Fill="{StaticResource PPSnWindowBackgroundBrush}"
+									  DockPanel.Dock="Top"/>
 						<ui:PpsButton x:Name="removeButton"
-									   DisplayMode="Circle"
-									   GeometryName="delete"
-									   GeometrySize="30"
-									   Foreground="{StaticResource PPSnWindowForegroundBrush}"
-									   Fill="{StaticResource PPSnWindowBackgroundBrush}"
-									   DockPanel.Dock="Bottom"/>
+									  Command="{x:Static local:PpsAttachmentsControl.RemoveCommand}"
+									  CommandParameter="{Binding}"
+									  DisplayMode="Circle"
+									  GeometryName="delete"
+									  GeometrySize="30"
+									  Foreground="{StaticResource PPSnWindowForegroundBrush}"
+									  Fill="{StaticResource PPSnWindowBackgroundBrush}"
+									  DockPanel.Dock="Bottom"/>
 					</DockPanel>
 					<TextBlock Grid.Row="1" Text="{Binding Name, Mode=OneWay}" TextWrapping="Wrap" HorizontalAlignment="Center"
 								   Foreground="{StaticResource PPSnWindowForegroundBrush}"/>

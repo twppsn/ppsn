@@ -557,7 +557,7 @@ namespace TecWare.PPSn.UI
 					}
 				);
 				//PpsXamlParser.DebugTransform = false;
-				Control.Resources[PpsWindowPaneHelper.WindowPaneService] = this;
+				Control.Resources[PpsShellWpf.CurrentWindowPaneKey] = this;
 				OnControlCreated();
 			}
 			else if (paneData is LuaChunk luaCode) // run the code to initalize control, setControl should be called.
