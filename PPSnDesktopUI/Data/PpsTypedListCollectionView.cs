@@ -24,24 +24,31 @@ using System.Windows.Data;
 
 namespace TecWare.PPSn.Data
 {
-	/// <summary>Support filter for generic lists</summary>
-	public class PpsTypedListCollectionView<T> : ListCollectionView, IPpsDataRowViewFilter, IPpsDataRowViewSort
+	#region -- class PpsFilterableListCollectionView ----------------------------------
+
+	/// <summary>Basic filter and sort implementation.</summary>
+	public abstract class PpsFilterableListCollectionView : ListCollectionView, IPpsDataRowViewFilter
 	{
 		private PpsDataFilterExpression filterExpression = null;
+		private Predicate<object> filterCustomFunction = null;
+		private Predicate<object> filterExpressionFunction = null;
 
 		/// <summary></summary>
 		/// <param name="list"></param>
-		public PpsTypedListCollectionView(IList list)
+		protected PpsFilterableListCollectionView(IList list)
 			: base(list)
 		{
 		} // ctor
 
-		/// <summary>Apply a sort expression to the collection view.</summary>
+		/// <summary>Apply a sort expression to the collection view, the interface is not set, because RefreshOverride is not implemented.</summary>
 		public IEnumerable<PpsDataOrderExpression> Sort
 		{
 			get => from s in SortDescriptions select new PpsDataOrderExpression(s.Direction != ListSortDirection.Ascending, s.PropertyName);
 			set
 			{
+				if (!CanSort)
+					throw new NotSupportedException();
+
 				SortDescriptions.Clear();
 				if (value != null)
 				{
@@ -53,17 +60,51 @@ namespace TecWare.PPSn.Data
 			}
 		} // prop Sort
 
-		private bool allowSetFilter = false;
+		private bool setBaseFilter = false;
+
+		/// <summary></summary>
+		/// <param name="filterExpression"></param>
+		/// <returns></returns>
+		protected abstract Predicate<object> CreateFilterPredicate(PpsDataFilterExpression filterExpression);
+
+		private bool CombinedFilterFunction(object item)
+			=> filterCustomFunction(item) && filterExpressionFunction(item);
+
+		private void UpdateBaseFilter()
+		{
+			setBaseFilter = true;
+			try
+			{
+				if (filterCustomFunction != null && filterExpressionFunction != null)
+					base.Filter = CombinedFilterFunction;
+				else if (filterCustomFunction != null)
+					base.Filter = filterCustomFunction;
+				else
+					base.Filter = filterExpressionFunction;
+
+			}
+			finally
+			{
+				setBaseFilter = false;
+			}
+		} // proc UpdateBaseFilter
+
+		/// <summary>Can filter is always false.</summary>
+		public sealed override bool CanFilter => true;
 
 		/// <summary>Filter expression</summary>
-		public override Predicate<object> Filter
+		public sealed override Predicate<object> Filter
 		{
 			get => base.Filter;
 			set
 			{
-				if (!allowSetFilter)
-					throw new NotSupportedException();
-				base.Filter = value;
+				if (setBaseFilter)
+					base.Filter = value;
+				else
+				{
+					filterCustomFunction = value;
+					UpdateBaseFilter();
+				}
 			}
 		} // prop Filter
 
@@ -76,18 +117,36 @@ namespace TecWare.PPSn.Data
 				if (filterExpression != value)
 				{
 					filterExpression = value;
-					allowSetFilter = true;
-					try
-					{
-						var filterFunc = PpsDataFilterVisitorLambda.CompileTypedFilter<T>(filterExpression);
-						base.Filter = new Predicate<object>(o => filterFunc((T)o));
-					}
-					finally
-					{
-						allowSetFilter = false;
-					}
+					filterExpressionFunction = CreateFilterPredicate(filterExpression);
+					UpdateBaseFilter();
 				}
 			}
 		} // prop FilterExpression
+	} // class PpsFilterableListCollectionView
+
+	#endregion
+
+	#region -- class PpsTypedListCollectionView ---------------------------------------
+
+	/// <summary>Support filter for generic lists</summary>
+	public class PpsTypedListCollectionView<T> : PpsFilterableListCollectionView, IPpsDataRowViewFilter
+	{
+		/// <summary></summary>
+		/// <param name="list"></param>
+		public PpsTypedListCollectionView(IList list)
+			: base(list)
+		{
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="filterExpression"></param>
+		/// <returns></returns>
+		protected override Predicate<object> CreateFilterPredicate(PpsDataFilterExpression filterExpression)
+		{
+			var filterFunc = PpsDataFilterVisitorLambda.CompileTypedFilter<T>(filterExpression);
+			return new Predicate<object>(o => filterFunc((T)o));
+		} // func CreateFilterPredicate
 	} // class PpsTypedListCollectionView
+
+	#endregion	
 }

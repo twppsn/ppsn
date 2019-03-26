@@ -116,7 +116,7 @@ namespace TecWare.PPSn.Controls
 
 			SetValue(commandsPropertyKey, CreateCommandBar());
 
-			Resources[PpsWindowPaneHelper.WindowPaneService] = this;
+			Resources[PpsShellWpf.CurrentWindowPaneKey] = this;
 		} // ctor
 
 		private PpsUICommandCollection CreateCommandBar()
