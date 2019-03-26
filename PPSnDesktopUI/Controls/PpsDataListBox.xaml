@@ -1,4 +1,4 @@
-﻿	<!--
+﻿<!--
 Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
 European Commission - subsequent versions of the EUPL(the "Licence"); You may
 not use this work except in compliance with the Licence.
@@ -29,7 +29,11 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsDataListBox}">
-					<Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+					<Border Background="{TemplateBinding Background}"
+							BorderBrush="{TemplateBinding BorderBrush}"
+							BorderThickness="{TemplateBinding BorderThickness}"
+							SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+							Padding="{TemplateBinding Padding}">
 						<Grid>
 							<Grid.RowDefinitions>
 								<RowDefinition Height="Auto" />
@@ -45,13 +49,14 @@ specific language governing permissions and limitations under the Licence.
 											  BasicCommands="{TemplateBinding ListCommands}"
 											  ExternalCommands="{TemplateBinding SelectedItemCommands}"
 											  Mode="Mixed"
-											  MinHeight="36" />
-							<!--sum(Height, Margin.Top, Margin.Bottom) = commandBar.MinHeight!-->
+											  MinHeight="33"
+											  Margin="0,0,0,1"/>
+							<!--sum(Height, Margin.Top, Margin.Bottom) = commandBar.MinHeight + commandBar.Margin.Bottom-->
 							<ui:PpsTextBox x:Name="PART_FilterBox"
 										   Grid.Column="1"
 										   Text="{Binding UserFilterText,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,Delay=300}"
 										   Height="23"
-										   Margin="0,7,0,6"
+										   Margin="0,5,0,6"
 										   VerticalAlignment="Bottom"
 										   AdditionalImage="magnify" />
 							<Rectangle x:Name="separatorRect"
@@ -89,8 +94,8 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style TargetType="{x:Type ui:PpsDataListItem}">
-		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="Template">
@@ -101,15 +106,16 @@ specific language governing permissions and limitations under the Licence.
 							<RowDefinition />
 							<RowDefinition Height="2" />
 						</Grid.RowDefinitions>
-						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-							<ContentPresenter Margin="6,1"/>
+						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" RenderOptions.EdgeMode="Aliased">
+							<ContentPresenter Margin="6,1" />
 						</Border>
 
 						<!--custom visual focus-->
-						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" RenderOptions.EdgeMode="Aliased" Opacity="0" />
+						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" SnapsToDevicePixels="True" RenderOptions.EdgeMode="Aliased" Opacity="0" />
 
-						<!--ItemSeparator-->
-						<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="{DynamicResource PPSnWindowBackgroundBrush}" />
+						<!--ItemSeparator?-->
+						<!--<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="{DynamicResource PPSnWindowBackgroundBrush}" />-->
+						<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="Transparent" />
 
 						<Grid.ContextMenu>
 							<ContextMenu ItemsSource="{TemplateBinding Commands}" UsesItemContainerTemplate="True">
