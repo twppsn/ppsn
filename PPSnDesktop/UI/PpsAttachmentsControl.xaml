@@ -18,50 +18,47 @@ specific language governing permissions and limitations under the Licence.
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
+			 xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 			 xmlns:local="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-	<ui:PpsDataListBox x:Name="zusaList">
+	<ui:PpsDataListBox x:Name="zusaList" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 		<ui:PpsDataListBox.ListCommands>
-			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFromFileCommand}" Order="100;110" Image="plus" DisplayText="Neu" Description="Füge einen Anhang hinzu." />
-			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFromClipboardCommand}" Order="100;120" Image="clipboardPaste" Description="Füge ein Bild aus der Zwischenablage ein." />
+			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFromFileCommand}" Order="100;110" Image="plus" DisplayText="Neu" Description="Fügt einen Anhang hinzu." />
+			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFromClipboardCommand}" Order="110;110" Image="clipboardPaste" Description="Fügt ein Bild aus der Zwischenablage ein." />
 			<!--<ui:PpsUICommandButton Order="100;130" Image="link" Description="Fügt eine Verknüpfung hinzu." />-->
-			<ui:PpsUICommandButton Order="110;110" Image="camera" Command="{x:Static local:PpsAttachmentsControl.AddFromCameraCommand}" Description="Fügt einen Bild von der Kamera hinzu." />
+			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFromCameraCommand}" Order="110;120" Image="cameraOutline" Description="Fügt ein Bild von der Kamera hinzu." />
 		</ui:PpsDataListBox.ListCommands>
 		<ui:PpsDataListBox.ItemCommands>
 			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.OpenCommand}" CommandParameter="{Binding}" Order="200,110"
-								   Image="openFolderOutline" DisplayText="Öffnen" Description="Anhang öffnen" />
+								   DisplayMode="Image" Image="openFolderOutline" DisplayText="Öffnen" Description="Anhang öffnen." />
 			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.RemoveCommand}" CommandParameter="{Binding}" Order="200,120"
-								   Image="delete" DisplayText="Löschen" Description="Anhang entfernen" />
+								   DisplayMode="Image" Image="delete" DisplayText="Löschen" Description="Anhang entfernen." />
 		</ui:PpsDataListBox.ItemCommands>
 		<ui:PpsDataListBox.ItemsPanel>
 			<ItemsPanelTemplate>
-				<WrapPanel Orientation="Horizontal" />
+				<WrapPanel IsItemsHost="True" />
 			</ItemsPanelTemplate>
 		</ui:PpsDataListBox.ItemsPanel>
 		<ui:PpsDataListBox.ItemTemplate>
 			<DataTemplate>
-				<Grid Width="102">
+				<Grid Width="90">
 					<Grid.RowDefinitions>
-						<RowDefinition Height="72"/>
-						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="64" />
+						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
-					<Border x:Name="border" Padding="3" BorderThickness="1"	BorderBrush="{StaticResource PPSnControlNormalBorderBrush}" Background="{StaticResource PPSnControlBackgroundBrush}">
-						<Grid>
-							<Image x:Name="image" Margin="1"
-								   Source="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"
-								   Stretch="Uniform"/>
-							<Viewbox x:Name="symbolBox" Width="20">
-								<Path x:Name="symbolPath"
-									  Data="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
-									  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".55"/>
-							</Viewbox>
-							<Viewbox x:Name="imageBox" Width="20" Visibility="Hidden">
-								<Path Data="{StaticResource imagePathGeometry}"
-									  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".55"/>
-							</Viewbox>
-						</Grid>
-					</Border>
+					<Image x:Name="image" Margin="1"
+						   Source="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"
+						   Stretch="Uniform"/>
+					<Viewbox x:Name="symbolBox" Width="48">
+						<Path x:Name="symbolPath"
+							  Data="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
+							  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".55" />
+					</Viewbox>
+					<Viewbox x:Name="imageBox" Width="48" Visibility="Hidden">
+						<Path Data="{StaticResource imageOutlinePathGeometry}"
+							  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".55" />
+					</Viewbox>
 					<TextBlock Grid.Row="1"
 							   Text="{Binding Name, Mode=OneWay}"
 							   TextWrapping="Wrap"
@@ -70,49 +67,68 @@ specific language governing permissions and limitations under the Licence.
 				</Grid>
 				<DataTemplate.Triggers>
 					<Trigger SourceName="image" Property="Source" Value="{x:Null}">
-						<Setter TargetName="image" Property="Visibility" Value="Hidden"/>
+						<Setter TargetName="image" Property="Visibility" Value="Hidden" />
 					</Trigger>
 					<Trigger SourceName="symbolPath" Property="Data" Value="{x:Null}">
-						<Setter TargetName="symbolBox" Property="Visibility" Value="Hidden"/>
+						<Setter TargetName="symbolBox" Property="Visibility" Value="Hidden" />
 					</Trigger>
 					<MultiTrigger>
 						<MultiTrigger.Conditions>
-							<Condition SourceName="image" Property="Visibility" Value="Hidden"/>
-							<Condition SourceName="symbolBox" Property="Visibility" Value="Hidden"/>
+							<Condition SourceName="image" Property="Visibility" Value="Hidden" />
+							<Condition SourceName="symbolBox" Property="Visibility" Value="Hidden" />
 						</MultiTrigger.Conditions>
-						<Setter TargetName="imageBox" Property="Visibility" Value="Visible"/>
+						<Setter TargetName="imageBox" Property="Visibility" Value="Visible" />
 					</MultiTrigger>
-					<DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
-						<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnSelectionBarBrush}" />
-					</DataTrigger>
-					<DataTrigger Binding="{Binding IsFocused, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
-						<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnMarkerBrush}" />
-					</DataTrigger>
-
-
-					<!--<MultiDataTrigger>
-						<MultiDataTrigger.Conditions>
-							<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True"/>
-							<Condition Binding="{Binding Path=IsFocused, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True"/>
-						</MultiDataTrigger.Conditions>
-						<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
-					</MultiDataTrigger>-->
 				</DataTemplate.Triggers>
 			</DataTemplate>
 		</ui:PpsDataListBox.ItemTemplate>
 
 		<ui:PpsDataListBox.ItemContainerStyle>
-			<Style TargetType="{x:Type ListBoxItem}">
+			<Style TargetType="{x:Type ui:PpsDataListItem}">
 				<Setter Property="VerticalAlignment" Value="Top" />
 				<Setter Property="Margin" Value="0,8,10,2" />
 				<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+				<Setter Property="Background" Value="Transparent" />
 				<Setter Property="Template">
 					<Setter.Value>
-						<ControlTemplate TargetType="{x:Type ListBoxItem}">
-							<ContentPresenter />
+						<ControlTemplate TargetType="{x:Type ui:PpsDataListItem}">
+							<Grid>
+								<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="True" RenderOptions.EdgeMode="Aliased">
+									<ContentPresenter Margin="3,1,3,1" />
+								</Border>
+
+								<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" SnapsToDevicePixels="True" RenderOptions.EdgeMode="Aliased" Opacity="0" />
+
+								<Grid.ContextMenu>
+									<ContextMenu ItemsSource="{TemplateBinding Commands}" UsesItemContainerTemplate="True">
+										<ContextMenu.Resources>
+											<ItemContainerTemplate DataType="{x:Type uiO:PpsUICommandButton}">
+												<MenuItem Header="{Binding DisplayText}"
+														  Command="{Binding Command}"
+														  CommandParameter="{Binding CommandParameter}"
+														  CommandTarget="{Binding CommandTarget}">
+													<MenuItem.Icon>
+														<ui:PpsGeometryImage GeometryName="{Binding Image}" GeometryCircled="False" Foreground="{DynamicResource PPSnImageBrush}" Opacity=".75" />
+													</MenuItem.Icon>
+												</MenuItem>
+											</ItemContainerTemplate>
+											<ItemContainerTemplate DataType="{x:Type uiO:PpsUICommandSeperator}">
+												<Separator>
+													<Separator.Style>
+														<Style TargetType="{x:Type Separator}" BasedOn="{StaticResource ResourceKey={x:Static MenuItem.SeparatorStyleKey}}" />
+													</Separator.Style>
+												</Separator>
+											</ItemContainerTemplate>
+										</ContextMenu.Resources>
+									</ContextMenu>
+								</Grid.ContextMenu>
+							</Grid>
 							<ControlTemplate.Triggers>
+								<Trigger Property="IsSelected" Value="True">
+									<Setter Property="Background" Value="{StaticResource PPSnSelectionBarBrush}" />
+								</Trigger>
 								<Trigger Property="IsFocused" Value="True">
-									<Setter Property="IsSelected" Value="True" />
+									<Setter TargetName="focusRect" Property="Opacity" Value="1" />
 								</Trigger>
 							</ControlTemplate.Triggers>
 						</ControlTemplate>
