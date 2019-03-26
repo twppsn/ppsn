@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -377,7 +378,9 @@ namespace TecWare.PPSn.UI
 		public static bool ShowModalDialog(this DependencyObject owner, Func<bool?> showDialog)
 		{
 			var oldWindow = Application.Current.MainWindow;
-			var window = Window.GetWindow(owner);
+			var window = owner == null 
+				? Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
+				: Window.GetWindow(owner);
 			try
 			{
 				Application.Current.MainWindow = window;

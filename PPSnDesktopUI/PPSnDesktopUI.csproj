@@ -102,7 +102,9 @@
     <Compile Include="UI\PpsAttachments.cs" />
     <Compile Include="Data\PpsDataRowEnumerableCollectionView.cs" />
     <Compile Include="Data\PpsTypedListCollectionView.cs" />
-    <Compile Include="UI\PpsCameraPane.cs" />
+    <Compile Include="UI\PpsCameraDialog.xaml.cs">
+      <DependentUpon>PpsCameraDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\PpsCircularListBox.cs" />
     <Compile Include="Controls\PpsComboBox.cs" />
     <Compile Include="Controls\PpsGeometryImage.cs" />
@@ -281,6 +283,10 @@
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UI\PpsCameraDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsMarkdownPane.xaml">
       <SubType>Designer</SubType>

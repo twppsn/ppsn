@@ -143,6 +143,10 @@ namespace TecWare.PPSn.UI
 
 				throw;
 			}
+			finally
+			{
+				CommandManager.InvalidateRequerySuggested();
+			}
 		} // func LoadAsync
 
 		private void UpdateFocus(bool setLogical)

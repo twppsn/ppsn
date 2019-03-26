@@ -26,7 +26,7 @@ specific language governing permissions and limitations under the Licence.
 			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFromFileCommand}" Order="100;110" Image="plus" DisplayText="Neu" Description="Füge einen Anhang hinzu." />
 			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFromClipboardCommand}" Order="100;120" Image="clipboardPaste" Description="Füge ein Bild aus der Zwischenablage ein." />
 			<!--<ui:PpsUICommandButton Order="100;130" Image="link" Description="Fügt eine Verknüpfung hinzu." />-->
-			<!--<ui:PpsUICommandButton Order="110;110" Image="camera" Command="{x:Static local:PpsAttachmentsControl.AddFromCameraCommand}" Description="Fügt einen Bild von der Kamera hinzu." />-->
+			<ui:PpsUICommandButton Order="110;110" Image="camera" Command="{x:Static local:PpsAttachmentsControl.AddFromCameraCommand}" Description="Fügt einen Bild von der Kamera hinzu." />
 		</ui:PpsDataListBox.ListCommands>
 		<ui:PpsDataListBox.ItemCommands>
 			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.OpenCommand}" CommandParameter="{Binding}" Order="200,110"
