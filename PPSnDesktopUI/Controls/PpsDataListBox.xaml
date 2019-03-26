@@ -26,6 +26,8 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ui:PpsDataListBox}">
@@ -66,7 +68,11 @@ specific language governing permissions and limitations under the Licence.
 									   Fill="{DynamicResource PPSnSeparatorBrush}"
 									   Height="1"
 									   Margin="0,0,0,6" />
-							<ui:PpsScrollViewer Grid.Row="2" Grid.ColumnSpan="2" Focusable="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+							<ui:PpsScrollViewer Grid.Row="2"
+												Grid.ColumnSpan="2"
+												Focusable="False"
+												HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+												VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
 								<ItemsPresenter KeyboardNavigation.TabNavigation="Once" />
 							</ui:PpsScrollViewer>
 						</Grid>
