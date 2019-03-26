@@ -22,6 +22,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<Style TargetType="{x:Type pps:PpsSideBarControl}">
 		<Setter Property="Focusable" Value="False" />
+		<Setter Property="Padding" Value="32,16,0,16" />
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
@@ -60,7 +61,7 @@ specific language governing permissions and limitations under the Licence.
 							</Grid>
 						</Border>
 						<ContentPresenter Grid.Column="1"
-										  Margin="32,16,0,16"
+										  Margin="{TemplateBinding Padding}"
 										  Content="{TemplateBinding SelectedContent}" 
 										  ContentTemplate="{TemplateBinding SelectedContentTemplate}" 
 										  ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"
