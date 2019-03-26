@@ -139,6 +139,21 @@ namespace TecWare.PPSn.UI
 			);
 
 			CommandBindings.Add(
+				new CommandBinding(AddFromCameraCommand,
+					async (sender, e) =>
+					{
+						await AddFromCameraAsync();
+						e.Handled = true;
+					},
+					(sender, e) =>
+					{
+						e.CanExecute = GetEditAttachments();
+						e.Handled = true;
+					}
+				)
+			);
+
+			CommandBindings.Add(
 				new CommandBinding(OpenCommand,
 					async (sender, e) =>
 					{
@@ -210,12 +225,27 @@ namespace TecWare.PPSn.UI
 
 		private async Task AddFromClipboardAsync()
 		{
-			if ((await Environment.MsgBoxAsync("Bild aus Zwischenanlage anfügen?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes)) != MessageBoxResult.Yes)
+			if (Environment.MsgBox("Bild aus Zwischenanlage anfügen?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes) != MessageBoxResult.Yes)
 				return;
 
 			// convert bitmap to png
 			var bmp = Clipboard.GetImage();
 			using (var bar = CurrentPane?.DisableUI("Füge Bild aus Zwischenablage ein..."))
+				await AddFromBitmapSourceAsync(bmp);
+		} // proc AddFromClipboardAsync
+
+		private async Task AddFromCameraAsync()
+		{
+			var bitmap = StuffUI.TakePicture(this);
+			if (bitmap != null)
+			{
+				using (var bar = CurrentPane?.DisableUI("Füge Bild von Kamera..."))
+					await AddFromBitmapSourceAsync(bitmap);
+			}
+		} // proc AddFromCameraAsync
+
+		private async Task AddFromBitmapSourceAsync(BitmapSource bmp)
+		{
 			using (var dst = new MemoryStream())
 			{
 				await Task.Run(() =>
@@ -229,7 +259,7 @@ namespace TecWare.PPSn.UI
 				dst.Position = 0;
 				await AttachmentsSource.AppendAsync(Environment, dst, DateTime.Now.ToString("yyyy-MM-dd_HH:mm") + ".jpg", MimeTypes.Image.Jpeg);
 			}
-		} // procAddFromClipboard
+		} // proc AddFromBitmapSourceAsync
 
 		private async Task OpenAttachmentAsync(IPpsAttachmentItem item)
 		{

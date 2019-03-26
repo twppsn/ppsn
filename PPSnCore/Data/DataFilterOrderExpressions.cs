@@ -2383,9 +2383,9 @@ namespace TecWare.PPSn.Data
 						continue;
 
 					var s = v.ChangeType<string>();
-					if (startsWith && s.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+					if (startsWith && s.StartsWith(text, StringComparison.CurrentCultureIgnoreCase))
 						return true;
-					else if (!startsWith && s.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
+					else if (!startsWith && s.IndexOf(text, StringComparison.CurrentCultureIgnoreCase) >= 0)
 						return true;
 				}
 			}

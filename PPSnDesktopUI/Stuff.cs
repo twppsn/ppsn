@@ -32,6 +32,7 @@ using System.Web;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using System.Xml.Linq;
 using TecWare.DE.Networking;
@@ -512,6 +513,12 @@ namespace TecWare.PPSn
 		} // func Execute
 
 		#endregion
+
+		/// <summary></summary>
+		/// <param name="owner"></param>
+		/// <returns></returns>
+		public static BitmapSource TakePicture(DependencyObject owner)
+			=> PpsCameraDialog.TakePicture(owner);
 
 		#region -- remove after update DES --
 
