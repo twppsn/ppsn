@@ -805,6 +805,9 @@ namespace TecWare.PPSn
 			protected override Tuple<string, Type> LookupNumberColumn(string columnToken)
 				=> base.LookupNumberColumn(columnToken);
 
+			protected override string CreateLikeString(string value, PpsSqlLikeStringEscapeFlag flag)
+				=> "ulower(" + base.CreateLikeString(value, flag) + ")";
+
 			public void AppendJoins(StringBuilder sb)
 			{
 				foreach (var j in joins)
@@ -860,14 +863,21 @@ namespace TecWare.PPSn
 						{
 							if (filterVisitor.NeedFullTextColumn)
 							{
-								var expr = String.Join(" || ' ' || ",
-									from c in table.Columns
-									where c.DataType == typeof(string)
-									select "COALESCE(d.[" + c.Name + "],'')"
-								);
-								if (String.IsNullOrEmpty(expr))
-									expr = "null";
-								sb.Append(',').Append(expr).Append(" AS __FULLTEXT__");
+								//var expr = String.Join(" || ' ' || ",
+								//	from c in table.Columns
+								//	where c.DataType == typeof(string)
+								//	select "COALESCE(d.[" + c.Name + "],'')"
+								//);
+								//if (String.IsNullOrEmpty(expr))
+								//	expr = "null";
+								//sb.Append(',').Append(expr).Append(" AS __FULLTEXT__");
+								sb.Append(",uconcat(").Append(
+									String.Join(",",
+										from c in table.Columns
+										where c.DataType == typeof(string)
+										select "d.[" + c.Name + "]"
+									)
+								).Append(") AS __FULLTEXT__");
 							}
 						}
 					);

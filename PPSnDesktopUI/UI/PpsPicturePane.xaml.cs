@@ -80,7 +80,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>initializes the cameras, the settings and the events</summary>
 		/// <param name="paneHost"></param>
 		public PpsPicturePane(IPpsWindowPaneHost paneHost)
-			:base(paneHost)
+			: base(paneHost)
 		{
 			InitializeComponent();
 
@@ -107,7 +107,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary></summary>
 		/// <param name="disposing"></param>
-		protected override void Dispose(bool disposing) 
+		protected override void Dispose(bool disposing)
 			=> base.Dispose(disposing);
 
 		/// <summary>Loads the content of the panel</summary>
@@ -158,12 +158,15 @@ namespace TecWare.PPSn.UI
 			currentPicture.DisableUI = () => PaneHost.DisableUI("Bild wird bearbeitet...");
 			currentPicture.DataChanged += CurrentImage_DataChanged;
 
+			// update subtitle to image
+			SubTitle = currentPictureInfo.Name;
+
 			// update pane host
 			NotifyWindowPanePropertyChanged(nameof(IPpsWindowPane.CurrentData));
 
 			// load image
 			await RefreshCurrentImageAsync();
-			
+
 			return true;
 		} // func OpenPictureAsync
 
@@ -200,9 +203,10 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		/// <summary>Return current image object data.</summary>
+		protected override IPpsDataInfo CurrentData => currentPictureInfo;
 		/// <summary></summary>
 		public PpsShellWpf Shell => PaneHost.PaneManager.Shell;
-
 
 
 
@@ -362,7 +366,7 @@ namespace TecWare.PPSn.UI
 		//	#endregion
 		//}
 
-		
+
 
 		///// <summary>representation for thicknesses</summary>
 		//public class PpsPecStrokeThickness
@@ -687,64 +691,64 @@ namespace TecWare.PPSn.UI
 
 		//private void AddStrokeCommandBindings()
 		//{
-			//CommandBindings.Add(new CommandBinding(
-			//	OverlayEditFreehandCommand,
-			//	(sender, e) =>
-			//	{
-			//		InkEditMode = InkCanvasEditingMode.Ink;
-			//	}));
+		//CommandBindings.Add(new CommandBinding(
+		//	OverlayEditFreehandCommand,
+		//	(sender, e) =>
+		//	{
+		//		InkEditMode = InkCanvasEditingMode.Ink;
+		//	}));
 
-			//CommandBindings.Add(new CommandBinding(
-			//	OverlayRemoveStrokeCommand,
-			//	(sender, e) =>
-			//	{
-			//		InkEditMode = InkCanvasEditingMode.EraseByStroke;
-			//	},
-			//	(sender, e) => e.CanExecute = InkStrokes.Count > 0));
+		//CommandBindings.Add(new CommandBinding(
+		//	OverlayRemoveStrokeCommand,
+		//	(sender, e) =>
+		//	{
+		//		InkEditMode = InkCanvasEditingMode.EraseByStroke;
+		//	},
+		//	(sender, e) => e.CanExecute = InkStrokes.Count > 0));
 
-			//CommandBindings.Add(new CommandBinding(
-			//	OverlayCancelEditModeCommand,
-			//	(sender, e) =>
-			//	{
-			//		InkEditMode = InkCanvasEditingMode.None;
-			//	},
-			//	(sender, e) => e.CanExecute = true));
+		//CommandBindings.Add(new CommandBinding(
+		//	OverlayCancelEditModeCommand,
+		//	(sender, e) =>
+		//	{
+		//		InkEditMode = InkCanvasEditingMode.None;
+		//	},
+		//	(sender, e) => e.CanExecute = true));
 
-			//CommandBindings.Add(new CommandBinding(
-			//	ApplicationCommands.Undo,
-			//	(sender, e) =>
-			//	{
-			//		strokeUndoManager.Undo();
-			//	},
-			//	(sender, e) => e.CanExecute = strokeUndoManager?.CanUndo ?? false));
+		//CommandBindings.Add(new CommandBinding(
+		//	ApplicationCommands.Undo,
+		//	(sender, e) =>
+		//	{
+		//		strokeUndoManager.Undo();
+		//	},
+		//	(sender, e) => e.CanExecute = strokeUndoManager?.CanUndo ?? false));
 
-			//CommandBindings.Add(new CommandBinding(
-			//	ApplicationCommands.Redo,
-			//	(sender, e) =>
-			//	{
-			//		strokeUndoManager.Redo();
-			//	},
-			//	(sender, e) => e.CanExecute = strokeUndoManager?.CanRedo ?? false));
+		//CommandBindings.Add(new CommandBinding(
+		//	ApplicationCommands.Redo,
+		//	(sender, e) =>
+		//	{
+		//		strokeUndoManager.Redo();
+		//	},
+		//	(sender, e) => e.CanExecute = strokeUndoManager?.CanRedo ?? false));
 
-			//CommandBindings.Add(new CommandBinding(
-			//	OverlaySetThicknessCommand,
-			//	(sender, e) =>
-			//	{
-			//		var thickness = (PpsPecStrokeThickness)e.Parameter;
-			//		InkDrawingAttributes.Width = InkDrawingAttributes.Height = (double)thickness.Size;
-			//		SetValue(currentStrokeThicknessPropertyKey, thickness);
-			//	},
-			//	(sender, e) => e.CanExecute = true));
+		//CommandBindings.Add(new CommandBinding(
+		//	OverlaySetThicknessCommand,
+		//	(sender, e) =>
+		//	{
+		//		var thickness = (PpsPecStrokeThickness)e.Parameter;
+		//		InkDrawingAttributes.Width = InkDrawingAttributes.Height = (double)thickness.Size;
+		//		SetValue(currentStrokeThicknessPropertyKey, thickness);
+		//	},
+		//	(sender, e) => e.CanExecute = true));
 
-			//CommandBindings.Add(new CommandBinding(
-			//	OverlaySetColorCommand,
-			//	(sender, e) =>
-			//	{
-			//		var color = (PpsPecStrokeColor)e.Parameter;
-			//		InkDrawingAttributes.Color = color.Color;
-			//		SetValue(currentStrokeColorPropertyKey, color);
-			//	},
-			//	(sender, e) => e.CanExecute = true));
+		//CommandBindings.Add(new CommandBinding(
+		//	OverlaySetColorCommand,
+		//	(sender, e) =>
+		//	{
+		//		var color = (PpsPecStrokeColor)e.Parameter;
+		//		InkDrawingAttributes.Color = color.Color;
+		//		SetValue(currentStrokeColorPropertyKey, color);
+		//	},
+		//	(sender, e) => e.CanExecute = true));
 		//}
 
 		#region Helper Functions
@@ -888,7 +892,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#endregion
-		
+
 		#region -- Methods ------------------------------------------------------------
 
 		#region -- Pen Settings -------------------------------------------------------

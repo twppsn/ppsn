@@ -22,8 +22,13 @@ specific language governing permissions and limitations under the Licence.
 			 mc:Ignorable="d" 
 			Title="Bildeditor"
              d:DesignHeight="300" d:DesignWidth="300">
-	<Image Source="{Binding CurrentImage}" />
-
+	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+		<Image x:Name="PART_Image" Stretch="None" Source="{Binding CurrentImage}" >
+			<Image.LayoutTransform>
+				<ScaleTransform ScaleX="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" ScaleY="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" />
+			</Image.LayoutTransform>
+		</Image>
+	</uiC:PpsScrollViewer>
 	<!--<UserControl.Resources>
 		<local:LuaValueConverter x:Key="ScaleConverter">
 			<![CDATA[
