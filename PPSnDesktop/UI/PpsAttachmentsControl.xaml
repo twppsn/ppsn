@@ -51,13 +51,17 @@ specific language governing permissions and limitations under the Licence.
 						   Source="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"
 						   Stretch="Uniform"/>
 					<Viewbox x:Name="symbolBox" Width="48">
-						<Path x:Name="symbolPath"
-							  Data="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
-							  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".55" />
+						<Canvas Width="24" Height="24">
+							<Path x:Name="symbolPath"
+								  Data="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
+								  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".55" />
+						</Canvas>
 					</Viewbox>
 					<Viewbox x:Name="imageBox" Width="48" Visibility="Hidden">
-						<Path Data="{StaticResource imageOutlinePathGeometry}"
-							  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".55" />
+						<Canvas Width="24" Height="24">
+							<Path Data="{StaticResource imageOutlinePathGeometry}"
+								  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".55" />
+						</Canvas>
 					</Viewbox>
 					<TextBlock Grid.Row="1"
 							   Text="{Binding Name, Mode=OneWay}"
