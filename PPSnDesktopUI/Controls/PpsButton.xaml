@@ -86,6 +86,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter Property="Focusable" Value="False" />
 							<Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
 							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
+							<Setter Property="Padding" Value="0" />
 						</Trigger>
 
 						<Trigger Property="DisplayMode" Value="ImageAndText">
@@ -106,12 +107,14 @@ specific language governing permissions and limitations under the Licence.
 
 						<Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
 							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
-							<Setter Property="Padding" Value="6,0" />
+							<Setter Property="Padding" Value="6,0,6,0" />
 						</Trigger>
 
 						<Trigger Property="HasContent" Value="False">
 							<Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
 							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
+							<Setter TargetName="ImageBox" Property="Margin" Value="0,0,0,0" />
+							<Setter Property="Padding" Value="0" />
 						</Trigger>
 
 						<Trigger Property="IsEnabled" Value="False">
