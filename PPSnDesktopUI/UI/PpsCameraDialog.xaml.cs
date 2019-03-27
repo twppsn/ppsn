@@ -20,6 +20,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -769,7 +770,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- CurrentImage - property -------------------------------------------
+		#region -- CurrentImage - property --------------------------------------------
 
 		private static readonly DependencyPropertyKey currentImagePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentImage), typeof(ImageSource), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty CurrentImageProperty = currentImagePropertyKey.DependencyProperty;
@@ -778,6 +779,14 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- AllowDeviceSelection - Property ------------------------------------
+
+		private static readonly DependencyPropertyKey allowDevicePropertyKey = DependencyProperty.RegisterReadOnly(nameof(AllowDeviceSelection), typeof(bool), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty AllowDeviceSelectionProperty = allowDevicePropertyKey.DependencyProperty;
+
+		public bool AllowDeviceSelection => BooleanBox.GetBool(GetValue(AllowDeviceSelectionProperty));
+
+		#endregion
 
 		private readonly PpsShellWpf environment;
 		private readonly DispatcherTimer refreshCameraDevices;
@@ -792,13 +801,22 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
+			DataContext = this;
+
 			devicesView = CollectionViewSource.GetDefaultView(devices);
 			devicesView.CurrentChanged += DevicesView_CurrentChanged;
+			devicesView.CollectionChanged += DevicesView_CollectionChanged;
 
 			refreshCameraDevices = new DispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Send, RefreshDevicesTick, Dispatcher) { IsEnabled = true };
-
-			DataContext = this;
 		} // ctor
+
+		// Q+D
+		private void DevicesView_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			if (CurrentDevice == null && !devicesView.IsEmpty)
+				devicesView.MoveCurrentToFirst();
+			SetValue(allowDevicePropertyKey, devices.Count > 1);
+		}
 
 		protected override void OnClosed(EventArgs e)
 		{
@@ -920,6 +938,7 @@ namespace TecWare.PPSn.UI
 		public static BitmapSource TakePicture(DependencyObject owner)
 		{
 			var window = new PpsCameraDialog(PpsShellWpf.GetShell(owner));
+
 
 			if (owner.ShowModalDialog(window.ShowDialog) == true)
 			{

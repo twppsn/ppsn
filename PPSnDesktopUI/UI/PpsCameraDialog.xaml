@@ -6,7 +6,64 @@
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
         mc:Ignorable="d"
         Title="PpsCameraDialog" Height="450" Width="800">
-    <Grid>
+
+	<ContentControl>
+		<ContentControl.Template>
+			<ControlTemplate>
+				<Grid Background="Black">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition />
+					</Grid.ColumnDefinitions>
+					<ListBox x:Name="listDevices" ItemsSource="{Binding Devices}" IsSynchronizedWithCurrentItem="True"
+							 Background="Transparent" BorderThickness="0" Margin="16,16,16,16" Visibility="Collapsed" >
+						<ListBox.ItemTemplate>
+							<DataTemplate>
+								<Grid Width="100">
+									<Grid.RowDefinitions>
+										<RowDefinition />
+										<RowDefinition Height="Auto" />
+									</Grid.RowDefinitions>
+									<Image Source="{Binding PreviewImage,IsAsync=True}" />
+									<TextBlock Grid.Row="1" Text="{Binding Name}" Foreground="White" HorizontalAlignment="Center" TextWrapping="Wrap" />
+								</Grid>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+						<ListBox.ItemContainerStyle>
+							<Style TargetType="{x:Type ListBoxItem}">
+								<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+								<Setter Property="Margin" Value="0,8" />
+								<Setter Property="BorderBrush" Value="Transparent" />
+								<Setter Property="Template">
+									<Setter.Value>
+										<ControlTemplate TargetType="{x:Type ListBoxItem}">
+											<Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Background="Transparent">
+												<ContentPresenter Margin="4" />
+											</Border>
+											<ControlTemplate.Triggers>
+												<Trigger Property="IsSelected" Value="True">
+													<Setter Property="BorderBrush" Value="White" />
+												</Trigger>
+											</ControlTemplate.Triggers>
+										</ControlTemplate>
+									</Setter.Value>
+								</Setter>
+							</Style>
+						</ListBox.ItemContainerStyle>
+					</ListBox>
+					<Image Grid.Column="1" Source="{Binding CurrentDevice.PreviewImage,IsAsync=True}" />
+					<Image Grid.Column="1" Source="{Binding CurrentImage}" Visibility="Collapsed" />
+				</Grid>
+				<ControlTemplate.Triggers>
+					<DataTrigger Binding="{Binding AllowDeviceSelection}" Value="True">
+						<Setter TargetName="listDevices" Property="Visibility" Value="Visible" />
+					</DataTrigger>
+				</ControlTemplate.Triggers>
+			</ControlTemplate>
+		</ContentControl.Template>
+	</ContentControl>
+
+	<!--<Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="100" />
 			<ColumnDefinition />
@@ -14,7 +71,7 @@
 		</Grid.ColumnDefinitions>
 		<DockPanel LastChildFill="True">
 			<Button DockPanel.Dock="Bottom" Content="Take" Click="Button_Click" />
-			<ListBox ItemsSource="{Binding Devices}" IsSynchronizedWithCurrentItem="True">
+			<ListBox x:Name="listDevices" ItemsSource="{Binding Devices}" IsSynchronizedWithCurrentItem="True">
 				<ListBox.ItemTemplate>
 					<DataTemplate>
 						<Grid Height="90" Width="90">
@@ -31,5 +88,7 @@
 		</DockPanel>
 		<Image Grid.Column="1" Source="{Binding CurrentDevice.PreviewImage,IsAsync=true}" />
 		<Image Grid.Column="2" Source="{Binding CurrentImage}" />
-	</Grid>
+	</Grid>-->
+
+
 </Window>
