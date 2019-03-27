@@ -101,6 +101,7 @@
     </Compile>
     <Compile Include="Data\PpsDataSetDesktop.cs" />
     <Compile Include="Data\PpsTraceLog.cs" />
+    <Compile Include="Data\SQLiteExtensions.cs" />
     <Compile Include="PpsEnvironment.Data.cs" />
     <Compile Include="PpsEnvironment.Http.cs" />
     <Compile Include="PpsEnvironment.Lua.cs" />

@@ -1678,7 +1678,11 @@ namespace TecWare.PPSn.Data
 			}
 		} // func CreateParsableValue
 
-		private string CreateLikeString(string value, PpsSqlLikeStringEscapeFlag flag)
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <param name="flag"></param>
+		/// <returns></returns>
+		protected virtual string CreateLikeString(string value, PpsSqlLikeStringEscapeFlag flag)
 		{
 			value = value.Replace("%", "[%]")
 				.Replace("?", "[?]");
