@@ -18,8 +18,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
@@ -370,6 +373,45 @@ namespace TecWare.PPSn.UI
 			progress.Value = value;
 			return progress;
 		} // func DisableUI
+
+		/// <summary></summary>
+		/// <param name="window"></param>
+		/// <param name="relativeTo"></param>
+		public static void SetFullscreen(this Window window, DependencyObject relativeTo)
+		{
+			var parentWindow = relativeTo == null ? Application.Current.MainWindow :  Window.GetWindow(relativeTo);
+			IntPtr hMonitor;
+			if (parentWindow != null)
+			{
+				var rc = new RECT(
+					(int)parentWindow.Left,
+					(int)parentWindow.Top,
+					(int)(parentWindow.Left + parentWindow.ActualWidth),
+					(int)(parentWindow.Top + parentWindow.ActualHeight)
+				);
+				hMonitor = NativeMethods.MonitorFromRect(ref rc, MonitorOptions.MONITOR_DEFAULTTONEAREST);
+			}
+			else
+			{
+				var pt = default(POINT);
+				NativeMethods.GetCursorPos(ref pt);
+				hMonitor = NativeMethods.MonitorFromPoint(pt, MonitorOptions.MONITOR_DEFAULTTONEAREST);
+			}
+
+			var monitorInfo = new MONITORINFO
+			{
+				cbSize = Marshal.SizeOf(typeof(MONITORINFO))
+			};
+			if (NativeMethods.GetMonitorInfo(hMonitor, ref monitorInfo))
+			{
+				window.Left = monitorInfo.rcMonitor.Left;
+				window.Top = monitorInfo.rcMonitor.Top;
+				window.Width = monitorInfo.rcMonitor.Width;
+				window.Height = monitorInfo.rcMonitor.Height;
+			}
+			else
+				window.WindowState = WindowState.Maximized;
+		} // proc SetFullscreen
 
 		/// <summary>Helper to show a system dialog static.</summary>
 		/// <param name="owner"></param>

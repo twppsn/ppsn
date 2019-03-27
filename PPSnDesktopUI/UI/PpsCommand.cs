@@ -174,6 +174,8 @@ namespace TecWare.PPSn.UI
 				}
 				else if (runningCommandList != null)
 					runningCommandList.Remove(this);
+
+				CommandManager.InvalidateRequerySuggested();
 			}
 			else
 				throw new ArgumentException("target must be an UIElement");
@@ -689,6 +691,12 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Is the command currently visible.</summary>
 		public bool IsVisible { get => (bool)GetValue(IsVisibleProperty); set => SetValue(IsVisibleProperty, value); }
+
+		/// <summary>Check is this command an default command.</summary>
+		/// <param name="command"></param>
+		/// <returns></returns>
+		public static bool IsDefaultCommand(PpsUICommandButton command)
+			=> command.Order.Group < 500;
 	} // class PpsUICommand
 
 	#endregion

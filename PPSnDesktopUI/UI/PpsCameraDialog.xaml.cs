@@ -28,6 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -37,7 +38,22 @@ using TecWare.DE.Data;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class PpsCameraDeviceProperty ------------------------------------------
+	#region -- enum PpsCameraDialogStatus ------------------------------------------------
+
+	/// <summary></summary>
+	public enum PpsCameraDialogStatus
+	{
+		/// <summary></summary>
+		Idle,
+		/// <summary>Camera ready to shoot</summary>
+		Preview,
+		/// <summary>Image taken</summary>
+		Image
+	} // enum PpsCameraDialogStatus
+
+	#endregion
+
+	#region -- class PpsCameraDeviceProperty ---------------------------------------------
 
 	internal sealed class PpsCameraDeviceProperty : ObservableObject
 	{
@@ -220,7 +236,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsCameraDevice --------------------------------------------------
+	#region -- class PpsCameraDevice -----------------------------------------------------
 
 	internal sealed class PpsCameraDevice : INotifyPropertyChanged, IDisposable
 	{
@@ -710,7 +726,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Is camera lost.</summary>
 		public bool IsCameraLost
 		{
-			get => isCameraLost; private set
+			get => isCameraLost;
+			private set
 			{
 				if (isCameraLost != value)
 				{
@@ -719,6 +736,9 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // prop IsCameraLost
+
+		/// <summary>Time out for frames.</summary>
+		public bool IsTimeout => unchecked(Environment.TickCount - lastPreviewFrameTick) > 5000;
 
 		/// <summary>bitmaps of the preview stream</summary>
 		public ImageSource PreviewImage => currentPreviewImage;
@@ -745,7 +765,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsCameraDialog --------------------------------------------------
+	#region -- class PpsCameraDialog -----------------------------------------------------
 
 	internal partial class PpsCameraDialog : Window
 	{
@@ -779,12 +799,21 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- AllowDeviceSelection - Property ------------------------------------
+		#region -- AllowDeviceSelection - property ------------------------------------
 
 		private static readonly DependencyPropertyKey allowDevicePropertyKey = DependencyProperty.RegisterReadOnly(nameof(AllowDeviceSelection), typeof(bool), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty AllowDeviceSelectionProperty = allowDevicePropertyKey.DependencyProperty;
 
 		public bool AllowDeviceSelection => BooleanBox.GetBool(GetValue(AllowDeviceSelectionProperty));
+
+		#endregion
+
+		#region -- CurrentStatus - property -------------------------------------------
+
+		private static readonly DependencyPropertyKey currentStatusPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentStatus), typeof(PpsCameraDialogStatus), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(PpsCameraDialogStatus.Idle));
+		public static readonly DependencyProperty CurrentStatusProperty = currentStatusPropertyKey.DependencyProperty;
+
+		public PpsCameraDialogStatus CurrentStatus => (PpsCameraDialogStatus)GetValue(CurrentStatusProperty);
 
 		#endregion
 
@@ -801,22 +830,50 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
-			DataContext = this;
-
 			devicesView = CollectionViewSource.GetDefaultView(devices);
 			devicesView.CurrentChanged += DevicesView_CurrentChanged;
+			// WIP:
 			devicesView.CollectionChanged += DevicesView_CollectionChanged;
 
 			refreshCameraDevices = new DispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Send, RefreshDevicesTick, Dispatcher) { IsEnabled = true };
+
+			this.AddCommandBinding(environment, ApplicationCommands.New,
+				new PpsAsyncCommand(TakePictureImpl, CanTakePicture)
+			);
+			this.AddCommandBinding(environment, ApplicationCommands.Close,
+				new PpsCommand(ctx => Close())
+			);
+			this.AddCommandBinding(environment, ApplicationCommands.Redo,
+				new PpsCommand(
+					ctx => SetValue(currentStatusPropertyKey, PpsCameraDialogStatus.Preview),
+					CanTakePicture)
+			);
+			this.AddCommandBinding(environment, ApplicationCommands.Save,
+				new PpsCommand(ctx => SaveAndExit())
+			);
+
+			DataContext = this;
 		} // ctor
 
-		// Q+D
+		// WIP:
 		private void DevicesView_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
 			if (CurrentDevice == null && !devicesView.IsEmpty)
 				devicesView.MoveCurrentToFirst();
+
 			SetValue(allowDevicePropertyKey, devices.Count > 1);
-		}
+
+			if (CurrentStatus == PpsCameraDialogStatus.Idle && !devicesView.IsEmpty)
+				SetValue(currentStatusPropertyKey, PpsCameraDialogStatus.Preview);
+
+			CommandManager.InvalidateRequerySuggested();
+		} // proc DevicesView_CollectionChanged
+
+		// WIP:
+		private void SaveAndExit()
+		{
+			Close();
+		} // proc SaveAndExit
 
 		protected override void OnClosed(EventArgs e)
 		{
@@ -885,7 +942,7 @@ namespace TecWare.PPSn.UI
 			}
 
 			// check for lost camera's
-			var devicesToRemove = devices.Where(d => d.IsCameraLost || d.IsDisposed).ToArray();
+			var devicesToRemove = devices.Where(d => d.IsCameraLost || d.IsTimeout || d.IsDisposed).ToArray();
 			if (devicesToRemove.Length > 0 || newCameras.Count > 0)
 			{
 				Dispatcher.Invoke(new Action<PpsCameraDevice[], PpsCameraDevice[]>(UpdateDevicesUI),
@@ -916,19 +973,25 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		private async void Button_Click(object sender, RoutedEventArgs e)
+		private async Task TakePictureImpl(PpsCommandContext ctx)
 		{
 			try
 			{
 				var img = await CurrentDevice?.TakePictureAsync();
 				if (img != null)
+				{
 					SetValue(currentImagePropertyKey, img);
+					SetValue(currentStatusPropertyKey, PpsCameraDialogStatus.Image);
+				}
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				Environment.ShowException(ex);
 			}
-		}
+		} // func TakePictureImpl
+
+		private bool CanTakePicture(PpsCommandContext ctx)
+			=> CurrentDevice != null && !CurrentDevice.IsCameraLost && !CurrentDevice.IsDisposed;
 
 		public ICollectionView Devices => devicesView;
 		private PpsShellWpf Environment => environment;
@@ -938,15 +1001,14 @@ namespace TecWare.PPSn.UI
 		public static BitmapSource TakePicture(DependencyObject owner)
 		{
 			var window = new PpsCameraDialog(PpsShellWpf.GetShell(owner));
-
-
+			window.SetFullscreen(owner);
 			if (owner.ShowModalDialog(window.ShowDialog) == true)
 			{
 				return null;
 			}
 			else
 				return null;
-		}
+		} // func TakePicture
 	} // class PpsCameraDialog
 
 	#endregion
