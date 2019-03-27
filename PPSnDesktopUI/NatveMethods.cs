@@ -107,6 +107,12 @@ namespace TecWare.PPSn
 		public int x;
 		public int y;
 #pragma warning restore 0649
+
+		public POINT(int _x, int _y)
+		{
+			x = _x;
+			y = _y;
+		}
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -366,7 +372,13 @@ namespace TecWare.PPSn
 		[DllImport("user32.dll", SetLastError = true)]
 		public static extern IntPtr MonitorFromRect([In] ref RECT lprc, MonitorOptions dwFlags);
 		[DllImport("user32.dll", SetLastError = true)]
+		public static extern IntPtr MonitorFromPoint([In] POINT lprc, MonitorOptions dwFlags);
+		[DllImport("user32.dll", SetLastError = true)]
 		public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+		[DllImport("user32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool GetCursorPos(ref POINT pt);
 
 		[DllImport("gdi32.dll", SetLastError = true)]
 		internal static extern IntPtr CreateDIBSection(IntPtr hdc, ref BITMAPINFO pbmi, uint iUsage, out IntPtr ppvBits, IntPtr hSection, uint dwOffset);

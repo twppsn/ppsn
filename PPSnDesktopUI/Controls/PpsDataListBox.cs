@@ -13,13 +13,11 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using System;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.DE.Stuff;
@@ -80,7 +78,7 @@ namespace TecWare.PPSn.Controls
 		} // func UpdateHasCommands
 
 		private PpsUICommandButton GetDefaultCommand()
-			=> Commands?.OfType<PpsUICommandButton>().FirstOrDefault();
+			=> Commands?.OfType<PpsUICommandButton>().FirstOrDefault(PpsUICommand.IsDefaultCommand);
 
 		/// <summary>Current commands for the item.</summary>
 		public PpsUICommandCollection Commands { get => (PpsUICommandCollection)GetValue(CommandsProperty); set => SetValue(CommandsProperty, value); }

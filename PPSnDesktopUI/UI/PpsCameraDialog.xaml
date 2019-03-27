@@ -5,15 +5,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
         mc:Ignorable="d"
-        Title="PpsCameraDialog" Height="450" Width="800">
-    <Grid>
+        Title="Kamera" Height="450" Width="800" ResizeMode="NoResize" WindowStyle="None" Topmost="True" ShowInTaskbar="False">
+	<Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="100" />
 			<ColumnDefinition />
 			<ColumnDefinition />
 		</Grid.ColumnDefinitions>
 		<DockPanel LastChildFill="True">
-			<Button DockPanel.Dock="Bottom" Content="Take" Click="Button_Click" />
+			<Button DockPanel.Dock="Bottom" Content="Take" Command="{x:Static ApplicationCommands.New}" />
 			<ListBox ItemsSource="{Binding Devices}" IsSynchronizedWithCurrentItem="True">
 				<ListBox.ItemTemplate>
 					<DataTemplate>

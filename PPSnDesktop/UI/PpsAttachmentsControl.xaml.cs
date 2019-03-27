@@ -14,23 +14,15 @@
 //
 #endregion
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
-using TecWare.DE.Data;
 using TecWare.DE.Networking;
-using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
