@@ -44,7 +44,7 @@ namespace TecWare.PPSn.Controls
 			var newScaleFactor = matrix.M11;
 			if (newScaleFactor < MinScaleFactor)
 			{
-				var diff = newScaleFactor - MinScaleFactor;
+				var diff = MinScaleFactor - newScaleFactor;
 				ScaleRelative(ref matrix, diff, origin);
 			}
 			else if (newScaleFactor > MaxScaleFactor)
@@ -64,7 +64,8 @@ namespace TecWare.PPSn.Controls
 		private static void ScaleRelative(ref Matrix matrix, double relScale, Point origin)
 		{
 			var delta = (matrix.M11 + relScale) / matrix.M11;
-			matrix.ScaleAt(delta, delta, origin.X, origin.Y);
+			if (delta != 0.0)
+				matrix.ScaleAt(delta, delta, origin.X, origin.Y);
 		} // proc ScaleReltive
 
 		#endregion
