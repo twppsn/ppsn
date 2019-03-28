@@ -99,6 +99,7 @@
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\PpsListbox.cs" />
     <Compile Include="Controls\PpsDataListBox.cs" />
+    <Compile Include="Controls\PpsPanel.cs" />
     <Compile Include="UI\PpsAttachments.cs" />
     <Compile Include="Data\PpsDataRowEnumerableCollectionView.cs" />
     <Compile Include="Data\PpsTypedListCollectionView.cs" />

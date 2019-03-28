@@ -517,7 +517,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="owner"></param>
 		/// <returns></returns>
-		public static BitmapSource TakePicture(DependencyObject owner)
+		public static ImageSource TakePicture(DependencyObject owner)
 			=> PpsCameraDialog.TakePicture(owner);
 
 		#region -- remove after update DES --

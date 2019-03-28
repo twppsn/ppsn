@@ -145,7 +145,7 @@
 				<ControlTemplate.Triggers>
 					<MultiDataTrigger>
 						<MultiDataTrigger.Conditions>
-							<Condition Binding="{Binding AllowDeviceSelection}" Value="True" />
+							<Condition Binding="{Binding HasDeviceSelection}" Value="True" />
 							<Condition Binding="{Binding CurrentStatus}" Value="Preview" />
 						</MultiDataTrigger.Conditions>
 						<Setter TargetName="listDevices" Property="Visibility" Value="Visible" />

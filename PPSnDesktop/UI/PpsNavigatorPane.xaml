@@ -33,7 +33,14 @@ specific language governing permissions and limitations under the Licence.
 		<ui:PpsSideBarControl.Content>
 			<local:PpsNavigationListBox x:Name="itemList"
 										ItemsSource="{Binding ItemsView}"
-										IsSynchronizedWithCurrentItem="True"/>
+										IsSynchronizedWithCurrentItem="True"
+										ScrollViewer.CanContentScroll="True">
+				<local:PpsNavigationListBox.ItemsPanel>
+					<ItemsPanelTemplate>
+						<ui:PpsFixedStackPanel ItemHeight="44" />
+					</ItemsPanelTemplate>
+				</local:PpsNavigationListBox.ItemsPanel>
+			</local:PpsNavigationListBox>
 		</ui:PpsSideBarControl.Content>
 	</ui:PpsSideBarControl>
 </ui:PpsWindowPaneControl>
