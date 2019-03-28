@@ -6,8 +6,8 @@
 	<DataTemplate x:Key="{DataTemplateKey {x:Type local:PpsObject}}">
 		<Grid>
 			<Grid.RowDefinitions>
-				<RowDefinition Height="22" />
-				<RowDefinition Height="22" />
+				<RowDefinition Height="20" />
+				<RowDefinition Height="20" />
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="100" />
