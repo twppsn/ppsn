@@ -343,7 +343,7 @@ namespace TecWare.PPSn.Server.Sql
 					// output clause
 					if (parameter.GetOptionalValue("output", true))
 					{
-						commandText.Append(" OUTPUT");
+						commandText.Append(" OUTPUT ");
 						AppendOutputValues(tableInfo, cmd, commandText, "inserted.", emitRowResults, targetColumns);
 					}
 

@@ -230,10 +230,14 @@ namespace TecWare.PPSn.UI
 			//	PaneControl.Commands.Add(redoCommand);
 			//}
 
+			HelpKey = obj.Typ + ".Edit";
+
 			OnPropertyChanged(nameof(UndoManager));
 			OnPropertyChanged(nameof(UndoView));
 			OnPropertyChanged(nameof(RedoView));
 			OnPropertyChanged(nameof(Data));
+			OnPropertyChanged(nameof(CurrentData));
+			OnPropertyChanged(nameof(HelpKey));
 			OnDataChanged();
 		} // proc InitializeData
 
@@ -300,6 +304,9 @@ namespace TecWare.PPSn.UI
 		/// <summary>UndoManager of the dataset.</summary>
 		[LuaMember]
 		public PpsUndoManager UndoManager => data.UndoManager;
+
+		/// <summary></summary>
+		protected sealed override IPpsDataInfo CurrentData => obj;
 
 		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
 		public ICollectionView UndoView => undoView.View;

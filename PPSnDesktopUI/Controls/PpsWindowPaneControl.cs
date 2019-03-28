@@ -19,6 +19,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -29,6 +30,11 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Base window pane implementation for user-control based window panes.</summary>
 	public class PpsWindowPaneControl : UserControl, IPpsWindowPane
 	{
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly RoutedCommand CommitCommand = new RoutedCommand("Commit", typeof(PpsWindowPaneControl));
+		public static readonly RoutedCommand PublishCommand = new RoutedCommand("Publish", typeof(PpsWindowPaneControl));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
 		#region -- Title - Property ---------------------------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -202,5 +208,8 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Extent logical child collection with commands</summary>
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
+
+		/// <summary></summary>
+		public PpsShellWpf Shell => paneHost.PaneManager.Shell;
 	} // class PpsWindowPaneControl
 }
