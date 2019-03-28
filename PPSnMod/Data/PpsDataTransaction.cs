@@ -261,7 +261,11 @@ namespace TecWare.PPSn.Server.Data
 			if (parameter.GetMemberValue("rows") is IEnumerable<IDataRow> rows) // from datatable or other row source
 			{
 				var rowEnumerator = rows.GetEnumerator();
-				if (!(rows is IDataColumns columns))
+				if (rows is IDataColumns columns)
+				{
+					rowEnumerator.MoveNext();
+				}
+				else
 				{
 					if (!rowEnumerator.MoveNext()) // no arguments defined
 					{
