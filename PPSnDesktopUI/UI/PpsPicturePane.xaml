@@ -19,8 +19,9 @@ specific language governing permissions and limitations under the Licence.
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls"
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
-			 mc:Ignorable="d" 
-			Title="Bildeditor"
+			 mc:Ignorable="d"
+			 Title="Bildeditor"
+			 Image="image"
              d:DesignHeight="300" d:DesignWidth="300">
 	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
 		<Image x:Name="PART_Image" Stretch="None" Source="{Binding CurrentImage}" >
