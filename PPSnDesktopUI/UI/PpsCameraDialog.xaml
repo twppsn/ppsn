@@ -51,7 +51,8 @@
 										  Width="72"
 										  Opacity=".75"
 										  HorizontalAlignment="Center"
-										  VerticalAlignment="Center" />
+										  VerticalAlignment="Center"
+										  Visibility="Collapsed" />
 					<ListBox x:Name="listDevices" ItemsSource="{Binding Devices}" IsSynchronizedWithCurrentItem="True"
 							 Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="16,16,16,16" Visibility="Collapsed" >
 						<ListBox.ItemTemplate>
@@ -118,7 +119,14 @@
 						   Grid.Column="1"
 						   Grid.Row="1"
 						   Margin="0"
-						   Visibility="Collapsed" />
+						   Visibility="Collapsed">
+						<Image.RenderTransformOrigin>
+							<Point X="0.5" Y="0.5"/>
+						</Image.RenderTransformOrigin>
+						<Image.RenderTransform>
+							<ScaleTransform x:Name="ImageScaleTransform" ScaleX="0.2" ScaleY="0.2" />
+						</Image.RenderTransform>
+					</Image>
 					<StackPanel x:Name="imageCmdPanel" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0" Visibility="Collapsed">
 						<Border Background="{StaticResource blackBackGround}" Padding="1">
 							<pps:PpsButton Command="{x:Static ApplicationCommands.Save}" Content="Übernehmen" GeometryName="checkedCircle" ImageOpacity="1" GeometrySize="22"
@@ -142,16 +150,44 @@
 						</MultiDataTrigger.Conditions>
 						<Setter TargetName="listDevices" Property="Visibility" Value="Visible" />
 					</MultiDataTrigger>
+					<DataTrigger Binding="{Binding CurrentStatus}" Value="Idle">
+						<Setter TargetName="idleImage" Property="Visibility" Value="Visible" />
+					</DataTrigger>
+
 					<DataTrigger Binding="{Binding CurrentStatus}" Value="Preview">
-						<Setter TargetName="idleImage" Property="Visibility" Value="Hidden" />
 						<Setter TargetName="previewImage" Property="Visibility" Value="Visible" />
 						<Setter TargetName="gridTake" Property="Visibility" Value="Visible" />
 						<Setter TargetName="gridSettings" Property="Visibility" Value="Visible" />
 					</DataTrigger>
 					<DataTrigger Binding="{Binding CurrentStatus}" Value="Image">
-						<Setter TargetName="idleImage" Property="Visibility" Value="Hidden" />
-						<Setter TargetName="currentImage" Property="Visibility" Value="Visible" />
-						<Setter TargetName="imageCmdPanel" Property="Visibility" Value="Visible" />
+						<DataTrigger.EnterActions>
+							<BeginStoryboard>
+								<Storyboard x:Name="AnimationBeginStoryboard">
+									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="currentImage" Storyboard.TargetProperty="Visibility">
+										<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+									</ObjectAnimationUsingKeyFrames>
+									<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:00:0.25" />
+									<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:00:0.25" />
+									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="imageCmdPanel" Storyboard.TargetProperty="Visibility">
+										<DiscreteObjectKeyFrame KeyTime="0:0:0.25" Value="{x:Static Visibility.Visible}"/>
+									</ObjectAnimationUsingKeyFrames>
+								</Storyboard>
+							</BeginStoryboard>
+						</DataTrigger.EnterActions>
+						<DataTrigger.ExitActions>
+							<BeginStoryboard>
+								<Storyboard>
+									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="currentImage" Storyboard.TargetProperty="Visibility">
+										<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+									</ObjectAnimationUsingKeyFrames>
+									<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="0.2" BeginTime="0:0:0" Duration="0:0:0" />
+									<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="0.2" BeginTime="0:0:0" Duration="0:0:0" />
+									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="imageCmdPanel" Storyboard.TargetProperty="Visibility">
+										<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+									</ObjectAnimationUsingKeyFrames>
+								</Storyboard>
+							</BeginStoryboard>
+						</DataTrigger.ExitActions>
 					</DataTrigger>
 				</ControlTemplate.Triggers>
 			</ControlTemplate>
