@@ -793,8 +793,14 @@ namespace TecWare.PPSn.UI
 		[LuaMember]
 		public IPpsWindowPaneHost PaneHost { get; }
 
-		string IPpsWindowPane.HelpKey => null;
-		IPpsDataInfo IPpsWindowPane.CurrentData => null;
+		/// <summary></summary>
+		[LuaMember]
+		public string HelpKey { get; set; }
+
+		/// <summary></summary>
+		protected virtual IPpsDataInfo CurrentData => null;
+
+		IPpsDataInfo IPpsWindowPane.CurrentData => CurrentData;
 
 		/// <summary>Base web request, for the pane.</summary>
 		[LuaMember]

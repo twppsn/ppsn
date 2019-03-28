@@ -265,7 +265,12 @@ namespace TecWare.PPSn
 			{
 				headers["ppsn-hostname"] = System.Environment.MachineName;
 				foreach (var k in headers.AllKeys)
-					onlineRequest.Headers[k] = headers[k];
+				{
+					if (String.Compare(k, "Accept", true) == 0)
+						onlineRequest.Accept = headers[k];
+					else
+						onlineRequest.Headers[k] = headers[k];
+				}
 			}
 
 			// request data, cached POST-Data

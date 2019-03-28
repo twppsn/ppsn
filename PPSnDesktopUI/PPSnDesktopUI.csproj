@@ -132,9 +132,6 @@
     <Compile Include="Data\PdfReader.cs" />
     <Compile Include="PpsShellWpf.cs" />
     <Compile Include="Threading.cs" />
-    <Compile Include="UI\PpsMarkdownPane.xaml.cs">
-      <DependentUpon>PpsMarkdownPane.xaml</DependentUpon>
-    </Compile>
     <Compile Include="UI\PpsPdfViewerPane.xaml.cs">
       <DependentUpon>PpsPdfViewerPane.xaml</DependentUpon>
     </Compile>
@@ -286,10 +283,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="UI\PpsCameraDialog.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\PpsMarkdownPane.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

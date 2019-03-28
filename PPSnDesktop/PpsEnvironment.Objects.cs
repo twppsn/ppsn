@@ -2989,6 +2989,7 @@ namespace TecWare.PPSn
 			GetObjectUri(out var objectInfo, out var objectUri);
 			var request = Environment.GetProxyRequest($"{objectUri}/?action=push", $"Push:{Nr} ({Id:N0})");
 			request.Method = HttpMethod.Put.Method;
+			request.Headers[HttpRequestHeader.Accept] = MimeTypes.Text.Xml;
 			return request;
 		} //func PushDataRequest
 
@@ -3536,8 +3537,7 @@ namespace TecWare.PPSn
 
 		private Type GetPaneTypeFromObject()
 		{
-			if (Typ == PpsEnvironment.AttachmentObjectTyp // select editor for the attachment
-				|| Typ == PpsEnvironment.HelpKeyTyp)
+			if (Typ == PpsEnvironment.AttachmentObjectTyp) // select editor for the attachment
 			{
 				if (MimeType.StartsWith("image/"))
 					return Environment.GetPaneTypeFromString("picture");
@@ -3548,6 +3548,8 @@ namespace TecWare.PPSn
 				else
 					return null;
 			}
+			else if (Typ == PpsEnvironment.HelpKeyTyp)
+				return typeof(PpsHelpPagePane);
 			else // default is mask
 				return Environment.GetPaneTypeFromString("mask");
 		} // func GetPaneTypeFromObject

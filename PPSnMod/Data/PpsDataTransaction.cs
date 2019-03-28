@@ -261,17 +261,19 @@ namespace TecWare.PPSn.Server.Data
 			if (parameter.GetMemberValue("rows") is IEnumerable<IDataRow> rows) // from datatable or other row source
 			{
 				var rowEnumerator = rows.GetEnumerator();
-				if (!rowEnumerator.MoveNext()) // no arguments defined
+				if (!(rows is IDataColumns columns))
 				{
-					rowEnumerator.Dispose();
-					return (null, null); // silent return nothing
+					if (!rowEnumerator.MoveNext()) // no arguments defined
+					{
+						rowEnumerator.Dispose();
+						return (null, null); // silent return nothing
+					}
+
+					columns = rowEnumerator.Current as IDataColumns;
 				}
 
 				// create columns list parameter
-				if (rowEnumerator.Current is IDataColumns columns)
-					parameter["columnList"] = columns;
-				else
-					throw new ArgumentException("IDataColumns not implemented.", nameof(parameter));
+				parameter["columnList"] = columns ?? throw new ArgumentException("IDataColumns not implemented.", nameof(parameter));
 
 				return (rowEnumerator, PrepareCore(parameter, null));
 			}

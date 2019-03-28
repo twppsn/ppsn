@@ -675,7 +675,7 @@ namespace TecWare.PPSn.Data
 		private bool isReading = false;
 
 		private long lastPrimaryId = 1;
-		private object nextPrimaryLock = new object();
+		private readonly object nextPrimaryLock = new object();
 
 		private LuaTable properties; // local properties and states, that are not persisted
 		private readonly List<LuaTable> eventSinks;

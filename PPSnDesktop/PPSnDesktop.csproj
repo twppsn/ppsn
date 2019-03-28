@@ -112,10 +112,14 @@
       <DependentUpon>PpsAttachmentsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
+    <Compile Include="UI\PpsHelpPagePane.cs" />
     <Compile Include="UI\PpsHelpPageViewer.cs" />
     <Compile Include="UI\PpsMainWindow.Panes.cs" />
     <Compile Include="UI\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UI\PpsMarkdownPane.xaml.cs">
+      <DependentUpon>PpsMarkdownPane.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsNavigatorPane.xaml.cs">
       <DependentUpon>PpsNavigatorPane.xaml</DependentUpon>
@@ -206,6 +210,10 @@
     <Page Include="UI\PpsMainWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="UI\PpsMarkdownPane.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="UI\PpsNavigatorPane.xaml">
       <SubType>Designer</SubType>

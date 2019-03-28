@@ -17,7 +17,6 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Documents;
-using System.Windows.Input;
 using Neo.IronLua;
 using Neo.Markdig.Xaml;
 using TecWare.DE.Data;
@@ -26,7 +25,10 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
-	internal sealed class PpsMarkdownDocumentModel : ObservableObject, IDisposable
+	#region -- class PpsMarkdownDocumentModel -----------------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsMarkdownDocumentModel : ObservableObject, IDisposable
 	{
 		private readonly IPpsDataInfo dataInfo;
 		private IPpsDataObject dataAccess = null;
@@ -36,17 +38,23 @@ namespace TecWare.PPSn.UI
 		private bool isDocumentDirty = false;
 		private bool isDirty = false;
 
+		/// <summary></summary>
+		/// <param name="dataInfo"></param>
 		public PpsMarkdownDocumentModel(IPpsDataInfo dataInfo)
 		{
 			this.dataInfo = dataInfo;
 		} // ctor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			dataAccess?.Dispose();
 			dataAccess = null;
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="windowPane"></param>
+		/// <returns></returns>
 		public async Task LoadAsync(IPpsWindowPane windowPane)
 		{
 			using (var bar = windowPane.DisableUI(String.Format("Lade Dokument ({0})...", dataInfo.Name)))
@@ -82,6 +90,8 @@ namespace TecWare.PPSn.UI
 				throw new ArgumentNullException("data", "Data is not an blob.");
 		} // proc LoadFromObjectAsync
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public async Task SaveAsync()
 		{
 			if (dataAccess.Data is IPpsDataStream stream)
@@ -107,8 +117,10 @@ namespace TecWare.PPSn.UI
 			return document;
 		} // func GetDocument
 
+		/// <summary>Current data information</summary>
 		public IPpsDataInfo Data => dataInfo;
 
+		/// <summary>Current text content.</summary>
 		public string Text
 		{
 			get => text; set
@@ -122,11 +134,18 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Text
 
+		/// <summary>Current flow document</summary>
 		public FlowDocument Document => GetDocument();
 
+		/// <summary>Is the current document changed</summary>
 		public bool IsDirty { get => isDirty; set => Set(ref isDirty, value, nameof(IsDirty)); }
 	} // class PpsMarkdownDocumentModel
 
+	#endregion
+
+	#region -- class PpsMarkdownPane --------------------------------------------------
+
+	// todo: sollte in Desktop.UI sein, aber LoadComponent prüft das Assembly, anderes Model notwendig?
 	public partial class PpsMarkdownPane : PpsWindowPaneControl
 	{
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -136,9 +155,19 @@ namespace TecWare.PPSn.UI
 		public PpsMarkdownPane(IPpsWindowPaneHost paneHost)
 			: base(paneHost)
 		{
-			Commands.AddButton("100;100", "save", ApplicationCommands.Save, "Speichern", "Speichert die Änderungen");
-
 			InitializeComponent();
+
+			Commands.AddButton("100;120", "save",
+				CommitCommand,
+				"Speichern", "Speichert die Änderungen"
+			);
+
+			this.AddCommandBinding(Shell, CommitCommand,
+				new PpsAsyncCommand(
+					async ctx => await CurrentDocument.SaveAsync(),
+					ctx => CurrentDocument != null && CurrentDocument.IsDirty
+				)
+			);
 		} // ctor
 
 		/// <summary></summary>
@@ -192,16 +221,7 @@ namespace TecWare.PPSn.UI
 			=> CurrentDocument?.Data;
 
 		#endregion
-
-		private async void CommandBinding_Executed(object sender, ExecutedRoutedEventArgs e)
-		{
-			await CurrentDocument?.SaveAsync();
-			e.Handled = true;
-		} // event CommandBinding_Executed
-
-		private void CommandBinding_CanExecute(object sender, CanExecuteRoutedEventArgs e)
-		{
-			e.CanExecute = CurrentDocument != null && CurrentDocument.IsDirty;
-		} // event CommandBinding_CanExecute
 	} // class PpsMarkdownPane
+
+	#endregion
 }

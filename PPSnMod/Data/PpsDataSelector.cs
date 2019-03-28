@@ -710,6 +710,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		/// <param name="connection"></param>
 		/// <param name="viewId"></param>
+		/// <param name="dataVersion"></param>
 		/// <param name="enumerable"></param>
 		/// <param name="columns"></param>
 		public PpsGenericSelector(IPpsConnectionHandle connection, string viewId, long dataVersion, IEnumerable<T> enumerable, AliasColumn[] columns = null)
