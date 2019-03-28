@@ -513,7 +513,16 @@
 			<xs:appinfo>
 				<class>TecWare.PPSn.Server.PpsAttachmentItem</class>
 			</xs:appinfo>
-			<xs:documentation></xs:documentation>
+			<xs:documentation>Entry point for all attachments.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="helpkey" type="pps:objectItemType" substitutionGroup="pps:objectItem">
+		<xs:annotation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsHelpKeyItem</class>
+			</xs:appinfo>
+			<xs:documentation>Entry point for all pages.</xs:documentation>
 		</xs:annotation>
 	</xs:element>
 
