@@ -128,7 +128,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="IsKeyboardFocused" Value="True" />
 								<Condition Property="IsMouseCaptured" Value="False" />
 							</MultiTrigger.Conditions>
-							<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 						</MultiTrigger>
 
 						<!--mouse over regular button-->
@@ -138,7 +138,8 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="HasBackground" Value="True" />
 							</MultiTrigger.Conditions>
 							<Setter Property="ImageOpacity" Value="1" />
-							<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
 						</MultiTrigger>
 
 						<!--mouse over non circled button-->
@@ -149,8 +150,8 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="HasBackground" Value="False" />
 							</MultiTrigger.Conditions>
 							<Setter Property="ImageOpacity" Value="1" />
-							<Setter Property="BorderBrush" Value="{DynamicResource PPSnMouseOverBrush}" />
-							<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnMouseOverBrush}" />
+							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
 						</MultiTrigger>
 
 						<!--display pressed status for non circled-->
