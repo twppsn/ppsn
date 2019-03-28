@@ -297,8 +297,8 @@ namespace TecWare.PPSn.Data
 				case CurrentEnumeratorState.ReadBlock: // in async read block
 					break;
 				case CurrentEnumeratorState.Fetching: // fetch current block
-					if (index >= currentFetchedRows.Count) // do we need to fetch a next block
-						CheckResult(FetchBlockAsync(((index / blockFetchSize) + 1) * blockFetchSize, enumeratorVersion));
+					if (index >= currentFetchedRows.Count - 1) // do we need to fetch a next block
+						CheckResult(FetchBlockAsync((((index + 1) / blockFetchSize) + 1) * blockFetchSize, enumeratorVersion));
 					break;
 
 				case CurrentEnumeratorState.Closed:
