@@ -232,7 +232,7 @@ namespace TecWare.PPSn.UI
 			if (bitmap != null)
 			{
 				using (var bar = CurrentPane?.DisableUI("Füge Bild von Kamera..."))
-					await AddFromBitmapSourceAsync(bitmap);
+					await AddFromBitmapSourceAsync((BitmapSource)bitmap);
 			}
 		} // proc AddFromCameraAsync
 

@@ -40,10 +40,9 @@ namespace TecWare.PPSn.UI
 {
 	#region -- enum PpsCameraDialogStatus ------------------------------------------------
 
-	/// <summary></summary>
-	public enum PpsCameraDialogStatus
+	internal enum PpsCameraDialogStatus
 	{
-		/// <summary></summary>
+		/// <summary>No camera detected.</summary>
 		Idle,
 		/// <summary>Camera ready to shoot</summary>
 		Preview,
@@ -801,10 +800,10 @@ namespace TecWare.PPSn.UI
 
 		#region -- AllowDeviceSelection - property ------------------------------------
 
-		private static readonly DependencyPropertyKey allowDevicePropertyKey = DependencyProperty.RegisterReadOnly(nameof(AllowDeviceSelection), typeof(bool), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(BooleanBox.False));
-		public static readonly DependencyProperty AllowDeviceSelectionProperty = allowDevicePropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey hasDevicePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasDeviceSelection), typeof(bool), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty HasDeviceSelectionProperty = hasDevicePropertyKey.DependencyProperty;
 
-		public bool AllowDeviceSelection => BooleanBox.GetBool(GetValue(AllowDeviceSelectionProperty));
+		public bool HasDeviceSelection => BooleanBox.GetBool(GetValue(HasDeviceSelectionProperty));
 
 		#endregion
 
@@ -832,7 +831,6 @@ namespace TecWare.PPSn.UI
 
 			devicesView = CollectionViewSource.GetDefaultView(devices);
 			devicesView.CurrentChanged += DevicesView_CurrentChanged;
-			// WIP:
 			devicesView.CollectionChanged += DevicesView_CollectionChanged;
 
 			refreshCameraDevices = new DispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Send, RefreshDevicesTick, Dispatcher) { IsEnabled = true };
@@ -841,15 +839,30 @@ namespace TecWare.PPSn.UI
 				new PpsAsyncCommand(TakePictureImpl, CanTakePicture)
 			);
 			this.AddCommandBinding(environment, ApplicationCommands.Close,
-				new PpsCommand(ctx => Close())
+				new PpsCommand(ctx =>
+					{
+						SetValue(currentImagePropertyKey, null);
+						DialogResult = false;
+					}
+				)
 			);
 			this.AddCommandBinding(environment, ApplicationCommands.Redo,
 				new PpsCommand(
-					ctx => SetValue(currentStatusPropertyKey, PpsCameraDialogStatus.Preview),
+					ctx => 
+					{
+						// clear image and status
+						SetValue(currentImagePropertyKey, null);
+						SetValue(currentStatusPropertyKey, PpsCameraDialogStatus.Preview);
+					},
 					CanTakePicture)
 			);
 			this.AddCommandBinding(environment, ApplicationCommands.Save,
-				new PpsCommand(ctx => SaveAndExit())
+				new PpsCommand(ctx =>
+					{
+						DialogResult = true;
+					},
+					ctx => CurrentImage != null
+				)
 			);
 
 			DataContext = this;
@@ -861,19 +874,13 @@ namespace TecWare.PPSn.UI
 			if (CurrentDevice == null && !devicesView.IsEmpty)
 				devicesView.MoveCurrentToFirst();
 
-			SetValue(allowDevicePropertyKey, devices.Count > 1);
+			SetValue(hasDevicePropertyKey, devices.Count > 1);
 
 			if (CurrentStatus == PpsCameraDialogStatus.Idle && !devicesView.IsEmpty)
 				SetValue(currentStatusPropertyKey, PpsCameraDialogStatus.Preview);
 
 			CommandManager.InvalidateRequerySuggested();
 		} // proc DevicesView_CollectionChanged
-
-		// WIP:
-		private void SaveAndExit()
-		{
-			Close();
-		} // proc SaveAndExit
 
 		protected override void OnClosed(EventArgs e)
 		{
@@ -998,16 +1005,13 @@ namespace TecWare.PPSn.UI
 
 		// -- static  ---------------------------------------------------------
 
-		public static BitmapSource TakePicture(DependencyObject owner)
+		public static ImageSource TakePicture(DependencyObject owner)
 		{
 			var window = new PpsCameraDialog(PpsShellWpf.GetShell(owner));
 			window.SetFullscreen(owner);
-			if (owner.ShowModalDialog(window.ShowDialog) == true)
-			{
-				return null;
-			}
-			else
-				return null;
+			return owner.ShowModalDialog(window.ShowDialog) == true
+				? window.CurrentImage
+				: null;
 		} // func TakePicture
 	} // class PpsCameraDialog
 
