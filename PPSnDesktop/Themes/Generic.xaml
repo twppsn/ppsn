@@ -25,8 +25,8 @@
 								<RowDefinition />
 							</Grid.RowDefinitions>
 							<Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource PPSnSeparatorBrush}" Background="{DynamicResource PPSnSideBarBackgroundBrush}"
-									Height="37" BorderThickness="0,0,0,1" Padding="0,0,0,1" >
-								<uiC:PpsCommandBar Name="PART_CommandBar" BasicCommands="{TemplateBinding Commands}" Mode="Mixed" VerticalAlignment="Center" Margin="32,0,0,0" />
+									Height="36" BorderThickness="0,0,0,1" Padding="0,0,0,1" >
+								<uiC:PpsCommandBar Name="PART_CommandBar" BasicCommands="{TemplateBinding Commands}" Mode="Mixed" Margin="32,0,0,0" />
 							</Border>
 							<ContentPresenter Grid.Row="1" x:Name="PART_Control" Content="{TemplateBinding Control}" />
 							<ui:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" Focusable="False"/>
