@@ -27,6 +27,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -44,9 +45,9 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>No camera detected.</summary>
 		Idle,
-		/// <summary>Camera ready to shoot</summary>
+		/// <summary>Camera ready to shoot.</summary>
 		Preview,
-		/// <summary>Image taken</summary>
+		/// <summary>Image taken.</summary>
 		Image
 	} // enum PpsCameraDialogStatus
 
@@ -798,12 +799,21 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- AllowDeviceSelection - property ------------------------------------
+		#region -- HasDeviceSelection - property --------------------------------------
 
 		private static readonly DependencyPropertyKey hasDevicePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasDeviceSelection), typeof(bool), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasDeviceSelectionProperty = hasDevicePropertyKey.DependencyProperty;
 
 		public bool HasDeviceSelection => BooleanBox.GetBool(GetValue(HasDeviceSelectionProperty));
+
+		#endregion
+
+		#region -- IsSettingsActive - property ----------------------------------------
+
+		private static readonly DependencyPropertyKey isSettingsActivePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsSettingsActive), typeof(bool), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty IsSettingsActiveProperty = isSettingsActivePropertyKey.DependencyProperty;
+
+		public bool IsSettingsActive => BooleanBox.GetBool(GetValue(IsSettingsActiveProperty));
 
 		#endregion
 
@@ -815,6 +825,9 @@ namespace TecWare.PPSn.UI
 		public PpsCameraDialogStatus CurrentStatus => (PpsCameraDialogStatus)GetValue(CurrentStatusProperty);
 
 		#endregion
+
+		/// <summary>Template name for the settings box</summary>
+		private const string SettingsBoxTemplateName = "PART_SettingsBox";
 
 		private readonly PpsShellWpf environment;
 		private readonly DispatcherTimer refreshCameraDevices;
@@ -848,7 +861,7 @@ namespace TecWare.PPSn.UI
 			);
 			this.AddCommandBinding(environment, ApplicationCommands.Redo,
 				new PpsCommand(
-					ctx => 
+					ctx =>
 					{
 						// clear image and status
 						SetValue(currentImagePropertyKey, null);
@@ -864,7 +877,14 @@ namespace TecWare.PPSn.UI
 					ctx => CurrentImage != null
 				)
 			);
-
+			this.AddCommandBinding(environment, ApplicationCommands.Properties,
+				new PpsCommand(ctx =>
+					{
+						SetValue(isSettingsActivePropertyKey, !IsSettingsActive);
+					},
+					ctx => CurrentStatus == PpsCameraDialogStatus.Preview
+				)
+			);
 			DataContext = this;
 		} // ctor
 
@@ -881,6 +901,51 @@ namespace TecWare.PPSn.UI
 
 			CommandManager.InvalidateRequerySuggested();
 		} // proc DevicesView_CollectionChanged
+
+		#region -- Simulate Popup.StaysOpen = false -----------------------------------
+
+		// simulate Popup.StaysOpen = false
+		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+		{
+			if (IsSettingsActive && !IsChildOfSettingsBox((DependencyObject)e.OriginalSource))
+				SetValue(isSettingsActivePropertyKey, false);
+			base.OnPreviewMouseDown(e);
+		} // proc OnPreviewMouseDown
+
+		private bool IsChildOfSettingsBox(DependencyObject o)
+		{
+			while (true)
+			{
+				if (o == null)
+					return false;
+				if (o.GetName() == SettingsBoxTemplateName)
+					return true;
+				o = VisualTreeHelper.GetParent(o);
+			}
+		} // func IsChildOfSettingsBox
+
+		#endregion
+
+		public static T GetLogicalParent<T>(DependencyObject p_oElement)
+			where T : DependencyObject
+		{
+			DependencyObject oParent = p_oElement;
+			Type oTargetType = typeof(T);
+			do
+			{
+				oParent = LogicalTreeHelper.GetParent(oParent);
+			}
+			while (
+				!(
+					oParent == null
+					|| oParent.GetType() == oTargetType
+					|| oParent.GetType().IsSubclassOf(oTargetType)
+				)
+			);
+
+			return oParent as T;
+		}
+
 
 		protected override void OnClosed(EventArgs e)
 		{
