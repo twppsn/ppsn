@@ -685,6 +685,9 @@ namespace TecWare.PPSn
 			ShowException(ExceptionShowFlags.None, e, alternativeMessage);
 		} // proc HandleDataRemoveException
 
+		/// <summary>Write in the trace log.</summary>
+		/// <param name="type"></param>
+		/// <param name="args"></param>
 		[LuaMember("trace")]
 		public void LuaTrace(PpsLogType type, params object[] args)
 		{
@@ -703,6 +706,9 @@ namespace TecWare.PPSn
 		public void LuaPrint(params object[] args)
 			=> LuaTrace(PpsLogType.Information, args);
 
+		/// <summary>Creates a table from the data object.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
 		[LuaMember("toTable")]
 		public LuaTable LuaToTable(object table)
 		{
@@ -732,14 +738,23 @@ namespace TecWare.PPSn
 			}
 		} // func LuaToTable
 
+		/// <summary>Get the .net type.</summary>
+		/// <param name="o"></param>
+		/// <returns></returns>
 		[LuaMember("typeof")]
 		public Type LuaType(object o)
 			=> o?.GetType();
 
+		/// <summary>Check if this object callable.</summary>
+		/// <param name="o"></param>
+		/// <returns></returns>
 		[LuaMember("isfunction")]
 		public bool LuaIsFunction(object o)
 			=> Lua.RtInvokeable(o);
 
+		/// <summary>Get raw value.</summary>
+		/// <param name="v"></param>
+		/// <returns></returns>
 		[LuaMember("getServerRowValue")]
 		public virtual object GetServerRowValue(object v)
 			=> v;
@@ -794,6 +809,9 @@ namespace TecWare.PPSn
 			}
 		} // func LuaRunTask
 
+		/// <summary>Await a function.</summary>
+		/// <param name="func"></param>
+		/// <returns></returns>
 		protected virtual LuaResult LuaAwaitFunc(object func)
 			=> throw new ArgumentException($"The type '{func.GetType().Name}' is not awaitable.");
 

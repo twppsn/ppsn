@@ -2016,7 +2016,6 @@ namespace TecWare.PPSn.Server.Sql
 				if (!isNullable.HasValue)
 					isNullable = !columnInfo.IsPrimaryKey;
 
-				var param = CreateParameter(command.Command, columnInfo, parameterName);
 				var formattedParameterName = FormatParameterName(parameterName);
 				if (isNullable.Value)
 				{
@@ -2031,7 +2030,12 @@ namespace TecWare.PPSn.Server.Sql
 					  .Append(" = ")
 					  .Append(formattedParameterName);
 				}
-				command.AppendParameter(ParameterMapping.CreateTableName(parameterName, param, columnInfo.DataType, DBNull.Value));
+
+				if (!command.ExistsParameter(parameterName))
+				{
+					var param = CreateParameter(command.Command, columnInfo, parameterName);
+					command.AppendParameter(ParameterMapping.CreateTableName(parameterName, param, columnInfo.DataType, DBNull.Value));
+				}
 			} // func CreateWhereParameter
 
 			/// <summary>Add trailing sql notations</summary>

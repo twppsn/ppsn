@@ -99,19 +99,33 @@ namespace TecWare.PPSn
 	/// <summary>Boolean box helper</summary>
 	public static class BooleanBox
 	{
+		/// <summary>Get a object from a boolean value.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static object GetObject(bool value)
 			=> value ? True : False;
 
+		/// <summary>Get a object from a boolean value.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static object GetObject(bool? value)
 			=> value.HasValue ? GetObject(value.Value) : null;
 
+		/// <summary>Get the boolean value from an object.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool GetBool(object value)
-			=> Object.Equals(value, True);
+			=> Equals(value, True);
 
+		/// <summary>Get the nullable boolean value from an object.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool? GetBoolNullable(object value)
 			=> value == null ? (bool?)null : Object.Equals(value, True);
 
+		/// <summary>Object for <c>true</c>.</summary>
 		public static object True { get; } = true;
+		/// <summary>Object for <c>false</c>.</summary>
 		public static object False { get; } = false;
 	} // class BooleanBox
 
@@ -288,10 +302,14 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static DependencyObject GetLogicalParent(this DependencyObject current, Type typeOfParent)
 		{
-			var parent = GetLogicalParent(current);
-			return parent == null || typeOfParent == null || typeOfParent.IsAssignableFrom(parent.GetType())
-				? parent
-				: GetLogicalParent(parent, typeOfParent);
+			if (current == null)
+				return null;
+			else if (typeOfParent == null)
+				return GetLogicalParent(current);
+			else if (typeOfParent.IsAssignableFrom(current.GetType()))
+				return current;
+			else
+				return GetLogicalParent(GetLogicalParent(current), typeOfParent);
 		} // func GetVisualParent
 
 		/// <summary></summary>
@@ -300,12 +318,13 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static DependencyObject GetLogicalParent(this DependencyObject current, string name)
 		{
-			var parent = GetLogicalParent(current);
-			return parent == null || CompareName(parent, name) == 0
-				? parent
-				: GetLogicalParent(parent, name);
+			if (current == null)
+				return null;
+			else if (CompareName(current, name) == 0)
+				return current;
+			else
+				return GetLogicalParent(GetLogicalParent(current), name);
 		} // func GetVisualParent
-
 
 		/// <summary>Get the logical parent or the template parent.</summary>
 		/// <param name="current"></param>
@@ -521,14 +540,6 @@ namespace TecWare.PPSn
 			=> PpsCameraDialog.TakePicture(owner);
 
 		#region -- remove after update DES --
-
-		public static string MakeRelative(this DEHttpClient client, Uri uri)
-		{
-			if (!uri.IsAbsoluteUri)
-				return uri.ToString();
-
-			return client.BaseAddress.MakeRelativeUri(uri).ToString();
-		} // func MakeRelative
 
 		#endregion
 	} // class StuffUI

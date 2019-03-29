@@ -74,13 +74,17 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsExceptionItem -------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Represents a exception item.</summary>
 	public sealed class PpsExceptionItem : PpsTraceItemBase
 	{
 		private readonly string message;
 		private readonly Exception exception;
 		private readonly PpsLogType type;
 
+		/// <summary></summary>
+		/// <param name="alternativeMessage"></param>
+		/// <param name="exception"></param>
+		/// <param name="type"></param>
 		public PpsExceptionItem(string alternativeMessage, Exception exception, PpsLogType type = PpsLogType.Exception)
 		{
 			message = String.IsNullOrEmpty(alternativeMessage) ? exception.Message : alternativeMessage;
@@ -89,9 +93,12 @@ namespace TecWare.PPSn.Data
 			this.type = type;
 		} // ctor
 
+		/// <summary>Type of the exception</summary>
 		public override PpsLogType Type => type;
+		/// <summary>Message text.</summary>
 		public override string Message => message;
 
+		/// <summary>Exception object.</summary>
 		public Exception Exception => exception;
 	} // class PpsExceptionItem
 
@@ -99,7 +106,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsTraceItem -----------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Represents a trace item, that was collected from the .net trace.</summary>
 	public sealed class PpsTraceItem : PpsTraceItemBase
 	{
 		private readonly TraceEventType traceEventType;
@@ -118,19 +125,30 @@ namespace TecWare.PPSn.Data
 			this.message = message;
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override int GetHashCode()
 			=> traceEventType.GetHashCode() ^ message.GetHashCode() ^ id.GetHashCode() ^ source.GetHashCode();
 
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is PpsTraceItem item && (item.traceEventType == this.traceEventType && item.message == this.message && item.id == this.id && item.source == this.source);
 
+		/// <summary>Id</summary>
 		public int Id => id;
-		public string Source => source; 
+		/// <summary>Source information</summary>
+		public string Source => source;
+		/// <summary>Identifies the type of event that has caused the trace.</summary>
 		public TraceEventType EventType => traceEventType;
+		/// <summary>Provides trace event data specific to a thread and a process.</summary>
 		public TraceEventCache EventCache => traceEventCache;
 
+		/// <summary>Message text.</summary>
 		public override string Message => message; 
 
+		/// <summary>Type mapping</summary>
 		public override PpsLogType Type
 		{
 			get
@@ -162,7 +180,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsTextItem ------------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Simple text, that was pushed to the log.</summary>
 	public sealed class PpsTextItem : PpsTraceItemBase
 	{
 		private readonly PpsLogType type;
@@ -174,7 +192,9 @@ namespace TecWare.PPSn.Data
 			this.message = message;
 		} // ctor
 
+		/// <summary>Message text</summary>
 		public override string Message => message;
+		/// <summary>Message type.</summary>
 		public override PpsLogType Type => type;
 	} // class PpsTextItem
 
@@ -285,6 +305,8 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="environment"></param>
 		public PpsTraceLog(PpsEnvironment environment)
 		{
 			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
@@ -294,11 +316,13 @@ namespace TecWare.PPSn.Data
 			environment.AddIdleAction(this);
 		} // ctor
 
+		/// <summary></summary>
 		~PpsTraceLog()
 		{
 			Dispose(false);
 		} // dtor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
@@ -366,6 +390,7 @@ namespace TecWare.PPSn.Data
 			return index;
 		} // proc AppendItem
 
+		/// <summary>Clear all trace items.</summary>
 		public void Clear()
 		{
 			lock (items)
@@ -392,6 +417,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- Last Trace Item ----------------------------------------------------
 
+		/// <summary>Clear last trace item.</summary>
 		public void ClearLastTrace()
 		{
 			LastTrace = null;
@@ -478,6 +504,7 @@ namespace TecWare.PPSn.Data
 		} // proc ICollection.CopyTo
 
 		bool ICollection.IsSynchronized => true;
+		/// <summary></summary>
 		public object SyncRoot => items;
 
 		#endregion

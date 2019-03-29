@@ -151,9 +151,6 @@ namespace TecWare.PPSn.Server.Sql
 					foreach (var m in firstArgs.Members)
 					{
 						var columnInfo = tableInfo.FindColumn(m.Key, true);
-						if (columnInfo.IsIdentity)
-							continue;
-
 						targetColumns.Add(columnInfo);
 						cmd.AppendParameter(ParameterMapping.CreateTableName(m.Key, CreateParameter(cmd.Command, columnInfo, m.Key), columnInfo.DataType, DBNull.Value));
 					}
@@ -162,9 +159,6 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					foreach (var t in tableInfo.Columns)
 					{
-						if (t.IsIdentity)
-							continue;
-
 						targetColumns.Add(t);
 						cmd.AppendParameter(ParameterMapping.CreateTableName(t.Name, CreateParameter(cmd.Command, t, t.Name), t.DataType, DBNull.Value));
 					}
@@ -257,6 +251,9 @@ namespace TecWare.PPSn.Server.Sql
 					first = true;
 					foreach (var col in targetColumns)
 					{
+						if (col.IsIdentity) // do not insert primary key identity
+							continue;
+
 						if (first)
 							first = false;
 						else
@@ -330,6 +327,9 @@ namespace TecWare.PPSn.Server.Sql
 					// create the column list
 					for (var i = 0; i < targetColumns.Count; i++)
 					{
+						if (targetColumns[i].IsIdentity) // do not update primary key
+							continue;
+
 						if (first)
 							first = false;
 						else

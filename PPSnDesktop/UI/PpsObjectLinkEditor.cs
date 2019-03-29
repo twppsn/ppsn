@@ -23,7 +23,7 @@ using System.Windows.Controls;
 
 namespace TecWare.PPSn.UI
 {
-	public class PpsObjectLinkEditor : Control
+	internal class PpsObjectLinkEditor : Control
 	{
 		static PpsObjectLinkEditor()
 		{

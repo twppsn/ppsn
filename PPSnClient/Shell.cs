@@ -326,6 +326,11 @@ namespace TecWare.PPSn
 			}
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> GetType().Name;
+
 		#endregion
 
 		#region -- Synchronization ----------------------------------------------------
@@ -477,6 +482,7 @@ namespace TecWare.PPSn
 		public abstract IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments);
 
 		/// <summary></summary>
+		[LuaMember]
 		public abstract DEHttpClient Request { get; }
 
 		#endregion
@@ -607,6 +613,11 @@ namespace TecWare.PPSn
 			this.shell = shell;
 			this.parentShellTable = null;
 		} // ctor
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> GetType().Name;
 
 		/// <summary></summary>
 		/// <param name="key"></param>

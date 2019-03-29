@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
 		xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
         mc:Ignorable="d"
-        Title="Kamera" Height="450" Width="800" ResizeMode="NoResize" WindowStyle="None" Topmost="True" ShowInTaskbar="False">
+        Title="Kamera" Height="450" Width="800" ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False">
 
 	<ContentControl>
 		<ContentControl.Resources>
@@ -96,7 +96,9 @@
 
 					<Grid x:Name="gridSettings" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,38,6,0" Visibility="Collapsed">
 						<Ellipse Width="39" Height="39" StrokeThickness="0" Fill="{StaticResource blackBackGround}" />
-						<pps:PpsButton Command="{x:Static ApplicationCommands.Properties}"
+						<pps:PpsButton x:Name="buttonSettings"
+									   Command="{x:Static ApplicationCommands.Properties}"
+									   Visibility="Hidden"
 									   DisplayMode="Image"
 									   GeometryName="settingsOutline"
 									   GeometrySize="36"
@@ -154,6 +156,38 @@
 							<TextBlock Text="EINSTELLUNGEN" FontSize="18" Foreground="White" VerticalAlignment="Center" Margin="12,0,6,0" />
 							<pps:PpsButton Command="{x:Static ApplicationCommands.Properties}" DisplayMode="Image" GeometryName="nextPane" GeometrySize="30"
 										   Foreground="White" ImageOpacity="1" Grid.Column="1" Width="32" HorizontalAlignment="Left" ToolTip="Einstellungen schließen" />
+
+							<ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding CurrentDevice.Properties}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<StackPanel />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+								<ItemsControl.ItemTemplate>
+									<DataTemplate DataType="{x:Type local:PpsCameraDeviceProperty}">
+										<Border BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,6,0,0">
+											<Grid>
+												<Grid.RowDefinitions>
+													<RowDefinition />
+													<RowDefinition/>
+												</Grid.RowDefinitions>
+												<Grid.ColumnDefinitions>
+													<ColumnDefinition/>
+													<ColumnDefinition Width="100"/>
+												</Grid.ColumnDefinitions>
+												<TextBlock Grid.ColumnSpan="2" Grid.Row="0" Foreground="White" Text="{Binding DisplayName}"/>
+												<Slider Grid.Column="0" Grid.Row="1" Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" Value="{Binding Value}" VerticalAlignment="Center" FocusVisualStyle="{x:Null}"/>
+												<CheckBox x:Name="checkAuto" Grid.Column="1" Grid.Row="1" IsChecked="{Binding IsAutomatic}" Content="Auto" FocusVisualStyle="{x:Null}" Foreground="White" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden"/>
+											</Grid>
+										</Border>
+										<DataTemplate.Triggers>
+											<DataTrigger Binding="{Binding CanSetAuto}" Value="True">
+												<Setter TargetName="checkAuto" Property="Visibility" Value="Visible" />
+											</DataTrigger>
+										</DataTemplate.Triggers>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
 						</Grid>
 						<Border.RenderTransformOrigin>
 							<Point X="1" Y="0.5"/>
@@ -233,10 +267,12 @@
 							</BeginStoryboard>
 						</DataTrigger.ExitActions>
 					</DataTrigger>
+
+					<DataTrigger Binding="{Binding CurrentDevice.HasProperties}" Value="True">
+						<Setter TargetName="buttonSettings" Property="Visibility" Value="Visible" />
+					</DataTrigger>
 				</ControlTemplate.Triggers>
 			</ControlTemplate>
 		</ContentControl.Template>
 	</ContentControl>
-
-
 </Window>

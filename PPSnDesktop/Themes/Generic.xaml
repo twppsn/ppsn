@@ -213,9 +213,7 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ui:PpsObjectLinkEditor">
-					<TextBlock >
-						<Run Text="Links " />
-					</TextBlock>
+					<ui:PpsAttachmentsControl AttachmentsSource="{Binding Links}" />
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>

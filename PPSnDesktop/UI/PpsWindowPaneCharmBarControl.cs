@@ -22,6 +22,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using TecWare.DE.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -29,17 +30,19 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsWindowPaneObjectInfo ------------------------------------------
 
 	/// <summary>Holds information container of an data-object.</summary>
-	public sealed class PpsWindowPaneObjectInfo : INotifyPropertyChanged
+	public sealed class PpsWindowPaneObjectInfo : ObservableObject
 	{
-		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-
 		private readonly PpsWindowPaneCharmBarControl owner;
 
 		private string text;
 		private object image;
 		private object content;
 
+		/// <summary></summary>
+		/// <param name="owner"></param>
+		/// <param name="text"></param>
+		/// <param name="image"></param>
+		/// <param name="content"></param>
 		public PpsWindowPaneObjectInfo(PpsWindowPaneCharmBarControl owner, string text = null, object image = null, object content = null)
 		{
 			this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
@@ -48,48 +51,31 @@ namespace TecWare.PPSn.UI
 			this.content = content;
 		} // ctor
 
-		internal void FireActiveChanged()
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsActive)));
-
+		/// <summary>Title of the pane.</summary>
 		public string Text
 		{
 			get => text;
-			set
-			{
-				if (text != value)
-				{
-					text = value;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Text)));
-				}
-			}
+			set => Set(ref text, value, nameof(Text));
 		} // prop Text
 
+		/// <summary>Image of the pane.</summary>
 		public object Image
 		{
 			get => image;
-			set
-			{
-				if (!Equals(image, value))
-				{
-					image = value;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Image)));
-				}
-			}
+			set => Set(ref image, value, nameof(Image));
 		} // prop Image
 
+		/// <summary>Content information of the pane.</summary>
 		public object Content
 		{
 			get => content;
-			set
-			{
-				if (!Equals(content, value))
-				{
-					content = value;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Content)));
-				}
-			}
+			set => Set(ref content, value, nameof(Content));
 		} // prop Content
 
+		internal void FireActiveChanged()
+			=> OnPropertyChanged(nameof(IsActive));
+
+		/// <summary>This pane active</summary>
 		public bool IsActive => owner.CurrentPane == this;
 	} // class PpsWindowPaneObjectInfo
 
@@ -100,13 +86,16 @@ namespace TecWare.PPSn.UI
 	{
 		private readonly PpsWindowPaneObjectInfo helpPage;
 		private readonly PpsHelpPageViewer helpPageViewer;
+		private readonly PpsObjectLinkEditor objectLinkEditor;
 
 		private readonly PpsWindowPaneObjectInfo[] ppsObjectPanes;
-		private readonly PpsObjectTagsEditor[] ppsTagsEditors; 
+		private readonly PpsObjectTagsEditor[] ppsTagsEditors;
 
 		#region -- CurrentData - Property ---------------------------------------------
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty CurrentDataProperty = DependencyProperty.Register(nameof(CurrentData), typeof(object), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurentDataChanged)));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private static void OnCurentDataChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsWindowPaneCharmBarControl)d).OnCurrentDataChanged(e.NewValue, e.OldValue);
@@ -119,14 +108,17 @@ namespace TecWare.PPSn.UI
 				SetObject(newValue);
 		} // proc OnCurrentDataChanged
 
+		/// <summary>Current attached data object.</summary>
 		public object CurrentData { get => GetValue(CurrentDataProperty); set => SetValue(CurrentDataProperty, value); }
 
 		#endregion
 
 		#region -- Views - Property ---------------------------------------------------
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey viewsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Views), typeof(IEnumerable<PpsWindowPaneObjectInfo>), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty ViewsProperty = viewsPropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>List of extented object information.</summary>
 		public IEnumerable<PpsWindowPaneObjectInfo> Views => (IEnumerable<PpsWindowPaneObjectInfo>)GetValue(ViewsProperty);
@@ -135,16 +127,21 @@ namespace TecWare.PPSn.UI
 
 		#region -- ObjectName - Property ----------------------------------------------
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey objectNamePropertyKey = DependencyProperty.RegisterReadOnly(nameof(ObjectName), typeof(string), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty ObjectNameProperty = objectNamePropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
+		/// <summary>Name of the current object.</summary>
 		public string ObjectName => (string)GetValue(ObjectNameProperty);
 
 		#endregion
 
 		#region -- HelpKey - Property -------------------------------------------------
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty HelpKeyProperty = PpsHelpPageViewer.HelpKeyProperty.AddOwner(typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnHelpKeyChanged)));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private static void OnHelpKeyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsWindowPaneCharmBarControl)d).OnHelpKeyChanged((string)e.NewValue);
@@ -152,14 +149,17 @@ namespace TecWare.PPSn.UI
 		private void OnHelpKeyChanged(string newValue)
 			=> helpPageViewer.HelpKey = newValue;
 
+		/// <summary>Current used helpkey.</summary>
 		public string HelpKey { get => (string)GetValue(HelpKeyProperty); set => SetValue(HelpKeyProperty, value); }
 
 		#endregion
 
 		#region -- CurrentPane - Property ---------------------------------------------
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey currentPanePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPane), typeof(PpsWindowPaneObjectInfo), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurrentPaneChanged)));
 		public static readonly DependencyProperty CurrentPaneProperty = currentPanePropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private static void OnCurrentPaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsWindowPaneCharmBarControl)d).OnCurrentPaneChanged((PpsWindowPaneObjectInfo)e.NewValue, (PpsWindowPaneObjectInfo)e.OldValue);
@@ -172,27 +172,34 @@ namespace TecWare.PPSn.UI
 			oldValue?.FireActiveChanged();
 		} // func OnCurrentPaneChanged
 
+		/// <summary>Current content pane.</summary>
 		public PpsWindowPaneObjectInfo CurrentPane { get => (PpsWindowPaneObjectInfo)GetValue(CurrentPaneProperty); private set => SetValue(currentPanePropertyKey, value); }
 
 		#endregion
 
 		#region -- IsPaneVisible - Property -------------------------------------------
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey isPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsPaneVisible), typeof(bool), typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(false));
 		public static readonly DependencyProperty IsInfoVisibleProperty = isPaneVisiblePropertyKey.DependencyProperty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
+		/// <summary>Is the content pane visible.</summary>
 		public bool IsPaneVisible { get => (bool)GetValue(IsInfoVisibleProperty); private set => SetValue(isPaneVisiblePropertyKey, value); }
 
 		#endregion
 
+		/// <summary>Change content of the charm-bar-control.</summary>
 		public readonly static RoutedUICommand ChangeContentCommand = new RoutedUICommand("ChangeContent", "ChangeContent", typeof(PpsWindowPaneCharmBarControl));
 
+		/// <summary>Charm bar control.</summary>
 		public PpsWindowPaneCharmBarControl()
 		{
 			helpPage = new PpsWindowPaneObjectInfo(this) { Text = "Hilfe", Image = "help" };
 
 			helpPageViewer = new PpsHelpPageViewer();
 			helpPage.Content = helpPageViewer; // todo: add to logical tree
+			objectLinkEditor = new PpsObjectLinkEditor();
 
 			ppsTagsEditors = new PpsObjectTagsEditor[]
 			{
@@ -206,7 +213,8 @@ namespace TecWare.PPSn.UI
 				new PpsWindowPaneObjectInfo(this) { Text = "Notizen", Content = ppsTagsEditors[0], Image = "noteOutline" },
 				new PpsWindowPaneObjectInfo(this) { Text = "Tags", Content = ppsTagsEditors[1], Image = "hashTag" },
 				new PpsWindowPaneObjectInfo(this) { Text = "Attribute", Content = ppsTagsEditors[2], Image = "tagTextOutline" },
-				new PpsWindowPaneObjectInfo(this) { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" }
+				new PpsWindowPaneObjectInfo(this) { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" },
+				new PpsWindowPaneObjectInfo(this) { Text = "Verknüpfunen", Content = objectLinkEditor, Image = "link" }
 			};
 
 			SetViews(null);
@@ -231,6 +239,7 @@ namespace TecWare.PPSn.UI
 		{
 			foreach (var t in ppsTagsEditors)
 				t.Object = null;
+			objectLinkEditor.DataContext = null;
 
 			SetValue(objectNamePropertyKey, null); // hide object name
 			SetViews(null); // show only help
@@ -244,6 +253,8 @@ namespace TecWare.PPSn.UI
 			{
 				foreach (var t in ppsTagsEditors)
 					t.Object = obj;
+				objectLinkEditor.DataContext = obj;
+
 				SetViews(ppsObjectPanes);
 			}
 			else
@@ -263,7 +274,6 @@ namespace TecWare.PPSn.UI
 
 		#region -- class PpsWindowPaneCharmBarWidthConverter ------------------------------
 
-		/// <summary>calculate the width of CharmBarControl when property-pane is visible.</summary>
 		private sealed class PpsWindowPaneCharmBarWidthConverter : IMultiValueConverter
 		{
 			object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
@@ -285,8 +295,8 @@ namespace TecWare.PPSn.UI
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsWindowPaneCharmBarControl), new FrameworkPropertyMetadata(typeof(PpsWindowPaneCharmBarControl)));
 		} // cstor
-		
-		/// <summary></summary>
+
+		/// <summary>Calculate the width of CharmBarControl when property-pane is visible.</summary>
 		public static IMultiValueConverter WithConverter { get; } = new PpsWindowPaneCharmBarWidthConverter();
 	} // class PpsWindowPaneCharmBarControl
 

@@ -205,7 +205,7 @@ namespace TecWare.PPSn
 		} // prop LinkToId
 
 		string IPpsAttachmentItem.Name => LinkTo.Nr;
-		bool IPpsAttachmentItem.IsReadOnly => false;
+		bool IPpsAttachmentItem.IsReadOnly => RefCount != 0;
 		bool IPpsAttachmentItem.IsNull => false;
 		IPpsDataInfo IPpsAttachmentItem.LinkedObject => LinkTo;
 

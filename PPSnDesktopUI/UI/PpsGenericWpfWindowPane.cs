@@ -815,6 +815,7 @@ namespace TecWare.PPSn.UI
 		public Lua Lua => Shell.Lua;
 
 		/// <summary></summary>
+		[LuaMember("Environment")]
 		public PpsShellWpf ShellWpf => (PpsShellWpf)Shell;
 
 		/// <summary>Is the current pane dirty.</summary>
