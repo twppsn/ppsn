@@ -95,9 +95,9 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="openFolderOutlinePathGeometry" 
 				  Figures="M6.1,10L4,18V8H21A2,2 0 0,0 19,6H12L10,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H19C19.9,20 20.7,19.4 20.9,18.5L23.2,10H6.1M19,18H6L7.6,12H20.6L19,18Z" />
 
-	<!-- book-open-->
-	<PathGeometry x:Key="openBookPathGeometry" 
-				  Figures="M13,12H20V13.5H13M13,9.5H20V11H13M13,14.5H20V16H13M21,4H3A2,2 0 0,0 1,6V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V6A2,2 0 0,0 21,4M21,19H12V6H21" />
+	<!-- book-open-outline, Google-->
+	<PathGeometry x:Key="bookOpenOutlinePathGeometry" 
+				  Figures="M21,4H3A2,2 0 0,0 1,6V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V6A2,2 0 0,0 21,4M3,19V6H11V19H3M21,19H13V6H21V19M14,9.5H20V11H14V9.5M14,12H20V13.5H14V12M14,14.5H20V16H14V14.5Z" />
 
 	<!-- cancel-->
 	<PathGeometry x:Key="cancelPathGeometry" 
@@ -140,7 +140,7 @@ specific language governing permissions and limitations under the Licence.
 				  Figures="M5.5,9A1.5,1.5 0 0,0 7,7.5A1.5,1.5 0 0,0 5.5,6A1.5,1.5 0 0,0 4,7.5A1.5,1.5 0 0,0 5.5,9M17.41,11.58C17.77,11.94 18,12.44 18,13C18,13.55 17.78,14.05 17.41,14.41L12.41,19.41C12.05,19.77 11.55,20 11,20C10.45,20 9.95,19.78 9.58,19.41L2.59,12.42C2.22,12.05 2,11.55 2,11V6C2,4.89 2.89,4 4,4H9C9.55,4 10.05,4.22 10.41,4.58L17.41,11.58M13.54,5.71L14.54,4.71L21.41,11.58C21.78,11.94 22,12.45 22,13C22,13.55 21.78,14.05 21.42,14.41L16.04,19.79L15.04,18.79L20.75,13L13.54,5.71Z" />
 
 	<!-- tag-text-outline-->
-	<PathGeometry x:Key="tagTextPathGeometry" 
+	<PathGeometry x:Key="tagTextOutlinePathGeometry" 
 				  Figures="M5.5,7A1.5,1.5 0 0,0 7,5.5A1.5,1.5 0 0,0 5.5,4A1.5,1.5 0 0,0 4,5.5A1.5,1.5 0 0,0 5.5,7M21.41,11.58C21.77,11.94 22,12.44 22,13C22,13.55 21.78,14.05 21.41,14.41L14.41,21.41C14.05,21.77 13.55,22 13,22C12.45,22 11.95,21.77 11.58,21.41L2.59,12.41C2.22,12.05 2,11.55 2,11V4C2,2.89 2.89,2 4,2H11C11.55,2 12.05,2.22 12.41,2.58L21.41,11.58M13,20L20,13L11.5,4.5L4.5,11.5L13,20M10.09,8.91L11.5,7.5L17,13L15.59,14.41L10.09,8.91M7.59,11.41L9,10L13,14L11.59,15.41L7.59,11.41Z" />
 
 	<!-- note-outline-->
@@ -171,14 +171,15 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="projectPathGeometry" 
 				  Figures="M3,3H11V7.34L16.66,1.69L22.31,7.34L16.66,13H21V21H13V13H16.66L11,7.34V11H3V3M3,13H11V21H3V13Z" />
 
-	<!-- lock-->
+	<!-- lock, Google-->
 	<PathGeometry x:Key="lockPathGeometry" 
 				  Figures="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" />
 
-	<!-- plus-->
-	<!--<PathGeometry x:Key="plusPathGeometry" 
-				  Figures="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />-->
-	<!-- plus, mod-->
+	<!-- lock-outline, custom-->
+	<PathGeometry x:Key="lockOutlinePathGeometry" 
+				  Figures="M 12,17C 10.8907,17 10,16.0987 10,15C 10,13.8907 10.8907,13 12,13C 13.104,13 14,13.896 14,15C 14,16.104 13.104,17 12,17 Z M 18,19L 18,10 6,10 6,19 18,19 Z M 18,8C 19.104,8 20,8.896 20,10L 20,19C 20,20.104 19.104,21 18,21L 6,21C 4.89067,21 4,20.0987 4,19L 4,10C 4,8.89067 4.89067,8 6,8L 7,8 7,7C 7,4.24 9.24,2.00001 12,2.00001C 14.76,2.00001 17,4.24 17,7L 17,8 18,8 Z M 12,4C 10.344,4 9,5.344 9,7L 9,8 15,8 15,7C 15,5.344 13.656,4 12,4 Z" />
+
+	<!-- plus, custom-->
 	<PathGeometry x:Key="plusPathGeometry" 
 				  Figures="M20,13 H13 V20 H11 V13 H4 V11 H11 V4 H13 V11 H20 V13Z" />
 
@@ -189,6 +190,10 @@ specific language governing permissions and limitations under the Licence.
 	<!-- account-multiple-->
 	<PathGeometry x:Key="accountMultiplePathGeometry" 
 				  Figures="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z" />
+
+	<!-- account-star-outline, Michael Irigoyen-->
+	<PathGeometry x:Key="accountStarOutlinePathGeometry" 
+				  Figures="M15,4A4,4 0 0,1 19,8A4,4 0 0,1 15,12A4,4 0 0,1 11,8A4,4 0 0,1 15,4M15,5.9A2.1,2.1 0 0,0 12.9,8A2.1,2.1 0 0,0 15,10.1C16.16,10.1 17.1,9.16 17.1,8C17.1,6.84 16.16,5.9 15,5.9M15,13C17.67,13 23,14.33 23,17V20H7V17C7,14.33 12.33,13 15,13M15,14.9C12,14.9 8.9,16.36 8.9,17V18.1H21.1V17C21.1,16.36 17.97,14.9 15,14.9M5,13.28L2.5,14.77L3.18,11.96L1,10.08L3.87,9.83L5,7.19L6.11,9.83L9,10.08L6.8,11.96L7.45,14.77L5,13.28Z" />
 
 	<!-- settings, google-->
 	<PathGeometry x:Key="settingsPathGeometry" 
@@ -225,17 +230,17 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="cursorPathGeometry" 
 				  Figures="M10.07,14.27C10.57,14.03 11.16,14.25 11.4,14.75L13.7,19.74L15.5,18.89L13.19,13.91C12.95,13.41 13.17,12.81 13.67,12.58L13.95,12.5L16.25,12.05L8,5.12V15.9L9.82,14.43L10.07,14.27M13.64,21.97C13.14,22.21 12.54,22 12.31,21.5L10.13,16.76L7.62,18.78C7.45,18.92 7.24,19 7,19A1,1 0 0,1 6,18V3A1,1 0 0,1 7,2C7.24,2 7.47,2.09 7.64,2.23L7.65,2.22L19.14,11.86C19.57,12.22 19.62,12.85 19.27,13.27C19.12,13.45 18.91,13.57 18.7,13.61L15.54,14.23L17.74,18.96C18,19.46 17.76,20.05 17.26,20.28L13.64,21.97Z" />
 
-	<!-- filter-outline-->
-	<PathGeometry x:Key="comboxBoxFilterPathGeometry"
+	<!-- filter-outline, Austin Andrews-->
+	<PathGeometry x:Key="filterOutlinePathGeometry"
 				  Figures="M15,19.88C15.04,20.18 14.94,20.5 14.71,20.71C14.32,21.1 13.69,21.1 13.3,20.71L9.29,16.7C9.06,16.47 8.96,16.16 9,15.87V10.75L4.21,4.62C3.87,4.19 3.95,3.56 4.38,3.22C4.57,3.08 4.78,3 5,3V3H19V3C19.22,3 19.43,3.08 19.62,3.22C20.05,3.56 20.13,4.19 19.79,4.62L15,10.75V19.88M7.04,5L11,10.06V15.58L13,17.58V10.05L16.96,5H7.04Z"/>
 
-	<!-- domain-->
-	<PathGeometry x:Key="domainPathGeometry"
-				  Figures="M18,15H16V17H18M18,11H16V13H18M20,19H12V17H14V15H12V13H14V11H12V9H20M10,7H8V5H10M10,11H8V9H10M10,15H8V13H10M10,19H8V17H10M6,7H4V5H6M6,11H4V9H6M6,15H4V13H6M6,19H4V17H6M12,7V3H2V21H22V7H12Z"/>
+	<!-- filter-remove-outline, Austin Andrews-->
+	<PathGeometry x:Key="filterRemoveOutlinePathGeometry"
+				  Figures="M14.73,20.83L17.58,18L14.73,15.17L16.15,13.76L19,16.57L21.8,13.76L23.22,15.17L20.41,18L23.22,20.83L21.8,22.24L19,19.4L16.15,22.24L14.73,20.83M13,19.88C13.04,20.18 12.94,20.5 12.71,20.71C12.32,21.1 11.69,21.1 11.3,20.71L7.29,16.7C7.06,16.47 6.96,16.16 7,15.87V10.75L2.21,4.62C1.87,4.19 1.95,3.56 2.38,3.22C2.57,3.08 2.78,3 3,3V3H17V3C17.22,3 17.43,3.08 17.62,3.22C18.05,3.56 18.13,4.19 17.79,4.62L13,10.75V19.88M5.04,5L9,10.06V15.58L11,17.58V10.05L14.96,5H5.04Z"/>
 
-	<!-- factory-->
-	<PathGeometry x:Key="factoryPathGeometry" 
-				  Figures="M4,18V20H8V18H4M4,14V16H14V14H4M10,18V20H14V18H10M16,14V16H20V14H16M16,18V20H20V18H16M2,22V8L7,12V8L12,12V8L17,12L18,2H21L22,12V22H2Z" />
+	<!-- map-marker-outline, google-->
+	<PathGeometry x:Key="mapMarkerOutlinePathGeometry" 
+				  Figures="M12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5M12,2A7,7 0 0,1 19,9C19,14.25 12,22 12,22C12,22 5,14.25 5,9A7,7 0 0,1 12,2M12,4A5,5 0 0,0 7,9C7,10 7,12 12,18.71C17,12 17,10 17,9A5,5 0 0,0 12,4Z" />
 
 	<!-- clipboard-outline, Austin Andrews -->
 	<PathGeometry x:Key="clipboardPastePathGeometry" 
