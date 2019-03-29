@@ -53,7 +53,7 @@ specific language governing permissions and limitations under the Licence.
 											  ExternalCommands="{TemplateBinding SelectedItemCommands}"
 											  Mode="Mixed"
 											  MinHeight="34"
-											  Margin="0,0,0,1"/>
+											  Margin="0,0,0,1" />
 							<!--sum(Height, Margin.Top, Margin.Bottom) = commandBar.MinHeight + commandBar.Margin.Bottom-->
 							<ui:PpsTextBox x:Name="PART_FilterBox"
 										   Grid.Column="1"
@@ -118,7 +118,8 @@ specific language governing permissions and limitations under the Licence.
 						</Border>
 
 						<!--custom visual focus-->
-						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" SnapsToDevicePixels="True" RenderOptions.EdgeMode="Aliased" Opacity="0" />
+						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" SnapsToDevicePixels="True"
+								   RenderOptions.EdgeMode="Aliased" IsHitTestVisible="False" Opacity="0" />
 
 						<!--ItemSeparator?-->
 						<!--<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="{DynamicResource PPSnWindowBackgroundBrush}" />-->
