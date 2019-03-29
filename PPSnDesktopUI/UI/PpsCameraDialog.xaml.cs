@@ -827,7 +827,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		/// <summary>Template name for the settings box</summary>
-		private const string SettingsBoxTemplateName = "PART_SettingsBox";
+		private const string settingsBoxTemplateName = "PART_SettingsBox";
 
 		private readonly PpsShellWpf environment;
 		private readonly DispatcherTimer refreshCameraDevices;
@@ -907,45 +907,12 @@ namespace TecWare.PPSn.UI
 		// simulate Popup.StaysOpen = false
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
-			if (IsSettingsActive && !IsChildOfSettingsBox((DependencyObject)e.OriginalSource))
+			if (IsSettingsActive && ((DependencyObject)e.OriginalSource).GetLogicalParent(settingsBoxTemplateName) != null)
 				SetValue(isSettingsActivePropertyKey, false);
 			base.OnPreviewMouseDown(e);
 		} // proc OnPreviewMouseDown
 
-		private bool IsChildOfSettingsBox(DependencyObject o)
-		{
-			while (true)
-			{
-				if (o == null)
-					return false;
-				if (o.GetName() == SettingsBoxTemplateName)
-					return true;
-				o = VisualTreeHelper.GetParent(o);
-			}
-		} // func IsChildOfSettingsBox
-
 		#endregion
-
-		public static T GetLogicalParent<T>(DependencyObject p_oElement)
-			where T : DependencyObject
-		{
-			DependencyObject oParent = p_oElement;
-			Type oTargetType = typeof(T);
-			do
-			{
-				oParent = LogicalTreeHelper.GetParent(oParent);
-			}
-			while (
-				!(
-					oParent == null
-					|| oParent.GetType() == oTargetType
-					|| oParent.GetType().IsSubclassOf(oTargetType)
-				)
-			);
-
-			return oParent as T;
-		}
-
 
 		protected override void OnClosed(EventArgs e)
 		{

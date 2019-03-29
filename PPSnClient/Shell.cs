@@ -477,6 +477,7 @@ namespace TecWare.PPSn
 		public abstract IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments);
 
 		/// <summary></summary>
+		[LuaMember]
 		public abstract DEHttpClient Request { get; }
 
 		#endregion

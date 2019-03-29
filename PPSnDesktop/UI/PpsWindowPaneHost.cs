@@ -29,6 +29,7 @@ namespace TecWare.PPSn.UI
 {
 	#region -- enum PpsPaneHostState --------------------------------------------------
 
+	/// <summary>Additional pane information.</summary>
 	public enum PpsWindowPaneHostState
 	{
 		/// <summary>This pane host is marked as not closable.</summary>

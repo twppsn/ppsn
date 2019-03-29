@@ -114,7 +114,7 @@ namespace TecWare.PPSn
 		private LuaResult LuaRequire(LuaTable self, string path)
 		{
 			// get the current root
-			var webRequest = (IPpsRequest)self.GetMemberValue(nameof(IPpsRequest.Request)) ?? this;
+			var webRequest = self as IPpsRequest ?? this;
 
 			if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) // load assembly
 			{

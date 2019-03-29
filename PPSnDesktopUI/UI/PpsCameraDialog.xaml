@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
 		xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
         mc:Ignorable="d"
-        Title="Kamera" Height="450" Width="800" ResizeMode="NoResize" WindowStyle="None" Topmost="True" ShowInTaskbar="False">
+        Title="Kamera" Height="450" Width="800" ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False">
 
 	<ContentControl>
 		<ContentControl.Resources>
@@ -237,6 +237,4 @@
 			</ControlTemplate>
 		</ContentControl.Template>
 	</ContentControl>
-
-
 </Window>

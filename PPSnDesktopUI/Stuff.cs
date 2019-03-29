@@ -99,19 +99,33 @@ namespace TecWare.PPSn
 	/// <summary>Boolean box helper</summary>
 	public static class BooleanBox
 	{
+		/// <summary>Get a object from a boolean value.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static object GetObject(bool value)
 			=> value ? True : False;
 
+		/// <summary>Get a object from a boolean value.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static object GetObject(bool? value)
 			=> value.HasValue ? GetObject(value.Value) : null;
 
+		/// <summary>Get the boolean value from an object.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool GetBool(object value)
-			=> Object.Equals(value, True);
+			=> Equals(value, True);
 
+		/// <summary>Get the nullable boolean value from an object.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool? GetBoolNullable(object value)
 			=> value == null ? (bool?)null : Object.Equals(value, True);
 
+		/// <summary>Object for <c>true</c>.</summary>
 		public static object True { get; } = true;
+		/// <summary>Object for <c>false</c>.</summary>
 		public static object False { get; } = false;
 	} // class BooleanBox
 
@@ -521,14 +535,6 @@ namespace TecWare.PPSn
 			=> PpsCameraDialog.TakePicture(owner);
 
 		#region -- remove after update DES --
-
-		public static string MakeRelative(this DEHttpClient client, Uri uri)
-		{
-			if (!uri.IsAbsoluteUri)
-				return uri.ToString();
-
-			return client.BaseAddress.MakeRelativeUri(uri).ToString();
-		} // func MakeRelative
 
 		#endregion
 	} // class StuffUI
