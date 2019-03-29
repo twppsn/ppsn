@@ -100,7 +100,7 @@ namespace TecWare.PPSn
 
 		#region -- LuaHelper ----------------------------------------------------------
 
-		[LuaMember("require")]
+		[LuaMember("require", true)]
 		private LuaResult LuaRequire(object arg)
 		{
 			if (arg is string path)
@@ -109,10 +109,12 @@ namespace TecWare.PPSn
 				throw new ArgumentException("string as argument expected.");
 		} // func LuaRequire
 
-
 		[LuaMember("require", true)]
 		private LuaResult LuaRequire(LuaTable self, string path)
 		{
+			if (String.IsNullOrEmpty(path))
+				throw new ArgumentException("string as argument expected.");
+
 			// get the current root
 			var webRequest = self as IPpsRequest ?? this;
 

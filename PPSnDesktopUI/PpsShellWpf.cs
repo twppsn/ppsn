@@ -395,7 +395,7 @@ namespace TecWare.PPSn
 				code != null
 				? CompileAsync(code, uri?.OriginalString ?? "dummy.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
 				: request.CompileAsync(uri, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-			compileTask.AwaitTask().Run(self, self);
+			compileTask.AwaitTask().Run(self, request);
 		} // proc CompileCode
 
 		#endregion
