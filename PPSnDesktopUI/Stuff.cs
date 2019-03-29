@@ -302,10 +302,14 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static DependencyObject GetLogicalParent(this DependencyObject current, Type typeOfParent)
 		{
-			var parent = GetLogicalParent(current);
-			return parent == null || typeOfParent == null || typeOfParent.IsAssignableFrom(parent.GetType())
-				? parent
-				: GetLogicalParent(parent, typeOfParent);
+			if (current == null)
+				return null;
+			else if (typeOfParent == null)
+				return GetLogicalParent(current);
+			else if (typeOfParent.IsAssignableFrom(current.GetType()))
+				return current;
+			else
+				return GetLogicalParent(GetLogicalParent(current), typeOfParent);
 		} // func GetVisualParent
 
 		/// <summary></summary>
@@ -314,12 +318,13 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static DependencyObject GetLogicalParent(this DependencyObject current, string name)
 		{
-			var parent = GetLogicalParent(current);
-			return parent == null || CompareName(parent, name) == 0
-				? parent
-				: GetLogicalParent(parent, name);
+			if (current == null)
+				return null;
+			else if (CompareName(current, name) == 0)
+				return current;
+			else
+				return GetLogicalParent(GetLogicalParent(current), name);
 		} // func GetVisualParent
-
 
 		/// <summary>Get the logical parent or the template parent.</summary>
 		/// <param name="current"></param>

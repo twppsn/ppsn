@@ -86,6 +86,7 @@ namespace TecWare.PPSn.UI
 	{
 		private readonly PpsWindowPaneObjectInfo helpPage;
 		private readonly PpsHelpPageViewer helpPageViewer;
+		private readonly PpsObjectLinkEditor objectLinkEditor;
 
 		private readonly PpsWindowPaneObjectInfo[] ppsObjectPanes;
 		private readonly PpsObjectTagsEditor[] ppsTagsEditors;
@@ -198,6 +199,7 @@ namespace TecWare.PPSn.UI
 
 			helpPageViewer = new PpsHelpPageViewer();
 			helpPage.Content = helpPageViewer; // todo: add to logical tree
+			objectLinkEditor = new PpsObjectLinkEditor();
 
 			ppsTagsEditors = new PpsObjectTagsEditor[]
 			{
@@ -211,7 +213,8 @@ namespace TecWare.PPSn.UI
 				new PpsWindowPaneObjectInfo(this) { Text = "Notizen", Content = ppsTagsEditors[0], Image = "noteOutline" },
 				new PpsWindowPaneObjectInfo(this) { Text = "Tags", Content = ppsTagsEditors[1], Image = "hashTag" },
 				new PpsWindowPaneObjectInfo(this) { Text = "Attribute", Content = ppsTagsEditors[2], Image = "tagTextOutline" },
-				new PpsWindowPaneObjectInfo(this) { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" }
+				new PpsWindowPaneObjectInfo(this) { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" },
+				new PpsWindowPaneObjectInfo(this) { Text = "Verknüpfunen", Content = objectLinkEditor, Image = "link" }
 			};
 
 			SetViews(null);
@@ -236,6 +239,7 @@ namespace TecWare.PPSn.UI
 		{
 			foreach (var t in ppsTagsEditors)
 				t.Object = null;
+			objectLinkEditor.DataContext = null;
 
 			SetValue(objectNamePropertyKey, null); // hide object name
 			SetViews(null); // show only help
@@ -249,6 +253,8 @@ namespace TecWare.PPSn.UI
 			{
 				foreach (var t in ppsTagsEditors)
 					t.Object = obj;
+				objectLinkEditor.DataContext = obj;
+
 				SetViews(ppsObjectPanes);
 			}
 			else

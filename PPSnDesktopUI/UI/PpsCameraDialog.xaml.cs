@@ -695,6 +695,8 @@ namespace TecWare.PPSn.UI
 		public string Moniker => device.Source;
 		/// <summary>Name of the device</summary>
 		public string Name => deviceName;
+		/// <summary>Are properties present.</summary>
+		public bool HasProperties => properties.Length > 0;
 		/// <summary>list of propertys which the camera supports</summary>
 		public PpsCameraDeviceProperty[] Properties => properties;
 		/// <summary>true if the camera chooses the optimal settings</summary>
@@ -907,7 +909,7 @@ namespace TecWare.PPSn.UI
 		// simulate Popup.StaysOpen = false
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
-			if (IsSettingsActive && ((DependencyObject)e.OriginalSource).GetLogicalParent(settingsBoxTemplateName) != null)
+			if (IsSettingsActive && e.OriginalSource is DependencyObject d && d.GetLogicalParent(settingsBoxTemplateName) == null)
 				SetValue(isSettingsActivePropertyKey, false);
 			base.OnPreviewMouseDown(e);
 		} // proc OnPreviewMouseDown
