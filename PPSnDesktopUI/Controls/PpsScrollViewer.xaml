@@ -278,7 +278,7 @@
 								   AutomationProperties.AutomationId="HorizontalScrollBar"
 								   Cursor="Arrow"
 								   IsTabStop="False"
-								   Opacity=".94"
+								   Opacity=".9"
 								   Style="{StaticResource PpsScrollBarStyle}" />
 						<ScrollBar x:Name="PART_VerticalScrollBar"
 								   Grid.Column="1"
@@ -290,7 +290,7 @@
 								   AutomationProperties.AutomationId="VerticalScrollBar"
 								   Cursor="Arrow"
 								   IsTabStop="False"
-								   Opacity=".94"
+								   Opacity=".9"
 								   Style="{StaticResource PpsScrollBarStyle}" />
 					</Grid>
 					<ControlTemplate.Triggers>
@@ -299,7 +299,7 @@
 								<Condition SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Visible" />
 								<Condition SourceName="PART_HorizontalScrollBar" Property="Visibility" Value="Visible" />
 							</MultiTrigger.Conditions>
-							<Setter Property="Padding" Value="0,0,5,5" />
+							<Setter Property="Padding" Value="0,0,2,2" />
 						</MultiTrigger>
 
 						<MultiTrigger>
@@ -307,7 +307,7 @@
 								<Condition SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Visible" />
 								<Condition SourceName="PART_HorizontalScrollBar" Property="Visibility" Value="Collapsed" />
 							</MultiTrigger.Conditions>
-							<Setter Property="Padding" Value="0,0,5,0" />
+							<Setter Property="Padding" Value="0,0,2,0" />
 						</MultiTrigger>
 
 						<MultiTrigger>
@@ -315,7 +315,7 @@
 								<Condition SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Collapsed" />
 								<Condition SourceName="PART_HorizontalScrollBar" Property="Visibility" Value="Visible" />
 							</MultiTrigger.Conditions>
-							<Setter Property="Padding" Value="0,0,0,5" />
+							<Setter Property="Padding" Value="0,0,0,2" />
 						</MultiTrigger>
 
 
