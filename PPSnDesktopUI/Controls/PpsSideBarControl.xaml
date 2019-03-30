@@ -22,7 +22,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<Style TargetType="{x:Type pps:PpsSideBarControl}">
 		<Setter Property="Focusable" Value="False" />
-		<Setter Property="Padding" Value="32,16,0,16" />
+		<Setter Property="Padding" Value="32,16,6,16" />
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
