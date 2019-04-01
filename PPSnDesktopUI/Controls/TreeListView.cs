@@ -40,29 +40,32 @@ namespace TecWare.PPSn.Controls
 		private readonly static DependencyProperty AutoSelectAddedNodeProperty = DependencyProperty.Register("AutoSelectAddedNode", typeof(bool), typeof(PpsTreeListView), new PropertyMetadata(true));
 		private object itemToSelect;
 
+		/// <summary></summary>
 		public PpsTreeListView()
 		{
 			Loaded += OnLoaded;
 		} // ctor
 
+		/// <summary></summary>
 		protected override DependencyObject GetContainerForItemOverride()
 			=> new PpsTreeListViewItem();
 
+		/// <summary></summary>
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsTreeListViewItem;
 
 		private void OnLoaded(object sender, RoutedEventArgs e)
 			=> EnsureSelection();
 
+		/// <summary></summary>
 		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
 		{
 			base.OnItemsChanged(e);
 			switch (e.Action)
 			{
-				case NotifyCollectionChangedAction.Remove:
-					var x = ItemContainerGenerator;
-					AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)this, 0);
-					break;
+				//case NotifyCollectionChangedAction.Remove:
+				//	AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)this, 0);
+				//	break;
 				case NotifyCollectionChangedAction.Add:
 					if (e.NewItems.Count > 0 && e.NewItems[0] != null && AutoSelectAddedNode)
 						SelectNode(e.NewItems[0]);
@@ -92,8 +95,7 @@ namespace TecWare.PPSn.Controls
 
 		private void DoSelectNode(object item)
 		{
-			var node = ItemContainerGenerator.ContainerFromItem(item) as PpsTreeListViewItem;
-			if (node == null)
+			if (!(ItemContainerGenerator.ContainerFromItem(item) is PpsTreeListViewItem node))
 				return; // todo: noch nicht generiert? throw new ArgumentNullException("SelectNode TreeListViewItem");
 
 			//  reset itemToSelect
@@ -132,35 +134,38 @@ namespace TecWare.PPSn.Controls
 	{
 		private object itemToSelect;
 
+		/// <summary></summary>
 		public PpsTreeListViewItem()
 		{
-			Loaded += OnLoaded;
+			//Loaded += OnLoaded;
 		} // ctor
 
+		/// <summary></summary>
 		protected override DependencyObject GetContainerForItemOverride()
 			=> new PpsTreeListViewItem();
 
+		/// <summary></summary>
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsTreeListViewItem;
 
-		private void OnLoaded(object sender, RoutedEventArgs e)
-			=> UpdateAlternationIndex();
+		//private void OnLoaded(object sender, RoutedEventArgs e)
+		//	=> UpdateAlternationIndex();
 
 		/// <summary>Overridden to update the Alternation index. Passes to base-class</summary>
 		/// <param name="e">Arguments</param>
-		protected override void OnExpanded(RoutedEventArgs e)
-		{
-			base.OnExpanded(e);
-			UpdateAlternationIndex();
-		} // proc OnExpanded
+		//protected override void OnExpanded(RoutedEventArgs e)
+		//{
+		//	base.OnExpanded(e);
+		//	UpdateAlternationIndex();
+		//} // proc OnExpanded
 
 		/// <summary>Overridden to update the Alternation index. Passes to base-class</summary>
 		/// <param name="e">Arguments</param>
-		protected override void OnCollapsed(RoutedEventArgs e)
-		{
-			base.OnCollapsed(e);
-			UpdateAlternationIndex();
-		} // proc OnCollapsed
+		//protected override void OnCollapsed(RoutedEventArgs e)
+		//{
+		//	base.OnCollapsed(e);
+		//	UpdateAlternationIndex();
+		//} // proc OnCollapsed
 
 		/// <summary>Overridden to update the Alternation index or select an added item. Passes to base-class</summary>
 		/// <param name="e">Arguments</param>
@@ -170,22 +175,22 @@ namespace TecWare.PPSn.Controls
 
 			switch (e.Action)
 			{
-				case NotifyCollectionChangedAction.Remove:
-					UpdateAlternationIndex();
-					break;
+				//case NotifyCollectionChangedAction.Remove:
+				//	UpdateAlternationIndex();
+				//	break;
 				case NotifyCollectionChangedAction.Add:
 					SelectAddedNode(e.NewItems[0]);
 					break;
 			}
 		} // proc OnItemChanged
 
-		private void UpdateAlternationIndex()
-		{
-			// update index
-			var parent = ParentTreeView;
-			if (parent != null)
-				AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)parent, 0);
-		} // proc UpdateAlternationIndex
+		//private void UpdateAlternationIndex()
+		//{
+		//	// update index
+		//	var parent = ParentTreeView;
+		//	if (parent != null)
+		//		AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)parent, 0);
+		//} // proc UpdateAlternationIndex
 
 		#region -- ItemSelection --------------------------------------------------------
 
