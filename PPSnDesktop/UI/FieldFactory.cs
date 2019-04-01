@@ -376,7 +376,8 @@ namespace TecWare.PPSn.UI
 		private static LuaWpfCreator CreateComboField(IPpsDataFieldReadOnlyProperties properties)
 		{
 			dynamic ui = new LuaUI();
-			dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(ComboBox));
+			//dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(ComboBox));
+			dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(PpsComboBox));
 
 			combo.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
 
