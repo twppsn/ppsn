@@ -134,7 +134,12 @@ specific language governing permissions and limitations under the Licence.
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsEnabled" Value="False">
 							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+							<Setter Property="Background" Value="Transparent" />
 							<Setter Property="BorderBrush" Value="{DynamicResource PPSnSeparatorBrush}" />
+						</Trigger>
+
+						<Trigger Property="IsReadOnly" Value="True">
+							<Setter Property="Background" Value="Transparent" />
 						</Trigger>
 
 						<Trigger Property="AcceptsReturn" Value="True">
@@ -145,7 +150,7 @@ specific language governing permissions and limitations under the Licence.
 						</Trigger>
 
 						<Trigger Property="IsKeyboardFocusWithin" Value="True">
-							<Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+							<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 							<Setter Property="Validation.ErrorTemplate" Value="{x:Null}" />
 						</Trigger>
 
@@ -163,21 +168,21 @@ specific language governing permissions and limitations under the Licence.
 
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
-								<Condition Property="IsKeyboardFocused" Value="False"/>
-								<Condition Property="HasFormattedValue" Value="True"/>
+								<Condition Property="IsKeyboardFocused" Value="False" />
+								<Condition Property="HasFormattedValue" Value="True" />
 							</MultiTrigger.Conditions>
-							<Setter TargetName="FormattedValueViewer" Property="Visibility" Value="Visible"/>
-							<Setter TargetName="PART_ContentHost" Property="Visibility" Value="Hidden"/>
+							<Setter TargetName="FormattedValueViewer" Property="Visibility" Value="Visible" />
+							<Setter TargetName="PART_ContentHost" Property="Visibility" Value="Hidden" />
 						</MultiTrigger>
 
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
-								<Condition Property="IsNullable" Value="False"/>
-								<Condition Property="IsKeyboardFocused" Value="False"/>
-								<Condition Property="Validation.HasError" Value="False"/>
-								<Condition Property="Text" Value="{x:Static sys:String.Empty}"/>
+								<Condition Property="IsNullable" Value="False" />
+								<Condition Property="IsKeyboardFocused" Value="False" />
+								<Condition Property="Validation.HasError" Value="False" />
+								<Condition Property="Text" Value="{x:Static sys:String.Empty}" />
 							</MultiTrigger.Conditions>
-							<Setter TargetName="RequiredInfo" Property="Visibility" Value="Visible"/>
+							<Setter TargetName="RequiredInfo" Property="Visibility" Value="Visible" />
 						</MultiTrigger>
 
 						<Trigger Property="HasAdditionalImage" Value="True">
@@ -185,7 +190,7 @@ specific language governing permissions and limitations under the Licence.
 						</Trigger>
 												
 		                <Trigger Property="Validation.HasError" Value="True">
-							<Setter Property="ToolTip" Value="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=(Validation.Errors)[0].ErrorContent}"/>
+							<Setter Property="ToolTip" Value="{Binding RelativeSource={x:Static RelativeSource.Self}, Path=(Validation.Errors)[0].ErrorContent}" />
 						</Trigger>
 									
 					</ControlTemplate.Triggers>
