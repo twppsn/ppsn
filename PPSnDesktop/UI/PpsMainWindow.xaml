@@ -148,8 +148,8 @@
 					ToolTipService.InitialShowDelay="750"
 					ToolTipService.ShowDuration="10000">
 				<Button.ToolTip>
-					<ToolTip Placement="Top" VerticalOffset="-16" Margin="16,0" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
-						<ListBox Style="{StaticResource PPSnListBoxStyle}" Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
+					<ToolTip Placement="MousePoint" VerticalOffset="-16" Margin="16,0" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
+						<ListBox Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}" BorderThickness="0" MaxWidth="500" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 							<ListBox.ItemsSource>
 								<Binding Path="Environment.Log" Converter="{x:Static uiO:PpsConverter.TakeListItems}">
 									<Binding.ConverterParameter>
@@ -193,7 +193,7 @@
 						 ToolTipService.InitialShowDelay="750" ToolTipService.ShowDuration="10000">
 				<ProgressBar.ToolTip>
 					<ToolTip Placement="Top" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
-						<ListBox ItemsSource="{Binding Environment.StatusOfProxy.TopTen, IsAsync=True}" Style="{StaticResource PPSnListBoxStyle}"
+						<ListBox ItemsSource="{Binding Environment.StatusOfProxy.TopTen, IsAsync=True}" BorderThickness="0" MaxWidth="500" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 								 Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
 							<ListBox.ItemTemplate>
 								<DataTemplate>
@@ -313,8 +313,7 @@
 			<Grid SnapsToDevicePixels="True">
 				<Rectangle Fill="Black" Opacity=".7" />
 				<ListBox x:Name="windowPanePopupListBox" ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True"
-						 Style="{StaticResource PPSnListBoxStyle}"
-						 Background="Transparent" Margin="16" Focusable="False" MaxWidth="636">
+						 Background="Transparent" BorderThickness="0" Margin="16" Focusable="False" MaxWidth="636">
 					<ListBox.ItemsPanel>
 						<ItemsPanelTemplate>
 							<WrapPanel Orientation="Horizontal" MaxWidth="{Binding MaxWidth, ElementName=windowPanePopupListBox}"/>
@@ -324,7 +323,7 @@
 						<DataTemplate DataType="{x:Type uiL:PpsWindowPaneHost}">
 							<Grid Width="200">
 								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="24" />
+									<ColumnDefinition Width="Auto" />
 									<ColumnDefinition />
 								</Grid.ColumnDefinitions>
 								<Grid.RowDefinitions>
@@ -332,12 +331,12 @@
 									<RowDefinition Height="Auto" />
 								</Grid.RowDefinitions>
 								<ui:PpsGeometryImage GeometryName="{Binding Image, Mode=OneWay,TargetNullValue='pane'}" GeometryCircled="False"
-													 Foreground="White" />
+													 Foreground="White" Width="18" Height="18" VerticalAlignment="Top" />
 								<TextBlock Grid.Column="1" LineHeight="12" LineStackingStrategy="BlockLineHeight" Margin="3,0,0,0"
 										   Foreground="White" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
 									<Run Text="{Binding Title, Mode=OneWay}" FontWeight="Bold" />
 									<LineBreak/>
-									<Run Text="{Binding SubTitle, Mode=OneWay}" FontWeight="Thin" />
+									<Run Text="{Binding SubTitle, Mode=OneWay}" FontWeight="Light" />
 								</TextBlock>
 								<Border Grid.ColumnSpan="2" Grid.Row="1" Margin="0,3,0,0" Background="{StaticResource PPSnWindowBackgroundBrush}">
 									<Image Source="{Binding Converter={x:Static uiL:PpsMainWindow.PaneHostToImage}}" />
