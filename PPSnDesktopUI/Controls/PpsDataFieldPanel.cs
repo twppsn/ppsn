@@ -313,7 +313,7 @@ namespace TecWare.PPSn.Controls
 
 			foreach (var child in PlaceableChildren)
 			{
-				var width = Math.Floor(childwidth + (GetFullWidth(child) ? LabelWidth : 0));
+				var width = Math.Round(childwidth + (GetFullWidth(child) ? LabelWidth : 0));
 				child.Measure(new Size(width, GetGridLines(child) * RowHeight));
 			}
 
@@ -380,7 +380,7 @@ namespace TecWare.PPSn.Controls
 
 					var controlRect = new Rect(columnX + thisLabelWidth,
 											   line * (RowHeight + RowMargin),
-											   Math.Floor(columnWidth - thisLabelWidth),
+											   Math.Round(columnWidth - thisLabelWidth),
 											   controlLines * RowHeight + (controlLines - 1) * RowMargin);
 					child.Arrange(controlRect);
 
