@@ -4,7 +4,7 @@
                     xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Color x:Key="PpsThumbColor">#D8D8D8</Color>
-	<Color x:Key="PpsThumbShrunkColor">#7A7A7A</Color>
+	<Color x:Key="PpsThumbShrunkColor">#8C8C8C</Color>
 	<Color x:Key="PpsScrollBarBackground">#E6E6E6</Color>
 
 	<Style x:Key="PpsScrollBarLineButtonStyle" TargetType="{x:Type RepeatButton}">
