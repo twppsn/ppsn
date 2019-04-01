@@ -100,10 +100,14 @@ specific language governing permissions and limitations under the Licence.
 													Margin="6,6,6,6"
 													Width="250"
 													BorderThickness="0"
-													Background="#F6F6F6"
+													Background="{DynamicResource PPSnWindowBackgroundBrush}"
 													HorizontalAlignment="Right"
 													AdditionalImage="magnify" />
-									<pps:PpsScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" KeyboardNavigation.DirectionalNavigation="Contained" KeyboardNavigation.TabNavigation="Once">
+									<pps:PpsScrollViewer Grid.Row="1"
+														 HorizontalScrollBarVisibility="Disabled"
+														 VerticalScrollBarVisibility="Auto"
+														 KeyboardNavigation.DirectionalNavigation="Contained"
+														 KeyboardNavigation.TabNavigation="Once">
 										<ItemsPresenter />
 									</pps:PpsScrollViewer>
 								</Grid>
@@ -123,7 +127,8 @@ specific language governing permissions and limitations under the Licence.
 							<Setter Property="Visibility" TargetName="ContentSite" Value="Hidden"/>
 						</Trigger>
 						<Trigger Property="IsEnabled" Value="False">
-							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
+							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+							<Setter Property="Background" Value="Transparent" />
 						</Trigger>
 						<Trigger Property="IsFilterable" Value="False">
 							<Setter TargetName="PART_FilterBox" Property="Visibility" Value="Collapsed" />
@@ -157,7 +162,9 @@ specific language governing permissions and limitations under the Licence.
 						</MultiTrigger>
 						
 						<Trigger Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly" Value="True">
-							<Setter TargetName="PART_EditableTextBox" Property="IsEnabled" Value="False"/>
+							<Setter TargetName="PART_EditableTextBox" Property="IsEnabled" Value="False" />
+							<Setter Property="Background" Value="Transparent" />
+
 							<!--<Setter TargetName="ChangeDropDownToggleButton" Property="IsEnabled" Value="False"/>-->
 							<!--KeyBoard-Selection-->
 							<!--<Setter Property="Focusable" Value="False"/>-->
@@ -188,7 +195,7 @@ specific language governing permissions and limitations under the Licence.
 						</Border>
 						<!--custom visual focus-->
 						<Rectangle x:Name="FocusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" StrokeDashArray="2 1"
-									   RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" Opacity="0" />
+								   RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True" Opacity="0" />
 					</Grid>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsHighlighted" Value="True">
