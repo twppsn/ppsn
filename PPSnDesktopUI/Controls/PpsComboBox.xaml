@@ -107,6 +107,7 @@ specific language governing permissions and limitations under the Licence.
 														 HorizontalScrollBarVisibility="Disabled"
 														 VerticalScrollBarVisibility="Auto"
 														 KeyboardNavigation.DirectionalNavigation="Contained"
+														 CanContentScroll="True"
 														 KeyboardNavigation.TabNavigation="Once">
 										<ItemsPresenter />
 									</pps:PpsScrollViewer>
@@ -188,7 +189,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="Control.Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type ComboBoxItem}">
+				<ControlTemplate TargetType="{x:Type pps:PpsComboBoxItem}">
 					<Grid>
 						<Border Name="ContentBorder" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Padding="6,0" MinHeight="29">
 							<ContentPresenter VerticalAlignment="Center" />

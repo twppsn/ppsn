@@ -84,6 +84,7 @@
 			</Trigger>
 			<Trigger Property="IsEnabled" Value="false">
 				<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+				<Setter TargetName="IconBox" Property="Opacity" Value=".33" />
 			</Trigger>
 		</ControlTemplate.Triggers>
 	</ControlTemplate>
@@ -126,6 +127,7 @@
 			</DataTrigger>
 			<Trigger Property="IsEnabled" Value="false">
 				<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+				<Setter TargetName="IconBox" Property="Opacity" Value=".33" />
 			</Trigger>
 		</ControlTemplate.Triggers>
 	</ControlTemplate>

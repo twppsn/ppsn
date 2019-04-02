@@ -308,6 +308,14 @@ namespace TecWare.PPSn.Controls
 			}
 		} // event FilterBox_PreviewKeyDown
 
+		/// <summary>leave clean</summary>
+		/// <param name="e"></param>
+		protected override void OnDropDownClosed(EventArgs e)
+		{
+			base.OnDropDownClosed(e);
+			UserFilterText = String.Empty;
+		} // proc OnDropDownClosed
+
 		/// <summary></summary>
 		/// <param name="e"></param>
 		protected override void OnDropDownOpened(EventArgs e)

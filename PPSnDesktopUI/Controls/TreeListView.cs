@@ -25,6 +25,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TecWare.DE.Stuff;
@@ -147,6 +148,13 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsTreeListViewItem;
+
+		/// <summary>Select item, before showing the contextmenu</summary>
+		protected override void OnPreviewMouseRightButtonDown(MouseButtonEventArgs e)
+		{
+			base.OnPreviewMouseRightButtonDown(e);
+			IsSelected = true;
+		} // proc OnPreviewMouseRightButtonDown
 
 		//private void OnLoaded(object sender, RoutedEventArgs e)
 		//	=> UpdateAlternationIndex();
