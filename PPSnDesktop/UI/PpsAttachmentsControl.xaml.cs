@@ -222,6 +222,8 @@ namespace TecWare.PPSn.UI
 
 			// convert bitmap to png
 			var bmp = Clipboard.GetImage();
+			bmp.Freeze();
+
 			using (var bar = CurrentPane?.DisableUI("Füge Bild aus Zwischenablage ein..."))
 				await AddFromBitmapSourceAsync(bmp);
 		} // proc AddFromClipboardAsync

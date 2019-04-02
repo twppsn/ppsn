@@ -180,6 +180,6 @@ namespace TecWare.PPSn.UI
 			=> MarkdownXaml.ToFlowDocument("*Es wurde kein HelpKey gesetzt.*");
 
 		private static FlowDocument CreateNoHelpDocument()
-			=> MarkdownXaml.ToFlowDocument("*Keine Dokunment hinterlegt.*");
+			=> MarkdownXaml.ToFlowDocument("*Kein Dokument hinterlegt.*");
 	} //class PpsHelpPageViewer
 }
