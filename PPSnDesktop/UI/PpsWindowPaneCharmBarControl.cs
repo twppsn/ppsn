@@ -239,8 +239,6 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = IsPaneVisible
 				)
 			);
-
-
 		} // ctor
 
 		private void ChangeVisiblePane(PpsWindowPaneObjectInfo pane)
