@@ -67,6 +67,8 @@ specific language governing permissions and limitations under the Licence.
 									   Grid.ColumnSpan="2"
 									   StrokeThickness="0"
 									   Fill="{DynamicResource PPSnSeparatorBrush}"
+									   SnapsToDevicePixels="True"
+									   RenderOptions.EdgeMode="Aliased"
 									   Height="1"
 									   Margin="0,0,0,6" />
 							<ui:PpsScrollViewer Grid.Row="2"
