@@ -111,12 +111,20 @@
 									<RowDefinition Height="32" />
 									<RowDefinition />
 								</Grid.RowDefinitions>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="Auto" />
+									<ColumnDefinition />
+								</Grid.ColumnDefinitions>
 								<uiC:PpsGeometryImage GeometryName="{Binding Image, Mode=OneWay}" GeometryCircled="False"
 													  Width="20" Height="20" Margin="6,0,0,0" HorizontalAlignment="Left"
 													  Foreground="{DynamicResource PPSnActionButtonBrush}" Opacity=".65" />
-								<TextBlock Text="{Binding Text, Mode=OneWay}" VerticalAlignment="Center" Margin="32,0,0,0"
+								<TextBlock Text="{Binding Text, Mode=OneWay}" VerticalAlignment="Center" Margin="32,0,16,0"
 										   FontSize="18" Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
-								<ContentPresenter Grid.Row="1" Content="{Binding Content, Mode=OneWay}" />
+								<uiC:PpsButton Command="{x:Static ApplicationCommands.Close}" DisplayMode="Image" GeometryName="nextPane" GeometrySize="24" 
+											   Foreground="{DynamicResource PPSnWindowForegroundBrush}" ImageOpacity="1"
+											   Grid.Column="1" Width="32" HorizontalAlignment="Left" ToolTip="Schließen" />
+
+								<ContentPresenter Grid.Row="1" Grid.ColumnSpan="2" Content="{Binding Content, Mode=OneWay}" />
 							</Grid>
 						</Border>
 						<TextBlock Grid.Column="1" Text="{TemplateBinding ObjectName}"

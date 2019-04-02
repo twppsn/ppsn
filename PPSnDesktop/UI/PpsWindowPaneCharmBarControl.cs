@@ -230,6 +230,17 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = true
 				)
 			);
+			CommandBindings.Add(
+				new CommandBinding(ApplicationCommands.Close,
+					(sender, e) =>
+					{
+						CurrentPane = null;
+					},
+					(sender, e) => e.CanExecute = IsPaneVisible
+				)
+			);
+
+
 		} // ctor
 
 		private void ChangeVisiblePane(PpsWindowPaneObjectInfo pane)
