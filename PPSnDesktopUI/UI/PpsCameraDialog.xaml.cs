@@ -909,7 +909,7 @@ namespace TecWare.PPSn.UI
 		// simulate Popup.StaysOpen = false
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
-			if (IsSettingsActive && e.OriginalSource is DependencyObject d && d.GetLogicalParent(settingsBoxTemplateName) == null)
+			if (IsSettingsActive && e.OriginalSource is DependencyObject d && d.GetVisualParent(settingsBoxTemplateName) == null)
 				SetValue(isSettingsActivePropertyKey, false);
 			base.OnPreviewMouseDown(e);
 		} // proc OnPreviewMouseDown
@@ -1043,7 +1043,7 @@ namespace TecWare.PPSn.UI
 		{
 			var window = new PpsCameraDialog(PpsShellWpf.GetShell(owner));
 			window.SetFullscreen(owner);
-			return owner.ShowModalDialog(window.ShowDialog) == true
+			return owner.ShowModalDialog(window) == true
 				? window.CurrentImage
 				: null;
 		} // func TakePicture

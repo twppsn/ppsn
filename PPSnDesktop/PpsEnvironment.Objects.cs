@@ -432,7 +432,7 @@ namespace TecWare.PPSn
 				parent.SetDirty();
 			}
 
-			OnCollectionReset();
+			parent.Environment.Dispatcher.Invoke(new Action(OnCollectionReset));
 		} // proc ReadLinksFromXml
 
 		internal void AddToXml(XElement xParent, XName linkElementName)

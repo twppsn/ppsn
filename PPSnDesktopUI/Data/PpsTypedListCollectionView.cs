@@ -81,7 +81,6 @@ namespace TecWare.PPSn.Data
 					base.Filter = filterCustomFunction;
 				else
 					base.Filter = filterExpressionFunction;
-
 			}
 			finally
 			{

@@ -413,24 +413,42 @@ namespace TecWare.PPSn.UI
 				window.WindowState = WindowState.Maximized;
 		} // proc SetFullscreen
 
+		private static Window GetWindowFromOwner(DependencyObject owner)
+		{
+			return owner == null
+				? Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
+				: Window.GetWindow(owner);
+		} // func GetWindowFromOwner
+
+		/// <summary>Helper to show a system dialog static.</summary>
+		/// <param name="owner"></param>
+		/// <param name="window"></param>
+		/// <returns></returns>
+		public static bool ShowModalDialog(this DependencyObject owner, Window window)
+		{
+			var ownerWindow = GetWindowFromOwner(owner);
+			window.Owner = ownerWindow;
+			return ShowModalDialog(ownerWindow, window.ShowDialog);
+		} // proc ShowModalDialog
+
 		/// <summary>Helper to show a system dialog static.</summary>
 		/// <param name="owner"></param>
 		/// <param name="showDialog"></param>
 		/// <returns></returns>
 		public static bool ShowModalDialog(this DependencyObject owner, Func<bool?> showDialog)
+			=> ShowModalDialog(GetWindowFromOwner(owner), showDialog);
+
+		private static bool ShowModalDialog(Window ownerWindow, Func<bool?> showDialog)
 		{
 			var oldWindow = Application.Current.MainWindow;
-			var window = owner == null 
-				? Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-				: Window.GetWindow(owner);
+			Application.Current.MainWindow = ownerWindow;
 			try
 			{
-				Application.Current.MainWindow = window;
 				return showDialog() ?? false;
 			}
 			finally
 			{
-				if (Application.Current.MainWindow != window)
+				if (Application.Current.MainWindow != ownerWindow)
 					throw new InvalidOperationException();
 				Application.Current.MainWindow = oldWindow;
 			}

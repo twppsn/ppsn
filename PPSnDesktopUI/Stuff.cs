@@ -318,7 +318,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static DependencyObject GetLogicalParent(this DependencyObject current, string name)
 		{
-			if (current == null)
+			if (current == null || name == null)
 				return null;
 			else if (CompareName(current, name) == 0)
 				return current;
@@ -350,13 +350,19 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static DependencyObject GetVisualParent(this DependencyObject current, Type typeOfParent)
 		{
-			var parent = GetVisualParent(current);
-			if (parent == null && current != null && current.GetType().Name == "PopupRoot")
-				parent = GetLogicalParent(current);
-
-			return parent == null || typeOfParent == null || typeOfParent.IsAssignableFrom(parent.GetType())
-				? parent
-				: GetVisualParent(parent, typeOfParent);
+			if (current == null)
+				return null;
+			else if (typeOfParent == null)
+				return GetVisualParent(current);
+			else if (typeOfParent.IsAssignableFrom(current.GetType()))
+				return current;
+			else
+			{
+				var parent = GetVisualParent(current);
+				if (parent == null && current.GetType().Name == "PopupRoot")
+					parent = GetLogicalParent(current);
+				return GetVisualParent(parent, typeOfParent);
+			}
 		} // func GetVisualParent
 
 		/// <summary></summary>
@@ -365,10 +371,17 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static DependencyObject GetVisualParent(this DependencyObject current, string name)
 		{
-			var parent = GetVisualParent(current);
-			return parent == null || CompareName(parent, name) == 0
-				? parent
-				: GetVisualParent(parent, name);
+			if (current == null || name == null)
+				return null;
+			else if (CompareName(current, name) == 0)
+				return current;
+			else
+			{
+				var parent = GetVisualParent(current);
+				if (parent == null && current.GetType().Name == "PopupRoot")
+					parent = GetLogicalParent(current);
+				return GetVisualParent(parent, name);
+			}
 		} // func GetVisualParent
 
 		/// <summary></summary>

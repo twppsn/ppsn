@@ -15,6 +15,10 @@
 #endregion
 using System;
 using System.Collections;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -58,7 +62,6 @@ namespace TecWare.PPSn.Controls
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsComboBoxItem), new FrameworkPropertyMetadata(typeof(PpsComboBoxItem)));
 		} // sctor
-
 	} // class PpsComboBoxItem
 
 	#endregion
@@ -198,6 +201,22 @@ namespace TecWare.PPSn.Controls
 			SelectedIndex = -1;
 		} // proc ClearValue
 
+		#region -- ItemsSource --------------------------------------------------------
+
+		private static object ItemsSourceCoerceValue(DependencyObject d, object baseValue)
+		{
+			var view = CollectionViewSource.GetDefaultView(baseValue);
+			if (view is IPpsDataRowViewFilter) // filterable view
+			{
+				if (baseValue is ICollectionViewFactory factory)
+					return factory.CreateView();
+				else
+					return new CollectionViewSource { Source = baseValue }.View;
+			}
+			else
+				return baseValue;
+		} // func ItemsSourceCoerceValue
+
 		/// <summary></summary>
 		/// <param name="oldValue"></param>
 		/// <param name="newValue"></param>
@@ -212,6 +231,49 @@ namespace TecWare.PPSn.Controls
 			UpdateFilterExpression();
 			UpdateFilterable();
 		} // proc OnItemsSourceChanged
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
+		{
+			if (!IsFilterable)
+				base.OnItemsChanged(e); // do not change any selection
+			else if(IsDropDownOpen) // enforce focus on first
+			{
+				var itemContainerGenerator = ItemContainerGenerator;
+				if (itemContainerGenerator != null)
+					itemContainerGenerator.StatusChanged += ItemContainerGenerator_StatusChanged;
+				
+			}
+		} // proc OnItemsChanged
+
+		private void ItemContainerGenerator_StatusChanged(object sender, EventArgs e)
+		{
+			var itemContainerGenerator = ItemContainerGenerator;
+			if (itemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+			{
+				itemContainerGenerator.StatusChanged -= ItemContainerGenerator_StatusChanged;
+				var container = itemContainerGenerator.ContainerFromItem(SelectedItem);
+				if (container is PpsComboBoxItem ci)
+					HighlightItem(ci);
+				else
+				{
+					if (itemContainerGenerator.Items.Count > 0)
+						HighlightItem((itemContainerGenerator.ContainerFromIndex(0) as PpsComboBoxItem));
+				}
+			}
+		} // event ItemContainerGenerator_StatusChanged
+
+		private void HighlightItem(PpsComboBoxItem ci)
+		{
+			if (ci != null && !ci.IsHighlighted)
+			{
+				// HighlightedInfo = ItemInfoFromContainer(item);
+				highlightedInfoPropertyInfo.SetValue(this, itemInfoFromContainerMethodInfo.Invoke(this, new object[] { ci }));
+			}
+		} // proc HighlightItem
+
+		#endregion
 
 		/// <summary></summary>
 		public override void OnApplyTemplate()
@@ -258,6 +320,15 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc OnDropDownOpened
 
+		/// <summary>Clear filter on close</summary>
+		/// <param name="e"></param>
+		protected override void OnDropDownClosed(EventArgs e)
+		{
+			UserFilterText = String.Empty; // clear filter
+			//ignoreAnySelectionChange = false;
+			base.OnDropDownClosed(e);
+		} // proc OnDropDownClosed
+
 		/// <summary></summary>
 		/// <param name="e"></param>
 		protected override void OnIsKeyboardFocusWithinChanged(DependencyPropertyChangedEventArgs e)
@@ -300,9 +371,21 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		private static PropertyInfo highlightedInfoPropertyInfo;
+		private static MethodInfo itemInfoFromContainerMethodInfo;
+
 		static PpsComboBox()
 		{
+			highlightedInfoPropertyInfo = typeof(ComboBox).GetProperty("HighlightedInfo", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly) ?? throw new ArgumentNullException("ComboBox.HighlightedInfo");
+			itemInfoFromContainerMethodInfo = typeof(ItemsControl).GetMethod("ItemInfoFromContainer", BindingFlags.NonPublic | BindingFlags.Instance) ?? throw new ArgumentNullException("ItemsControl.ItemInfoFromContainer");
+
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsComboBox), new FrameworkPropertyMetadata(typeof(PpsComboBox)));
+
+			// erzeugt neue collectionviews, da durch den filter ein manipulation eintritt
+			ItemsSourceProperty.OverrideMetadata(typeof(PpsComboBox), new FrameworkPropertyMetadata(null, null, new CoerceValueCallback(ItemsSourceCoerceValue)));
+			// muss ausgeschalten werden, da sonst bei nicht default views aktiv
+			IsSynchronizedWithCurrentItemProperty.OverrideMetadata(typeof(PpsComboBox), new FrameworkPropertyMetadata(false));
+
 			PpsControlCommands.RegisterClearCommand(typeof(PpsComboBox));
 		}
 	} // class PpsComboBox
