@@ -23,13 +23,14 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using TecWare.DE.Networking;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {
 	#region -- class PpsAttachmentsControl --------------------------------------------
 
 	/// <summary>Control to view and edit attachments.</summary>
-	public partial class PpsAttachmentsControl : UserControl
+	public partial class PpsAttachmentsControl : UserControl, IPpsReadOnlyControl
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static RoutedCommand AddFromFileCommand = new RoutedCommand("Add", typeof(PpsAttachmentsControl));
@@ -109,7 +110,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = GetEditAttachments();
+						e.CanExecute = !isReadOnly && GetEditAttachments();
 						e.Handled = true;
 					}
 				)
@@ -124,7 +125,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = GetEditAttachments() && Clipboard.ContainsImage();
+						e.CanExecute = !isReadOnly && GetEditAttachments() && Clipboard.ContainsImage();
 						e.Handled = true;
 					}
 				)
@@ -139,7 +140,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = GetEditAttachments();
+						e.CanExecute = !isReadOnly && GetEditAttachments();
 						e.Handled = true;
 					}
 				)
@@ -171,7 +172,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = GetEditAttachments() && e.Parameter is IPpsAttachmentItem;
+						e.CanExecute = !isReadOnly && GetEditAttachments() && e.Parameter is IPpsAttachmentItem;
 						e.Handled = true;
 					}
 				)
@@ -266,6 +267,21 @@ namespace TecWare.PPSn.UI
 
 		private IPpsWindowPane CurrentPane => getCurrentPane.Value;
 		private PpsEnvironment Environment => (PpsEnvironment)CurrentPane.PaneHost.PaneManager.Shell;
+
+		private bool isReadOnly = false;
+
+		bool IPpsReadOnlyControl.IsReadOnly
+		{
+			get => isReadOnly;
+			set
+			{
+				if (isReadOnly != value)
+				{
+					isReadOnly = value;
+					CommandManager.InvalidateRequerySuggested();
+				}
+			}
+		} // prop IsReadOnly
 
 		#endregion
 

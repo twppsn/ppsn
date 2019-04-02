@@ -105,7 +105,19 @@ namespace TecWare.PPSn.UI
 				=> row.GetHashCode();
 
 			public override bool Equals(object obj)
-				=> obj is PpsAttachmentItemImplementation a ? a.row == row : false;
+			{
+				switch (obj)
+				{
+					case null:
+						return this is null;
+					case PpsAttachmentItemImplementation a:
+						return a.row == row;
+					case IDataRow r:
+						return r == row;
+					default:
+						return false;
+				}
+			} // func Equal
 
 			public bool Equals(PpsDataRow other)
 				=> other == row;
@@ -295,7 +307,7 @@ namespace TecWare.PPSn.UI
 							var startIndex = e.OldStartingIndex;
 							foreach (var o in e.OldItems)
 							{
-								if (o != attachmentRows[startIndex])
+								if (!attachmentRows[startIndex].Equals(o))
 									throw new InvalidOperationException();
 								attachmentRows.RemoveAt(startIndex++);
 							}

@@ -748,6 +748,9 @@ namespace TecWare.PPSn.Server.Sql
 
 				base.InitSqlParameter(parameter, parameterName, value);
 
+				if (parameter.Size == 0 && (sqlType == SqlDbType.NVarChar || sqlType == SqlDbType.VarChar || sqlType == SqlDbType.VarBinary))
+					parameter.Size = -1;
+
 				((SqlParameter)parameter).SqlDbType = sqlType;
 				if (sqlType == SqlDbType.Udt)
 					((SqlParameter)parameter).UdtTypeName = udtName;
