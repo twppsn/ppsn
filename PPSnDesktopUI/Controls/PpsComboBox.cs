@@ -206,12 +206,16 @@ namespace TecWare.PPSn.Controls
 		private static object ItemsSourceCoerceValue(DependencyObject d, object baseValue)
 		{
 			var view = CollectionViewSource.GetDefaultView(baseValue);
-			if (view is IPpsDataRowViewFilter) // filterable view
+			if (view is PpsDataRowEnumerableCollectionView)
+				return baseValue;
+			else if (view is IPpsDataRowViewFilter) // filterable view
 			{
 				if (baseValue is ICollectionViewFactory factory)
 					return factory.CreateView();
+				else if (view is ICollectionView currentView)
+					return new CollectionViewSource { Source = currentView.SourceCollection }.View;
 				else
-					return new CollectionViewSource { Source = baseValue }.View;
+					return baseValue;
 			}
 			else
 				return baseValue;
@@ -308,14 +312,6 @@ namespace TecWare.PPSn.Controls
 			}
 		} // event FilterBox_PreviewKeyDown
 
-		/// <summary>leave clean</summary>
-		/// <param name="e"></param>
-		protected override void OnDropDownClosed(EventArgs e)
-		{
-			base.OnDropDownClosed(e);
-			UserFilterText = String.Empty;
-		} // proc OnDropDownClosed
-
 		/// <summary></summary>
 		/// <param name="e"></param>
 		protected override void OnDropDownOpened(EventArgs e)
@@ -333,7 +329,6 @@ namespace TecWare.PPSn.Controls
 		protected override void OnDropDownClosed(EventArgs e)
 		{
 			UserFilterText = String.Empty; // clear filter
-			//ignoreAnySelectionChange = false;
 			base.OnDropDownClosed(e);
 		} // proc OnDropDownClosed
 
