@@ -25,6 +25,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Neo.IronLua;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
@@ -74,6 +75,8 @@ namespace TecWare.PPSn.UI
 
 		private IPpsDataInfo currentPictureInfo = null;
 		private IPpsDataObject currentPicture = null;
+
+		private bool scheduleFitToImage = false;
 
 		#region -- Constructor --------------------------------------------------------
 
@@ -170,11 +173,36 @@ namespace TecWare.PPSn.UI
 			return true;
 		} // func OpenPictureAsync
 
+		private void FitToImage()
+		{
+			if (CurrentImage == null)
+				return;
+
+			var renderSize = scrollViewer.RenderSize;
+			var imageSize = new Size(CurrentImage.Width, CurrentImage.Height);
+			if (imageSize.Height < 0.1 || imageSize.Width < 0.1 || renderSize.Height < 0.1 || renderSize.Width < 0.1)
+				return;
+
+			var aspectWidth = renderSize.Width / imageSize.Width;
+			var aspectHeight = renderSize.Height / imageSize.Height;
+			var aspect = (aspectWidth < aspectHeight) ? aspectWidth : aspectHeight;
+
+			scrollViewer.ScaleFactor = aspect;
+		} // proc FitToImage
+
 		private async Task RefreshCurrentImageAsync()
 		{
 			if (currentPicture.Data is IPpsDataStream imgSrc)
 			{
-				CurrentImage = await Task.Run(() => BitmapFrame.Create(imgSrc.OpenStream(FileAccess.Read), BitmapCreateOptions.None, BitmapCacheOption.Default));
+				CurrentImage = await Task.Run(
+					() =>
+					{
+						var src = imgSrc.OpenStream(FileAccess.Read);
+						return BitmapFrame.Create(src, BitmapCreateOptions.None, BitmapCacheOption.Default);
+					}
+				);
+
+				scheduleFitToImage = true;
 				CanEdit = false;// !currentPicture.IsReadOnly;
 			}
 			else
@@ -198,6 +226,19 @@ namespace TecWare.PPSn.UI
 			return Task.FromResult(true);
 		} // proc ClosePictureAsync
 
+		/// <summary></summary>
+		/// <param name="sizeInfo"></param>
+		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+		{
+			base.OnRenderSizeChanged(sizeInfo);
+
+			if (scheduleFitToImage)
+			{
+				scheduleFitToImage = false;
+				FitToImage();
+			}
+		} // proc OnRenderSizeChanged
+
 		private void CurrentImage_DataChanged(object sender, EventArgs e)
 			=> RefreshCurrentImageAsync().SpawnTask(Shell);
 
@@ -206,7 +247,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Return current image object data.</summary>
 		protected override IPpsDataInfo CurrentData => currentPictureInfo;
 		/// <summary></summary>
-		public PpsShellWpf Shell => PaneHost.PaneManager.Shell;
+		public new PpsShellWpf Shell => PaneHost.PaneManager.Shell;
 
 
 
