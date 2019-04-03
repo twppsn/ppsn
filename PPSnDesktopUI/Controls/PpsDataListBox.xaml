@@ -77,7 +77,7 @@ specific language governing permissions and limitations under the Licence.
 												CanContentScroll="True"
 												HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
 												VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
-								<ItemsPresenter KeyboardNavigation.TabNavigation="Once" />
+								<ItemsPresenter KeyboardNavigation.TabNavigation="Once" KeyboardNavigation.DirectionalNavigation="Contained" />
 							</ui:PpsScrollViewer>
 						</Grid>
 					</Border>
@@ -116,7 +116,7 @@ specific language governing permissions and limitations under the Licence.
 							<RowDefinition />
 							<RowDefinition Height="2" />
 						</Grid.RowDefinitions>
-						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" RenderOptions.EdgeMode="Aliased">
+						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<ContentPresenter Margin="6,1" />
 						</Border>
 
