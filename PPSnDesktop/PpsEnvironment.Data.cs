@@ -768,6 +768,9 @@ namespace TecWare.PPSn
 			{
 				var currentPrefix = "d";
 				var currentColumn = (PpsDataColumnDefinition)FindColumnForUser(table, columnPath[0]);
+				if (currentColumn == null)
+					throw new ArgumentOutOfRangeException("columnPath[0]", columnPath[0], $"'{columnPath[0]}' not in table '{table.Definition.Name}'.");
+
 				var index = 1;
 				while (index < columnPath.Length)
 				{
@@ -780,7 +783,7 @@ namespace TecWare.PPSn
 					// find current column
 					currentColumn = (PpsDataColumnDefinition)FindColumnForUser(parentColumn.Table, columnPath[index]);
 					if (currentColumn == null)
-						throw new ArgumentException(); // todo: exception
+						throw new ArgumentOutOfRangeException($"columnPath[{index}]", columnPath[index], $"'{columnPath[index]}' not in table '{parentColumn.Table.Name}'.");
 
 					index++;
 				}
