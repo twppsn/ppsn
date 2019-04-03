@@ -7,28 +7,26 @@
 		xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
         mc:Ignorable="d"
         Title="Kamera" Height="450" Width="800" ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False">
-
-	<ContentControl>
-		<ContentControl.Resources>
-			<SolidColorBrush x:Key="blackBackGround" Color="Black" Opacity=".2"/>
-		</ContentControl.Resources>
-		<ContentControl.Template>
-			<ControlTemplate>
-				<Grid Background="Black">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="Auto" />
-						<ColumnDefinition />
-					</Grid.ColumnDefinitions>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="32" />
-						<RowDefinition />
-					</Grid.RowDefinitions>
-					<TextBlock Text="{Binding Title}"
+	<Window.Resources>
+		<SolidColorBrush x:Key="blackBackGround" Color="Black" Opacity=".2"/>
+	</Window.Resources>
+	<Window.Template>
+		<ControlTemplate>
+			<Grid Background="Black">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition />
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="32" />
+					<RowDefinition />
+				</Grid.RowDefinitions>
+				<TextBlock Text="{Binding Title}"
 							   Foreground="White"
 							   Grid.ColumnSpan="2"
 							   Margin="24,0,0,0"
 							   VerticalAlignment="Center"/>
-					<pps:PpsButton Command="{x:Static ApplicationCommands.Close}"
+				<pps:PpsButton Command="{x:Static ApplicationCommands.Close}"
 								   ToolTip="Schließen"
 								   DisplayMode="Image"
 								   GeometryName="windowClose"
@@ -41,7 +39,7 @@
 								   Height="26"
 								   HorizontalAlignment="Right"
 								   VerticalAlignment="Top" />
-					<pps:PpsGeometryImage x:Name="idleImage"
+				<pps:PpsGeometryImage x:Name="idleImage"
 										  GeometryName="cameraOutline"
 										  GeometryCircled="False"
 										  Foreground="White"
@@ -52,51 +50,51 @@
 										  HorizontalAlignment="Center"
 										  VerticalAlignment="Center"
 										  Visibility="Collapsed" />
-					<ListBox x:Name="listDevices" ItemsSource="{Binding Devices}" IsSynchronizedWithCurrentItem="True"
+				<ListBox x:Name="listDevices" ItemsSource="{Binding Devices}" IsSynchronizedWithCurrentItem="True"
 							 Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="16,16,16,16" Visibility="Collapsed" >
-						<ListBox.ItemTemplate>
-							<DataTemplate>
-								<Grid Width="100">
-									<Grid.RowDefinitions>
-										<RowDefinition />
-										<RowDefinition Height="Auto" />
-									</Grid.RowDefinitions>
-									<Image Source="{Binding PreviewImage,IsAsync=True}" />
-									<TextBlock Grid.Row="1" Text="{Binding Name}" Foreground="White" HorizontalAlignment="Center" TextWrapping="Wrap" />
-								</Grid>
-							</DataTemplate>
-						</ListBox.ItemTemplate>
-						<ListBox.ItemContainerStyle>
-							<Style TargetType="{x:Type ListBoxItem}">
-								<Setter Property="FocusVisualStyle" Value="{x:Null}" />
-								<Setter Property="Margin" Value="0,8" />
-								<Setter Property="BorderBrush" Value="Transparent" />
-								<Setter Property="Template">
-									<Setter.Value>
-										<ControlTemplate TargetType="{x:Type ListBoxItem}">
-											<Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Background="Transparent">
-												<ContentPresenter Margin="4" />
-											</Border>
-											<ControlTemplate.Triggers>
-												<Trigger Property="IsSelected" Value="True">
-													<Setter Property="BorderBrush" Value="White" />
-												</Trigger>
-											</ControlTemplate.Triggers>
-										</ControlTemplate>
-									</Setter.Value>
-								</Setter>
-							</Style>
-						</ListBox.ItemContainerStyle>
-					</ListBox>
-					<Image x:Name="previewImage"
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Grid Width="100">
+								<Grid.RowDefinitions>
+									<RowDefinition Height="100"/>
+									<RowDefinition Height="Auto" />
+								</Grid.RowDefinitions>
+								<Image Source="{Binding PreviewImage,IsAsync=True}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+								<TextBlock Grid.Row="1" Text="{Binding Name}" Foreground="White" HorizontalAlignment="Center" TextWrapping="Wrap" />
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+					<ListBox.ItemContainerStyle>
+						<Style TargetType="{x:Type ListBoxItem}">
+							<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+							<Setter Property="Margin" Value="0,8" />
+							<Setter Property="BorderBrush" Value="Transparent" />
+							<Setter Property="Template">
+								<Setter.Value>
+									<ControlTemplate TargetType="{x:Type ListBoxItem}">
+										<Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Background="Transparent">
+											<ContentPresenter Margin="4" />
+										</Border>
+										<ControlTemplate.Triggers>
+											<Trigger Property="IsSelected" Value="True">
+												<Setter Property="BorderBrush" Value="White" />
+											</Trigger>
+										</ControlTemplate.Triggers>
+									</ControlTemplate>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</ListBox.ItemContainerStyle>
+				</ListBox>
+				<Image x:Name="previewImage"
 						   Source="{Binding CurrentDevice.PreviewImage,IsAsync=True}"
 						   Grid.Column="1"
 						   Grid.Row="1"
 						   Visibility="Collapsed" />
 
-					<Grid x:Name="gridSettings" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,38,6,0" Visibility="Collapsed">
-						<Ellipse x:Name="ellipseSettings" Width="39" Height="39" StrokeThickness="0" Fill="{StaticResource blackBackGround}" Visibility="{Binding Visibility, ElementName=buttonSettings}" />
-						<pps:PpsButton x:Name="buttonSettings"
+				<Grid x:Name="gridSettings" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,38,6,0" Visibility="Collapsed">
+					<Ellipse x:Name="ellipseSettings" Width="39" Height="39" StrokeThickness="0" Fill="{StaticResource blackBackGround}" Visibility="{Binding Visibility, ElementName=buttonSettings}" />
+					<pps:PpsButton x:Name="buttonSettings"
 									   Command="{x:Static ApplicationCommands.Properties}"
 									   Visibility="Hidden"
 									   DisplayMode="Image"
@@ -105,174 +103,173 @@
 									   Foreground="White"
 									   ImageOpacity="1"
 									   ToolTip="Kameraeinstellungen" />
-					</Grid>
-					<Grid x:Name="gridTake" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" Visibility="Collapsed">
-						<Ellipse Width="78" Height="78" StrokeThickness="0" Fill="{StaticResource blackBackGround}" />
-						<pps:PpsButton Command="{x:Static ApplicationCommands.New}"
+				</Grid>
+				<Grid x:Name="gridTake" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" Visibility="Collapsed">
+					<Ellipse Width="78" Height="78" StrokeThickness="0" Fill="{StaticResource blackBackGround}" />
+					<pps:PpsButton Command="{x:Static ApplicationCommands.New}"
 									   DisplayMode="Circle"
 									   GeometryName="camera"
 									   GeometrySize="72"
 									   Foreground="White"
 									   ImageOpacity="1"
 									   ToolTip="Foto aufnehmen" />
-					</Grid>
-					<Image x:Name="currentImage"
+				</Grid>
+				<Image x:Name="currentImage"
 						   Source="{Binding CurrentImage}"
 						   Grid.Column="1"
 						   Grid.Row="1"
 						   Margin="0"
 						   Visibility="Collapsed">
-						<Image.RenderTransformOrigin>
-							<Point X="0.5" Y="0.5"/>
-						</Image.RenderTransformOrigin>
-						<Image.RenderTransform>
-							<ScaleTransform x:Name="ImageScaleTransform" ScaleX="0.2" ScaleY="0.2" />
-						</Image.RenderTransform>
-					</Image>
-					<StackPanel x:Name="imageCmdPanel" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0" Visibility="Collapsed">
-						<Border Background="{StaticResource blackBackGround}" Padding="1">
-							<pps:PpsButton Command="{x:Static ApplicationCommands.Save}" Content="Übernehmen" GeometryName="checkedCircle" ImageOpacity="1" GeometrySize="22"
+					<Image.RenderTransformOrigin>
+						<Point X="0.5" Y="0.5"/>
+					</Image.RenderTransformOrigin>
+					<Image.RenderTransform>
+						<ScaleTransform x:Name="ImageScaleTransform" ScaleX="0.2" ScaleY="0.2" />
+					</Image.RenderTransform>
+				</Image>
+				<StackPanel x:Name="imageCmdPanel" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0" Visibility="Collapsed">
+					<Border Background="{StaticResource blackBackGround}" Padding="1">
+						<pps:PpsButton Command="{x:Static ApplicationCommands.Save}" Content="Übernehmen" GeometryName="checkedCircle" ImageOpacity="1" GeometrySize="22"
 										   Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Bild übernehmen"/>
-						</Border>
-						<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,24,0,0">
-							<pps:PpsButton Command="{x:Static ApplicationCommands.Redo}" Content="Neues Foto" GeometryName="camera" ImageOpacity="1" GeometrySize="22"
+					</Border>
+					<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,24,0,0">
+						<pps:PpsButton Command="{x:Static ApplicationCommands.Redo}" Content="Neues Foto" GeometryName="camera" ImageOpacity="1" GeometrySize="22"
 										   Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Neues Bild aufnehmen"/>
-						</Border>
-						<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,48,0,0">
-							<pps:PpsButton Command="{x:Static ApplicationCommands.Close}" Content="Abbrechen" GeometryName="closeCircle" ImageOpacity="1" GeometrySize="22"
+					</Border>
+					<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,48,0,0">
+						<pps:PpsButton Command="{x:Static ApplicationCommands.Close}" Content="Abbrechen" GeometryName="closeCircle" ImageOpacity="1" GeometrySize="22"
 										   Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Modul schließen"/>
-						</Border>
-					</StackPanel>
-					<Border x:Name="PART_SettingsBox" Grid.Column="1" Grid.Row="1" Width="400" Background="#525252" HorizontalAlignment="Right" Visibility="Collapsed" >
-						<Grid>
-							<Grid.RowDefinitions>
-								<RowDefinition Height="32" />
-								<RowDefinition />
-							</Grid.RowDefinitions>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto" />
-								<ColumnDefinition />
-							</Grid.ColumnDefinitions>
-							<TextBlock Text="EINSTELLUNGEN" FontSize="18" Foreground="White" VerticalAlignment="Center" Margin="12,0,6,0" />
-							<pps:PpsButton Command="{x:Static ApplicationCommands.Properties}" DisplayMode="Image" GeometryName="nextPane" GeometrySize="30"
+					</Border>
+				</StackPanel>
+				<Border x:Name="PART_SettingsBox" Grid.Column="1" Grid.Row="1" Width="400" Background="#525252" HorizontalAlignment="Right" Visibility="Collapsed" >
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="32" />
+							<RowDefinition />
+						</Grid.RowDefinitions>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition />
+						</Grid.ColumnDefinitions>
+						<TextBlock Text="EINSTELLUNGEN" FontSize="18" Foreground="White" VerticalAlignment="Center" Margin="12,0,6,0" />
+						<pps:PpsButton Command="{x:Static ApplicationCommands.Properties}" DisplayMode="Image" GeometryName="nextPane" GeometrySize="30"
 										   Foreground="White" ImageOpacity="1" Grid.Column="1" Width="32" HorizontalAlignment="Left" ToolTip="Einstellungen schließen" />
 
-							<ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding CurrentDevice.Properties}">
-								<ItemsControl.ItemsPanel>
-									<ItemsPanelTemplate>
-										<StackPanel />
-									</ItemsPanelTemplate>
-								</ItemsControl.ItemsPanel>
-								<ItemsControl.ItemTemplate>
-									<DataTemplate DataType="{x:Type local:PpsCameraDeviceProperty}">
-										<Border BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,6,0,0">
-											<Grid>
-												<Grid.RowDefinitions>
-													<RowDefinition />
-													<RowDefinition/>
-												</Grid.RowDefinitions>
-												<Grid.ColumnDefinitions>
-													<ColumnDefinition/>
-													<ColumnDefinition Width="100"/>
-												</Grid.ColumnDefinitions>
-												<TextBlock Grid.ColumnSpan="2" Grid.Row="0" Foreground="White" Text="{Binding DisplayName}"/>
-												<Slider Grid.Column="0" Grid.Row="1" Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" Value="{Binding Value}" VerticalAlignment="Center" FocusVisualStyle="{x:Null}"/>
-												<CheckBox x:Name="checkAuto" Grid.Column="1" Grid.Row="1" IsChecked="{Binding IsAutomatic}" Content="Auto" FocusVisualStyle="{x:Null}" Foreground="White" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden" />
-											</Grid>
-										</Border>
-										<DataTemplate.Triggers>
-											<DataTrigger Binding="{Binding CanSetAuto}" Value="True">
-												<Setter TargetName="checkAuto" Property="Visibility" Value="Visible" />
-											</DataTrigger>
-										</DataTemplate.Triggers>
-									</DataTemplate>
-								</ItemsControl.ItemTemplate>
-							</ItemsControl>
-						</Grid>
-						<Border.RenderTransformOrigin>
-							<Point X="1" Y="0.5"/>
-						</Border.RenderTransformOrigin>
-						<Border.RenderTransform>
-							<ScaleTransform x:Name="SettingScaleTransform" ScaleX="0" ScaleY="1" />
-						</Border.RenderTransform>
-					</Border>
-				</Grid>
-				<ControlTemplate.Triggers>
-					<MultiDataTrigger>
-						<MultiDataTrigger.Conditions>
-							<Condition Binding="{Binding HasDeviceSelection}" Value="True" />
-							<Condition Binding="{Binding CurrentStatus}" Value="Preview" />
-						</MultiDataTrigger.Conditions>
-						<Setter TargetName="listDevices" Property="Visibility" Value="Visible" />
-					</MultiDataTrigger>
-					<DataTrigger Binding="{Binding CurrentStatus}" Value="Idle">
-						<Setter TargetName="idleImage" Property="Visibility" Value="Visible" />
-					</DataTrigger>
+						<ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding CurrentDevice.Properties}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<StackPanel />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+							<ItemsControl.ItemTemplate>
+								<DataTemplate DataType="{x:Type local:PpsCameraDeviceProperty}">
+									<Border BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,6,0,0">
+										<Grid>
+											<Grid.RowDefinitions>
+												<RowDefinition />
+												<RowDefinition/>
+											</Grid.RowDefinitions>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition/>
+												<ColumnDefinition Width="100"/>
+											</Grid.ColumnDefinitions>
+											<TextBlock Grid.ColumnSpan="2" Grid.Row="0" Foreground="White" Text="{Binding DisplayName}"/>
+											<Slider Grid.Column="0" Grid.Row="1" Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" Value="{Binding Value}" VerticalAlignment="Center" FocusVisualStyle="{x:Null}"/>
+											<CheckBox x:Name="checkAuto" Background="Black" Grid.Column="1" Grid.Row="1" IsChecked="{Binding IsAutomatic}" Content="Auto" FocusVisualStyle="{x:Null}" Foreground="White" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden" />
+										</Grid>
+									</Border>
+									<DataTemplate.Triggers>
+										<DataTrigger Binding="{Binding CanSetAuto}" Value="True">
+											<Setter TargetName="checkAuto" Property="Visibility" Value="Visible" />
+										</DataTrigger>
+									</DataTemplate.Triggers>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</Grid>
+					<Border.RenderTransformOrigin>
+						<Point X="1" Y="0.5"/>
+					</Border.RenderTransformOrigin>
+					<Border.RenderTransform>
+						<ScaleTransform x:Name="SettingScaleTransform" ScaleX="0" ScaleY="1" />
+					</Border.RenderTransform>
+				</Border>
+			</Grid>
+			<ControlTemplate.Triggers>
+				<MultiDataTrigger>
+					<MultiDataTrigger.Conditions>
+						<Condition Binding="{Binding HasDeviceSelection}" Value="True" />
+						<Condition Binding="{Binding CurrentStatus}" Value="Preview" />
+					</MultiDataTrigger.Conditions>
+					<Setter TargetName="listDevices" Property="Visibility" Value="Visible" />
+				</MultiDataTrigger>
+				<DataTrigger Binding="{Binding CurrentStatus}" Value="Idle">
+					<Setter TargetName="idleImage" Property="Visibility" Value="Visible" />
+				</DataTrigger>
 
-					<DataTrigger Binding="{Binding CurrentStatus}" Value="Preview">
-						<Setter TargetName="previewImage" Property="Visibility" Value="Visible" />
-						<Setter TargetName="gridTake" Property="Visibility" Value="Visible" />
-						<Setter TargetName="gridSettings" Property="Visibility" Value="Visible" />
-					</DataTrigger>
-					<DataTrigger Binding="{Binding CurrentStatus}" Value="Image">
-						<DataTrigger.EnterActions>
-							<BeginStoryboard>
-								<Storyboard>
-									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="currentImage" Storyboard.TargetProperty="Visibility">
-										<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
-									</ObjectAnimationUsingKeyFrames>
-									<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:00:0.25" />
-									<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:00:0.25" />
-									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="imageCmdPanel" Storyboard.TargetProperty="Visibility">
-										<DiscreteObjectKeyFrame KeyTime="0:0:0.25" Value="{x:Static Visibility.Visible}"/>
-									</ObjectAnimationUsingKeyFrames>
-								</Storyboard>
-							</BeginStoryboard>
-						</DataTrigger.EnterActions>
-						<DataTrigger.ExitActions>
-							<BeginStoryboard>
-								<Storyboard>
-									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="currentImage" Storyboard.TargetProperty="Visibility">
-										<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
-									</ObjectAnimationUsingKeyFrames>
-									<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="0.2" BeginTime="0:0:0" Duration="0:0:0" />
-									<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="0.2" BeginTime="0:0:0" Duration="0:0:0" />
-									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="imageCmdPanel" Storyboard.TargetProperty="Visibility">
-										<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
-									</ObjectAnimationUsingKeyFrames>
-								</Storyboard>
-							</BeginStoryboard>
-						</DataTrigger.ExitActions>
-					</DataTrigger>
+				<DataTrigger Binding="{Binding CurrentStatus}" Value="Preview">
+					<Setter TargetName="previewImage" Property="Visibility" Value="Visible" />
+					<Setter TargetName="gridTake" Property="Visibility" Value="Visible" />
+					<Setter TargetName="gridSettings" Property="Visibility" Value="Visible" />
+				</DataTrigger>
+				<DataTrigger Binding="{Binding CurrentStatus}" Value="Image">
+					<DataTrigger.EnterActions>
+						<BeginStoryboard>
+							<Storyboard>
+								<ObjectAnimationUsingKeyFrames Storyboard.TargetName="currentImage" Storyboard.TargetProperty="Visibility">
+									<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+								</ObjectAnimationUsingKeyFrames>
+								<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:00:0.25" />
+								<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:00:0.25" />
+								<ObjectAnimationUsingKeyFrames Storyboard.TargetName="imageCmdPanel" Storyboard.TargetProperty="Visibility">
+									<DiscreteObjectKeyFrame KeyTime="0:0:0.25" Value="{x:Static Visibility.Visible}"/>
+								</ObjectAnimationUsingKeyFrames>
+							</Storyboard>
+						</BeginStoryboard>
+					</DataTrigger.EnterActions>
+					<DataTrigger.ExitActions>
+						<BeginStoryboard>
+							<Storyboard>
+								<ObjectAnimationUsingKeyFrames Storyboard.TargetName="currentImage" Storyboard.TargetProperty="Visibility">
+									<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+								</ObjectAnimationUsingKeyFrames>
+								<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="0.2" BeginTime="0:0:0" Duration="0:0:0" />
+								<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="0.2" BeginTime="0:0:0" Duration="0:0:0" />
+								<ObjectAnimationUsingKeyFrames Storyboard.TargetName="imageCmdPanel" Storyboard.TargetProperty="Visibility">
+									<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Collapsed}"/>
+								</ObjectAnimationUsingKeyFrames>
+							</Storyboard>
+						</BeginStoryboard>
+					</DataTrigger.ExitActions>
+				</DataTrigger>
 
-					<DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
-						<DataTrigger.EnterActions>
-							<BeginStoryboard>
-								<Storyboard>
-									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_SettingsBox" Storyboard.TargetProperty="Visibility">
-										<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
-									</ObjectAnimationUsingKeyFrames>
-									<DoubleAnimation Storyboard.TargetName="SettingScaleTransform" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:00:0.25" />
-								</Storyboard>
-							</BeginStoryboard>
-						</DataTrigger.EnterActions>
-						<DataTrigger.ExitActions>
-							<BeginStoryboard>
-								<Storyboard>
-									<DoubleAnimation Storyboard.TargetName="SettingScaleTransform" Storyboard.TargetProperty="ScaleX" To="0" BeginTime="0:0:0" Duration="0:0:0.25" />
-									<ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_SettingsBox" Storyboard.TargetProperty="Visibility">
-										<DiscreteObjectKeyFrame KeyTime="0:0:0.25" Value="{x:Static Visibility.Collapsed}"/>
-									</ObjectAnimationUsingKeyFrames>
-								</Storyboard>
-							</BeginStoryboard>
-						</DataTrigger.ExitActions>
-					</DataTrigger>
+				<DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
+					<DataTrigger.EnterActions>
+						<BeginStoryboard>
+							<Storyboard>
+								<ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_SettingsBox" Storyboard.TargetProperty="Visibility">
+									<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+								</ObjectAnimationUsingKeyFrames>
+								<DoubleAnimation Storyboard.TargetName="SettingScaleTransform" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:00:0.25" />
+							</Storyboard>
+						</BeginStoryboard>
+					</DataTrigger.EnterActions>
+					<DataTrigger.ExitActions>
+						<BeginStoryboard>
+							<Storyboard>
+								<DoubleAnimation Storyboard.TargetName="SettingScaleTransform" Storyboard.TargetProperty="ScaleX" To="0" BeginTime="0:0:0" Duration="0:0:0.25" />
+								<ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_SettingsBox" Storyboard.TargetProperty="Visibility">
+									<DiscreteObjectKeyFrame KeyTime="0:0:0.25" Value="{x:Static Visibility.Collapsed}"/>
+								</ObjectAnimationUsingKeyFrames>
+							</Storyboard>
+						</BeginStoryboard>
+					</DataTrigger.ExitActions>
+				</DataTrigger>
 
-					<DataTrigger Binding="{Binding CurrentDevice.HasProperties}" Value="True">
-						<Setter TargetName="buttonSettings" Property="Visibility" Value="Visible" />
-					</DataTrigger>
-				</ControlTemplate.Triggers>
-			</ControlTemplate>
-		</ContentControl.Template>
-	</ContentControl>
+				<DataTrigger Binding="{Binding CurrentDevice.HasProperties}" Value="True">
+					<Setter TargetName="buttonSettings" Property="Visibility" Value="Visible" />
+				</DataTrigger>
+			</ControlTemplate.Triggers>
+		</ControlTemplate>
+	</Window.Template>
 </Window>

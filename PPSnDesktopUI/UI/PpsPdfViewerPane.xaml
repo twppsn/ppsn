@@ -14,7 +14,7 @@
 			<ui:VisibilityMarkConverterParameter x:Key="visibleMark" WaterMark="0.4" />
 		</Grid.Resources>
 		
-		<pps:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" MinScaleFactor="0.1" MaxScaleFactor="20.0" CanContentScroll="True">
+		<pps:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" MinScaleFactor="0.1" MaxScaleFactor="20.0" CanContentScroll="True" IsManipulationEnabled="True">
 			<pps:PpsPdfViewer x:Name="pdfViewer" Zoom="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=TwoWay}" />
 		</pps:PpsScrollViewer>
 		<Grid MaxWidth="120" MaxHeight="120" Margin="32" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.8"

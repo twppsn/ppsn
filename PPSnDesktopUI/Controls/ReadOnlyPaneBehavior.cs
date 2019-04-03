@@ -18,6 +18,13 @@ using System.Windows.Controls;
 
 namespace TecWare.PPSn.Controls
 {
+	/// <summary>Readonly flag for the mask and control</summary>
+	public interface IPpsReadOnlyControl
+	{
+		/// <summary></summary>
+		bool IsReadOnly { get; set; }
+	} // interface IPpsReadOnlyControl
+
 	#region -- class PpsReadOnlyPaneBehavior ------------------------------------------
 
 	/// <summary></summary>
@@ -39,7 +46,9 @@ namespace TecWare.PPSn.Controls
 		
 		private static void ReadOnlyPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
-			if (d is TextBox tb)
+			if (d is IPpsReadOnlyControl ro)
+				ro.IsReadOnly = BooleanBox.GetBool(e.NewValue);
+			else if (d is TextBox tb)
 				tb.IsReadOnly = BooleanBox.GetBool(e.NewValue);
 			else if (d is PpsDataFilterCombo ds)
 				ds.IsReadOnly = BooleanBox.GetBool(e.NewValue);

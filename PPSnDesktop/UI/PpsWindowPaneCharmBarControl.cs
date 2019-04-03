@@ -213,7 +213,7 @@ namespace TecWare.PPSn.UI
 				new PpsWindowPaneObjectInfo(this) { Text = "Notizen", Content = ppsTagsEditors[0], Image = "noteOutline" },
 				new PpsWindowPaneObjectInfo(this) { Text = "Tags", Content = ppsTagsEditors[1], Image = "hashTag" },
 				new PpsWindowPaneObjectInfo(this) { Text = "Attribute", Content = ppsTagsEditors[2], Image = "tagTextOutline" },
-				new PpsWindowPaneObjectInfo(this) { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" },
+				//new PpsWindowPaneObjectInfo(this) { Text = "Termine / Aufgaben", Content = ppsTagsEditors[3], Image = "calendarClock" },
 				new PpsWindowPaneObjectInfo(this) { Text = "Verknüpfunen", Content = objectLinkEditor, Image = "link" }
 			};
 
@@ -239,8 +239,6 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = IsPaneVisible
 				)
 			);
-
-
 		} // ctor
 
 		private void ChangeVisiblePane(PpsWindowPaneObjectInfo pane)

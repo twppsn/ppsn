@@ -107,7 +107,7 @@ namespace TecWare.PPSn.UI
 					return false; // if MinValue==MaxValue the Property is not changeable by the user - thus will not be shown
 				}
 
-				range = new CameraPropertyRange(minValue, maxValue, stepSize, defaultValue, flags != CameraControlFlags.None);
+				range = new CameraPropertyRange(minValue, maxValue, stepSize, defaultValue, (flags & CameraControlFlags.Auto) == CameraControlFlags.Auto);
 				return true;
 			} // func TryGetPropertyRange
 
@@ -418,6 +418,7 @@ namespace TecWare.PPSn.UI
 
 		private BitmapSource GetBitmapFrame(System.Drawing.Bitmap bitmap)
 		{
+			//Debug.Print(String.Format("Frame: {0}, {1}", bitmap.Width, bitmap.Width));
 			var rc = new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
 			var bitmapData = bitmap.LockBits(rc, System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
 			try
