@@ -112,7 +112,7 @@ namespace TecWare.PPSn.Controls
 
 	/// <summary></summary>
 	[TemplatePart(Name = "PART_FilterBox", Type = typeof(PpsTextBox))]
-	public class PpsDataListBox : ListBox
+	public class PpsDataListBox : PpsListBox
 	{
 		#region -- ListCommands - Property --------------------------------------------
 
