@@ -14,11 +14,11 @@ specific language governing permissions and limitations under the Licence.
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
-					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
+					xmlns:uiC="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style x:Key="PpsListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
-		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="Template">
@@ -32,9 +32,10 @@ specific language governing permissions and limitations under the Licence.
 						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<ContentPresenter Margin="6,1"/>
 						</Border>
+						<!--custom visual focus-->
 						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" RenderOptions.EdgeMode="Aliased" Opacity="0" />
 						<!--ItemSeparator-->
-						<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="{DynamicResource PPSnWindowBackgroundBrush}" />
+						<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="Transparent" />
 					</Grid>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsFocused" Value="True">
@@ -43,7 +44,7 @@ specific language governing permissions and limitations under the Licence.
 						<MultiDataTrigger>
 							<MultiDataTrigger.Conditions>
 								<Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
-								<Condition Binding="{Binding ShowSelectionMode, RelativeSource={RelativeSource AncestorType={x:Type pps:PpsListBox}}}" Value="Always" />
+								<Condition Binding="{Binding ShowSelectionMode, RelativeSource={RelativeSource AncestorType={x:Type uiC:PpsListBox}}}" Value="Always" />
 							</MultiDataTrigger.Conditions>
 							<Setter Property="Background" Value="{DynamicResource PPSnSelectionBarBrush}" />
 						</MultiDataTrigger>
@@ -51,7 +52,7 @@ specific language governing permissions and limitations under the Licence.
 							<MultiDataTrigger.Conditions>
 								<Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
 								<Condition Binding="{Binding IsFocused, RelativeSource={RelativeSource Self}}" Value="True" />
-								<Condition Binding="{Binding ShowSelectionMode, RelativeSource={RelativeSource AncestorType={x:Type pps:PpsListBox}}}" Value="WhenFocused" />
+								<Condition Binding="{Binding ShowSelectionMode, RelativeSource={RelativeSource AncestorType={x:Type uiC:PpsListBox}}}" Value="WhenFocused" />
 							</MultiDataTrigger.Conditions>
 							<Setter Property="Background" Value="{DynamicResource PPSnSelectionBarBrush}" />
 						</MultiDataTrigger>
@@ -61,24 +62,28 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
-	<Style TargetType="{x:Type pps:PpsListBox}">
+	<Style TargetType="{x:Type uiC:PpsListBox}">
 		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsListBoxItemStyle}" />
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
-		<Setter Property="Background" Value="{DynamicResource PPSnControlBackgroundBrush}" />
-		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="BorderThickness" Value="0" />
+		<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
+		<Setter Property="Padding" Value="0" />
+		<Setter Property="Focusable" Value="False" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
 		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type pps:PpsListBox}">
+				<ControlTemplate TargetType="{x:Type uiC:PpsListBox}">
 					<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-						<ScrollViewer x:Name="scrollviewer" Focusable="false" Padding="{TemplateBinding Padding}"
-									  Style="{DynamicResource PPSnScrollViewerStyle}" >
-							<ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-						</ScrollViewer>
+						<uiC:PpsScrollViewer CanContentScroll="True"
+											 HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+											 VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
+											 Focusable="False">
+							<ItemsPresenter />
+						</uiC:PpsScrollViewer>
 					</Border>
 				</ControlTemplate>
 			</Setter.Value>

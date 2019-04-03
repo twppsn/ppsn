@@ -28,11 +28,9 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsEditableListbox}">
 					<Border BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-						<ScrollViewer Focusable="False" Padding="{TemplateBinding Padding}"
-									  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
-									  Style="{DynamicResource PPSnScrollViewerStyle}" >
+						<pps:PpsScrollViewer Focusable="False" Padding="{TemplateBinding Padding}" HorizontalScrollBarVisibility="Disabled">
 							<ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-						</ScrollViewer>
+						</pps:PpsScrollViewer>
 					</Border>
 				</ControlTemplate>
 			</Setter.Value>

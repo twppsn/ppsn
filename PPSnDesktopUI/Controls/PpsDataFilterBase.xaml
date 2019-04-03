@@ -69,7 +69,6 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="SelectedValueTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}" />
 		<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterComboDefaultItemTemplate}" />
 		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsDataFilterComboDefaultListBoxItemStyle}" />
-		<Setter Property="ListBoxStyle" Value="{DynamicResource PPSnListBoxStyle}" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 		<Setter Property="Background" Value="{DynamicResource PPSnControlBackgroundBrush}"/>
@@ -194,10 +193,8 @@ specific language governing permissions and limitations under the Licence.
 	<Style TargetType="{x:Type pps:PpsDataFilterList}">
 		<Style.Setters>
 			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterListDefaultItemTemplate}" />
-			<Setter Property="ItemContainerStyle" Value="{DynamicResource PPSnAlternatingListBoxItemStyle}" />
 			<Setter Property="IsSynchronizedWithCurrentItem" Value="True" />
 			<Setter Property="AlternationCount" Value="2" />
-			<Setter Property="ListBoxStyle" Value="{DynamicResource PPSnListBoxStyle}" />
 			<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
 			<Setter Property="Focusable" Value="False" />
 			<Setter Property="Padding" Value="0,0,0,6" />
