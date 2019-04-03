@@ -204,10 +204,18 @@ namespace TecWare.PPSn
 			}
 		} // prop LinkToId
 
-		string IPpsAttachmentItem.Name => LinkTo.Nr;
-		bool IPpsAttachmentItem.IsReadOnly => RefCount != 0;
-		bool IPpsAttachmentItem.IsNull => false;
-		IPpsDataInfo IPpsAttachmentItem.LinkedObject => LinkTo;
+		/// <summary>Do not use.</summary>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public string Name => LinkTo.Nr;
+		/// <summary>Do not use.</summary>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public bool IsReadOnly => RefCount != 0;
+		/// <summary>Do not use.</summary>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public bool IsNull => false;
+		/// <summary>Do not use.</summary>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public IPpsDataInfo LinkedObject => LinkTo;
 
 		/// <summary>Object reference to the object.</summary>
 		public PpsObject LinkTo => GetLinkedObject();

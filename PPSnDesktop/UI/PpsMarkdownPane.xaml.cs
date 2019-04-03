@@ -189,7 +189,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="args"></param>
 		/// <returns></returns>
 		protected override PpsWindowPaneCompareResult CompareArguments(LuaTable args)
-			=> PpsWindowPaneCompareResult.Reload;
+			=> CurrentData == (args["Object"] as IPpsDataInfo) ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;
 
 		/// <summary></summary>
 		/// <param name="args"></param>

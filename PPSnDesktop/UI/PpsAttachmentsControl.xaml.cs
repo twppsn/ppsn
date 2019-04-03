@@ -266,7 +266,7 @@ namespace TecWare.PPSn.UI
 			=> item.Remove();
 
 		private IPpsWindowPane CurrentPane => getCurrentPane.Value;
-		private PpsEnvironment Environment => (PpsEnvironment)CurrentPane.PaneHost.PaneManager.Shell;
+		private PpsEnvironment Environment => (PpsEnvironment)CurrentPane?.PaneHost.PaneManager.Shell;
 
 		private bool isReadOnly = false;
 

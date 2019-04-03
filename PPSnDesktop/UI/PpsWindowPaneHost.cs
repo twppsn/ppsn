@@ -181,6 +181,8 @@ namespace TecWare.PPSn.UI
 
 		private IPpsWindowPane SetWindowPane(IPpsWindowPane newPane)
 		{
+			Resources[PpsShellWpf.CurrentWindowPaneKey] = newPane;
+
 			newPane.PropertyChanged += CurrentPanePropertyChanged;
 
 			SetValue(titlePropertyKey, newPane.Title);
@@ -217,6 +219,8 @@ namespace TecWare.PPSn.UI
 			// clear document
 			charmBarControl.CurrentData = null;
 			charmBarControl.HelpKey = null;
+
+			Resources[PpsShellWpf.CurrentWindowPaneKey] = null;
 		} // proc ClearWindowPane
 
 		public void MoveWindowPane(IPpsWindowPaneManager targetPaneManager, PpsWindowPaneHost targetPaneHost)

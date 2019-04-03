@@ -418,7 +418,7 @@ namespace TecWare.PPSn.UI
 
 		private BitmapSource GetBitmapFrame(System.Drawing.Bitmap bitmap)
 		{
-			//log.Append(PpsLogType.Information, String.Format("Frame: {0}, {1}", bitmap.Width, bitmap.Width));
+			//Debug.Print(String.Format("Frame: {0}, {1}", bitmap.Width, bitmap.Width));
 			var rc = new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
 			var bitmapData = bitmap.LockBits(rc, System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
 			try
