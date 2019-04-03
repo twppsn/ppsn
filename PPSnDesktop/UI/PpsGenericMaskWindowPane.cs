@@ -75,7 +75,7 @@ namespace TecWare.PPSn.UI
 		public override PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)
 		{
 			var r = base.CompareArguments(otherArgumens);
-			if (r == PpsWindowPaneCompareResult.Reload)
+			if (r == PpsWindowPaneCompareResult.Reload || r == PpsWindowPaneCompareResult.Incompatible)
 			{
 				var otherObj = otherArgumens.GetMemberValue("Object");
 				return otherObj == obj ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;

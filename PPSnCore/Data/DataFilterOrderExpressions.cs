@@ -2375,7 +2375,7 @@ namespace TecWare.PPSn.Data
 
 			for (var i = 0; i < row.Columns.Count; i++)
 			{
-				if (level < 3 && row is IDataValues2 r && r.TryGetRelatedDataRow(i, out var relatedRow))
+				if (level < 1 && row is IDataValues2 r && r.TryGetRelatedDataRow(i, out var relatedRow))
 				{
 					if (RtDataRowSearchFullText(relatedRow, text, startsWith, level + 1))
 						return true;
