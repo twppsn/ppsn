@@ -175,7 +175,7 @@
 											</Grid.ColumnDefinitions>
 											<TextBlock Grid.ColumnSpan="2" Grid.Row="0" Foreground="White" Text="{Binding DisplayName}"/>
 											<Slider Grid.Column="0" Grid.Row="1" Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" Value="{Binding Value}" VerticalAlignment="Center" FocusVisualStyle="{x:Null}"/>
-											<CheckBox x:Name="checkAuto" Background="Black" Grid.Column="1" Grid.Row="1" IsChecked="{Binding IsAutomatic}" Content="Auto" FocusVisualStyle="{x:Null}" Foreground="White" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden" />
+											<CheckBox x:Name="checkAuto" IsChecked="{Binding IsAutomatic}" Content="Auto" Background="Black" Foreground="White" BorderBrush="White" Grid.Column="1" Grid.Row="1" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden" />
 										</Grid>
 									</Border>
 									<DataTemplate.Triggers>
