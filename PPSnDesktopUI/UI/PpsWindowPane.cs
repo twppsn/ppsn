@@ -379,15 +379,24 @@ namespace TecWare.PPSn.UI
 		/// <param name="relativeTo"></param>
 		public static void SetFullscreen(this Window window, DependencyObject relativeTo)
 		{
-			var parentWindow = relativeTo == null ? Application.Current.MainWindow :  Window.GetWindow(relativeTo);
+			var parentWindow = relativeTo == null ? Application.Current.MainWindow : Window.GetWindow(relativeTo);
 			IntPtr hMonitor;
 			if (parentWindow != null)
 			{
+				var ps = PresentationSource.FromVisual(parentWindow);
+				var windowPoints = new Point[]
+				{
+					new Point(parentWindow.Left, parentWindow.Top),
+					new Point(parentWindow.Left + parentWindow.Width, parentWindow.Top + parentWindow.Height)
+				};
+
+				ps.CompositionTarget.TransformToDevice.Transform(windowPoints);
+
 				var rc = new RECT(
-					(int)parentWindow.Left,
-					(int)parentWindow.Top,
-					(int)(parentWindow.Left + parentWindow.ActualWidth),
-					(int)(parentWindow.Top + parentWindow.ActualHeight)
+					(int)windowPoints[0].X,
+					(int)windowPoints[0].Y,
+					(int)windowPoints[1].X,
+					(int)windowPoints[1].Y
 				);
 				hMonitor = NativeMethods.MonitorFromRect(ref rc, MonitorOptions.MONITOR_DEFAULTTONEAREST);
 			}
@@ -402,12 +411,21 @@ namespace TecWare.PPSn.UI
 			{
 				cbSize = Marshal.SizeOf(typeof(MONITORINFO))
 			};
-			if (NativeMethods.GetMonitorInfo(hMonitor, ref monitorInfo))
+			if (NativeMethods.GetMonitorInfo(hMonitor, ref monitorInfo) && parentWindow != null)
 			{
-				window.Left = monitorInfo.rcMonitor.Left;
-				window.Top = monitorInfo.rcMonitor.Top;
-				window.Width = monitorInfo.rcMonitor.Width;
-				window.Height = monitorInfo.rcMonitor.Height;
+				var ps = PresentationSource.FromVisual(parentWindow);
+				var windowPoints = new Point[]
+				{
+					new Point(monitorInfo.rcMonitor.Left, monitorInfo.rcMonitor.Top),
+					new Point(monitorInfo.rcMonitor.Right, monitorInfo.rcMonitor.Bottom)
+				};
+
+				ps.CompositionTarget.TransformFromDevice.Transform(windowPoints);
+
+				window.Left = windowPoints[0].X;
+				window.Top = windowPoints[0].Y;
+				window.Width = windowPoints[1].X - windowPoints[0].X;
+				window.Height = windowPoints[1].Y - windowPoints[0].Y;
 			}
 			else
 				window.WindowState = WindowState.Maximized;
