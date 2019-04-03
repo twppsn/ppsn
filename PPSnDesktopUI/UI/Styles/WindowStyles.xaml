@@ -88,10 +88,6 @@ specific language governing permissions and limitations under the Licence.
     </Style>
 
 	<!--PlaceHolder-->
-    <Style x:Key="PPSnListBoxStyle" TargetType="{x:Type ListBox}"/>
-	<Style x:Key="PPSnAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}"/>
-	<Style x:Key="PPSnScrollViewerStyle" TargetType="{x:Type ScrollViewer}"/>
-	<Style x:Key="PpsPaneToolBarStyle" TargetType="{x:Type ToolBar}"/>
 	<Style x:Key="PPSnCheckBoxStyle" TargetType="{x:Type CheckBox}"/>
 
 	<Style x:Key="PPSnSysCheckBoxStyle" TargetType="{x:Type CheckBox}">
