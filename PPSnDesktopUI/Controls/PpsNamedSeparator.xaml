@@ -19,36 +19,36 @@ specific language governing permissions and limitations under the Licence.
 	<Style TargetType="{x:Type pps:PpsNamedSeparator}">
 		<Setter Property="TextElement.Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 		<Setter Property="BorderBrush" Value="{DynamicResource PPSnSeparatorBrush}" />
-		<Setter Property="BorderThickness" Value="0,1,0,0" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
+		<Setter Property="Padding" Value="6,0,6,0" />
+		<Setter Property="VerticalContentAlignment" Value="Center" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsNamedSeparator}">
 					<Grid>
 						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="20"/>
-							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition Width="20" />
+							<ColumnDefinition Width="Auto"/>
 							<ColumnDefinition/>
 						</Grid.ColumnDefinitions>
-						<Border Grid.Column="0"
-								Height="2"
-								BorderThickness="{TemplateBinding BorderThickness}"
-								BorderBrush="{TemplateBinding BorderBrush}"
-								RenderOptions.EdgeMode="Aliased"
-								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+						<Rectangle StrokeThickness="0"
+								   Fill="{TemplateBinding BorderBrush}"
+								   Height="1"
+								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+								   RenderOptions.EdgeMode="Aliased" />
 						<ContentPresenter Grid.Column="1"
-										  VerticalAlignment="Center"
-										  Margin="6,0,6,0"
+										  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+										  Margin="{TemplateBinding Padding}"
 										  Content="{TemplateBinding Content}"
 										  ContentTemplate="{TemplateBinding ContentTemplate}"
 										  ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
 										  ContentStringFormat="{TemplateBinding ContentStringFormat}" />
-						<Border Grid.Column="2"
-								Height="2"
-								BorderThickness="{TemplateBinding BorderThickness}"
-								BorderBrush="{TemplateBinding BorderBrush}"
-								RenderOptions.EdgeMode="Aliased"
-								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+						<Rectangle Grid.Column="2"
+								   StrokeThickness="0"
+								   Fill="{TemplateBinding BorderBrush}"
+								   Height="1"
+								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+								   RenderOptions.EdgeMode="Aliased" />
 					</Grid>
 				</ControlTemplate>
 			</Setter.Value>

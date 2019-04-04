@@ -16,30 +16,87 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style TargetType="{x:Type pps:PpsStackSectionItem}">
+		<Setter Property="BorderBrush" Value="{DynamicResource PPSnSeparatorBrush}" />
 		<Setter Property="Margin" Value="0,0,0,16" />
+		<Setter Property="SnapsToDevicePixels" Value="True" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsStackSectionItem}">
 					<Grid>
 						<Grid.RowDefinitions>
+							<RowDefinition Height="29" />
 							<RowDefinition Height="Auto" />
-							<RowDefinition x:Name="Auto" />
+							<RowDefinition Height="Auto" />
 						</Grid.RowDefinitions>
+						<pps:PpsNamedSeparator IsHitTestVisible="True" IsEnabled="True" IsTabStop="False" VerticalContentAlignment="Stretch"
+											   BorderBrush="{TemplateBinding BorderBrush}" Padding="1,0,1,0">
+							<pps:PpsNamedSeparator.Content>
+								<ToggleButton IsChecked="{Binding IsExpanded,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}"
+											  Content="{Binding Header,RelativeSource={RelativeSource TemplatedParent}}"
+											  Foreground="{TemplateBinding Foreground}">
+									<ToggleButton.Style>
+										<Style TargetType="{x:Type ToggleButton}">
+											<Setter Property="Background" Value="Transparent" />
+											<Setter Property="BorderBrush" Value="Transparent" />
+											<Setter Property="BorderThickness" Value="1,1,1,1" />
+											<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+											<Setter Property="Template">
+												<Setter.Value>
+													<ControlTemplate TargetType="{x:Type ToggleButton}">
+														<Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+																BorderThickness="{TemplateBinding BorderThickness}"	Padding="4,0,6,0" SnapsToDevicePixels="True" >
+															<Grid>
+																<Canvas Width="16" Height="16" HorizontalAlignment="Left">
+																	<Path x:Name="chevron" Fill="{TemplateBinding Foreground}" Opacity=".8"
+																		  Data="M3.412,11.706 L8,7.122 12.588,11.706 14,10.294 8,4.294 2,10.294 Z" />
+																</Canvas>
+																<ContentPresenter VerticalAlignment="Center" Margin="21,0,0,0"/>
+															</Grid>
+														</Border>
+														<ControlTemplate.Triggers>
+															<Trigger Property="IsMouseOver" Value="True">
+																<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+																<Setter Property="BorderBrush" Value="{DynamicResource PPSnMouseOverBrush}" />
+															</Trigger>
+															<Trigger Property="IsFocused" Value="True">
+																<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+															</Trigger>
+															<Trigger Property="IsPressed" Value="True">
+																<Setter Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}" />
+															</Trigger>
+															<Trigger Property="IsChecked" Value="False">
+																<Setter TargetName="chevron" Property="Data" Value="M3.412,4.294 L8,8.878 12.588,4.294 14,5.706 8,11.706 2,5.706 Z" />
+															</Trigger>
+														</ControlTemplate.Triggers>
+													</ControlTemplate>
+												</Setter.Value>
+											</Setter>
+										</Style>
+									</ToggleButton.Style>
+								</ToggleButton>
+							</pps:PpsNamedSeparator.Content>
+						</pps:PpsNamedSeparator>
+						<!--Margin.Left = 20 aus dem linken Teil des Separators plus margins, paddings und chevron des ToggleButtons-->
+						<ContentPresenter x:Name="SubHeader" Content="{Binding SubHeader,RelativeSource={RelativeSource TemplatedParent}}"
+										  Grid.Row="1" HorizontalAlignment="Left" Margin="47,0,0,0" TextBlock.FontStyle="Italic" Opacity=".75" Visibility="Collapsed" />
 
-						<ToggleButton Grid.Row="0"
-									  HorizontalAlignment="Left"
-									  IsChecked="{Binding IsExpanded,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}">
+						<Border x:Name="ContentBorder" Grid.Row="2" Padding="0,6,0,6">
+							<ContentPresenter />
+						</Border>
+
+						<!--<ToggleButton Grid.Row="0" HorizontalAlignment="Left" IsChecked="{Binding IsExpanded,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}">
 							<ToggleButton.Style>
 								<Style TargetType="{x:Type ToggleButton}">
 									<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
-									<Setter Property="Background" Value="Transparent"/>
+									<Setter Property="Background" Value="Yellow"/>
 									<Setter Property="Focusable" Value="True" />
 									<Setter Property="Template">
 										<Setter.Value>
 											<ControlTemplate TargetType="{x:Type ToggleButton}">
 												<Grid Background="{TemplateBinding Background}">
 													<Grid.ColumnDefinitions>
-														<ColumnDefinition Width="auto" />
+														<ColumnDefinition Width="Auto" />
 														<ColumnDefinition />
 													</Grid.ColumnDefinitions>
 													<Grid.RowDefinitions>
@@ -47,7 +104,7 @@ specific language governing permissions and limitations under the Licence.
 														<RowDefinition />
 													</Grid.RowDefinitions>
 													<Border x:Name="HeaderBorder"
-															BorderThickness="0,0,0,4"
+															BorderThickness="0,0,0,0"
 															Margin="0,4,0,0"
 															Padding="0,0,1,1"
 															HorizontalAlignment="Left"
@@ -86,8 +143,8 @@ specific language governing permissions and limitations under the Licence.
 														<Setter TargetName="SubHeader" Property="Visibility" Value="Visible" />
 													</MultiDataTrigger>
 													<Trigger Property="IsChecked" Value="true">
-														<Setter TargetName="ChevronPath" Property="Data" Value="{DynamicResource chevronUpThinPathGeometry}" />
-														<Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource PPSnMarkerBrush}" />
+													<Setter TargetName="ChevronPath" Property="Data" Value="{DynamicResource chevronUpThinPathGeometry}" />
+														--><!--<Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource PPSnMarkerBrush}" />--><!--
 													</Trigger>
 													<Trigger Property="IsMouseOver" Value="true">
 														<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}"/>
@@ -101,16 +158,19 @@ specific language governing permissions and limitations under the Licence.
 									</Setter>
 								</Style>
 							</ToggleButton.Style>
-						</ToggleButton>
-
-						<Border x:Name="ContentBorder" Padding="0,16,0,8" Grid.Row="1" >
-							<ContentPresenter />
-						</Border>
+						</ToggleButton>-->
 					</Grid>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsExpanded" Value="False">
 							<Setter TargetName="ContentBorder" Property="Visibility" Value="Collapsed" />
 						</Trigger>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsExpanded" Value="False" />
+								<Condition Property="HasSubHeader" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter TargetName="SubHeader" Property="Visibility" Value="Visible" />
+						</MultiTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
