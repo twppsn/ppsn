@@ -271,6 +271,9 @@ namespace TecWare.PPSn.UI
 		public ImageSource Render(int pixelWidth, int pixelHeight, double dpiX = 96.0, double dpiY = 96.0)
 		{
 			var ctrlSize = new Size(ActualWidth, ActualHeight);
+			if (ctrlSize.Width < 10.0 || ctrlSize.Height < 10.0)
+				return null;
+
 			var targetBmp = new RenderTargetBitmap((int)ctrlSize.Width, (int)ctrlSize.Height, dpiX, dpiY, PixelFormats.Pbgra32);
 			targetBmp.Render(this);
 
