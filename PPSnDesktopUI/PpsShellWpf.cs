@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -276,6 +277,49 @@ namespace TecWare.PPSn
 		public T FindResource<T>(object resourceKey)
 			where T : class
 			=> defaultResources[resourceKey] as T;
+
+		private static IEnumerable<object> FindResourceByKeyCore<TKEY>(ResourceDictionary resourceDictionary, Predicate<TKEY> predicate)
+		{
+			var dictionaryStack = new Stack<Tuple<ResourceDictionary, IEnumerator<ResourceDictionary>>>();
+			var current = new Tuple<ResourceDictionary, IEnumerator<ResourceDictionary>>(
+				resourceDictionary, 
+				resourceDictionary.MergedDictionaries.GetEnumerator()
+			);
+
+			while (current != null)
+			{
+				// enumerate merged dictionaries
+				while (current.Item2.MoveNext())
+				{
+					dictionaryStack.Push(current);
+
+					var rd = current.Item2.Current;
+					current = new Tuple<ResourceDictionary, IEnumerator<ResourceDictionary>>(
+						rd,
+						rd.MergedDictionaries.GetEnumerator()
+					);
+				}
+				
+				// enumerate resource keys
+				foreach (var key in current.Item1.Keys.OfType<TKEY>())
+				{
+					if (predicate == null || predicate(key))
+						yield return current.Item1[key];
+				}
+
+				current = dictionaryStack.Count > 0 ? dictionaryStack.Pop() : null;
+			}
+		} // func FindResourceByKeyCore
+
+		/// <summary>Find resource by key in the main resource dictionary</summary>
+		/// <typeparam name="TKEY"></typeparam>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="predicate"></param>
+		/// <returns></returns>
+		public IEnumerable<T> FindResourceByKey<TKEY,T>(Predicate<TKEY> predicate = null)
+			where TKEY : ResourceKey
+			where T : class
+			=> FindResourceByKeyCore(mainResources, predicate).OfType<T>();
 
 		/// <summary>Update a resource from a xml-source.</summary>
 		/// <param name="xamlSource"></param>

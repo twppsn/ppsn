@@ -29,6 +29,7 @@ namespace TecWare.PPSn.Controls
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty PreserveFocusProperty = DependencyProperty.Register(nameof(PreserveFocus), typeof(bool), typeof(PpsPopup), new FrameworkPropertyMetadata(BooleanBox.True));
+		public static readonly DependencyProperty RouteEventsProperty = DependencyProperty.Register(nameof(RouteEvents), typeof(bool), typeof(PpsPopup), new FrameworkPropertyMetadata(BooleanBox.False));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary></summary>
@@ -65,7 +66,9 @@ namespace TecWare.PPSn.Controls
 		/// <returns></returns>
 		protected override DependencyObject GetUIParentCore()
 		{
-			return null; // do not use PlacementTarget or Logical Tree for event routing
+			return RouteEvents
+				? base.GetUIParentCore()
+				: null; // do not use PlacementTarget or Logical Tree for event routing
 		} // func GetUIParentCore
 
 		private static object OnIsOpenCoerceValue(DependencyObject d, object baseValue)
@@ -114,6 +117,8 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		public bool PreserveFocus { get => BooleanBox.GetBool(GetValue(PreserveFocusProperty)); set => SetValue(PreserveFocusProperty, BooleanBox.GetObject(value)); }
+		/// <summary></summary>
+		public bool RouteEvents { get => BooleanBox.GetBool(GetValue(RouteEventsProperty)); set => SetValue(RouteEventsProperty, BooleanBox.GetObject(value)); }
 
 		static PpsPopup()
 		{
