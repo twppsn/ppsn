@@ -69,11 +69,16 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsComboBox ------------------------------------------------------
 
 	/// <summary></summary>
-	[TemplatePart(Name = FilterBoxTemplateName, Type = typeof(PpsTextBox))]
+	[
+		TemplatePart(Name = FilterBoxTemplateName, Type = typeof(PpsTextBox)),
+		TemplatePart(Name = ContentPresenterTemplateName, Type = typeof(ContentPresenter))
+	]
 	public class PpsComboBox : ComboBox, IPpsNullableControl
 	{
 		/// <summary>Template name for the filter box</summary>
 		public const string FilterBoxTemplateName = "PART_FilterBox";
+		/// <summary>Template name for the contentpresenter</summary>
+		public const string ContentPresenterTemplateName = "PART_ContentPresenter";
 
 		#region -- UserFilterText - Property ------------------------------------------
 
@@ -190,6 +195,17 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region -- SelectedValueTemplate - property -----------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty SelectedValueTemplateProperty = DependencyProperty.Register(nameof(SelectedValueTemplate), typeof(DataTemplate), typeof(PpsComboBox), new FrameworkPropertyMetadata(null));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		/// <summary>Alternative template for ComboBox.SelectionBoxItemTemplate</summary>
+		public DataTemplate SelectedValueTemplate { get => (DataTemplate)GetValue(SelectedValueTemplateProperty); set => SetValue(SelectedValueTemplateProperty, value); }
+
+		#endregion
+
 		private IPpsDataRowViewFilter filterView = null;
 		private PpsTextBox filterBox;
 
@@ -289,8 +305,15 @@ namespace TecWare.PPSn.Controls
 			{
 				filterBox.PreviewKeyDown += FilterBox_PreviewKeyDown;
 			}
-
 			UpdateFilterable();
+
+			// replace ComboBox.SelectionBoxItemTemplate
+			if (SelectedValueTemplate != null)
+			{
+				var presenter = (ContentPresenter)GetTemplateChild(ContentPresenterTemplateName);
+				if (presenter != null)
+					presenter.ContentTemplate = SelectedValueTemplate;
+			}
 		} // proc OnApplyTemplate
 
 		private void FilterBox_PreviewKeyDown(object sender, KeyEventArgs e)
