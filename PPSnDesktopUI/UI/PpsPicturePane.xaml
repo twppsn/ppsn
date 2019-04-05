@@ -16,68 +16,85 @@ specific language governing permissions and limitations under the Licence.
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+		     xmlns:cm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls"
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 mc:Ignorable="d"
+			 x:Name="imagePane"
 			 Title="Bildeditor"
 			 Image="image"
              d:DesignHeight="300" d:DesignWidth="300">
-	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsManipulationEnabled="True">
-		<Image x:Name="imageView" Stretch="None" Source="{Binding CurrentImage}" >
-			<Image.LayoutTransform>
-				<ScaleTransform ScaleX="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" ScaleY="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" />
-			</Image.LayoutTransform>
-		</Image>
-	</uiC:PpsScrollViewer>
-	<!--<UserControl.Resources>
-		<local:LuaValueConverter x:Key="ScaleConverter">
-			<![CDATA[
-					if value[1] ~= clr.System.Windows.DependencyProperty:UnsetValue then
-						local fact = value[0] / value[1];
-						return clr.System.Windows.Media.MatrixTransform(fact, 0, 0, fact, 0, 0);
-					else
-						return clr.System.Windows.Media.MatrixTransform(1, 0, 0, 1, 0, 0);
-					end;
-				]]>
-		</local:LuaValueConverter>
-
-		<local:LuaValueConverter x:Key="IsCameraSettingsEnabledConverter">
-			<![CDATA[
-				if value == nil then
-					return false;
-				elseif value.Properties == nil then
-					return false;
-				elseif value.Properties.Count < 1 then
-					return false;
-				end;
-				return true;
-			]]>
-		</local:LuaValueConverter>
-
-		--><!--parms[0] = Control.Witdh: substract border(2 * 1pxl) and padding(2 * 3pxl)
-		parms[1] = ratio: calc image height
-		returns Control.Height: add border(2 * 1pxl), padding(2 * 3pxl) and footer(19pxl)--><!--
-		<local:LuaValueConverter x:Key="PreviewHeightConverter">
-			<![CDATA[
-				local retval = 145.0;
-				if value[1] ~= clr.System.Windows.DependencyProperty:UnsetValue then
-					local imageWidth = value[0] - 8.0;
-					local imageHeight = imageWidth / value[1];
-					retval = imageHeight + 27;
-				end;
-				return retval;
-			]]>
-		</local:LuaValueConverter>
-
-		<CollectionViewSource x:Key="FilteredAttachments"
-							  Filter="ShowOnlyObjectImageDataFilter"
-							  IsLiveFilteringRequested="True"
-							  Source="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=Attachments}">
-			<CollectionViewSource.LiveFilteringProperties>
-				<sys:String>MimeType</sys:String>
-			</CollectionViewSource.LiveFilteringProperties>
+	<uiC:PpsWindowPaneControl.Resources>
+		<CollectionViewSource x:Key="shapeFactories" Source="{Binding ElementName=imagePane,Mode=OneWay,Path=ShapeFactories}">
+			<CollectionViewSource.GroupDescriptions>
+				<PropertyGroupDescription PropertyName="Order" Converter="{x:Static local:PpsCommandOrder.GetGroup}" />
+			</CollectionViewSource.GroupDescriptions>
+			<CollectionViewSource.SortDescriptions>
+				<cm:SortDescription PropertyName="Order" />
+			</CollectionViewSource.SortDescriptions>
 		</CollectionViewSource>
+							  
+	</uiC:PpsWindowPaneControl.Resources>
+	<uiC:PpsWindowPaneControl.Commands>
+		<local:PpsUISplitCommandButton DisplayText="Neu" Image="plus" Mode="Dropdown">
+			<local:PpsUISplitCommandButton.Popup>
+				<uiC:PpsPopup StaysOpen="False" RouteEvents="True">
+					<Grid Background="Gray">
+						<Grid.RowDefinitions>
+							<RowDefinition />
+							<RowDefinition />
+						</Grid.RowDefinitions>
+						<StackPanel Grid.Row="0" Orientation="Horizontal">
+							<Button Content="MOVE" Command="{x:Static ApplicationCommands.New}" CommandParameter="{x:Null}" />
+						</StackPanel>
+						<ItemsControl Grid.Row="1" ItemsSource="{Binding Source={StaticResource shapeFactories}}" VerticalAlignment="Top" HorizontalAlignment="Left">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<Button ToolTip="{Binding Text}" Command="{x:Static ApplicationCommands.New}" CommandParameter="{Binding}">
+										<Image Source="{Binding Image}"/>
+									</Button>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+							<ItemsControl.GroupStyle>
+								<GroupStyle>
+									<GroupStyle.HeaderTemplate>
+										<DataTemplate>
+											<Separator />
+										</DataTemplate>
+									</GroupStyle.HeaderTemplate>
+								</GroupStyle>
+							</ItemsControl.GroupStyle>
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<UniformGrid />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+						</ItemsControl>
+					</Grid>
+				</uiC:PpsPopup>
+			</local:PpsUISplitCommandButton.Popup>
+		</local:PpsUISplitCommandButton>
+	</uiC:PpsWindowPaneControl.Commands>
+
+	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsManipulationEnabled="True">
+		<Grid>
+			<Image x:Name="imageView" Stretch="None" Source="{Binding CurrentImage}" >
+				<Image.LayoutTransform>
+					<ScaleTransform ScaleX="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" ScaleY="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" />
+				</Image.LayoutTransform>
+			</Image>
+
+			<uiC:PpsShapeCanvas x:Name="shapeCanvas" Width="{Binding ElementName=imageView,Path=ActualWidth}" Height="{Binding ElementName=imageView,Path=ActualHeight}">
+				<uiC:PpsShapeCanvas.LayoutTransform>
+					<ScaleTransform ScaleX="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" ScaleY="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" />
+				</uiC:PpsShapeCanvas.LayoutTransform>
+			</uiC:PpsShapeCanvas>
+		</Grid>
+	</uiC:PpsScrollViewer>
+
+
+	<!--<UserControl.Resources>
 
 		<sys:Double x:Key="PpsPicturePaneImagePanelHeight">134</sys:Double>
 		<SolidColorBrush x:Key="PpsPicturePaneBorderBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.45"/>
@@ -203,117 +220,7 @@ specific language governing permissions and limitations under the Licence.
 			</Image.Triggers>
 		</Image>
 
-		--><!--Button to make a Photo--><!--
-		<uiC:PpsButton Command="{x:Static ApplicationCommands.New}"
-					   DisplayMode="Circle"
-					   GeometryName="camera"
-					   GeometrySize="100"
-					   Fill="{StaticResource PpsPicturePaneBackgroundBrush}"
-					   HorizontalAlignment="Right"
-					   VerticalAlignment="Center"
-					   Margin="0,0,40,0"
-					   ToolTip="Foto aufnehmen"
-					   Visibility="{Binding SelectedCamera, RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Converter={x:Static local:PpsConverter.Visibility}}" />
-
-		--><!--Button to open Camera settings--><!--
-		<ToggleButton x:Name="CameraSettingsToggleButton"
-					  Focusable="False"
-					  Width="60" Height="60"
-					  HorizontalAlignment="Right" VerticalAlignment="Top"
-					  Margin="0,6,60,0"
-					  ToolTip="Kameraeinstellungen">
-			<ToggleButton.Template>
-				<ControlTemplate TargetType="{x:Type ToggleButton}">
-					<Grid x:Name="rootGrid">
-						<Ellipse x:Name="circle" Fill="{StaticResource PpsPicturePaneBackgroundBrush}"/>
-						<uiC:PpsGeometryImage x:Name="imageBox"
-											  GeometryName="settings"
-											  GeometryCircled="false"
-											  Foreground="{StaticResource PPSnActionButtonBrush}"
-											  Opacity=".65"
-											  Width="48"
-											  Height="48" />
-					</Grid>
-					<ControlTemplate.Triggers>
-						<Trigger Property="IsChecked" Value="True">
-							<Setter TargetName="rootGrid" Property="Visibility" Value="Hidden"/>
-						</Trigger>
-						<Trigger Property="IsMouseOver" Value="True">
-							<Setter TargetName="imageBox" Property="Opacity" Value="1"/>
-						</Trigger>
-						<Trigger Property="IsPressed" Value="True">
-							<Setter TargetName="circle" Property="Fill" Value="{StaticResource PPSnButtonPressedBrush}"/>
-						</Trigger>
-						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedCamera, Converter={StaticResource IsCameraSettingsEnabledConverter}}">
-							<DataTrigger.Value>
-								<sys:Boolean>false</sys:Boolean>
-							</DataTrigger.Value>
-							<Setter Property="Visibility" Value="Collapsed"/>
-						</DataTrigger>
-					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</ToggleButton.Template>
-		</ToggleButton>
-
-		--><!--this is the control for Camera Settings--><!--
-		<Popup PlacementTarget="{Binding ElementName=CameraSettingsToggleButton}" Placement="Left" HorizontalOffset="60"
-			   IsOpen="{Binding ElementName=CameraSettingsToggleButton, Path=IsChecked, Mode=TwoWay}" StaysOpen="False"
-			   AllowsTransparency="True" PopupAnimation="Scroll"
-			   uiC:PpsPopupBehavior.ForceFocus="True">
-			<Border BorderThickness="1" BorderBrush="{StaticResource PpsPicturePaneBorderBrush}" Background="{StaticResource PpsPicturePaneBackgroundBrush}" Padding="12,4,12,12">
-				<Grid TextBlock.Foreground="{StaticResource PPSnActionButtonBrush}">
-					<Grid.RowDefinitions>
-						<RowDefinition Height="auto"/>
-						<RowDefinition Height="32"/>
-						<RowDefinition Height="auto"/>
-					</Grid.RowDefinitions>
-					<TextBlock Grid.Row="0" Text="EINSTELLUNGEN" FontSize="16"/>
-					<TextBlock Grid.Row="1" Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedCamera.Name, Mode=OneWay}" Margin="6,0,0,0"/>
-					<ListBox Grid.Row="2"
-							 ItemsSource="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedCamera.Properties}"
-							 ItemContainerStyle="{StaticResource PPSnStrokeSettingsListBoxItemStyle}"
-							 Style="{StaticResource PPSnListBoxStyle}"
-							 Foreground="{StaticResource PPSnActionButtonBrush}">
-						<ListBox.ItemTemplate>
-							<DataTemplate>
-								<Border BorderBrush="{StaticResource PpsPicturePaneBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,6,0,0">
-									<Grid>
-										<Grid.RowDefinitions>
-											<RowDefinition />
-											<RowDefinition/>
-										</Grid.RowDefinitions>
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="200"/>
-											<ColumnDefinition/>
-										</Grid.ColumnDefinitions>
-										<TextBlock Grid.ColumnSpan="2" Grid.Row="0" Text="{Binding Name}"/>
-										<Slider Grid.Column="0" Grid.Row="1" Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" Value="{Binding Value}"
-												VerticalAlignment="Center" FocusVisualStyle="{x:Null}"/>
-										<CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding AutomaticValue}" Content="Auto" FocusVisualStyle="{x:Null}"
-												  Foreground="{StaticResource PPSnActionButtonBrush}" Margin="6,0,0,0" VerticalAlignment="Center"/>
-									</Grid>
-								</Border>
-							</DataTemplate>
-						</ListBox.ItemTemplate>
-					</ListBox>
-					<Viewbox Grid.Row="0" Grid.RowSpan="2" Width="23" Height="23" VerticalAlignment="Top" HorizontalAlignment="Right" Opacity=".65"
-							 ToolTip="Einige Kameraeinstellungen wurden manuell festgelegt.">
-						<Canvas Width="24" Height="24">
-							<Path Data="{StaticResource informationPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}"/>
-						</Canvas>
-						<Viewbox.Style>
-							<Style TargetType="{x:Type Viewbox}">
-								<Style.Triggers>
-									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedCamera.AutomaticSettings}" Value="True">
-										<Setter Property="Visibility" Value="Collapsed"/>
-									</DataTrigger>
-								</Style.Triggers>
-							</Style>
-						</Viewbox.Style>
-					</Viewbox>
-				</Grid>
-			</Border>
-		</Popup>
+		
 
 		<Grid>
 			<Image x:Name="CurrentObjectImageMax"

@@ -100,6 +100,7 @@
     <Compile Include="Controls\PpsListbox.cs" />
     <Compile Include="Controls\PpsDataListBox.cs" />
     <Compile Include="Controls\PpsPanel.cs" />
+    <Compile Include="Controls\PpsShapeCanvas.cs" />
     <Compile Include="UI\PpsAttachments.cs" />
     <Compile Include="Data\PpsDataRowEnumerableCollectionView.cs" />
     <Compile Include="Data\PpsTypedListCollectionView.cs" />
@@ -250,6 +251,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\PpsProgressControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\PpsShapeCanvas.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

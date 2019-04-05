@@ -19,6 +19,7 @@
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsCircularListBox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsEditableListbox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsScrollViewer.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsShapeCanvas.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsListbox.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>
