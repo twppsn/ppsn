@@ -1540,7 +1540,7 @@ namespace TecWare.PPSn
 
 		private void UpdateRevisionTagCore(long? id, PpsObjectTag newTag, bool isLocalChanged, List<PpsObjectTagBase> removeTags, ref bool collectionChanged)
 		{
-			var currentTag = (PpsObjectEditableTag)revisionTags.Find(t => String.Compare(t.Name, newTag.Name, StringComparison.OrdinalIgnoreCase) == 0);
+			var currentTag = (PpsObjectEditableTag)revisionTags.Find(t => String.Compare(t.Name, newTag.Name, StringComparison.OrdinalIgnoreCase) == 0 && t.Class == newTag.Class);
 
 			if (currentTag != null) // tag alread exists
 			{
