@@ -313,7 +313,7 @@
 			<Grid SnapsToDevicePixels="True">
 				<Rectangle Fill="Black" Opacity=".7" />
 				<ListBox x:Name="windowPanePopupListBox" ItemsSource="{Binding SelectionOrder}" IsSynchronizedWithCurrentItem="True"
-						 Background="Transparent" BorderThickness="0" Margin="16" Focusable="False" MaxWidth="636">
+						 Background="Transparent" BorderThickness="0" Margin="16" Focusable="False">
 					<ListBox.ItemsPanel>
 						<ItemsPanelTemplate>
 							<WrapPanel Orientation="Horizontal" MaxWidth="{Binding MaxWidth, ElementName=windowPanePopupListBox}"/>

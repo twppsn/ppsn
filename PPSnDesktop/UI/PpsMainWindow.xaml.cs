@@ -175,7 +175,7 @@ namespace TecWare.PPSn.UI
 				if (columns < maxColumns)
 					maxColumns = columns;
 			}
-			return maxColumns * itemWidth;
+			return maxColumns * itemWidth + 2;  // AddChild 2Pxl for WrapPanel margin
 		} // func CalculatePaneHostListColumns
 
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
