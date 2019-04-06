@@ -131,6 +131,11 @@ namespace TecWare.PPSn.UI
 
 		/// <summary></summary>
 		/// <returns></returns>
+		public override string ToString()
+			=> GetType().Name + "@" + name;
+
+		/// <summary></summary>
+		/// <returns></returns>
 		public sealed override int GetHashCode()
 			=> GetType().GetHashCode() ^ name.GetHashCode();
 

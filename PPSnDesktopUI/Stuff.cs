@@ -1141,15 +1141,20 @@ namespace TecWare.PPSn
 	/// <summary>Hue, Saturation, Light</summary>
 	public struct HsvColor : IComparable, IComparable<HsvColor>
 	{
-		private float a;
-		private float h;
-		private float s;
-		private float v;
+		private byte a;
+		private short h;
+		private byte s;
+		private byte v;
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> $"a={a};h={h};s={s};v={v}";
 
 		/// <summary></summary>
 		/// <returns></returns>
 		public override int GetHashCode()
-			=> h.GetHashCode() ^ s.GetHashCode() ^ v.GetHashCode();
+			=> ToInt32().GetHashCode();
 
 		/// <summary></summary>
 		/// <param name="obj"></param>
@@ -1176,27 +1181,29 @@ namespace TecWare.PPSn
 			return r;
 		} // func CompareTo
 
+		/// <summary>Create a 32bit value for the hsv.</summary>
+		/// <returns></returns>
+		public int ToInt32()
+			=> unchecked((int)((uint)a << 24 | (uint)h << 15 | (uint)(s & 0x7F) << 8 | (uint)v));
+
 		/// <summary>Convert to color</summary>
 		/// <returns></returns>
 		public Color ToColor()
 		{
+			byte r;
+			byte g;
+			byte b;
 
-			float r;
-			float g;
-			float b;
-
-			if (s <= 0.0f)
+			if (s == 0)
 			{
 				r = g = b = v;
 			}
 			else
 			{
-				var f = h / (60 / 360);
-				var i = (int)Math.Floor(f);
-				f = f - i;
-				var p = v * (1.0f - s);
-				var q = v * (1.0f - s * f);
-				var t = v * (1.0f - s * (1.0f - f));
+				var i = Math.DivRem(h, 60, out var fraction);
+				var p = Convert.ToByte(v * (100 - s) / 100);
+				var q = Convert.ToByte(v * (6000 - s * fraction) / 6000);
+				var t = Convert.ToByte(v * (6000 - s * (60 - fraction)) / 6000);
 
 				switch (i)
 				{
@@ -1217,7 +1224,7 @@ namespace TecWare.PPSn
 						break;
 					case 4:
 						r = t;
-						g = q;
+						g = p;
 						b = v;
 						break;
 					case 5:
@@ -1225,7 +1232,7 @@ namespace TecWare.PPSn
 						g = p;
 						b = q;
 						break;
-					default: // 0,6
+					default: // 0
 						r = v;
 						g = t;
 						b = p;
@@ -1233,89 +1240,76 @@ namespace TecWare.PPSn
 				}
 			}
 
-			return Color.FromArgb(Convert.ToByte(a * 255.0f),
-				Convert.ToByte(r * 255.0f),
-				Convert.ToByte(g * 255.0f),
-				Convert.ToByte(b * 255.0f)
-			);
+			return Color.FromArgb(a, r, g, b);
 		} // func ToColor
 
-		/// <summary></summary>
-		public float Alpha => a;
-		/// <summary>Color</summary>
-		public float Hue => h;
-		/// <summary>Saturation</summary>
-		public float Saturation => s;
-		/// <summary>Light/Brightness (0.0 is dark, 1.0 is light)</summary>
-		public float Light => v;
+		/// <summary>Alpha value 0..255</summary>
+		public byte Alpha => a;
+		/// <summary>Color 0..360</summary>
+		public short Hue => h;
+		/// <summary>Saturation 0..100</summary>
+		public byte Saturation => s;
+		/// <summary>Light/Brightness (0 is dark, 255 is light)</summary>
+		public byte Light => v;
 
 		/// <summary></summary>
-		/// <param name="h"></param>
-		/// <param name="s"></param>
-		/// <param name="l"></param>
-		/// <returns></returns>
-		public static HsvColor FromHsv(float h, float s, float l)
-			=> FromAhsv(1.0f, h, s, l);
+		/// <param name="h">Color 0..360</param>
+		/// <param name="s">Saturation 0..100</param>
+		/// <param name="v">Light/Brightness (0 is dark, 255 is light)</param>
+		/// <returns>Hsv color</returns>
+		public static HsvColor FromHsv(short h, byte s, byte v)
+			=> FromAhsv(Byte.MaxValue, h, s, v);
 
 		/// <summary></summary>
-		/// <param name="a"></param>
-		/// <param name="h"></param>
-		/// <param name="s"></param>
-		/// <param name="l"></param>
-		public static HsvColor FromAhsv(float a, float h, float s, float l)
-			=> new HsvColor() { a = CheckRange(a), h = CheckRange(h), s = CheckRange(s), v = CheckRange(l) };
-
-		private static float CheckRange(float v)
-			=> v <= 0.0f ? 0.0f : (v >= 1.0f ? 1.0f : v);
-
-		private static bool IsClose(float a, float b)
-			=> Math.Abs(a - b) < Single.Epsilon;
+		/// <param name="a">Alpha value 0..255</param>
+		/// <param name="h">Color 0..360</param>
+		/// <param name="s">Saturation 0..100</param>
+		/// <param name="v">Light/Brightness (0 is dark, 255 is light)</param>
+		/// <returns>Hsv color</returns>
+		public static HsvColor FromAhsv(byte a, short h, byte s, byte v)
+			=> new HsvColor() { a = a, h = h > 360 ? (short)360 : h, s = s > 100 ? (byte)100 : s, v = v };
 
 		/// <summary>Convert from color</summary>
 		/// <param name="color"></param>
 		/// <returns></returns>
 		public static HsvColor FromColor(Color color)
 		{
-			var a = color.A / 255.0f;
-			var r = color.R / 255.0f;
-			var g = color.G / 255.0f;
-			var b = color.B / 255.0f;
+			var a = color.A;
+			var r = color.R;
+			var g = color.G;
+			var b = color.B;
 
-			float h;
-			float s;
-			float v;
+			int h;
+			int s;
+			int v;
 
 			var max = Math.Max(Math.Max(r, g), b);
 			var min = Math.Min(Math.Min(r, g), b);
 
-			if (IsClose(max, min))
-				h = 0.0f;
+			if (max == min)
+				h = 0;
 			else
 			{
-				var diff = (max - min);
+				var diff = max - min;
 
-				if (IsClose(max, r))
-					h = 0.0f + (g - b) / diff;
-				else if (IsClose(max, g))
-					h = 2.0f + (b - r) / diff;
+				if (max == r)
+					h = 0 + (g - b) * 60 / diff;
+				else if (max == g)
+					h = 120 + (b - r) * 60 / diff;
 				else
-					h = 4.0f + (r - g) / diff;
+					h = 240 + (r - g) * 60 / diff;
 
-				h = 60.0f * h / 360.0f;
-
-				if (h < 0.0f)
-					h += 1.0f;
-				if (h > 1.0f)
-					h += 1.0f;
+				if (h < 0)
+					h += 360;
+				if (h > 360)
+					h -= 360;
 			}
 
-			s = IsClose(max, 0.0f)
-				? 0.0f
-				: (max - min) / max;
+			s = max == 0 ? 0 : (max - min) * 100 / max;
 
 			v = max;
 
-			return FromAhsv(a, h, s, v) ;
+			return FromAhsv(a, (short)h, (byte)s, (byte)v);
 		} // func ToHsv
 	} // struct HsvColor
 

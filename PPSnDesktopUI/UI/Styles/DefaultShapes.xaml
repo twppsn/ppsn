@@ -42,6 +42,7 @@ specific language governing permissions and limitations under the Licence.
 	<Color x:Key="{ui:PpsColorResourceKey Stock5}">Blue</Color>
 	<Color x:Key="{ui:PpsColorResourceKey Stock6}">Green</Color>
 	<Color x:Key="{ui:PpsColorResourceKey Stock7}">AliceBlue</Color>
+	<Color x:Key="{ui:PpsColorResourceKey Stock7a}">Chocolate</Color>
 	<Color x:Key="{ui:PpsColorResourceKey Stock8}">Magenta</Color>
 	<Color x:Key="{ui:PpsColorResourceKey Stock9}">Purple</Color>
 	<Thickness x:Key="{ui:PpsThicknessResourceKey Stock1}">1</Thickness>
