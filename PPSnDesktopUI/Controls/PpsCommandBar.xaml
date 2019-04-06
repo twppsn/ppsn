@@ -24,6 +24,7 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsCommandBar}">
 					<ItemsControl x:Name="PART_ItemsControl"
 								  ItemsSource="{TemplateBinding CommandsView}"
+								  MinHeight="{TemplateBinding ButtonHeight}"
 								  Focusable="False">
 						<ItemsControl.ItemsPanel>
 							<ItemsPanelTemplate>
@@ -91,7 +92,7 @@ specific language governing permissions and limitations under the Licence.
 							   GeometryName="{Binding Image}"
 							   DisplayMode="{Binding DisplayMode}"
 							   GeometrySize="24"
-							   Height="{Binding ButtonHeight,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsCommandBar}}}"
+							   Height="{Binding MinHeight,ElementName=PART_ItemsControl}"
 							   MinWidth="36"
 							   Focusable="True" />
 			</DataTemplate>
@@ -106,7 +107,7 @@ specific language governing permissions and limitations under the Licence.
 									GeometryName="{Binding Image}"
 									DisplayMode="{Binding DisplayMode}"
 									GeometrySize="24"
-									Height="{Binding ButtonHeight,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsCommandBar}}}"
+									Height="{Binding MinHeight,ElementName=PART_ItemsControl}"
 									MinWidth="36"
 									Focusable="True" />
 			</DataTemplate>
