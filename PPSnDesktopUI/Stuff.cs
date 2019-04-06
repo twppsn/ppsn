@@ -1135,4 +1135,189 @@ namespace TecWare.PPSn
 	} // class PpsCircularView
 
 	#endregion
+
+	#region -- class HsvColor ---------------------------------------------------------
+
+	/// <summary>Hue, Saturation, Light</summary>
+	public struct HsvColor : IComparable, IComparable<HsvColor>
+	{
+		private float a;
+		private float h;
+		private float s;
+		private float v;
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override int GetHashCode()
+			=> h.GetHashCode() ^ s.GetHashCode() ^ v.GetHashCode();
+
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public override bool Equals(object obj)
+			=> obj is HsvColor hsl ? CompareTo(hsl) == 0 : false;
+
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public int CompareTo(object obj)
+			=> obj is HsvColor hsl ? CompareTo(hsl) : -1;
+
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		public int CompareTo(HsvColor other)
+		{
+			var r = h.CompareTo(other.h);
+			if (r == 0)
+				r = s.CompareTo(other.s);
+			if (r == 0)
+				r = v.CompareTo(other.v);
+			return r;
+		} // func CompareTo
+
+		/// <summary>Convert to color</summary>
+		/// <returns></returns>
+		public Color ToColor()
+		{
+
+			float r;
+			float g;
+			float b;
+
+			if (s <= 0.0f)
+			{
+				r = g = b = v;
+			}
+			else
+			{
+				var f = h / (60 / 360);
+				var i = (int)Math.Floor(f);
+				f = f - i;
+				var p = v * (1.0f - s);
+				var q = v * (1.0f - s * f);
+				var t = v * (1.0f - s * (1.0f - f));
+
+				switch (i)
+				{
+					case 1:
+						r = q;
+						g = v;
+						b = p;
+						break;
+					case 2:
+						r = p;
+						g = v;
+						b = t;
+						break;
+					case 3:
+						r = p;
+						g = q;
+						b = v;
+						break;
+					case 4:
+						r = t;
+						g = q;
+						b = v;
+						break;
+					case 5:
+						r = v;
+						g = p;
+						b = q;
+						break;
+					default: // 0,6
+						r = v;
+						g = t;
+						b = p;
+						break;
+				}
+			}
+
+			return Color.FromArgb(Convert.ToByte(a * 255.0f),
+				Convert.ToByte(r * 255.0f),
+				Convert.ToByte(g * 255.0f),
+				Convert.ToByte(b * 255.0f)
+			);
+		} // func ToColor
+
+		/// <summary></summary>
+		public float Alpha => a;
+		/// <summary>Color</summary>
+		public float Hue => h;
+		/// <summary>Saturation</summary>
+		public float Saturation => s;
+		/// <summary>Light/Brightness (0.0 is dark, 1.0 is light)</summary>
+		public float Light => v;
+
+		/// <summary></summary>
+		/// <param name="h"></param>
+		/// <param name="s"></param>
+		/// <param name="l"></param>
+		/// <returns></returns>
+		public static HsvColor FromHsv(float h, float s, float l)
+			=> FromAhsv(1.0f, h, s, l);
+
+		/// <summary></summary>
+		/// <param name="a"></param>
+		/// <param name="h"></param>
+		/// <param name="s"></param>
+		/// <param name="l"></param>
+		public static HsvColor FromAhsv(float a, float h, float s, float l)
+			=> new HsvColor() { a = CheckRange(a), h = CheckRange(h), s = CheckRange(s), v = CheckRange(l) };
+
+		private static float CheckRange(float v)
+			=> v <= 0.0f ? 0.0f : (v >= 1.0f ? 1.0f : v);
+
+		private static bool IsClose(float a, float b)
+			=> Math.Abs(a - b) < Single.Epsilon;
+
+		/// <summary>Convert from color</summary>
+		/// <param name="color"></param>
+		/// <returns></returns>
+		public static HsvColor FromColor(Color color)
+		{
+			var a = color.A / 255.0f;
+			var r = color.R / 255.0f;
+			var g = color.G / 255.0f;
+			var b = color.B / 255.0f;
+
+			float h;
+			float s;
+			float v;
+
+			var max = Math.Max(Math.Max(r, g), b);
+			var min = Math.Min(Math.Min(r, g), b);
+
+			if (IsClose(max, min))
+				h = 0.0f;
+			else
+			{
+				var diff = (max - min);
+
+				if (IsClose(max, r))
+					h = 0.0f + (g - b) / diff;
+				else if (IsClose(max, g))
+					h = 2.0f + (b - r) / diff;
+				else
+					h = 4.0f + (r - g) / diff;
+
+				h = 60.0f * h / 360.0f;
+
+				if (h < 0.0f)
+					h += 1.0f;
+				if (h > 1.0f)
+					h += 1.0f;
+			}
+
+			s = IsClose(max, 0.0f)
+				? 0.0f
+				: (max - min) / max;
+
+			v = max;
+
+			return FromAhsv(a, h, s, v) ;
+		} // func ToHsv
+	} // struct HsvColor
+
+	#endregion
 }

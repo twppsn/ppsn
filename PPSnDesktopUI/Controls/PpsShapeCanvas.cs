@@ -84,39 +84,6 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
-	#region -- class PpsShapeResourceKey ----------------------------------------------
-
-	/// <summary>Resource key to mark shapes</summary>
-	public sealed class PpsShapeResourceKey : ResourceKey
-	{
-		private readonly string name;
-
-		/// <summary></summary>
-		/// <param name="name"></param>
-		public PpsShapeResourceKey(string name)
-		{
-			this.name = name ?? throw new ArgumentNullException(nameof(name));
-		} // ctor
-
-		/// <summary></summary>
-		/// <returns></returns>
-		public override int GetHashCode()
-			=> typeof(PpsShapeResourceKey).GetHashCode() ^ name.GetHashCode();
-
-		/// <summary>Compare resource keys.</summary>
-		/// <param name="obj"></param>
-		/// <returns></returns>
-		public override bool Equals(object obj)
-			=> obj is PpsShapeResourceKey r ? r.name == name : base.Equals(obj);
-
-		/// <summary>Resource name.</summary>
-		public string Name => Name;
-		/// <summary>Assembly is <c>null</c>.</summary>
-		public override Assembly Assembly => null;
-	} // class PpsShapeResourceKey
-
-	#endregion
-
 	#region -- interface IPpsShapeFactory ---------------------------------------------
 
 	/// <summary>Shape factory.</summary>

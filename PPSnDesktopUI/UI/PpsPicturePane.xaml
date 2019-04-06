@@ -26,7 +26,7 @@ specific language governing permissions and limitations under the Licence.
 			 Image="image"
              d:DesignHeight="300" d:DesignWidth="300">
 	<uiC:PpsWindowPaneControl.Resources>
-		<CollectionViewSource x:Key="shapeFactories" Source="{Binding ElementName=imagePane,Mode=OneWay,Path=ShapeFactories}">
+		<CollectionViewSource x:Key="shapeFactories" Source="{local:PpsCollectTypedResources {x:Type local:PpsShapeResourceKey},ResourceType={x:Type uiC:IPpsShapeFactory}}">
 			<CollectionViewSource.GroupDescriptions>
 				<PropertyGroupDescription PropertyName="Order" Converter="{x:Static local:PpsCommandOrder.GetGroup}" />
 			</CollectionViewSource.GroupDescriptions>
@@ -34,7 +34,8 @@ specific language governing permissions and limitations under the Licence.
 				<cm:SortDescription PropertyName="Order" />
 			</CollectionViewSource.SortDescriptions>
 		</CollectionViewSource>
-							  
+		<CollectionViewSource x:Key="colorTable" Source="{local:PpsCollectTypedResources {x:Type local:PpsColorResourceKey},ResourceType={x:Type Color},Comparer={x:Static local:PpsComparer.Colors}}" />
+		<CollectionViewSource x:Key="thicknessTable" Source="{local:PpsCollectTypedResources {x:Type local:PpsThicknesResourceKey},ResourceType={x:Type Thickness}}" />
 	</uiC:PpsWindowPaneControl.Resources>
 	<uiC:PpsWindowPaneControl.Commands>
 		<local:PpsUISplitCommandButton DisplayText="Neu" Image="plus" Mode="Dropdown">
@@ -45,10 +46,15 @@ specific language governing permissions and limitations under the Licence.
 							<RowDefinition />
 							<RowDefinition />
 						</Grid.RowDefinitions>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition />
+							<ColumnDefinition />
+							<ColumnDefinition />
+						</Grid.ColumnDefinitions>
 						<StackPanel Grid.Row="0" Orientation="Horizontal">
 							<Button Content="MOVE" Command="{x:Static ApplicationCommands.New}" CommandParameter="{x:Null}" />
 						</StackPanel>
-						<ItemsControl Grid.Row="1" ItemsSource="{Binding Source={StaticResource shapeFactories}}" VerticalAlignment="Top" HorizontalAlignment="Left">
+						<ItemsControl Grid.Row="1" ItemsSource="{Binding Source={StaticResource shapeFactories}}">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate>
 									<Button ToolTip="{Binding Text}" Command="{x:Static ApplicationCommands.New}" CommandParameter="{Binding}">
@@ -71,6 +77,24 @@ specific language governing permissions and limitations under the Licence.
 								</ItemsPanelTemplate>
 							</ItemsControl.ItemsPanel>
 						</ItemsControl>
+						<ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Source={StaticResource colorTable}}">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<Button ToolTip="{Binding}" Command="{x:Static ApplicationCommands.Properties}" CommandParameter="{Binding}">
+										<Rectangle Stroke="Black" StrokeThickness="1" Width="16" Height="16">
+											<Rectangle.Fill>
+												<SolidColorBrush Color="{Binding}" />
+											</Rectangle.Fill>
+										</Rectangle>
+									</Button>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<UniformGrid />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+						</ItemsControl>					
 					</Grid>
 				</uiC:PpsPopup>
 			</local:PpsUISplitCommandButton.Popup>

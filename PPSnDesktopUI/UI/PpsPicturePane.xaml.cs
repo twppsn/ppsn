@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -27,7 +28,54 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
-	/// <summary>Pciture view and editor for one image or a list of images</summary>
+	#region -- class PpsShapeResourceKey ----------------------------------------------
+
+	/// <summary>Resource key to mark shapes</summary>
+	public sealed class PpsShapeResourceKey : PpsTypedResourceKey
+	{
+		/// <summary></summary>
+		/// <param name="name"></param>
+		public PpsShapeResourceKey(string name)
+			:base(name)
+		{
+		} // ctor
+	} // class PpsShapeResourceKey
+
+	#endregion
+
+	#region -- class PpsColorResourceKey ----------------------------------------------
+
+	/// <summary>Resource key to mark shapes</summary>
+	public sealed class PpsColorResourceKey : PpsTypedResourceKey
+	{
+		/// <summary></summary>
+		/// <param name="name"></param>
+		public PpsColorResourceKey(string name)
+			: base(name)
+		{
+		} // ctor
+	} // class PpsColorResourceKey
+
+	#endregion
+
+	#region -- class PpsThicknessResourceKey ------------------------------------------
+
+	/// <summary>Resource key to mark shapes</summary>
+	public sealed class PpsThicknessResourceKey : PpsTypedResourceKey
+	{
+		/// <summary></summary>
+		/// <param name="name"></param>
+		public PpsThicknessResourceKey(string name)
+			: base(name)
+		{
+		} // ctor
+	} // class PpsThicknessResourceKey
+
+	#endregion
+
+	#region -- class PpsPicturePane ---------------------------------------------------
+
+	/// <summary>Picture view and editor for one image.</summary>
 	public partial class PpsPicturePane : PpsWindowPaneControl
 	{
 		#region -- CanEdit - Property -------------------------------------------------
@@ -65,23 +113,7 @@ namespace TecWare.PPSn.UI
 		public ImageSource CurrentImage { get => (ImageSource)GetValue(CurrentImageProperty); private set => SetValue(currentImagePropertyKey, value); }
 
 		#endregion
-
-		#region -- ShapeFactories - property ------------------------------------------
-
-		private static readonly DependencyPropertyKey shapeFactoriesPropertyKey = DependencyProperty.RegisterReadOnly(nameof(ShapeFactories), typeof(IEnumerable), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty ShapeFactoriesProperty = shapeFactoriesPropertyKey.DependencyProperty;
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-
-		private void InitShapeFactories()
-			=> SetValue(shapeFactoriesPropertyKey, Shell.FindResourceByKey<PpsShapeResourceKey, IPpsShapeFactory>());
-
-		/// <summary>Get shape factories</summary>
-		public IEnumerable ShapeFactories => (IEnumerable)GetValue(ShapeFactoriesProperty);
-
-		#endregion
-
-
+		
 		private IPpsDataInfo currentPictureInfo = null;
 		private IPpsDataObject currentPicture = null;
 
@@ -95,7 +127,6 @@ namespace TecWare.PPSn.UI
 			: base(paneHost)
 		{
 			InitializeComponent();
-			InitShapeFactories();
 
 			DataContext = this;
 
@@ -955,4 +986,6 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 	} // class PpsPicturePane
+
+	#endregion
 }
