@@ -270,6 +270,34 @@ namespace TecWare.PPSn
 
 		#region -- Wpf Resource Management --------------------------------------------
 
+		private class FindResourceStackItem
+		{
+			private int mergedIndex;
+
+			public FindResourceStackItem(ResourceDictionary resourceDictionary)
+			{
+				Resources = resourceDictionary;
+
+				mergedIndex = resourceDictionary.MergedDictionaries.Count - 1;
+			} // ctor
+
+			public bool TryGetNextDictionary(out FindResourceStackItem stackItem)
+			{
+				if (mergedIndex >= 0)
+				{
+					stackItem = new FindResourceStackItem(Resources.MergedDictionaries[mergedIndex--]);
+					return true;
+				}
+				else
+				{
+					stackItem = null;
+					return false;
+				}
+			} // func TryGetNextDictionary
+
+			public ResourceDictionary Resources { get; }
+		} // class FindResourceStackItem
+
 		/// <summary>Find a global resource.</summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="resourceKey"></param>
@@ -278,35 +306,39 @@ namespace TecWare.PPSn
 			where T : class
 			=> defaultResources[resourceKey] as T;
 
-		private static IEnumerable<object> FindResourceByKeyCore<TKEY>(ResourceDictionary resourceDictionary, Predicate<TKEY> predicate)
+		/// <summary></summary>
+		/// <typeparam name="TKEY"></typeparam>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="resourceDictionary"></param>
+		/// <param name="predicate"></param>
+		/// <returns></returns>
+		public static IEnumerable<T> FindResourceByKeyCore<TKEY, T>(ResourceDictionary resourceDictionary, Predicate<TKEY> predicate = null)
+			where TKEY : ResourceKey
 		{
-			var dictionaryStack = new Stack<Tuple<ResourceDictionary, IEnumerator<ResourceDictionary>>>();
-			var current = new Tuple<ResourceDictionary, IEnumerator<ResourceDictionary>>(
-				resourceDictionary, 
-				resourceDictionary.MergedDictionaries.GetEnumerator()
-			);
+			var dictionaryStack = new Stack<FindResourceStackItem>();
+			var current = new FindResourceStackItem(resourceDictionary);
+
+			var returnedKeys = new List<TKEY>();
 
 			while (current != null)
 			{
-				// enumerate merged dictionaries
-				while (current.Item2.MoveNext())
+				// enumerate merged resources
+				while (current.TryGetNextDictionary(out var stackItem))
 				{
 					dictionaryStack.Push(current);
+					current = stackItem;
+				}
 
-					var rd = current.Item2.Current;
-					current = new Tuple<ResourceDictionary, IEnumerator<ResourceDictionary>>(
-						rd,
-						rd.MergedDictionaries.GetEnumerator()
-					);
+				// enumerate resource keys
+				foreach (var key in current.Resources.Keys.OfType<TKEY>())
+				{
+					if (!returnedKeys.Contains(key) && (predicate == null || predicate(key)) && current.Resources[key] is T v)
+					{
+						returnedKeys.Add(key);
+						yield return v;
+					}
 				}
 				
-				// enumerate resource keys
-				foreach (var key in current.Item1.Keys.OfType<TKEY>())
-				{
-					if (predicate == null || predicate(key))
-						yield return current.Item1[key];
-				}
-
 				current = dictionaryStack.Count > 0 ? dictionaryStack.Pop() : null;
 			}
 		} // func FindResourceByKeyCore
@@ -318,8 +350,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public IEnumerable<T> FindResourceByKey<TKEY,T>(Predicate<TKEY> predicate = null)
 			where TKEY : ResourceKey
-			where T : class
-			=> FindResourceByKeyCore(mainResources, predicate).OfType<T>();
+			=> FindResourceByKeyCore<TKEY,T>(mainResources, predicate);
 
 		/// <summary>Update a resource from a xml-source.</summary>
 		/// <param name="xamlSource"></param>
@@ -633,6 +664,15 @@ namespace TecWare.PPSn
 		/// <summary>Lua ui-wpf framwework.</summary>
 		[LuaMember("UI")]
 		public LuaUI LuaUI { get; } = new LuaUI();
+
+		// -- Static ----------------------------------------------------------
+
+		private readonly static ResourceDictionary staticDefaultResources;
+
+		static PpsShellWpf()
+		{
+			staticDefaultResources = new ResourceDictionary() { Source = new Uri("/PPSn.Desktop.UI;component/UI/UI.xaml", UriKind.Relative) };
+		} // ctor
 
 		#region -- GetShell, GetCurrentPane -------------------------------------------
 

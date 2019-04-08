@@ -100,6 +100,8 @@
     <Compile Include="Controls\PpsListbox.cs" />
     <Compile Include="Controls\PpsDataListBox.cs" />
     <Compile Include="Controls\PpsPanel.cs" />
+    <Compile Include="Controls\PpsShapeCanvas.cs" />
+    <Compile Include="UI\Comparer.cs" />
     <Compile Include="UI\PpsAttachments.cs" />
     <Compile Include="Data\PpsDataRowEnumerableCollectionView.cs" />
     <Compile Include="Data\PpsTypedListCollectionView.cs" />
@@ -253,6 +255,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Controls\PpsShapeCanvas.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Controls\PpsScrollViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -296,6 +302,10 @@
     <Page Include="UI\PpsPicturePane.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\Styles\DefaultShapes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="UI\Styles\DrawingImages.xaml">
       <SubType>Designer</SubType>

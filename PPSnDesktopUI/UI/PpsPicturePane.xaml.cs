@@ -15,24 +15,67 @@
 #endregion
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Neo.IronLua;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
-	/// <summary>Pciture view and editor for one image or a list of images</summary>
+	#region -- class PpsShapeResourceKey ----------------------------------------------
+
+	/// <summary>Resource key to mark shapes</summary>
+	public sealed class PpsShapeResourceKey : PpsTypedResourceKey
+	{
+		/// <summary></summary>
+		/// <param name="name"></param>
+		public PpsShapeResourceKey(string name)
+			:base(name)
+		{
+		} // ctor
+	} // class PpsShapeResourceKey
+
+	#endregion
+
+	#region -- class PpsColorResourceKey ----------------------------------------------
+
+	/// <summary>Resource key to mark shapes</summary>
+	public sealed class PpsColorResourceKey : PpsTypedResourceKey
+	{
+		/// <summary></summary>
+		/// <param name="name"></param>
+		public PpsColorResourceKey(string name)
+			: base(name)
+		{
+		} // ctor
+	} // class PpsColorResourceKey
+
+	#endregion
+
+	#region -- class PpsThicknessResourceKey ------------------------------------------
+
+	/// <summary>Resource key to mark shapes</summary>
+	public sealed class PpsThicknessResourceKey : PpsTypedResourceKey
+	{
+		/// <summary></summary>
+		/// <param name="name"></param>
+		public PpsThicknessResourceKey(string name)
+			: base(name)
+		{
+		} // ctor
+	} // class PpsThicknessResourceKey
+
+	#endregion
+
+	#region -- class PpsPicturePane ---------------------------------------------------
+
+	/// <summary>Picture view and editor for one image.</summary>
 	public partial class PpsPicturePane : PpsWindowPaneControl
 	{
 		#region -- CanEdit - Property -------------------------------------------------
@@ -70,9 +113,7 @@ namespace TecWare.PPSn.UI
 		public ImageSource CurrentImage { get => (ImageSource)GetValue(CurrentImageProperty); private set => SetValue(currentImagePropertyKey, value); }
 
 		#endregion
-
-		/// <summary>Picture source argument for the load process</summary>
-
+		
 		private IPpsDataInfo currentPictureInfo = null;
 		private IPpsDataObject currentPicture = null;
 
@@ -89,23 +130,27 @@ namespace TecWare.PPSn.UI
 
 			DataContext = this;
 
+			this.AddCommandBinding(Shell, ApplicationCommands.New,
+				new PpsCommand(
+					ctx =>
+					{
+						shapeCanvas.NewShapeType = ctx.Parameter as IPpsShapeFactory;
+						scrollViewer.IsZoomAllowed =
+							scrollViewer.IsPanningAllowed = shapeCanvas.NewShapeType == null; // todo: binding
+					},
+					ctx => !shapeCanvas.IsReadOnly
+				)
+			);
+
 			//AddCommandBindings();
 
 			//InitializePenSettings();
-			//InitializeCameras();
 			//InitializeStrokes();
 
 
 			//strokeUndoManager = new PpsUndoManager();
 
 			//strokeUndoManager.CollectionChanged += (sender, e) => { PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("RedoM")); PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("UndoM")); };
-
-			//SetValue(commandsPropertyKey, new PpsUICommandCollection());
-
-			//if (imagesList.Items.Count > 0)
-			//	SelectedAttachment = (IPpsAttachmentItem)imagesList.Items[0];
-			//else if (CameraEnum.Count() > 0)
-			//	SelectedCamera = CameraEnum.First();
 		} // ctor
 
 		/// <summary></summary>
@@ -271,144 +316,7 @@ namespace TecWare.PPSn.UI
 		#region -- Helper Classes -----------------------------------------------------
 
 		//#region -- Data Representation ------------------------------------------------
-
-		///// <summary>This class represents the collection of available cameras</summary>
-		//public class PpsCameraHandler : IEnumerable<PpsAforgeCamera>, INotifyCollectionChanged, IDisposable
-		//{
-		//	#region ---- Readonly ----------------------------------------------------------------
-
-		//	private readonly System.Timers.Timer refreshTimer;
-		//	private readonly LoggerProxy log;
-		//	private readonly System.Windows.Threading.Dispatcher dispatcher;
-
-		//	#endregion
-
-		//	#region ---- Events ------------------------------------------------------------------
-
-		//	/// <summary>Thrown if a Camera was added or removed</summary>
-		//	public event NotifyCollectionChangedEventHandler CollectionChanged;
-
-		//	private void RefreshTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
-		//	{
-		//		// the timer may trigger while initialized||lost is called - rendering the list invalid
-		//		lock (awaitingCameras)
-		//		{
-		//			// list all webcams
-		//			var localWebcamCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-		//			// subtract webcams which are already known (running or being initialized)
-		//			var localUninitializedWebcamCollection = from FilterInfo vc in localWebcamCollection where !((from c in cameras select c.MonikerString).Contains(vc.MonikerString)) select vc;
-		//			// subtract webcams which are neither usb nor pnp:display(directly on cpu/bus)
-		//			var localValidWebcamCollection = from FilterInfo vc in localUninitializedWebcamCollection where (vc.MonikerString.Contains("vid") || vc.MonikerString.Contains("pnp:\\\\?\\display")) select vc;
-		//			foreach (var cam in localValidWebcamCollection)
-		//			{
-		//				awaitingCameras.Add(cam);
-		//				var acam = new PpsAforgeCamera(cam, log);
-		//				acam.CameraInitialized += (ts, te) =>
-		//				{
-		//					lock (awaitingCameras)
-		//					{
-		//						awaitingCameras.Remove((from tcam in awaitingCameras where tcam.MonikerString == ((PpsAforgeCamera)ts).MonikerString select tcam).First());
-
-		//						cameras.Add((PpsAforgeCamera)ts);
-
-		//						dispatcher.Invoke(() => CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, new List<PpsAforgeCamera>() { (PpsAforgeCamera)ts })));
-
-		//						((PpsAforgeCamera)ts).SnapShot += SnapShot;
-		//					}
-		//				};
-		//				acam.CameraLost += (ts, te) =>
-		//				{
-		//					lock (awaitingCameras)
-		//					{
-		//						// the camera may fail during initialization -> delete from awaiting thus reininitalizing
-		//						var waitingCam = (from tcam in awaitingCameras where tcam.MonikerString == ((PpsAforgeCamera)ts).MonikerString select tcam).FirstOrDefault();
-		//						if (waitingCam != null)
-		//							awaitingCameras.Remove(waitingCam);
-
-		//						// the camera may fail during runtime -> delete from list of running cameras
-		//						var pos = cameras.IndexOf((PpsAforgeCamera)ts);
-		//						if (pos >= 0)
-		//						{
-		//							cameras.Remove((PpsAforgeCamera)ts);
-
-		//							dispatcher.Invoke(() => CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, (PpsAforgeCamera)ts, pos)));
-		//						}
-		//						((PpsAforgeCamera)ts).Dispose();
-		//					}
-		//				};
-		//			}
-		//		}
-		//	}
-
-		//	#endregion
-
-		//	#region ---- Fields ------------------------------------------------------------------
-
-		//	// actual working cameras
-		//	private List<PpsAforgeCamera> cameras;
-		//	// cameras where initialization already started
-		//	private List<FilterInfo> awaitingCameras = new List<FilterInfo>();
-
-		//	#endregion
-
-		//	#region ---- Constructor/Destructor --------------------------------------------------
-
-		//	/// <summary>Initializes the Handler, starts exploration of devices</summary>
-		//	/// <param name="log">reference to the TraceLog for Status/Warning messages</param>
-		//	public PpsCameraHandler(LoggerProxy log)
-		//	{
-		//		this.log = log ?? throw new ArgumentNullException(nameof(log));
-		//		this.dispatcher = Application.Current.Dispatcher;
-
-		//		cameras = new List<PpsAforgeCamera>();
-		//		refreshTimer = new System.Timers.Timer();
-		//		refreshTimer.Elapsed += RefreshTimer_Elapsed;
-		//		refreshTimer.Interval = 1000;
-		//		refreshTimer.AutoReset = true;
-		//		refreshTimer.Start();
-
-		//		RefreshTimer_Elapsed(null, null);
-		//	}
-
-		//	/// <summary>Destructor disposes all handles to cameras</summary>
-		//	~PpsCameraHandler()
-		//	{
-		//		Dispose();
-		//	}
-
-		//	/// <summary>stops the exploration of cameras, disposes all open handles to cameras</summary>
-		//	public void Dispose()
-		//	{
-		//		refreshTimer.Stop();
-		//		refreshTimer.Dispose();
-		//		foreach (var cam in cameras)
-		//			cam.Dispose();
-		//	}
-
-		//	#endregion
-
-		//	#region ---- Properties --------------------------------------------------------------
-
-		//	/// <summary>Event is thrown, when a Camera provides a Snapshot (either requested by the App or by a hardware pushbutton</summary>
-		//	public NewFrameEventHandler SnapShot;
-
-		//	/// <summary>List of available cameras</summary>
-		//	/// <returns></returns>
-		//	public IEnumerator<PpsAforgeCamera> GetEnumerator()
-		//	{
-		//		return ((IEnumerable<PpsAforgeCamera>)cameras).GetEnumerator();
-		//	}
-
-		//	IEnumerator IEnumerable.GetEnumerator()
-		//	{
-		//		return ((IEnumerable<PpsAforgeCamera>)cameras).GetEnumerator();
-		//	}
-
-		//	#endregion
-		//}
-
-
-
+			
 		///// <summary>representation for thicknesses</summary>
 		//public class PpsPecStrokeThickness
 		//{
@@ -598,28 +506,6 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Events -------------------------------------------------------------
-
-		///// <summary>
-		///// Checks, if the mouse is over an InkStroke and changes the cursor according
-		///// </summary>
-		///// <param name="sender">InkCanvas</param>
-		///// <param name="e"></param>
-		//private void InkCanvasRemoveHitTest(object sender, MouseEventArgs e)
-		//{
-		//	var hit = false;
-		//	var pos = e.GetPosition((InkCanvas)sender);
-		//	foreach (var stroke in InkStrokes)
-		//		if (stroke.HitTest(pos))
-		//		{
-		//			hit = true;
-		//			break;
-		//		}
-		//	InkEditCursor = hit ? Cursors.No : Cursors.Cross;
-		//}
-
-		#endregion
-
 		#region -- Commands -----------------------------------------------------------
 
 		#region ---- CommandBindings ----------------------------------------------------------
@@ -707,29 +593,7 @@ namespace TecWare.PPSn.UI
 
 		//	AddStrokeCommandBindings();
 		//}
-
-		//private void AddCameraCommandBindings()
-		//{
-		//	CommandBindings.Add(new CommandBinding(
-		//		ApplicationCommands.New,
-		//		(sender, e) =>
-		//		{
-		//			if (SelectedCamera != null)
-		//			{
-		//				SelectedCamera.MakePhoto();
-		//			}
-		//		},
-		//		(sender, e) => e.CanExecute = SelectedCamera != null));
-
-		//	CommandBindings.Add(new CommandBinding(
-		//		ChangeCameraCommand,
-		//		(sender, e) =>
-		//		{
-		//			SelectedCamera = (PpsAforgeCamera)e.Parameter;
-		//			//SetCharmObject(null);
-		//		}));
-		//}
-
+		
 		//private void AddStrokeCommandBindings()
 		//{
 		//CommandBindings.Add(new CommandBinding(
@@ -791,34 +655,7 @@ namespace TecWare.PPSn.UI
 		//	},
 		//	(sender, e) => e.CanExecute = true));
 		//}
-
-		#region Helper Functions
-
-		///// <summary>
-		///// Finds the UIElement of a given type in the childs of another control
-		///// </summary>
-		///// <param name="t">Type of Control</param>
-		///// <param name="parent">Parent Control</param>
-		///// <returns></returns>
-		//private DependencyObject FindChildElement(Type t, DependencyObject parent)
-		//{
-		//	if (parent.GetType() == t)
-		//		return parent;
-
-		//	DependencyObject ret = null;
-		//	var i = 0;
-
-		//	while (ret == null && i < VisualTreeHelper.GetChildrenCount(parent))
-		//	{
-		//		ret = FindChildElement(t, VisualTreeHelper.GetChild(parent, i));
-		//		i++;
-		//	}
-
-		//	return ret;
-		//}
-
-		#endregion
-
+		
 		#region UICommands
 
 		/// <summary>sets the Mode to Edit</summary>
@@ -1001,65 +838,7 @@ namespace TecWare.PPSn.UI
 		//} // proc InitializePenSettings
 
 		#endregion
-
-		#region -- Hardware / Cameras -------------------------------------------------
-
-		//private void InitializeCameras()
-		//{
-		//	CameraEnum = new PpsCameraHandler(log);
-
-		//	CameraEnum.SnapShot += (s, e) =>
-		//	{
-		//		var path = String.Empty;
-		//		var runningindex = -1;
-		//		var written = false;
-
-		//		// find a useable path
-		//		while (!written)
-		//		{
-		//			runningindex++;
-
-		//			path = Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + (runningindex > 0 ? "_(" + runningindex + ")" : String.Empty) + ".jpg";
-		//			if (File.Exists(path))
-		//				continue;
-
-		//			try
-		//			{
-		//				e.Frame.Save(path, ImageFormat.Jpeg);
-		//				written = true;
-		//			}
-		//			catch (ExternalException)
-		//			{
-		//				continue;
-		//			}
-		//		}
-
-		//		e.Frame.Dispose();
-		//		//PpsObject obj = null;
-		//		//Dispatcher.Invoke(async () =>
-		//		//{
-		//		//	obj = await IncludePictureAsync(path);
-
-		//		//	Attachments.Append(obj);
-
-		//		//	File.Delete(path);
-		//		//	var i = 0;
-
-		//		//	// scroll the new item into view - 
-		//		//	// to find the new item one has to scroll one-by-one, because the itemscontrol is virtualizing so a new item can't be found, because it is not rendered, unless it is near the FOV
-		//		//	while (i < imagesList.Items.Count && imagesList.Items[i] != obj)
-		//		//	{
-		//		//		((ListBoxItem)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
-		//		//		i++;
-		//		//	}
-
-		//		//	LastSnapshot = obj;
-		//		//}).AwaitTask();
-		//	};
-		//}
-
-		#endregion
-
+		
 		#region -- Strokes ------------------------------------------------------------
 
 		//private bool LeaveCurrentImage()
@@ -1122,47 +901,6 @@ namespace TecWare.PPSn.UI
 		//public IEnumerable<object> UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index descending select un).ToArray();
 		///// <summary>Property for the ToolBar which references the available Redo items</summary>
 		//public IEnumerable<object> RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
-		///// <summary>Binding Point for caller to set the shown attachments</summary>
-		//public IPpsAttachments Attachments { get => (IPpsAttachments)GetValue(AttachmentsProperty); set => SetValue(AttachmentsProperty, value); }
-		///// <summary>The Attachmnet which is shown in the editor</summary>
-		//public IPpsAttachmentItem SelectedAttachment
-		//{
-		//	get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
-		//	private set
-		//	{
-		//		if (value != null && !LeaveCurrentImage())
-		//			return;
-
-		//		if (value != null)
-		//			AddToolbarCommands();
-		//		else
-		//			RemoveToolbarCommands();
-		//		SetValue(selectedAttachmentPropertyKey, value);
-		//		SelectedCamera = null;
-		//	}
-		//} // prop SelectedAttachment
-
-		///// <summary>The camera which is shown in the editor</summary>
-		//public PpsAforgeCamera SelectedCamera
-		//{
-		//	get => (PpsAforgeCamera)GetValue(SelectedCameraProperty);
-		//	private set
-		//	{
-		//		if (value != null)
-		//		{
-		//			if (!LeaveCurrentImage())
-		//				return;
-		//			//SelectedAttachment = null;
-		//		}
-		//		SetValue(selectedCameraPropertyKey, value);
-		//	}
-		//} // prop SelectedCamera
-
-		/////// <summary></summary>
-		////public PpsObject LastSnapshot { get => (PpsObject)GetValue(LastSnapshotProperty); private set => SetValue(lastSnapshotPropertyKey, value); }
-
-		///// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
-		//public PpsCameraHandler CameraEnum { get => (PpsCameraHandler)GetValue(CameraEnumProperty); private set => SetValue(cameraEnumPropertyKey, value); }
 
 		///// <summary>The Strokes made on the shown Image</summary>
 		//public PpsDetraceableStrokeCollection InkStrokes
@@ -1248,4 +986,6 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 	} // class PpsPicturePane
+
+	#endregion
 }

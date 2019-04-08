@@ -1,0 +1,18 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:TecWare.PPSn"
+					xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015">
+	<Matrix x:Key="DrawingImageMatrix">24.0, 0.0, 0.0, 24.0, 0.0, 0.0</Matrix>
+
+	<ui:PpsGeometryShapeFactory x:Key="{ui:PpsShapeResourceKey Information}" 
+								Text="Information" Order="200;100"
+								GeometryScale="{StaticResource DrawingImageMatrix}" 
+								Geometry="{StaticResource informationPathGeometry}" />
+
+	<ui:PpsGeometryShapeFactory x:Key="{ui:PpsShapeResourceKey Arrow}" Text="Pfeil" Order="200;110"
+								GeometryScale="{StaticResource DrawingImageMatrix}">
+		<ui:PpsGeometryShapeFactory.Geometry>
+			<PathGeometry Figures="M19,6.41L17.59,5L7,15.59V9H5V19H15V17H8.41L19,6.41Z"/>
+		</ui:PpsGeometryShapeFactory.Geometry>
+	</ui:PpsGeometryShapeFactory>
+</ResourceDictionary>

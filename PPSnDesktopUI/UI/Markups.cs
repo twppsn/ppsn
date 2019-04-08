@@ -15,10 +15,16 @@
 #endregion
 using Neo.IronLua;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Xaml;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
@@ -106,6 +112,125 @@ namespace TecWare.PPSn.UI
 		[ConstructorArgument("value")]
 		public object Value { get; set; }
 	} // class Constant
+
+	#endregion
+
+	#region -- class PpsTypedResourceKey ----------------------------------------------
+
+	/// <summary>Resource key to mark shapes</summary>
+	public abstract class PpsTypedResourceKey : ResourceKey
+	{
+		private readonly string name;
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		protected PpsTypedResourceKey(string name)
+		{
+			this.name = name ?? throw new ArgumentNullException(nameof(name));
+		} // ctor
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> GetType().Name + "@" + name;
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public sealed override int GetHashCode()
+			=> GetType().GetHashCode() ^ name.GetHashCode();
+
+		/// <summary>Compare resource keys.</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public sealed override bool Equals(object obj)
+			=> obj is PpsTypedResourceKey r ? r.name == name && r.GetType() == GetType() : base.Equals(obj);
+
+		/// <summary>Resource name.</summary>
+		public string Name => Name;
+		/// <summary>Assembly is <c>null</c>.</summary>
+		public sealed override Assembly Assembly => null;
+	} // class PpsTypedResourceKey
+
+	#endregion
+
+	#region -- class PpsCollectTypedResources -----------------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsCollectTypedResources : MarkupExtension
+	{
+		/// <summary></summary>
+		/// <param name="resourceKeyType"></param>
+		public PpsCollectTypedResources(Type resourceKeyType)
+		{
+			ResourceKeyType = resourceKeyType ?? throw new ArgumentNullException(nameof(resourceKeyType));
+		} // ctor
+
+		/// <summary></summary>
+		/// <typeparam name="TKEY"></typeparam>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public object GetResult<TKEY, T>(PpsShellWpf shell)
+			where TKEY : ResourceKey
+		{
+			var result = shell.FindResourceByKey<TKEY, T>();
+
+			// order result
+			if(Order || Comparer != null)
+			{
+				if (Comparer != null)
+				{
+					if (Comparer is IComparer<T> comparer)
+						result = result.OrderBy(c => c, comparer);
+					else
+						throw new ArgumentOutOfRangeException(nameof(Comparer), $"Comparer does not implement '{typeof(IComparer<T>).GetType().Name}'.");
+				}
+				else if (typeof(IComparable<T>).IsAssignableFrom(typeof(T)))
+				{
+					result = result.OrderBy(c => c);
+				}
+				else
+					throw new ArgumentOutOfRangeException(nameof(Comparer), $"Resource does not implement '{typeof(IComparable<T>).GetType().Name}'.");
+			}
+
+			return CreateArray ? result.ToArray() : result;
+		} // func GetResult
+
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			// find shell
+			var rootObject = serviceProvider.GetService<IRootObjectProvider>(true);
+			var shell = PpsShellWpf.GetShell((DependencyObject)rootObject.RootObject);
+
+			// make select method
+			var m = findResourceKeyMethodInfo.MakeGenericMethod(ResourceKeyType, ResourceType ?? typeof(object));
+			return m.Invoke(this, new object[] { shell });
+		} // func ProvideValue
+
+		/// <summary>Resource key, which is selected.</summary>
+		public Type ResourceKeyType { get; }
+
+		/// <summary>Type of the returned resource</summary>
+		public Type ResourceType { get; set; } = typeof(object);
+
+		/// <summary>Return a ordered collection.</summary>
+		public bool Order { get; set; } = false;
+		/// <summary>Compare resources</summary>
+		public IComparer Comparer { get; set; } = null;
+		/// <summary>Return an array.</summary>
+		public bool CreateArray { get; set; } = false;
+
+		private static readonly MethodInfo findResourceKeyMethodInfo;
+
+		static PpsCollectTypedResources()
+		{
+			findResourceKeyMethodInfo = typeof(PpsCollectTypedResources).GetMethod(nameof(GetResult)) ?? throw new ArgumentNullException(nameof(PpsShellWpf.FindResourceByKey));
+		}
+	} // class PpsCollectTypedResources
 
 	#endregion
 
