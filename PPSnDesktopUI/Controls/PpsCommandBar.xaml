@@ -101,6 +101,7 @@ specific language governing permissions and limitations under the Licence.
 									CommandParameter="{Binding CommandParameter}"
 									CommandTarget="{Binding CommandTarget}"
 									Content="{Binding DisplayText}"
+									IsEnabled="{Binding IsEnabled}"
 									Popup="{Binding Popup}"
 									Mode="{Binding Mode}"
 									ToolTip="{Binding Description}"
