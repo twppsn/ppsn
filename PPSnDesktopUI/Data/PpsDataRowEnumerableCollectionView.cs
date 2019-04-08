@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Data;
@@ -241,15 +242,24 @@ namespace TecWare.PPSn.Data
 
 			if (enumeratorVersion == callEnumeratorVersion)
 			{
+				var firstRow = currentFetchedRows.Count > 0 ? currentFetchedRows[0] : null;
+
 				// update view
 				if (Filter != null)
 				{
 					foreach (var r in rows)
 					{
+						// check if alread added
+						if (firstRow == r)
+							continue;
+
+						// filter
 						if (Filter(r))
 							currentFetchedRows.Add(r);
 					}
 				}
+				else if (firstRow != null)
+					currentFetchedRows.AddRange(rows.Where(c => c != firstRow));
 				else
 					currentFetchedRows.AddRange(rows);
 
@@ -285,6 +295,7 @@ namespace TecWare.PPSn.Data
 
 		private bool EnsureItem(int index)
 		{
+			Debug.Print("ENSURE: {0}", index);
 			// enumeration is finished
 			switch (currentEnumeratorState)
 			{
@@ -350,7 +361,29 @@ namespace TecWare.PPSn.Data
 		/// <param name="item"></param>
 		/// <returns></returns>
 		public override int IndexOf(object item)
-			=> currentFetchedRows?.IndexOf((IDataRow)item) ?? -1;
+		{
+			if (IsEmpty) // ensure first row
+				return -1;
+
+			var idx = currentFetchedRows.IndexOf((IDataRow)item);
+			if (idx >= 0)
+				return idx;  // item is cached
+
+			// item is not cached, yet
+			// add as first item, may a problem could be that the item is views twice
+			if (CheckCompatibleRow(item))
+			{
+				currentFetchedRows.Insert(0, (IDataRow)item);
+				return 0;
+			}
+			else
+				return -1;
+		} // func IndexOf
+
+		private bool CheckCompatibleRow(object item)
+		{
+			return item is IDataRow; // todo: check enumeration
+		} // func CheckCompatibleRow
 
 		/// <summary>Test if this collection has items</summary>
 		public override bool IsEmpty
