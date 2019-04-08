@@ -295,7 +295,6 @@ namespace TecWare.PPSn.Data
 
 		private bool EnsureItem(int index)
 		{
-			Debug.Print("ENSURE: {0}", index);
 			// enumeration is finished
 			switch (currentEnumeratorState)
 			{

@@ -2305,7 +2305,7 @@ namespace TecWare.PPSn
 
 		private async Task LoadDataAsync()
 		{
-			loadedRawData = await baseObj.LoadObjectDataInformationAsync() ?? DBNull.Value;
+			loadedRawData = (await baseObj.LoadObjectDataInformationAsync()) ?? DBNull.Value;
 			await Task.Run(() => baseObj.Tags.RefreshTags(false));
 			loadedHash = baseObj.RevisionTags.GetProperty(HashTag, null);
 			newRawData = null;
@@ -3573,7 +3573,7 @@ namespace TecWare.PPSn
 			var data = await GetDataAsync<IPpsObjectData>();
 			if (data is PpsObjectBlobData blob)
 			{
-				using (var dataAccess = data.AccessAsync())
+				using (var dataAccess = await data.AccessAsync())
 				{
 					if (blob.RawData is string f)
 						fileName = f;
