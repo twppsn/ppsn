@@ -23,7 +23,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
 		<Setter Property="BorderThickness" Value="0" />
-		<Setter Property="Padding" Value="0" />
+		<Setter Property="Padding" Value="0,0,0,0" />
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
@@ -35,8 +35,7 @@ specific language governing permissions and limitations under the Licence.
 					<Border Background="{TemplateBinding Background}"
 							BorderBrush="{TemplateBinding BorderBrush}"
 							BorderThickness="{TemplateBinding BorderThickness}"
-							SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-							Padding="{TemplateBinding Padding}">
+							SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 						<Grid>
 							<Grid.RowDefinitions>
 								<RowDefinition Height="Auto" />
@@ -73,6 +72,7 @@ specific language governing permissions and limitations under the Licence.
 									   Margin="0,0,0,6" />
 							<ui:PpsScrollViewer Grid.Row="2"
 												Grid.ColumnSpan="2"
+												Margin="{TemplateBinding Padding}"
 												Focusable="False"
 												CanContentScroll="True"
 												HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
