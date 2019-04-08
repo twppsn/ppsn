@@ -54,7 +54,7 @@ specific language governing permissions and limitations under the Licence.
 												  Width="20"
 												  Height="20"
 												  Foreground="{DynamicResource PPSnActionButtonBrush}"
-												  Opacity=".65" />
+												  Opacity=".75" />
 							<ContentPresenter Grid.Column="1"
 											  Content="{TemplateBinding Header}"
 											  ContentTemplate="{TemplateBinding HeaderTemplate}"
@@ -63,7 +63,7 @@ specific language governing permissions and limitations under the Licence.
 											  HorizontalAlignment="Left"
 											  VerticalAlignment="Center"
 											  Margin="6,0,0,0"
-											  TextElement.FontSize="18"
+											  TextElement.FontSize="16"
 											  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
 								<ContentPresenter.Resources>
 									<Style TargetType="{x:Type TextBlock}">
