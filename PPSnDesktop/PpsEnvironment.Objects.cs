@@ -702,7 +702,6 @@ namespace TecWare.PPSn
 		
 		/// <summary></summary>
 		public PpsObject Parent => parent;
-
 	} // class PpsObjectLinks
 
 	#endregion

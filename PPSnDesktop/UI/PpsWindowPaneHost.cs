@@ -270,7 +270,7 @@ namespace TecWare.PPSn.UI
 
 		public ImageSource Render(int pixelWidth, int pixelHeight, double dpiX = 96.0, double dpiY = 96.0)
 		{
-			var ctrlSize = new Size(ActualWidth, ActualHeight);
+			var ctrlSize = new Size(Math.Min(ActualWidth, 3000), Math.Min(ActualHeight, 3000));
 			if (ctrlSize.Width < 10.0 || ctrlSize.Height < 10.0)
 				return null;
 

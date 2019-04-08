@@ -258,13 +258,15 @@ namespace TecWare.PPSn.Controls
 		{
 			if (!IsFilterable)
 				base.OnItemsChanged(e); // do not change any selection
-			else if(IsDropDownOpen) // enforce focus on first
+			else if (IsDropDownOpen) // enforce focus on first
 			{
 				var itemContainerGenerator = ItemContainerGenerator;
 				if (itemContainerGenerator != null)
 					itemContainerGenerator.StatusChanged += ItemContainerGenerator_StatusChanged;
-				
+
 			}
+			else if (e.Action == NotifyCollectionChangedAction.Reset && SelectedValue != null && SelectedIndex == -1) // set selection
+				base.OnItemsChanged(e);
 		} // proc OnItemsChanged
 
 		private void ItemContainerGenerator_StatusChanged(object sender, EventArgs e)

@@ -549,7 +549,7 @@ namespace TecWare.PPSn.UI
 
 	/// <summary>Command order structure</summary>
 	[TypeConverter(typeof(PpsCommandOrderConverter))]
-	public sealed class PpsCommandOrder : IEquatable<PpsCommandOrder>, IComparable<PpsCommandOrder>
+	public sealed class PpsCommandOrder : IEquatable<PpsCommandOrder>, IComparable<PpsCommandOrder>, IComparable
 	{
 		/// <summary></summary>
 		/// <param name="group"></param>
@@ -588,6 +588,12 @@ namespace TecWare.PPSn.UI
 		public int CompareTo(PpsCommandOrder other)
 			=> Group == other.Group ? Order - other.Order : Group - other.Group;
 
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public int CompareTo(object obj)
+			=> obj is PpsCommandOrder o ? CompareTo(o) : 0;
+
 		/// <summary>Group of commands</summary>
 		public int Group { get; }
 		/// <summary>Order of with the group.</summary>
@@ -597,6 +603,32 @@ namespace TecWare.PPSn.UI
 		public bool IsEmpty => Equals(Empty);
 
 		// -- Static ----------------------------------------------------------------------
+
+		#region -- class GetGroupConverter --------------------------------------------
+
+		private sealed class GetGroupConverter : IValueConverter
+		{
+			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+				=> value is PpsCommandOrder o ? (object)o.Group : DependencyProperty.UnsetValue;
+
+			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) 
+				=> throw new NotSupportedException();
+		} // class GetGroupConverter
+
+		#endregion
+
+		#region -- class GetOrderConverter --------------------------------------------
+
+		private sealed class GetOrderConverter : IValueConverter
+		{
+			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+				=> value is PpsCommandOrder o ? (object)o.Order : DependencyProperty.UnsetValue;
+
+			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+				=> throw new NotSupportedException();
+		} // class GetOrderConverter
+
+		#endregion
 
 		/// <summary>Empty command order</summary>
 		public static PpsCommandOrder Empty { get; } = new PpsCommandOrder(Int32.MaxValue, -1);
@@ -646,6 +678,11 @@ namespace TecWare.PPSn.UI
 			order = Empty;
 			return false;
 		} //func TryParse
+
+		/// <summary></summary>
+		public static IValueConverter GetGroup { get; } = new GetGroupConverter();
+		/// <summary></summary>
+		public static IValueConverter GetOrder { get; } = new GetOrderConverter();
 	} // class PpsCommandOrder
 
 	#endregion
