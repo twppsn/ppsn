@@ -17,6 +17,7 @@ using System;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -28,6 +29,7 @@ namespace PPSnExcel
 	internal partial class ReportInsertForm : Form
 	{
 		private readonly PpsEnvironment env;
+		private Matrix scaleMatrix = new Matrix(1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
 
 		public ReportInsertForm(PpsEnvironment env)
 		{
@@ -38,6 +40,14 @@ namespace PPSnExcel
 			// run in background
 			env.Spawn(RefreshViewAsync);
 		} // ctor
+
+		protected override void ScaleControl(SizeF factor, BoundsSpecified specified)
+		{
+			base.ScaleControl(factor, specified);
+
+			scaleMatrix = new Matrix(factor.Width, 0.0f, 0.0f, factor.Height, 0.0f, 0.0f);
+			dv.RowTemplate.Height = scaleMatrix.TransformX(38);
+		} // proc ScaleControl
 
 		protected override void OnClosing(CancelEventArgs e)
 		{
@@ -139,40 +149,49 @@ namespace PPSnExcel
 			if (e.RowIndex < 0)
 				return;
 
-			var v = dv.Rows[e.RowIndex].DataBoundItem as DataRowView;
-			if (v == null)
-				return;
-
-			e.Paint(e.ClipBounds, DataGridViewPaintParts.Background | DataGridViewPaintParts.SelectionBackground);
-			if (e.ColumnIndex == 0)
+			if (dv.Rows[e.RowIndex].DataBoundItem is DataRowView v)
 			{
-				var displayName = v["DisplayName"] as string;
-				var description = v["Description"] as string;
-				var typeImage = GetTypeImage(v["Type"] as string);
-				if (String.IsNullOrEmpty(displayName))
-					displayName = (string)v["ReportId"];
-
-				var g = e.Graphics;
-				using (var fmt = new StringFormat(StringFormatFlags.NoWrap) { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter })
-				using (var br = new SolidBrush(e.CellStyle.ForeColor))
-				using (var fnt = new Font(Font, FontStyle.Bold))
+				e.Paint(e.ClipBounds, DataGridViewPaintParts.Background | DataGridViewPaintParts.SelectionBackground);
+				if (e.ColumnIndex == 0)
 				{
-					var rc = new Rectangle(e.CellBounds.Left + 3, e.CellBounds.Top + 3,
-						32, 32
-					);
-					if (typeImage != null)
-						g.DrawImage(typeImage, rc);
+					var displayName = v["DisplayName"] as string;
+					var description = v["Description"] as string;
+					var typeImage = GetTypeImage(v["Type"] as string);
+					if (String.IsNullOrEmpty(displayName))
+						displayName = (string)v["ReportId"];
 
-					rc = new Rectangle(
-						e.CellBounds.Left + 40,
-						e.CellBounds.Top + 3,
-						e.CellBounds.Width - 6,
-						(e.CellBounds.Height - 6) / 2
-					);
-					g.DrawString(displayName, fnt, br, rc, fmt);
+					var g = e.Graphics;
+					using (var fmt = new StringFormat(StringFormatFlags.NoWrap) { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter })
+					using (var br = new SolidBrush((e.State & DataGridViewElementStates.Selected) != 0 ? e.CellStyle.SelectionForeColor : e.CellStyle.ForeColor))
+					using (var fnt = new Font(Font, FontStyle.Bold))
+					{
+						var pts = new Point[]
+						{
+							new Point(3, 3),
+							new Point(32, 32),
+							new Point(40, 3),
+							new Point(6,6)
+						};
 
-					rc.Y = rc.Top + rc.Height;
-					g.DrawString(description, Font, br, rc, fmt);
+						scaleMatrix.TransformPoints(pts);
+
+						var rc = new Rectangle(e.CellBounds.Left + pts[0].X, e.CellBounds.Top + pts[0].Y,
+							pts[1].X, pts[1].Y
+						);
+						if (typeImage != null)
+							g.DrawImage(typeImage, rc);
+
+						rc = new Rectangle(
+							e.CellBounds.Left + pts[2].X,
+							e.CellBounds.Top + pts[2].Y,
+							e.CellBounds.Width - pts[3].X,
+							(e.CellBounds.Height - pts[3].Y) / 2
+						);
+						g.DrawString(displayName, fnt, br, rc, fmt);
+
+						rc.Y = rc.Top + rc.Height;
+						g.DrawString(description, Font, br, rc, fmt);
+					}
 				}
 			}
 

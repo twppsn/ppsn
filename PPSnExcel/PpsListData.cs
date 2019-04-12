@@ -195,11 +195,15 @@ namespace PPSnExcel
 			{
 				var col = columnInfo.Columns[i];
 
-				// set schema
-				xColumns.Add(new XElement(xsdElementName,
+				var xColumnDef = new XElement(xsdElementName,
 					new XAttribute("name", columnNames[i] = col.Name),
-					new XAttribute("type", namespaceShortcut + ":" + typeToXsdType[col.DataType])
-				));
+					new XAttribute("type", namespaceShortcut + ":" + typeToXsdType[col.DataType]),
+					new XAttribute("minOccurs", col.Attributes.TryGetProperty<bool>("nullable", out var isNullable) && isNullable ? 0 : 1),
+					new XAttribute("maxOccurs", 1)
+				);
+
+				// set schema
+				xColumns.Add(xColumnDef);
 			}
 
 			return (xSchema, columnNames);
@@ -566,10 +570,12 @@ namespace PPSnExcel
 
 						for (var i = 0; i < columnNames.Length; i++)
 						{
-							x.WriteStartElement(columnNames[i]);
 							if (r[i] != null)
+							{
+								x.WriteStartElement(columnNames[i]);
 								x.WriteValue(r[i]);
-							x.WriteEndElement();
+								x.WriteEndElement();
+							}
 						}
 
 						x.WriteEndElement();
@@ -586,6 +592,11 @@ namespace PPSnExcel
 
 				// import data
 				var xmlData = tw.GetStringBuilder().ToString();
+#if DEBUG
+				File.WriteAllText(@"D:\temp\xl.xml", xmlData);
+				File.WriteAllText(@"D:\temp\xl.xsd", xlMap.Schemas[1].XML);
+#endif
+
 				switch (xlMap.ImportXml(xmlData, true))
 				{
 					case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:

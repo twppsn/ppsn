@@ -49,6 +49,14 @@ namespace PPSnExcel
 			RefreshUsername();
 			Refresh();
 
+#if DEBUG
+			cmdExtended.Visible = true;
+			cmdTable.Visible = true;
+#else
+			cmdExtended.Visible = false;
+			cmdTable.Visible = false;
+#endif
+
 			isMenuLoaded = true;
 		} // event PpsMenu_Load
 

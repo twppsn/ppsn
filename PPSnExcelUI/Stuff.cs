@@ -15,6 +15,8 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -87,5 +89,25 @@ namespace TecWare.PPSn
 					yield return new KeyValuePair<string, string>(m.Groups["k"].Value, m.Groups["v"].Value);
 			}
 		} // func GetLineProperties
+
+		public static int TransformX(this Matrix matrix, int x)
+			=> TransformPoint(matrix, new Point(x, 0)).X;
+
+		public static int TransformY(this Matrix matrix, int y)
+			=> TransformPoint(matrix, new Point(0, y)).Y;
+
+		public static Point TransformPoint(this Matrix matrix, Point pt)
+		{
+			var pts = new Point[] { pt };
+			matrix.TransformPoints(pts);
+			return pts[0];
+		} // proc TransformPoint
+
+		public static Rectangle TransformRect(this Matrix matrix, Rectangle rc)
+		{
+			var pts = new Point[] { rc.Location, new Point(rc.Right, rc.Bottom) };
+			matrix.TransformPoints(pts);
+			return new Rectangle(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
+		} // proc TransformPoint
 	} // class XlProcs
 }
