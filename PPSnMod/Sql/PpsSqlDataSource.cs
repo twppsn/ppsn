@@ -535,6 +535,12 @@ namespace TecWare.PPSn.Server.Sql
 
 			private sealed class PpsDataResultColumnAttributes : IPropertyEnumerableDictionary
 			{
+				private static readonly string[,] translateTable = new string[,]
+				{
+					{ "MaxLength", "ColumnSize" },
+					{ "Nullable", "AllowDBNull" }
+				};
+
 				private readonly SqlDataResultColumnDescription column;
 
 				public PpsDataResultColumnAttributes(SqlDataResultColumnDescription column)
@@ -542,12 +548,34 @@ namespace TecWare.PPSn.Server.Sql
 					this.column = column;
 				} // ctor
 
+				private bool TryTranslateAttribute(string attributeName, int sourceIndex, int returnIndex, out string rowName)
+				{
+					for (var i = 0; i < translateTable.GetLength(0); i++)
+					{
+						if (String.Compare(translateTable[i, sourceIndex], attributeName, StringComparison.OrdinalIgnoreCase) == 0)
+						{
+							rowName = translateTable[i, returnIndex];
+							return true;
+						}
+					}
+
+					rowName = attributeName;
+					return false;
+				} // func TryTranslateAttribute
+
+				private bool TryTranslateFromAttribute(string attributeName, out string rowName)
+					=> TryTranslateAttribute(attributeName, 0, 1, out rowName);
+
+				private bool TryTranslateToAttribute(string rowName, out string attributeName)
+					=> TryTranslateAttribute(rowName, 1, 0, out attributeName);
+
 				public bool TryGetProperty(string name, out object value)
 				{
-					if (String.Compare(name, "MaxLength", StringComparison.OrdinalIgnoreCase) == 0)
+					// find value translation
+					if (TryTranslateFromAttribute(name, out var rowName))
 					{
-						value = GetDataRowValue(column.row, "ColumnSize", 0);
-						return true;
+						value = column.row[rowName];
+						return value != DBNull.Value;
 					}
 					else
 					{
@@ -570,7 +598,10 @@ namespace TecWare.PPSn.Server.Sql
 					foreach (var c in column.row.Table.Columns.Cast<DataColumn>())
 					{
 						if (column.row[c] != DBNull.Value)
-							yield return new PropertyValue(c.ColumnName, column.row[c]);
+						{
+							TryTranslateToAttribute(c.ColumnName, out var attributeName);
+							yield return new PropertyValue(attributeName, column.row[c]);
+						}
 					}
 				} // func GetEnumerator
 

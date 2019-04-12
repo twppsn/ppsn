@@ -370,23 +370,16 @@ namespace TecWare.PPSn.Server
 
 		#region -- IEnumerable --------------------------------------------------------
 
-		private IEnumerable<PropertyValue> GetAttributesConverted(string attributeSelector)
-		{
-			foreach (var c in Attributes)
-			{
-				if (attributeSelector == null || c.Name.StartsWith(attributeSelector)) // todo: convert standard attribute
-					yield return c;
-			}
-		} // proc GetAttributesConverted
-
 		/// <summary>Get attributes of this field.</summary>
 		/// <param name="attributeSelector">String selector for attribute names.</param>
 		/// <returns></returns>
 		public IEnumerable<PropertyValue> GetAttributes(string attributeSelector)
-			=> attributeSelector == "*"
+		{
+			return attributeSelector == null || attributeSelector.Length == 0 || attributeSelector == "*"
 				? Attributes
-				: GetAttributesConverted(attributeSelector);
-
+				: Attributes.Where(c => c.Name.StartsWith(attributeSelector)); // todo: convert standard attribute
+		} // func GetAttributes
+		
 		#endregion
 
 		/// <summary>Gets the specific column description.</summary>
@@ -943,6 +936,20 @@ namespace TecWare.PPSn.Server
 			xml.WriteEndElement();
 		} // proc WriteDataRow
 
+		private static void WriteAttributeForViewGet(XmlWriter xml, IPpsColumnDescription fieldDefinition, PropertyValue attr)
+		{
+			xml.WriteStartElement("attribute");
+
+			xml.WriteAttributeString("name", attr.Name);
+			xml.WriteAttributeString("dataType", LuaType.GetType(attr.Type).AliasOrFullName);
+
+			var value = fieldDefinition.Attributes.TryGetProperty(attr.Name, out var tmp) ? tmp : attr.Value;
+			if (value != null)
+				xml.WriteValue(Procs.ChangeType<string>(value));
+
+			xml.WriteEndElement();
+		} // proc WriteAttributeForViewGet
+
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
 		private void HttpViewGetAction(IDEWebRequestScope r)
 		{
@@ -1019,6 +1026,8 @@ namespace TecWare.PPSn.Server
 								{
 									xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
 									xml.WriteAttributeString("field", fieldDefinition.Name);
+
+									WriteAttributeForViewGet(xml, fieldDefinition, new PropertyValue("Nullable", typeof(bool), null));
 								}
 								else
 								{
@@ -1026,14 +1035,7 @@ namespace TecWare.PPSn.Server
 
 									foreach (var c in fieldDescription.GetAttributes(attributeSelector))
 									{
-										xml.WriteStartElement("attribute");
-										
-										xml.WriteAttributeString("name", c.Name);
-										xml.WriteAttributeString("dataType", LuaType.GetType(c.Type).AliasOrFullName);
-										if (c.Value != null)
-											xml.WriteValue(Procs.ChangeType<string>(c.Value));
-
-										xml.WriteEndElement();
+										WriteAttributeForViewGet(xml, fieldDefinition, c);
 									}
 								}
 								xml.WriteEndElement();
