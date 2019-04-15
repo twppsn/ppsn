@@ -79,7 +79,42 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- class PpsClientApplicationInfo -------------------------------------
+
+		/// <summary>Client application information</summary>
+		[DEListTypeProperty("appinfo")]
+		public sealed class PpsClientApplicationInfo
+		{
+			internal PpsClientApplicationInfo(string name, string displayName, string icon, Version version, string source)
+			{
+				Name = name ?? throw new ArgumentNullException(nameof(name));
+				DisplayName = displayName ?? name;
+				Icon = icon;
+				Version = version ?? new Version(1, 0, 0, 0);
+				Source = source;
+			} // ctor
+
+			/// <summary>Internal name of the client application.</summary>
+			[DEListTypeProperty("@name")]
+			public string Name { get; }
+			/// <summary>Displayname for the client application.</summary>
+			[DEListTypeProperty("@displayName")]
+			public string DisplayName { get; }
+			/// <summary>Icon of the application</summary>
+			[DEListTypeProperty("@icon")]
+			public string Icon { get; }
+			/// <summary>Version</summary>
+			[DEListTypeProperty("@version")]
+			public Version Version { get; }
+			/// <summary>Download source</summary>
+			[DEListTypeProperty("@src")]
+			public string Source { get; }
+		} // class PpsClientApplicationInfo
+
+		#endregion
+
 		private readonly SimpleConfigItemProperty<string> initializationProgress;
+		private readonly DEList<PpsClientApplicationInfo> clientApplicationInfos;
 		private Task initializationProcess = null;        // initialization process
 		private bool isInitializedSuccessful = false;     // is the system initialized properly
 
@@ -108,6 +143,8 @@ namespace TecWare.PPSn.Server
 			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 			LuaType.RegisterTypeAlias("geography", typeof(Microsoft.SqlServer.Types.SqlGeography));
 
+			PublishItem(clientApplicationInfos = new DEList<PpsClientApplicationInfo>(this, "tw_client_infos", "Client applications"));
+
 			InitUser();
 		} // ctor
 
@@ -135,6 +172,12 @@ namespace TecWare.PPSn.Server
 		protected override void OnEndReadConfiguration(IDEConfigLoading config)
 		{
 			base.OnEndReadConfiguration(config);
+
+			// register client application packages
+
+			clientApplicationInfos.Clear();
+			clientApplicationInfos.Add(new PpsClientApplicationInfo("ppsndesktop", "PPSn Desktop", null, new Version("1.0.0.0"), null));
+			clientApplicationInfos.Add(new PpsClientApplicationInfo("ppsnexcel", "PPSn Excel", null, new Version("1.0.0.0"), null));
 
 			// set the configuration
 			BeginEndConfigurationData(config);
@@ -600,6 +643,51 @@ namespace TecWare.PPSn.Server
 			return x;
 		} // func GetMimeTypesInfo
 
+		private void WriteApplicationInfo(IDEWebRequestScope r, string applicationName, bool returnAll)
+		{
+			using (clientApplicationInfos.EnterReadLock())
+			{
+				clientApplicationInfos.OnBeforeList();
+
+				using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Http.DefaultEncoding, -1L), Procs.XmlWriterSettings))
+				{
+					xml.WriteStartElement("ppsn");
+					xml.WriteAttributeString("displayName", DisplayName);
+					xml.WriteAttributeString("loginSecurity", "NTLM,Basic");
+
+					// add specific application information
+					if (!String.IsNullOrEmpty(applicationName))
+					{
+						var idx = clientApplicationInfos.FindIndex(c => c.Name == applicationName);
+						if (idx == -1)
+							xml.WriteAttributeString("version", "1.0.0.0");
+						else
+						{
+							var appInfo = clientApplicationInfos[idx];
+							xml.WriteAttributeString("version", appInfo.Version.ToString());
+							if (appInfo.Source != null)
+								xml.WriteAttributeString("src", appInfo.Source);
+						}
+					}
+
+					// return all application
+					if (returnAll)
+					{
+						xml.WriteStartElement("appinfos");
+						var itemWriter = new DEListItemWriter(xml);
+						foreach (var cur in clientApplicationInfos.List)
+							clientApplicationInfos.Descriptor.WriteItem(itemWriter, cur);
+						xml.WriteEndElement();
+					}
+
+					// add mime information
+					GetMimeTypesInfo().WriteTo(xml);
+
+					xml.WriteEndElement();
+				}
+			}
+		} // func WriteApplicationInfo
+
 		/// <summary></summary>
 		/// <param name="r"></param>
 		/// <returns></returns>
@@ -608,46 +696,13 @@ namespace TecWare.PPSn.Server
 			switch (r.RelativeSubPath)
 			{
 				case "info.xml":
-					await Task.Run(() => r.WriteObject(
-						new XElement("ppsn",
-							new XAttribute("displayName", DisplayName),
-							new XAttribute("version", "1.0.0.0"),
-							new XAttribute("loginSecurity", "NTLM,Basic"),
-							GetMimeTypesInfo()
-						)
-					));
+					await Task.Run(() => WriteApplicationInfo(r, r.GetProperty("app", (string)null), r.GetProperty("all", false)));
 					return true;
 				case "login.xml":
 					r.DemandToken(SecurityUser);
 					
 					var ctx = r.GetUser<IPpsPrivateDataContext>();
-					await Task.Run(() =>
-						{
-							// basic login data
-							var xLoginData = new XElement("user",
-								new XAttribute("userId", ctx.UserId),
-								new XAttribute("displayName", ctx.UserName)
-							);
-
-							// update optional values
-							if (ctx.TryGetProperty<long>(UserContextKtKtId, out var ktktId))
-								xLoginData.SetAttributeValue(UserContextKtKtId, ktktId.ChangeType<string>());
-							if (ctx.TryGetProperty<long>(UserContextPersId, out var persId))
-								xLoginData.SetAttributeValue(UserContextPersId, persId.ChangeType<string>());
-							if (ctx.TryGetProperty(UserContextFullName, out var fullName))
-								xLoginData.SetAttributeValue(UserContextFullName, fullName);
-							if (ctx.TryGetProperty(UserContextInitials, out var initials))
-								xLoginData.SetAttributeValue(UserContextInitials, initials);
-
-							// execute script based extensions
-							var t = new LuaTable();
-							CallMemberDirect("OnExtentLogin", new object[] { ctx, t }, ignoreNilFunction: true);
-							foreach (var kv in t.Members)
-								xLoginData.SetAttributeValue(kv.Key, kv.Value);
-							
-							r.WriteObject(xLoginData);
-						}
-					);
+					await Task.Run(() => r.WriteObject(GetLoginData(ctx)));
 					return true;
 				default:
 					return await base.OnProcessRequestAsync(r);

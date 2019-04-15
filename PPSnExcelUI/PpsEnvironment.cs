@@ -28,17 +28,20 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
+	#region -- interface IPpsFormsApplication -----------------------------------------
+
 	public interface IPpsFormsApplication : ISynchronizeInvoke, IWin32Window, IPpsProgressFactory
 	{
 		void Await(Task t);
 
 		SynchronizationContext SynchronizationContext { get; }
 	} // interface IPpsFormsApplication
+
+	#endregion
 
 	/// <summary>Special environment for data warehouse applications</summary>
 	public sealed class PpsEnvironment : PpsShell

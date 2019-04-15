@@ -46,10 +46,10 @@ namespace TecWare.PPSn.Server.Wpf
 		{
 			internal PpsExcelReportItem(string type, string reportId, string displayName, string description)
 			{
-				this.Type = type;
-				this.ReportId = reportId;
-				this.DisplayName = displayName;
-				this.Description = description;
+				Type = type;
+				ReportId = reportId;
+				DisplayName = displayName;
+				Description = description;
 			} // ctor
 
 			/// <summary>Type of the excel report item</summary>
@@ -67,28 +67,17 @@ namespace TecWare.PPSn.Server.Wpf
 			foreach (var v in application.GetViewDefinitions())
 			{
 				if (v.Attributes.GetProperty("bi.visible", false))
-					yield return new PpsExcelReportItem("table", v.Name, v.DisplayName, v.Attributes.GetProperty("description", (string)null));
+					yield return new PpsExcelReportItem("table", v.Name, v.DisplayName, v.Attributes.GetProperty("description", null));
 			}
 		} // func GetExcelReportItems
 
-		// todo: move DECore
-		private static XElement CreateAttributeInfo(PropertyValue attr)
-		{
-			if (attr.Value == null)
-				return null;
-
-			return new XElement("attribute",
-				new XAttribute("name", attr.Name),
-				new XAttribute("dataType", LuaType.GetType(attr.Type).AliasOrFullName),
-				new XText(attr.Value.ChangeType<string>())
-			);
-		} // func CreateAttributeInfo
-
 		private static XElement CreateParameterInfo(XName n, PpsViewParameterDefinition def)
-			=> new XElement(n,
+		{
+			return new XElement(n,
 				new XAttribute("name", def.Name),
 				Procs.XAttributeCreate("displayName", def.DisplayName, null)
 			);
+		} // func CreateParameterInfo
 
 		private static XElement CreateFilterInfo(PpsViewParameterDefinition def)
 			=> CreateParameterInfo("filter", def);
@@ -97,10 +86,12 @@ namespace TecWare.PPSn.Server.Wpf
 			=> CreateParameterInfo("order", def);
 
 		private static XElement CreateJoinInfo(PpsViewJoinDefinition def)
-			=> new XElement("join",
+		{
+			return new XElement("join",
 				new XAttribute("view", def.ViewName),
 				Procs.XAttributeCreate("alias", def.AliasName, null)
 			);
+		} // func CreateJoinInfo
 
 		private static XElement CreateColumnInfo(IDataColumn c, string a)
 		{
@@ -114,13 +105,10 @@ namespace TecWare.PPSn.Server.Wpf
 			if (desc == null)
 			{
 				if (c.Attributes.TryGetProperty<string>("displayName", out var displayName))
-					xColumn.Add(CreateAttributeInfo(new PropertyValue("displayName", displayName)));
+					xColumn.Add(new PropertyValue("displayName", displayName).ToXml());
 			}
 			else
-			{
-				foreach (var attr in desc.GetAttributes(a))
-					xColumn.Add(CreateAttributeInfo(attr));
-			}
+				xColumn.Add(from p in desc.GetAttributes(a) where p.Value != null select p.ToXml());
 
 			return xColumn;
 		} // func CreateColumnInfo
@@ -140,7 +128,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 				// append properties
 				if (viewInfo.Attributes is IPropertyEnumerableDictionary properties)
-					xInfo.Add(properties.Select(CreateAttributeInfo));
+					xInfo.Add(from p in properties where p.Value != null select p.ToXml());
 
 				// append filter
 				xInfo.Add(viewInfo.Filter.Where(o => o.IsVisible).Select(CreateFilterInfo));

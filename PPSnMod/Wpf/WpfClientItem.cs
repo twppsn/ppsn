@@ -43,7 +43,7 @@ namespace TecWare.PPSn.Server.Wpf
 	{
 		/// <summary>Get client site files, that should be synchronizated.</summary>
 		/// <returns></returns>
-		IEnumerable<PpsApplicationFileItem> GetApplicationFiles();
+		IEnumerable<PpsWpfApplicationFileItem> GetApplicationFiles();
 	} // IWpfClientApplicationFileProvider
 
 	#endregion
@@ -433,7 +433,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		private PpsDataSetServerDefinition masterDataSetDefinition;
 		private ParsedXamlFile defaultTheme = null;
-		private List<PpsApplicationFileItem> scriptAddedFiles = new List<PpsApplicationFileItem>();
+		private List<PpsWpfApplicationFileItem> scriptAddedFiles = new List<PpsWpfApplicationFileItem>();
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -920,23 +920,23 @@ namespace TecWare.PPSn.Server.Wpf
 			{
 				var index = scriptAddedFiles.FindIndex(c => c.Path == path);
 				if (index == -1)
-					scriptAddedFiles.Add(new PpsApplicationFileItem(path, length, lastWriteTime));
+					scriptAddedFiles.Add(new PpsWpfApplicationFileItem(path, length, lastWriteTime));
 				else
-					scriptAddedFiles[index] = new PpsApplicationFileItem(path, length, lastWriteTime);
+					scriptAddedFiles[index] = new PpsWpfApplicationFileItem(path, length, lastWriteTime);
 			}
 		} // proc AddApplicationFileItem
 
-		private IEnumerable<PpsApplicationFileItem> GetApplicationFileList()
+		private IEnumerable<PpsWpfApplicationFileItem> GetApplicationFileList()
 		{
 			var basePath = this.Name;
 
-			yield return new PpsApplicationFileItem(basePath + "/styles.xaml", -1, Server.Configuration.ConfigurationStamp);
+			yield return new PpsWpfApplicationFileItem(basePath + "/styles.xaml", -1, Server.Configuration.ConfigurationStamp);
 
 			// navigator.xml
-			yield return new PpsApplicationFileItem(basePath + "/environment.xml", -1, Server.Configuration.ConfigurationStamp);
+			yield return new PpsWpfApplicationFileItem(basePath + "/environment.xml", -1, Server.Configuration.ConfigurationStamp);
 
 			// templates.xml
-			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, Server.Configuration.ConfigurationStamp);
+			yield return new PpsWpfApplicationFileItem(basePath + "/templates.xaml", -1, Server.Configuration.ConfigurationStamp);
 
 			// schemas from application/documents
 			foreach (var c in application.CollectChildren<IWpfClientApplicationFileProvider>())
@@ -961,13 +961,13 @@ namespace TecWare.PPSn.Server.Wpf
 					var virtualPath = x.GetAttribute("virtualPath", String.Empty);
 
 					foreach (var fi in new DirectoryInfo(directoryPath).GetFiles("*", SearchOption.TopDirectoryOnly))
-						yield return new PpsApplicationFileItem(basePath + "/" + virtualPath + "/" + fi.Name, fi.Length, fi.LastWriteTimeUtc);
+						yield return new PpsWpfApplicationFileItem(basePath + "/" + virtualPath + "/" + fi.Name, fi.Length, fi.LastWriteTimeUtc);
 				}
 				else if (x.Name == PpsStuff.xnWpfTheme)
 				{
 					var id = x.GetAttribute("id", String.Empty);
 					if (String.Compare(id, "default", StringComparison.OrdinalIgnoreCase) != 0)
-						yield return new PpsApplicationFileItem(basePath + "/styles.xaml?id=" + id, -1, Server.Configuration.ConfigurationStamp);
+						yield return new PpsWpfApplicationFileItem(basePath + "/styles.xaml?id=" + id, -1, Server.Configuration.ConfigurationStamp);
 				}
 			}
 		} // func GetApplicationFileList
@@ -976,7 +976,7 @@ namespace TecWare.PPSn.Server.Wpf
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
 		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource.SystemConnection, "wpf.sync", offlineFileVersion, GetApplicationFileList());
+			=> new PpsGenericSelector<PpsWpfApplicationFileItem>(dataSource.SystemConnection, "wpf.sync", offlineFileVersion, GetApplicationFileList());
 
 		#endregion
 
