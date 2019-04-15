@@ -547,7 +547,7 @@
 		</xs:annotation>
 	</xs:element>
 
-	<xs:element name="package" substitutionGroup="configItem">
+	<xs:element name="package">
 		<xs:annotation>
 			<xs:documentation>Defines a pps functionality.</xs:documentation>
 			<xs:appinfo>

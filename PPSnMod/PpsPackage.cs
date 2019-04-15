@@ -56,8 +56,8 @@ namespace TecWare.PPSn.Server
 								: Name + "/" + path;
 
 							yield return new PpsApplicationFileItem(path,
-								item.ReturnOptionalValue<long>("length", -1),
-								item.ReturnOptionalValue<DateTime>("lastModified", DateTime.MinValue)
+								item.ReturnOptionalValue("length", -1L),
+								item.ReturnOptionalValue("lastModified", DateTime.MinValue)
 							);
 						}
 					}
