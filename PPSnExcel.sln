@@ -16,6 +16,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnExcelUI", "PPSnExcelUI\PPSnExcelUI.csproj", "{48F78CBB-B08C-42BB-83AF-D02DE9D16010}"
 EndProject
 Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "PPSnExcelMSI", "PPSnExcelMSI\PPSnExcelMSI.wixproj", "{244FBC1B-0ECD-4E6F-9692-C92B5831B412}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D4900AD1-E946-470E-BC3F-4F041EB2A89D} = {D4900AD1-E946-470E-BC3F-4F041EB2A89D}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -87,7 +90,7 @@ Global
 		{244FBC1B-0ECD-4E6F-9692-C92B5831B412} = {44AA1057-C75E-4491-A3A4-18D4CDB955B2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {F0AFC2F2-0A01-4CAB-8B21-44C224AFF0A0}
 		RESX_NeutralResourcesLanguage = de-DE
+		SolutionGuid = {F0AFC2F2-0A01-4CAB-8B21-44C224AFF0A0}
 	EndGlobalSection
 EndGlobal

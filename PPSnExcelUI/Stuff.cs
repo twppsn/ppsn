@@ -19,9 +19,13 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn
 {
+	#region -- class ExcelException ---------------------------------------------------
+
 	/// <summary></summary>
 	public class ExcelException : Exception
 	{
@@ -32,6 +36,8 @@ namespace TecWare.PPSn
 		{
 		} // ctor
 	} // class ExcelException
+
+	#endregion
 
 	public static class XlProcs
 	{
@@ -90,6 +96,8 @@ namespace TecWare.PPSn
 			}
 		} // func GetLineProperties
 
+		#region -- Transform - dpi ----------------------------------------------------
+
 		public static int TransformX(this Matrix matrix, int x)
 			=> TransformPoint(matrix, new Point(x, 0)).X;
 
@@ -109,5 +117,32 @@ namespace TecWare.PPSn
 			matrix.TransformPoints(pts);
 			return new Rectangle(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
 		} // proc TransformPoint
+
+		#endregion
+
+		#region -- Dialogs ------------------------------------------------------------
+
+		public static void ShowException(this IWin32Window owner, ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		{
+			var unpackedException = exception.UnpackException();
+
+			if ((flags & ExceptionShowFlags.Warning) != 0)
+				MessageBox.Show(owner, alternativeMessage ?? unpackedException.Message, "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			else if (unpackedException is ExcelException excelException)
+				MessageBox.Show(owner, alternativeMessage ?? excelException.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			else
+			{
+				using (var exceptionDialog = new ExceptionDialog())
+				{
+					exceptionDialog.SetData(alternativeMessage, unpackedException, false);
+					exceptionDialog.ShowDialog(owner);
+				}
+			}
+		} // proc ShowException
+
+		public static void ShowMessage(this IWin32Window owner, string message)
+			=> MessageBox.Show(owner, message, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+		#endregion
 	} // class XlProcs
 }

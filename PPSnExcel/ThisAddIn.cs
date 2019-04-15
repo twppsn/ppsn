@@ -169,7 +169,7 @@ namespace PPSnExcel
 		/// <summary>Create Table</summary>
 		/// <param name="environment"></param>
 		/// <param name="map"></param>
-		internal async Task ImportTableAsync(Excel.Range range, PpsListMapping map, string reportName)
+		internal async Task ImportTableAsync(Excel.Range range, PpsListMapping map, string reportName, bool singleLineMode)
 		{
 			GetActiveXlObjects(out var worksheet, out var workbook);
 
@@ -184,8 +184,7 @@ namespace PPSnExcel
 			using (var progress = CreateProgress())
 			{
 				progress.Report(String.Format("Importiere '{0}'...", reportName));
-
-				await PpsListObject.CreateAsync(range, map);
+				await PpsListObject.CreateAsync(range, map, singleLineMode);
 			}
 		} // func ImportTableAsync
 
@@ -233,7 +232,7 @@ namespace PPSnExcel
 				progress.Report(String.Format("Aktualisiere {0}...", xlList.Name ?? "Tabelle"));
 
 				if (PpsListObject.TryGet(FindEnvironment, xlList, out var ppsList))
-					await ppsList.RefreshAsync(refreshColumnLayout);
+					await ppsList.RefreshAsync(refreshColumnLayout, PpsMenu.IsSingleLineModeToggle());
 				else
 				{
 					//if (refreshColumnLayout)
@@ -250,7 +249,7 @@ namespace PPSnExcel
 
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
 			{
-				ShowMessage($"{range.ListObject.XmlMap.Schemas[1].XML} --- {range.ListObject.SourceType}");
+				this.ShowMessage($"{range.ListObject.XmlMap.Schemas[1].XML} --- {range.ListObject.SourceType}");
 			}
 
 			var sb = new StringBuilder();
@@ -266,7 +265,7 @@ namespace PPSnExcel
 				}
 			}
 
-			ShowMessage(sb.ToString());
+			this.ShowMessage(sb.ToString());
 		} // func ShowTableInfo
 
 		#endregion
@@ -286,17 +285,6 @@ namespace PPSnExcel
 		#endregion
 
 		#region -- IPpsFormsApplication -----------------------------------------------
-
-		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-		{
-			if (exception is ExcelException ee)
-				MessageBox.Show(this, alternativeMessage ?? exception.Message, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-			else
-				MessageBox.Show(this, alternativeMessage ?? exception.ToString());
-		} // proc ShowException
-
-		public void ShowMessage(string message)
-			=> MessageBox.Show(this, message, "PPSnExcel", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
 		public void Await(Task t)
 			=> waitForm.Await(t);

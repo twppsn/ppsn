@@ -28,6 +28,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
@@ -36,11 +37,8 @@ namespace TecWare.PPSn
 	{
 		void Await(Task t);
 
-		void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
-		void ShowMessage(string message);
-
 		SynchronizationContext SynchronizationContext { get; }
-	} // interface IPpsSynchronize
+	} // interface IPpsFormsApplication
 
 	/// <summary>Special environment for data warehouse applications</summary>
 	public sealed class PpsEnvironment : PpsShell
@@ -253,7 +251,7 @@ namespace TecWare.PPSn
 		#region -- ShowException, ShowMessage -----------------------------------------
 
 		public override void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-			=> formsApplication.ShowException(flags, exception.UnpackException(), alternativeMessage);
+			=> formsApplication.ShowException(flags, exception, alternativeMessage);
 
 		public override void ShowMessage(string message)
 			=> formsApplication.ShowMessage(message);

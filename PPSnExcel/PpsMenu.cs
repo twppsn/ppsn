@@ -118,8 +118,11 @@ namespace PPSnExcel
 			}
 		} // proc RefreshEnvironments
 
-		private static void ImportTableCommand(string reportName, PpsListMapping map)
-			=> Globals.ThisAddIn.Run(() => Globals.ThisAddIn.ImportTableAsync(Globals.ThisAddIn.Application.Selection as Excel.Range, map, reportName));
+		private static void ImportTableCommand(string reportName, PpsListMapping map, bool singleLineMode)
+			=> Globals.ThisAddIn.Run(() => Globals.ThisAddIn.ImportTableAsync(Globals.ThisAddIn.Application.Selection as Excel.Range, map, reportName, singleLineMode));
+
+		public static bool IsSingleLineModeToggle() 
+			=> (Control.ModifierKeys & (Keys.Control | Keys.Alt)) == (Keys.Control | Keys.Alt);
 
 		private static void InsertReport()
 		{
@@ -130,8 +133,9 @@ namespace PPSnExcel
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
 					{
+						var singleLineMode = IsSingleLineModeToggle();
 						if (frm.ReportSource is PpsListMapping map)
-							ImportTableCommand(frm.ReportName, map);
+							ImportTableCommand(frm.ReportName, map, singleLineMode);
 						else
 							MessageBox.Show("todo");
 					}
@@ -147,7 +151,7 @@ namespace PPSnExcel
 				using (var frm = new TableInsertForm(env))
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
-						ImportTableCommand(frm.ReportName, frm.ReportSource);
+						ImportTableCommand(frm.ReportName, frm.ReportSource, IsSingleLineModeToggle());
 				}
 			}
 		} // proc InsertTable

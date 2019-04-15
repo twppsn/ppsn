@@ -9,6 +9,7 @@
 	<String Id="PackageDescription">PPSn Excel Beschreibung</String>
 	<String Id="PackageComments">PPSn Excel Kommentar</String>
 
+	<String Id="ConditionEarlierVersion">Eine ältere Version von [ProductName] ist schon installiert. Setup wird beendet.</String>
 	<String Id="ConditionLaterVersion">Eine neuerer Version wurde schon installiert.</String>
 	<String Id="ConditionAllUsers">Setup darf nur als Nutzer ausgeführt werden.</String>
 </WixLocalization>

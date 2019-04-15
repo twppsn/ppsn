@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?define ProductVersion = "1.0.1.0" ?>
-<?define ProductCode = "bf507455-8652-403b-90a6-62a1108ab713" ?>
+<!-- version und code ändern!!!! -->
+<?define ProductVersion = "1.2.1.0" ?>
+<?define ProductCode = "f2be507d-a104-44c7-8c27-08b17a08f8f2" ?>
+
 <?define ProductUpgradeCode = "59d50ec7-25af-4684-9681-ea8e4c7c593f" ?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
@@ -31,6 +33,8 @@
 			<UpgradeVersion Minimum="$(var.ProductVersion)" OnlyDetect="yes" Property="NEWERVERSIONDETECTED" />
 			<UpgradeVersion Minimum="1.0.0.0" IncludeMinimum="yes" Maximum="$(var.ProductVersion)" IncludeMaximum="no" Property="OLDERVERSIONBEINGUPGRADED" />
 		</Upgrade>
+		<MajorUpgrade DowngradeErrorMessage="!(loc.ConditionEarlierVersion)" />
+		
 		<CustomAction Id="CA_BlockOlderVersionInstall" Error="!(loc.ConditionLaterVersion)" />
 		
 		<!-- Enforce users -->
@@ -52,7 +56,6 @@
 			<Custom Action="CA_BlockOlderVersionInstall" After="FindRelatedProducts">
 				<![CDATA[NEWERVERSIONDETECTED]]>
 			</Custom>
-			<RemoveExistingProducts After="InstallFinalize" />
 			<LaunchConditions After="AppSearch"/>
 
 		</InstallExecuteSequence>

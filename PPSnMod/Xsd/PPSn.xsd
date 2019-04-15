@@ -559,6 +559,7 @@
 				<xs:extension base="ConfigLogItemType">
 					<xs:sequence minOccurs="0" maxOccurs="unbounded">
 						<xs:element ref="pps:objectItem" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:package" minOccurs="0" maxOccurs="unbounded" />
 					</xs:sequence>
 				</xs:extension>
 			</xs:complexContent>

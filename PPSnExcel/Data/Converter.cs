@@ -55,6 +55,8 @@ namespace PPSnExcel.Data
 			if (attributes.TryGetProperty("valign", out tmp))
 				range.HorizontalAlignment = GetAlignment(false, tmp);
 
+			//range.Borders
+
 			//range.ColumnWidth;
 			//range.RowHeight;
 			//range.ShrinkToFit;
