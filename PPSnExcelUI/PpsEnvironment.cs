@@ -43,6 +43,8 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsEnvironment ---------------------------------------------------
+
 	/// <summary>Special environment for data warehouse applications</summary>
 	public sealed class PpsEnvironment : PpsShell
 	{
@@ -167,7 +169,7 @@ namespace TecWare.PPSn
 			return dt.Columns.Count == 0 ? null : dt;
 		} // func GetViewDataAsync
 
-		public override DEHttpClient Request => throw new NotImplementedException();
+		public override DEHttpClient Request => request;
 
 		#endregion
 
@@ -282,4 +284,6 @@ namespace TecWare.PPSn
 
 		private static object[] EmptyArgs { get; } = Array.Empty<object>();
 	} // class PpsEnvironment
+
+	#endregion
 }
