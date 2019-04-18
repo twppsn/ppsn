@@ -17,9 +17,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Microsoft.Deployment.WindowsInstaller;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -174,10 +176,12 @@ namespace TecWare.PPSn.Server
 			base.OnEndReadConfiguration(config);
 
 			// register client application packages
-
 			clientApplicationInfos.Clear();
-			clientApplicationInfos.Add(new PpsClientApplicationInfo("ppsndesktop", "PPSn Desktop", null, new Version("1.0.0.0"), null));
-			clientApplicationInfos.Add(new PpsClientApplicationInfo("ppsnexcel", "PPSn Excel", null, new Version("1.0.0.0"), null));
+			var appSource = UnsafeChildren.OfType<HttpFileWorker>().FirstOrDefault(c => c.Name == "appSource");
+			if (appSource != null)
+				RegisterInitializationTask(1000, "Read Client Applications", () => RefreshClientApplicationInfosAsync(appSource.DirectoryBase, appSource.VirtualRoot));
+			else
+				Log.Info("No application Source defined (HttpFileWorker 'app' is missing).");
 
 			// set the configuration
 			BeginEndConfigurationData(config);
@@ -621,7 +625,56 @@ namespace TecWare.PPSn.Server
 		public PpsReportEngine Reports => reporting;
 
 		#endregion
-		
+
+		#region -- Client Application Source ------------------------------------------
+
+		private PpsClientApplicationInfo GetClientMsiApplication(FileInfo fi, string virtualRoot)
+		{
+			const string productNameProperty = "ProductName";
+			const string productVersionProperty = "ProductVersion";
+
+			var key = Path.GetFileNameWithoutExtension(fi.Name); // id of the client application
+			var productName = key;
+			var productVersion = new Version(0, 0, 0, 0);
+
+			using (var msi = new Database(fi.FullName, DatabaseOpenMode.ReadOnly))
+			{
+				using (var view = msi.OpenView("SELECT `Property`, `Value` FROM `Property` " +
+					"WHERE `Property` = '" + productNameProperty + "' " +
+						"OR `Property` = '" + productVersionProperty + "' ")
+				)
+				{
+					view.Execute();
+					foreach (var c in view)
+					{
+						using (c)
+						{
+							switch (c.GetString(1))
+							{
+								case productNameProperty:
+									productName = c.GetString(2);
+									break;
+								case productVersionProperty:
+									productVersion = new Version(c.GetString(2));
+									break;
+							}
+						}
+					}
+				}
+			}
+
+			return new PpsClientApplicationInfo(key, productName, null, productVersion, virtualRoot + fi.Name);
+		} // func AddClientMsiApplicationAsync
+
+		private async Task RefreshClientApplicationInfosAsync(DirectoryInfo appSourceDirectory, string virtualRoot)
+		{
+			// scan for msi-files
+			foreach (var fi in appSourceDirectory.EnumerateFiles("*.msi", SearchOption.TopDirectoryOnly))
+				clientApplicationInfos.Add(await Task.Run(() => GetClientMsiApplication(fi, virtualRoot)));
+		} // proc RefreshClientApplicationInfosAsync
+
+		#endregion
+
 		/// <summary></summary>
 		/// <param name="database"></param>
 		public void FireDataChangedEvent(string database)
@@ -658,7 +711,7 @@ namespace TecWare.PPSn.Server
 					// add specific application information
 					if (!String.IsNullOrEmpty(applicationName))
 					{
-						var idx = clientApplicationInfos.FindIndex(c => c.Name == applicationName);
+						var idx = clientApplicationInfos.FindIndex(c => String.Compare(c.Name, applicationName, StringComparison.OrdinalIgnoreCase) == 0);
 						if (idx == -1)
 							xml.WriteAttributeString("version", "1.0.0.0");
 						else

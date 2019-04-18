@@ -14,11 +14,11 @@
 					 Version="$(var.ProductVersion)"
 					 Manufacturer="!(loc.ProductCompany)" >
 
-		<Package Description="!(loc.PackageDescription)"
+		<Package Description="!(loc.ProductName)"
 						 Comments="!(loc.PackageComments)"
 						 InstallerVersion="200" 
 						 Compressed="yes" 
-						 InstallScope="perUser" 
+						 InstallScope="perUser"
 						 InstallPrivileges="limited" 
 		/>
 

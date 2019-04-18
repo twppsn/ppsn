@@ -6,7 +6,6 @@
 	<String Id="ArpHelpLink">https://tecware-gmbh.de/</String>
 	<String Id="ArpUrlInfoAbout">https://tecware-gmbh.de/</String>
 
-	<String Id="PackageDescription">PPSn Excel Beschreibung</String>
 	<String Id="PackageComments">PPSn Excel Kommentar</String>
 
 	<String Id="ConditionEarlierVersion">Eine ältere Version von [ProductName] ist schon installiert. Setup wird beendet.</String>

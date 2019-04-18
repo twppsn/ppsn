@@ -1,0 +1,4 @@
+Source:
+Install WIX 3.11
+
+%ProgramFiles%\WiX Toolset v3.11\SDK\Microsoft.Deployment.WindowsInstaller.dll
