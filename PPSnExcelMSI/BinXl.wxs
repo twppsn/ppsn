@@ -22,7 +22,10 @@
 					<RegistryValue Name="LoadBehavior" Value="3" Type="integer" />
 					<RegistryValue Name="Manifest" Value="file://[#PPSnExcel.vsto]|vstolocal" Type="string" />
 				</RegistryKey>
-				<RegistryValue Root="HKCU" Key="$(var.AddInKeyPaths)" Name="PPSnCore" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryKey Root="HKCU" Key="$(var.AddInKeyPaths)">
+					<RegistryValue Name="PPSnCore" Value="1" Type="integer" KeyPath="yes" />
+					<RegistryValue Value="[ProductVersion]" Type="string" />
+				</RegistryKey>
 			</Component>
 			<Component Id="PPSnExcelUI" Guid="6f50b107-1c1c-4b76-95b4-75beb425dfca">
 				<File Id="PPSnExcelUI.dll" Name="PPSnExcelUI.dll" Source="..\PPSnExcel\bin\Release\PPSnExcelUI.dll" />

@@ -374,13 +374,18 @@ namespace TecWare.PPSn.Data
 		} // TryParseUserName
 
 		/// <summary>Get the credentilas, as <c>NetworkCredential</c>.</summary>
+		/// <param name="enforceDefault"><c>false</c>, returns <c>null</c> if not credentials are stored, otherwise default credentials returned.</param>
 		/// <returns></returns>
-		public NetworkCredential GetCredentials()
+		public NetworkCredential GetCredentials(bool enforceDefault = false)
 		{
 			if (TryParseUserName(out var domainName, out var userName, out var isDefaultUser))
+			{
 				return isDefaultUser
-						? CredentialCache.DefaultNetworkCredentials
-						: new NetworkCredential(userName, GetPassword(), domainName);
+					? CredentialCache.DefaultNetworkCredentials
+					: new NetworkCredential(userName, GetPassword(), domainName);
+			}
+			else if (enforceDefault)
+				return CredentialCache.DefaultNetworkCredentials;
 			else
 				return null;
 		} // func GetCredentials

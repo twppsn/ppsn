@@ -140,8 +140,25 @@ namespace TecWare.PPSn
 			}
 		} // proc ShowException
 
-		public static void ShowMessage(this IWin32Window owner, string message)
-			=> MessageBox.Show(owner, message, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+		private static string GetMessageTitle(MessageBoxIcon icon)
+		{
+			switch (icon)
+			{
+				case MessageBoxIcon.Information:
+					return "Information";
+				case MessageBoxIcon.Warning:
+					return "Warnung";
+				case MessageBoxIcon.Question:
+					return "Frage";
+				case MessageBoxIcon.Error:
+					return "Fehler";
+				default:
+					return icon.ToString();
+			}
+		} // func GetMessageTitle
+
+		public static DialogResult ShowMessage(this IWin32Window owner, string message, MessageBoxIcon icon = MessageBoxIcon.Information, MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxDefaultButton defaultButton = MessageBoxDefaultButton.Button1)
+			=> MessageBox.Show(owner, message, GetMessageTitle(icon), buttons, icon, defaultButton);
 
 		#endregion
 	} // class XlProcs

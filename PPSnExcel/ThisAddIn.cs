@@ -79,12 +79,24 @@ namespace PPSnExcel
 
 		public PpsEnvironment AuthentificateEnvironment(PpsEnvironment environment)
 		{
-			if (environment != null
-				&& (environment.IsAuthentificated // is authentificated
-				|| environment.Await(environment.LoginAsync(this)))) // try to authentificate the environment
+			if (environment == null)
+				return null;
+
+			if (environment.IsAuthentificated) // is authentificated
 				return environment;
 			else
-				return null;
+			{
+				switch (environment.Await(environment.LoginAsync(this)))// try to authentificate the environment
+				{
+					case PpsLoginResult.Sucess:
+						return environment;
+					case PpsLoginResult.Restart:
+						Application.Quit();
+						return null;
+					default:
+						return null;
+				}
+			}
 		} // func AuthentificateEnvironment
 
 		public PpsEnvironment FindEnvironment(string name, Uri uri)
@@ -325,6 +337,9 @@ namespace PPSnExcel
 		public bool InvokeRequired => waitForm.InvokeRequired;
 
 		#endregion
+
+		string IPpsFormsApplication.ApplicationId => "PPSnExcel";
+		string IPpsFormsApplication.Title => "Excel";
 
 		/// <summary>Current active, authentificated environment.</summary>
 		public PpsEnvironment CurrentEnvironment => currentEnvironment;
