@@ -80,7 +80,7 @@ namespace TecWare.PPSn.Controls
 		{
 		}
 
-		#if DEBUG
+#if DEBUG
 		/// <summary></summary>
 		/// <param name="e"></param>
 		protected override void OnKeyUp(KeyEventArgs e)
@@ -92,7 +92,7 @@ namespace TecWare.PPSn.Controls
 			else if (e.Key == Key.F7)
 				StuffUI.PrintEventTreeToConsole(Keyboard.FocusedElement as DependencyObject);
 			base.OnKeyUp(e);
-		}
+		} // proc OnKeyUp
 #endif
 
 		/// <summary></summary>

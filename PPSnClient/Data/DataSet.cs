@@ -43,7 +43,7 @@ namespace TecWare.PPSn.Data
 
 		private readonly PpsShell shell;
 		private readonly string schema;
-		private PpsDataSetMetaCollectionClient metaInfo;
+		private readonly PpsDataSetMetaCollectionClient metaInfo;
 
 		/// <summary></summary>
 		/// <param name="shell"></param>
@@ -55,7 +55,7 @@ namespace TecWare.PPSn.Data
 			this.schema = schema;
 
 			// read definitions
-			foreach (XElement c in xSchema.Elements())
+			foreach (var c in xSchema.Elements())
 			{
 				if (c.Name == xnTable)
 					Add(CreateDataTable(c));
