@@ -702,7 +702,8 @@ namespace TecWare.PPSn.Data
 			{
 				for (var i = 0; i < originalValues.Length; i++)
 				{
-					if(table.Columns[i].IsExtended)
+					var columnDefinition = table.Columns[i];
+					if (columnDefinition.IsExtended)
 					{
 						if (originalValues[i] is IPpsDataRowSetGenericValue e)
 						{
@@ -715,6 +716,8 @@ namespace TecWare.PPSn.Data
 						var oldValue = currentValues[i];
 						currentValues[i] = NotSet;
 						undo?.Append(new PpsDataRowValueChangedItem(this, i, oldValue, NotSet));
+
+						ClearParentRowCache(columnDefinition);
 						OnValueChanged(i, oldValue, originalValues[i]);
 					}
 				}
