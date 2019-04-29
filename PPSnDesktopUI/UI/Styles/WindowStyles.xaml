@@ -16,43 +16,45 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:sys="clr-namespace:System;assembly=mscorlib"
 	                xmlns:ui="clr-namespace:TecWare.PPSn.Controls">
 
-	<Color x:Key="PPSnDesktopColor">#3B4A62</Color>
 	<Color x:Key="PPSnAccentColor">#000000</Color>
+	<Color x:Key="PPSnDesktopColor">#FFFAF0</Color>
+
 	<Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
 	<Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
 	<Color x:Key="PPSnActionButtonColor">#FFF</Color>
+	<Color x:Key="PPSnControlBackgroundColor">#FFFFFF</Color>
+	<Color x:Key="PPSnMarkerColor">#0078D7</Color>
 	<Color x:Key="PPSnBlackColor">#000</Color>
-	<Color x:Key="PPSnControlBackgroundColor">#F3F3F3</Color>
 
 	<sys:String x:Key="PPSnApplicationTitle">PPSn</sys:String>
 
-	<SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="#000000" />
-	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="#FFFFFF" />
+	<SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
+	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
 
 	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
-	<SolidColorBrush x:Key="PPSnMarkerBrush" Color="#000000"/>
-	<SolidColorBrush x:Key="PPSnSeparatorBrush" Color="#586579"/>
+	<SolidColorBrush x:Key="PPSnMarkerBrush" Color="{StaticResource PPSnMarkerColor}"/>
+	<SolidColorBrush x:Key="PPSnSeparatorBrush" Color="#E5E0D7"/>
 	<SolidColorBrush x:Key="PPSnActionButtonBrush" Color="{StaticResource PPSnActionButtonColor}" />
+
+	<SolidColorBrush x:Key="PPSnControlNormalBorderBrush" Color="#BFBBB4"/>
+	<SolidColorBrush x:Key="PPSnControlBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}"/>
+	<SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="{StaticResource PPSnMarkerColor}"/>
+	<SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="Gray"/>
 
 	<SolidColorBrush x:Key="PPSnAlternation0Brush" Color="#96EDEDED"/>
 	<SolidColorBrush x:Key="PPSnAlternation1Brush" Color="#80F3F3F3"/>
 
-	<SolidColorBrush x:Key="PPSnControlNormalBorderBrush" Color="#D4D4D4"/>
-	<SolidColorBrush x:Key="PPSnControlBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}"/>
-	<SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="#000000"/>
-	<SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="Gray"/>
 
-	<SolidColorBrush x:Key="PPSnMouseOverBrush" Color="#D4D4D4"/>
-	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="#ACACAC"/>
+	<SolidColorBrush x:Key="PPSnMouseOverBrush" Color="Black" Opacity=".10"/>
+	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="Black" Opacity=".25"/>
 
-	<SolidColorBrush x:Key="PPSnSelectionBarBrush" Color="#C8D1B8"/>
+	<SolidColorBrush x:Key="PPSnSelectionBarBrush" Color="#CCE8FF"/>
 
-
-	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="Blue"/>
-	<SolidColorBrush x:Key="PPSnPopUpBorderBrush" Color="DarkBlue"/>
+	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="#F3EFE5"/>
+	<SolidColorBrush x:Key="PPSnPopUpBorderBrush" Color="#BCB8B0"/>
+	<SolidColorBrush x:Key="PPSnSideBarBackgroundBrush" Color="#F7F2E8"/>
 
 	<SolidColorBrush x:Key="PPSnImageBrush" Color="Brown"/>
-	<SolidColorBrush x:Key="PPSnSideBarBackgroundBrush" Color="#445369"/>
 
 	<!--obsolete-->
 	<!--<KeyTime x:Key="PPSnShrinkStoryKeyTime">0:00:.2</KeyTime>
