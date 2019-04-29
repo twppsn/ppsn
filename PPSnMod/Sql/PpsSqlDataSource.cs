@@ -535,6 +535,12 @@ namespace TecWare.PPSn.Server.Sql
 
 			private sealed class PpsDataResultColumnAttributes : IPropertyEnumerableDictionary
 			{
+				private static readonly string[,] translateTable = new string[,]
+				{
+					{ "MaxLength", "ColumnSize" },
+					{ "Nullable", "AllowDBNull" }
+				};
+
 				private readonly SqlDataResultColumnDescription column;
 
 				public PpsDataResultColumnAttributes(SqlDataResultColumnDescription column)
@@ -542,12 +548,34 @@ namespace TecWare.PPSn.Server.Sql
 					this.column = column;
 				} // ctor
 
+				private bool TryTranslateAttribute(string attributeName, int sourceIndex, int returnIndex, out string rowName)
+				{
+					for (var i = 0; i < translateTable.GetLength(0); i++)
+					{
+						if (String.Compare(translateTable[i, sourceIndex], attributeName, StringComparison.OrdinalIgnoreCase) == 0)
+						{
+							rowName = translateTable[i, returnIndex];
+							return true;
+						}
+					}
+
+					rowName = attributeName;
+					return false;
+				} // func TryTranslateAttribute
+
+				private bool TryTranslateFromAttribute(string attributeName, out string rowName)
+					=> TryTranslateAttribute(attributeName, 0, 1, out rowName);
+
+				private bool TryTranslateToAttribute(string rowName, out string attributeName)
+					=> TryTranslateAttribute(rowName, 1, 0, out attributeName);
+
 				public bool TryGetProperty(string name, out object value)
 				{
-					if (String.Compare(name, "MaxLength", StringComparison.OrdinalIgnoreCase) == 0)
+					// find value translation
+					if (TryTranslateFromAttribute(name, out var rowName))
 					{
-						value = GetDataRowValue(column.row, "ColumnSize", 0);
-						return true;
+						value = column.row[rowName];
+						return value != DBNull.Value;
 					}
 					else
 					{
@@ -570,7 +598,10 @@ namespace TecWare.PPSn.Server.Sql
 					foreach (var c in column.row.Table.Columns.Cast<DataColumn>())
 					{
 						if (column.row[c] != DBNull.Value)
-							yield return new PropertyValue(c.ColumnName, column.row[c]);
+						{
+							TryTranslateToAttribute(c.ColumnName, out var attributeName);
+							yield return new PropertyValue(attributeName, column.row[c]);
+						}
 					}
 				} // func GetEnumerator
 
@@ -2276,6 +2307,61 @@ namespace TecWare.PPSn.Server.Sql
 
 			private static Regex regExSqlParameter = new Regex(@"\@(\w+)", RegexOptions.Compiled);
 
+			/// <summary>Get a table info from an object.</summary>
+			/// <param name="tableInfo"></param>
+			/// <returns></returns>
+			protected PpsSqlTableInfo GetColumnTableInfo(object tableInfo)
+			{
+				switch (tableInfo)
+				{
+					case PpsSqlTableInfo ti:
+						return ti;
+					case string tn:
+						return FindTable(tn, true);
+					default:
+						throw new ArgumentNullException(nameof(tableInfo));
+				}
+			} // func GetTableInto
+
+			/// <summary></summary>
+			/// <param name="columnList"></param>
+			/// <returns></returns>
+			protected Func<string, IDataColumn> GetColumnMapper(object columnList)
+			{
+				if (columnList == null)
+					return null;
+				else if (columnList is IDataColumns columns)
+				{
+					return new Func<string, IDataColumn>(k => columns.Columns[columns.FindColumnIndex(k, true)]);
+				}
+				else if(columnList is string tableName)
+				{
+					var tableInfo = FindTable(tableName, true);
+					return new Func<string, IDataColumn>(k => tableInfo.FindColumn(k, true));
+				}
+				else if (columnList is LuaTable table)
+				{
+					var tableInfo = GetColumnTableInfo(table[1]);
+
+					return new Func<string, IDataColumn>(
+						k =>
+						{
+							var v = table[k];
+							if (v == null)
+								return tableInfo.FindColumn(k, true);
+							else if (v is string cn)
+								return tableInfo.FindColumn(cn, true);
+							else if (v is IDataColumn column)
+								return column;
+							else
+								throw new ArgumentOutOfRangeException(nameof(k), $"Can not resolve {k} in {tableInfo.TableName}.");
+						}
+					);
+				}
+				else
+					throw new ArgumentOutOfRangeException(nameof(columnList), $"Can not create a columnd mapper from type {columnList.GetType().Name}.");
+			} // func GetColumnMapper
+
 			private PpsSqlDataCommand PrepareSql(LuaTable parameter, string name)
 			{
 				/*
@@ -2286,24 +2372,18 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					cmd.Command.CommandText = name;
 
-					var columnList = parameter.GetMemberValue("columnList");
-					if (columnList is IDataColumns columnMap)
+					var columnMapper = GetColumnMapper(parameter.GetMemberValue("columnList"));
+					// create mapping for table
+					foreach (Match m in regExSqlParameter.Matches(name))
 					{
-						throw new NotImplementedException();
-					}
-					else // create mapping for table
-					{
-						foreach (Match m in regExSqlParameter.Matches(name))
+						var k = m.Groups[1].Value;
+						if (!cmd.ExistsParameter(k))
 						{
-							var k = m.Groups[1].Value;
-							if (!cmd.ExistsParameter(k))
-							{
-								var p = CreateParameter(cmd.Command, null, k, GetSampleValueFromArguments(parameter, k));
-								cmd.AppendParameter(ParameterMapping.CreateTableName(k, p, p.GetDataType(), DBNull.Value));
-							}
+							var p = CreateParameter(cmd.Command, columnMapper?.Invoke(k), k, GetSampleValueFromArguments(parameter, k));
+							cmd.AppendParameter(ParameterMapping.CreateTableName(k, p, p.GetDataType(), DBNull.Value));
 						}
 					}
-
+					
 					cmd.Command.Prepare();
 					return cmd;
 				}

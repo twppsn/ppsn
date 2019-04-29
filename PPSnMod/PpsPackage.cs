@@ -39,7 +39,7 @@ namespace TecWare.PPSn.Server
 
 		/// <summary></summary>
 		/// <returns></returns>
-		public virtual IEnumerable<PpsApplicationFileItem> GetApplicationFiles()
+		public virtual IEnumerable<PpsWpfApplicationFileItem> GetApplicationFiles()
 		{
 			// check the LuaTable "ApplicationFiles"
 			if (GetMemberValue(LuaApplicationFiles, rawGet: true) is LuaTable applicationFileProvider)
@@ -55,9 +55,9 @@ namespace TecWare.PPSn.Server
 								? path.Substring(1)
 								: Name + "/" + path;
 
-							yield return new PpsApplicationFileItem(path,
-								item.ReturnOptionalValue<long>("length", -1),
-								item.ReturnOptionalValue<DateTime>("lastModified", DateTime.MinValue)
+							yield return new PpsWpfApplicationFileItem(path,
+								item.ReturnOptionalValue("length", -1L),
+								item.ReturnOptionalValue("lastModified", DateTime.MinValue)
 							);
 						}
 					}

@@ -15,11 +15,17 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn
 {
+	#region -- class ExcelException ---------------------------------------------------
+
 	/// <summary></summary>
 	public class ExcelException : Exception
 	{
@@ -30,6 +36,8 @@ namespace TecWare.PPSn
 		{
 		} // ctor
 	} // class ExcelException
+
+	#endregion
 
 	public static class XlProcs
 	{
@@ -87,5 +95,71 @@ namespace TecWare.PPSn
 					yield return new KeyValuePair<string, string>(m.Groups["k"].Value, m.Groups["v"].Value);
 			}
 		} // func GetLineProperties
+
+		#region -- Transform - dpi ----------------------------------------------------
+
+		public static int TransformX(this Matrix matrix, int x)
+			=> TransformPoint(matrix, new Point(x, 0)).X;
+
+		public static int TransformY(this Matrix matrix, int y)
+			=> TransformPoint(matrix, new Point(0, y)).Y;
+
+		public static Point TransformPoint(this Matrix matrix, Point pt)
+		{
+			var pts = new Point[] { pt };
+			matrix.TransformPoints(pts);
+			return pts[0];
+		} // proc TransformPoint
+
+		public static Rectangle TransformRect(this Matrix matrix, Rectangle rc)
+		{
+			var pts = new Point[] { rc.Location, new Point(rc.Right, rc.Bottom) };
+			matrix.TransformPoints(pts);
+			return new Rectangle(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
+		} // proc TransformPoint
+
+		#endregion
+
+		#region -- Dialogs ------------------------------------------------------------
+
+		public static void ShowException(this IWin32Window owner, ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		{
+			var unpackedException = exception.UnpackException();
+
+			if ((flags & ExceptionShowFlags.Warning) != 0)
+				MessageBox.Show(owner, alternativeMessage ?? unpackedException.Message, "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			else if (unpackedException is ExcelException excelException)
+				MessageBox.Show(owner, alternativeMessage ?? excelException.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			else
+			{
+				using (var exceptionDialog = new ExceptionDialog())
+				{
+					exceptionDialog.SetData(alternativeMessage, unpackedException, false);
+					exceptionDialog.ShowDialog(owner);
+				}
+			}
+		} // proc ShowException
+
+		private static string GetMessageTitle(MessageBoxIcon icon)
+		{
+			switch (icon)
+			{
+				case MessageBoxIcon.Information:
+					return "Information";
+				case MessageBoxIcon.Warning:
+					return "Warnung";
+				case MessageBoxIcon.Question:
+					return "Frage";
+				case MessageBoxIcon.Error:
+					return "Fehler";
+				default:
+					return icon.ToString();
+			}
+		} // func GetMessageTitle
+
+		public static DialogResult ShowMessage(this IWin32Window owner, string message, MessageBoxIcon icon = MessageBoxIcon.Information, MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxDefaultButton defaultButton = MessageBoxDefaultButton.Button1)
+			=> MessageBox.Show(owner, message, GetMessageTitle(icon), buttons, icon, defaultButton);
+
+		#endregion
 	} // class XlProcs
 }

@@ -25,9 +25,9 @@
 		<xs:complexContent>
 			<xs:extension base="pps:dataSourceType">
 				<xs:sequence>
-					<xs:element name="connectionString" type="xs:string" minOccurs="1" maxOccurs="1">
+					<xs:element name="connectionString" type="xs:string" minOccurs="0" maxOccurs="1">
 						<xs:annotation>
-							<xs:documentation>Connection string to the database, this string is used for system connection.</xs:documentation>
+							<xs:documentation>Connection string to the database, this string is used for system connection. It is not optional.</xs:documentation>
 						</xs:annotation>
 					</xs:element>
 				</xs:sequence>
@@ -547,7 +547,7 @@
 		</xs:annotation>
 	</xs:element>
 
-	<xs:element name="package" substitutionGroup="configItem">
+	<xs:element name="package">
 		<xs:annotation>
 			<xs:documentation>Defines a pps functionality.</xs:documentation>
 			<xs:appinfo>
@@ -559,6 +559,7 @@
 				<xs:extension base="ConfigLogItemType">
 					<xs:sequence minOccurs="0" maxOccurs="unbounded">
 						<xs:element ref="pps:objectItem" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:package" minOccurs="0" maxOccurs="unbounded" />
 					</xs:sequence>
 				</xs:extension>
 			</xs:complexContent>

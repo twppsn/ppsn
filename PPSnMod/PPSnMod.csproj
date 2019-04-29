@@ -35,12 +35,17 @@
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
 	  <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
-	  <PackageReference Include="NeoLua" Version="1.3.9" />
-	  <PackageReference Include="TecWare.DES.Core" Version="3.4.33" />
-	  <PackageReference Include="TecWare.DES.ServerLib" Version="3.4.33" />
+	  <PackageReference Include="NeoLua" Version="1.3.10-beta.0" />
+	  <PackageReference Include="TecWare.DES.Core" Version="3.4.34-pre.342" />
+	  <PackageReference Include="TecWare.DES.ServerLib" Version="3.4.34-pre.342" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\PPSnCore\PPSnCore.csproj" />
 	  <ProjectReference Include="..\PPSnReport\PPSnReport.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Reference Include="Microsoft.Deployment.WindowsInstaller">
+	    <HintPath>..\Common\DTF\Microsoft.Deployment.WindowsInstaller.dll</HintPath>
+	  </Reference>
 	</ItemGroup>
 </Project>

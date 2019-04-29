@@ -17,10 +17,10 @@ using System;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsApplicationFileItem -------------------------------------------
+	#region -- class PpsWpfApplicationFileItem ----------------------------------------
 
 	/// <summary>Application item description.</summary>
-	public sealed class PpsApplicationFileItem
+	public sealed class PpsWpfApplicationFileItem
 	{
 		private readonly string path;
 		private readonly long length;
@@ -30,7 +30,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="path"></param>
 		/// <param name="length"></param>
 		/// <param name="lastWriteTime"></param>
-		public PpsApplicationFileItem(string path, long length, DateTime lastWriteTime)
+		public PpsWpfApplicationFileItem(string path, long length, DateTime lastWriteTime)
 		{
 			this.path = path;
 			this.length = length;
@@ -43,7 +43,7 @@ namespace TecWare.PPSn.Server
 		public long Length => length;
 		/// <summary>Last write time stamp.</summary>
 		public DateTime LastWriteTime => lastWriteTime;
-	} // class PpsApplicationFileItem
+	} // class PpsWpfApplicationFileItem
 
 	#endregion
 }

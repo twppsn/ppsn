@@ -20,6 +20,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Security.Principal;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
@@ -353,7 +354,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class PrivateUserDataContext -----------------------------------------
+		#region -- class PrivateUserDataContext ---------------------------------------
 
 		/// <summary>This class holds a active context for a user. It is possible to
 		/// attach objects, that will be disposed on the end of the active process.</summary>
@@ -597,7 +598,7 @@ namespace TecWare.PPSn.Server
 		private PrivateUserData systemUser;
 		private DEList<PrivateUserData> userList;
 
-		#region -- Init/Done --------------------------------------------------------------
+		#region -- Init/Done ----------------------------------------------------------
 
 		private void InitUser()
 		{
@@ -704,6 +705,40 @@ namespace TecWare.PPSn.Server
 			await context.AuthentificateUserAsync(systemUser.User);
 			return context;
 		} // proc CreateSystemContextAsync
+
+		/// <summary>Returns the login data for the given context.</summary>
+		/// <param name="ctx"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public XElement GetLoginData(IPpsPrivateDataContext ctx = null)
+		{
+			if (ctx == null)
+				ctx = DEScope.GetScopeService<IPpsPrivateDataContext>(true);
+
+			// basic login data
+			var xLoginData = new XElement("user",
+				new XAttribute("userId", ctx.UserId),
+				new XAttribute("displayName", ctx.UserName)
+			);
+
+			// update optional values
+			if (ctx.TryGetProperty<long>(UserContextKtKtId, out var ktktId))
+				xLoginData.SetAttributeValue(UserContextKtKtId, ktktId.ChangeType<string>());
+			if (ctx.TryGetProperty<long>(UserContextPersId, out var persId))
+				xLoginData.SetAttributeValue(UserContextPersId, persId.ChangeType<string>());
+			if (ctx.TryGetProperty(UserContextFullName, out var fullName))
+				xLoginData.SetAttributeValue(UserContextFullName, fullName);
+			if (ctx.TryGetProperty(UserContextInitials, out var initials))
+				xLoginData.SetAttributeValue(UserContextInitials, initials);
+
+			// execute script based extensions
+			var t = new LuaTable();
+			CallMemberDirect("OnExtentLogin", new object[] { ctx, t }, ignoreNilFunction: true);
+			foreach (var kv in t.Members)
+				xLoginData.SetAttributeValue(kv.Key, kv.Value);
+
+			return xLoginData;
+		} // func GetLoginData
 
 		/// <summary>Time in ms after a good connection is recreated in the pool.</summary>
 		public int ConnectionLease => 1 * 3600 * 1000; // 1h

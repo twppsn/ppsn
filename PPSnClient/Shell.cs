@@ -21,6 +21,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -751,6 +752,26 @@ namespace TecWare.PPSn
 		/// <param name="shell"></param>
 		public static void SpawnTask(this Task task, PpsShell shell)
 			=> task.ContinueWith(t => shell.ShowException(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+
+		/// <summary></summary>
+		/// <param name="xInfo"></param>
+		public static void UpdateMimeTypesFromInfo(XElement xInfo)
+		{
+			var x = xInfo.Element("mimeTypes")?.Elements("mimeType");
+			if (x != null)
+			{
+				foreach (var c in x)
+				{
+					var mimeType = c.GetAttribute("id", null);
+					if (mimeType != null)
+					{
+						var isCompressedContent = c.GetAttribute("isCompressedContent", false);
+						var extensions = c.GetAttribute("extensions", null)?.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+						MimeTypeMapping.Update(mimeType, isCompressedContent, false, extensions);
+					}
+				}
+			}
+		} // proc UpdateMimeTypesFromInfo
 	} // class PpsShellExtensions
 
 	#endregion

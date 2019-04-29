@@ -246,19 +246,19 @@ namespace TecWare.PPSn.Server
 
 		#region -- Application Files --------------------------------------------------
 
-		IEnumerable<PpsApplicationFileItem> IWpfClientApplicationFileProvider.GetApplicationFiles()
+		IEnumerable<PpsWpfApplicationFileItem> IWpfClientApplicationFileProvider.GetApplicationFiles()
 		{
 			var baseUri = Name + '/';
 
 			// schema
-			yield return new PpsApplicationFileItem(baseUri + "schema.xml", -1, DataSetDefinition.ConfigurationStamp);
+			yield return new PpsWpfApplicationFileItem(baseUri + "schema.xml", -1, DataSetDefinition.ConfigurationStamp);
 
 			// related client scripts
 			foreach (var c in DataSetDefinition.ClientScripts)
 			{
 				var fi = new FileInfo(c);
 				if (fi.Exists)
-					yield return new PpsApplicationFileItem(baseUri + fi.Name, fi.Length, fi.LastWriteTimeUtc);
+					yield return new PpsWpfApplicationFileItem(baseUri + fi.Name, fi.Length, fi.LastWriteTimeUtc);
 			}
 		} // func GetApplicationFiles
 

@@ -525,12 +525,29 @@ namespace TecWare.PPSn
 		public void AppendException(Exception exception, string alternativeMessage = null)
 			=> ShowException(ExceptionShowFlags.Background, exception, alternativeMessage);
 
+		private static string GetMessageCaptionFromImage(MessageBoxImage image)
+		{
+			switch (image)
+			{
+				case MessageBoxImage.Error:
+					return "Fehler";
+				case MessageBoxImage.Warning:
+					return "Warnung";
+				case MessageBoxImage.Question:
+					return "Frage";
+				default:
+					return "Information";
+			}
+		} // func GetMessageCaptionFromImage
+
+		/// <summary>Display a simple messagebox</summary>
 		/// <param name="text"></param>
 		/// <param name="button"></param>
 		/// <param name="image"></param>
 		/// <param name="defaultResult"></param>
 		/// <returns></returns>
-		public abstract MessageBoxResult MsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK);
+		public virtual MessageBoxResult MsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
+			=> MessageBox.Show(text, GetMessageCaptionFromImage(image), button, image, defaultResult);
 
 		/// <summary>Display a simple messagebox in the main ui-thread.</summary>
 		/// <param name="text"></param>
@@ -546,6 +563,25 @@ namespace TecWare.PPSn
 		public sealed override void ShowMessage(string message)
 			=> MsgBox(message);
 
+		/// <summary></summary>
+		/// <param name="flags"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		public override void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		{
+			Log.Append(PpsLogType.Exception, exception, alternativeMessage);
+
+			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background)
+			{
+				// show message simple
+				MsgBox(alternativeMessage ?? exception.UnpackException().ToString(), MessageBoxButton.OK, MessageBoxImage.Error);
+
+				// shutdown application
+				if ((flags & ExceptionShowFlags.Shutown) == ExceptionShowFlags.Shutown)
+					Application.Current.Shutdown(1);
+			}
+		} // proc ShowException
+		
 		/// <summary>Return a data template for the object.</summary>
 		/// <param name="data"></param>
 		/// <param name="container"></param>

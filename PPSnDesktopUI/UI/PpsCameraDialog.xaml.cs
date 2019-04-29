@@ -248,7 +248,7 @@ namespace TecWare.PPSn.UI
 		private readonly PpsCameraDeviceProperty[] properties;
 		private bool isDisposed = false;
 
-		private Size currentPreviewSize = new Size(80, 80);
+		private Size? currentPreviewSize = new Size(80, 80);
 		private bool snapShotsAttached = false;
 		private bool videoAttached = false;
 		private bool isCameraLost = false;
@@ -315,9 +315,9 @@ namespace TecWare.PPSn.UI
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsCameraInAutomaticMode)));
 		} // event Property_PropertyChanged
 
-		public async Task InitAsync(Size previewSize, int previewFpsMinimum = 15)
+		public async Task InitAsync(Size previewSize, int previewFpsMinimum = 15, bool forTakePicture = false)
 		{
-			currentPreviewSize = previewSize;
+			currentPreviewSize = forTakePicture && snapShotsAttached ? (Size?)previewSize : null;
 
 			InitSnapshots();
 			if (await InitVideoAsync(previewSize, previewFpsMinimum))
@@ -671,7 +671,7 @@ namespace TecWare.PPSn.UI
 				try
 				{
 					// change to highest resolution
-					var result = await InitVideoAsync(null, 1) ? await GetOneFrameAsync() : null;
+					var result = await GetOneFrameAsync();
 
 					// restore preview
 					if (await InitVideoAsync(currentPreviewSize, 15))
@@ -786,7 +786,7 @@ namespace TecWare.PPSn.UI
 				oldValue.InitAsync(initialPreviewSize).SpawnTask(Environment);
 
 			if (newValue != null)
-				newValue.InitAsync(fullPreviewSize).SpawnTask(Environment);
+				newValue.InitAsync(fullPreviewSize, forTakePicture: true).SpawnTask(Environment);
 		} // proc OnCurrentDeviceChanged
 
 		public PpsCameraDevice CurrentDevice => (PpsCameraDevice)GetValue(CurrentDeviceProperty);

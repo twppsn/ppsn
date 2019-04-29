@@ -223,3 +223,5 @@ FakesAssemblies/
 /PPSnModCfg/Schema/DES.xsd
 /PPSnMod/SqlServerTypes/Loader.cs
 /PPSnMod/SqlServerTypes/readme.htm
+/Common/DTF/Microsoft.Deployment.WindowsInstaller.dll
+/Common/AssemblyInfoXl..cs

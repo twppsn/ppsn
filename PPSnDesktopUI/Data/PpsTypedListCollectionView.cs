@@ -16,11 +16,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Data;
+using Neo.IronLua;
+using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
@@ -147,5 +149,102 @@ namespace TecWare.PPSn.Data
 		} // func CreateFilterPredicate
 	} // class PpsTypedListCollectionView
 
-	#endregion	
+	#endregion
+
+	#region -- class PpsDataCollectionView --------------------------------------------
+
+	/// <summary>Special collection view for PpsDataTable, that supports IDataRowEnumerable</summary>
+	public class PpsDataCollectionView : PpsFilterableListCollectionView, IPpsDataRowViewFilter, IPpsDataRowViewSort
+	{
+		#region -- class DataRowEnumerator --------------------------------------------
+
+		private sealed class DataRowEnumerator : IEnumerator<IDataRow>
+		{
+			private readonly IEnumerator enumerator;
+
+			public DataRowEnumerator(IEnumerator enumerator)
+			{
+				this.enumerator = enumerator;
+			} // ctor
+
+			public void Dispose()
+			{
+				if (enumerator is IDisposable d)
+					d.Dispose();
+			} // proc Dispose
+
+			public void Reset()
+				=> enumerator.Reset();
+
+			public bool MoveNext()
+				=> enumerator.MoveNext();
+
+			object IEnumerator.Current => enumerator.Current;
+			public IDataRow Current => enumerator.Current as IDataRow;
+		} // class DataRowEnumerator
+
+		#endregion
+
+		private readonly IDisposable detachView;
+
+		/// <summary>Collection view for PpsDataTable's.</summary>
+		/// <param name="dataTable"></param>
+		public PpsDataCollectionView(IPpsDataView dataTable)
+			: base(dataTable)
+		{
+			this.detachView = dataTable as IDisposable;
+		} // ctor
+
+		/// <summary>Detach view from CollectionView.</summary>
+		public override void DetachFromSourceCollection()
+		{
+			base.DetachFromSourceCollection();
+			detachView?.Dispose();
+		} // proc DetachFromSourceCollection
+
+		/// <summary>Implement a add method, that supports a LuaTable as argument.</summary>
+		/// <param name="values">Values for the new row.</param>
+		/// <returns>Added row.</returns>
+		public PpsDataRow Add(LuaTable values)
+		{
+			var row = DataView.NewRow(DataView.Table.GetDataRowValues(values), null);
+			AddNewItem(row);
+			return row;
+		} // func Add
+
+		/// <summary>Implement a add method, that supports a LuaTable as argument.</summary>
+		/// <param name="values">Values for the new row.</param>
+		/// <returns>Added row.</returns>
+		public PpsDataRow Add(IPropertyReadOnlyDictionary values)
+		{
+			var row = DataView.NewRow(DataView.Table.GetDataRowValues(values), null);
+			AddNewItem(row);
+			return row;
+		} // func Add
+
+		/// <summary>Auto Commit rows.</summary>
+		/// <param name="args"></param>
+		protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs args)
+		{
+			base.OnCollectionChanged(args);
+			// we do not want the new/edit
+			if (IsAddingNew)
+				CommitNew();
+			else if (IsEditingItem)
+				CommitEdit();
+		} // proc OnCollectionChanged
+
+		/// <summary></summary>
+		/// <param name="filterExpression"></param>
+		/// <returns></returns>
+		protected sealed override Predicate<object> CreateFilterPredicate(PpsDataFilterExpression filterExpression)
+			=> PpsDataFilterVisitorDataRow.CreateDataRowFilter<object>(filterExpression);
+
+		/// <summary>Parent row, of the current filter.</summary>
+		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;
+		/// <summary>Get the DataView, that is filtered.</summary>
+		public IPpsDataView DataView => (IPpsDataView)base.SourceCollection;
+	} // class PpsDataCollectionView
+
+	#endregion
 }

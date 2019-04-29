@@ -470,30 +470,6 @@ namespace TecWare.PPSn
 			}
 		} // func ShowExceptionDialog
 
-		private static string GetMessageCaptionFromImage(MessageBoxImage image)
-		{
-			switch (image)
-			{
-				case MessageBoxImage.Error:
-					return "Fehler";
-				case MessageBoxImage.Warning:
-					return "Warnung";
-				case MessageBoxImage.Question:
-					return "Frage";
-				default:
-					return "Information";
-			}
-		} // func GetMessageCaptionFromImage
-
-		/// <summary>Display a simple messagebox</summary>
-		/// <param name="text"></param>
-		/// <param name="button"></param>
-		/// <param name="image"></param>
-		/// <param name="defaultResult"></param>
-		/// <returns></returns>
-		public override MessageBoxResult MsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
-			=> MessageBox.Show(text, GetMessageCaptionFromImage(image), button, image, defaultResult);
-
 		/// <summary></summary>
 		/// <param name="paneType"></param>
 		/// <returns></returns>

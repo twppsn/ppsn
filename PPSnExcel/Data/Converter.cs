@@ -14,12 +14,8 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using TecWare.DE.Stuff;
 using Excel = Microsoft.Office.Interop.Excel;
 
@@ -59,6 +55,8 @@ namespace PPSnExcel.Data
 			if (attributes.TryGetProperty("valign", out tmp))
 				range.HorizontalAlignment = GetAlignment(false, tmp);
 
+			//range.Borders
+
 			//range.ColumnWidth;
 			//range.RowHeight;
 			//range.ShrinkToFit;
@@ -96,9 +94,11 @@ namespace PPSnExcel.Data
 		} // func GetAlignment
 
 		private static string GenerateExcelMask(bool seperator, int comma)
-			=> comma <= 0
-				? (seperator ? "#,##0" : "0")
-				: (seperator ? "#,##0." : "0.") + new String('0', comma);
+		{
+			return comma <= 0
+				  ? (seperator ? "#,##0" : "0")
+				  : (seperator ? "#,##0." : "0.") + new string('0', comma);
+		} // func GenerateExcelMask
 
 		private static string GenerateExcelSymbolMask(string sym, bool seperator, int comma, int pattern)
 		{
@@ -165,7 +165,36 @@ namespace PPSnExcel.Data
 			if (String.IsNullOrEmpty(format))
 				return baseType == typeof(string) ? "Text" : "General";
 
-			if (TryMatchRegex(numberFormat, format, out var m))
+			if (baseType == typeof(DateTime))
+			{
+				if (format.Length == 1)
+				{
+					switch (format[0])
+					{
+						case 'd': // short date
+							return "m/d/yyyy";
+						case 'D': // long date
+							return "[$-x-sysdate]dddd, mmmm dd, yyyy";
+						case 'f': // full date/time pattern (short time)
+							return "dddd, mmmm dd, yyyy hh:mm";
+						case 'F': // full date/time pattern (long time)
+							return "dddd, mmmm dd, yyyy hh:mm:ss";
+						case 'g':
+							return "m/d/yyyy hh:mm";
+						case 'G':
+							return "m/d/yyyy hh:mm:ss";
+						case 'm':
+							return "d/ mmm";
+						case 'M':
+							return "d/ mmmm";
+						default:
+							return "General";
+					}
+				}
+				else
+					return "General";
+			}
+			else if (TryMatchRegex(numberFormat, format, out var m))
 			{
 				var f = m.Groups["f"].Value;
 				var ns = m.Groups["d"].Value;
@@ -187,9 +216,9 @@ namespace PPSnExcel.Data
 							if (n == -1)
 								n = cultureInfo.NumberFormat.PercentDecimalDigits;
 							var sym = cultureInfo.NumberFormat.PercentSymbol;
-							
+
 							return GenerateExcelSymbolMask(sym, true, n, cultureInfo.NumberFormat.PercentPositivePattern) + ";" +
-								GenerateExcelSymbolMask(sym, true, n, cultureInfo.NumberFormat.PercentNegativePattern, cultureInfo.NumberFormat.NegativeSign) + ";"+
+								GenerateExcelSymbolMask(sym, true, n, cultureInfo.NumberFormat.PercentNegativePattern, cultureInfo.NumberFormat.NegativeSign) + ";" +
 								GenerateExcelSymbolMask(sym, false, n, cultureInfo.NumberFormat.PercentPositivePattern);
 						}
 					case 'D': // decimal (number are digits)

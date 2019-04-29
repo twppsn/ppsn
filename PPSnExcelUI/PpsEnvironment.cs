@@ -17,13 +17,17 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -32,15 +36,34 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
+	#region -- interface IPpsFormsApplication -----------------------------------------
+
 	public interface IPpsFormsApplication : ISynchronizeInvoke, IWin32Window, IPpsProgressFactory
 	{
 		void Await(Task t);
 
-		void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
-		void ShowMessage(string message);
+		/// <summary>Internal application-id for the server.</summary>
+		string ApplicationId { get; }
+		/// <summary>Title of the application.</summary>
+		string Title { get; }
 
 		SynchronizationContext SynchronizationContext { get; }
-	} // interface IPpsSynchronize
+	} // interface IPpsFormsApplication
+
+	#endregion
+
+	#region -- enum PpsLoginResult ----------------------------------------------------
+
+	public enum PpsLoginResult
+	{
+		Canceled,
+		Sucess,
+		Restart
+	} // enum PpsLoginResult
+
+	#endregion
+
+	#region -- class PpsEnvironment ---------------------------------------------------
 
 	/// <summary>Special environment for data warehouse applications</summary>
 	public sealed class PpsEnvironment : PpsShell
@@ -60,65 +83,127 @@ namespace TecWare.PPSn
 
 		#region -- Login --------------------------------------------------------------
 
+		private static Version GetExcelAssemblyVersion()
+		{
+			var fileVersion = typeof(PpsEnvironment).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
+			return fileVersion == null ? new Version(1, 0, 0, 0) : new Version(fileVersion.Version);
+		} // func GetExcelAssemblyVersion
+
+		private static Version GetExcelAddinVersion()
+		{
+			using (var reg = Registry.CurrentUser.OpenSubKey(@"Software\TecWare\PPSnExcel\Components", false))
+			{
+				return reg?.GetValue(null) is string v
+					? new Version(v)
+					: new Version(1, 0, 0, 0);
+			}
+		} // func GetExcelAddinVersion
+
 		public void ClearCredentials()
 		{
 			request = null;
 			fullName = null;
 		} // proc ClearCredentials
 
-		public async Task<bool> LoginAsync(IWin32Window parent)
+		public async Task<PpsLoginResult> LoginAsync(IWin32Window parent)
 		{
-			using (var login = new PpsClientLogin("ppsn_env:" + info.Uri.ToString(), info.Name, false))
+			var newRequest = DEHttpClient.Create(info.Uri, null, Encoding);
+			try
 			{
-				var showLoginDialog = false;
+				// get app-info
+				var xInfo = await newRequest.GetXmlAsync("info.xml?app=" + formsApplication.ApplicationId);
 
-				while (true)
+				// check version
+				var clientVersion = GetExcelAddinVersion();
+				var assemblyVesion = GetExcelAssemblyVersion();
+				var serverVersion = new Version(xInfo.GetAttribute("version", "1.0.0.0"));
+
+#if DEBUG
+				assemblyVesion = serverVersion = clientVersion;
+#endif
+
+				if (clientVersion < serverVersion) // new version is provided
 				{
-					// show login dialog
-					if (showLoginDialog)
-					{
-						if (!await InvokeAsync(() => login.ShowWindowsLogin(parent.Handle)))
-							return false;
-					}
+					return await UpdateApplicationAsync(newRequest, xInfo.GetAttribute("src", null))
+						? PpsLoginResult.Restart
+						: PpsLoginResult.Canceled;
+				}
+				else if (assemblyVesion < clientVersion) // new version is installed, but not active
+				{
+					return AskForRestart()
+						? PpsLoginResult.Restart
+						: PpsLoginResult.Canceled;
+				}
 
-					// try login with user
-					var newRequest = DEHttpClient.Create(info.Uri, login.GetCredentials(), Encoding);
-					try
-					{
-						var xLogin = await newRequest.GetXmlAsync("login.xml");
-						fullName = xLogin.GetAttribute("FullName", (string)null);
+				// update mime type mappings
+				PpsShellExtensions.UpdateMimeTypesFromInfo(xInfo);
 
-						request = newRequest;
-						login.Commit();
-						return true;
-					}
-					catch (Exception e)
+				// open trust stroe
+				using (var login = new PpsClientLogin("ppsn_env:" + info.Uri.ToString(), info.Name, false))
+				{
+					var loginCounter = 0; // first time, do not show login dialog
+					while (true)
 					{
-						if (e is HttpRequestException he
-							&& he.InnerException is WebException we)
+						// show login dialog
+						if (loginCounter > 0)
 						{
-							switch (we.Status)
-							{
-								case WebExceptionStatus.Timeout:
-								case WebExceptionStatus.ConnectFailure:
-									await ShowMessageAsync("Verbindung zum Server konnte nicht hergestellt werden.");
-									return false;
+							if (!await InvokeAsync(() => login.ShowWindowsLogin(parent.Handle)))
+								return PpsLoginResult.Canceled;
+						}
 
-								case WebExceptionStatus.ProtocolError:
-									login.ShowErrorMessage = true;
+						// create new client request
+						loginCounter++;
+						newRequest?.Dispose();
+						newRequest = DEHttpClient.Create(info.Uri, login.GetCredentials(true), Encoding);
+
+						// try login with user
+						try
+						{
+							// execute login
+							var xLogin = await newRequest.GetXmlAsync("login.xml");
+							request = newRequest;
+							fullName = xLogin.GetAttribute("FullName", (string)null);
+
+							login.Commit();
+							return PpsLoginResult.Sucess;
+						}
+						catch (HttpResponseException e)
+						{
+							switch (e.StatusCode)
+							{
+								case HttpStatusCode.Unauthorized:
+									if (loginCounter > 1)
+										ShowMessage("Passwort oder Nutzername falsch.");
 									break;
 								default:
-									await ShowExceptionAsync(ExceptionShowFlags.None, e, "Verbindung fehlgeschlagen.");
-									return false;
+									formsApplication.ShowMessage(String.Format("Verbindung mit fehlgeschlagen.\n{0} ({2} {1})", e.Message, e.StatusCode, (int)e.StatusCode), MessageBoxIcon.Error);
+									return PpsLoginResult.Canceled;
 							}
-						}
-						else
-						{
-							await ShowExceptionAsync(ExceptionShowFlags.None, e);
-							return false;
 						}
 					}
 				}
+			}
+			catch (HttpRequestException e)
+			{
+				newRequest?.Dispose();
+				if (e.InnerException is WebException we)
+				{
+					switch (we.Status)
+					{
+						case WebExceptionStatus.Timeout:
+						case WebExceptionStatus.ConnectFailure:
+							ShowMessage("Server nicht erreichbar.");
+							return PpsLoginResult.Canceled;
+					}
+				}
+				else
+					ShowException(ExceptionShowFlags.None, e, "Verbindung fehlgeschlagen.");
+				return PpsLoginResult.Canceled;
+			}
+			catch
+			{
+				newRequest?.Dispose();
+				throw;
 			}
 		} // func LoginAsync
 
@@ -166,7 +251,7 @@ namespace TecWare.PPSn
 			return dt.Columns.Count == 0 ? null : dt;
 		} // func GetViewDataAsync
 
-		public override DEHttpClient Request => throw new NotImplementedException();
+		public override DEHttpClient Request => request;
 
 		#endregion
 
@@ -253,13 +338,33 @@ namespace TecWare.PPSn
 		#region -- ShowException, ShowMessage -----------------------------------------
 
 		public override void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-			=> formsApplication.ShowException(flags, exception.UnpackException(), alternativeMessage);
+			=> formsApplication.ShowException(flags, exception, alternativeMessage);
 
 		public override void ShowMessage(string message)
 			=> formsApplication.ShowMessage(message);
-		
-		protected override IPpsProgress CreateProgressCore(bool blockUI) 
+
+		protected override IPpsProgress CreateProgressCore(bool blockUI)
 			=> formsApplication.CreateProgress(blockUI);
+
+		private bool AskForRestart()
+			=> formsApplication.ShowMessage(String.Format("Die Anwenundung muss für eine Aktivierung neugestartet werden.\nNeustart von {0} sofort einleiten?", formsApplication.Title), MessageBoxIcon.Question, MessageBoxButtons.YesNo) == DialogResult.Yes;
+
+		private async Task<bool> UpdateApplicationAsync(DEHttpClient client, string src)
+		{
+			if (formsApplication.ShowMessage(String.Format("Eine neue Anwendung steht bereit.\nInstallieren und {0} neustarten?", formsApplication.Title), MessageBoxIcon.Question, MessageBoxButtons.YesNo) != DialogResult.Yes)
+				return false;
+
+			var sourceUri = client.CreateFullUri(src);
+			var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
+			var psi = new ProcessStartInfo(msiExe, "/i " + sourceUri.ToString() + " /b");
+			using (var ps = Process.Start(psi))
+			{
+				await Task.Run(new Action(ps.WaitForExit));
+				// ps.ExitCode
+			}
+
+			return true;
+		} // proc UpdateApplicationAsync
 
 		#endregion
 
@@ -281,4 +386,6 @@ namespace TecWare.PPSn
 
 		private static object[] EmptyArgs { get; } = Array.Empty<object>();
 	} // class PpsEnvironment
+
+	#endregion
 }

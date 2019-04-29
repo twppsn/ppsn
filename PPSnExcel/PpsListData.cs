@@ -195,11 +195,15 @@ namespace PPSnExcel
 			{
 				var col = columnInfo.Columns[i];
 
-				// set schema
-				xColumns.Add(new XElement(xsdElementName,
+				var xColumnDef = new XElement(xsdElementName,
 					new XAttribute("name", columnNames[i] = col.Name),
-					new XAttribute("type", namespaceShortcut + ":" + typeToXsdType[col.DataType])
-				));
+					new XAttribute("type", namespaceShortcut + ":" + typeToXsdType[col.DataType]),
+					new XAttribute("minOccurs", col.Attributes.TryGetProperty<bool>("nullable", out var isNullable) && isNullable ? 0 : 1),
+					new XAttribute("maxOccurs", 1)
+				);
+
+				// set schema
+				xColumns.Add(xColumnDef);
 			}
 
 			return (xSchema, columnNames);
@@ -542,38 +546,34 @@ namespace PPSnExcel
 
 		#region -- ImportDataAsync ----------------------------------------------------
 
-		private async Task ImportDataAsync(IEnumerator<IDataRow> e, bool checkXmlMapping)
+		private async Task<bool> ImportDataBlockAsync(IEnumerator<IDataRow> e, Excel.XmlMap xlMap, string[] columnNames, int blockIndex, int blockSize)
 		{
+			var moveNext = false;
+
 			using (var tw = new StringWriter(CultureInfo.InvariantCulture))
 			using (var x = XmlWriter.Create(tw, new XmlWriterSettings() { Encoding = Encoding.Default, NewLineHandling = NewLineHandling.None }))
 			{
-				var (xlMap, columnNames, isChanged, xlMapToRemove) = map.EnsureXmlMap(xlList, checkXmlMapping ? (IDataColumns)e : null);
-				if (isChanged)
-				{
-					ImportLayoutByColumn((IDataColumns)e, xlList, xlMap, columnNames);
-					PpsListMapping.RemoveXmlMap(xlMapToRemove);
-				}
-
 				#region -- Fetch data --
 
 				await Task.Run(() =>
 				{
 					x.WriteStartElement(xlMap.RootElementName);
-					while (e.MoveNext())
+					while ((moveNext = e.MoveNext()) && blockSize-- > 0)
 					{
 						var r = e.Current;
 						x.WriteStartElement("r");
 
 						for (var i = 0; i < columnNames.Length; i++)
 						{
-							x.WriteStartElement(columnNames[i]);
 							if (r[i] != null)
+							{
+								x.WriteStartElement(columnNames[i]);
 								x.WriteValue(r[i]);
-							x.WriteEndElement();
+								x.WriteEndElement();
+							}
 						}
 
 						x.WriteEndElement();
-
 					}
 
 					x.WriteEndElement();
@@ -586,14 +586,56 @@ namespace PPSnExcel
 
 				// import data
 				var xmlData = tw.GetStringBuilder().ToString();
-				switch (xlMap.ImportXml(xmlData, true))
+				switch (xlMap.ImportXml(xmlData, blockIndex == 0))
 				{
 					case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:
 						throw new ExcelException("Zu viele Element, nicht alle Zeilen wurden geladen.");
 					case Excel.XlXmlImportResult.xlXmlImportValidationFailed:
 						throw new ExcelException("Validierung der Rohdaten fehlgeschlagen.");
 				}
+
+				return moveNext;
 			}
+		} // func ImportDataBlockAsync
+
+		private async Task ImportDataAsync(IEnumerator<IDataRow> e, bool checkXmlMapping, bool singleLineMode)
+		{
+			var (xlMap, columnNames, isChanged, xlMapToRemove) = map.EnsureXmlMap(xlList, checkXmlMapping ? (IDataColumns)e : null);
+			if (isChanged)
+			{
+				ImportLayoutByColumn((IDataColumns)e, xlList, xlMap, columnNames);
+				PpsListMapping.RemoveXmlMap(xlMapToRemove);
+			}
+
+			var errorCheckingOptions = xlList.Application.ErrorCheckingOptions;
+			var oldNumberAsTextValue = errorCheckingOptions.NumberAsText;
+			var oldTextDateValue = errorCheckingOptions.TextDate;
+			errorCheckingOptions.NumberAsText = false;
+			errorCheckingOptions.TextDate = false;
+			try
+			{
+				var blockSize = singleLineMode ? 1 : (64 << 10);
+				var blockIndex = 0;
+				while (await ImportDataBlockAsync(e, xlMap, columnNames, blockIndex, blockSize))
+					blockIndex++;
+			}
+			finally
+			{
+				errorCheckingOptions.NumberAsText = oldNumberAsTextValue;
+				errorCheckingOptions.TextDate = oldTextDateValue;
+			}
+
+			//// disable alerts
+			//	var dataRange = xlList.DataBodyRange;
+			//for (var y = 1; y <= dataRange.Rows.Count; y++)
+			//{
+			//	for (var x = 1; x <= dataRange.Columns.Count; x++)
+			//	{
+			//		var range = (Excel.Range)dataRange.Cells[y, x];
+			//		range.Errors[Excel.XlErrorChecks.xlNumberAsText].Ignore = true;
+			//		range.Errors[Excel.XlErrorChecks.xlTextDate].Ignore = true;
+			//	}
+			//}
 		} // func ImportDataAsync
 
 		#endregion
@@ -605,7 +647,7 @@ namespace PPSnExcel
 
 		#region -- Refresh ------------------------------------------------------------
 
-		public async Task RefreshAsync(bool refreshLayout)
+		public async Task RefreshAsync(bool refreshLayout, bool singleLineMode)
 		{
 			var showTotals = false;
 			var worksheet = ThisAddIn.GetWorksheet(xlList.InnerObject);
@@ -618,7 +660,7 @@ namespace PPSnExcel
 				}
 
 				// import data
-				await ImportDataAsync(e, !refreshLayout);
+				await ImportDataAsync(e, !refreshLayout, singleLineMode);
 
 				if (refreshLayout && showTotals)
 					xlList.ShowTotals = true;
@@ -632,7 +674,7 @@ namespace PPSnExcel
 
 		#region -- CreateAsync --------------------------------------------------------
 
-		public static async Task<PpsListObject> CreateAsync(Excel.Range topLeftCell, PpsListMapping info)
+		public static async Task<PpsListObject> CreateAsync(Excel.Range topLeftCell, PpsListMapping info, bool singleLineMode)
 		{
 			// create list object and add header
 			using (var e = await GetViewDataAsync(info, ThisAddIn.GetWorksheet(topLeftCell), false))
@@ -645,7 +687,7 @@ namespace PPSnExcel
 				ppsList.ImportLayoutRefresh((IDataColumns)e, xlList, out var showTotals);
 
 				// Load data
-				await ppsList.ImportDataAsync(e, false);
+				await ppsList.ImportDataAsync(e, false, singleLineMode);
 
 				// show totals
 				if (showTotals)
