@@ -89,7 +89,8 @@ namespace TecWare.PPSn.Server.Wpf
 		{
 			return new XElement("join",
 				new XAttribute("view", def.ViewName),
-				Procs.XAttributeCreate("alias", def.AliasName, null)
+				Procs.XAttributeCreate("alias", def.AliasName, null),
+				Procs.XAttributeCreate("type", def.Type, PPSn.Data.PpsDataJoinType.Inner)
 			);
 		} // func CreateJoinInfo
 

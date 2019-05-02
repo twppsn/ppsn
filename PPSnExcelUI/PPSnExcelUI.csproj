@@ -54,12 +54,23 @@
     <Compile Include="..\Common\AssemblyInfoXl..cs">
       <Link>Properties\AssemblyInfoXl..cs</Link>
     </Compile>
+    <Compile Include="Controls\PpsTreeView.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Controls\ExceptionDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Controls\ExceptionDialog.Designer.cs">
       <DependentUpon>ExceptionDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="Controls\TableInsertForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\TableInsertForm.Designer.cs">
+      <DependentUpon>TableInsertForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\PpsTableData.cs" />
+    <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -68,7 +79,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Stuff.cs" />
-    <Compile Include="PpsViewDictionary.cs" />
+    <Compile Include="Data\PpsViewDictionary.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">
@@ -85,6 +96,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Controls\ExceptionDialog.resx">
       <DependentUpon>ExceptionDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Controls\TableInsertForm.resx">
+      <DependentUpon>TableInsertForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

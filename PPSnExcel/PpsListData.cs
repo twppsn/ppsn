@@ -36,7 +36,29 @@ using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
-	#region -- class PpsXmlMap --------------------------------------------------------
+	#region -- class PpsXlColumnInfo --------------------------------------------------
+
+	internal sealed class PpsXlColumnInfo
+	{
+		private readonly string columnName;
+		private readonly string xmlType;
+		private readonly bool isNullable;
+
+		public PpsXlColumnInfo(string columnName, string xmlType, bool isNullable)
+		{
+			this.columnName = columnName ?? throw new ArgumentNullException(nameof(columnName));
+			this.xmlType = xmlType ?? throw new ArgumentNullException(nameof(xmlType));
+			this.isNullable = isNullable;
+		} // ctor
+
+		public string ColumnName => columnName;
+		public string XmlType => xmlType;
+		public bool IsNullable => isNullable;
+	} // class PpsXlColumnInfo
+
+	#endregion
+
+	#region -- class PpsListMapping ---------------------------------------------------
 
 	internal sealed class PpsListMapping
 	{
@@ -363,9 +385,37 @@ namespace PPSnExcel
 
 		public static bool TryParse(Func<string, Uri, PpsEnvironment> findEnvironment, Excel.XmlMap xlMap, out PpsListMapping ppsMap)
 		{
-			ppsMap = null;
-			if (xlMap == null
-				|| xlMap.Schemas.Count != 1)
+			if (TryParse(xlMap, out var environmentName, out var environmentUri, out var viewId, out var filterExpr, out var columns, out var orders))
+			{
+				// find environment
+				var env = findEnvironment(environmentName, environmentUri);
+				if (env == null)
+				{
+					ppsMap = null;
+					return false;
+				}
+
+				// create mapping
+				ppsMap = new PpsListMapping(env, viewId, columns.Select(c => new PpsDataColumnExpression(c.ColumnName)).ToArray(), filterExpr, orders);
+				return true;
+			}
+			else
+			{
+				ppsMap = null;
+				return false;
+			}
+		} // func TryParse
+
+		public static bool TryParse(Excel.XmlMap xlMap, out string environmentName, out Uri environmentUri, out string viewId, out string filterExpr, out PpsXlColumnInfo[] columns, out PpsDataOrderExpression[] orders)
+		{
+			environmentName = null;
+			environmentUri = null;
+			viewId = null;
+			filterExpr = null;
+			columns = null;
+			orders = null;
+
+			if (xlMap == null || xlMap.Schemas.Count != 1)
 				return false;
 
 			// schema 
@@ -378,13 +428,6 @@ namespace PPSnExcel
 				return false;
 
 			// parse content
-			string viewId = null;
-			PpsDataColumnExpression[] columns = null;
-			string environmentName = null;
-			Uri environmentUri = null;
-			PpsDataOrderExpression[] orders = null;
-			string filterExpr = null;
-
 			foreach (var kv in XlProcs.GetLineProperties(comment))
 			{
 				switch (kv.Key)
@@ -401,25 +444,51 @@ namespace PPSnExcel
 					case viewTag:
 						viewId = kv.Value;
 						break;
-					case columnsTag:
-						columns = PpsDataColumnExpression.Parse(kv.Value).ToArray();
-						break;
 					case ordersTag:
 						orders = PpsDataOrderExpression.Parse(kv.Value).ToArray();
 						break;
 				}
 			}
 
-			var env = findEnvironment(environmentName, environmentUri);
-			if (env == null)
-				return false;
+			// parse column information
+			columns = (
+				from xCol in xSchema.Element(xsdElementName)? // data
+					.Element(xsdComplexTypeName)?.Element(xsdSequenceName)?.Element(xsdElementName) // r
+					.Element(xsdComplexTypeName)?.Element(xsdSequenceName)?.Elements(xsdElementName) // columns
+				let name = xCol?.Attribute("name")?.Value
+				let type = xCol?.Attribute("type")?.Value
+				let minOccurs = xCol.GetAttribute("minOccurs", 1)
+				where name != null
+				select new PpsXlColumnInfo(name, type, minOccurs == 0)
+			).ToArray();
 
-			if (String.IsNullOrEmpty(viewId))
-				return false;
-
-			ppsMap = new PpsListMapping(env, viewId, columns, filterExpr, orders);
-			return true;
+			return environmentUri != null && !String.IsNullOrEmpty(viewId);
 		} // func TryParse
+
+		public static bool TryParseFromSelection(out PpsListMapping ppsMap)
+		{
+			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && !(range.ListObject is null))
+			{
+				var xlList = Globals.Factory.GetVstoObject(range.ListObject);
+				return TryParse(Globals.ThisAddIn.FindEnvironment, xlList.XmlMap, out ppsMap);
+			}
+			else
+			{
+				ppsMap = null;
+				return false;
+			}
+		} // func TryParseFromSelection
+
+		public static bool TryParseFromSelection()
+		{
+			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && !(range.ListObject is null))
+			{
+				var xlList = Globals.Factory.GetVstoObject(range.ListObject);
+				return xlList.XmlMap.Schemas.Count >= 1;
+			}
+			else
+				return false;
+		} // func TryParseFromSelection
 
 		#endregion
 	} // class PpsListMapping
@@ -428,17 +497,17 @@ namespace PPSnExcel
 
 	#region -- class PpsListObject ----------------------------------------------------
 
-	internal sealed class PpsListObject
+	internal sealed class PpsListObject : IPpsTableData
 	{
 		private readonly ListObject xlList; // attached excel list object
 		private readonly PpsListMapping map;
 
 		#region -- Ctor ---------------------------------------------------------------
 
-		private PpsListObject(ListObject xlList, PpsListMapping info)
+		private PpsListObject(ListObject xlList, PpsListMapping map)
 		{
-			this.xlList = xlList;
-			this.map = info;
+			this.xlList = xlList ?? throw new ArgumentNullException(nameof(xlList));
+			this.map = map ?? throw new ArgumentNullException(nameof(map));
 		} // ctor
 
 		#endregion
@@ -669,6 +738,22 @@ namespace PPSnExcel
 
 		#endregion
 
+		#region -- Editor -------------------------------------------------------------
+
+		public void Edit()
+			=> map.Environment.EditTable(this);
+
+		Task IPpsTableData.UpdateAsync(string views)
+		{
+			return Task.CompletedTask;
+		} // proc UpdateAsync
+
+		string IPpsTableData.DisplayName { get => xlList.DisplayName; set => xlList.DisplayName = value; }
+		string IPpsTableData.Views => map.Select;
+		bool IPpsTableData.IsEmpty => false;
+
+		#endregion
+
 		public ListObject List => xlList;
 		public PpsListMapping Mapping => map;
 
@@ -699,6 +784,24 @@ namespace PPSnExcel
 
 		#endregion
 
+		#region -- New ----------------------------------------------------------------
+
+		private sealed class NewModel : IPpsTableData
+		{
+			public Task UpdateAsync(string views)
+				=> Task.CompletedTask;
+
+			public string DisplayName { get; set; } = null;
+
+			public string Views => null;
+			public bool IsEmpty => true;
+		} // class NewModel 
+
+		public static void New(PpsEnvironment env)
+			=> env.EditTable(new NewModel());
+
+		#endregion
+
 		#region -- TryGet -------------------------------------------------------------
 
 		public static bool TryGet(Func<string, Uri, PpsEnvironment> findEnvironment, ListObject xlList, out PpsListObject ppsList)
@@ -714,6 +817,20 @@ namespace PPSnExcel
 				return false;
 			}
 		} // func TryGet
+
+		public static bool TryGetFromSelection(out PpsListObject ppsList)
+		{
+			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && !(range.ListObject is null))
+			{
+				var xlList = Globals.Factory.GetVstoObject(range.ListObject);
+				return TryGet(Globals.ThisAddIn.FindEnvironment, xlList, out ppsList);
+			}
+			else
+			{
+				ppsList = null;
+				return false;
+			}
+		} // func TryGetFromSelection
 
 		#endregion
 	} // class PpsListObject

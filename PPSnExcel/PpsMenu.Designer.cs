@@ -36,14 +36,15 @@
 		{
 			this.tabPPSn = this.Factory.CreateRibbonTab();
 			this.groupData = this.Factory.CreateRibbonGroup();
-			this.group1 = this.Factory.CreateRibbonGroup();
 			this.cmdReport = this.Factory.CreateRibbonButton();
 			this.cmdTable = this.Factory.CreateRibbonButton();
+			this.separator1 = this.Factory.CreateRibbonSeparator();
 			this.cmdRefreshAll = this.Factory.CreateRibbonSplitButton();
 			this.cmdRefreshLayout = this.Factory.CreateRibbonButton();
 			this.separator3 = this.Factory.CreateRibbonSeparator();
 			this.cmdRefresh = this.Factory.CreateRibbonButton();
 			this.button1 = this.Factory.CreateRibbonButton();
+			this.group1 = this.Factory.CreateRibbonGroup();
 			this.loginMenu = this.Factory.CreateRibbonMenu();
 			this.loginGalery = this.Factory.CreateRibbonGallery();
 			this.separator2 = this.Factory.CreateRibbonSeparator();
@@ -52,7 +53,6 @@
 			this.cmdStyles = this.Factory.CreateRibbonButton();
 			this.cmdListObjectInfo = this.Factory.CreateRibbonButton();
 			this.cmdOptions = this.Factory.CreateRibbonButton();
-			this.separator1 = this.Factory.CreateRibbonSeparator();
 			this.tabPPSn.SuspendLayout();
 			this.groupData.SuspendLayout();
 			this.group1.SuspendLayout();
@@ -76,13 +76,6 @@
 			this.groupData.Items.Add(this.button1);
 			this.groupData.Label = "Auswertungen";
 			this.groupData.Name = "groupData";
-			// 
-			// group1
-			// 
-			this.group1.Items.Add(this.loginMenu);
-			this.group1.Items.Add(this.cmdExtended);
-			this.group1.Label = "Verbindung";
-			this.group1.Name = "group1";
 			// 
 			// cmdReport
 			// 
@@ -108,8 +101,11 @@
 			this.cmdTable.ScreenTip = "Datentabelle verknüpfen";
 			this.cmdTable.ShowImage = true;
 			this.cmdTable.SuperTip = "Verknüpft eine Datentabelle mit dem aktuellen Arbeitsblatt";
-			this.cmdTable.Visible = true;
 			this.cmdTable.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdTable_Click);
+			// 
+			// separator1
+			// 
+			this.separator1.Name = "separator1";
 			// 
 			// cmdRefreshAll
 			// 
@@ -152,6 +148,13 @@
 			this.button1.Name = "button1";
 			this.button1.ShowImage = true;
 			this.button1.Visible = false;
+			// 
+			// group1
+			// 
+			this.group1.Items.Add(this.loginMenu);
+			this.group1.Items.Add(this.cmdExtended);
+			this.group1.Label = "Verbindung";
+			this.group1.Name = "group1";
 			// 
 			// loginMenu
 			// 
@@ -216,10 +219,6 @@
 			this.cmdOptions.Name = "cmdOptions";
 			this.cmdOptions.ShowImage = true;
 			this.cmdOptions.Visible = false;
-			// 
-			// separator1
-			// 
-			this.separator1.Name = "separator1";
 			// 
 			// PpsMenu
 			// 

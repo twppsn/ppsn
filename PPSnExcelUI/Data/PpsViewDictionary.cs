@@ -24,7 +24,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
-namespace TecWare.PPSn
+namespace TecWare.PPSn.Data
 {
 	#region -- class PpsViewJoinDefinition --------------------------------------------
 
@@ -32,21 +32,46 @@ namespace TecWare.PPSn
 	public sealed class PpsViewJoinDefinition
 	{
 		private readonly PpsViewDefinition view;
-		private readonly string key;
 		private readonly string alias;
+		private readonly PpsDataJoinType type;
 
-		public PpsViewJoinDefinition(PpsViewDefinition view, string alias)
+		public PpsViewJoinDefinition(PpsViewDefinition view, string alias, PpsDataJoinType type)
 		{
 			this.view = view ?? throw new ArgumentNullException(nameof(view));
-			this.alias = alias;
+			this.alias = alias ?? String.Empty;
+			this.type = type;
 
-			key = alias != null ? view.ViewId + key : view.ViewId;
+			Key = new PpsDataJoinStatement[0];
 		} // ctor
 
-		/// <summary></summary>
+		public bool IsCompatibleAlias(string tableAlias)
+		{
+			if (String.IsNullOrEmpty(tableAlias))
+				return !HasAlias;
+
+			var pos = tableAlias.IndexOf('_');
+			if (pos >= 0)
+				tableAlias = tableAlias.Substring(0, pos);
+
+			if (alias.Length == 0) // no alias
+				return true;
+
+			return String.Compare(alias, tableAlias, StringComparison.OrdinalIgnoreCase) == 0;
+		} // func IsCompatibleAlias
+
+		/// <summary>View to join to</summary>
 		public PpsViewDefinition View => view;
+		/// <summary>Alias for this view, if a view is joined more than ones.</summary>
 		public string Alias => alias;
-		public string DisplayName => alias != null ? view.DisplayName + " (" + alias + ")" : view.DisplayName;
+		/// <summary>Join type</summary>
+		public PpsDataJoinType Type => type;
+		/// <summary>Is alias is set.</summary>
+		public bool HasAlias => alias.Length > 0;
+		/// <summary>Display name for the user.</summary>
+		public string DisplayName => HasAlias ? view.DisplayName + " (" + alias + ")" : view.DisplayName;
+		
+		/// <summary>Statement key, for internal use.</summary>
+		internal PpsDataJoinStatement[] Key { get; }
 	} // class PpsViewJoinDefinition
 
 	#endregion
@@ -66,6 +91,9 @@ namespace TecWare.PPSn
 			this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
 			ViewId = viewId ?? throw new ArgumentNullException(nameof(viewId));
 		} // ctor
+
+		public override string ToString() 
+			=> ViewId;
 
 		internal void RefreshData(XElement x)
 		{
@@ -87,7 +115,7 @@ namespace TecWare.PPSn
 						break;
 					case "join": // references
 						if (owner.TryGetValue(cur.GetAttribute("view", null), out var viewInfo))
-							joins.Add(new PpsViewJoinDefinition(viewInfo, cur.GetAttribute("alias", null)));
+							joins.Add(new PpsViewJoinDefinition(viewInfo, cur.GetAttribute("alias", null), cur.GetAttribute("type", PpsDataJoinType.Inner)));
 						break;
 					case "field": // column
 						if (TryParseColumn(cur, out var col))
@@ -135,7 +163,30 @@ namespace TecWare.PPSn
 			attr = null;
 			return false;
 		} // func TryParseAttribute
-		
+
+		public IEnumerable<PpsViewJoinDefinition> GetAllJoins()
+		{
+			foreach (var j in joins)
+				yield return j;
+
+			foreach (var view in owner.Values)
+			{
+				if (view != this)
+				{
+					foreach (var j in view.Joins)
+					{
+						if (j.View == this)
+						{
+							var rtype = j.Type == PpsDataJoinType.Right
+								? PpsDataJoinType.Left
+								: (j.Type == PpsDataJoinType.Left ? PpsDataJoinType.Right : PpsDataJoinType.Inner);
+							yield return new PpsViewJoinDefinition(view, j.Alias, rtype);
+						}
+					}
+				}
+			}
+		} // func GetJoins
+
 		public string ViewId { get; }
 
 		public string DisplayName { get => displayName ?? ViewId; internal set { displayName = value; } }
@@ -183,9 +234,11 @@ namespace TecWare.PPSn
 
 			using (var r = environment.GetViewData(list).GetEnumerator())
 			{
-				var reportIndex = r.FindColumnIndex("ReportId", true);
-				var displayNameIndex = r.FindColumnIndex("DisplayName", true);
-				var descriptionIndex = r.FindColumnIndex("Description", true);
+				var columns = await Task.Run(() => new SimpleDataColumns(((IDataColumns)r).Columns.ToArray()));
+				
+				var reportIndex = columns.FindColumnIndex("ReportId", true);
+				var displayNameIndex = columns.FindColumnIndex("DisplayName", true);
+				var descriptionIndex = columns.FindColumnIndex("Description", true);
 
 				while (await Task.Run(new Func<bool>(r.MoveNext)))
 				{

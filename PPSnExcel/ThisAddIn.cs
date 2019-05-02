@@ -24,6 +24,7 @@ using System.Windows.Forms;
 using Microsoft.Office.Tools.Excel;
 using Neo.IronLua;
 using TecWare.PPSn;
+using TecWare.PPSn.Data;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
@@ -259,21 +260,56 @@ namespace PPSnExcel
 		{
 			GetActiveXlObjects(out var worksheet, out var workbook);
 
-			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
-			{
-				this.ShowMessage($"{range.ListObject.XmlMap.Schemas[1].XML} --- {range.ListObject.SourceType}");
-			}
-
 			var sb = new StringBuilder();
 
-			for (var i = 1; i <= workbook.XmlMaps.Count; i++)
+			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
 			{
-				var map = workbook.XmlMaps[i];
-				sb.AppendLine($"{i}: name={map.Name}, root={map.RootElementName}, schemas={map.Schemas.Count}");
-				for (var j = 1; j <= map.Schemas.Count; j++)
+				var xlMap = range.ListObject.XmlMap;
+				if (PpsListMapping.TryParse(xlMap, out var environmentName, out var environmentUri, out var viewId, out var filterExpr, out var columns, out var orders))
 				{
-					var schema = map.Schemas[j];
-					sb.AppendLine($"  {j}: name={schema.Name}, uri={schema.Namespace.Uri.ToString()}");
+					sb.AppendLine("Mapping found:");
+					sb.AppendFormat("\tEnvironment: {0} ({1})", environmentName, environmentUri).AppendLine();
+					sb.Append("\tView: ").Append(viewId).AppendLine();
+					sb.Append("\tFilter: ").Append(filterExpr).AppendLine();
+					sb.Append("\tOrder: ").Append(PpsDataOrderExpression.ToString(orders)).AppendLine();
+					sb.AppendLine();
+					if (columns == null || columns.Length == 0)
+						sb.Append("Column information not found.");
+					else
+					{
+						var i = 0;
+						foreach (var col in columns)
+						{
+							sb.AppendFormat("{0}: {1} [{2}]", ++i, col.ColumnName, col.XmlType);
+							if (col.IsNullable)
+								sb.Append(" OPT");
+							sb.AppendLine();
+						}
+					}
+				}
+				else
+				{
+					sb.AppendLine("Could not parse Mapping.");
+					sb.AppendLine();
+					if (xlMap.Schemas.Count == 1)
+						sb.AppendLine("Xml-Schema is missing.");
+					else
+						sb.Append(xlMap.Schemas[1].XML);
+				}
+			}
+			else // show mappings in workbook
+			{
+				sb.AppendLine("Mappings of the workbook:");
+
+				for (var i = 1; i <= workbook.XmlMaps.Count; i++)
+				{
+					var map = workbook.XmlMaps[i];
+					sb.AppendLine($"{i}: name={map.Name}, root={map.RootElementName}, schemas={map.Schemas.Count}");
+					for (var j = 1; j <= map.Schemas.Count; j++)
+					{
+						var schema = map.Schemas[j];
+						sb.AppendLine($"  {j}: name={schema.Name}, uri={schema.Namespace.Uri.ToString()}");
+					}
 				}
 			}
 

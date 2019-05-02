@@ -483,26 +483,29 @@ namespace TecWare.PPSn.Server
 		/// <summary></summary>
 		/// <param name="viewName"></param>
 		/// <param name="aliasName"></param>
+		/// <param name="type"></param>
 		/// <param name="statement"></param>
-		public PpsViewJoinDefinition(string viewName, string aliasName, PpsDataJoinStatement[] statement)
+		public PpsViewJoinDefinition(string viewName, string aliasName, PpsDataJoinType type, PpsDataJoinStatement[] statement)
 		{
 			ViewName = viewName;
 			AliasName = aliasName;
 			Statement = statement;
+			Type = type;
 		} // ctor
 
-		/// <summary></summary>
+		/// <summary>View to join to</summary>
 		public string ViewName { get; }
-		/// <summary></summary>
+		/// <summary>Alias to intendify joins to the same view</summary>
 		public string AliasName { get;  }
-		/// <summary></summary>
+		/// <summary>Join type</summary>
+		public PpsDataJoinType Type { get; }
+		/// <summary>On statement for the view.</summary>
 		public PpsDataJoinStatement[] Statement { get;  }
 
 		/// <summary>Empty parameter array.</summary>
 		public static PpsViewJoinDefinition[] EmptyArray { get; } = Array.Empty<PpsViewJoinDefinition>();
 	} // class PpsViewJoinDefinition
-
-
+	
 	#endregion
 
 	#region -- class PpsViewDefinition ------------------------------------------------

@@ -970,6 +970,20 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region -- Shape Load/Save ----------------------------------------------------
+
+		/// <summary></summary>
+		public static void LoadShapes()
+		{
+		} // proc LoadShapes
+
+		/// <summary></summary>
+		public void SaveShapes()
+		{
+		} // proc SaveShapes
+
+		#endregion
+
 		#region -- NewShape - Management ----------------------------------------------
 
 		private PpsShape newShape = null; // selection-box content

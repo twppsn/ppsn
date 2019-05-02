@@ -50,10 +50,8 @@ namespace PPSnExcel
 			Refresh();
 
 #if DEBUG
-			cmdExtended.Visible = true;
 			cmdTable.Visible = true;
 #else
-			cmdExtended.Visible = false;
 			cmdTable.Visible = false;
 #endif
 
@@ -81,8 +79,9 @@ namespace PPSnExcel
 		public void Refresh()
 		{
 			var currentEnvironment = Globals.ThisAddIn.CurrentEnvironment;
-			cmdReport.Enabled =
-				cmdTable.Enabled = currentEnvironment != null;
+			var hasEnvironment = currentEnvironment != null;
+			cmdReport.Enabled = hasEnvironment;
+			cmdTable.Enabled = hasEnvironment || PpsListMapping.TryParseFromSelection();
 
 			cmdRefresh.Enabled =
 				cmdRefreshLayout.Enabled = Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null);
@@ -145,14 +144,13 @@ namespace PPSnExcel
 
 		private static void InsertTable()
 		{
-			var env = Globals.ThisAddIn.CurrentEnvironment;
-			if (env != null)
+			if (PpsListObject.TryGetFromSelection(out var ppsList)) // edit the current selected table
+				ppsList.Edit();
+			else // create a fresh table
 			{
-				using (var frm = new TableInsertForm(env))
-				{
-					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
-						ImportTableCommand(frm.ReportName, frm.ReportSource, IsSingleLineModeToggle());
-				}
+				var env = Globals.ThisAddIn.CurrentEnvironment; // get environment
+				if (env != null)
+					PpsListObject.New(env);
 			}
 		} // proc InsertTable
 

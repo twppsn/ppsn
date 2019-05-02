@@ -216,12 +216,6 @@
     <Compile Include="ReportInsertForm.Designer.cs">
       <DependentUpon>ReportInsertForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="TableInsertForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="TableInsertForm.Designer.cs">
-      <DependentUpon>TableInsertForm.cs</DependentUpon>
-    </Compile>
     <Compile Include="WaitForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -243,9 +237,6 @@
     </Compile>
     <EmbeddedResource Include="ReportInsertForm.resx">
       <DependentUpon>ReportInsertForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="TableInsertForm.resx">
-      <DependentUpon>TableInsertForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="WaitForm.resx">
       <DependentUpon>WaitForm.cs</DependentUpon>

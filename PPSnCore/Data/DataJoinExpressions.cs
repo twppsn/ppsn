@@ -199,6 +199,24 @@ namespace TecWare.PPSn.Data
 			}
 		} // func ParseJoinType
 
+		/// <summary>Convert join type to string.</summary>
+		/// <param name="type"></param>
+		/// <returns></returns>
+		public static string ConvertJoinType(PpsDataJoinType type)
+		{
+			switch(type)
+			{
+				case PpsDataJoinType.Left:
+					return ">";
+				case PpsDataJoinType.Right:
+					return "<";
+				case PpsDataJoinType.Inner:
+					return "=";
+				default:
+					return ",";
+			}
+		} // func ConvertJoinType
+
 		private static Exception CreateJoinTypeException(string expr)
 			=> throw new ArgumentOutOfRangeException(nameof(expr), expr, "Invalid join expression.");
 		
@@ -293,6 +311,11 @@ namespace TecWare.PPSn.Data
 
 			/// <summary></summary>
 			/// <returns></returns>
+			public override string ToString()
+				=> "#Table#" + table.ToString() + (String.IsNullOrEmpty(alias) ? String.Empty : "#" + alias);
+
+			/// <summary></summary>
+			/// <returns></returns>
 			public override IEnumerable<PpsTableExpression> GetTables()
 			{
 				yield return this;
@@ -331,6 +354,11 @@ namespace TecWare.PPSn.Data
 				this.right = right ?? throw new ArgumentNullException(nameof(right));
 				this.onStatement = onStatement ?? throw new ArgumentNullException(nameof(onStatement));
 			} // ctor
+
+			/// <summary></summary>
+			/// <returns></returns>
+			public override string ToString()
+				=> left.ToString() + " " + type.ToString() + " " + right.ToString();
 
 			/// <summary></summary>
 			/// <returns></returns>
@@ -425,23 +453,6 @@ namespace TecWare.PPSn.Data
 
 			private PpsExpressionPart ParseTable()
 			{
-				var tableName = ParseDotName();
-				var tableAlias = ParseAlias();
-				return owner.CreateTable(tableName, tableAlias);
-			} // func ParseTable
-
-			private PpsDataJoinType ParseJoinOperator()
-			{
-				ParseWhiteSpace();
-				var r = PpsDataJoinStatement.ParseJoinType(Cur, true);
-				if (r != PpsDataJoinType.None)
-					pos++;
-				return r;
-			} // func ParseJoinOperator
-
-			private PpsExpressionPart ParseExpr()
-			{
-				ParseWhiteSpace();
 				if (Cur == '(')
 				{
 					pos++;
@@ -451,32 +462,50 @@ namespace TecWare.PPSn.Data
 					pos++;
 					return r;
 				}
-				else if (Char.IsLetter(Cur))
+				else
 				{
-					var left = ParseTable();
+					var tableName = ParseDotName();
+					if (String.IsNullOrEmpty(tableName))
+						throw new ArgumentException("Identifier expected.");
 
-					var joinOp = PpsDataJoinType.None;
-					while ((joinOp = ParseJoinOperator()) != PpsDataJoinType.None)
+					var tableAlias = ParseAlias();
+					return owner.CreateTable(tableName, tableAlias);
+				}
+			} // func ParseTable
+
+			private PpsDataJoinType ParseJoinOperator()
+			{
+				ParseWhiteSpace();
+				var r = PpsDataJoinStatement.ParseJoinType(Cur, false);
+				if (r != PpsDataJoinType.None)
+					pos++;
+				return r;
+			} // func ParseJoinOperator
+
+			private PpsExpressionPart ParseExpr()
+			{
+				ParseWhiteSpace();
+				var left = ParseTable();
+
+				var joinOp = PpsDataJoinType.None;
+				while ((joinOp = ParseJoinOperator()) != PpsDataJoinType.None)
+				{
+					var right = ParseTable();
+					PpsDataJoinStatement[] onStatement = null;
+					if (Cur == '[')
 					{
-						var right = ParseTable();
-						PpsDataJoinStatement[] onStatement = null;
-						if (Cur == '[')
-						{
-							pos++; // eat start
-							onStatement = ParseOnStatement().ToArray();
+						pos++; // eat start
+						onStatement = ParseOnStatement().ToArray();
 
-							if (Cur != ']')
-								throw CreateException("']' expected.");
-							pos++;
-						}
-
-						left = new PpsJoinExpression(left, joinOp, right, onStatement ?? owner.CreateOnStatement(left, joinOp, right));
+						if (Cur != ']')
+							throw CreateException("']' expected.");
+						pos++;
 					}
 
-					return left;
+					left = new PpsJoinExpression(left, joinOp, right, onStatement ?? owner.CreateOnStatement(left, joinOp, right));
 				}
-				else
-					throw CreateException("Identifier expected.");
+
+				return left;
 			} // func ParseExpr
 
 			public PpsExpressionPart Parse()
@@ -590,6 +619,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // func GetTables
 
+		/// <summary>Parsed expression part</summary>
+		public PpsExpressionPart Root => root;
 		/// <summary>Is this expression valid.</summary>
 		public bool IsValid => root?.IsValid ?? false;
 	} // class PpsJoinExpression

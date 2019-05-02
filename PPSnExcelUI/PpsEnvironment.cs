@@ -32,6 +32,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
@@ -313,12 +314,17 @@ namespace TecWare.PPSn
 				return Task.FromResult(func());
 		} // func InvokeAsync
 
-		public void Spawn(Func<Task> task)
+		public void ContinueCatch(Task task)
 		{
-			Task.Run(task).ContinueWith(
+			task.ContinueWith(
 				t => Await(ShowExceptionAsync(ExceptionShowFlags.None, t.Exception)),
 				TaskContinuationOptions.OnlyOnFaulted
 			);
+		} // func ContinueCatch
+
+		public void Spawn(Func<Task> task)
+		{
+			Task.Run(task);
 		} // proc Spawn
 
 		public void Spawn(Action action)
@@ -367,6 +373,20 @@ namespace TecWare.PPSn
 		} // proc UpdateApplicationAsync
 
 		#endregion
+
+		/// <summary>Edit the current table</summary>
+		/// <param name="table"></param>
+		public void EditTable(IPpsTableData table)
+		{
+			if (table == null)
+				throw new ArgumentNullException(nameof(table));
+
+			using (var frm = new TableInsertForm(this))
+			{
+				frm.LoadData(table);
+				frm.ShowDialog(formsApplication);
+			}
+		} // void EditTable
 
 		/// <summary>Name of the environment.</summary>
 		public string Name => info.Name;

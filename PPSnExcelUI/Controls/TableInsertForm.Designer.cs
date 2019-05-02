@@ -1,4 +1,4 @@
-﻿namespace PPSnExcel
+﻿namespace TecWare.PPSn.Controls
 {
 	partial class TableInsertForm
 	{
@@ -31,9 +31,9 @@
 			this.tableSearchText = new System.Windows.Forms.TextBox();
 			this.label3 = new System.Windows.Forms.Label();
 			this.conditionExpression = new System.Windows.Forms.TextBox();
-			this.cmdInsert = new System.Windows.Forms.Button();
+			this.cmdRefresh = new System.Windows.Forms.Button();
 			this.cmdClose = new System.Windows.Forms.Button();
-			this.tableTree = new System.Windows.Forms.TreeView();
+			this.tableTree = new PpsTreeView();
 			this.availableColumns = new System.Windows.Forms.CheckedListBox();
 			this.SuspendLayout();
 			// 
@@ -61,16 +61,16 @@
 			this.conditionExpression.Size = new System.Drawing.Size(379, 62);
 			this.conditionExpression.TabIndex = 6;
 			// 
-			// cmdInsert
+			// cmdRefresh
 			// 
-			this.cmdInsert.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.cmdInsert.Location = new System.Drawing.Point(489, 504);
-			this.cmdInsert.Name = "cmdInsert";
-			this.cmdInsert.Size = new System.Drawing.Size(100, 23);
-			this.cmdInsert.TabIndex = 9;
-			this.cmdInsert.Text = "Einfügen";
-			this.cmdInsert.UseVisualStyleBackColor = true;
-			this.cmdInsert.Click += new System.EventHandler(this.cmdInsert_Click);
+			this.cmdRefresh.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.cmdRefresh.Location = new System.Drawing.Point(489, 504);
+			this.cmdRefresh.Name = "cmdRefresh";
+			this.cmdRefresh.Size = new System.Drawing.Size(100, 23);
+			this.cmdRefresh.TabIndex = 9;
+			this.cmdRefresh.Text = "Einfügen";
+			this.cmdRefresh.UseVisualStyleBackColor = true;
+			this.cmdRefresh.Click += new System.EventHandler(this.cmdInsert_Click);
 			// 
 			// cmdClose
 			// 
@@ -104,14 +104,14 @@
 			// 
 			// TableInsertForm
 			// 
-			this.AcceptButton = this.cmdInsert;
+			this.AcceptButton = this.cmdRefresh;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(711, 543);
 			this.Controls.Add(this.availableColumns);
 			this.Controls.Add(this.tableTree);
 			this.Controls.Add(this.cmdClose);
-			this.Controls.Add(this.cmdInsert);
+			this.Controls.Add(this.cmdRefresh);
 			this.Controls.Add(this.label3);
 			this.Controls.Add(this.conditionExpression);
 			this.Controls.Add(this.tableSearchText);
@@ -133,9 +133,9 @@
 		private System.Windows.Forms.TextBox tableSearchText;
 		private System.Windows.Forms.Label label3;
 		private System.Windows.Forms.TextBox conditionExpression;
-		private System.Windows.Forms.Button cmdInsert;
+		private System.Windows.Forms.Button cmdRefresh;
 		private System.Windows.Forms.Button cmdClose;
-		private System.Windows.Forms.TreeView tableTree;
+		private PpsTreeView tableTree;
 		private System.Windows.Forms.CheckedListBox availableColumns;
 	}
 }
