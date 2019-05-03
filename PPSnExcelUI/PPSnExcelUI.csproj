@@ -54,6 +54,9 @@
     <Compile Include="..\Common\AssemblyInfoXl..cs">
       <Link>Properties\AssemblyInfoXl..cs</Link>
     </Compile>
+    <Compile Include="Controls\PpsFilterEditor.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Controls\PpsTreeView.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -104,6 +107,10 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\r16x16\sort_ascending.png" />
+    <Content Include="Resources\r16x16\sort_descending.png" />
   </ItemGroup>
   <Import Project="..\PPSnClient\PPSnClient.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

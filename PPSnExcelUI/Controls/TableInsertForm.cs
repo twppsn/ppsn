@@ -15,12 +15,16 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
@@ -34,7 +38,7 @@ namespace TecWare.PPSn.Controls
 			private readonly TreeNodeData parent; // parent node
 			private readonly List<JoinTreeNodeData> joins = new List<JoinTreeNodeData>(); // list of all sub joins
 			private string alias = null; // encodes the alias name
-			
+
 			protected TreeNodeData(TreeNodeData parent)
 			{
 				this.parent = parent;
@@ -60,7 +64,7 @@ namespace TecWare.PPSn.Controls
 			} // proc Refresh
 
 			protected abstract string GetDefaultAlias(string alias);
-			
+
 			/// <summary>Activate this node</summary>
 			/// <param name="isNewActive"></param>
 			public void SetActive(bool isNewActive, string alias = null)
@@ -72,15 +76,18 @@ namespace TecWare.PPSn.Controls
 				{
 					this.alias = GetDefaultAlias(alias);
 
-					joins.Clear();
-					foreach (var c in View.Joins)
-						joins.Add(new JoinTreeNodeData(this, c));
+					if (joins.Count == 0)
+					{
+						foreach (var c in View.Joins)
+							joins.Add(new JoinTreeNodeData(this, c));
+					}
 
 				}
 				else// clear all parents
 				{
 					this.alias = null;
-					joins.Clear();
+					foreach (var c in joins)
+						c.SetActive(false);
 				}
 			} // proc SetActive
 
@@ -114,8 +121,8 @@ namespace TecWare.PPSn.Controls
 				sb.Append(View.ViewId);
 				if (!String.IsNullOrEmpty(alias))
 					sb.Append(' ').Append(alias);
-			
-				foreach(var j in joins)
+
+				foreach (var j in joins)
 				{
 					if (!j.IsActive)
 						continue;
@@ -160,8 +167,33 @@ namespace TecWare.PPSn.Controls
 				}
 			} // func ActiveChildren
 
+			public bool ContainsColumn(IDataColumn column)
+				=> View.Columns.Contains(column);
+
+			public string GetColumnName(IDataColumn column)
+			{
+				return String.IsNullOrEmpty(alias)
+					? column.Name
+					: alias + "." + column.Name;
+			} // func GetColumnName
+
+			private StringBuilder GetPath(StringBuilder sb)
+			{
+				if (parent == null)
+					sb.Append(NodeText);
+				else
+				{
+					sb.Append(NodeText)
+						.Append("/");
+					parent.GetPath(sb);
+				}
+				return sb;
+			} // func GetPath
+
 			public abstract string NodeText { get; }
 			public virtual string NodeToolTip => null;
+
+			public string Path => GetPath(new StringBuilder()).ToString();
 
 			public IEnumerable<JoinTreeNodeData> ActiveJoins => from j in joins where j.IsActive select j;
 			public bool HasActiveJoins => ActiveJoins.Any();
@@ -378,28 +410,236 @@ namespace TecWare.PPSn.Controls
 
 		#region -- class ColumnSource -------------------------------------------------
 
-		private sealed class ColumnSource
+		private sealed class ColumnSource : IPpsTableColumn
 		{
-			public ColumnSource(PpsViewDefinition view, IDataColumn column)
+			public ColumnSource(TreeNodeData columnSource, IDataColumn column)
 			{
-				View = view ?? throw new ArgumentNullException(nameof(view));
+				Source = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
 				Column = column ?? throw new ArgumentNullException(nameof(column));
+
+				DisplayName = column.Attributes.GetProperty<string>("DisplayName", column.Name);
 			} // ctor
 
 			public override string ToString()
-				=> Column.Name;
+				=> DisplayName;
 
-			public PpsViewDefinition View { get; }
+			public bool IsEqualColumn(ColumnSource other)
+				=> Column == other.Column && Source == other.Source;
+
+			public TreeNodeData Source { get; }
 			public IDataColumn Column { get; }
+
+			public string DisplayName { get; }
+			public string SourcePath => Source.Path;
+
+			string IPpsTableColumn.Expression => Source.GetColumnName(Column);
+			bool? IPpsTableColumn.Ascending
+			{
+				get
+				{
+					switch (ColumnSort)
+					{
+						case SortOrder.Ascending:
+							return true;
+						case SortOrder.Descending:
+							return false;
+						default:
+							return null;
+					}
+				}
+			} // prop Ascending
+
+			public SortOrder ColumnSort { get; set; } = SortOrder.None;
 		} // class ColumnSource
 
 		#endregion
 
+		#region -- class ColumCondition -----------------------------------------------
+
+		private sealed class ColumnCondition : IPpsFilterColumn
+		{
+			private readonly ColumnSource columnSource;
+			private PpsDataFilterCompareOperator op = PpsDataFilterCompareOperator.Contains;
+			private string compareValue = null;
+			private IPpsFilterGroup groupdIndex = null;
+
+			public ColumnCondition(ColumnSource columnSource)
+			{
+				this.columnSource = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
+			} // ctor
+
+			private void SetExpression(string expr)
+			{
+				if (expr == null)
+				{
+					op = PpsDataFilterCompareOperator.Contains;
+					compareValue = null;
+				}
+				else
+				{
+					expr = expr.Trim();
+					var (newOp, valueOfs) = ParsePrefix(expr);
+					op = newOp;
+					compareValue = expr.Substring(valueOfs).Trim();
+				}
+			} // proc SetExpression
+
+			private static (PpsDataFilterCompareOperator, int) ParsePrefix(string expr)
+			{
+				if (expr.Length >= 1)
+				{
+					switch (expr[0])
+					{
+						case '!':
+							if (expr.Length >= 2 && expr[1] == '=')
+								return (PpsDataFilterCompareOperator.NotEqual, 2);
+							else
+								return (PpsDataFilterCompareOperator.NotContains, 1);
+						case '=':
+							return (PpsDataFilterCompareOperator.Equal, 1);
+						case '>':
+							if (expr.Length >= 2 && expr[1] == '=')
+								return (PpsDataFilterCompareOperator.GreaterOrEqual, 2);
+							else
+								return (PpsDataFilterCompareOperator.Greater, 1);
+						case '<':
+							if (expr.Length >= 2 && expr[1] == '=')
+								return (PpsDataFilterCompareOperator.LowerOrEqual, 2);
+							else
+								return (PpsDataFilterCompareOperator.Lower, 1);
+						default:
+							return (PpsDataFilterCompareOperator.Contains, 0);
+					}
+				}
+				else
+					return (PpsDataFilterCompareOperator.Contains, 0);
+			} // func ParsePrefix
+
+			private static string GetPrefix(PpsDataFilterCompareOperator op)
+			{
+				switch (op)
+				{
+					case PpsDataFilterCompareOperator.NotContains:
+						return "!";
+					case PpsDataFilterCompareOperator.NotEqual:
+						return "!=";
+					case PpsDataFilterCompareOperator.Equal:
+						return "=";
+					case PpsDataFilterCompareOperator.Greater:
+						return ">";
+					case PpsDataFilterCompareOperator.GreaterOrEqual:
+						return ">=";
+					case PpsDataFilterCompareOperator.Lower:
+						return "<";
+					case PpsDataFilterCompareOperator.LowerOrEqual:
+						return "<=";
+					case PpsDataFilterCompareOperator.Contains:
+					default:
+						return String.Empty;
+				}
+			} // func GetPrefix
+
+			private string GetExpression()
+			{
+				return GetPrefix(op) + compareValue;
+			} // func GetExpression
+
+			internal string FormatFilterExpression()
+			{
+				return IsEmpty
+					? null
+					: Source.Source.GetColumnName(Source.Column) + ":" + Expression;
+			} // func FormatFilterExpression
+
+			internal ColumnSource Source => columnSource;
+
+			public string ColumnName => columnSource.DisplayName;
+			public string ColumnSource => columnSource.SourcePath;
+
+			public string Expression { get => GetExpression(); set => SetExpression(value); }
+			public IPpsFilterGroup Group { get => groupdIndex; set => groupdIndex = value; }
+
+			public bool IsEmpty => compareValue == null;
+		} // class ColumnCondition
+
+		#endregion
+
+		#region -- class VisibleColumnHelper ------------------------------------------
+
+		private sealed class VisibleColumnHelper
+		{
+			private readonly ViewTreeNodeData resultView;
+			private readonly JoinTreeNodeData[] activeTreeNodes;
+
+			public VisibleColumnHelper(ViewTreeNodeData resultView)
+			{
+				this.resultView = resultView ?? throw new ArgumentNullException(nameof(resultView));
+				activeTreeNodes = resultView.ActiveChildren().ToArray();
+			} // ctor
+
+			public bool IsVisibleColumn(ColumnSource column)
+			{
+				if (resultView == column.Source)
+					return true;
+
+				foreach (var c in activeTreeNodes)
+					if (c == column.Source)
+						return true;
+
+				return false;
+			} // func IsVisibleColumn
+
+			public bool IsVisibleColumn2(IPpsFilterColumn filterColumn)
+				=> IsVisibleColumn(((ColumnCondition)filterColumn).Source);
+
+			private bool TryFindColumn(TreeNodeData view, string exprAlias, string exprColumn, ref TreeNodeData resultColumnSource, ref IDataColumn resultColumn)
+			{
+				var r = false;
+				if (!String.IsNullOrEmpty(exprAlias))
+					r = String.Compare(view.Alias, exprAlias, StringComparison.OrdinalIgnoreCase) == 0;
+
+				var currentResultColumn = view.View.Columns.FirstOrDefault(c => String.Compare(c.Name, exprColumn, StringComparison.OrdinalIgnoreCase) == 0);
+				if (currentResultColumn != null)
+				{
+					resultColumnSource = view;
+					resultColumn = currentResultColumn;
+				}
+
+				return r && currentResultColumn != null;
+			} // func TryFindColumn
+
+			public ColumnSource FindColumnSource(string expression)
+			{
+				var p = expression.IndexOf('.');
+				var exprAlias = p >= 0 ? expression.Substring(0, p) : null;
+				var exprColumn = p >= 0 ? expression.Substring(p + 1) : expression;
+
+				var resultColumnSource = (TreeNodeData)null;
+				var resultColumn = (IDataColumn)null;
+
+				if (TryFindColumn(resultView, exprAlias, exprColumn, ref resultColumnSource, ref resultColumn))
+					return new ColumnSource(resultColumnSource, resultColumn);
+
+				foreach (var c in activeTreeNodes)
+					if (TryFindColumn(c, exprAlias, exprColumn, ref resultColumnSource, ref resultColumn))
+						return new ColumnSource(resultColumnSource, resultColumn);
+
+				return null;
+			} // func FindColumnSource
+		} // class VisibleColumnHelper
+
+		#endregion
+
+		private const string dataObjectFormat = "PpsnColumnSource[]";
+
 		private readonly PpsEnvironment env;
 		private readonly PpsViewDictionary availableViews; // list of all server tables
+		private readonly List<ViewTreeNodeData> createdTreeNodeViews = new List<ViewTreeNodeData>();
 
-		private IPpsTableData currentData = null;	// current selected mapping
-		private ViewTreeNodeData selectedView = null;   // current selected root table
+		private IPpsTableData currentData = null;   // current selected mapping
+		private ViewTreeNodeData resultView = null;   // current selected root table
+		private List<ColumnSource> resultColumns = new List<ColumnSource>(); // result column set
+		private List<IPpsFilterColumn> resultFilter = new List<IPpsFilterColumn>(); // filter expression
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -409,6 +649,7 @@ namespace TecWare.PPSn.Controls
 
 			InitializeComponent();
 
+			filterGrid.RequireRefreshFilter += (sender, e) => RefreshResultColumns();
 			availableViews = new PpsViewDictionary(env);
 		} // ctor
 
@@ -419,21 +660,40 @@ namespace TecWare.PPSn.Controls
 
 			// check current view
 			if (data != null)
-				selectedView = new PpsJoinParser(availableViews, data.Views).Result;
+			{
+				// joins
+				SetResultView(new PpsJoinParser(availableViews, data.Views).Result);
+
+				// update columns
+				if (data.Columns != null)
+				{
+					var visibleResultView = new VisibleColumnHelper(resultView);
+					foreach (var col in data.Columns)
+					{
+						var columnSource = visibleResultView.FindColumnSource(col.Expression);
+						if (columnSource != null)
+							resultColumns.Add(columnSource);
+					}
+				}
+
+				// update filter
+				// todo: parse filter
+			}
 
 			// update view
 			UpdateTreeView();
+			RefreshResultColumns();
 		} // func RefreshAllAsync
 
 		public void LoadData(IPpsTableData tableData)
 		{
-			Text = tableData.IsEmpty 
+			Text = tableData.IsEmpty
 				? "Neue Tabelle einfügen"
 				: String.Format("{0} bearbeiten", tableData.DisplayName);
-			cmdRefresh.Text = tableData.IsEmpty 
+			cmdRefresh.Text = tableData.IsEmpty
 				? "Einfügen"
 				: "Aktualisieren";
-			
+
 			// update view
 			currentData = tableData;
 			env.ContinueCatch(RefreshAllAsync(currentData));
@@ -443,7 +703,7 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Tree View Management -----------------------------------------------
 
-		private static int BinaryTreeNodeSearch(TreeNodeCollection nodes, int offset, int length, string text)
+		private static int BinarySearch(Func<int, string> g, int offset, int length, string text)
 		{
 			var startAt = offset;
 			var endAt = offset + length - 1;
@@ -451,7 +711,7 @@ namespace TecWare.PPSn.Controls
 			while (startAt <= endAt)
 			{
 				var middle = startAt + ((endAt - startAt) >> 1);
-				var t = String.Compare(nodes[middle].Text, text, StringComparison.OrdinalIgnoreCase);
+				var t = String.Compare(g(middle), text, StringComparison.OrdinalIgnoreCase);
 				if (t == 0)
 					return middle;
 				else if (t < 0)
@@ -461,11 +721,11 @@ namespace TecWare.PPSn.Controls
 			}
 
 			return ~startAt;
-		} // proc BinaryTreeNodeSearch
+		} // proc BinaryNodeSearch
 
 		private static void UpsertTreeNode(TreeNodeCollection nodes, TreeNodeData data)
 		{
-			var pos = BinaryTreeNodeSearch(nodes, 0, nodes.Count, data.NodeText);
+			var pos = BinarySearch(i => nodes[i].Text, 0, nodes.Count, data.NodeText);
 			if (pos < 0)
 			{
 				pos = ~pos;
@@ -493,6 +753,25 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc UpdateTreeNodes
 
+		private int GetTreeNodeViewCacheIndex(PpsViewDefinition view)
+			=> createdTreeNodeViews.FindIndex(c => c.View == view);
+
+		private void SetResultView(ViewTreeNodeData newView)
+		{
+			resultView = newView;
+			if (newView != null && !createdTreeNodeViews.Contains(newView))
+				createdTreeNodeViews.Add(newView);
+		} // proc SetResultView
+
+		private ViewTreeNodeData GetTreeNodeView(PpsViewDefinition view)
+		{
+			var cacheIndex = GetTreeNodeViewCacheIndex(view);
+			if (cacheIndex >= 0)
+				return createdTreeNodeViews[cacheIndex];
+			else
+				return new ViewTreeNodeData(view, null, false);
+		} // func GetTreeNodeView
+
 		private void UpdateTreeView()
 		{
 			if (IsTableSelectMode) // table selected
@@ -501,7 +780,7 @@ namespace TecWare.PPSn.Controls
 				var d = tableTree.Nodes.Count - 1;
 				while (tableTree.Nodes.Count > 1)
 				{
-					if (tableTree.Nodes[d].Tag == selectedView)
+					if (tableTree.Nodes[d].Tag == resultView)
 						d--;
 					tableTree.Nodes.RemoveAt(d);
 					d--;
@@ -509,10 +788,10 @@ namespace TecWare.PPSn.Controls
 				if (tableTree.Nodes.Count == 0)
 					tableTree.Nodes.Add("Node");
 
-				selectedView.Refresh(tableTree.Nodes[0]);
+				resultView.Refresh(tableTree.Nodes[0]);
 			}
 			else // show full filtered list
-				UpdateTreeNodes(tableTree.Nodes, availableViews.Select(c => new ViewTreeNodeData(c.Value, null, false)));
+				UpdateTreeNodes(tableTree.Nodes, availableViews.Select(c => GetTreeNodeView(c.Value)));
 		} // proc UpdateTreeView
 
 		private void tableTree_AfterCheck(object sender, TreeViewEventArgs e)
@@ -525,56 +804,431 @@ namespace TecWare.PPSn.Controls
 				if (e.Node.Checked)
 				{
 					view.SetActive(true);
-					selectedView = view;
+					SetResultView(view);
 					UpdateTreeView();
 				}
 				else
 				{
-					selectedView = null;
+					SetResultView(null);
 					view.SetActive(false);
 					UpdateTreeView();
 				}
-				RefreshAvailableColumns();
+				RefreshResultColumns();
+				if (e.Node.IsSelected)
+					RefreshAvailableColumns(view);
 			}
 			else if (e.Node.Tag is JoinTreeNodeData join) // child node
 			{
 				join.SetActive(e.Node.Checked);
 				join.Refresh(e.Node);
-				RefreshAvailableColumns();
+				RefreshResultColumns();
+				if (e.Node.IsSelected)
+					RefreshAvailableColumns(join);
 			}
 		} // event tableTree_AfterCheck
 
 		#endregion
 
-		#region -- RefreshAvailableColumns --------------------------------------------
+		#region -- ColumnSelection ----------------------------------------------------
 
-		private void RefreshAvailableColumns()
+		private void tableTree_AfterSelect(object sender, TreeViewEventArgs e)
 		{
-			//availableColumns.BeginUpdate();
-			//try
-			//{
-			//	if (selectedView == null)
-			//		availableColumns.Items.Clear();
-			//	else
-			//	{
-			//		foreach (var view in selectedView.GetViews())
-			//		{
-			//			foreach (var col in view.Columns)
-			//			{
-			//				availableColumns.Items.Add(new ColumnSource(view, col));
-			//			}
-			//		}
-			//	}
-			//}
-			//finally
-			//{
-			//	availableColumns.EndUpdate();
-			//}
+			if (e.Node.Tag is TreeNodeData nodeData)
+				RefreshAvailableColumns(nodeData);
+		} // event tableTree_AfterSelect
+
+		private void RefreshAvailableColumns(TreeNodeData nodeData)
+		{
+			currentColumnsListView.BeginUpdate();
+			try
+			{
+				if (nodeData == null || !nodeData.IsActive || !IsTableSelectMode)
+				{
+					currentColumnsListView.Items.Clear();
+				}
+				else
+				{
+					// remove columns
+					for (var i = currentColumnsListView.Items.Count - 1; i >= 0; i--)
+					{
+						if (currentColumnsListView.Items[i].Tag is ColumnSource columnSource && columnSource.Source != nodeData)
+							currentColumnsListView.Items.RemoveAt(i);
+					}
+
+					// add new columns
+					foreach (var col in nodeData.View.Columns)
+					{
+						var newCol = new ColumnSource(nodeData, col);
+						var idx = BinarySearch(
+							i => currentColumnsListView.Items[i].Text,
+							0, currentColumnsListView.Items.Count,
+							newCol.DisplayName
+						);
+
+						ListViewItem lvi;
+						if (idx < 0)
+							currentColumnsListView.Items.Insert(~idx, lvi = new ListViewItem() { Tag = newCol });
+						else
+							lvi = currentColumnsListView.Items[idx];
+
+						lvi.Text = newCol.DisplayName;
+					}
+				}
+			}
+			finally
+			{
+				currentColumnsListView.EndUpdate();
+			}
+		} // proc RefreshAvailableColumns
+
+		private void MoveColumnsToResult()
+		{
+			MoveColumnsToResult(from lvi in currentColumnsListView.SelectedItems.Cast<ListViewItem>() select (ColumnSource)lvi.Tag);
+			currentColumnsListView.SelectedItems.Clear();
+		} // proc MoveColumnsToResult
+
+		private void MoveColumnsToResult(IEnumerable<ColumnSource> columnSource, int insertAt = -1)
+		{
+			if (insertAt < 0)
+				insertAt = resultColumns.Count;
+
+			// clear selection of target
+			resultColumnsListView.SelectedItems.Clear();
+
+			// add new items in target
+			var toSelect = new List<ColumnSource>();
+			foreach (var col in columnSource)
+			{
+				var existsIndex = resultColumns.FindIndex(col.IsEqualColumn);
+				if (existsIndex >= 0)
+				{
+					resultColumns.RemoveAt(existsIndex);
+					if (existsIndex < insertAt)
+						insertAt--;
+				}
+
+				resultColumns.Insert(insertAt++, col);
+				toSelect.Add(col);
+			}
+
+			RefreshResultColumns(toSelect.ToArray());
+		} // proc MoveColumnsToResult
+
+		private void RemoveColumnsFromResult()
+		{
+			foreach (var lvi in resultColumnsListView.SelectedItems.Cast<ListViewItem>())
+			{
+				var column = (ColumnSource)lvi.Tag;
+				var selectedIndex = resultColumns.FindIndex(column.IsEqualColumn);
+				if (selectedIndex >= 0)
+					resultColumns.RemoveAt(selectedIndex);
+			}
+
+			RefreshResultColumns();
+		} // proc RemoveColumnsFromResult
+
+		private void SetColumnResultSortOrder(SortOrder sort)
+		{
+			foreach (var lvi in resultColumnsListView.SelectedItems.Cast<ListViewItem>())
+			{
+				var column = (ColumnSource)lvi.Tag;
+				column.ColumnSort = sort;
+			}
+
+			RefreshResultColumns();
+		} // proc SetColumnResultSortOrder
+
+		private void SelectAll(ListView list)
+		{
+			list.BeginUpdate();
+			try
+			{
+				for (var i = 0; i < list.Items.Count; i++)
+					list.Items[i].Selected = true;
+			}
+			finally
+			{
+				list.EndUpdate();
+			}
+		} // proc SelectAll
+
+		private void SelectInverse(ListView list)
+		{
+			list.BeginUpdate();
+			try
+			{
+				for (var i = 0; i < list.Items.Count; i++)
+					list.Items[i].Selected = !list.Items[i].Selected;
+			}
+			finally
+			{
+				list.EndUpdate();
+			}
+		} // proc SelectInverse
+
+		private static void UpdateResultColumnListViewItem(ColumnSource currentColumn, ListViewItem currentLvi)
+		{
+			var columnSourcePath = currentColumn.SourcePath;
+			var columnDisplayName = currentColumn.DisplayName;
+
+			currentLvi.Text = columnDisplayName;
+			currentLvi.ToolTipText = columnDisplayName + "\n" + columnSourcePath;
+
+			if (currentLvi.SubItems.Count == 1)
+				currentLvi.SubItems.Add(String.Empty);
+			currentLvi.SubItems[1].Text = columnSourcePath;
+
+			switch (currentColumn.ColumnSort)
+			{
+				case SortOrder.Ascending:
+					currentLvi.ImageIndex = 0;
+					break;
+				case SortOrder.Descending:
+					currentLvi.ImageIndex = 1;
+					break;
+				default:
+					currentLvi.ImageIndex = -1;
+					break;
+			}
+		} // proc UpdateResultColumnListViewItem
+
+		private ListViewItem FindResultColumnListViewItem(ColumnSource column, int offset)
+		{
+			for (var i = offset; i < resultColumnsListView.Items.Count; i++)
+			{
+				if (resultColumnsListView.Items[i].Tag is ColumnSource other && column.IsEqualColumn(other))
+					return resultColumnsListView.Items[i];
+			}
+			return null;
+		} // func FindResultColumnListViewItem
+
+		private void RefreshResultColumns(ColumnSource[] toSelect = null)
+		{
+			if (IsTableSelectMode)
+			{
+				// get all treenodes
+				var visibleColumnHelper = new VisibleColumnHelper(resultView);
+
+				// update filter
+				filterGrid.SetFilter(resultFilter);
+				filterGrid.RefreshFilter(visibleColumnHelper.IsVisibleColumn2);
+
+				// update view
+				resultColumnsListView.BeginUpdate();
+				try
+				{
+					// update items
+					var sourceIndex = 0;
+					var targetIndex = 0;
+
+					while (sourceIndex < resultColumns.Count)
+					{
+						// get source
+						var currentColumn = resultColumns[sourceIndex++];
+						if (!visibleColumnHelper.IsVisibleColumn(currentColumn))
+							continue;
+
+						// get target
+						var currentLvi = FindResultColumnListViewItem(currentColumn, targetIndex);
+						if (currentLvi == null) // not in lsit -> insert new 
+						{
+							currentLvi = new ListViewItem { Tag = currentColumn };
+							UpdateResultColumnListViewItem(currentColumn, currentLvi);
+							resultColumnsListView.Items.Insert(targetIndex, currentLvi);
+						}
+						else if (currentLvi.Index == targetIndex) // same position -> update
+						{
+							UpdateResultColumnListViewItem(currentColumn, currentLvi);
+						}
+						else // other position -> move
+						{
+							currentLvi.Remove();
+							UpdateResultColumnListViewItem(currentColumn, currentLvi);
+							resultColumnsListView.Items.Insert(targetIndex, currentLvi);
+						}
+
+						// update selection
+						if (toSelect != null)
+							currentLvi.Selected = Array.Exists(toSelect, currentColumn.IsEqualColumn);
+
+						targetIndex++;
+					}
+
+					// remove unused items
+					while (resultColumnsListView.Items.Count > targetIndex)
+						resultColumnsListView.Items.RemoveAt(resultColumnsListView.Items.Count - 1);
+
+				}
+				finally
+				{
+					resultColumnsListView.EndUpdate();
+				}
+			}
+			else
+			{
+				resultColumnsListView.Items.Clear();
+				filterGrid.SetFilter(null);
+			}
 		} // proc RefreshAvailableColumns
 
 		#endregion
 
-		private bool IsTableSelectMode => selectedView != null;
+		#region -- ListView UI --------------------------------------------------------
+
+		private Rectangle dragStartRectangle = Rectangle.Empty;
+
+		private static IEnumerable<ColumnSource> CheckResultColumnsDragSource(DragEventArgs e)
+		{
+			var columns = e.Data.GetData(dataObjectFormat) as ColumnSource[];
+			if (columns != null && columns.Length > 0)
+				e.Effect = DragDropEffects.Move & e.AllowedEffect;
+			return columns;
+		} // func CheckResultColumnsDragSource
+
+		private ListViewItem GetListViewHoverItem(ListView listView, DragEventArgs e, out bool insertAfter)
+		{
+			if (listView.Items.Count == 0)
+			{
+				insertAfter = false;
+				return null;
+			}
+			else
+			{
+				var pt = listView.PointToClient(new Point(e.X, e.Y));
+				var firstItemBounds = listView.GetItemRect(0, ItemBoundsPortion.Entire);
+				var hoverItem = listView.GetItemAt(firstItemBounds.Left, pt.Y);
+				if (hoverItem == null)
+				{
+					insertAfter = pt.Y > firstItemBounds.Top;
+					return null;
+				}
+				else
+				{
+					var hoverItemBounds = hoverItem.GetBounds(ItemBoundsPortion.Entire);
+					var middle = hoverItemBounds.Top + hoverItemBounds.Height / 2;
+					insertAfter = middle < pt.Y;
+					return hoverItem;
+				}
+			}
+		} // func GetListViewHoverItem
+
+		private void currentContextMenuStrip_Opening(object sender, CancelEventArgs e)
+		{
+			var hasItems = currentColumnsListView.Items.Count > 0;
+			var hasSelectedItems = currentColumnsListView.SelectedItems.Count > 0;
+
+			currentColumnsSelectAllMenuItem.Enabled = hasItems;
+			currentColumnsSelectInverseMenuItem.Enabled = hasItems;
+			currentColumnAddToResultMenuItem.Enabled = hasSelectedItems;
+		} // event currentContextMenuStrip_Opening
+
+		private void resultColumnsContextMenuStrip_Opening(object sender, CancelEventArgs e)
+		{
+			var hasItems = resultColumnsListView.Items.Count > 0;
+			var hasSelectedItems = resultColumnsListView.SelectedItems.Count > 0;
+
+			resultColumnsSelectAllMenuItem.Enabled = hasItems;
+			resultColumnsSelectInverseMenuItem.Enabled = hasItems;
+			resultColumnRemoveMenuItem.Enabled = hasSelectedItems;
+			resultColumnSortAscMenuItem.Enabled = hasSelectedItems;
+			resultColumnSortDescMenuItem.Enabled = hasSelectedItems;
+			resultColumnSortNoneMenuItem.Enabled = hasSelectedItems;
+		} // event resultColumnsContextMenuStrip_Opening
+
+		private void listView_MouseDown(object sender, MouseEventArgs e)
+		{
+			if (sender is ListView listView && (e.Button & MouseButtons.Left) != 0)
+			{
+				var dragSize = SystemInformation.DragSize;
+				if (listView.SelectedItems.Count > 0)
+					dragStartRectangle = new Rectangle(new Point(e.X - (dragSize.Width / 2), e.Y - (dragSize.Height / 2)), dragSize);
+			}
+		} // event listView_MouseDown
+
+		private void listView_MouseMove(object sender, MouseEventArgs e)
+		{
+			if (sender is ListView listView && (e.Button & MouseButtons.Left) != 0 && !dragStartRectangle.Contains(e.X, e.Y))
+			{
+				dragStartRectangle = Rectangle.Empty;
+
+				var dragData = new DataObject(dataObjectFormat,
+					(
+						from lvi in listView.SelectedItems.Cast<ListViewItem>()
+						where lvi.Tag is ColumnSource
+						select (ColumnSource)lvi.Tag
+					).ToArray()
+				);
+
+				if (DoDragDrop(dragData, DragDropEffects.Move) == DragDropEffects.Move)
+					listView.SelectedItems.Clear();
+			}
+		} // event listView_MouseMove
+
+		private void resultColumnsListView_DragEnter(object sender, DragEventArgs e)
+			=> CheckResultColumnsDragSource(e);
+
+		private void resultColumnsListView_DragOver(object sender, DragEventArgs e)
+			=> CheckResultColumnsDragSource(e);
+
+		private void resultColumnsListView_DragDrop(object sender, DragEventArgs e)
+		{
+			var columns = CheckResultColumnsDragSource(e);
+
+			var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
+			if (hoverItem == null)
+				MoveColumnsToResult(columns, insertAfter ? -1 : 0); // append at end
+			else if (hoverItem.Tag is ColumnSource columnSource)
+			{
+				// get index to insert
+				var insertAt = resultColumns.FindIndex(columnSource.IsEqualColumn);
+				if (insertAfter)
+					insertAt++;
+
+				// insert items
+				MoveColumnsToResult(columns, insertAt);
+			}
+		} // event resultColumnsListView_DragDrop
+
+		private void filterGrid_DragEnter(object sender, DragEventArgs e)
+			=> CheckResultColumnsDragSource(e);
+
+		private void filterGrid_DragOver(object sender, DragEventArgs e)
+			=> CheckResultColumnsDragSource(e);
+
+		private void filterGrid_DragDrop(object sender, DragEventArgs e)
+		{
+			var columns = CheckResultColumnsDragSource(e);
+			if (columns != null)
+				filterGrid.InsertFilter(columns.Select(c => new ColumnCondition(c)), new Point(e.X, e.Y));
+		} // event filterGrid_DragDrop
+
+		#endregion
+
+		private void CommandExec(object sender, EventArgs e)
+		{
+			if (sender == currentColumnAddToResultMenuItem)
+				MoveColumnsToResult();
+			else if (sender == resultColumnRemoveMenuItem)
+				RemoveColumnsFromResult();
+			// sort
+			else if (sender == resultColumnSortAscMenuItem)
+				SetColumnResultSortOrder(SortOrder.Ascending);
+			else if (sender == resultColumnSortDescMenuItem)
+				SetColumnResultSortOrder(SortOrder.Descending);
+			else if (sender == resultColumnSortNoneMenuItem)
+				SetColumnResultSortOrder(SortOrder.None);
+			// selection
+			else if (sender == currentColumnsSelectAllMenuItem)
+				SelectAll(currentColumnsListView);
+			else if (sender == currentColumnsSelectInverseMenuItem)
+				SelectInverse(currentColumnsListView);
+			else if (sender == resultColumnsSelectAllMenuItem)
+				SelectAll(resultColumnsListView);
+			else if (sender == resultColumnsSelectInverseMenuItem)
+				SelectInverse(resultColumnsListView);
+		} // event CommandExec
+
+		private bool IsTableSelectMode => resultView != null;
 
 		private async void cmdInsert_Click(object sender, EventArgs e)
 		{
@@ -585,11 +1239,18 @@ namespace TecWare.PPSn.Controls
 			}
 			try
 			{
-
+				// create join expression
 				var sbView = new StringBuilder();
-				selectedView.GetJoinExpression(sbView);
+				resultView.GetJoinExpression(sbView);
 
-				await currentData.UpdateAsync(sbView.ToString());
+				// build columns, filter
+				var visibleColumnHelper = new VisibleColumnHelper(resultView);
+
+				await currentData.UpdateAsync(
+					sbView.ToString(),
+					String.Join(" ", from f in resultFilter.Cast<ColumnCondition>() where !f.IsEmpty && visibleColumnHelper.IsVisibleColumn2(f) select f.FormatFilterExpression()),
+					from col in resultColumns where visibleColumnHelper.IsVisibleColumn(col) select col
+				);
 
 				DialogResult = DialogResult.OK;
 			}
@@ -597,24 +1258,6 @@ namespace TecWare.PPSn.Controls
 			{
 				env.ShowException(ex);
 			}
-
-			//var columns = new List<PpsDataColumnExpression>();
-			//for (var i = 0; i < availableColumns.Items.Count; i++)
-			//{
-			//	if (availableColumns.GetItemChecked(i))
-			//		columns.Add(new PpsDataColumnExpression(((ColumnSource)availableColumns.Items[i]).Column.Name));
-			//}
-			//if (columns.Count == 0)
-			//{
-			//	MessageBox.Show(this, "Keine Spalten gewählt");
-			//	return;
-			//}
-
-			//ReportName = "Custom";
-			//ReportSource = new PpsListMapping(env, sbView.ToString(), columns.ToArray(), conditionExpression.Text, null);
 		} // event cmdInsert_Click
-
-		public string ReportName { get; private set; } = null;
-		//public PpsListMapping ReportSource { get; private set; } = null;
 	} // class TableInsertForm
 }

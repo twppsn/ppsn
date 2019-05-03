@@ -45,7 +45,8 @@ namespace TecWare.PPSn.Export
 			environment.ContinueCatch(environment.LoginAsync(this));
 
 			//textBox1.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
-			textBox1.Text = "views.Betriebsmittelstamm,views.Werkzeugstamm,views.WkzLebenslauf";
+			joinTextBox.Text = "views.Betriebsmittelstamm,views.Werkzeugstamm,views.WkzLebenslauf";
+			columnsTextBox.Text = String.Join(Environment.NewLine, "+t.BMKKIDENT", "t.BMKKBEZ", "t.BMKKCRDAT", "t.BMKKCRUSER", "t.BMKKFBERIDENT", "t.FBERNAME", "t.BMKKUPDAT", "t.BMKKUPUSER");
 		} // ctor
 
 		public string ApplicationId => "PPSnExport";
@@ -96,18 +97,54 @@ namespace TecWare.PPSn.Export
 
 		SynchronizationContext IPpsFormsApplication.SynchronizationContext => synchronizationContext;
 
-
-		Task IPpsTableData.UpdateAsync(string views)
+		private sealed class ParseColumnInfo : IPpsTableColumn
 		{
-			textBox1.Text = views;
+			public ParseColumnInfo(string expr)
+			{
+				var ofs = 0;
+				if (expr[0] == '+')
+				{
+					Ascending = true;
+					ofs = 1;
+				}
+				else if (expr[0] == '-')
+				{
+					Ascending = false;
+					ofs = 1;
+				}
+
+				Expression = expr.Substring(ofs);
+			} // ctor
+
+			public string Expression { get; }
+			public bool? Ascending { get; }
+		} // class ParseColumnInfo
+
+		private static string FormatColumnInfo(IPpsTableColumn col)
+		{
+			var prefix = String.Empty;
+			if (col.Ascending.HasValue)
+				prefix = col.Ascending.Value ? "+" : "-";
+
+			return prefix + col.Expression;
+		} // func FormatColumnInfo
+
+		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
+		{
+			joinTextBox.Text = views;
+			filterTextBox.Text = filter;
+			columnsTextBox.Text= String.Join(Environment.NewLine, from col in columns select FormatColumnInfo(col)); 
+
 			return Task.CompletedTask;
 		} // func UpdateAsync
 
 		string IPpsTableData.DisplayName { get => label1.Text; set => label1.Text=value; }
 
-		string IPpsTableData.Views => textBox1.Text;
+		string IPpsTableData.Views => joinTextBox.Text;
+		string IPpsTableData.Filter => filterTextBox.Text;
+		IEnumerable<IPpsTableColumn> IPpsTableData.Columns => columnsTextBox.Text.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Select(s => new ParseColumnInfo(s));
 
-		bool IPpsTableData.IsEmpty => String.IsNullOrEmpty(textBox1.Text);
+		bool IPpsTableData.IsEmpty => String.IsNullOrEmpty(joinTextBox.Text);
 
 		private void button1_Click(object sender, EventArgs e)
 		{

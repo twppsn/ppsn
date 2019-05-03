@@ -743,13 +743,15 @@ namespace PPSnExcel
 		public void Edit()
 			=> map.Environment.EditTable(this);
 
-		Task IPpsTableData.UpdateAsync(string views)
+		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
 		{
 			return Task.CompletedTask;
 		} // proc UpdateAsync
 
 		string IPpsTableData.DisplayName { get => xlList.DisplayName; set => xlList.DisplayName = value; }
 		string IPpsTableData.Views => map.Select;
+		string IPpsTableData.Filter => null;
+		IEnumerable<IPpsTableColumn> IPpsTableData.Columns => Array.Empty<IPpsTableColumn>();
 		bool IPpsTableData.IsEmpty => false;
 
 		#endregion
@@ -788,12 +790,14 @@ namespace PPSnExcel
 
 		private sealed class NewModel : IPpsTableData
 		{
-			public Task UpdateAsync(string views)
+			public Task UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
 				=> Task.CompletedTask;
 
 			public string DisplayName { get; set; } = null;
 
 			public string Views => null;
+			public string Filter => null;
+			public IEnumerable<IPpsTableColumn> Columns => Array.Empty<IPpsTableColumn>();
 			public bool IsEmpty => true;
 		} // class NewModel 
 

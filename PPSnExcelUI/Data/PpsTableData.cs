@@ -21,6 +21,16 @@ using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Data
 {
+	#region -- interface IPpsTableColumn ----------------------------------------------
+
+	public interface IPpsTableColumn
+	{
+		string Expression { get; }
+		bool? Ascending { get; }
+	} // interface IPpsTableColumn
+
+	#endregion
+
 	#region -- interface IPpsTableData ------------------------------------------------
 
 	/// <summary>Table data representation</summary>
@@ -28,13 +38,19 @@ namespace TecWare.PPSn.Data
 	{
 		/// <summary>Update the table data.</summary>
 		/// <param name="views"></param>
-		Task UpdateAsync(string views);
+		/// <param name="filter"></param>
+		/// <param name="columns"></param>
+		Task UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns);
 
 		/// <summary>Change the displayname of the table.</summary>
 		string DisplayName { get; set; }
 
 		/// <summary>Get all views</summary>
 		string Views { get; }
+		/// <summary></summary>
+		string Filter { get; }
+		/// <summary></summary>
+		IEnumerable<IPpsTableColumn> Columns { get; }
 
 		/// <summary>Is this an empty view.</summary>
 		bool IsEmpty { get; }
