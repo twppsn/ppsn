@@ -134,7 +134,7 @@ namespace TecWare.PPSn.Data
 		#region -- Parse --------------------------------------------------------------
 
 		private static bool IsLetterOrDigit(char c)
-			=> c == '_' || Char.IsLetterOrDigit(c);
+			=> c == '_' || c == '.' || Char.IsLetterOrDigit(c);
 
 		private static bool TestExpressionCharacter(string expression, int offset, char c)
 			=> offset < expression.Length && expression[offset] == c;

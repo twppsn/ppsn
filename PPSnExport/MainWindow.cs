@@ -44,8 +44,9 @@ namespace TecWare.PPSn.Export
 			environment = new PpsEnvironment(lua, this, new PpsEnvironmentInfo("Test") { Uri = new Uri("http://localhost:8080/ppsn/") });
 			environment.ContinueCatch(environment.LoginAsync(this));
 
-			//textBox1.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
-			joinTextBox.Text = "views.Betriebsmittelstamm,views.Werkzeugstamm,views.WkzLebenslauf";
+			//joinTextBox.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
+			joinTextBox.Text = "views.Betriebsmittelstamm t=views.Werkzeugstamm t1=views.WkzLebenslauf t2";
+			filterTextBox.Text = "t.BMKKID:test";
 			columnsTextBox.Text = String.Join(Environment.NewLine, "+t.BMKKIDENT", "t.BMKKBEZ", "t.BMKKCRDAT", "t.BMKKCRUSER", "t.BMKKFBERIDENT", "t.FBERNAME", "t.BMKKUPDAT", "t.BMKKUPUSER");
 		} // ctor
 

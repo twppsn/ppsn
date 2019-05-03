@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -459,13 +458,16 @@ namespace TecWare.PPSn.Controls
 		private sealed class ColumnCondition : IPpsFilterColumn
 		{
 			private readonly ColumnSource columnSource;
-			private PpsDataFilterCompareOperator op = PpsDataFilterCompareOperator.Contains;
-			private string compareValue = null;
+			private PpsDataFilterCompareOperator op;
+			private string compareValue;
 			private IPpsFilterGroup groupdIndex = null;
 
-			public ColumnCondition(ColumnSource columnSource)
+			public ColumnCondition(ColumnSource columnSource, PpsDataFilterCompareOperator op = PpsDataFilterCompareOperator.Contains, PpsDataFilterCompareValue value = null)
 			{
 				this.columnSource = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
+
+				this.op = op;
+				this.compareValue = value is PpsDataFilterCompareTextValue textValue ? textValue.Text : null;
 			} // ctor
 
 			private void SetExpression(string expr)
@@ -548,7 +550,7 @@ namespace TecWare.PPSn.Controls
 			{
 				return IsEmpty
 					? null
-					: Source.Source.GetColumnName(Source.Column) + ":" + Expression;
+					: PpsDataFilterExpression.Compare(Source.Source.GetColumnName(Source.Column), op, compareValue).ToString();
 			} // func FormatFilterExpression
 
 			internal ColumnSource Source => columnSource;
@@ -653,6 +655,31 @@ namespace TecWare.PPSn.Controls
 			availableViews = new PpsViewDictionary(env);
 		} // ctor
 
+		private void AddCompareExpression(VisibleColumnHelper visibleResultView, PpsDataFilterCompareExpression compareExpr)
+		{
+			if (compareExpr.Operand == null)
+				return;
+
+			var columnSource = visibleResultView.FindColumnSource(compareExpr.Operand); // todo: reuse columns?
+			if (columnSource != null)
+				resultFilter.Add(new ColumnCondition(columnSource, compareExpr.Operator, compareExpr.Value));
+		} // proc AddCompareExpression
+
+		private void LoadFilterExpression(VisibleColumnHelper visibleResultView, PpsDataFilterExpression expr)
+		{
+			if (expr == PpsDataFilterExpression.True)
+				resultFilter.Clear();
+			else if(expr is PpsDataFilterCompareExpression compareExpr)
+			{
+				AddCompareExpression(visibleResultView, compareExpr);
+			}
+			else if(expr is PpsDataFilterLogicExpression logicExpr)
+			{
+				foreach (var c in logicExpr.Arguments.OfType<PpsDataFilterCompareExpression>())
+					AddCompareExpression(visibleResultView, c);
+			}
+		} // proc LoadFilterExpression
+
 		private async Task RefreshAllAsync(IPpsTableData data)
 		{
 			// update data model
@@ -665,9 +692,9 @@ namespace TecWare.PPSn.Controls
 				SetResultView(new PpsJoinParser(availableViews, data.Views).Result);
 
 				// update columns
+				var visibleResultView = new VisibleColumnHelper(resultView);
 				if (data.Columns != null)
 				{
-					var visibleResultView = new VisibleColumnHelper(resultView);
 					foreach (var col in data.Columns)
 					{
 						var columnSource = visibleResultView.FindColumnSource(col.Expression);
@@ -677,7 +704,8 @@ namespace TecWare.PPSn.Controls
 				}
 
 				// update filter
-				// todo: parse filter
+				var expr = PpsDataFilterExpression.Parse(data.Filter);
+				LoadFilterExpression(visibleResultView, expr);
 			}
 
 			// update view
@@ -826,6 +854,8 @@ namespace TecWare.PPSn.Controls
 					RefreshAvailableColumns(join);
 			}
 		} // event tableTree_AfterCheck
+
+		private bool IsTableSelectMode => resultView != null;
 
 		#endregion
 
@@ -1227,8 +1257,6 @@ namespace TecWare.PPSn.Controls
 			else if (sender == resultColumnsSelectInverseMenuItem)
 				SelectInverse(resultColumnsListView);
 		} // event CommandExec
-
-		private bool IsTableSelectMode => resultView != null;
 
 		private async void cmdInsert_Click(object sender, EventArgs e)
 		{
