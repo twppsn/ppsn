@@ -28,8 +28,10 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Export
 {
-	public partial class MainWindow : Form, IPpsFormsApplication, IPpsTableData
+	public partial class MainWindow : Form, IPpsFormsApplication
 	{
+		private readonly PpsTableData listInfo = new PpsTableData();
+
 		private readonly Lua lua = new Lua();
 		private readonly PpsEnvironment environment;
 		private readonly SynchronizationContext synchronizationContext;
@@ -42,16 +44,44 @@ namespace TecWare.PPSn.Export
 
 			// init env
 			environment = new PpsEnvironment(lua, this, new PpsEnvironmentInfo("Test") { Uri = new Uri("http://localhost:8080/ppsn/") });
-			environment.ContinueCatch(environment.LoginAsync(this));
+			environment.ContinueCatch(InitEnvironmentAsync());
+
+			joinTextBox.DataBindings.Add(new Binding("Text", listInfo, "Views",true, DataSourceUpdateMode.OnPropertyChanged));
+			filterTextBox.DataBindings.Add(new Binding("Text", listInfo, "Filter", true, DataSourceUpdateMode.OnPropertyChanged));
+			columnsTextBox.DataBindings.Add(new Binding("Text", listInfo, "Columns", true, DataSourceUpdateMode.OnPropertyChanged));
+			listInfo.PropertyChanged += ListInfo_PropertyChanged;
 
 			//joinTextBox.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
-			joinTextBox.Text = "views.Betriebsmittelstamm t=views.Werkzeugstamm t1=views.WkzLebenslauf t2";
-			filterTextBox.Text = "t.BMKKID:test";
-			columnsTextBox.Text = String.Join(Environment.NewLine, "+t.BMKKIDENT", "t.BMKKBEZ", "t.BMKKCRDAT", "t.BMKKCRUSER", "t.BMKKFBERIDENT", "t.FBERNAME", "t.BMKKUPDAT", "t.BMKKUPUSER");
+			listInfo.Views = "views.Betriebsmittelstamm t=views.Werkzeugstamm t1=views.WkzLebenslauf t2";
+			listInfo.Filter = "t.BMKKID:test";
+			listInfo.Columns = String.Join(Environment.NewLine, "+t.BMKKIDENT", "t.BMKKBEZ", "t.BMKKCRDAT", "t.BMKKCRUSER", "t.BMKKFBERIDENT", "t.FBERNAME", "t.BMKKUPDAT", "t.BMKKUPUSER");
 		} // ctor
 
-		public string ApplicationId => "PPSnExport";
-		public string Title => "PPSn Exporter";
+		private void ListInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			switch (e.PropertyName)
+			{
+				case nameof(PpsTableData.Views):
+				case nameof(PpsTableData.Filter):
+				case nameof(PpsTableData.Columns):
+					UpdateUri();
+					break;
+			}
+		} // event ListInfo_PropertyChanged
+
+		private async Task InitEnvironmentAsync()
+		{
+			await environment.LoginAsync(this);
+			UpdateUri();
+		} // proc InitEnvironmentAsync
+
+		private void UpdateUri()
+			=> textBox1.Text = listInfo.IsEmpty ? String.Empty : CreateUriSafe(listInfo.GetShellList().ToQuery());
+
+		private string CreateUriSafe(string query)
+			=> environment?.Request?.CreateFullUri(Uri.EscapeUriString(query))?.ToString() ?? query;
+
+		#region -- IPpsFormsApplication members ---------------------------------------
 
 		private sealed class AwaitStack
 		{
@@ -98,58 +128,14 @@ namespace TecWare.PPSn.Export
 
 		SynchronizationContext IPpsFormsApplication.SynchronizationContext => synchronizationContext;
 
-		private sealed class ParseColumnInfo : IPpsTableColumn
-		{
-			public ParseColumnInfo(string expr)
-			{
-				var ofs = 0;
-				if (expr[0] == '+')
-				{
-					Ascending = true;
-					ofs = 1;
-				}
-				else if (expr[0] == '-')
-				{
-					Ascending = false;
-					ofs = 1;
-				}
+		public string ApplicationId => "PPSnExport";
+		public string Title => "PPSn Exporter";
 
-				Expression = expr.Substring(ofs);
-			} // ctor
-
-			public string Expression { get; }
-			public bool? Ascending { get; }
-		} // class ParseColumnInfo
-
-		private static string FormatColumnInfo(IPpsTableColumn col)
-		{
-			var prefix = String.Empty;
-			if (col.Ascending.HasValue)
-				prefix = col.Ascending.Value ? "+" : "-";
-
-			return prefix + col.Expression;
-		} // func FormatColumnInfo
-
-		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
-		{
-			joinTextBox.Text = views;
-			filterTextBox.Text = filter;
-			columnsTextBox.Text= String.Join(Environment.NewLine, from col in columns select FormatColumnInfo(col)); 
-
-			return Task.CompletedTask;
-		} // func UpdateAsync
-
-		string IPpsTableData.DisplayName { get => label1.Text; set => label1.Text=value; }
-
-		string IPpsTableData.Views => joinTextBox.Text;
-		string IPpsTableData.Filter => filterTextBox.Text;
-		IEnumerable<IPpsTableColumn> IPpsTableData.Columns => columnsTextBox.Text.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries).Select(s => new ParseColumnInfo(s));
-
-		bool IPpsTableData.IsEmpty => String.IsNullOrEmpty(joinTextBox.Text);
+		#endregion
 
 		private void button1_Click(object sender, EventArgs e)
 		{
-			environment.EditTable(this);
+			environment.EditTable(listInfo);
 		}
 	} // class MainWindow
 }

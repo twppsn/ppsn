@@ -33,6 +33,7 @@
 			this.label1 = new System.Windows.Forms.Label();
 			this.columnsTextBox = new System.Windows.Forms.TextBox();
 			this.filterTextBox = new System.Windows.Forms.TextBox();
+			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.SuspendLayout();
 			// 
 			// joinTextBox
@@ -46,7 +47,7 @@
 			// 
 			// button1
 			// 
-			this.button1.Location = new System.Drawing.Point(596, 427);
+			this.button1.Location = new System.Drawing.Point(498, 427);
 			this.button1.Name = "button1";
 			this.button1.Size = new System.Drawing.Size(75, 23);
 			this.button1.TabIndex = 1;
@@ -81,11 +82,20 @@
 			this.filterTextBox.Size = new System.Drawing.Size(639, 53);
 			this.filterTextBox.TabIndex = 0;
 			// 
+			// textBox1
+			// 
+			this.textBox1.Location = new System.Drawing.Point(117, 435);
+			this.textBox1.Name = "textBox1";
+			this.textBox1.ReadOnly = true;
+			this.textBox1.Size = new System.Drawing.Size(286, 20);
+			this.textBox1.TabIndex = 4;
+			// 
 			// MainWindow
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(693, 467);
+			this.Controls.Add(this.textBox1);
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.button1);
 			this.Controls.Add(this.columnsTextBox);
@@ -106,6 +116,7 @@
 		private System.Windows.Forms.Label label1;
 		private System.Windows.Forms.TextBox columnsTextBox;
 		private System.Windows.Forms.TextBox filterTextBox;
+		private System.Windows.Forms.TextBox textBox1;
 	}
 }
 
