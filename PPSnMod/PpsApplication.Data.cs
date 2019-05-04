@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
@@ -634,8 +635,9 @@ namespace TecWare.PPSn.Server
 					throw new DEConfigurationException(xJoin, "@view is missing.");
 				var statement = ParseOnStatement(xJoin);
 				var aliasName = xJoin.GetAttribute("alias", null); // optional
+				var type= xJoin.GetAttribute("type", PpsDataJoinType.Inner);
 
-				return new PpsViewJoinDefinition(viewName, aliasName, statement);
+				return new PpsViewJoinDefinition(viewName, aliasName, type, statement);
 			} // func CreateJoinDefinition
 
 			private static PpsDataJoinStatement[] ParseOnStatement(XElement xJoin)
@@ -738,6 +740,169 @@ namespace TecWare.PPSn.Server
 				}
 			} // proc RegisterList
 		} // class DependencyElement
+
+		#endregion
+
+		#region -- class ViewWriter ---------------------------------------------------
+
+		private abstract class ViewWriter : IDisposable
+		{
+			public void Dispose()
+				=> Dispose(true);
+
+			protected virtual void Dispose(bool disposing)
+			{
+			} // proc Dispose
+
+			public virtual void Begin(PpsDataSelector selector, IDataColumns columns, string attributeSelector) { }
+
+			public virtual void WriteRow(IDataRow current) { }
+
+			public virtual void End() { }
+		} // class ViewWriter
+
+		#endregion
+
+		#region -- class ViewXmlWriter ------------------------------------------------
+
+		private sealed class ViewXmlWriter : ViewWriter
+		{
+			private readonly TextWriter tw;
+			private readonly XmlWriter xml;
+
+			private bool firstRow = true;
+			private string[] columnNames = null;
+
+			public ViewXmlWriter(IDEWebRequestScope r)
+			{
+				tw = r.GetOutputTextWriter(MimeTypes.Text.Xml);
+				xml = XmlWriter.Create(tw, GetSettings(tw));
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				try
+				{
+					xml.Dispose();
+					tw.Dispose();
+				}
+				finally
+				{
+					base.Dispose(disposing);
+				}
+			} // proc Dispose
+
+			private static void WriteAttributeForViewGet(XmlWriter xml, IPpsColumnDescription fieldDefinition, PropertyValue attr)
+			{
+				xml.WriteStartElement("attribute");
+
+				xml.WriteAttributeString("name", attr.Name);
+				xml.WriteAttributeString("dataType", LuaType.GetType(attr.Type).AliasOrFullName);
+
+				var value = fieldDefinition.Attributes.TryGetProperty(attr.Name, out var tmp) ? tmp : attr.Value;
+				if (value != null)
+					xml.WriteValue(Procs.ChangeType<string>(value));
+
+				xml.WriteEndElement();
+			} // proc WriteAttributeForViewGet
+
+			private void WriteColumns(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			{
+				// emit column description
+				columnNames = new string[columns.Columns.Count];
+
+				xml.WriteStartElement("fields");
+				for (var i = 0; i < columnNames.Length; i++)
+				{
+					var nativeColumnName = columns.Columns[i].Name;
+					var fieldDefinition = selector.GetFieldDescription(nativeColumnName); // get the field description for the native column
+
+					if (fieldDefinition == null)
+					{
+						columnNames[i] = null;
+						continue;
+					}
+					else
+					{
+						columnNames[i] = nativeColumnName;
+
+						var fieldDescription = fieldDefinition.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
+
+						xml.WriteStartElement(nativeColumnName);
+
+						if (fieldDescription == null)
+						{
+							xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
+							xml.WriteAttributeString("field", fieldDefinition.Name);
+
+							WriteAttributeForViewGet(xml, fieldDefinition, new PropertyValue("Nullable", typeof(bool), null));
+						}
+						else
+						{
+							xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
+
+							foreach (var c in fieldDescription.GetAttributes(attributeSelector))
+							{
+								WriteAttributeForViewGet(xml, fieldDefinition, c);
+							}
+						}
+						xml.WriteEndElement();
+					}
+				}
+				xml.WriteEndElement();
+			} // proc WriteColumns
+
+			public override void Begin(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			{
+				xml.WriteStartDocument();
+				xml.WriteStartElement("view");
+
+				if (columns != null)
+					WriteColumns(selector, columns, attributeSelector);
+				else
+					columnNames = null;
+			} // proc Begin
+
+			private void WriteRowValue(string columnName, object v)
+			{
+				if (v != null)
+					xml.WriteElementString(columnName, v.ChangeType<string>());
+			} // proc WriteRowValue
+
+			public override void WriteRow(IDataRow row)
+			{
+				if (firstRow)
+				{
+					firstRow = false;
+					xml.WriteStartElement("rows");
+				}
+
+				xml.WriteStartElement("r");
+				if (columnNames == null)
+				{
+					for (var i = 0; i < row.Columns.Count; i++)
+						WriteRowValue(row.Columns[i].Name, row[i]);
+				}
+				else
+				{
+					for (var i = 0; i < columnNames.Length; i++)
+					{
+						if (columnNames[i] != null)
+							WriteRowValue(columnNames[i], row[i]);
+					}
+				}
+				xml.WriteEndElement();
+			} // proc WriteRow
+
+			public override void End()
+			{
+				if (!firstRow)
+					xml.WriteEndElement();
+
+				xml.WriteEndElement();
+				xml.WriteEndDocument();
+			} // proc End
+		} // class ViewXmlWriter
 
 		#endregion
 
@@ -924,44 +1089,15 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetDataSetDefinition
 
-		private void WriteDataRow(XmlWriter xml, IDataValues row, string[] columnNames)
-		{
-			xml.WriteStartElement("r");
-			for (var i = 0; i < columnNames.Length; i++)
-			{
-				if (columnNames[i] != null)
-				{
-					var v = row[i];
-					if (v != null)
-						xml.WriteElementString(columnNames[i], v.ChangeType<string>());
-				}
-			}
-			xml.WriteEndElement();
-		} // proc WriteDataRow
-
-		private static void WriteAttributeForViewGet(XmlWriter xml, IPpsColumnDescription fieldDefinition, PropertyValue attr)
-		{
-			xml.WriteStartElement("attribute");
-
-			xml.WriteAttributeString("name", attr.Name);
-			xml.WriteAttributeString("dataType", LuaType.GetType(attr.Type).AliasOrFullName);
-
-			var value = fieldDefinition.Attributes.TryGetProperty(attr.Name, out var tmp) ? tmp : attr.Value;
-			if (value != null)
-				xml.WriteValue(Procs.ChangeType<string>(value));
-
-			xml.WriteEndElement();
-		} // proc WriteAttributeForViewGet
-
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
 		private void HttpViewGetAction(IDEWebRequestScope r)
 		{
 			// v=views,...&f={filterList}&o={orderList}&s={startAt]&c={count}&a={attributeSelector}
 			var startAt = r.GetProperty("s", 0);
 			var count = r.GetProperty("c", Int32.MaxValue);
-			
+
 			var ctx = r.GetUser<IPpsPrivateDataContext>();
-			
+
 			var selector = ctx.CreateSelectorAsync(
 				r.GetProperty<string>("v", null),
 				r.GetProperty<string>("r", null),
@@ -976,17 +1112,13 @@ namespace TecWare.PPSn.Server
 			r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
 
 			// emit the selector
-			using (var tw = r.GetOutputTextWriter(MimeTypes.Text.Xml))
-			using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+			using (var viewWriter = new ViewXmlWriter(r))
 			{
-				xml.WriteStartDocument();
-				xml.WriteStartElement("view");
-
 				// execute the complete statemet
 				using (var enumerator = selector.GetEnumerator(startAt, count))
 				{
 					var emitCurrentRow = false;
-					
+
 					// extract the columns, optional before the fetch operation
 					var columnDefinition = enumerator as IDataColumns;
 					if (columnDefinition == null)
@@ -1000,58 +1132,14 @@ namespace TecWare.PPSn.Server
 							count = 0; // no rows
 					}
 
-					// emit column description
-					string[] columnNames = null;
-					if (columnDefinition != null)
-					{
-						columnNames = new string[columnDefinition.Columns.Count];
+					// write header
+					viewWriter.Begin(selector, columnDefinition, attributeSelector);
 
-						xml.WriteStartElement("fields");
-						for (var i = 0; i < columnNames.Length; i++)
-						{
-							var nativeColumnName = columnDefinition.Columns[i].Name;
-							var fieldDefinition = selector.GetFieldDescription(nativeColumnName); // get the field description for the native column
-
-							if (fieldDefinition == null)
-							{
-								columnNames[i] = null;
-								continue;
-							}
-							else
-							{
-								columnNames[i] = nativeColumnName;
-
-								var fieldDescription = fieldDefinition.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
-
-								xml.WriteStartElement(nativeColumnName);
-
-								if (fieldDescription == null)
-								{
-									xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
-									xml.WriteAttributeString("field", fieldDefinition.Name);
-
-									WriteAttributeForViewGet(xml, fieldDefinition, new PropertyValue("Nullable", typeof(bool), null));
-								}
-								else
-								{
-									xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
-
-									foreach (var c in fieldDescription.GetAttributes(attributeSelector))
-									{
-										WriteAttributeForViewGet(xml, fieldDefinition, c);
-									}
-								}
-								xml.WriteEndElement();
-							}
-						}
-						xml.WriteEndElement();
-					}
 
 					// emit first row
-					xml.WriteStartElement("rows");
 					if (emitCurrentRow)
 					{
-						WriteDataRow(xml, enumerator.Current, columnNames);
+						viewWriter.WriteRow(enumerator.Current);
 						count--;
 					}
 
@@ -1061,16 +1149,13 @@ namespace TecWare.PPSn.Server
 						if (!enumerator.MoveNext())
 							break;
 
-						WriteDataRow(xml, enumerator.Current, columnNames);
-
+						viewWriter.WriteRow(enumerator.Current);
 						count--;
 					}
 
-					xml.WriteEndElement();
+					// write end
+					viewWriter.End();
 				}
-
-				xml.WriteEndElement();
-				xml.WriteEndDocument();
 			}
 		} // func HttpViewGetAction
 
