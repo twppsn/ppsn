@@ -64,6 +64,7 @@ namespace PPSnExcel
 
 		private void RunActionSafe(Action action)
 		{
+			ThisAddIn.CheckSynchronizationContext();
 			try
 			{
 				action();

@@ -353,11 +353,16 @@ namespace PPSnExcel
 		public SynchronizationContext SynchronizationContext
 			=> waitForm.SynchronizationContext;
 
-		private T RunCore<T>(Func<T> func)
-			where T : Task
+		public static void CheckSynchronizationContext()
 		{
 			if (!(SynchronizationContext.Current is WindowsFormsSynchronizationContext))
 				SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
+		} // proc CheckSynchronizationContext
+
+		private T RunCore<T>(Func<T> func)
+			where T : Task
+		{
+			CheckSynchronizationContext();
 
 			var t = func();
 			Await(t);
