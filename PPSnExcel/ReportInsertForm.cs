@@ -52,7 +52,7 @@ namespace PPSnExcel
 		protected override void OnClosing(CancelEventArgs e)
 		{
 			if (DialogResult == DialogResult.OK)
-				e.Cancel = ReportSource == null;
+				e.Cancel = ReportId == null;
 			base.OnClosing(e);
 		} // proc OnClosing
 
@@ -106,24 +106,17 @@ namespace PPSnExcel
 			if (row == null)
 			{
 				ReportName = null;
-				ReportSource = null;
+				ReportName = null;
+				ReportId = null;
+
 				cmdOk.Enabled = false;
 			}
 			else
 			{
-				var reportId = (string)row["ReportId"];
-				var reportName = row["DisplayName"] as string ?? reportId;
-				if ((string)row["Type"] == "table")
-				{
-					var rpt = new PpsListMapping(env, reportId, null, null, null);
-					ReportName = reportName;
-					ReportSource = rpt;
-				}
-				else
-				{
-					ReportName = reportName;
-					ReportSource = reportId;
-				}
+				ReportId = (string)row["ReportId"];
+				ReportType = (string)row["Type"];
+				ReportName = row["DisplayName"] as string ?? ReportId;
+
 				cmdOk.Enabled = true;
 			}
 		} // proc UpdateResult
@@ -213,6 +206,7 @@ namespace PPSnExcel
 		} // event dv_SelectionChanged
 
 		public string ReportName { get; private set; } = null;
-		public object ReportSource { get; private set; } = null;
+		public string ReportId { get; private set; } = null;
+		public string ReportType { get; private set; } = null;
 	} // class ReportInsertForm
 }

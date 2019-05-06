@@ -181,8 +181,10 @@ namespace PPSnExcel
 
 		/// <summary>Create Table</summary>
 		/// <param name="environment"></param>
-		/// <param name="map"></param>
-		internal async Task ImportTableAsync(Excel.Range range, PpsListMapping map, string reportName, bool singleLineMode)
+		/// <param name="range"></param>
+		/// <param name="reportId"></param>
+		/// <param name="reportName"></param>
+		internal async Task ImportTableAsync(PpsEnvironment environment, Excel.Range range, string reportId, string reportName)
 		{
 			GetActiveXlObjects(out var worksheet, out var workbook);
 
@@ -197,7 +199,7 @@ namespace PPSnExcel
 			using (var progress = CreateProgress())
 			{
 				progress.Report(String.Format("Importiere '{0}'...", reportName));
-				await PpsListObject.CreateAsync(range, map, singleLineMode);
+				await PpsListObject.NewAsync(environment, range, reportId);
 			}
 		} // func ImportTableAsync
 
@@ -245,7 +247,7 @@ namespace PPSnExcel
 				progress.Report(String.Format("Aktualisiere {0}...", xlList.Name ?? "Tabelle"));
 
 				if (PpsListObject.TryGet(FindEnvironment, xlList, out var ppsList))
-					await ppsList.RefreshAsync(refreshColumnLayout, PpsMenu.IsSingleLineModeToggle());
+					await ppsList.RefreshAsync(refreshColumnLayout, PpsMenu.IsSingleLineModeToggle(), null);
 				else
 				{
 					//if (refreshColumnLayout)
@@ -265,13 +267,12 @@ namespace PPSnExcel
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
 			{
 				var xlMap = range.ListObject.XmlMap;
-				if (PpsListMapping.TryParse(xlMap, out var environmentName, out var environmentUri, out var viewId, out var filterExpr, out var columns, out var orders))
+				if (PpsListMapping.TryParse(xlMap, out var environmentName, out var environmentUri, out var viewId, out var filterExpr, out var columns))
 				{
 					sb.AppendLine("Mapping found:");
 					sb.AppendFormat("\tEnvironment: {0} ({1})", environmentName, environmentUri).AppendLine();
 					sb.Append("\tView: ").Append(viewId).AppendLine();
 					sb.Append("\tFilter: ").Append(filterExpr).AppendLine();
-					sb.Append("\tOrder: ").Append(PpsDataOrderExpression.ToString(orders)).AppendLine();
 					sb.AppendLine();
 					if (columns == null || columns.Length == 0)
 						sb.Append("Column information not found.");
@@ -280,7 +281,7 @@ namespace PPSnExcel
 						var i = 0;
 						foreach (var col in columns)
 						{
-							sb.AppendFormat("{0}: {1} [{2}]", ++i, col.ColumnName, col.XmlType);
+							sb.AppendFormat("{0}: {1} | {2} [{3}]", ++i, col.SelectColumnName, col.ResultColumnName, col.XmlType);
 							if (col.IsNullable)
 								sb.Append(" OPT");
 							sb.AppendLine();
@@ -291,7 +292,7 @@ namespace PPSnExcel
 				{
 					sb.AppendLine("Could not parse Mapping.");
 					sb.AppendLine();
-					if (xlMap.Schemas.Count == 1)
+					if (xlMap == null || xlMap.Schemas.Count == 0)
 						sb.AppendLine("Xml-Schema is missing.");
 					else
 						sb.Append(xlMap.Schemas[1].XML);

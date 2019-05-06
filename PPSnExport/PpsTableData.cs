@@ -73,10 +73,10 @@ namespace TecWare.PPSn.Export
 				=> Ascending == other.Ascending && Expression != other.Expression;
 
 			public PpsDataOrderExpression ToOrder()
-				=> Ascending.HasValue ? new PpsDataOrderExpression(!Ascending.Value, Expression) : null;
+				=> XlProcs.ToOrder(this);
 
 			public PpsDataColumnExpression ToColumn()
-				=> new PpsDataColumnExpression(Expression);
+				=> XlProcs.ToColumn(this);
 
 			public string Expression { get; }
 			public bool? Ascending { get; }
@@ -88,7 +88,7 @@ namespace TecWare.PPSn.Export
 		private string views = null;
 		private string filter = null;
 		private PpsColumnInfo[] columnInfos = Array.Empty<PpsColumnInfo>();
-
+		
 		public PpsShellGetList GetShellList()
 		{
 			if (IsEmpty)
@@ -99,7 +99,7 @@ namespace TecWare.PPSn.Export
 				{
 					Filter = PpsDataFilterExpression.Parse(Filter),
 					Columns = columnInfos.Select(c => c.ToColumn()).ToArray(),
-					Order = columnInfos.Select(c => c.ToOrder()).Where(c => c != null).ToArray()
+					Order = columnInfos.ToOrder().ToArray()
 				};
 			}
 		} // func GetShellList

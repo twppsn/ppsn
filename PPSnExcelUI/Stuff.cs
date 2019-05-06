@@ -17,10 +17,12 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
@@ -161,5 +163,17 @@ namespace TecWare.PPSn
 			=> MessageBox.Show(owner, message, GetMessageTitle(icon), buttons, icon, defaultButton);
 
 		#endregion
+
+		public static PpsDataOrderExpression ToOrder(this IPpsTableColumn column)
+			=> column.Ascending.HasValue ? new PpsDataOrderExpression(!column.Ascending.Value, column.Expression) : null;
+
+		public static IEnumerable<PpsDataOrderExpression> ToOrder(this IEnumerable<IPpsTableColumn> columns)
+			=> columns?.Select(ToOrder).Where(c => c != null);
+
+		public static IEnumerable<PpsDataOrderExpression> ToOrder(this IPpsTableData tableData)
+			=> ToOrder(tableData.Columns);
+
+		public static PpsDataColumnExpression ToColumn(this IPpsTableColumn column)
+			=> new PpsDataColumnExpression(column.Expression);
 	} // class XlProcs
 }

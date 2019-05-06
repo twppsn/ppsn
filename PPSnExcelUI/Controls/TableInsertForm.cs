@@ -612,9 +612,7 @@ namespace TecWare.PPSn.Controls
 
 			public ColumnSource FindColumnSource(string expression)
 			{
-				var p = expression.IndexOf('.');
-				var exprAlias = p >= 0 ? expression.Substring(0, p) : null;
-				var exprColumn = p >= 0 ? expression.Substring(p + 1) : expression;
+				PpsDataColumnExpression.ParseQualifiedName(expression, out var exprAlias, out var exprColumn);
 
 				var resultColumnSource = (TreeNodeData)null;
 				var resultColumn = (IDataColumn)null;
@@ -626,7 +624,7 @@ namespace TecWare.PPSn.Controls
 					if (TryFindColumn(c, exprAlias, exprColumn, ref resultColumnSource, ref resultColumn))
 						return new ColumnSource(resultColumnSource, resultColumn);
 
-				return null;
+				return resultColumnSource == null || resultColumn == null ? null : new ColumnSource(resultColumnSource, resultColumn);
 			} // func FindColumnSource
 		} // class VisibleColumnHelper
 
@@ -686,7 +684,7 @@ namespace TecWare.PPSn.Controls
 			await availableViews.RefreshAsync();
 
 			// check current view
-			if (data != null)
+			if (data != null && !data.IsEmpty)
 			{
 				// joins
 				SetResultView(new PpsJoinParser(availableViews, data.Views).Result);
@@ -699,7 +697,10 @@ namespace TecWare.PPSn.Controls
 					{
 						var columnSource = visibleResultView.FindColumnSource(col.Expression);
 						if (columnSource != null)
+						{
 							resultColumns.Add(columnSource);
+							columnSource.ColumnSort = col.Ascending.HasValue ? (col.Ascending.Value ? SortOrder.Ascending : SortOrder.Descending) : SortOrder.None;
+						}
 					}
 				}
 

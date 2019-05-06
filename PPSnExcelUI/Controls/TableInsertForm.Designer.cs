@@ -67,6 +67,7 @@
 			// 
 			// columnHeader1
 			// 
+			columnHeader1.Text = "Spalte";
 			columnHeader1.Width = 220;
 			// 
 			// columnHeader2
@@ -212,7 +213,7 @@
 			this.currentColumnsListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             columnHeader1});
 			this.currentColumnsListView.ContextMenuStrip = this.currentContextMenuStrip;
-			this.currentColumnsListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
+			this.currentColumnsListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
 			this.currentColumnsListView.HideSelection = false;
 			this.currentColumnsListView.Location = new System.Drawing.Point(291, 16);
 			this.currentColumnsListView.Name = "currentColumnsListView";

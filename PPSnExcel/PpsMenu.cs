@@ -117,10 +117,13 @@ namespace PPSnExcel
 			}
 		} // proc RefreshEnvironments
 
-		private static void ImportTableCommand(string reportName, PpsListMapping map, bool singleLineMode)
-			=> Globals.ThisAddIn.Run(() => Globals.ThisAddIn.ImportTableAsync(Globals.ThisAddIn.Application.Selection as Excel.Range, map, reportName, singleLineMode));
+		private static Excel.Range GetTopLeftCell() 
+			=> Globals.ThisAddIn.Application.Selection as Excel.Range;
 
-		public static bool IsSingleLineModeToggle() 
+		private static void ImportTableCommand(PpsEnvironment environment, string reportName, string reportId)
+			=> Globals.ThisAddIn.Run(() => Globals.ThisAddIn.ImportTableAsync(environment, GetTopLeftCell(), reportId, reportName));
+		
+		public static bool IsSingleLineModeToggle()
 			=> (Control.ModifierKeys & (Keys.Control | Keys.Alt)) == (Keys.Control | Keys.Alt);
 
 		private static void InsertReport()
@@ -133,8 +136,8 @@ namespace PPSnExcel
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
 					{
 						var singleLineMode = IsSingleLineModeToggle();
-						if (frm.ReportSource is PpsListMapping map)
-							ImportTableCommand(frm.ReportName, map, singleLineMode);
+						if (frm.ReportType == "table")
+							ImportTableCommand(env, frm.ReportName, frm.ReportId);
 						else
 							MessageBox.Show("todo");
 					}
@@ -150,7 +153,7 @@ namespace PPSnExcel
 			{
 				var env = Globals.ThisAddIn.CurrentEnvironment; // get environment
 				if (env != null)
-					PpsListObject.New(env);
+					PpsListObject.New(env, GetTopLeftCell());
 			}
 		} // proc InsertTable
 
