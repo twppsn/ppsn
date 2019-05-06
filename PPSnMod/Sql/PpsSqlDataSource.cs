@@ -851,6 +851,26 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
+			#region -- class AliasColumnExpression ------------------------------------
+
+			private sealed class AliasColumnExpression : IPpsSqlAliasColumn
+			{
+				private readonly PpsTableExpression table;
+				private readonly IPpsColumnDescription column;
+
+				public AliasColumnExpression(PpsTableExpression table, IPpsColumnDescription column)
+				{
+					this.table = table ?? throw new ArgumentNullException(nameof(table));
+					this.column = column ?? throw new ArgumentNullException(nameof(column));
+				} // ctor
+
+				public string Alias => table.Alias;
+				public string Expression => GetColumnExpression(table, column);
+				public Type DataType => column.DataType;
+			} // class AliasColumnExpression
+
+			#endregion
+
 			private readonly PpsSqlDataSource dataSource;
 
 			/// <summary></summary>
@@ -885,7 +905,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="table"></param>
 			/// <param name="column"></param>
 			/// <returns></returns>
-			public string GetColumnExpression(PpsTableExpression table, IPpsColumnDescription column)
+			public static string GetColumnExpression(PpsTableExpression table, IPpsColumnDescription column)
 				=> String.IsNullOrEmpty(table.Alias)
 					? table.Table.QualifiedName + ".[" + column.Name + "]"
 					: table.Alias + ".[" + column.Name + "]";
@@ -1011,6 +1031,17 @@ namespace TecWare.PPSn.Server.Sql
 					throw new ArgumentException($"Column not found ({columnDescription.Name}).");
 				return r;
 			} // func FindNativeColumn
+
+			/// <summary></summary>
+			/// <param name="name"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public IPpsSqlAliasColumn GetAliasColumn(string name, bool throwException)
+			{
+				var (table, nativeColumn) = FindNativeColumn(name, throwException);
+				return table == null ? null : new AliasColumnExpression(table, nativeColumn);
+			} // func GetAliasColumn
+
 
 			private (PpsTableExpression table, IPpsColumnDescription nativeColumn) FindNativeColumn(Func<PpsTableExpression, IPpsColumnDescription, bool> predicate)
 			{
@@ -1258,7 +1289,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (nativeColumn == null)
 					return null;
 
-				return new SelectColumn(GetColumnExpression(table.Alias, col.Name), nativeColumn, col.HasAlias ? col.Alias : col.Name);
+				return new SelectColumn(GetColumnExpression(table.Alias, nativeColumn.Name), nativeColumn, col.HasAlias ? col.Alias : col.Name);
 			} // func CreateColumnAliasFromNative
 
 			protected override PpsDataSelector ApplyColumnsCore(AliasColumn[] columns)
@@ -2176,7 +2207,7 @@ namespace TecWare.PPSn.Server.Sql
 								else
 									commandText.Append(", ");
 
-								commandText.Append(tableInfos.GetColumnExpression(table, column));
+								commandText.Append(PpsSqlJoinExpression.GetColumnExpression(table, column));
 							}
 						}
 						#endregion
@@ -2188,7 +2219,7 @@ namespace TecWare.PPSn.Server.Sql
 						{
 							var (table, column) = tableInfos.FindNativeColumn(columnName, !cmd.HasDefaults);
 							if (column != null) // append table column
-								commandText.Append(tableInfos.GetColumnExpression(table, column));
+								commandText.Append(PpsSqlJoinExpression.GetColumnExpression(table, column));
 							else // try append empty DbNull column
 							{
 								var field = DataSource.Application.GetFieldDescription(columnName, true);
@@ -2233,7 +2264,7 @@ namespace TecWare.PPSn.Server.Sql
 								: tableInfos.FindNativeColumn(col.Name, !cmd.HasDefaults);
 
 							if (column != null) // append table column
-								commandText.Append(tableInfos.GetColumnExpression(table, column));
+								commandText.Append(PpsSqlJoinExpression.GetColumnExpression(table, column));
 							else // try append empty DbNull column
 								commandText.Append(FormatParameterName(CreateParameter(cmd.Command, col).ParameterName));
 
@@ -2264,7 +2295,7 @@ namespace TecWare.PPSn.Server.Sql
 
 							var (table, column) = tableInfos.FindNativeColumn((string)p.Key, true);
 							var parm = CreateParameter(cmd.Command, column, null, p.Value);
-							commandText.Append(tableInfos.GetColumnExpression(table, column));
+							commandText.Append(PpsSqlJoinExpression.GetColumnExpression(table, column));
 							commandText.Append(" = ")
 								.Append(FormatParameterName(parm.ParameterName));
 						}
@@ -2908,14 +2939,46 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- Sql Helper ---------------------------------------------------------
 
+		#region -- class SqlColumnFinder ----------------------------------------------
+
+		/// <summary>Helper to locate columns in a sql-selector expression.</summary>
+		protected sealed class SqlColumnFinder
+		{
+			private readonly IPpsSqlAliasColumn[] selectedColumns;
+			private readonly PpsSqlJoinExpression from;
+
+			/// <summary></summary>
+			/// <param name="selectColumns"></param>
+			/// <param name="from"></param>
+			public SqlColumnFinder(IPpsSqlAliasColumn[] selectColumns, PpsSqlJoinExpression from)
+			{
+				this.from = from ?? throw new ArgumentNullException(nameof(from));
+				this.selectedColumns = selectColumns;
+			} // ctor
+
+			/// <summary></summary>
+			/// <param name="expression"></param>
+			/// <returns></returns>
+			public IPpsSqlAliasColumn Find(string expression)
+			{
+				return selectedColumns?.FirstOrDefault(c => String.Compare(c.Alias, expression, StringComparison.OrdinalIgnoreCase) == 0)
+					?? from.GetAliasColumn(expression, false);
+			} // func Find
+
+			/// <summary></summary>
+			public IPpsSqlAliasColumn[] SelectedColumns => selectedColumns;
+		} // class SqlColumnFinder
+
+		#endregion
+
 		#region -- class SqlDataFilterVisitor -----------------------------------------
 
 		private sealed class SqlDataFilterVisitor : PpsDataFilterVisitorSql
 		{
 			private readonly Func<string, string> lookupNative;
-			private readonly Func<string, IPpsSqlAliasColumn> columnLookup;
+			private readonly SqlColumnFinder columnLookup;
 
-			public SqlDataFilterVisitor(Func<string, string> lookupNative, Func<string, IPpsSqlAliasColumn> columnLookup)
+			public SqlDataFilterVisitor(Func<string, string> lookupNative, SqlColumnFinder columnLookup)
 			{
 				this.lookupNative = lookupNative;
 				this.columnLookup = columnLookup;
@@ -2923,7 +2986,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			protected override Tuple<string, Type> LookupColumn(string columnToken)
 			{
-				var column = columnLookup(columnToken);
+				var column = columnLookup.Find(columnToken);
 				if (column == null)
 					throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
 
@@ -2946,7 +3009,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="lookupNative"></param>
 		/// <param name="columnLookup"></param>
 		/// <returns></returns>
-		protected static string FormatOrderExpression(PpsDataOrderExpression orderBy, Func<string, string> lookupNative, Func<string, IPpsSqlAliasColumn> columnLookup)
+		protected static string FormatOrderExpression(PpsDataOrderExpression orderBy, Func<string, string> lookupNative, SqlColumnFinder columnLookup)
 		{
 			// check for native expression
 			if (lookupNative != null)
@@ -2964,7 +3027,7 @@ namespace TecWare.PPSn.Server.Sql
 			}
 
 			// checkt the column
-			var column = columnLookup(orderBy.Identifier)
+			var column = columnLookup.Find(orderBy.Identifier)
 				?? throw new ArgumentNullException("orderby", $"Order by column '{orderBy.Identifier} not found.");
 
 			if (orderBy.Negate)
@@ -2979,7 +3042,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="orderByNativeLookup"></param>
 		/// <param name="columnLookup"></param>
 		/// <returns></returns>
-		protected static bool FormatOrderList(StringBuilder sb, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByNativeLookup, Func<string, IPpsSqlAliasColumn> columnLookup)
+		protected static bool FormatOrderList(StringBuilder sb, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByNativeLookup, SqlColumnFinder columnLookup)
 		{
 			var first = true;
 
@@ -3007,18 +3070,18 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="lookupNative"></param>
 		/// <param name="columnLookup"></param>
 		/// <returns></returns>
-		protected static string FormatWhereExpression(PpsDataFilterExpression whereCondition, Func<string, string> lookupNative, Func<string, IPpsSqlAliasColumn> columnLookup)
+		protected static string FormatWhereExpression(PpsDataFilterExpression whereCondition, Func<string, string> lookupNative, SqlColumnFinder columnLookup)
 			=> new SqlDataFilterVisitor(lookupNative, columnLookup).CreateFilter(whereCondition);
 
 		/// <summary></summary>
 		/// <param name="sb"></param>
 		/// <param name="columns"></param>
-		protected static void FormatSelectList(StringBuilder sb, IPpsSqlAliasColumn[] columns)
+		protected static void FormatSelectList(StringBuilder sb, SqlColumnFinder columns)
 		{
 			var first = true;
-			if (columns != null) // emit column expressions
+			if (columns.SelectedColumns != null) // emit column expressions
 			{
-				foreach (var cur in columns)
+				foreach (var cur in columns.SelectedColumns)
 				{
 					if (first)
 						first = false;

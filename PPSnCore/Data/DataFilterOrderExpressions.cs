@@ -2447,7 +2447,7 @@ namespace TecWare.PPSn.Data
 	#region -- class PpsDataOrderExpression -------------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsDataOrderExpression
+	public sealed class PpsDataOrderExpression : IEquatable<PpsDataOrderExpression>
 	{
 		private readonly bool negate;
 		private readonly string identifier;
@@ -2470,7 +2470,13 @@ namespace TecWare.PPSn.Data
 		/// <param name="obj"></param>
 		/// <returns></returns>
 		public override bool Equals(object obj)
-			=> obj is PpsDataOrderExpression o ? o.identifier.Equals(identifier) && o.negate == negate : base.Equals(obj);
+			=> obj is PpsDataOrderExpression o ? Equals(o) : base.Equals(obj);
+
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		public bool Equals(PpsDataOrderExpression other) 
+			=> other.identifier.Equals(identifier) && other.negate == negate;
 
 		/// <summary></summary>
 		/// <returns></returns>
@@ -2595,7 +2601,13 @@ namespace TecWare.PPSn.Data
 		public PpsDataColumnExpression(string columnName, string columnAlias = null)
 		{
 			this.columnName = columnName ?? throw new ArgumentNullException(nameof(columnName));
-			this.columnAlias = columnAlias;
+			if (columnAlias == null)
+			{
+				ParseQualifiedName(columnName, out var tableAlias, out var name);
+				this.columnAlias = tableAlias == null ? null : tableAlias + name;
+			}
+			else
+				this.columnAlias = columnAlias;
 		} // ctor
 
 		/// <summary>String from column expression.</summary>
@@ -2628,6 +2640,25 @@ namespace TecWare.PPSn.Data
 					return CreateStringKeyValuePair(value.ToString());
 			}
 		} // func CreateStringKeyValuePair
+
+		/// <summary>Split name into alias and name</summary>
+		/// <param name="columnName"></param>
+		/// <param name="table"></param>
+		/// <param name="name"></param>
+		public static void ParseQualifiedName(string columnName, out string table, out string name)
+		{
+			var p = columnName.IndexOf('.');
+			if (p >= 0)
+			{
+				table = columnName.Substring(0, p);
+				name = columnName.Substring(p + 1);
+			}
+			else
+			{
+				table = null;
+				name = columnName;
+			}
+		} // proc ParseQualifiedName
 
 		/// <summary></summary>
 		/// <param name="columns"></param>

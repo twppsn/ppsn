@@ -1422,21 +1422,23 @@ namespace TecWare.PPSn.Server.Sql
 				}
 
 				var sb = new StringBuilder("SELECT ");
+				var columnHelper = new SqlColumnFinder(
+					selectList.OfType<IPpsSqlAliasColumn>().ToArray(),
+					from
+				);
 
 				// build the select
-				var columns = selectList.OfType<IPpsSqlAliasColumn>().ToArray();
-				var columnLookup = new Func<string, IPpsSqlAliasColumn>(n => columns.FirstOrDefault(c => String.Compare(c.Alias, n, StringComparison.OrdinalIgnoreCase) == 0));
-				FormatSelectList(sb, columns);
+				FormatSelectList(sb, columnHelper);
 
 				// add the view
 				sb.Append("FROM ").Append(from.EmitJoin()).Append(' ');
 
 				// add the where
 				if (whereCondition != null && whereCondition != PpsDataFilterExpression.True)
-					sb.Append("WHERE ").Append(FormatWhereExpression(whereCondition, whereNativeLookup, columnLookup)).Append(' ');
+					sb.Append("WHERE ").Append(FormatWhereExpression(whereCondition, whereNativeLookup, columnHelper)).Append(' ');
 
 				// add the orderBy
-				var orderByEmitted = FormatOrderList(sb, orderBy, orderByNativeLookup, columnLookup);
+				var orderByEmitted = FormatOrderList(sb, orderBy, orderByNativeLookup, columnHelper);
 
 				// build the range, without order fetch is not possible
 				if (count >= 0 && start < 0)

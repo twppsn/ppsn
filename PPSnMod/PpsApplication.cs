@@ -276,6 +276,7 @@ namespace TecWare.PPSn.Server
 
 					isInitializedSuccessful = true;
 					UpdateInitializationState("Successful");
+					Server.LogMsg(EventLogEntryType.Information, "Configuration initialized.");
 				}
 				catch (Exception e)
 				{
