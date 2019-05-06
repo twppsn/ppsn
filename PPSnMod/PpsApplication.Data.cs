@@ -896,7 +896,12 @@ namespace TecWare.PPSn.Server
 
 			public override void End()
 			{
-				if (!firstRow)
+				if (firstRow) // write empty element
+				{
+					xml.WriteStartElement("rows");
+					xml.WriteEndElement();
+				}
+				else
 					xml.WriteEndElement();
 
 				xml.WriteEndElement();

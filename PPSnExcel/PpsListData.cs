@@ -126,7 +126,7 @@ namespace PPSnExcel
 		private const string viewTag = "view";
 
 		private readonly PpsEnvironment environment;            // attached environment
-		private readonly string select;                         // view or views
+		private readonly string viewId;                         // view or views
 		private readonly string filterExpr;                     // uses placeholder for cells
 		private PpsXlColumnInfo[] columns;                      // columns information
 
@@ -135,7 +135,7 @@ namespace PPSnExcel
 		public PpsListMapping(PpsEnvironment environment, string select, PpsXlColumnInfo[] columns, string filterExpr)
 		{
 			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
-			this.select = select ?? throw new ArgumentNullException(nameof(select));
+			this.viewId = select ?? throw new ArgumentNullException(nameof(select));
 			this.filterExpr = filterExpr ?? String.Empty;
 			this.columns = columns ?? Array.Empty<PpsXlColumnInfo>();
 		} // ctor
@@ -149,7 +149,7 @@ namespace PPSnExcel
 
 		internal IEnumerator<IDataRow> GetViewData(PpsDataOrderExpression[] order, Worksheet current, SynchronizationContext context = null, bool headerOnly = false)
 		{
-			var request = new PpsShellGetList(select)
+			var request = new PpsShellGetList(viewId)
 			{
 				Columns = columns.Select(c => c.ToColumnExpression()).Where(c => c != null).ToArray(),
 				Filter = PpsDataFilterExpression.Parse(filterExpr, GetVariables(current, context)),
@@ -192,7 +192,7 @@ namespace PPSnExcel
 			var annotation = XlProcs.UpdateProperties(String.Empty,
 				new KeyValuePair<string, string>(environmentNameTag, environment.Info.Name),
 				new KeyValuePair<string, string>(environmentUriTag, environment.Info.Uri.ToString()),
-				new KeyValuePair<string, string>(viewTag, select),
+				new KeyValuePair<string, string>(viewTag, viewId),
 				new KeyValuePair<string, string>(filterTag, filterExpr)
 			);
 
@@ -229,7 +229,7 @@ namespace PPSnExcel
 			{
 				var col = columnInfo.Columns[i]; // result
 				var xsdType = namespaceShortcut + ":" + typeToXsdType[col.DataType];
-				var isNullable = col.Attributes.TryGetProperty<bool>("nullable", out var tmp) && tmp;
+				var isNullable = col.GetIsNullable();
 
 				// try find source column
 				newColumns[i] = new PpsXlColumnInfo(
@@ -254,17 +254,6 @@ namespace PPSnExcel
 				.Element(xsdComplexTypeName).Element(xsdSequenceName).Elements(xsdElementName); // column
 		} // func XsdSchemaElements
 
-		private static IEnumerable<XElement> XsdSchemaElements(Excel.XmlMap map, string listName)
-		{
-			if (map == null || map.Schemas.Count != 1)
-				throw new ArgumentException($"Schema information for list is invalid [{listName}].");
-			if (!TryParseSchema(map.Schemas[1].XML, out var xSchema))
-				throw new ArgumentException($"Format exception for schema information [{listName}]");
-
-			// parse column names from schema
-			return XsdSchemaElements(xSchema);
-		} // func XsdSchemaElements
-
 		private bool IsXsdSchemaChange(Excel.XmlMap map, string listName, IDataColumns columnInfo)
 		{
 			var newColumns = new PpsXlColumnInfo[columnInfo.Columns.Count];
@@ -272,23 +261,33 @@ namespace PPSnExcel
 			bool TestXsdType(string xsdType, Type netType)
 				=> typeToXsdType.TryGetValue(netType, out var tmp) && tmp == xsdType;
 
-			// test schema
-			foreach (var x in XsdSchemaElements(map, listName))
-			{
-				var name = x.Attribute("name").Value;
-				var type = x.Attribute("type").Value;
-				var minOccures = x.GetAttribute("minOccurs", 1);
+			// test base params
+			if (!TryParse(map, out var environmentName, out var environmentUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
+				return false;
 
-				var columnIndex = columnInfo.FindColumnIndex(name, false);
+			if (viewId != currentViewId)
+				return true;
+
+			if (String.IsNullOrEmpty(filterExpr) != String.IsNullOrEmpty(currentFilterExpr))
+				return true;
+
+			// test schema
+			foreach (var col in currentColumns)
+			{
+				var columnIndex = columnInfo.FindColumnIndex(col.ResultColumnName, false);
 				if (columnIndex == -1)
 					return true;
 				else
 				{
-					var columnType = columnInfo.Columns[columnIndex].DataType;
-					if (type.Length < 3 || !TestXsdType(type.Substring(3), columnType))
+					var column = columnInfo.Columns[columnIndex];
+					var columnType = column.DataType;
+					var isNewNullable = column.GetIsNullable();
+					if (col.XmlType.Length < 3 || !TestXsdType(col.XmlType.Substring(3), columnType))
+						return true;
+					else if (isNewNullable != col.IsNullable)
 						return true;
 					else
-						newColumns[columnIndex] = new PpsXlColumnInfo(columnIndex < columns.Length ? columns[columnIndex].SelectColumnName : null, name, type, minOccures == 0);
+						newColumns[columnIndex] = new PpsXlColumnInfo(columnIndex < columns.Length ? columns[columnIndex].SelectColumnName : null, col.ResultColumnName, col.XmlType, isNewNullable);
 				}
 			}
 
@@ -390,7 +389,7 @@ namespace PPSnExcel
 		} // func FindColumnForOrderKey
 
 		public PpsEnvironment Environment => environment;
-		public string Select => select;
+		public string Select => viewId;
 		public string Filter => filterExpr;
 		public PpsXlColumnInfo[] Columns => columns;
 
@@ -436,20 +435,12 @@ namespace PPSnExcel
 			}
 		} // func TryParse
 
-		public static bool TryParse(Excel.XmlMap xlMap, out string environmentName, out Uri environmentUri, out string viewId, out string filterExpr, out PpsXlColumnInfo[] columns)
+		public static bool TryParseComment(XElement xSchema, out string environmentName, out Uri environmentUri, out string viewId, out string filterExpr)
 		{
 			environmentName = null;
 			environmentUri = null;
 			viewId = null;
 			filterExpr = null;
-			columns = null;
-
-			if (xlMap == null || xlMap.Schemas.Count != 1)
-				return false;
-
-			// schema 
-			if (!TryParseSchema(xlMap.Schemas[1].XML, out var xSchema))
-				return false;
 
 			// get annotation
 			var comment = xSchema.Element(xsdAnnotationName)?.Element(xsdDocumentationName)?.Value;
@@ -475,6 +466,28 @@ namespace PPSnExcel
 						break;
 				}
 			}
+			return true;
+		} // func TryParseComment
+
+		public static bool TryParse(Excel.XmlMap xlMap, out string environmentName, out Uri environmentUri, out string viewId, out string filterExpr, out PpsXlColumnInfo[] columns)
+		{
+			environmentName = null;
+			environmentUri = null;
+			viewId = null;
+			filterExpr = null;
+			columns = null;
+
+			if (xlMap == null || xlMap.Schemas.Count != 1)
+				return false;
+
+			// schema 
+			if (!TryParseSchema(xlMap.Schemas[1].XML, out var xSchema))
+				return false;
+
+			// parse header
+			if (!TryParseComment(xSchema, out environmentName, out environmentUri, out viewId, out filterExpr))
+				return false;
+			
 
 			// parse column information
 			columns = (from xCol in XsdSchemaElements(xSchema)
@@ -727,18 +740,22 @@ namespace PPSnExcel
 			return ofs >= 1 && xPath[ofs - 1] == '/' && String.Compare(xPath, ofs, columnName, 0, columnName.Length, StringComparison.OrdinalIgnoreCase) == 0;
 		} // func IsXPathEqualColumnName
 
+		private string GetSortXPath(Excel.SortField f)
+		{
+			var column = f.Key.Column;
+			if (column >= 1 && column <= xlList.ListColumns.Count)
+				return xlList.ListColumns[column].XPath?.Value;
+			return null;
+		} // func GetSortXPath
+
 		private bool? IsColumnSortedAscending(PpsXlColumnInfo columnInfo)
 		{
 			for (var i = 1; i <= xlList.Sort.SortFields.Count; i++)
 			{
 				var f = xlList.Sort.SortFields[i];
-				var column = f.Key.Column;
-				if (column >= 1 && column <= xlList.ListColumns.Count)
-				{
-					var path = xlList.ListColumns[column].XPath;
-					if (path != null && IsXPathEqualColumnName(path.Value, columnInfo.ResultColumnName))
-						return f.Order == Excel.XlSortOrder.xlAscending;
-				}
+				var xPath = GetSortXPath(f);
+				if (xPath != null && IsXPathEqualColumnName(xPath, columnInfo.ResultColumnName))
+					return f.Order == Excel.XlSortOrder.xlAscending;
 			}
 			return null;
 		} // func IsColumnSortedAscending
@@ -762,10 +779,10 @@ namespace PPSnExcel
 			for (var i = 1; i <= xlList.Sort.SortFields.Count; i++)
 			{
 				var f = xlList.Sort.SortFields[i];
-				var path = f.Key.XPath;
-				if (path != null)
+				var xPath = GetSortXPath(f);
+				if (xPath != null)
 				{
-					var col = map.FindColumnFromXPath(path.Value);
+					var col = map.FindColumnFromXPath(xPath);
 					if (col != null)
 					{
 						var s = new PpsDataOrderExpression(f.Order == Excel.XlSortOrder.xlDescending, col.SelectColumnName ?? col.ResultColumnName);

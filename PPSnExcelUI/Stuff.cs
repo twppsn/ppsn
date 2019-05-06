@@ -21,6 +21,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
@@ -175,5 +177,8 @@ namespace TecWare.PPSn
 
 		public static PpsDataColumnExpression ToColumn(this IPpsTableColumn column)
 			=> new PpsDataColumnExpression(column.Expression);
+
+		public static bool GetIsNullable(this IDataColumn col)
+			=> col.Attributes.TryGetProperty<bool>("nullable", out var tmp) && tmp;
 	} // class XlProcs
 }
