@@ -272,10 +272,11 @@ namespace PPSnExcel
 				return true;
 
 			// test schema
-			foreach (var col in currentColumns)
+			for (var i = 0; i < currentColumns.Length; i++)
 			{
+				var col = currentColumns[i];
 				var columnIndex = columnInfo.FindColumnIndex(col.ResultColumnName, false);
-				if (columnIndex == -1)
+				if (columnIndex != i)
 					return true;
 				else
 				{
@@ -554,8 +555,15 @@ namespace PPSnExcel
 		private void ImportLayoutUpdateColumn(Excel.XmlMap xlMap, Excel.ListColumn listColumn, IDataColumn column, string columnName, bool styleUpdate, ref bool showTotals)
 		{
 			// set caption
-			listColumn.Name = column.Attributes.GetProperty("displayName", columnName);
+			var displayName = column.Attributes.GetProperty("displayName", columnName);
+			for (var i = listColumn.Index + 1; i <= xlList.ListColumns.Count; i++)
+			{
+				if (xlList.ListColumns[i].Name == displayName)
+					xlList.ListColumns[i].Name = "n" + i.ToString();
+			}
 
+			listColumn.Name = displayName;
+			
 			// update range
 			XlConverter.UpdateRange(listColumn.Range, column.DataType, column.Attributes, styleUpdate);
 
@@ -576,6 +584,13 @@ namespace PPSnExcel
 					if (listColumn.XPath.Value != columnSelector)
 					{
 						listColumn.XPath.Clear();
+						// clear used
+						for (var i = listColumn.Index + 1; i <= xlList.ListColumns.Count; i++)
+						{
+							if (xlList.ListColumns[i].XPath.Value == columnSelector)
+								xlList.ListColumns[i].XPath.Clear();
+						}
+
 						listColumn.XPath.SetValue(xlMap, columnSelector);
 					}
 				}
@@ -838,8 +853,8 @@ namespace PPSnExcel
 					if (columnInfo != null)
 					{
 						var col = FindListColumnByName(columnInfo.ResultColumnName);
-						if (col != null)
-							xlSort.SortFields.Add(col.DataBodyRange, Order: o.Negate ? Excel.XlSortOrder.xlDescending : Excel.XlSortOrder.xlAscending);
+						if (col != null && col.Range != null)
+							xlSort.SortFields.Add(col.Range, Order: o.Negate ? Excel.XlSortOrder.xlDescending : Excel.XlSortOrder.xlAscending);
 					}
 				}
 			}
