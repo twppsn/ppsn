@@ -49,12 +49,6 @@ namespace PPSnExcel
 			RefreshUsername();
 			Refresh();
 
-#if DEBUG
-			cmdTable.Visible = true;
-#else
-			cmdTable.Visible = false;
-#endif
-
 			isMenuLoaded = true;
 		} // event PpsMenu_Load
 

@@ -887,6 +887,7 @@ namespace TecWare.PPSn
 			return null;
 		} // func FindOpenPane
 
+		/// <summary>Enumerate panes of all windows</summary>
 		public IEnumerable<IPpsWindowPane> Panes
 		{
 			get

@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -911,6 +912,62 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- class ViewCsvWriter ------------------------------------------------
+
+		private sealed class ViewCsvWriter : ViewWriter
+		{
+			private readonly TextCsvWriter writer;
+			private bool[] isText = null;
+			private string[] rowBuffer = null;
+
+			public ViewCsvWriter(IDEWebRequestScope r)
+			{
+				writer = new TextCsvWriter(
+					r.GetOutputTextWriter(MimeTypes.Text.Plain),
+					new TextCsvSettings()
+				);
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				try
+				{
+					writer.Dispose();
+				}
+				finally
+				{
+					base.Dispose(disposing);
+				}
+			} // proc Dispose
+
+			public override void Begin(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			{
+				rowBuffer = new string[columns.Columns.Count];
+				isText = new bool[rowBuffer.Length];
+				var isHeaderText = new bool[rowBuffer.Length];
+				for (var i = 0; i < columns.Columns.Count; i++)
+				{
+					rowBuffer[i] = columns.Columns[i].Name;
+					isText[i] = columns.Columns[i].DataType == typeof(string);
+					isHeaderText[i] = true;
+				}
+
+				writer.WriteRow(rowBuffer, isHeaderText);
+			} // proc Begin
+
+			public override void WriteRow(IDataRow row)
+			{
+				for (var i = 0; i < rowBuffer.Length; i++)
+					rowBuffer[i] = Convert.ToString(row[i], CultureInfo.InvariantCulture);
+
+				writer.WriteRow(rowBuffer, isText);
+			} // proc WriteRow
+
+			public override void End() { }
+		} // class ViewXmlWriter
+
+		#endregion
+
 		private PpsSqlExDataSource mainDataSource;
 		private long viewsVersion;
 		private readonly Dictionary<string, PpsFieldDescription> fieldDescription = new Dictionary<string, PpsFieldDescription>(StringComparer.OrdinalIgnoreCase);
@@ -1094,6 +1151,14 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetDataSetDefinition
 
+		private static ViewWriter ViewGetCreateWriter(IDEWebRequestScope r)
+		{
+			if (r.AcceptType(MimeTypes.Text.Plain))
+				return new ViewCsvWriter(r);
+			else
+				return new ViewXmlWriter(r);
+		} // func ViewGetCreateWriter
+
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
 		private void HttpViewGetAction(IDEWebRequestScope r)
 		{
@@ -1113,15 +1178,15 @@ namespace TecWare.PPSn.Server
 
 			var attributeSelector = r.GetProperty("a", String.Empty);
 
-			r.OutputHeaders["x-ppsn-source"] = selector.DataSource.Name;
-			r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
-
 			// emit the selector
-			using (var viewWriter = new ViewXmlWriter(r))
+			using (var viewWriter = ViewGetCreateWriter(r))
 			{
 				// execute the complete statemet
 				using (var enumerator = selector.GetEnumerator(startAt, count))
 				{
+					r.OutputHeaders["x-ppsn-source"] = selector.DataSource.Name;
+					r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
+
 					var emitCurrentRow = false;
 
 					// extract the columns, optional before the fetch operation
