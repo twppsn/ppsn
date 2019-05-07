@@ -802,7 +802,7 @@ namespace TecWare.PPSn.Server
 
 				var value = fieldDefinition.Attributes.TryGetProperty(attr.Name, out var tmp) ? tmp : attr.Value;
 				if (value != null)
-					xml.WriteValue(Procs.ChangeType<string>(value));
+					xml.WriteValue(Procs.RemoveInvalidXmlChars(Procs.ChangeType<string>(value)));
 
 				xml.WriteEndElement();
 			} // proc WriteAttributeForViewGet
@@ -867,7 +867,7 @@ namespace TecWare.PPSn.Server
 			private void WriteRowValue(string columnName, object v)
 			{
 				if (v != null)
-					xml.WriteElementString(columnName, v.ChangeType<string>());
+					xml.WriteElementString(columnName, Procs.RemoveInvalidXmlChars(v.ChangeType<string>()));
 			} // proc WriteRowValue
 
 			public override void WriteRow(IDataRow row)
