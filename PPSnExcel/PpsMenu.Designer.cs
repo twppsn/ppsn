@@ -208,7 +208,7 @@
 			// 
 			// cmdListObjectInfo
 			// 
-			this.cmdListObjectInfo.Label = "Smart Table Daten";
+			this.cmdListObjectInfo.Label = "Xml-Quell-Daten anzeigen";
 			this.cmdListObjectInfo.Name = "cmdListObjectInfo";
 			this.cmdListObjectInfo.ShowImage = true;
 			this.cmdListObjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdListObjectInfo_Click);

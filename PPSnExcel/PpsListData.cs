@@ -1010,7 +1010,7 @@ namespace PPSnExcel
 				);
 
 				// Initialize ListObject
-				var xlList = Globals.Factory.GetVstoObject((Excel.ListObject)topLeftCell.Worksheet.ListObjects.Add());
+				var xlList = Globals.Factory.GetVstoObject((Excel.ListObject)(topLeftCell.ListObject ?? topLeftCell.Worksheet.ListObjects.Add()));
 				var ppsList = new PpsListObject(xlList, newMapping);
 
 				// Create table content

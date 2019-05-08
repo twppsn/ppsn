@@ -1272,7 +1272,12 @@ namespace TecWare.PPSn.Controls
 		{
 			if (!IsTableSelectMode)
 			{
-				MessageBox.Show(this, "Kein View gewählt");
+				MessageBox.Show(this, "Kein View gewählt.");
+				return;
+			}
+			if(resultColumns.Count == 0)
+			{
+				MessageBox.Show(this, "Keine Spalte gewählt.");
 				return;
 			}
 

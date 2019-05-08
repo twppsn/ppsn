@@ -75,8 +75,10 @@ namespace PPSnExcel
 		{
 			var currentEnvironment = Globals.ThisAddIn.CurrentEnvironment;
 			var hasEnvironment = currentEnvironment != null;
+			var hasListObjectInfo = PpsListMapping.TryParseFromSelection();
 			cmdReport.Enabled = hasEnvironment;
-			cmdTable.Enabled = hasEnvironment || PpsListMapping.TryParseFromSelection();
+			cmdTable.Enabled = hasEnvironment || hasListObjectInfo;
+			cmdListObjectInfo.Enabled = hasListObjectInfo;
 
 			cmdRefresh.Enabled =
 				cmdRefreshLayout.Enabled = Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null);

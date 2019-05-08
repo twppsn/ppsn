@@ -170,7 +170,7 @@ namespace TecWare.PPSn
 			=> column.Ascending.HasValue ? new PpsDataOrderExpression(!column.Ascending.Value, column.Expression) : null;
 
 		public static IEnumerable<PpsDataOrderExpression> ToOrder(this IEnumerable<IPpsTableColumn> columns)
-			=> columns?.Select(ToOrder).Where(c => c != null);
+			=> columns?.Select(ToOrder).Where(c => c != null) ?? Array.Empty<PpsDataOrderExpression>();
 
 		public static IEnumerable<PpsDataOrderExpression> ToOrder(this IPpsTableData tableData)
 			=> ToOrder(tableData.Columns);
