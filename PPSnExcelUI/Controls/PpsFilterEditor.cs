@@ -166,9 +166,9 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc RefreshFilter
 
-		public void InsertFilter(IEnumerable<IPpsFilterColumn> newFilter, Point insertPoint)
+		public void InsertFilter(IEnumerable<IPpsFilterColumn> newFilter, Point? insertPoint = null)
 		{
-			var pt = PointToClient(insertPoint);
+			//var pt = PointToClient(insertPoint);
 
 			foreach (var c in newFilter)
 				resultFilter.Add(c);

@@ -912,9 +912,12 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc RefreshAvailableColumns
 
+		private IEnumerable<ColumnSource> GetSelectedColumns(ListView listView)
+			=> from lvi in listView.SelectedItems.Cast<ListViewItem>() select (ColumnSource)lvi.Tag;
+
 		private void MoveColumnsToResult()
 		{
-			MoveColumnsToResult(from lvi in currentColumnsListView.SelectedItems.Cast<ListViewItem>() select (ColumnSource)lvi.Tag);
+			MoveColumnsToResult(GetSelectedColumns(currentColumnsListView));
 			currentColumnsListView.SelectedItems.Clear();
 		} // proc MoveColumnsToResult
 
@@ -1150,6 +1153,7 @@ namespace TecWare.PPSn.Controls
 
 			currentColumnsSelectAllMenuItem.Enabled = hasItems;
 			currentColumnsSelectInverseMenuItem.Enabled = hasItems;
+			currentColumnAddToCondition.Enabled = hasSelectedItems;
 			currentColumnAddToResultMenuItem.Enabled = hasSelectedItems;
 		} // event currentContextMenuStrip_Opening
 
@@ -1160,6 +1164,7 @@ namespace TecWare.PPSn.Controls
 
 			resultColumnsSelectAllMenuItem.Enabled = hasItems;
 			resultColumnsSelectInverseMenuItem.Enabled = hasItems;
+			resultColumnAddToCondition.Enabled = hasSelectedItems;
 			resultColumnRemoveMenuItem.Enabled = hasSelectedItems;
 			resultColumnSortAscMenuItem.Enabled = hasSelectedItems;
 			resultColumnSortDescMenuItem.Enabled = hasSelectedItems;
@@ -1239,8 +1244,12 @@ namespace TecWare.PPSn.Controls
 		{
 			if (sender == currentColumnAddToResultMenuItem)
 				MoveColumnsToResult();
+			else if (sender == currentColumnAddToCondition)
+				filterGrid.InsertFilter(GetSelectedColumns(currentColumnsListView).Select(c => new ColumnCondition(c)));
 			else if (sender == resultColumnRemoveMenuItem)
 				RemoveColumnsFromResult();
+			else if (sender == resultColumnAddToCondition)
+				filterGrid.InsertFilter(GetSelectedColumns(resultColumnsListView).Select(c => new ColumnCondition(c)));
 			// sort
 			else if (sender == resultColumnSortAscMenuItem)
 				SetColumnResultSortOrder(SortOrder.Ascending);
@@ -1266,6 +1275,8 @@ namespace TecWare.PPSn.Controls
 				MessageBox.Show(this, "Kein View gewählt");
 				return;
 			}
+
+			Enabled = false;
 			try
 			{
 				// create join expression
@@ -1286,6 +1297,10 @@ namespace TecWare.PPSn.Controls
 			catch (Exception ex)
 			{
 				env.ShowException(ex);
+			}
+			finally
+			{
+				Enabled = true;
 			}
 		} // event cmdInsert_Click
 	} // class TableInsertForm

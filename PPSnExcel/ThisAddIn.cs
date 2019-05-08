@@ -238,7 +238,7 @@ namespace PPSnExcel
 				await RefreshTableAsync(worksheet.ListObjects[i], false);
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.ListObject _xlList, bool refreshColumnLayout)
+		private async Task RefreshTableAsync(Excel.ListObject _xlList, bool refreshLayout)
 		{
 			using (var progress = CreateProgress())
 			{
@@ -247,7 +247,7 @@ namespace PPSnExcel
 				progress.Report(String.Format("Aktualisiere {0}...", xlList.Name ?? "Tabelle"));
 
 				if (PpsListObject.TryGet(FindEnvironment, xlList, out var ppsList))
-					await ppsList.RefreshAsync(refreshColumnLayout, PpsMenu.IsSingleLineModeToggle(), null);
+					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
 				else
 				{
 					//if (refreshColumnLayout)

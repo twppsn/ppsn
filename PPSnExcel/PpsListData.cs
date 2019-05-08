@@ -36,6 +36,18 @@ using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
+	#region -- enum PpsXlRefreshList --------------------------------------------------
+
+	[Flags]
+	internal enum PpsXlRefreshList
+	{
+		None,
+		Style = 1,
+		Columns = 2
+	} // enum PpsXlRefreshList
+
+	#endregion
+
 	#region -- class PpsXlColumnInfo --------------------------------------------------
 
 	internal sealed class PpsXlColumnInfo
@@ -254,22 +266,23 @@ namespace PPSnExcel
 				.Element(xsdComplexTypeName).Element(xsdSequenceName).Elements(xsdElementName); // column
 		} // func XsdSchemaElements
 
-		private bool IsXsdSchemaChange(Excel.XmlMap map, string listName, IDataColumns columnInfo)
+		private (bool isChanged, int[] resultToXml) IsXsdSchemaChange(Excel.XmlMap map, string listName, IDataColumns columnInfo)
 		{
 			var newColumns = new PpsXlColumnInfo[columnInfo.Columns.Count];
+			var mapping = new int[columnInfo.Columns.Count];
 
 			bool TestXsdType(string xsdType, Type netType)
 				=> typeToXsdType.TryGetValue(netType, out var tmp) && tmp == xsdType;
 
 			// test base params
 			if (!TryParse(map, out var environmentName, out var environmentUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
-				return false;
+				return (false, null);
 
 			if (viewId != currentViewId)
-				return true;
+				return (true, null);
 
 			if (String.IsNullOrEmpty(filterExpr) != String.IsNullOrEmpty(currentFilterExpr))
-				return true;
+				return (true, null);
 
 			// test schema
 			for (var i = 0; i < currentColumns.Length; i++)
@@ -277,7 +290,7 @@ namespace PPSnExcel
 				var col = currentColumns[i];
 				var columnIndex = columnInfo.FindColumnIndex(col.ResultColumnName, false);
 				if (columnIndex == -1)
-					return true;
+					return (true, null);
 				else
 				{
 					var column = columnInfo.Columns[columnIndex];
@@ -285,11 +298,12 @@ namespace PPSnExcel
 					var isNewNullable = column.GetIsNullable();
 
 					if (col.XmlType.Length < 3 || !TestXsdType(col.XmlType.Substring(3), columnType))
-						return true;
+						return (true, null);
 					else if (isNewNullable != col.IsNullable)
-						return true;
+						return (true, null);
 					else
 					{
+						mapping[i] = columnIndex;
 						newColumns[i] = new PpsXlColumnInfo(
 							columnIndex < columns.Length ? columns[columnIndex].SelectColumnName : null,
 							col.ResultColumnName,
@@ -304,11 +318,11 @@ namespace PPSnExcel
 			for (var i = 0; i < newColumns.Length; i++)
 			{
 				if (newColumns[i] is null)
-					return true;
+					return (true, null);
 			}
 
 			columns = newColumns;
-			return false;
+			return (false, mapping);
 		} // func IsXsdSchemaChange
 
 		private Excel.XmlMap CreateNewXmlMap(ListObject list, IDataColumns columnInfo)
@@ -359,26 +373,27 @@ namespace PPSnExcel
 			return "ppsnXsd" + freeNumber.ToString();
 		} // func FindSchemaMapName
 
-		public (Excel.XmlMap xlMap, bool isSchemaChanged, Excel.XmlMap xlMapToRemove) EnsureXmlMap(ListObject list, IDataColumns columnInfo = null)
+		public (Excel.XmlMap xlMap, bool isSchemaChanged, int[] resultToXml, Excel.XmlMap xlMapToRemove) EnsureXmlMap(ListObject list, IDataColumns columnInfo = null)
 		{
 			var map = list.XmlMap;
 
 			if (columnInfo == null) // read schema information only
-				return (map, false, null);
+				return (map, false, null, null);
 			else if (map == null) // no schema exists, create a new one
 			{
 				var mapNew = CreateNewXmlMap(list, columnInfo);
-				return (mapNew, true, null);
+				return (mapNew, true, null, null);
 			}
 			else // schema exists, check if outdated
 			{
-				if (IsXsdSchemaChange(map, list.Name, columnInfo))
+				var (isChanged, resultToXml) = IsXsdSchemaChange(map, list.Name, columnInfo);
+				if (isChanged)
 				{
 					var mapNew = CreateNewXmlMap(list, columnInfo);
-					return (mapNew, true, map);
+					return (mapNew, true, null, map);
 				}
 				else
-					return (map, false, null);
+					return (map, false, resultToXml, null);
 			}
 		} // proc EnsureXmlMap
 
@@ -548,6 +563,25 @@ namespace PPSnExcel
 
 	internal sealed class PpsListObject : IPpsTableData
 	{
+		#region -- class PpsListColumnInfo --------------------------------------------
+
+		private sealed class PpsListColumnInfo : IPpsTableColumn
+		{
+			private readonly PpsListObject parent;
+			private readonly PpsXlColumnInfo columnInfo;
+
+			public PpsListColumnInfo(PpsListObject parent, PpsXlColumnInfo columnInfo)
+			{
+				this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+				this.columnInfo = columnInfo ?? throw new ArgumentNullException(nameof(columnInfo));
+			} // ctor
+
+			public string Expression => columnInfo.SelectColumnName ?? columnInfo.ResultColumnName;
+			public bool? Ascending => parent.IsColumnSortedAscending(columnInfo);
+		} // class PpsTableColumnInfo
+
+		#endregion
+
 		private readonly ListObject xlList; // attached excel list object
 		private PpsListMapping map;
 
@@ -590,18 +624,20 @@ namespace PPSnExcel
 			try
 			{
 				var columnSelector = "/" + xlMap.RootElementName + "/r/" + column.Name;
+
+				// clear used
+				for (var i = listColumn.Index + 1; i <= xlList.ListColumns.Count; i++)
+				{
+					if (xlList.ListColumns[i].XPath.Value == columnSelector)
+						xlList.ListColumns[i].XPath.Clear();
+				}
+
+				// update currrent value
 				if (listColumn.XPath.Value != null)
 				{
 					if (listColumn.XPath.Value != columnSelector)
 					{
 						listColumn.XPath.Clear();
-						// clear used
-						for (var i = listColumn.Index + 1; i <= xlList.ListColumns.Count; i++)
-						{
-							if (xlList.ListColumns[i].XPath.Value == columnSelector)
-								xlList.ListColumns[i].XPath.Clear();
-						}
-
 						listColumn.XPath.SetValue(xlMap, columnSelector);
 					}
 				}
@@ -614,9 +650,13 @@ namespace PPSnExcel
 			}
 		} // proc ImportLayoutUpdateColumn
 
-		private void ImportLayoutRefresh(IDataColumns columnInfo, ListObject xlList, bool refreshLayout, out bool showTotals)
+		// rewrite layout
+		private (Excel.XmlMap xlMap, int[] resultToXml) ImportLayoutRefresh(IDataColumns columnInfo, ListObject xlList, PpsXlRefreshList refreshLayout, out bool showTotals)
 		{
-			var (xlMap, isChanged, xlMapToRemove) = Mapping.EnsureXmlMap(xlList, columnInfo);
+			var styleUpdate = (refreshLayout & PpsXlRefreshList.Style) != 0;
+			var columnUpdate = (refreshLayout & PpsXlRefreshList.Columns) != 0;
+
+			var (xlMap, isChanged, resultToXml, xlMapToRemove) = Mapping.EnsureXmlMap(xlList, columnInfo);
 
 			// import layout
 			showTotals = false;
@@ -625,38 +665,39 @@ namespace PPSnExcel
 
 			for (var i = 0; i < columnInfo.Columns.Count; i++)
 			{
-				var listColumn = i < List.ListColumns.Count ? xlList.ListColumns[i + 1] : xlList.ListColumns.Add();
-
-				// clear cell format -> XPath values
-				listColumn.Range.NumberFormat = "General";
-
-				ImportLayoutUpdateColumn(xlMap, listColumn, columnInfo.Columns[i], refreshLayout, ref showTotals);
-			}
-		} // func ImportLayoutRefresh
-
-		private void ImportLayoutByColumn(IDataColumns columnInfo, ListObject xlList, Excel.XmlMap xlMap)
-		{
-			var showTotals = false;
-			for (var i = 1; i <= xlList.ListColumns.Count; i++)
-			{
-				var listColumn = xlList.ListColumns[i];
-
-				var col = map.FindColumnFromXPath(listColumn.XPath.Value).Item2;
-				if (col == null) // clear xpath
-					listColumn.XPath.Clear();
-				else // update format
+				var col = columnInfo.Columns[i];
+				if (columnUpdate)
 				{
-					var idx = columnInfo.FindColumnIndex(col.ResultColumnName);
-					ImportLayoutUpdateColumn(xlMap, listColumn, columnInfo.Columns[idx], false, ref showTotals);
+					var listColumn = i < List.ListColumns.Count ? xlList.ListColumns[i + 1] : xlList.ListColumns.Add();
+
+					// clear cell format -> XPath values
+					listColumn.Range.NumberFormat = "General";
+
+					ImportLayoutUpdateColumn(xlMap, listColumn, col, styleUpdate, ref showTotals);
+				}
+				else
+				{
+					var listColumn = FindListColumnByName(col.Name);
+					if (listColumn == null) // add new list column
+					{
+						listColumn = xlList.ListColumns.Add();
+						ImportLayoutUpdateColumn(xlMap, listColumn, col, true, ref showTotals);
+					}
+					else // update
+					{
+						ImportLayoutUpdateColumn(xlMap, listColumn, col, styleUpdate, ref showTotals);
+					}
 				}
 			}
-		} // proc ImportLayoutByColumn
+
+			return (xlMap, resultToXml);
+		} // func ImportLayoutRefresh
 
 		#endregion
 
 		#region -- ImportDataAsync ----------------------------------------------------
 
-		private async Task<bool> ImportDataBlockAsync(IEnumerator<IDataRow> e, Excel.XmlMap xlMap, int blockIndex, int blockSize)
+		private async Task<bool> ImportDataBlockAsync(IEnumerator<IDataRow> e, Excel.XmlMap xlMap, int[] resultToXml, int blockIndex, int blockSize)
 		{
 			var moveNext = false;
 
@@ -675,10 +716,11 @@ namespace PPSnExcel
 
 						for (var i = 0; i < map.Columns.Length; i++)
 						{
-							if (r[i] != null)
+							var v = r[resultToXml?[i] ?? i];
+							if (v != null)
 							{
 								x.WriteStartElement(map.Columns[i].ResultColumnName);
-								x.WriteValue(r[i]);
+								x.WriteValue(v);
 								x.WriteEndElement();
 							}
 						}
@@ -708,15 +750,8 @@ namespace PPSnExcel
 			}
 		} // func ImportDataBlockAsync
 
-		private async Task ImportDataAsync(IEnumerator<IDataRow> e, bool checkXmlMapping, bool singleLineMode)
+		private async Task ImportDataAsync(IEnumerator<IDataRow> e, Excel.XmlMap xlMap, int[] resultToXml, bool singleLineMode)
 		{
-			var (xlMap, isChanged, xlMapToRemove) = map.EnsureXmlMap(xlList, checkXmlMapping ? (IDataColumns)e : null);
-			if (isChanged)
-			{
-				ImportLayoutByColumn((IDataColumns)e, xlList, xlMap);
-				PpsListMapping.RemoveXmlMap(xlMapToRemove);
-			}
-
 			var errorCheckingOptions = xlList.Application.ErrorCheckingOptions;
 			var oldNumberAsTextValue = errorCheckingOptions.NumberAsText;
 			var oldTextDateValue = errorCheckingOptions.TextDate;
@@ -726,7 +761,7 @@ namespace PPSnExcel
 			{
 				var blockSize = singleLineMode ? 1 : (64 << 10);
 				var blockIndex = 0;
-				while (await ImportDataBlockAsync(e, xlMap, blockIndex, blockSize))
+				while (await ImportDataBlockAsync(e, xlMap, resultToXml, blockIndex, blockSize))
 					blockIndex++;
 			}
 			finally
@@ -754,6 +789,34 @@ namespace PPSnExcel
 		{
 			xlList.DataBodyRange.Clear();
 		} // proc ClearData
+
+		#region -- GetListColumnInfo --------------------------------------------------
+
+		private IEnumerable<PpsListColumnInfo> GetListColumnInfo()
+		{
+			var returned = new bool[map.Columns.Length];
+			for (var i = 0; i < returned.Length; i++)
+				returned[i] = false;
+
+			for (var i = 1; i <= xlList.ListColumns.Count; i++)
+			{
+				var xPath = xlList.ListColumns[i].XPath?.Value;
+				if (xPath != null)
+				{
+					var (idx, col) = map.FindColumnFromXPath(xPath);
+					returned[idx] = true;
+					yield return new PpsListColumnInfo(this, col);
+				}
+			}
+
+			for (var i = 0; i < returned.Length; i++)
+			{
+				if (!returned[i])
+					yield return new PpsListColumnInfo(this, map.Columns[i]);
+			}
+		} // func GetListColumnInfo
+
+		#endregion
 
 		#region -- Refresh ------------------------------------------------------------
 
@@ -871,7 +934,7 @@ namespace PPSnExcel
 			}
 		} // proc UpdateSortOrder
 
-		public async Task RefreshAsync(bool refreshLayout, bool singleLineMode, PpsDataOrderExpression[] order)
+		public async Task RefreshAsync(PpsXlRefreshList refreshLayout, bool singleLineMode, PpsDataOrderExpression[] order)
 		{
 			var showTotals = false;
 			var worksheet = ThisAddIn.GetWorksheet(xlList.InnerObject);
@@ -881,16 +944,16 @@ namespace PPSnExcel
 
 			using (var e = await Task.Run(() => map.GetViewData(order ?? newOrder, worksheet, syncContext, false)))
 			{
-				ImportLayoutRefresh((IDataColumns)e, xlList, refreshLayout, out showTotals);
+				var (xlMap, resultToXml) = ImportLayoutRefresh((IDataColumns)e, xlList, refreshLayout, out showTotals);
 
 				// update sort order
 				if (order != null && isOrderChanged)
 					UpdateSortOrder(newOrder);
 
 				// import data
-				await ImportDataAsync(e, !refreshLayout, singleLineMode);
+				await ImportDataAsync(e, xlMap, resultToXml, singleLineMode);
 
-				if (refreshLayout && showTotals)
+				if ((refreshLayout & PpsXlRefreshList.Style) != 0 && showTotals)
 					xlList.ShowTotals = true;
 			}
 			//List.Sort.SortFields.Item[0].Order
@@ -901,21 +964,6 @@ namespace PPSnExcel
 
 		#region -- Editor -------------------------------------------------------------
 
-		private sealed class PpsTableColumnInfo : IPpsTableColumn
-		{
-			private readonly PpsListObject parent;
-			private readonly PpsXlColumnInfo columnInfo;
-
-			public PpsTableColumnInfo(PpsListObject parent, PpsXlColumnInfo columnInfo)
-			{
-				this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
-				this.columnInfo = columnInfo ?? throw new ArgumentNullException(nameof(columnInfo));
-			} // ctor
-
-			public string Expression => columnInfo.SelectColumnName ?? columnInfo.ResultColumnName;
-			public bool? Ascending => parent.IsColumnSortedAscending(columnInfo);
-		} // class PpsTableColumnInfo
-
 		public void Edit()
 			=> map.Environment.EditTable(this);
 
@@ -923,38 +971,14 @@ namespace PPSnExcel
 		{
 			// create new mapping
 			map = new PpsListMapping(map.Environment, views, columns?.Select(c => new PpsXlColumnInfo(c.Expression, null, null, true)).ToArray(), filter);
-			return RefreshAsync(false, PpsMenu.IsSingleLineModeToggle(), columns.ToOrder().ToArray());
+			using (var progress = Globals.ThisAddIn.CreateProgress())
+				return RefreshAsync(PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columns.ToOrder().ToArray());
 		} // proc UpdateAsync
 
 		string IPpsTableData.DisplayName { get => xlList.DisplayName; set => xlList.DisplayName = value; }
 		string IPpsTableData.Views => map.Select;
 		string IPpsTableData.Filter => map.Filter;
-		IEnumerable<IPpsTableColumn> IPpsTableData.Columns
-		{
-			get
-			{
-				var returned = new bool[map.Columns.Length];
-				for (var i = 0; i < returned.Length; i++)
-					returned[i] = false;
-
-				for (var i = 1; i <= xlList.ListColumns.Count; i++)
-				{
-					var xPath = xlList.ListColumns[i].XPath?.Value;
-					if (xPath != null)
-					{
-						var (idx, col) = map.FindColumnFromXPath(xPath);
-						returned[idx] = true;
-						yield return new PpsTableColumnInfo(this, col);
-					}
-				}
-
-				for (var i = 0; i < returned.Length; i++)
-				{
-					if (!returned[i])
-						yield return new PpsTableColumnInfo(this, map.Columns[i]);
-				}
-			}
-		} // prop IPpsTableData.Columns
+		IEnumerable<IPpsTableColumn> IPpsTableData.Columns => GetListColumnInfo();
 
 		bool IPpsTableData.IsEmpty => false;
 
@@ -990,7 +1014,7 @@ namespace PPSnExcel
 				var ppsList = new PpsListObject(xlList, newMapping);
 
 				// Create table content
-				await ppsList.RefreshAsync(true, PpsMenu.IsSingleLineModeToggle(), columns.ToOrder().ToArray());
+				await ppsList.RefreshAsync(PpsXlRefreshList.Columns | PpsXlRefreshList.Style, PpsMenu.IsSingleLineModeToggle(), columns.ToOrder().ToArray());
 			} // proc UpdateAsync
 
 			public string DisplayName { get; set; } = null;

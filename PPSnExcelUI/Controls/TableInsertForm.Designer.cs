@@ -36,6 +36,7 @@
 			System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
 			System.Windows.Forms.ColumnHeader columnHeader3;
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TableInsertForm));
+			System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 			this.resultColumnsSelectAllMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.resultColumnsSelectInverseMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.resultColumnSortNoneMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -54,12 +55,15 @@
 			this.currentColumnsSelectAllMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.resultColumnsListView = new System.Windows.Forms.ListView();
 			this.imageListSort = new System.Windows.Forms.ImageList(this.components);
+			this.resultColumnAddToCondition = new System.Windows.Forms.ToolStripMenuItem();
+			this.currentColumnAddToCondition = new System.Windows.Forms.ToolStripMenuItem();
 			columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			resultColumnsContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
 			toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
 			columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+			toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
 			resultColumnsContextMenuStrip.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.filterGrid)).BeginInit();
 			this.currentContextMenuStrip.SuspendLayout();
@@ -78,6 +82,8 @@
 			// resultColumnsContextMenuStrip
 			// 
 			resultColumnsContextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.resultColumnAddToCondition,
+            toolStripSeparator3,
             this.resultColumnsSelectAllMenuItem,
             this.resultColumnsSelectInverseMenuItem,
             toolStripSeparator2,
@@ -87,7 +93,7 @@
             this.toolStripSeparator1,
             this.resultColumnRemoveMenuItem});
 			resultColumnsContextMenuStrip.Name = "resultColumnsContextMenuStrip";
-			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(193, 148);
+			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(193, 176);
 			resultColumnsContextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.resultColumnsContextMenuStrip_Opening);
 			// 
 			// resultColumnsSelectAllMenuItem
@@ -229,11 +235,12 @@
 			// 
 			this.currentContextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.currentColumnAddToResultMenuItem,
+            this.currentColumnAddToCondition,
             toolStripMenuItem1,
             this.currentColumnsSelectInverseMenuItem,
             this.currentColumnsSelectAllMenuItem});
 			this.currentContextMenuStrip.Name = "currentContextMenuStrip";
-			this.currentContextMenuStrip.Size = new System.Drawing.Size(193, 76);
+			this.currentContextMenuStrip.Size = new System.Drawing.Size(193, 98);
 			this.currentContextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.currentContextMenuStrip_Opening);
 			// 
 			// currentColumnAddToResultMenuItem
@@ -288,6 +295,23 @@
 			this.imageListSort.Images.SetKeyName(0, "sort_ascending.png");
 			this.imageListSort.Images.SetKeyName(1, "sort_descending.png");
 			// 
+			// toolStripSeparator3
+			// 
+			toolStripSeparator3.Name = "toolStripSeparator3";
+			toolStripSeparator3.Size = new System.Drawing.Size(189, 6);
+			// 
+			// resultColumnsConditionAdd
+			// 
+			this.resultColumnAddToCondition.Name = "resultColumnsConditionAdd";
+			this.resultColumnAddToCondition.Size = new System.Drawing.Size(192, 22);
+			this.resultColumnAddToCondition.Text = "Als Bedingung";
+			// 
+			// currentColumnsConditionAdd
+			// 
+			this.currentColumnAddToCondition.Name = "currentColumnsConditionAdd";
+			this.currentColumnAddToCondition.Size = new System.Drawing.Size(192, 22);
+			this.currentColumnAddToCondition.Text = "Als Bedingung";
+			// 
 			// TableInsertForm
 			// 
 			this.AcceptButton = this.cmdRefresh;
@@ -335,5 +359,7 @@
 		private System.Windows.Forms.ToolStripMenuItem resultColumnsSelectInverseMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem currentColumnsSelectInverseMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem currentColumnsSelectAllMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem resultColumnAddToCondition;
+		private System.Windows.Forms.ToolStripMenuItem currentColumnAddToCondition;
 	}
 }
