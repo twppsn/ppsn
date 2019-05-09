@@ -353,7 +353,7 @@ namespace TecWare.PPSn
 			=> formsApplication.CreateProgress(blockUI);
 
 		private bool AskForRestart()
-			=> formsApplication.ShowMessage(String.Format("Die Anwenundung muss für eine Aktivierung neugestartet werden.\nNeustart von {0} sofort einleiten?", formsApplication.Title), MessageBoxIcon.Question, MessageBoxButtons.YesNo) == DialogResult.Yes;
+			=> formsApplication.ShowMessage(String.Format("Die Anwendung muss für eine Aktivierung neugestartet werden.\nNeustart von {0} sofort einleiten?", formsApplication.Title), MessageBoxIcon.Question, MessageBoxButtons.YesNo) == DialogResult.Yes;
 
 		private async Task<bool> UpdateApplicationAsync(DEHttpClient client, string src)
 		{
