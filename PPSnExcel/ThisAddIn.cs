@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -253,7 +254,18 @@ namespace PPSnExcel
 					//if (refreshColumnLayout)
 					//	;
 
-					xlList.Refresh();
+					switch (xlList.SourceType)
+					{
+						case Excel.XlListObjectSourceType.xlSrcQuery:
+						case Excel.XlListObjectSourceType.xlSrcXml:
+							try
+							{
+								xlList.Refresh();
+							}
+							catch (COMException)
+							{ }
+							break;
+					}
 				}
 			}
 		} // func RefreshTableAsync

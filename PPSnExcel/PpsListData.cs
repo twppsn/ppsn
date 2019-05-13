@@ -281,7 +281,9 @@ namespace PPSnExcel
 			if (viewId != currentViewId)
 				return (true, null);
 
-			if (String.IsNullOrEmpty(filterExpr) != String.IsNullOrEmpty(currentFilterExpr))
+			if (String.IsNullOrEmpty(currentFilterExpr))
+				currentFilterExpr = currentFilterExpr ?? String.Empty;
+			if (filterExpr != currentFilterExpr)
 				return (true, null);
 
 			// test schema
@@ -663,12 +665,22 @@ namespace PPSnExcel
 			// remove mapping
 			PpsListMapping.RemoveXmlMap(xlMapToRemove);
 
+			// make a list with all relevant columns
+			var columnsToDelete = new List<Excel.ListColumn>();
+			for (var i = 1; i <= xlList.ListColumns.Count; i++)
+			{
+				if (columnUpdate || xlList.ListColumns[i].XPath?.Value != null)
+					columnsToDelete.Add(xlList.ListColumns[i]);
+			}
+			
+			// process input columns
 			for (var i = 0; i < columnInfo.Columns.Count; i++)
 			{
 				var col = columnInfo.Columns[i];
 				if (columnUpdate)
 				{
-					var listColumn = i < List.ListColumns.Count ? xlList.ListColumns[i + 1] : xlList.ListColumns.Add();
+					var listColumn = i < xlList.ListColumns.Count ? xlList.ListColumns[i + 1] : xlList.ListColumns.Add();
+					columnsToDelete.Remove(listColumn);
 
 					// clear cell format -> XPath values
 					listColumn.Range.NumberFormat = "General";
@@ -685,10 +697,15 @@ namespace PPSnExcel
 					}
 					else // update
 					{
+						columnsToDelete.Remove(listColumn);
 						ImportLayoutUpdateColumn(xlMap, listColumn, col, styleUpdate, ref showTotals);
 					}
 				}
 			}
+
+			// remove unused columns
+			for (var i = columnsToDelete.Count - 1; i >= 0; i--)
+				columnsToDelete[i].Delete();
 
 			return (xlMap, resultToXml);
 		} // func ImportLayoutRefresh
@@ -948,7 +965,12 @@ namespace PPSnExcel
 
 				// update sort order
 				if (order != null && isOrderChanged)
+				{
 					UpdateSortOrder(newOrder);
+
+					if ((refreshLayout & PpsXlRefreshList.Style) != 0)
+						xlList.SaveSortOrder = true;
+				}
 
 				// import data
 				await ImportDataAsync(e, xlMap, resultToXml, singleLineMode);

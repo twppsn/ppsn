@@ -667,11 +667,11 @@ namespace TecWare.PPSn.Controls
 		{
 			if (expr == PpsDataFilterExpression.True)
 				resultFilter.Clear();
-			else if(expr is PpsDataFilterCompareExpression compareExpr)
+			else if (expr is PpsDataFilterCompareExpression compareExpr)
 			{
 				AddCompareExpression(visibleResultView, compareExpr);
 			}
-			else if(expr is PpsDataFilterLogicExpression logicExpr)
+			else if (expr is PpsDataFilterLogicExpression logicExpr)
 			{
 				foreach (var c in logicExpr.Arguments.OfType<PpsDataFilterCompareExpression>())
 					AddCompareExpression(visibleResultView, c);
@@ -843,16 +843,16 @@ namespace TecWare.PPSn.Controls
 					UpdateTreeView();
 				}
 				RefreshResultColumns();
-				if (e.Node.IsSelected)
-					RefreshAvailableColumns(view);
+				tableTree.SelectedNode = e.Node;
+				RefreshAvailableColumns(view);
 			}
 			else if (e.Node.Tag is JoinTreeNodeData join) // child node
 			{
 				join.SetActive(e.Node.Checked);
 				join.Refresh(e.Node);
 				RefreshResultColumns();
-				if (e.Node.IsSelected)
-					RefreshAvailableColumns(join);
+				tableTree.SelectedNode = e.Node;
+				RefreshAvailableColumns(join);
 			}
 		} // event tableTree_AfterCheck
 
@@ -1275,7 +1275,7 @@ namespace TecWare.PPSn.Controls
 				MessageBox.Show(this, "Kein View gewählt.");
 				return;
 			}
-			if(resultColumns.Count == 0)
+			if (resultColumns.Count == 0)
 			{
 				MessageBox.Show(this, "Keine Spalte gewählt.");
 				return;
