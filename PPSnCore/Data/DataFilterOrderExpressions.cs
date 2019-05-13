@@ -1647,7 +1647,7 @@ namespace TecWare.PPSn.Data
 				case nameof(Char):
 					return String.IsNullOrEmpty(text) ? "char(0)" : "'" + text[0] + "'";
 				case nameof(DateTime):
-					throw new NotImplementedException();
+					return "'" + DateTime.Parse(text).ToString("yyyy-MM-dd HH:mm:ss") + "'";
 				case nameof(String):
 					var sb = new StringBuilder(text.Length + 2);
 					var pos = 0;
