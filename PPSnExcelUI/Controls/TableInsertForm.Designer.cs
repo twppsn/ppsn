@@ -93,44 +93,45 @@
             this.toolStripSeparator1,
             this.resultColumnRemoveMenuItem});
 			resultColumnsContextMenuStrip.Name = "resultColumnsContextMenuStrip";
-			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(193, 176);
+			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(200, 198);
 			resultColumnsContextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.resultColumnsContextMenuStrip_Opening);
 			// 
 			// resultColumnAddToCondition
 			// 
 			this.resultColumnAddToCondition.Name = "resultColumnAddToCondition";
-			this.resultColumnAddToCondition.Size = new System.Drawing.Size(192, 22);
+			this.resultColumnAddToCondition.Size = new System.Drawing.Size(199, 22);
 			this.resultColumnAddToCondition.Text = "Als Bedingung";
 			this.resultColumnAddToCondition.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// toolStripSeparator3
 			// 
 			toolStripSeparator3.Name = "toolStripSeparator3";
-			toolStripSeparator3.Size = new System.Drawing.Size(189, 6);
+			toolStripSeparator3.Size = new System.Drawing.Size(196, 6);
 			// 
 			// resultColumnsSelectAllMenuItem
 			// 
 			this.resultColumnsSelectAllMenuItem.Name = "resultColumnsSelectAllMenuItem";
-			this.resultColumnsSelectAllMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.resultColumnsSelectAllMenuItem.ShortcutKeyDisplayString = "Strg+A";
+			this.resultColumnsSelectAllMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.resultColumnsSelectAllMenuItem.Text = "Alles markieren";
 			this.resultColumnsSelectAllMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// resultColumnsSelectInverseMenuItem
 			// 
 			this.resultColumnsSelectInverseMenuItem.Name = "resultColumnsSelectInverseMenuItem";
-			this.resultColumnsSelectInverseMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.resultColumnsSelectInverseMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.resultColumnsSelectInverseMenuItem.Text = "Markierung umkehren";
 			this.resultColumnsSelectInverseMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// toolStripSeparator2
 			// 
 			toolStripSeparator2.Name = "toolStripSeparator2";
-			toolStripSeparator2.Size = new System.Drawing.Size(189, 6);
+			toolStripSeparator2.Size = new System.Drawing.Size(196, 6);
 			// 
 			// resultColumnSortNoneMenuItem
 			// 
 			this.resultColumnSortNoneMenuItem.Name = "resultColumnSortNoneMenuItem";
-			this.resultColumnSortNoneMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.resultColumnSortNoneMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.resultColumnSortNoneMenuItem.Text = "Keine Sortierung";
 			this.resultColumnSortNoneMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
@@ -138,7 +139,7 @@
 			// 
 			this.resultColumnSortAscMenuItem.Image = global::TecWare.PPSn.Properties.Resources.SortAscendingImage;
 			this.resultColumnSortAscMenuItem.Name = "resultColumnSortAscMenuItem";
-			this.resultColumnSortAscMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.resultColumnSortAscMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.resultColumnSortAscMenuItem.Text = "Aufsteigend sortieren";
 			this.resultColumnSortAscMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
@@ -146,26 +147,26 @@
 			// 
 			this.resultColumnSortDescMenuItem.Image = global::TecWare.PPSn.Properties.Resources.SortDescendingImage;
 			this.resultColumnSortDescMenuItem.Name = "resultColumnSortDescMenuItem";
-			this.resultColumnSortDescMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.resultColumnSortDescMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.resultColumnSortDescMenuItem.Text = "Absteigend sortieren";
 			this.resultColumnSortDescMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
-			this.toolStripSeparator1.Size = new System.Drawing.Size(189, 6);
+			this.toolStripSeparator1.Size = new System.Drawing.Size(196, 6);
 			// 
 			// resultColumnRemoveMenuItem
 			// 
 			this.resultColumnRemoveMenuItem.Name = "resultColumnRemoveMenuItem";
-			this.resultColumnRemoveMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.resultColumnRemoveMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.resultColumnRemoveMenuItem.Text = "&Entfernen";
 			this.resultColumnRemoveMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// toolStripMenuItem1
 			// 
 			toolStripMenuItem1.Name = "toolStripMenuItem1";
-			toolStripMenuItem1.Size = new System.Drawing.Size(189, 6);
+			toolStripMenuItem1.Size = new System.Drawing.Size(196, 6);
 			// 
 			// columnHeader3
 			// 
@@ -240,6 +241,7 @@
 			this.currentColumnsListView.TabIndex = 1;
 			this.currentColumnsListView.UseCompatibleStateImageBehavior = false;
 			this.currentColumnsListView.View = System.Windows.Forms.View.Details;
+			this.currentColumnsListView.KeyUp += new System.Windows.Forms.KeyEventHandler(this.currentColumnsListView_KeyUp);
 			this.currentColumnsListView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listView_MouseDown);
 			this.currentColumnsListView.MouseMove += new System.Windows.Forms.MouseEventHandler(this.listView_MouseMove);
 			// 
@@ -249,37 +251,38 @@
             this.currentColumnAddToResultMenuItem,
             this.currentColumnAddToCondition,
             toolStripMenuItem1,
-            this.currentColumnsSelectInverseMenuItem,
-            this.currentColumnsSelectAllMenuItem});
+            this.currentColumnsSelectAllMenuItem,
+            this.currentColumnsSelectInverseMenuItem});
 			this.currentContextMenuStrip.Name = "currentContextMenuStrip";
-			this.currentContextMenuStrip.Size = new System.Drawing.Size(193, 98);
+			this.currentContextMenuStrip.Size = new System.Drawing.Size(200, 98);
 			this.currentContextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.currentContextMenuStrip_Opening);
 			// 
 			// currentColumnAddToResultMenuItem
 			// 
 			this.currentColumnAddToResultMenuItem.Name = "currentColumnAddToResultMenuItem";
-			this.currentColumnAddToResultMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.currentColumnAddToResultMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.currentColumnAddToResultMenuItem.Text = "Hinzufügen";
 			this.currentColumnAddToResultMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// currentColumnAddToCondition
 			// 
 			this.currentColumnAddToCondition.Name = "currentColumnAddToCondition";
-			this.currentColumnAddToCondition.Size = new System.Drawing.Size(192, 22);
+			this.currentColumnAddToCondition.Size = new System.Drawing.Size(199, 22);
 			this.currentColumnAddToCondition.Text = "Als Bedingung";
 			this.currentColumnAddToCondition.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// currentColumnsSelectInverseMenuItem
 			// 
 			this.currentColumnsSelectInverseMenuItem.Name = "currentColumnsSelectInverseMenuItem";
-			this.currentColumnsSelectInverseMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.currentColumnsSelectInverseMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.currentColumnsSelectInverseMenuItem.Text = "Markierung umkehren";
 			this.currentColumnsSelectInverseMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// currentColumnsSelectAllMenuItem
 			// 
 			this.currentColumnsSelectAllMenuItem.Name = "currentColumnsSelectAllMenuItem";
-			this.currentColumnsSelectAllMenuItem.Size = new System.Drawing.Size(192, 22);
+			this.currentColumnsSelectAllMenuItem.ShortcutKeyDisplayString = "Strg+A";
+			this.currentColumnsSelectAllMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.currentColumnsSelectAllMenuItem.Text = "Alles markieren";
 			this.currentColumnsSelectAllMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
@@ -304,6 +307,7 @@
 			this.resultColumnsListView.DragDrop += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragDrop);
 			this.resultColumnsListView.DragEnter += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragEnter);
 			this.resultColumnsListView.DragOver += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragOver);
+			this.resultColumnsListView.KeyUp += new System.Windows.Forms.KeyEventHandler(this.resultColumnsListView_KeyUp);
 			this.resultColumnsListView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listView_MouseDown);
 			this.resultColumnsListView.MouseMove += new System.Windows.Forms.MouseEventHandler(this.listView_MouseMove);
 			// 

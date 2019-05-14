@@ -1238,6 +1238,28 @@ namespace TecWare.PPSn.Controls
 				filterGrid.InsertFilter(columns.Select(c => new ColumnCondition(c)), new Point(e.X, e.Y));
 		} // event filterGrid_DragDrop
 
+		private void currentColumnsListView_KeyUp(object sender, KeyEventArgs e)
+		{
+			switch (e.KeyData)
+			{
+				case Keys.Control | Keys.A:
+					SelectAll(currentColumnsListView);
+					e.Handled = true;
+					break;
+			}
+		} // event currentColumnsListView_KeyUp
+
+		private void resultColumnsListView_KeyUp(object sender, KeyEventArgs e)
+		{
+			switch (e.KeyData)
+			{
+				case Keys.Control | Keys.A:
+					SelectAll(resultColumnsListView);
+					e.Handled = true;
+					break;
+			}
+		} // event resultColumnsListView_KeyUp
+
 		#endregion
 
 		private void CommandExec(object sender, EventArgs e)
