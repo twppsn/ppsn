@@ -14,15 +14,8 @@
 //
 #endregion
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
-using System.Windows.Data;
 using System.Xml.Linq;
-using Neo.IronLua;
-using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data

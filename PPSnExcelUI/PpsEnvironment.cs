@@ -362,9 +362,11 @@ namespace TecWare.PPSn
 
 			var sourceUri = client.CreateFullUri(src);
 			var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
-			var psi = new ProcessStartInfo(msiExe, "/i " + sourceUri.ToString() + " /b");
+			var psi = new ProcessStartInfo(msiExe, "/i " + sourceUri.ToString() + " /q");
+			using (var bar = CreateProgress(true))
 			using (var ps = Process.Start(psi))
 			{
+				bar.Text = "Installation wird ausgeführt...";
 				await Task.Run(new Action(ps.WaitForExit));
 				// ps.ExitCode
 			}

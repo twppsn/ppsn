@@ -6,7 +6,7 @@
     <ProductVersion>3.10</ProductVersion>
     <ProjectGuid>244fbc1b-0ecd-4e6f-9692-c92b5831b412</ProjectGuid>
     <SchemaVersion>2.0</SchemaVersion>
-    <OutputName>PPSnExcelMSI</OutputName>
+    <OutputName>PPSnExcel</OutputName>
     <OutputType>Package</OutputType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">

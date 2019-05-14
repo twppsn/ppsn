@@ -2779,7 +2779,7 @@ namespace TecWare.PPSn
 					throw new HttpResponseException(httpResponseMessage);
 
 				var schemaDate = httpResponseMessage.GetLastModified();
-				if (schemaDate == DateTime.MinValue || schemaDate.ToUniversalTime() != lastSynchronizationSchema)
+				if (schemaDate == DateTime.MinValue || schemaDate != lastSynchronizationSchema)
 				{
 					schemaIsOutDated = true;
 					return true;
