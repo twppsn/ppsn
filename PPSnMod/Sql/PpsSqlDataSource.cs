@@ -1042,7 +1042,6 @@ namespace TecWare.PPSn.Server.Sql
 				return table == null ? null : new AliasColumnExpression(table, nativeColumn);
 			} // func GetAliasColumn
 
-
 			private (PpsTableExpression table, IPpsColumnDescription nativeColumn) FindNativeColumn(Func<PpsTableExpression, IPpsColumnDescription, bool> predicate)
 			{
 				foreach (var tableExpr in GetTables())
@@ -3036,12 +3035,12 @@ namespace TecWare.PPSn.Server.Sql
 				return column.Expression;
 		} // func FormatOrderExpression
 
-		/// <summary></summary>
+		/// <summary>Generate a default order by expression.</summary>
 		/// <param name="sb"></param>
 		/// <param name="orderBy"></param>
 		/// <param name="orderByNativeLookup"></param>
 		/// <param name="columnLookup"></param>
-		/// <returns></returns>
+		/// <returns>Returns <c>true</c>, if no elements appended.</returns>
 		protected static bool FormatOrderList(StringBuilder sb, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByNativeLookup, SqlColumnFinder columnLookup)
 		{
 			var first = true;

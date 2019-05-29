@@ -248,7 +248,7 @@ namespace PPSnExcel
 				progress.Report(String.Format("Aktualisiere {0}...", xlList.Name ?? "Tabelle"));
 
 				if (PpsListObject.TryGet(FindEnvironment, xlList, out var ppsList))
-					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
+					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style | PpsXlRefreshList.Columns : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
 				else
 				{
 					//if (refreshColumnLayout)

@@ -599,24 +599,53 @@ namespace PPSnExcel
 
 		#region -- ImportLayout -------------------------------------------------------
 
+		private static bool ListColumnNameExists(string displayName, ListObject xlList, int ofs, int last)
+		{
+			for (var i = ofs; i <= last; i++)
+			{
+				if (String.Compare(xlList.ListColumns[i].Name, displayName, StringComparison.OrdinalIgnoreCase) == 0)
+					return true;
+
+			}
+			return false;
+		} // func ListColumnNameExists
+
+		private static string GetUniqueListColumnName(string displayName, ListObject xlList, int ofs, int last)
+		{
+			if (ListColumnNameExists(displayName, xlList, ofs, last))
+			{
+				var c = 2;
+				while (true)
+				{
+					var newDisplyName = displayName + "_" + c.ToString();
+					if (ListColumnNameExists(newDisplyName, xlList, ofs, last))
+						c++;
+					else
+						return newDisplyName;
+				}
+			}
+			else
+				return displayName;
+		} // func GetUniqueListColumnName
+
 		private void ImportLayoutUpdateColumn(Excel.XmlMap xlMap, Excel.ListColumn listColumn, IDataColumn column, bool styleUpdate, ref bool showTotals)
 		{
-			// set caption
-			var displayName = column.Attributes.GetProperty("displayName", column.Name);
-			for (var i = listColumn.Index + 1; i <= xlList.ListColumns.Count; i++)
-			{
-				if (xlList.ListColumns[i].Name == displayName)
-					xlList.ListColumns[i].Name = "n" + i.ToString();
-			}
-
-			listColumn.Name = displayName;
-			
-			// update range
-			XlConverter.UpdateRange(listColumn.Range, column.DataType, column.Attributes, styleUpdate);
-
-			// set totals calculation
 			if (styleUpdate)
 			{
+				// set caption
+				var displayName = column.Attributes.GetProperty("displayName", column.Name);
+				for (var i = listColumn.Index + 1; i <= xlList.ListColumns.Count; i++)
+				{
+					if (xlList.ListColumns[i].Name == displayName)
+						xlList.ListColumns[i].Name = "n" + i.ToString();
+				}
+
+				listColumn.Name = GetUniqueListColumnName(displayName, xlList, 1, listColumn.Index - 1);
+
+				// update range
+				XlConverter.UpdateRange(listColumn.Range, column.DataType, column.Attributes);
+
+				// set totals calculation
 				var totalsCalculation = XlConverter.ConvertToTotalsCalculation(column.Attributes.GetProperty("bi.totals", String.Empty));
 				listColumn.TotalsCalculation = totalsCalculation;
 				if (totalsCalculation != Excel.XlTotalsCalculation.xlTotalsCalculationNone)
@@ -966,10 +995,8 @@ namespace PPSnExcel
 				// update sort order
 				if (order != null && isOrderChanged)
 				{
+					//xlList.SaveSortOrder = true;
 					UpdateSortOrder(newOrder);
-
-					if ((refreshLayout & PpsXlRefreshList.Style) != 0)
-						xlList.SaveSortOrder = true;
 				}
 
 				// import data
@@ -978,6 +1005,10 @@ namespace PPSnExcel
 				if ((refreshLayout & PpsXlRefreshList.Style) != 0 && showTotals)
 					xlList.ShowTotals = true;
 			}
+
+			if(isOrderChanged)
+				xlList.Sort.Apply();
+
 			//List.Sort.SortFields.Item[0].Order
 		} // func Refresh
 

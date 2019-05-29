@@ -46,6 +46,9 @@ namespace TecWare.PPSn.Export
 			environment = new PpsEnvironment(lua, this, new PpsEnvironmentInfo("Test") { Uri = new Uri("http://localhost:8080/ppsn/") });
 			environment.ContinueCatch(InitEnvironmentAsync());
 
+			button1.Enabled = environment.IsAuthentificated;
+			environment.IsAuthentificatedChanged += (sender, e) => button1.Enabled = environment.IsAuthentificated;
+
 			joinTextBox.DataBindings.Add(new Binding("Text", listInfo, "Views",true, DataSourceUpdateMode.OnPropertyChanged));
 			filterTextBox.DataBindings.Add(new Binding("Text", listInfo, "Filter", true, DataSourceUpdateMode.OnPropertyChanged));
 			columnsTextBox.DataBindings.Add(new Binding("Text", listInfo, "Columns", true, DataSourceUpdateMode.OnPropertyChanged));

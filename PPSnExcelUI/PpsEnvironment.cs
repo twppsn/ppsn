@@ -69,6 +69,9 @@ namespace TecWare.PPSn
 	/// <summary>Special environment for data warehouse applications</summary>
 	public sealed class PpsEnvironment : PpsShell
 	{
+		/// <summary></summary>
+		public event EventHandler IsAuthentificatedChanged;
+
 		private readonly IPpsFormsApplication formsApplication;
 		private readonly PpsEnvironmentInfo info;
 
@@ -104,6 +107,8 @@ namespace TecWare.PPSn
 		{
 			request = null;
 			fullName = null;
+
+			IsAuthentificatedChanged?.Invoke(this, EventArgs.Empty);
 		} // proc ClearCredentials
 
 		public async Task<PpsLoginResult> LoginAsync(IWin32Window parent)
@@ -163,6 +168,7 @@ namespace TecWare.PPSn
 							// execute login
 							var xLogin = await newRequest.GetXmlAsync("login.xml");
 							request = newRequest;
+							IsAuthentificatedChanged?.Invoke(this, EventArgs.Empty);
 							fullName = xLogin.GetAttribute("FullName", (string)null);
 
 							login.Commit();

@@ -122,7 +122,7 @@
 			// 
 			// cmdRefreshLayout
 			// 
-			this.cmdRefreshLayout.Label = "Layout aktualisieren";
+			this.cmdRefreshLayout.Label = "Tabelle zurücksetzen";
 			this.cmdRefreshLayout.Name = "cmdRefreshLayout";
 			this.cmdRefreshLayout.ShowImage = true;
 			this.cmdRefreshLayout.SuperTip = "Aktualisiert von der gewählten Liste die Spalten und das Layout";
@@ -134,12 +134,12 @@
 			// 
 			// cmdRefresh
 			// 
-			this.cmdRefresh.Label = "Tabelle aktualisieren";
+			this.cmdRefresh.Label = "Daten aktualisieren";
 			this.cmdRefresh.Name = "cmdRefresh";
 			this.cmdRefresh.OfficeImageId = "Refresh";
-			this.cmdRefresh.ScreenTip = "Tabelle aktualisieren";
+			this.cmdRefresh.ScreenTip = "Daten aktualisieren";
 			this.cmdRefresh.ShowImage = true;
-			this.cmdRefresh.SuperTip = "Aktualisiert die ausgewählte Tabelle";
+			this.cmdRefresh.SuperTip = "Aktualisiert die Daten der ausgewählte Tabelle";
 			this.cmdRefresh.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdRefresh_Click);
 			// 
 			// button1
