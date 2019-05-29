@@ -53,8 +53,8 @@
 			this.currentContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
 			this.currentColumnAddToResultMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.currentColumnAddToCondition = new System.Windows.Forms.ToolStripMenuItem();
-			this.currentColumnsSelectInverseMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.currentColumnsSelectAllMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.currentColumnsSelectInverseMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.resultColumnsListView = new System.Windows.Forms.ListView();
 			this.imageListSort = new System.Windows.Forms.ImageList(this.components);
 			columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -93,7 +93,7 @@
             this.toolStripSeparator1,
             this.resultColumnRemoveMenuItem});
 			resultColumnsContextMenuStrip.Name = "resultColumnsContextMenuStrip";
-			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(200, 198);
+			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(200, 176);
 			resultColumnsContextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.resultColumnsContextMenuStrip_Opening);
 			// 
 			// resultColumnAddToCondition
@@ -159,6 +159,7 @@
 			// resultColumnRemoveMenuItem
 			// 
 			this.resultColumnRemoveMenuItem.Name = "resultColumnRemoveMenuItem";
+			this.resultColumnRemoveMenuItem.ShortcutKeyDisplayString = "Entf";
 			this.resultColumnRemoveMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.resultColumnRemoveMenuItem.Text = "&Entfernen";
 			this.resultColumnRemoveMenuItem.Click += new System.EventHandler(this.CommandExec);
@@ -241,6 +242,8 @@
 			this.currentColumnsListView.TabIndex = 1;
 			this.currentColumnsListView.UseCompatibleStateImageBehavior = false;
 			this.currentColumnsListView.View = System.Windows.Forms.View.Details;
+			this.currentColumnsListView.DragDrop += new System.Windows.Forms.DragEventHandler(this.currentColumnsListView_DragDrop);
+			this.currentColumnsListView.DragEnter += new System.Windows.Forms.DragEventHandler(this.currentColumnsListView_DragEnter);
 			this.currentColumnsListView.KeyUp += new System.Windows.Forms.KeyEventHandler(this.currentColumnsListView_KeyUp);
 			this.currentColumnsListView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listView_MouseDown);
 			this.currentColumnsListView.MouseMove += new System.Windows.Forms.MouseEventHandler(this.listView_MouseMove);
@@ -271,13 +274,6 @@
 			this.currentColumnAddToCondition.Text = "Als Bedingung";
 			this.currentColumnAddToCondition.Click += new System.EventHandler(this.CommandExec);
 			// 
-			// currentColumnsSelectInverseMenuItem
-			// 
-			this.currentColumnsSelectInverseMenuItem.Name = "currentColumnsSelectInverseMenuItem";
-			this.currentColumnsSelectInverseMenuItem.Size = new System.Drawing.Size(199, 22);
-			this.currentColumnsSelectInverseMenuItem.Text = "Markierung umkehren";
-			this.currentColumnsSelectInverseMenuItem.Click += new System.EventHandler(this.CommandExec);
-			// 
 			// currentColumnsSelectAllMenuItem
 			// 
 			this.currentColumnsSelectAllMenuItem.Name = "currentColumnsSelectAllMenuItem";
@@ -285,6 +281,13 @@
 			this.currentColumnsSelectAllMenuItem.Size = new System.Drawing.Size(199, 22);
 			this.currentColumnsSelectAllMenuItem.Text = "Alles markieren";
 			this.currentColumnsSelectAllMenuItem.Click += new System.EventHandler(this.CommandExec);
+			// 
+			// currentColumnsSelectInverseMenuItem
+			// 
+			this.currentColumnsSelectInverseMenuItem.Name = "currentColumnsSelectInverseMenuItem";
+			this.currentColumnsSelectInverseMenuItem.Size = new System.Drawing.Size(199, 22);
+			this.currentColumnsSelectInverseMenuItem.Text = "Markierung umkehren";
+			this.currentColumnsSelectInverseMenuItem.Click += new System.EventHandler(this.CommandExec);
 			// 
 			// resultColumnsListView
 			// 

@@ -684,7 +684,8 @@ namespace TecWare.PPSn.Controls
 			await availableViews.RefreshAsync();
 
 			// check current view
-			if (data != null && !data.IsEmpty)
+			var hasData = data != null && !data.IsEmpty;
+			if (hasData)
 			{
 				// joins
 				SetResultView(new PpsJoinParser(availableViews, data.Views).Result);
@@ -712,6 +713,10 @@ namespace TecWare.PPSn.Controls
 			// update view
 			UpdateTreeView();
 			RefreshResultColumns();
+
+			// update selection
+			if (hasData && tableTree.SelectedNode == null && tableTree.Nodes.Count > 0)
+				tableTree.SelectedNode = tableTree.Nodes[0];
 		} // func RefreshAllAsync
 
 		public void LoadData(IPpsTableData tableData)
@@ -915,10 +920,25 @@ namespace TecWare.PPSn.Controls
 		private IEnumerable<ColumnSource> GetSelectedColumns(ListView listView)
 			=> from lvi in listView.SelectedItems.Cast<ListViewItem>() select (ColumnSource)lvi.Tag;
 
-		private void MoveColumnsToResult()
+		private void MoveColumnsToResult(bool selectNext)
 		{
-			MoveColumnsToResult(GetSelectedColumns(currentColumnsListView));
+			var selectedColumns = GetSelectedColumns(currentColumnsListView).ToArray();
+			if (selectedColumns.Length == 0)
+				return;
+
+			MoveColumnsToResult(selectedColumns);
+			var lastSelectedIndex = selectNext && currentColumnsListView.SelectedItems.Count > 0
+				? currentColumnsListView.SelectedItems[currentColumnsListView.SelectedItems.Count - 1].Index
+				: -1;
+
+			lastSelectedIndex++;
 			currentColumnsListView.SelectedItems.Clear();
+			if (lastSelectedIndex >= 0 && lastSelectedIndex < currentColumnsListView.Items.Count)
+			{
+				var lvi = currentColumnsListView.Items[lastSelectedIndex];
+				lvi.Selected = true;
+				currentColumnsListView.FocusedItem = lvi;
+			}
 		} // proc MoveColumnsToResult
 
 		private void MoveColumnsToResult(IEnumerable<ColumnSource> columnSource, int insertAt = -1)
@@ -948,17 +968,35 @@ namespace TecWare.PPSn.Controls
 			RefreshResultColumns(toSelect.ToArray());
 		} // proc MoveColumnsToResult
 
-		private void RemoveColumnsFromResult()
+		private void RemoveColumnsFromResult(bool selectColumn)
+			=> RemoveColumnsFromResult(resultColumnsListView.SelectedItems.Cast<ListViewItem>().Select(lvi => (ColumnSource)lvi.Tag), selectColumn);
+
+		private void RemoveColumnsFromResult(IEnumerable<ColumnSource> columnSource, bool selectColumn)
 		{
-			foreach (var lvi in resultColumnsListView.SelectedItems.Cast<ListViewItem>())
+			var maxIndex = -1;
+
+			foreach (var column in columnSource)
 			{
-				var column = (ColumnSource)lvi.Tag;
 				var selectedIndex = resultColumns.FindIndex(column.IsEqualColumn);
 				if (selectedIndex >= 0)
 					resultColumns.RemoveAt(selectedIndex);
+
+				maxIndex = Math.Max(selectedIndex, maxIndex);
+				if (maxIndex <= selectedIndex)
+					maxIndex--;
 			}
 
-			RefreshResultColumns();
+			var toSelect = (ColumnSource[])null;
+			if (selectColumn)
+			{
+				maxIndex++;
+				if (maxIndex < resultColumns.Count)
+					toSelect = new ColumnSource[] { resultColumns[maxIndex] };
+				else if (resultColumns.Count > 0)
+					toSelect = new ColumnSource[] { resultColumns[resultColumns.Count - 1] };
+			}
+
+			RefreshResultColumns(toSelect);
 		} // proc RemoveColumnsFromResult
 
 		private void SetColumnResultSortOrder(SortOrder sort)
@@ -1200,6 +1238,16 @@ namespace TecWare.PPSn.Controls
 			}
 		} // event listView_MouseMove
 
+		private void currentColumnsListView_DragEnter(object sender, DragEventArgs e)
+			=> CheckResultColumnsDragSource(e);
+
+		private void currentColumnsListView_DragDrop(object sender, DragEventArgs e)
+		{
+			var columns = CheckResultColumnsDragSource(e);
+			if ((e.AllowedEffect & DragDropEffects.Move) != 0)
+				RemoveColumnsFromResult(columns, false);
+		} // event currentColumnsListView_DragDrop
+
 		private void resultColumnsListView_DragEnter(object sender, DragEventArgs e)
 			=> CheckResultColumnsDragSource(e);
 
@@ -1209,8 +1257,10 @@ namespace TecWare.PPSn.Controls
 		private void resultColumnsListView_DragDrop(object sender, DragEventArgs e)
 		{
 			var columns = CheckResultColumnsDragSource(e);
+			if ((e.AllowedEffect & DragDropEffects.Move) == 0)
+				return;
 
-			var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
+				var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
 			if (hoverItem == null)
 				MoveColumnsToResult(columns, insertAfter ? -1 : 0); // append at end
 			else if (hoverItem.Tag is ColumnSource columnSource)
@@ -1246,6 +1296,9 @@ namespace TecWare.PPSn.Controls
 					SelectAll(currentColumnsListView);
 					e.Handled = true;
 					break;
+				case Keys.Insert:
+					MoveColumnsToResult(true);
+					break;
 			}
 		} // event currentColumnsListView_KeyUp
 
@@ -1257,6 +1310,9 @@ namespace TecWare.PPSn.Controls
 					SelectAll(resultColumnsListView);
 					e.Handled = true;
 					break;
+				case Keys.Delete:
+					RemoveColumnsFromResult(true);
+					break;
 			}
 		} // event resultColumnsListView_KeyUp
 
@@ -1265,11 +1321,11 @@ namespace TecWare.PPSn.Controls
 		private void CommandExec(object sender, EventArgs e)
 		{
 			if (sender == currentColumnAddToResultMenuItem)
-				MoveColumnsToResult();
+				MoveColumnsToResult(false);
 			else if (sender == currentColumnAddToCondition)
 				filterGrid.InsertFilter(GetSelectedColumns(currentColumnsListView).Select(c => new ColumnCondition(c)));
 			else if (sender == resultColumnRemoveMenuItem)
-				RemoveColumnsFromResult();
+				RemoveColumnsFromResult(false);
 			else if (sender == resultColumnAddToCondition)
 				filterGrid.InsertFilter(GetSelectedColumns(resultColumnsListView).Select(c => new ColumnCondition(c)));
 			// sort
