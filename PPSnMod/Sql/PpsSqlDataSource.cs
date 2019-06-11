@@ -1260,14 +1260,11 @@ namespace TecWare.PPSn.Server.Sql
 				foreach (var col in tableOrView.Columns)
 				{
 					if (hasAlias)
-						yield return new SelectColumn(GetColumnExpression(tableAlias, col.Name), col, col.Name);
+						yield return new SelectColumn(FormatColumnExpression(tableAlias, col.Name), col, col.Name);
 					else
-						yield return new SelectColumn(GetColumnExpression(null, col.Name), col, col.Name);
+						yield return new SelectColumn(FormatColumnExpression(null, col.Name), col, col.Name);
 				}
 			} // func GetAliasColumns
-
-			private static string GetColumnExpression(string tableAlias, string name)
-				=> tableAlias == null ? FormatColumn(name) : tableAlias + "." + FormatColumn(name);
 
 			protected override AliasColumn CreateColumnAliasFromExisting(PpsDataColumnExpression col, AliasColumn aliasColumn)
 			{
@@ -1288,7 +1285,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (nativeColumn == null)
 					return null;
 
-				return new SelectColumn(GetColumnExpression(table.Alias, nativeColumn.Name), nativeColumn, col.HasAlias ? col.Alias : col.Name);
+				return new SelectColumn(FormatColumnExpression(table.Alias, nativeColumn.Name), nativeColumn, col.HasAlias ? col.Alias : col.Name);
 			} // func CreateColumnAliasFromNative
 
 			protected override PpsDataSelector ApplyColumnsCore(AliasColumn[] columns)
@@ -1377,7 +1374,7 @@ namespace TecWare.PPSn.Server.Sql
 					if ((parameter.Direction & ParameterDirection.Input) == ParameterDirection.Input)
 						parameter.SetValue(getParameterCore?.Invoke(args), dataType, defaultValue);
 				} // proc UpdateParameter
-				 
+
 				/// <summary>Set source value</summary>
 				/// <param name="args"></param>
 				public void UpdateSource(object args)
@@ -1531,7 +1528,7 @@ namespace TecWare.PPSn.Server.Sql
 				private readonly string columnName;
 				private readonly Action<object, object> updateValue;
 
-				private ResultMapping(string columnName, Action<object,object> updateValue)
+				private ResultMapping(string columnName, Action<object, object> updateValue)
 				{
 					this.columnName = columnName ?? throw new ArgumentNullException(nameof(columnName));
 					this.updateValue = updateValue ?? throw new ArgumentNullException(nameof(columnName));
@@ -1564,7 +1561,7 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						if (typeof(IPpsDataRowGetGenericValue).IsAssignableFrom(dataType)
 							&& typeof(IPpsDataRowSetGenericValue).IsAssignableFrom(dataType))
-								setRowValueCore = (r, v) => ((IPpsDataRowSetGenericValue)((PpsDataRow)r)[name]).SetGenericValue(false, v);
+							setRowValueCore = (r, v) => ((IPpsDataRowSetGenericValue)((PpsDataRow)r)[name]).SetGenericValue(false, v);
 					}
 					else
 					{
@@ -1755,7 +1752,7 @@ namespace TecWare.PPSn.Server.Sql
 							return (DBDATAREADER)cmd.ExecuteReaderEx(CommandBehavior.Default);
 					}
 				} // func ExecuteReaderCommand
-				
+
 				/// <summary></summary>
 				/// <param name="args"></param>
 				/// <param name="behavior"></param>
@@ -1770,9 +1767,9 @@ namespace TecWare.PPSn.Server.Sql
 					// fill arguments
 					foreach (var p in parameterMappings)
 						p.UpdateParameter(args);
-					
-					using (var r = ExecuteReaderCommand<DbDataReader>(command, 
-						resultMappings.Count > 0 && behavior == PpsDataTransactionExecuteBehavior.NoResult ? PpsDataTransactionExecuteBehavior.SingleRow :  behavior
+
+					using (var r = ExecuteReaderCommand<DbDataReader>(command,
+						resultMappings.Count > 0 && behavior == PpsDataTransactionExecuteBehavior.NoResult ? PpsDataTransactionExecuteBehavior.SingleRow : behavior
 					))
 					{
 						// copy arguments back
@@ -1932,7 +1929,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <returns></returns>
 			protected PpsSqlDataCommand CreateCommand(CommandType commandType, LuaTable parameter)
 				=> new PpsSqlDataCommand(this, parameter, CreateCommand(commandType, parameter.GetOptionalValue("__notrans", false)));
-				
+
 			#endregion
 
 			#region -- CreateParameter ------------------------------------------------
@@ -2364,7 +2361,7 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					return new Func<string, IDataColumn>(k => columns.Columns[columns.FindColumnIndex(k, true)]);
 				}
-				else if(columnList is string tableName)
+				else if (columnList is string tableName)
 				{
 					var tableInfo = FindTable(tableName, true);
 					return new Func<string, IDataColumn>(k => tableInfo.FindColumn(k, true));
@@ -2413,7 +2410,7 @@ namespace TecWare.PPSn.Server.Sql
 							cmd.AppendParameter(ParameterMapping.CreateTableName(k, p, p.GetDataType(), DBNull.Value));
 						}
 					}
-					
+
 					cmd.Command.Prepare();
 					return cmd;
 				}
@@ -2430,7 +2427,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="parameter"></param>
 			/// <param name="firstArgs"></param>
 			/// <returns></returns>
-			protected override PpsDataCommand PrepareCore(LuaTable parameter, LuaTable firstArgs) 
+			protected override PpsDataCommand PrepareCore(LuaTable parameter, LuaTable firstArgs)
 			{
 				string name;
 				if ((name = (string)(parameter["execute"] ?? parameter["exec"])) != null)
@@ -2444,7 +2441,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // func Prepare
 
 			#endregion
-			
+
 			#region -- Arguments ------------------------------------------------------
 
 			/// <summary></summary>
@@ -2760,7 +2757,7 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			// first look up view
 			var view = Application.GetViewDefinition(viewOrTableName, false);
-			if(view != null && view.SelectorToken.DataSource == this)
+			if (view != null && view.SelectorToken.DataSource == this)
 				return view.SelectorToken.CreateSelector(connection, alias, true);
 
 			// try to create from table
@@ -3105,6 +3102,35 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="columnName"></param>
 		protected static string FormatColumn(string columnName)
 			=> "[" + columnName + "]";
+
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		/// <param name="columnName"></param>
+		protected static StringBuilder FormatColumn(StringBuilder sb, string columnName)
+			=> sb.Append('[').Append(columnName).Append(']');
+
+		/// <summary></summary>
+		/// <param name="tableAlias"></param>
+		/// <param name="columnName"></param>
+		/// <returns></returns>
+		protected static string FormatColumnExpression(string tableAlias, string columnName)
+			=> String.IsNullOrEmpty(tableAlias) ? FormatColumn(columnName) : tableAlias + "." + FormatColumn(columnName);
+
+		/// <summary></summary>
+		/// <param name="sb"></param>
+		/// <param name="tableAlias"></param>
+		/// <param name="columnName"></param>
+		/// <returns></returns>
+		protected static StringBuilder FormatColumnExpression(StringBuilder sb, string tableAlias, string columnName)
+		{
+			if (String.IsNullOrEmpty(tableAlias))
+				return FormatColumn(sb, columnName);
+			else
+			{
+				sb.Append(tableAlias).Append('.');
+				return FormatColumn(sb, columnName);
+			}
+		} // func FormatColumnExpression
 
 		#endregion
 
