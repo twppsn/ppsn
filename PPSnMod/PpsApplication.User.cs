@@ -75,9 +75,12 @@ namespace TecWare.PPSn.Server
 
 				public void Clear()
 				{
-					if (connection.IsConnected)
-						connection.Dispose();
-					connection = null;
+					if (connection != null)
+					{
+						if (connection.IsConnected)
+							connection.Dispose();
+						connection = null;
+					}
 				} // proc Clear
 
 				public bool IsAlive
