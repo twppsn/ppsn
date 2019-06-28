@@ -748,6 +748,8 @@ namespace TecWare.PPSn.Server
 
 		private abstract class ViewWriter : IDisposable
 		{
+			private bool[] rowAllowed = null;
+
 			public void Dispose()
 				=> Dispose(true);
 
@@ -755,11 +757,39 @@ namespace TecWare.PPSn.Server
 			{
 			} // proc Dispose
 
-			public virtual void Begin(PpsDataSelector selector, IDataColumns columns, string attributeSelector) { }
+			protected bool IsColumnAllowedFast(int columnIndex)
+				=> rowAllowed[columnIndex];
 
-			public virtual void WriteRow(IDataRow current) { }
+			protected bool IsColumnAllowed(int columnIndex)
+				=> rowAllowed == null || columnIndex < 0 || columnIndex >= rowAllowed.Length ? false : rowAllowed[columnIndex];
 
-			public virtual void End() { }
+			public virtual void Begin(IPpsPrivateDataContext ctx, PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			{
+				// create column export rights
+				rowAllowed = new bool[columns.Columns.Count];
+				for (var i = 0; i < rowAllowed.Length; i++)
+				{
+					var col = columns.Columns[i];
+					rowAllowed[i] =
+						!col.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
+						|| ctx.TryDemandToken(securityToken);
+				}
+
+				// write output
+				BeginCore(selector, columns, attributeSelector);
+			} // proc Begin
+
+			protected virtual void BeginCore(PpsDataSelector selector, IDataColumns columns, string attributeSelector) { }
+
+			public void WriteRow(IDataRow current)
+				=> WriteRowCore(current);
+
+			protected abstract void WriteRowCore(IDataRow current);
+
+			public void End()
+				=> EndCore();
+
+			protected virtual void EndCore() { }
 		} // class ViewWriter
 
 		#endregion
@@ -825,7 +855,7 @@ namespace TecWare.PPSn.Server
 					}
 					else
 					{
-						columnNames[i] = nativeColumnName;
+						columnNames[i] = IsColumnAllowedFast(i) ? nativeColumnName : null;
 
 						var fieldDescription = fieldDefinition.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
 
@@ -853,7 +883,7 @@ namespace TecWare.PPSn.Server
 				xml.WriteEndElement();
 			} // proc WriteColumns
 
-			public override void Begin(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			protected override void BeginCore(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
 			{
 				xml.WriteStartDocument();
 				xml.WriteStartElement("view");
@@ -870,7 +900,7 @@ namespace TecWare.PPSn.Server
 					xml.WriteElementString(columnName, Procs.RemoveInvalidXmlChars(v.ChangeType<string>()));
 			} // proc WriteRowValue
 
-			public override void WriteRow(IDataRow row)
+			protected override void WriteRowCore(IDataRow row)
 			{
 				if (firstRow)
 				{
@@ -882,7 +912,10 @@ namespace TecWare.PPSn.Server
 				if (columnNames == null)
 				{
 					for (var i = 0; i < row.Columns.Count; i++)
-						WriteRowValue(row.Columns[i].Name, row[i]);
+					{
+						if (IsColumnAllowedFast(i))
+							WriteRowValue(row.Columns[i].Name, row[i]);
+					}
 				}
 				else
 				{
@@ -895,7 +928,7 @@ namespace TecWare.PPSn.Server
 				xml.WriteEndElement();
 			} // proc WriteRow
 
-			public override void End()
+			protected override void EndCore()
 			{
 				if (firstRow) // write empty element
 				{
@@ -940,7 +973,7 @@ namespace TecWare.PPSn.Server
 				}
 			} // proc Dispose
 
-			public override void Begin(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			protected override void BeginCore(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
 			{
 				rowBuffer = new string[columns.Columns.Count];
 				isText = new bool[rowBuffer.Length];
@@ -955,15 +988,15 @@ namespace TecWare.PPSn.Server
 				writer.WriteRow(rowBuffer, isHeaderText);
 			} // proc Begin
 
-			public override void WriteRow(IDataRow row)
+			protected override void WriteRowCore(IDataRow row)
 			{
 				for (var i = 0; i < rowBuffer.Length; i++)
-					rowBuffer[i] = Convert.ToString(row[i], CultureInfo.InvariantCulture);
+					rowBuffer[i] = IsColumnAllowedFast(i) ? Convert.ToString(row[i], CultureInfo.InvariantCulture) : String.Empty;
 
 				writer.WriteRow(rowBuffer, isText);
 			} // proc WriteRow
 
-			public override void End() { }
+			protected override void EndCore() { }
 		} // class ViewXmlWriter
 
 		#endregion
@@ -1203,8 +1236,7 @@ namespace TecWare.PPSn.Server
 					}
 
 					// write header
-					viewWriter.Begin(selector, columnDefinition, attributeSelector);
-
+					viewWriter.Begin(ctx, selector, columnDefinition, attributeSelector);
 
 					// emit first row
 					if (emitCurrentRow)

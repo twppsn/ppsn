@@ -139,6 +139,11 @@
 					<xs:documentation>Default value of the field.</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
+			<xs:enumeration value="securityToken">
+				<xs:annotation>
+					<xs:documentation>Security token for this field.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
 			<xs:enumeration value="sourceColumn" />
 			
 			<xs:enumeration value="refTable" />
