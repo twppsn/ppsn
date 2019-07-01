@@ -770,8 +770,10 @@ namespace TecWare.PPSn.Server
 				for (var i = 0; i < rowAllowed.Length; i++)
 				{
 					var col = columns.Columns[i];
-					rowAllowed[i] =
-						!col.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
+					var fieldDescription = selector.GetFieldDescription(col.Name);
+
+					rowAllowed[i] = fieldDescription == null
+						|| !fieldDescription.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
 						|| ctx.TryDemandToken(securityToken);
 				}
 
@@ -881,9 +883,7 @@ namespace TecWare.PPSn.Server
 							foreach (var c in fieldDescription.GetAttributes(attributeSelector))
 							{
 								if (String.Compare(c.Name, "Nullable", true) == 0)
-								{
 									isNullable = c.Value.ChangeType<bool>();
-								}
 								WriteAttributeForViewGet(xml, fieldDefinition, c);
 							}
 						}
