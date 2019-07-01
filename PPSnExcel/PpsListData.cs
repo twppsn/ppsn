@@ -630,7 +630,40 @@ namespace PPSnExcel
 
 		private void ImportLayoutUpdateColumn(Excel.XmlMap xlMap, Excel.ListColumn listColumn, IDataColumn column, bool styleUpdate, ref bool showTotals)
 		{
-			if (styleUpdate)
+			var isXPathChanged = false;
+			try
+			{
+				var columnSelector = "/" + xlMap.RootElementName + "/r/" + column.Name;
+
+				// clear used
+				for (var i = listColumn.Index + 1; i <= xlList.ListColumns.Count; i++)
+				{
+					if (xlList.ListColumns[i].XPath.Value == columnSelector)
+						xlList.ListColumns[i].XPath.Clear();
+				}
+
+				// update currrent value
+				if (listColumn.XPath.Value != null)
+				{
+					if (listColumn.XPath.Value != columnSelector)
+					{
+						listColumn.XPath.Clear();
+						listColumn.XPath.SetValue(xlMap, columnSelector);
+						isXPathChanged = true;
+					}
+				}
+				else
+				{
+					listColumn.XPath.SetValue(xlMap, columnSelector);
+					isXPathChanged = true;
+				}
+			}
+			catch (COMException e) when (e.HResult == unchecked((int)0x800A03EC))
+			{
+				Mapping.Environment.Await(Mapping.Environment.ShowMessageAsync(String.Format("Spaltenzuordnung von '{0}' ist fehlgeschlagen.", column.Name)));
+			}
+
+			if (styleUpdate || isXPathChanged)
 			{
 				// set caption
 				var displayName = column.Attributes.GetProperty("displayName", column.Name);
@@ -650,34 +683,6 @@ namespace PPSnExcel
 				listColumn.TotalsCalculation = totalsCalculation;
 				if (totalsCalculation != Excel.XlTotalsCalculation.xlTotalsCalculationNone)
 					showTotals = true;
-			}
-
-			try
-			{
-				var columnSelector = "/" + xlMap.RootElementName + "/r/" + column.Name;
-
-				// clear used
-				for (var i = listColumn.Index + 1; i <= xlList.ListColumns.Count; i++)
-				{
-					if (xlList.ListColumns[i].XPath.Value == columnSelector)
-						xlList.ListColumns[i].XPath.Clear();
-				}
-
-				// update currrent value
-				if (listColumn.XPath.Value != null)
-				{
-					if (listColumn.XPath.Value != columnSelector)
-					{
-						listColumn.XPath.Clear();
-						listColumn.XPath.SetValue(xlMap, columnSelector);
-					}
-				}
-				else
-					listColumn.XPath.SetValue(xlMap, columnSelector);
-			}
-			catch (COMException e) when (e.HResult == unchecked((int)0x800A03EC))
-			{
-				Mapping.Environment.Await(Mapping.Environment.ShowMessageAsync(String.Format("Spaltenzuordnung von '{0}' ist fehlgeschlagen.", column.Name)));
 			}
 		} // proc ImportLayoutUpdateColumn
 
