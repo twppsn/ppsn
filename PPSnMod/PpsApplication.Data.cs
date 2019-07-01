@@ -826,14 +826,14 @@ namespace TecWare.PPSn.Server
 				}
 			} // proc Dispose
 
-			private static void WriteAttributeForViewGet(XmlWriter xml, IPpsColumnDescription fieldDefinition, PropertyValue attr)
+			private static void WriteAttributeForViewGet(XmlWriter xml, PropertyValue attr)
 			{
 				xml.WriteStartElement("attribute");
 
 				xml.WriteAttributeString("name", attr.Name);
 				xml.WriteAttributeString("dataType", LuaType.GetType(attr.Type).AliasOrFullName);
 
-				var value = fieldDefinition.Attributes.TryGetProperty(attr.Name, out var tmp) ? tmp : attr.Value;
+				var value = attr.Value;
 				if (value != null)
 					xml.WriteValue(Procs.RemoveInvalidXmlChars(Procs.ChangeType<string>(value)));
 
@@ -873,7 +873,7 @@ namespace TecWare.PPSn.Server
 							xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
 							xml.WriteAttributeString("field", fieldDefinition.Name);
 
-							WriteAttributeForViewGet(xml, fieldDefinition, new PropertyValue("Nullable", typeof(bool), true));
+							WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
 							isNullable = true;
 						}
 						else
@@ -886,10 +886,10 @@ namespace TecWare.PPSn.Server
 								{
 									isNullable = fieldType == typeof(string) // always nullable
 										|| c.Value.ChangeType<bool>();
-									WriteAttributeForViewGet(xml, fieldDefinition, new PropertyValue(c.Name, typeof(bool), isNullable));
+									WriteAttributeForViewGet(xml, new PropertyValue(c.Name, typeof(bool), isNullable));
 								}
 								else
-									WriteAttributeForViewGet(xml, fieldDefinition, c);
+									WriteAttributeForViewGet(xml, c);
 							}
 						}
 						xml.WriteEndElement();
