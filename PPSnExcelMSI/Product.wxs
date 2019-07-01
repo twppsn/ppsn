@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!-- version, productcode und assemblyfile ändern!!!! -->
-<?define ProductVersion = "1.2.9.0" ?>
-<?define ProductCode = "e6eb6d2c-fc06-4fab-96c7-08585b351360" ?>
+<?define ProductVersion = "1.2.10.0" ?>
+<?define ProductCode = "4af91c07-eb35-44d4-95cf-1c537f11da77" ?>
 
 <?define ProductUpgradeCode = "59d50ec7-25af-4684-9681-ea8e4c7c593f" ?>
 
@@ -21,6 +21,8 @@
 						 InstallScope="perUser"
 						 InstallPrivileges="limited" 
 		/>
+
+		<WixVariable Id="WixUILicenseRtf" Value="de\License.rtf" />
 
 		<Property Id="ARPHELPLINK" Value="!(loc.ArpHelpLink)" />
 		<Property Id="ARPURLINFOABOUT" Value="!(loc.ArpUrlInfoAbout)" />
