@@ -883,8 +883,13 @@ namespace TecWare.PPSn.Server
 							foreach (var c in fieldDescription.GetAttributes(attributeSelector))
 							{
 								if (String.Compare(c.Name, "Nullable", true) == 0)
-									isNullable = c.Value.ChangeType<bool>();
-								WriteAttributeForViewGet(xml, fieldDefinition, c);
+								{
+									isNullable = fieldType == typeof(string) // always nullable
+										|| c.Value.ChangeType<bool>();
+									WriteAttributeForViewGet(xml, fieldDefinition, new PropertyValue(c.Name, typeof(bool), isNullable));
+								}
+								else
+									WriteAttributeForViewGet(xml, fieldDefinition, c);
 							}
 						}
 						xml.WriteEndElement();
