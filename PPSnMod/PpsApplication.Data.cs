@@ -803,6 +803,7 @@ namespace TecWare.PPSn.Server
 
 			private bool firstRow = true;
 			private string[] columnNames = null;
+			private Type[] columnTypes = null;
 
 			public ViewXmlWriter(IDEWebRequestScope r)
 			{
@@ -841,6 +842,7 @@ namespace TecWare.PPSn.Server
 			{
 				// emit column description
 				columnNames = new string[columns.Columns.Count];
+				columnTypes = new Type[columnNames.Length];
 
 				xml.WriteStartElement("fields");
 				for (var i = 0; i < columnNames.Length; i++)
@@ -851,33 +853,45 @@ namespace TecWare.PPSn.Server
 					if (fieldDefinition == null)
 					{
 						columnNames[i] = null;
+						columnTypes[i] = null;
 						continue;
 					}
 					else
 					{
-						columnNames[i] = IsColumnAllowedFast(i) ? nativeColumnName : null;
+						columnNames[i] = nativeColumnName;
 
 						var fieldDescription = fieldDefinition.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
+						var fieldType = fieldDefinition.DataType;
+						var isNullable = false;
 
 						xml.WriteStartElement(nativeColumnName);
 
 						if (fieldDescription == null)
 						{
-							xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
+							xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
 							xml.WriteAttributeString("field", fieldDefinition.Name);
 
-							WriteAttributeForViewGet(xml, fieldDefinition, new PropertyValue("Nullable", typeof(bool), null));
+							WriteAttributeForViewGet(xml, fieldDefinition, new PropertyValue("Nullable", typeof(bool), true));
+							isNullable = true;
 						}
 						else
 						{
-							xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
+							xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
 
 							foreach (var c in fieldDescription.GetAttributes(attributeSelector))
 							{
+								if (String.Compare(c.Name, "Nullable", true) == 0)
+								{
+									isNullable = c.Value.ChangeType<bool>();
+								}
 								WriteAttributeForViewGet(xml, fieldDefinition, c);
 							}
 						}
 						xml.WriteEndElement();
+
+						columnTypes[i] = isNullable && fieldType.IsValueType
+							? typeof(Nullable<>).MakeGenericType(fieldType)
+							: fieldType;
 					}
 				}
 				xml.WriteEndElement();
@@ -915,6 +929,8 @@ namespace TecWare.PPSn.Server
 					{
 						if (IsColumnAllowedFast(i))
 							WriteRowValue(row.Columns[i].Name, row[i]);
+						else if (columnTypes[i].IsValueType)
+							WriteRowValue(columnNames[i], Activator.CreateInstance(columnTypes[i]));
 					}
 				}
 				else
@@ -922,7 +938,12 @@ namespace TecWare.PPSn.Server
 					for (var i = 0; i < columnNames.Length; i++)
 					{
 						if (columnNames[i] != null)
-							WriteRowValue(columnNames[i], row[i]);
+						{
+							if (IsColumnAllowedFast(i))
+								WriteRowValue(columnNames[i], row[i]);
+							else if (columnTypes[i].IsValueType)
+								WriteRowValue(columnNames[i], Activator.CreateInstance(columnTypes[i]));
+						}
 					}
 				}
 				xml.WriteEndElement();

@@ -73,7 +73,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\PPSnExcelMSI\bin\Release\de-DE\PPSnExcelMSI.msi">
+    <None Include="..\PPSnExcelMSI\bin\Release\de-DE\PPSnExcel.msi">
       <Link>cfg\Client\Apps\PPSnExcel.msi</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

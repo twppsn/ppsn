@@ -214,7 +214,7 @@ namespace TecWare.PPSn.Reporting.Markdown
 				{
 					case '*':
 					case '_':
-						renderer.WriteStartElement(span.IsDouble ? "B" : "I");
+						renderer.WriteStartElement(span.DelimiterCount == 2 ? "B" : "I");
 						return true;
 					case '~':
 						//if (span.IsDouble)
@@ -233,7 +233,7 @@ namespace TecWare.PPSn.Reporting.Markdown
 						//	return true;
 						//}
 					case '+':
-						if (span.IsDouble)
+						if (span.DelimiterCount == 2)
 						{
 							renderer.WriteStartElement("U"); // Underlined -> Unterstrichen
 							return true;
