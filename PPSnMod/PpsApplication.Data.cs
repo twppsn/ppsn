@@ -56,6 +56,7 @@ namespace TecWare.PPSn.Server
 
 			private readonly Stack<IPpsColumnDescription> nativeColumnDescriptors = new Stack<IPpsColumnDescription>();
 			private PpsFieldDescription currentField = null;
+			private Queue<PpsFieldDescription> backFields = new Queue<PpsFieldDescription>();
 			private IEnumerator<XElement> currentFieldEnumerator = null;
 			private IEnumerator<PropertyValue> currentAttributesEnumerator = null;
 
@@ -136,7 +137,14 @@ namespace TecWare.PPSn.Server
 						}
 						currentFieldEnumerator.Dispose();
 						currentFieldEnumerator = null;
-						currentField = currentField.inheritedDefinition;
+
+						foreach (var fd in currentField.inheritedDefinitions)
+						{
+							if (!backFields.Contains(fd))
+								backFields.Enqueue(fd);
+						}
+
+						currentField = backFields.Count == 0 ? null : backFields.Dequeue();
 						goto case 0;
 
 					case 5:
@@ -201,7 +209,7 @@ namespace TecWare.PPSn.Server
 			
 			public bool TryGetProperty(string name, out object value)
 			{
-				var p = field.GetProperty(name);
+				var p = field.GetProperty(name, new List<PpsFieldDescription>());
 				if (p != null)
 				{
 					value = p.Value;
@@ -223,11 +231,11 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		private readonly string inheritedFieldName; // name for the base field
+		private readonly string[] inheritedFieldNames; // name for the base field
 		private readonly XElement xDefinition; // definition in configuration
 
 		private IPpsColumnDescription nativeColumnDescription = null; // assign field description of the datasource
-		private PpsFieldDescription inheritedDefinition = null; // inherited field description
+		private PpsFieldDescription[] inheritedDefinitions = null; // inherited field description
 
 		private readonly Lazy<string> displayName;
 		private readonly Lazy<int> maxLength;
@@ -248,10 +256,10 @@ namespace TecWare.PPSn.Server
 			this.Attributes = new PpsFieldAttributes(this);
 			this.xDefinition = xDefinition;
 
-			this.inheritedFieldName = xDefinition.GetAttribute(inheritedAttributeString, (string)null);
+			inheritedFieldNames = Procs.GetStrings(xDefinition.Attribute(inheritedAttributeString)?.Value, false);
 						
-			displayName = new Lazy<string>(() => this.Attributes.GetProperty(displayNameAttributeString, null));
-			maxLength = new Lazy<int>(() => this.Attributes.GetProperty(maxLengthAttributeString, Int32.MaxValue));
+			displayName = new Lazy<string>(() => Attributes.GetProperty(displayNameAttributeString, null));
+			maxLength = new Lazy<int>(() => Attributes.GetProperty(maxLengthAttributeString, Int32.MaxValue));
 
 			var xDataType = xDefinition.Attribute(dataTypeAttributeString);
 
@@ -269,12 +277,11 @@ namespace TecWare.PPSn.Server
 		/// <summary>Fills the network</summary>
 		public void EndInit()
 		{
-			// find inheritied column
-			if (!String.IsNullOrEmpty(inheritedFieldName))
-				inheritedDefinition = DataSource.Application.GetFieldDescription(inheritedFieldName, true);
+			// find inheritied field descriptions
+			inheritedDefinitions = inheritedFieldNames.Select(fn => DataSource.Application.GetFieldDescription(fn, true)).ToArray();
 			
 			// Resolve a native column description for the field.
-			this.nativeColumnDescription = DataSource.GetColumnDescription(Name); // no exception
+			nativeColumnDescription = DataSource.GetColumnDescription(Name); // no exception
 
 			isInitialzed = true;
 		} // proc EndInit
@@ -325,12 +332,17 @@ namespace TecWare.PPSn.Server
 		} // func TryGetAttributeBasedProperty
 
 		private PropertyValue GetPropertyFromElement(string propertyName)
-			=> GetPropertyFromElement(
-					xDefinition.Elements(xnFieldAttribute)
-						.FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), propertyName, StringComparison.OrdinalIgnoreCase) == 0)
-				);
+		{
+			return GetPropertyFromElement(
+				xDefinition.Elements(xnFieldAttribute)
+					.FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), propertyName, StringComparison.OrdinalIgnoreCase) == 0)
+			);
+		} // func GetPropertyFromElement
 
-		private PropertyValue GetProperty(string propertyName)
+		private PropertyValue GetInheritedProperty(string propertyName, ICollection<PpsFieldDescription> fetchedFields)
+			=> inheritedDefinitions?.Select(d => d.GetProperty(propertyName, fetchedFields)).FirstOrDefault();
+
+		private PropertyValue GetProperty(string propertyName, ICollection<PpsFieldDescription> fetchedFields)
 		{
 			bool TryGetAttributeBasedPropertyLocal(string attributeName, Type propertyType, out PropertyValue r)
 			{
@@ -342,6 +354,11 @@ namespace TecWare.PPSn.Server
 			} // func TryGetAttributeBasedProperty
 
 			CheckInitialized();
+
+			// recursion detection
+			if (fetchedFields.Contains(this))
+				return null;
+			fetchedFields.Add(this);
 
 			// find a attribute property
 			if (TryGetAttributeBasedPropertyLocal(displayNameAttributeString, typeof(string), out var ret))
@@ -357,7 +374,7 @@ namespace TecWare.PPSn.Server
 				return ret;
 
 			// ask native, inherited
-			ret = inheritedDefinition?.GetProperty(propertyName);
+			ret = GetInheritedProperty(propertyName, fetchedFields);
 			if (ret != null)
 				return ret;
 
@@ -394,8 +411,10 @@ namespace TecWare.PPSn.Server
 				return (T)(IPpsColumnDescription)this;
 			else if (nativeColumnDescription != null && typeof(T).IsAssignableFrom(nativeColumnDescription.GetType()))
 				return (T)nativeColumnDescription;
+			else if (inheritedDefinitions != null)
+				return inheritedDefinitions.Select(d => d.GetColumnDescription<T>()).FirstOrDefault();
 			else
-				return inheritedDefinition == null ? default(T) : inheritedDefinition.GetColumnDescription<T>();
+				return default(T);
 		} // func GetColumnDescription
 
 		/// <summary>Defined in.</summary>

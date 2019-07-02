@@ -222,11 +222,11 @@ namespace TecWare.PPSn.Data
 			var collectedRows = new List<IDataRow>(rowsToRead);
 			while (rowsToRead-- > 0)
 			{
-				if (enumerator.MoveNext())
+				if (enumerator != null && enumerator.MoveNext())
 					collectedRows.Add(enumerator.Current);
 				else
 				{
-					enumerator.Dispose();
+					enumerator?.Dispose();
 					return (collectedRows, true);
 				}
 			}
