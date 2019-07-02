@@ -340,7 +340,7 @@ namespace TecWare.PPSn.Server
 		} // func GetPropertyFromElement
 
 		private PropertyValue GetInheritedProperty(string propertyName, ICollection<PpsFieldDescription> fetchedFields)
-			=> inheritedDefinitions?.Select(d => d.GetProperty(propertyName, fetchedFields)).FirstOrDefault();
+			=> inheritedDefinitions?.Select(d => d.GetProperty(propertyName, fetchedFields)).FirstOrDefault(p => p != null);
 
 		private PropertyValue GetProperty(string propertyName, ICollection<PpsFieldDescription> fetchedFields)
 		{
