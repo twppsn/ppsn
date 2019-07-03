@@ -1365,9 +1365,10 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary></summary>
 		/// <param name="connection"></param>
 		/// <param name="name"></param>
+		/// <param name="timeStamp"></param>
 		/// <param name="selectStatement"></param>
 		/// <returns></returns>
-		protected override async Task<string> CreateOrReplaceViewAsync(DbConnection connection, string name, string selectStatement)
+		protected override async Task<string> CreateOrReplaceViewAsync(DbConnection connection, string name, DateTime? timeStamp, string selectStatement)
 		{
 			// execute the new view
 			using (var cmd = connection.CreateCommand())

@@ -2841,9 +2841,10 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary>Generate view in the database.</summary>
 		/// <param name="connection">Database connection</param>
 		/// <param name="name">Name of the view.</param>
+		/// <param name="timeStamp">Timestamp of the current view implementation.</param>
 		/// <param name="selectStatement">Select statemate of the view</param>
 		/// <returns></returns>
-		protected abstract Task<string> CreateOrReplaceViewAsync(DbConnection connection, string name, string selectStatement);
+		protected abstract Task<string> CreateOrReplaceViewAsync(DbConnection connection, string name, DateTime? timeStamp, string selectStatement);
 
 		private async Task<IPpsSelectorToken> CreateCoreAsync(string name, Func<DbConnection, Task<string>> createView)
 		{
@@ -2871,16 +2872,17 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="selectStatement"></param>
 		/// <returns></returns>
 		protected Task<IPpsSelectorToken> CreateSelectorTokenFromSelectAsync(string name, string selectStatement)
-			=> CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, selectStatement));
+			=> CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, null, selectStatement));
 
 		/// <summary></summary>
 		/// <param name="name"></param>
 		/// <param name="fileName"></param>
+		/// <param name="timeStamp">LastWriteTime of the file.</param>
 		/// <returns></returns>
-		protected async Task<IPpsSelectorToken> CreateSelectorTokenFromFileAsync(string name, string fileName)
+		protected async Task<IPpsSelectorToken> CreateSelectorTokenFromFileAsync(string name, string fileName, DateTime timeStamp)
 		{
 			var content = await LoadSqlFileAsync(fileName);
-			return await CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, content));
+			return await CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, timeStamp, content));
 		} // func CreateSelectorTokenFromFileAsync
 
 		/// <summary></summary>
@@ -2891,7 +2893,8 @@ namespace TecWare.PPSn.Server.Sql
 		protected Task<IPpsSelectorToken> CreateSelectorTokenFromResourceAsync(string name, Type type, string resourceScript)
 		{
 			var content = GetResourceScript(type, resourceScript);
-			return CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, content));
+			var timeStamp = File.GetLastWriteTime(type.Assembly.Location);
+			return CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, timeStamp, content));
 		} // func CreateSelectorTokenFromResourceAsync
 
 		/// <summary></summary>
@@ -2917,7 +2920,13 @@ namespace TecWare.PPSn.Server.Sql
 				if (sourceType == "select") // create view from sql
 					return await CreateSelectorTokenFromSelectAsync(name, sourceDescription.Value);
 				else if (sourceType == "file")
-					return await CreateSelectorTokenFromFileAsync(name, ProcsDE.GetFileName(sourceDescription, sourceDescription.Value));
+				{
+					var fileName = ProcsDE.GetFileName(sourceDescription, sourceDescription.Value);
+					return await CreateSelectorTokenFromFileAsync(name,
+						fileName,
+						File.GetLastWriteTime(fileName)
+					);
+				}
 				else if (sourceType == "resource")
 					return await CreateSelectorTokenFromResourceAsync(name, GetType(), sourceDescription.Value);
 				else if (sourceType == "view")
