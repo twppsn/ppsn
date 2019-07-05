@@ -2458,9 +2458,11 @@ namespace TecWare.PPSn
 			using (var r = await environment.Request.PutResponseXmlAsync(requestString, WriteCurentSyncState, MimeTypes.Text.Xml, MimeTypes.Text.Xml))
 			using (var xml = await r.GetXmlStreamAsync(MimeTypes.Text.Xml, new XmlReaderSettings() { IgnoreComments = true, IgnoreWhitespace = true, Async = true }))
 			{
-				await xml.ReadStartElementAsync("mdata");
-				if (!xml.IsEmptyElement)
+				await xml.MoveToContentAsync(XmlNodeType.Element);
+				if (xml.LocalName == "mdata" && !xml.IsEmptyElement)
 				{
+					await xml.ReadAsync();
+
 					// read batches
 					while (xml.NodeType == XmlNodeType.Element)
 					{
