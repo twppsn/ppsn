@@ -647,13 +647,15 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="throwException"></param>
 		/// <returns></returns>
 		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string select, string columns = null, string filter = null, string order = null, bool throwException = true)
-			=> ctx.CreateSelectorAsync(
+		{
+			return ctx.CreateSelectorAsync(
 				select,
 				PpsDataColumnExpression.Parse(columns).ToArray(),
 				PpsDataFilterExpression.Parse(filter),
 				PpsDataOrderExpression.Parse(order).ToArray(),
 				throwException
 			);
+		} // func CreateSelectorAsync
 
 		/// <summary>Create a selector.</summary>
 		/// <param name="ctx"></param>
@@ -661,13 +663,15 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="throwException"></param>
 		/// <returns></returns>
 		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true)
-			=> ctx.CreateSelectorAsync(
+		{
+			return ctx.CreateSelectorAsync(
 				table.GetOptionalValue("select", table.GetOptionalValue("name", (string)null)),
 				PpsDataColumnExpression.Parse(table.GetMemberValue("columns")).ToArray(),
 				PpsDataFilterExpression.Parse(table.GetMemberValue("filter")),
 				PpsDataOrderExpression.Parse(table.GetMemberValue("order")).ToArray(),
 				throwException
 			);
+		} // func CreateSelectorAsync
 	} // class PpsPrivateDataContextHelper
 
 	#endregion

@@ -782,7 +782,7 @@ namespace TecWare.PPSn.Server
 			protected bool IsColumnAllowed(int columnIndex)
 				=> rowAllowed == null || columnIndex < 0 || columnIndex >= rowAllowed.Length ? false : rowAllowed[columnIndex];
 
-			public virtual void Begin(IPpsPrivateDataContext ctx, PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			public virtual void Begin(PpsDataSelector selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
 			{
 				// create column export rights
 				rowAllowed = new bool[columns.Columns.Count];
@@ -792,6 +792,7 @@ namespace TecWare.PPSn.Server
 					var fieldDescription = selector.GetFieldDescription(col.Name);
 
 					rowAllowed[i] = fieldDescription == null
+						|| ctx == null
 						|| !fieldDescription.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
 						|| ctx.TryDemandToken(securityToken);
 				}
@@ -826,10 +827,10 @@ namespace TecWare.PPSn.Server
 			private string[] columnNames = null;
 			private Type[] columnTypes = null;
 
-			public ViewXmlWriter(IDEWebRequestScope r)
+			public ViewXmlWriter(TextWriter tw, XmlWriterSettings settings = null)
 			{
-				tw = r.GetOutputTextWriter(MimeTypes.Text.Xml);
-				xml = XmlWriter.Create(tw, GetSettings(tw));
+				this.tw = tw ?? throw new ArgumentNullException(nameof(tw));
+				xml = XmlWriter.Create(tw, settings ?? GetSettings(tw));
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -998,11 +999,11 @@ namespace TecWare.PPSn.Server
 			private bool[] isText = null;
 			private string[] rowBuffer = null;
 
-			public ViewCsvWriter(IDEWebRequestScope r)
+			public ViewCsvWriter(TextWriter tw, TextCsvSettings settings = null)
 			{
 				writer = new TextCsvWriter(
-					r.GetOutputTextWriter(MimeTypes.Text.Plain),
-					new TextCsvSettings()
+					tw,
+					settings ?? new TextCsvSettings()
 				);
 			} // ctor
 
@@ -1229,13 +1230,130 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetDataSetDefinition
 
+		#region -- ViewGetCreateWriter ------------------------------------------------
+
+		private static bool TryViewGetCreateWriterCsv(object csv, out ViewWriter writer)
+		{
+			switch (csv)
+			{
+				case string file:
+					writer = new ViewCsvWriter(new StreamWriter(file));
+					return true;
+				case LuaTable table:
+					var settings = new TextCsvSettings();
+					table.SetObjectMember(settings);
+					writer = new ViewCsvWriter(new StreamWriter((string)table.GetMemberValue("file")), settings);
+					return true;
+				default:
+					writer = null;
+					return false;
+			}
+		} // func ViewGetCreateWriterCsv
+
+		private static bool TryViewGetCreateWriterXml(object xml, out ViewWriter writer)
+		{
+			switch (xml)
+			{
+				case string file:
+					writer = new ViewXmlWriter(new StreamWriter(file));
+					return true;
+				case LuaTable table:
+					var tw = new StreamWriter((string)table.GetMemberValue("file"));
+					var settings = GetSettings(tw);
+					table.SetObjectMember(settings);
+					writer = new ViewXmlWriter(new StreamWriter((string)table.GetMemberValue("file")), settings);
+					return true;
+				default:
+					writer = null;
+					return false;
+			}
+		} // func ViewGetCreateWriterXml
+
+		private static ViewWriter ViewGetCreateWriter(LuaTable table)
+		{
+			if (TryViewGetCreateWriterCsv(table.GetMemberValue("csv"), out var writer))
+				return writer;
+			else if (TryViewGetCreateWriterXml(table.GetMemberValue("xml"), out writer))
+				return writer;
+
+			throw new ArgumentNullException("output", "No output is defined.");
+		} // proc ViewGetCreateWriter
+
 		private static ViewWriter ViewGetCreateWriter(IDEWebRequestScope r)
 		{
 			if (r.AcceptType(MimeTypes.Text.Plain))
-				return new ViewCsvWriter(r);
+				return new ViewCsvWriter(r.GetOutputTextWriter(MimeTypes.Text.Plain));
 			else
-				return new ViewXmlWriter(r);
+				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Xml));
 		} // func ViewGetCreateWriter
+
+		#endregion
+
+		/// <summary>Export a selector to local disk.</summary>
+		/// <param name="table"></param>
+		[LuaMember]
+		public void ExportView(LuaTable table)
+		{
+			using (var viewWriter = ViewGetCreateWriter(table))
+			{
+				if (table.GetMemberValue("selector") is PpsDataSelector selector) // selector is givven, export
+				{
+					ExportViewCore(viewWriter, selector, 0, Int32.MaxValue, DEScope.GetScopeService<IPpsPrivateDataContext>(false));
+				}
+				else if (table.Members.ContainsKey("select") || table.Members.ContainsKey("name")) // try create a selector
+				{
+					var ctx = DEScope.GetScopeService<IPpsPrivateDataContext>(true);
+					ExportViewCore(viewWriter, ctx.CreateSelectorAsync(table).AwaitTask(), 0, Int32.MaxValue, ctx, null);
+				}
+				else
+					throw new ArgumentNullException(nameof(selector), "No selector found.");
+			}
+		} // proc Export
+
+		private void ExportViewCore(ViewWriter viewWriter, PpsDataSelector selector, int startAt, int count, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
+		{
+			// execute the complete statemet
+			using (var enumerator = selector.GetEnumerator(startAt, count))
+			{
+				var emitCurrentRow = false;
+
+				// extract the columns, optional before the fetch operation
+				var columnDefinition = enumerator as IDataColumns;
+				if (columnDefinition == null)
+				{
+					if (enumerator.MoveNext())
+					{
+						emitCurrentRow = true;
+						columnDefinition = enumerator.Current;
+					}
+					else
+						count = 0; // no rows
+				}
+
+				// write header
+				viewWriter.Begin(selector, columnDefinition, ctx, attributeSelector);
+
+				// emit first row
+				if (emitCurrentRow)
+				{
+					viewWriter.WriteRow(enumerator.Current);
+					count--;
+				}
+
+				// emit all rows
+				while (count > 0)
+				{
+					if (!enumerator.MoveNext())
+						break;
+
+					viewWriter.WriteRow(enumerator.Current);
+					count--;
+				}
+
+				// write end
+				viewWriter.End();
+			}
+		} // proc ExportViewCore
 
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
 		private void HttpViewGetAction(IDEWebRequestScope r)
@@ -1259,50 +1377,10 @@ namespace TecWare.PPSn.Server
 			// emit the selector
 			using (var viewWriter = ViewGetCreateWriter(r))
 			{
-				// execute the complete statemet
-				using (var enumerator = selector.GetEnumerator(startAt, count))
-				{
-					r.OutputHeaders["x-ppsn-source"] = selector.DataSource.Name;
-					r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
+				r.OutputHeaders["x-ppsn-source"] = selector.DataSource.Name;
+				r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
 
-					var emitCurrentRow = false;
-
-					// extract the columns, optional before the fetch operation
-					var columnDefinition = enumerator as IDataColumns;
-					if (columnDefinition == null)
-					{
-						if (enumerator.MoveNext())
-						{
-							emitCurrentRow = true;
-							columnDefinition = enumerator.Current;
-						}
-						else
-							count = 0; // no rows
-					}
-
-					// write header
-					viewWriter.Begin(ctx, selector, columnDefinition, attributeSelector);
-
-					// emit first row
-					if (emitCurrentRow)
-					{
-						viewWriter.WriteRow(enumerator.Current);
-						count--;
-					}
-
-					// emit all rows
-					while (count > 0)
-					{
-						if (!enumerator.MoveNext())
-							break;
-
-						viewWriter.WriteRow(enumerator.Current);
-						count--;
-					}
-
-					// write end
-					viewWriter.End();
-				}
+				ExportViewCore(viewWriter, selector, startAt, count, ctx, attributeSelector);
 			}
 		} // func HttpViewGetAction
 
