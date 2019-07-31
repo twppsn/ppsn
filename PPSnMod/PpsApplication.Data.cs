@@ -1289,6 +1289,15 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary>Import a data table.</summary>
+		/// <param name="src"></param>
+		[LuaMember]
+		public IEnumerable<IDataRow> ImportView(object src)
+		{
+			// todo:
+			return XmlViewDataReader.Create((string)src);
+		} // proc ImportView
+
 		/// <summary>Export a selector to local disk.</summary>
 		/// <param name="table"></param>
 		[LuaMember]

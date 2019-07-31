@@ -1296,11 +1296,33 @@ namespace TecWare.PPSn.Server.Sql
 			public sealed override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, new WhereConditionStore(whereCondition, expression, lookupNative), orderBy);
 
+			private static WhereConditionStore CreateWhereExpressionStore(WhereConditionStore whereCondition, string expression)
+			{
+				var key = "key" + Guid.NewGuid().ToString("N");
+				return new WhereConditionStore(whereCondition, new PpsDataFilterNativeExpression(key),
+					k => key == k ? expression : null
+				);
+			} // func CreateWhereExpressionStore
+
+			public PpsDataSelector ApplyNativeFilter(string expression)
+				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, CreateWhereExpressionStore(whereCondition, expression), orderBy);
+
 			public sealed override bool IsOrderDesc(string columnName)
 				=> orderBy.IsOrderDesc(columnName);
 
 			public sealed override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, whereCondition, new OrderByStore(orderBy, expressions, lookupNative));
+
+			private static OrderByStore CreateOrderExpressionStore(OrderByStore orderBy, string expression)
+			{
+				var key = "key" + Guid.NewGuid().ToString("N");
+				return new OrderByStore(orderBy, new PpsDataOrderExpression[] { new PpsDataOrderExpression(false, key) },
+					k => key == k ? expression : null
+				);
+			} // func CreateOrderExpressionStore
+
+			public PpsDataSelector ApplyNativeOrder(string expression)
+				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, whereCondition, CreateOrderExpressionStore(orderBy, expression));
 
 			public sealed override PpsDataSelector ApplyJoin(PpsDataSelector selector, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
 			{
