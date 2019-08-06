@@ -326,6 +326,9 @@ namespace TecWare.PPSn.Server
 
 			#endregion
 
+			bool IPropertyReadOnlyDictionary.TryGetProperty(string name, out object value)
+				=> Members.TryGetValue(name, out value);
+
 			/// <summary>Access application.</summary>
 			[LuaMember("App")]
 			public PpsApplication Application => application;
@@ -575,6 +578,8 @@ namespace TecWare.PPSn.Server
 			{
 				if (serviceType == typeof(IPpsPrivateDataContext))
 					return this;
+				else if (serviceType == typeof(IDEUser))
+					return privateUser;
 				else
 					return null;
 			} // func GetService
@@ -589,6 +594,7 @@ namespace TecWare.PPSn.Server
 
 			IIdentity IPrincipal.Identity => currentIdentity;
 			PpsUserIdentity IPpsPrivateDataContext.Identity => privateUser.User;
+			IDEUser IDEAuthentificatedUser.Info => privateUser;
 
 			/// <summary>Access the application object.</summary>
 			public PpsApplication Application => privateUser.Application;
