@@ -47,7 +47,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DES.Core, Version=3.4.0.0, Culture=neutral, PublicKeyToken=65aa0de0ef4a3cd4, processorArchitecture=MSIL">
-      <HintPath>..\packages\TecWare.DES.Core.3.4.39-pre.368\lib\net47\DES.Core.dll</HintPath>
+      <HintPath>..\packages\TecWare.DES.Core.3.4.39\lib\net47\DES.Core.dll</HintPath>
     </Reference>
     <Reference Include="Markdig, Version=0.17.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Markdig.0.17.1\lib\net40\Markdig.dll</HintPath>
