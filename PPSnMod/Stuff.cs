@@ -62,6 +62,10 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnWpfCode = PpsNamespace + "code";
 		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
 
+		public readonly static XName xnStyle = PpsNamespace + "style";
+		public readonly static XName xnStyleGeometry = PpsNamespace + "geometry";
+		public readonly static XName xnStyleColor = PpsNamespace + "color";
+
 		public readonly static XName xnReports = PpsNamespace + "reports";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 

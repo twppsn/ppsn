@@ -865,6 +865,56 @@
 			</xs:attribute>
 		</xs:complexType>
 	</xs:element>
+
+	<xs:element name="style">
+		<xs:complexType>
+			<xs:sequence minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="color" minOccurs="0" maxOccurs="unbounded">
+					<xs:complexType>
+						<xs:attribute name="name" type="KeyType" use="required">
+							<xs:annotation>
+								<xs:documentation>Name of the color.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="value" use="required">
+							<xs:annotation>
+								<xs:documentation>Color value.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:pattern value="\#[0-9A-F]{8}" />
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:attribute>					
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="geometry" minOccurs="0" maxOccurs="unbounded">
+					<xs:complexType>
+						<xs:attribute name="name" type="KeyType" use="required">
+							<xs:annotation>
+								<xs:documentation>Name of the color.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="path" type="xs:string" use="required">
+							<xs:annotation>
+								<xs:documentation>Color value.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="rect" use="optional" default="0,0,24,24">
+							<xs:annotation>
+								<xs:documentation>View port of the path.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:pattern value="\d+,\d+,\d+,\d+" />
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:attribute>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
 	
 	<xs:element name="ppsn" substitutionGroup="configItem">
 		<xs:annotation>
@@ -884,6 +934,7 @@
 						<xs:element ref="pps:reports" minOccurs="0" maxOccurs="1" />
 						<xs:element ref="pps:objectItem" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:package" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:style" minOccurs="0" maxOccurs="1" />
 					</xs:sequence>
 					<xs:attribute name="mainDataSource" type="xs:string" use="optional">
 						<xs:annotation>

@@ -125,6 +125,8 @@ namespace TecWare.PPSn.Server
 		private PpsReportEngine reporting = null;
 		private readonly PpsServerReportProvider reportProvider;
 
+		private DateTime lastConfigurationTimeStamp = DateTime.MinValue;
+
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
@@ -186,6 +188,8 @@ namespace TecWare.PPSn.Server
 			// set the configuration
 			BeginEndConfigurationData(config);
 			BeginEndConfigurationUser(config);
+
+			lastConfigurationTimeStamp = config.LastWrite;
 			
 			// restart main thread
 			initializationProcess = Task.Run(new Action(InitializeApplication));
@@ -667,6 +671,16 @@ namespace TecWare.PPSn.Server
 			return new PpsClientApplicationInfo(key, productName, null, productVersion, virtualRoot + fi.Name);
 		} // func AddClientMsiApplicationAsync
 
+		/// <summary>Get the client application information.</summary>
+		/// <param name="applicationName"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsClientApplicationInfo GetClientApplicationInfo(string applicationName)
+		{
+			var idx = clientApplicationInfos.FindIndex(c => String.Compare(c.Name, applicationName, StringComparison.OrdinalIgnoreCase) == 0);
+			return idx == -1 ? null : clientApplicationInfos[idx];
+		} // func GetClientApplicationInfo
+
 		private async Task RefreshClientApplicationInfosAsync(DirectoryInfo appSourceDirectory, string virtualRoot)
 		{
 			// scan for msi-files
@@ -712,15 +726,14 @@ namespace TecWare.PPSn.Server
 					// add specific application information
 					if (!String.IsNullOrEmpty(applicationName))
 					{
-						var idx = clientApplicationInfos.FindIndex(c => String.Compare(c.Name, applicationName, StringComparison.OrdinalIgnoreCase) == 0);
-						if (idx == -1)
+						var appInfo = GetClientApplicationInfo(applicationName);
+						if (appInfo == null)
 							xml.WriteAttributeString("version", "1.0.0.0");
 						else
 						{
-							var appInfo = clientApplicationInfos[idx];
 							xml.WriteAttributeString("version", appInfo.Version.ToString());
 							if (appInfo.Source != null)
-								xml.WriteAttributeString("src", appInfo.Source);
+								xml.WriteAttributeString("src", r.GetOrigin(new Uri(appInfo.Source, UriKind.Relative)).ToString());
 						}
 					}
 
@@ -758,7 +771,15 @@ namespace TecWare.PPSn.Server
 					var ctx = r.GetUser<IPpsPrivateDataContext>();
 					await Task.Run(() => r.WriteObject(GetLoginData(ctx)));
 					return true;
+				case "geometries.xml":
+					await WriteXmlGeometriesAsync(r);
+					return true;
+				case "geometries.json":
+					await WriteJsonGeometriesAsync(r);
+					return true;
 				default:
+					if (r.RelativeSubPath.StartsWith("geometry/") && await WriteSingleGeometry(r))
+						return true;
 					return await base.OnProcessRequestAsync(r);
 			}
 		} // proc OnProcessRequest
