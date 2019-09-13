@@ -1250,19 +1250,29 @@ namespace TecWare.PPSn.Server
 			}
 		} // func ViewGetCreateWriterCsv
 
-		private static bool TryViewGetCreateWriterXml(object xml, out ViewWriter writer)
+		private static bool TryViewGetCreateWriterXml(object xml, XmlWriterSettings settings = null, out ViewWriter writer)
 		{
 			switch (xml)
 			{
 				case string file:
-					writer = new ViewXmlWriter(new StreamWriter(file));
+					writer = new ViewXmlWriter(new StreamWriter(file), settings);
+					return true;
+				case Stream stream:
+					writer = new ViewXmlWriter(new StreamWriter(stream), settings);
+					return true;
+				case TextWriter tw:
+					if (settings != null)
+						settings.Encoding = tw.Encoding;
+					writer = new ViewXmlWriter(tw, settings);
 					return true;
 				case LuaTable table:
-					var tw = new StreamWriter((string)table.GetMemberValue("file"));
-					var settings = GetSettings(tw);
+					settings = Procs.XmlWriterSettings;
 					table.SetObjectMember(settings);
-					writer = new ViewXmlWriter(new StreamWriter((string)table.GetMemberValue("file")), settings);
-					return true;
+					return TryViewGetCreateWriterXml(
+						table.GetMemberValue("stream") ?? table.GetMemberValue("file"),
+						settings,
+						out writer
+					);
 				default:
 					writer = null;
 					return false;
@@ -1273,7 +1283,7 @@ namespace TecWare.PPSn.Server
 		{
 			if (TryViewGetCreateWriterCsv(table.GetMemberValue("csv"), out var writer))
 				return writer;
-			else if (TryViewGetCreateWriterXml(table.GetMemberValue("xml"), out writer))
+			else if (TryViewGetCreateWriterXml(table.GetMemberValue("xml"), null, out writer))
 				return writer;
 
 			throw new ArgumentNullException("output", "No output is defined.");
