@@ -692,13 +692,13 @@ namespace TecWare.PPSn.Data
 		private PpsDataTableDefinition tableDefinition;   // definition of this table
 		private PpsDataSet dataset;                       // owner of this table
 
-		private PpsDataRow emptyRow;
+		private readonly PpsDataRow emptyRow;
 		private List<PpsDataRow> rows = new List<PpsDataRow>();         // all rows
 		private List<PpsDataRow> originalRows = new List<PpsDataRow>(); // all initial loaded rows
 		private List<PpsDataRow> currentRows = new List<PpsDataRow>();  // all current active rows
 
-		private ReadOnlyCollection<PpsDataRow> rowsView;
-		private ReadOnlyCollection<PpsDataRow> rowsOriginal;
+		private readonly ReadOnlyCollection<PpsDataRow> rowsView;
+		private readonly ReadOnlyCollection<PpsDataRow> rowsOriginal;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 

@@ -51,6 +51,7 @@ namespace TecWare.PPSn
 	#region -- struct PpsShellGetList -------------------------------------------------
 
 	/// <summary>Define all parameter of the ppsn viewget command.</summary>
+	[Obsolete("PpsDataQuery")]
 	public sealed class PpsShellGetList
 	{
 		/// <summary></summary>

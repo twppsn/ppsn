@@ -2547,12 +2547,12 @@ namespace TecWare.PPSn.Data
 		public static IEnumerable<PpsDataOrderExpression> Combine(params IEnumerable<PpsDataOrderExpression>[] expr)
 		{
 			if (expr == null || expr.Length == 0)
-				return Array.Empty<PpsDataOrderExpression>();
+				return Empty;
 
 			var i = 0;
 			var r = expr[i];
 			while (++i < expr.Length)
-				r = Enumerable.Union(r, expr[i], CompareIdentifier);
+				r = Enumerable.Union(r, expr[i] ?? Empty, CompareIdentifier);
 
 			return r;
 		} // func Combine

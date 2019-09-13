@@ -290,7 +290,7 @@ namespace TecWare.PPSn.Server
 				localIdentity = application.systemUser.userIdentity;
 				currentVersion = loginVersion;
 
-				// update optinal values
+				// update optional values
 				SetMemberValue(UserContextFullName, r.GetProperty("Name", userIdentity.Name));
 				if (r.TryGetProperty<long>(UserContextKtKtId, out var ktktId))
 					SetMemberValue(UserContextKtKtId, ktktId);
@@ -301,13 +301,17 @@ namespace TecWare.PPSn.Server
 				if (r.TryGetProperty<int>(UserContextIdenticon, out var identicon))
 					SetMemberValue(UserContextIdenticon, identicon);
 
+				// update parameter set from database, use only members
+				foreach (var kv in FromLson(r.GetProperty("Cfg", "{}")).Members)
+					SetMemberValue(kv.Key, kv.Value);
+
 				securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", String.Empty), SecurityUser);
 			} // proc UpdateData
 
 			public static PpsUserIdentity CreateUserIdentity(IDataRow r)
 			{
 				string GetString(string fieldName)
-					=> r.GetProperty(fieldName, (string)null) ?? throw new ArgumentNullException($"{fieldName} is null.");
+					=> r.GetProperty(fieldName, null) ?? throw new ArgumentNullException($"{fieldName} is null.");
 
 				// create the user
 				var userType = r.GetProperty("LoginType", (string)null);
