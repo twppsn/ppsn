@@ -782,14 +782,16 @@ namespace TecWare.PPSn.Server
 			protected bool IsColumnAllowed(int columnIndex)
 				=> rowAllowed == null || columnIndex < 0 || columnIndex >= rowAllowed.Length ? false : rowAllowed[columnIndex];
 
-			public virtual void Begin(PpsDataSelector selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
+			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
 			{
+				var selectorAccess = selector as PpsDataSelector; 
+
 				// create column export rights
 				rowAllowed = new bool[columns.Columns.Count];
 				for (var i = 0; i < rowAllowed.Length; i++)
 				{
 					var col = columns.Columns[i];
-					var fieldDescription = selector.GetFieldDescription(col.Name);
+					var fieldDescription = selectorAccess?.GetFieldDescription(col.Name);
 
 					rowAllowed[i] = fieldDescription == null
 						|| ctx == null
@@ -801,7 +803,7 @@ namespace TecWare.PPSn.Server
 				BeginCore(selector, columns, attributeSelector);
 			} // proc Begin
 
-			protected virtual void BeginCore(PpsDataSelector selector, IDataColumns columns, string attributeSelector) { }
+			protected virtual void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector) { }
 
 			public void WriteRow(IDataRow current)
 				=> WriteRowCore(current);
@@ -860,8 +862,10 @@ namespace TecWare.PPSn.Server
 				xml.WriteEndElement();
 			} // proc WriteAttributeForViewGet
 
-			private void WriteColumns(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			private void WriteColumns(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
 			{
+				var selectorFields = selector as PpsDataSelector;
+
 				// emit column description
 				columnNames = new string[columns.Columns.Count];
 				columnTypes = new Type[columnNames.Length];
@@ -870,59 +874,51 @@ namespace TecWare.PPSn.Server
 				for (var i = 0; i < columnNames.Length; i++)
 				{
 					var nativeColumnName = columns.Columns[i].Name;
-					var fieldDefinition = selector.GetFieldDescription(nativeColumnName); // get the field description for the native column
+					var fieldDefinition = selectorFields?.GetFieldDescription(nativeColumnName); // get the field description for the native column
+					var isNullable = false;
 
-					if (fieldDefinition == null)
+					xml.WriteStartElement(nativeColumnName);
+
+					columnNames[i] = nativeColumnName;
+
+					var fieldDescription = fieldDefinition?.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
+					var fieldType = fieldDefinition?.DataType ?? columns.Columns[i].DataType;
+
+					if (fieldDescription == null)
 					{
-						columnNames[i] = null;
-						columnTypes[i] = null;
-						continue;
+						xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
+						xml.WriteAttributeString("field", fieldDefinition?.Name ?? nativeColumnName);
+
+						WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
+						isNullable = true;
 					}
 					else
 					{
-						columnNames[i] = nativeColumnName;
+						xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
 
-						var fieldDescription = fieldDefinition.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
-						var fieldType = fieldDefinition.DataType;
-						var isNullable = false;
-
-						xml.WriteStartElement(nativeColumnName);
-
-						if (fieldDescription == null)
+						foreach (var c in fieldDescription.GetAttributes(attributeSelector))
 						{
-							xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
-							xml.WriteAttributeString("field", fieldDefinition.Name);
-
-							WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
-							isNullable = true;
-						}
-						else
-						{
-							xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
-
-							foreach (var c in fieldDescription.GetAttributes(attributeSelector))
+							if (String.Compare(c.Name, "Nullable", true) == 0)
 							{
-								if (String.Compare(c.Name, "Nullable", true) == 0)
-								{
-									isNullable = fieldType == typeof(string) // always nullable
-										|| c.Value.ChangeType<bool>();
-									WriteAttributeForViewGet(xml, new PropertyValue(c.Name, typeof(bool), isNullable));
-								}
-								else
-									WriteAttributeForViewGet(xml, c);
+								isNullable = fieldType == typeof(string) // always nullable
+									|| c.Value.ChangeType<bool>();
+								WriteAttributeForViewGet(xml, new PropertyValue(c.Name, typeof(bool), isNullable));
 							}
+							else
+								WriteAttributeForViewGet(xml, c);
 						}
-						xml.WriteEndElement();
-
-						columnTypes[i] = isNullable && fieldType.IsValueType
-							? typeof(Nullable<>).MakeGenericType(fieldType)
-							: fieldType;
 					}
+
+					xml.WriteEndElement();
+
+					columnTypes[i] = isNullable && fieldType.IsValueType
+						? typeof(Nullable<>).MakeGenericType(fieldType)
+						: fieldType;
 				}
 				xml.WriteEndElement();
 			} // proc WriteColumns
 
-			protected override void BeginCore(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			protected override void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
 			{
 				xml.WriteStartDocument();
 				xml.WriteStartElement("view");
@@ -1019,7 +1015,7 @@ namespace TecWare.PPSn.Server
 				}
 			} // proc Dispose
 
-			protected override void BeginCore(PpsDataSelector selector, IDataColumns columns, string attributeSelector)
+			protected override void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
 			{
 				rowBuffer = new string[columns.Columns.Count];
 				isText = new bool[rowBuffer.Length];
@@ -1250,7 +1246,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // func ViewGetCreateWriterCsv
 
-		private static bool TryViewGetCreateWriterXml(object xml, XmlWriterSettings settings = null, out ViewWriter writer)
+		private static bool TryViewGetCreateWriterXml(object xml, XmlWriterSettings settings, out ViewWriter writer)
 		{
 			switch (xml)
 			{
@@ -1324,15 +1320,22 @@ namespace TecWare.PPSn.Server
 					var ctx = DEScope.GetScopeService<IPpsPrivateDataContext>(true);
 					ExportViewCore(viewWriter, ctx.CreateSelectorAsync(table).AwaitTask(), 0, Int32.MaxValue, ctx, null);
 				}
+				else if (table.GetMemberValue("rows") is IEnumerable<IDataRow> rows)
+				{
+					ExportViewCore(viewWriter, rows, 0, Int32.MaxValue, null, null);
+				}
 				else
 					throw new ArgumentNullException(nameof(selector), "No selector found.");
 			}
 		} // proc Export
 
-		private void ExportViewCore(ViewWriter viewWriter, PpsDataSelector selector, int startAt, int count, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
+		private void ExportViewCore(ViewWriter viewWriter, IEnumerable<IDataRow> selector, int startAt, int count, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
 		{
-			// execute the complete statemet
-			using (var enumerator = selector.GetEnumerator(startAt, count))
+			// execute the complete statement
+			using (var enumerator = selector is IDERangeEnumerable<IDataRow> rangeSelector
+				? rangeSelector.GetEnumerator(startAt, count)
+				: Procs.GetRangeEnumerator(selector.GetEnumerator(), startAt, count)
+			)
 			{
 				var emitCurrentRow = false;
 

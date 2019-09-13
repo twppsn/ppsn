@@ -1945,13 +1945,20 @@ namespace TecWare.PPSn.Server
 				return r;
 			} // func CheckContextArgument
 
+			[LuaMember]
+			public static TextWriter CreateTextWriter(string mimeType = MimeTypes.Text.Plain)
+			{
+				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
+				return r.GetOutputTextWriter(mimeType, r.Http.DefaultEncoding);
+			} // func CreateTextReader
+
 			/// <summary>Creates a XmlWriter for the output stream</summary>
 			/// <returns></returns>
 			[LuaMember]
 			public static XmlWriter CreateXmlWriter()
 			{
 				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
-				return XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Http.DefaultEncoding), Procs.XmlWriterSettings);
+				return XmlWriter.Create(CreateTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings);
 			} // func CreateXmlWriter
 
 			[LuaMember]
