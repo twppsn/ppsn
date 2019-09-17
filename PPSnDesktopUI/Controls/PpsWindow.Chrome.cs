@@ -20,6 +20,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using TecWare.PPSn.Interop;
 
 namespace TecWare.PPSn.Controls
 {
@@ -312,7 +313,7 @@ namespace TecWare.PPSn.Controls
 
 		#region -- class GlowWindow ---------------------------------------------------
 
-		private sealed class GlowWindow : IDisposable
+		private sealed class GlowWindow : Win32Window
 		{
 			#region -- enum PropertyType ----------------------------------------------
 
@@ -331,16 +332,14 @@ namespace TecWare.PPSn.Controls
 			#endregion
 
 			private const int glowDimension = 10;
-			private static ushort sharedClassAtom = 0;
-			private static NativeMethods.WndProc sharedWndProc;
-			private static int sharedClassCount = 0;
+
+			private static WindowClass glowWindowClass;
+			private static int glowWindowClassCount = 0;
 
 			private readonly PpsWindow ownerWindow;
 			private readonly GlowDirection direction;
 			private readonly GlowBitmap[] activeBitmaps = new GlowBitmap[3];
 			private readonly GlowBitmap[] inactiveBitmaps = new GlowBitmap[3];
-			private IntPtr handle;
-			private Delegate wndProc;
 			private PropertyType changedPropertys;
 			private int left;
 			private int top;
@@ -348,7 +347,6 @@ namespace TecWare.PPSn.Controls
 			private int height;
 			private bool isVisible;
 			private bool isActive;
-			private bool disposed;
 			private Color activeColor = Colors.Black;
 			private Color inactiveColor = Colors.LightGray;
 
@@ -359,108 +357,51 @@ namespace TecWare.PPSn.Controls
 				this.ownerWindow = ownerWindow;
 				this.direction = direction;
 
-				CreateNativeWindow();
+				CreateWindow(
+					caption: String.Empty,
+					style: NativeMethods.WS_POPUP | NativeMethods.WS_CLIPCHILDREN | NativeMethods.WS_CLIPSIBLINGS,
+					exStyle: NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_LAYERED,
+					parentWindow: new WindowInteropHelper(ownerWindow).Owner
+				);
+				CreateBitmaps();
 			} // ctor
 
-			private void CreateNativeWindow()
+			protected override WindowClass CreateWindowClass()
 			{
-				CreateWindowClass();
-				CreateWindowHandle();
-				CreateBitmaps();
-			} // proc CreateNativeWindow
+				if (glowWindowClassCount++ == 0)
+					glowWindowClass = new WindowClass("PpsWindowGlowWnd");
+				return glowWindowClass;
+			} // func CreateWindowClass
 
-			public void Dispose()
+			protected override void DestroyWindowClass(WindowClass windowClass)
 			{
-				try
-				{
-					Dispose(true);
-				}
-				finally
-				{
-					GC.SuppressFinalize(this);
-				}
-			} // proc Dispose
+				if (windowClass != glowWindowClass)
+					throw new InvalidOperationException();
 
-			private void Dispose(bool disposing)
+				if (--glowWindowClassCount == 0)
+				{
+					glowWindowClass.Dispose();
+					glowWindowClass = null;
+				}
+			} // proc DestroyWindowClass
+
+			protected override void Dispose(bool disposing)
 			{
-				if (disposed)
+				if (IsDisposed)
 					return;
 
 				// Free managed objects here
 				if (disposing)
-				{
 					DestroyBitmaps();
-				}
-				// Free unmanaged objects here. 
-				DestroyWindowHandle();
-				DestroyWindowClass();
-				disposed = true;
-			}
 
-			~GlowWindow()
-				=> Dispose(false);
-
+				base.Dispose(disposing);
+			} // proc Dispose
+		
 			#endregion
 
-			#region -- NativeWindowClassAtom ------------------------------------------
-
-			private void CreateWindowClass()
-			{
-				sharedClassCount++;
-				if (sharedClassAtom != 0)
-					return;
-
-				sharedWndProc = new NativeMethods.WndProc(NativeMethods.DefWindowProc);
-
-				var wndclass = default(WNDCLASS);
-				wndclass.cbClsExtra = 0;
-				wndclass.cbWndExtra = 0;
-				wndclass.hbrBackground = IntPtr.Zero;
-				wndclass.hCursor = IntPtr.Zero;
-				wndclass.hIcon = IntPtr.Zero;
-				wndclass.lpfnWndProc = sharedWndProc;
-				wndclass.lpszClassName = "PpsWindowGlowWnd";
-				wndclass.lpszMenuName = null;
-				wndclass.style = 0u;
-				sharedClassAtom = NativeMethods.RegisterClass(ref wndclass);
-			} // proc CreateWindowClass
-
-			private void DestroyWindowClass()
-			{
-				sharedClassCount--;
-				if (sharedClassCount > 0 || sharedClassAtom == 0)
-					return;
-
-				var moduleHandle = NativeMethods.GetModuleHandle(null);
-				NativeMethods.UnregisterClass(new IntPtr(sharedClassAtom), moduleHandle);
-				sharedClassAtom = 0;
-			} // proc DestroyWindowClass
-
-			#endregion
-
-			#region -- NativeWindow ---------------------------------------------------
-
-			private void CreateWindowHandle()
-			{
-				var dwExStyle = NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_LAYERED;
-				var dwStyle = NativeMethods.WS_POPUP | NativeMethods.WS_CLIPCHILDREN | NativeMethods.WS_CLIPSIBLINGS;
-				handle = NativeMethods.CreateWindowEx(dwExStyle, new IntPtr((int)sharedClassAtom), String.Empty, dwStyle, 0, 0, 0, 0, new WindowInteropHelper(ownerWindow).Owner, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-				wndProc = new NativeMethods.WndProc(WndProc);
-
-				// subclass
-				NativeMethods.SetWindowLongPtr(handle, NativeMethods.GWL_WNDPROC, Marshal.GetFunctionPointerForDelegate(wndProc));
-			} // proc CreateWindowHandle
-
-			private void DestroyWindowHandle()
-			{
-				if (handle == IntPtr.Zero)
-					return;
-
-				NativeMethods.DestroyWindow(handle);
-				handle = IntPtr.Zero;
-			} // proc DestroyWindowHandle
-
-			private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam)
+			#region -- WndProc --------------------------------------------------------
+			
+			protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam)
 			{
 				switch ((WinMsg)msg)
 				{
@@ -488,12 +429,13 @@ namespace TecWare.PPSn.Controls
 							return IntPtr.Zero;
 						}
 				}
-				return NativeMethods.DefWindowProc(hwnd, msg, wParam, lParam);
+
+				return base.WndProc(hwnd, msg, wParam, lParam);
 			} // func WndProc
 
 			private int WmNcHitTest(IntPtr lParam)
 			{
-				NativeMethods.GetWindowRect(handle, out var rect);
+				NativeMethods.GetWindowRect(Handle, out var rect);
 				var value = lParam.ToInt32();
 				var xLParam = (int)((short)(value & 0xFFFF));
 				var yLParam = (int)((short)(value >> 16));
@@ -651,7 +593,7 @@ namespace TecWare.PPSn.Controls
 					{
 						flags |= NativeMethods.SWP_NOSIZE;
 					}
-					NativeMethods.SetWindowPos(handle, IntPtr.Zero, Left, Top, Width, Height, flags);
+					NativeMethods.SetWindowPos(Handle, IntPtr.Zero, Left, Top, Width, Height, flags);
 				}
 			} // proc UpdateWindowPos
 
@@ -660,7 +602,7 @@ namespace TecWare.PPSn.Controls
 				if (!isVisible || !changedPropertys.HasFlag(PropertyType.Draw))
 					return;
 
-				using (var draw = new GlowDrawingHelper(handle))
+				using (var draw = new GlowDrawingHelper(Handle))
 				{
 					Orientation orientation;
 					switch (direction)
@@ -682,8 +624,6 @@ namespace TecWare.PPSn.Controls
 
 			#region -- Properties -----------------------------------------------------
 
-			public IntPtr Handle => handle;
-
 			public bool IsVisible { get => isVisible; set => UpdateProperty(ref isVisible, value, PropertyType.Visibility | PropertyType.Draw); }
 			public bool IsActive { get => isActive; set => UpdateProperty(ref isActive, value, PropertyType.Draw); }
 
@@ -697,7 +637,7 @@ namespace TecWare.PPSn.Controls
 
 			private void UpdateProperty<T>(ref T field, T value, PropertyType propertytype) where T : struct
 			{
-				if (!Object.Equals(field, value))
+				if (!Equals(field, value))
 				{
 					field = value;
 					changedPropertys |= propertytype;

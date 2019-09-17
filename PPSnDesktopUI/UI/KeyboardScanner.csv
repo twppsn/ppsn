@@ -1,0 +1,45 @@
+﻿VID;PID;LC;Name
+0xE851;0x1000;;Aibecy Generic
+0x11FA;0x0200;;Code CR1400
+0x05F9;0x220C;;DataLogic Gryphon IGD
+0x05F9;0x220A;;DataLogic Gryphon GPT 4400
+0x05F9;0x2210;;DataLogic PN9500
+0x05F9;0x2214;;DataLogic Touch90
+0x05F9;0x2216;;DataLogic Gryphon GPT 4400
+0x05F9;0x2217;;DataLogic Gryphon GPT
+0x05F9;0x2218;;DataLogic Quickscan
+0x05F9;0x2219;;DataLogic QuickScan QM
+0x05F9;0x221A;;DataLogic Quickscan M
+0x05F9;0x2220;00020409;DataLogic Heron HD3430
+0x05F9;0x2601;;DataLogic Magellan 1000i
+0x05F9;0x2602;;DataLogic Magellan 1100i
+0x080C;0x0300;;DataLogic Heron D130
+0x0E8F;0x0020;;DataLogic Gryphon D
+0x09D8;0x0310;;Die SMART Technologies ID GmbH RFID Multiplex Multi125
+0x09D8;0x0410;;Die SMART Technologies ID GmbH RFID Multiplex Multi125
+0x1D57;0xAC08;;dpm-ident RFID-Reader V2.0 HID
+0x0C2E;0x0961;;Elimicron ES 8023
+0x060E;0x16C1;;Generic Handheld 2D QR USB
+0x065A;0xA001;;Generic LX-51X
+0x08FF;0x0009;;Generic Generic RFID-Reader (125kHz)
+0x0D3D;0x0001;;Generic LS 300
+0x0D6C;0x0802;;Generic Long Range CCD
+0x1241;0xE000;;Generic Generic RFID
+0x0536;0x0201;;Honeywell 4600g
+0x05FE;0x1010;;I-Keys EMRT-1
+0x0483;0x5750;;Inateck BCST-60
+0x0519;0x2017;;Inateck BCST-60
+0x0801;0x067E;;Intermec SG20T
+0x040B;0x6510;;Jarltech Glancetron 2009
+0x0C2E;0x9A6C;;Metrologic MS1690
+0x0C2E;0x0200;;Metrologic MS1690;MS9535,MS5145
+0x16C0;0x27DB;;neuftech RFID-Reader
+0x000A;0;;Opticon OPN 2006 (Bluetooth)
+0x0045;0;;Opticon OPN 2006 (Bluetooth)
+0x065A;0x0001;;Opticon OPN 2006 (USB)
+0x05E0;0x1200;;Symbol LS/DS
+0x13BA;0x0018;;TaoTronics TT-BS014
+0x1D57;0x001C;;TaoTronics TT-BS003
+0x1447;0x8047;;Cognex DM8600
+0x00010111;1;;Opticon OPN (Bluetooth)
+0x000123A1;1234;;DataLogic QuickScan QBT 2400 (Bluetooth)

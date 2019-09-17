@@ -101,6 +101,9 @@
     <Compile Include="Controls\PpsDataListBox.cs" />
     <Compile Include="Controls\PpsPanel.cs" />
     <Compile Include="Controls\PpsShapeCanvas.cs" />
+    <Compile Include="UI\KeyboardScanner.cs" />
+    <Compile Include="Interop\Win32Window.cs" />
+    <Compile Include="NativeMethods.RawInput.cs" />
     <Compile Include="UI\Comparer.cs" />
     <Compile Include="UI\PpsAttachments.cs" />
     <Compile Include="Data\PpsDataRowEnumerableCollectionView.cs" />
@@ -159,7 +162,7 @@
     </Compile>
     <AppDesigner Include="Properties\" />
     <Compile Include="UI\Markups.cs" />
-    <Compile Include="NatveMethods.cs" />
+    <Compile Include="NativeMethods.cs" />
     <Compile Include="UI\PpsCommand.cs" />
     <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
     <Compile Include="UI\PpsPicturePane.xaml.cs">
@@ -180,6 +183,7 @@
     <Content Include="x86\pdfium.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="UI\KeyboardScanner.csv" />
     <None Include="MarkdigXaml.licenseheader" />
     <None Include="x64\args.gn" />
     <None Include="x86\args.gn" />
