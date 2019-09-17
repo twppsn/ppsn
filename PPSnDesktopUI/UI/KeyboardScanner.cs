@@ -427,7 +427,7 @@ namespace TecWare.PPSn.UI
 				throw new Win32Exception();
 
 			Debug.Print("[KeyboardScanner] CreateHandle");
-			InitDevices();
+			RefreshDevices();
 		} // ctor
 
 		/// <summary></summary>
@@ -455,8 +455,21 @@ namespace TecWare.PPSn.UI
 
 		#region -- WndProc, ProcessInput ----------------------------------------------
 
-		private void InitDevices()
+		private void RefreshDevices()
 		{
+			// check for gone devices
+			for (var i = devices.Count - 1; i >= 0; i--)
+			{
+				var dev = devices[i];
+				if (!dev.CheckHandle(false))
+				{
+					dev.Unload();
+					devices.RemoveAt(i);
+					OnLostDevice(dev);
+				}
+			}
+
+			// check for new devies
 			var numDevices = (uint)0;
 			var structSize = (uint)Marshal.SizeOf(typeof(RAWINPUTDEVICELIST));
 			if (GetRawInputDeviceList(IntPtr.Zero, ref numDevices, structSize) != 0)
@@ -475,14 +488,16 @@ namespace TecWare.PPSn.UI
 					var data = (RAWINPUTDEVICELIST)Marshal.PtrToStructure(new IntPtr(offset), typeof(RAWINPUTDEVICELIST));
 					offset += Marshal.SizeOf(typeof(RAWINPUTDEVICELIST));
 					if (data.dwType == RIM_TYPEKEYBOARD)
-						TryCreateDevice(data.hDevice, false, out var dev);
+						TryGetDevice(data.hDevice, false, out var dev);
 				}
 			}
 			finally
 			{
 				Marshal.FreeHGlobal(pData);
 			}
-		} // proc InitDevices
+		
+			IsActive = devices.Count > 0;
+		} // proc RefreshDevices
 
 		private bool TryCreateDevice(IntPtr hDevice, bool updateLastSeenDevice, out Device dev)
 		{
@@ -511,20 +526,21 @@ namespace TecWare.PPSn.UI
 			return false;
 		} // func CreateDevice
 
-		private bool TryGetDevice(IntPtr hDevice, out Device dev)
+		private bool TryGetDevice(IntPtr hDevice, bool updateLastSeenDevice, out Device dev)
 		{
 			// find already registered device
 			for (var i = 0; i < devices.Count; i++)
 			{
 				if ((dev = devices[i]).Handle == hDevice)
 				{
-					LastSeenDevice = dev.DeviceName;
+					if (updateLastSeenDevice)
+						LastSeenDevice = dev.DeviceName;
 					return true;
 				}
 			}
 
 			// create new device from the known devices
-			return TryCreateDevice(hDevice, true, out dev);
+			return TryCreateDevice(hDevice, updateLastSeenDevice, out dev);
 		} // func CheckDeviceId
 
 		private unsafe void ProcessInput(IntPtr lParam)
@@ -546,7 +562,7 @@ namespace TecWare.PPSn.UI
 				if (header.dwType == RIM_TYPEKEYBOARD && header.hDevice != IntPtr.Zero)
 				{
 					//Debug.Print("WM_INPUT: Device=0x{0:X8}, Message=0x{1:X4}, VKey=0x{2:X2}, MakeCode=0x{3:X}, Flags={4}, Extra={5}", raw.header.hDevice.ToInt32(), raw.keyboard.Message, raw.keyboard.VKey, raw.keyboard.MakeCode, raw.keyboard.Flags, raw.keyboard.ExtraInformation);
-					if (TryGetDevice(header.hDevice, out var dev))
+					if (TryGetDevice(header.hDevice, true, out var dev))
 					{
 						var buf = (byte*)pBuf.ToPointer();
 						buf = buf + Marshal.SizeOf(typeof(RAWINPUTHEADER));
@@ -594,18 +610,7 @@ namespace TecWare.PPSn.UI
 						|| wParam.ToInt32() == DBT_DEVICEREMOVECOMPLETE
 						|| wParam.ToInt32() == DBT_DEVNODES_CHANGED)
 					{
-						for (var i = devices.Count - 1; i >= 0; i--)
-						{
-							var dev = devices[i];
-							if (!dev.CheckHandle(false))
-							{
-								dev.Unload();
-								devices.RemoveAt(i);
-								OnLostDevice(dev);
-							}
-						}
-
-						IsActive = devices.Count > 0;
+						RefreshDevices();
 					}
 					break;
 			}
