@@ -309,14 +309,25 @@
 										<xs:documentation>Define a connection to a other view.</xs:documentation>
 									</xs:annotation>
 									<xs:complexType>
+										<xs:attribute name="id" type="KeyType" use="required">
+											<xs:annotation>
+												<xs:documentation>Uniuqe identifier for the join statement.</xs:documentation>
+											</xs:annotation>
+										</xs:attribute>
 										<xs:attribute name="view" type="xs:string" use="required">
-											
+											<xs:annotation>
+												<xs:documentation>Name of the related view.</xs:documentation>
+											</xs:annotation>
 										</xs:attribute>
 										<xs:attribute name="alias" type="xs:string" use="optional">
-											
+											<xs:annotation>
+												<xs:documentation>Optional alias, if the view is used more than once.</xs:documentation>
+											</xs:annotation>
 										</xs:attribute>
 										<xs:attribute name="on" type="xs:string" use="required">
-											
+											<xs:annotation>
+												<xs:documentation>Join statement for the view.</xs:documentation>
+											</xs:annotation>
 										</xs:attribute>
 									</xs:complexType>
 								</xs:element>
