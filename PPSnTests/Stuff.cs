@@ -127,17 +127,17 @@ namespace TecWare.PPSn
 			}
 		}
 
-		[TestMethod]
-		public void DbPasswordStoreTest()
-		{
-			for (var i = 0; i < 100; i++)
-			{
-				var pwd = PpsEnvironment.GenerateSqlitePassword();
-				Console.WriteLine("Password: {0}", pwd);
-				var encrypted = PpsEnvironment.EncryptSqlitePassword(pwd);
-				var pwd2 = PpsEnvironment.DecryptSqlitePassword(encrypted);
-				Assert.AreEqual(pwd, pwd2);
-			}
-		}
+		//[TestMethod]
+		//public void DbPasswordStoreTest()
+		//{
+		//	for (var i = 0; i < 100; i++)
+		//	{
+		//		var pwd = PpsEnvironment.GenerateSqlitePassword();
+		//		Console.WriteLine("Password: {0}", pwd);
+		//		var encrypted = PpsEnvironment.EncryptSqlitePassword(pwd);
+		//		var pwd2 = PpsEnvironment.DecryptSqlitePassword(encrypted);
+		//		Assert.AreEqual(pwd, pwd2);
+		//	}
+		//}
 	}
 }

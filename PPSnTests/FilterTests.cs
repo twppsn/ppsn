@@ -28,6 +28,12 @@ namespace TecWare.PPSn
 	[TestClass]
 	public class FilterTests
 	{
+		private sealed class Props
+		{
+			public string Text { get; set; }
+			public long Int64 { get; set; }
+		}
+
 		private void TestFilter(string expected, string filterExpression)
 		{
 			var f = PpsDataFilterExpression.Parse(filterExpression);
@@ -190,6 +196,13 @@ namespace TecWare.PPSn
 			Assert.AreEqual(-1, t1.Item3);
 			Assert.AreEqual(4, t1.Item4);
 			Assert.AreEqual("v2.", t1.Item5);
+		}
+
+		[TestMethod]
+		public void TestInExpr()
+		{
+			var f = PpsDataFilterExpression.Parse("Int64:(1 2 3 4 5)");
+			var p = PpsDataFilterVisitorLambda.CompileTypedFilter<Props>(f);
 		}
 	}
 }
