@@ -203,6 +203,7 @@ namespace TecWare.PPSn
 		{
 			var f = PpsDataFilterExpression.Parse("Int64:(1 2 3 4 5)");
 			var p = PpsDataFilterVisitorLambda.CompileTypedFilter<Props>(f);
+			var f2 = PpsDataFilterExpression.Parse("or(or(Int64:=1 Int64:=2 Int64:=3 Int64:=4 Int64:=2) Int64:=5)").Reduce();
 		}
 	}
 }

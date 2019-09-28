@@ -141,7 +141,7 @@ namespace TecWare.PPSn.Data
 
 		private static bool EatExpressionCharacter(string expression, ref int offset, char c)
 		{
-			if (TestExpressionCharacter(expression, offset , c))
+			if (TestExpressionCharacter(expression, offset, c))
 			{
 				offset++;
 				return true;
@@ -549,7 +549,7 @@ namespace TecWare.PPSn.Data
 				: (PpsDataFilterCompareValue)new PpsDataFilterCompareTextValue(s);
 		} // func GetValueExpressionFromString
 
-		private static PpsDataFilterCompareValue GetValueExpressionFromLong(long i) 
+		private static PpsDataFilterCompareValue GetValueExpressionFromLong(long i)
 			=> new PpsDataFilterCompareIntegerValue(i);
 
 		private static PpsDataFilterCompareValue GetValueExpressionFromDateTime(DateTime dt)
@@ -851,7 +851,7 @@ namespace TecWare.PPSn.Data
 	} // class PpsDataFilterTrueExpression
 
 	#endregion
-	
+
 	#region -- enum PpsDataFilterCompareValueType -------------------------------------
 
 	/// <summary></summary>
@@ -908,7 +908,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="other"></param>
 		/// <returns></returns>
 		protected abstract bool EqualsValue(PpsDataFilterCompareValue other);
-		
+
 		/// <summary></summary>
 		/// <returns></returns>
 		protected abstract int GetValueHashCode();
@@ -948,7 +948,7 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		/// <returns></returns>
-		protected override int GetValueHashCode() 
+		protected override int GetValueHashCode()
 			=> 23.GetHashCode();
 
 		/// <summary></summary>
@@ -1387,22 +1387,24 @@ namespace TecWare.PPSn.Data
 				throw new ArgumentNullException(nameof(values));
 
 			var newValues = new List<PpsDataFilterCompareValue>(values.Length);
-			CopyValues(values[0].Type, values, newValues);
+			CopyValues(values, newValues);
 			this.values = newValues.ToArray();
 		} // ctor
 
-		private static void CopyValues(PpsDataFilterCompareValueType itemType, PpsDataFilterCompareValue[] values, List<PpsDataFilterCompareValue> newValues)
+		private static void CopyValues(PpsDataFilterCompareValue[] values, List<PpsDataFilterCompareValue> newValues)
 		{
-			if (!IsArrayCompatibleType(itemType))
-				throw new ArgumentOutOfRangeException(nameof(values), itemType, $"{itemType} is not allowed as array-type.");
 			newValues.Add(values[0]);
 
 			for (var i = 1; i < values.Length; i++)
 			{
 				if (values[i] is PpsDataFilterCompareArrayValue av)
-					CopyValues(itemType, av.Values, newValues);
-				else if (itemType != values[i].Type)
-					throw new ArgumentException($"Values must be of the same type. Index {i} with '{values[i]}' is of type {values[i].Type}, expected is {itemType}.", nameof(values));
+					CopyValues(av.Values, newValues);
+				else
+				{
+					var itemType = values[i].Type;
+					if (!IsArrayCompatibleType(itemType))
+						throw new ArgumentOutOfRangeException(nameof(values), itemType, $"{itemType} is not allowed as array-type.");
+				}
 
 				newValues.Add(values[i]);
 			}
@@ -1510,7 +1512,7 @@ namespace TecWare.PPSn.Data
 			// combine single value arrays to equal expression
 			if (value is PpsDataFilterCompareArrayValue av && av.Values.Length == 1)
 			{
-				switch(op)
+				switch (op)
 				{
 					case PpsDataFilterCompareOperator.Contains:
 						return new PpsDataFilterCompareExpression(operand, PpsDataFilterCompareOperator.Equal, av.Values[0]);
@@ -1601,7 +1603,7 @@ namespace TecWare.PPSn.Data
 		{
 			private readonly PpsDataFilterLogicExpression target;
 			private readonly List<PpsDataFilterExpression> args = new List<PpsDataFilterExpression>();
-			private readonly List<List<PpsDataFilterCompareValue>> combineValues = new List<List<PpsDataFilterCompareValue>>(); 
+			private readonly List<List<PpsDataFilterCompareValue>> combineValues = new List<List<PpsDataFilterCompareValue>>();
 
 			public ReduceHelper(PpsDataFilterLogicExpression target)
 			{
@@ -1612,15 +1614,14 @@ namespace TecWare.PPSn.Data
 
 			private CompareExpressionResult CompareExpression(PpsDataFilterCompareExpression cmp, PpsDataFilterExpression other)
 			{
-				if (other is PpsDataFilterCompareExpression otherCmp 
+				if (other is PpsDataFilterCompareExpression otherCmp
 					&& String.Compare(cmp.Operand, otherCmp.Operand, StringComparison.OrdinalIgnoreCase) == 0)
-					
 				{
 					if (cmp.Operator == otherCmp.Operator)
 					{
 						return Equals(cmp.Value, otherCmp.Value)
-						  ? CompareExpressionResult.Equal
-						  : CompareExpressionResult.EqualOperation;
+							? CompareExpressionResult.Equal
+							: CompareExpressionResult.EqualOperation;
 					}
 					else
 						return CompareExpressionResult.EqualOperand;
@@ -1662,7 +1663,7 @@ namespace TecWare.PPSn.Data
 			{
 				if (expr is PpsDataFilterCompareExpression cmp && !String.IsNullOrEmpty(cmp.Operand))
 				{
-					if (expr.Type == PpsDataFilterExpressionType.NOr || expr.Type == PpsDataFilterExpressionType.Or)
+					if (target.Type == PpsDataFilterExpressionType.NOr || target.Type == PpsDataFilterExpressionType.Or)
 					{
 						// same operands can be combined to an in
 						for (var i = 0; i < args.Count; i++)
@@ -1676,7 +1677,7 @@ namespace TecWare.PPSn.Data
 									case CompareExpressionResult.EqualOperand:
 										if (curCmp.Operator == PpsDataFilterCompareOperator.Contains
 											&& cmp.Operator == PpsDataFilterCompareOperator.Equal
-											&& curCmp.Value is PpsDataFilterCompareArrayValue arr && arr.ItemType == cmp.Value.Type) // add to array
+											&& curCmp.Value is PpsDataFilterCompareArrayValue arr && PpsDataFilterCompareArrayValue.IsArrayCompatibleType(cmp.Value.Type)) // add to array
 										{
 											AddValueTo(i, arr, cmp.Value);
 											return true;
@@ -1694,8 +1695,7 @@ namespace TecWare.PPSn.Data
 										}
 										else if (cmp.Operator == PpsDataFilterCompareOperator.Contains
 											&& curCmp.Value is PpsDataFilterCompareArrayValue arr1
-											&& cmp.Value is PpsDataFilterCompareArrayValue arr2
-											&& arr1.ItemType == arr2.ItemType) // if array combine in array
+											&& cmp.Value is PpsDataFilterCompareArrayValue arr2) // if array combine in array
 										{
 											foreach (var val in arr2.Values)
 												AddValueTo(i, arr1, val);
@@ -1706,7 +1706,7 @@ namespace TecWare.PPSn.Data
 							}
 						}
 					}
-					else if (expr.Type == PpsDataFilterExpressionType.NAnd || expr.Type == PpsDataFilterExpressionType.And)
+					else if (target.Type == PpsDataFilterExpressionType.NAnd || target.Type == PpsDataFilterExpressionType.And)
 					{
 						for (var i = 0; i < args.Count; i++)
 						{
@@ -1720,7 +1720,7 @@ namespace TecWare.PPSn.Data
 									case CompareExpressionResult.EqualOperand:
 										if (curCmp.Operator == PpsDataFilterCompareOperator.NotContains
 											&& cmp.Operator == PpsDataFilterCompareOperator.NotEqual
-											&& curCmp.Value is PpsDataFilterCompareArrayValue arr && arr.ItemType == cmp.Value.Type) // add to array
+											&& curCmp.Value is PpsDataFilterCompareArrayValue arr && PpsDataFilterCompareArrayValue.IsArrayCompatibleType(cmp.Value.Type)) // add to array
 										{
 											AddValueTo(i, arr, cmp.Value);
 											return true;
@@ -1745,8 +1745,7 @@ namespace TecWare.PPSn.Data
 										}
 										else if (cmp.Operator == PpsDataFilterCompareOperator.NotContains
 											&& curCmp.Value is PpsDataFilterCompareArrayValue arr1
-											&& cmp.Value is PpsDataFilterCompareArrayValue arr2
-											&& arr1.ItemType == arr2.ItemType) // if array combine in array
+											&& cmp.Value is PpsDataFilterCompareArrayValue arr2) // if array combine in array
 										{
 											foreach (var val in arr2.Values)
 												AddValueTo(i, arr1, val);
@@ -1848,7 +1847,16 @@ namespace TecWare.PPSn.Data
 			public PpsDataFilterExpression Build()
 			{
 				// combine values
-
+				for (var i = 0; i < combineValues.Count; i++)
+				{
+					if (combineValues[i] != null)
+					{
+						var cmp = (PpsDataFilterCompareExpression)args[i];
+						args[i] = new PpsDataFilterCompareExpression(cmp.Operand, cmp.Operator,
+							new PpsDataFilterCompareArrayValue(combineValues[i].ToArray())
+						);
+					}
+				}
 
 				// optimize 0 or 1 results
 				if (args.Count == 0)
@@ -2967,7 +2975,7 @@ namespace TecWare.PPSn.Data
 			stringJoinMethodInfo = typeof(string).GetMethod(nameof(String.Join), new Type[] { typeof(string), typeof(string[]) }) ?? throw new ArgumentNullException("String.Join");
 
 			procsChangeTypeMethodInfo = typeof(Procs).GetMethod(nameof(Procs.ChangeType), new Type[] { typeof(object), typeof(Type) }) ?? throw new ArgumentNullException("Procs.ChangeType");
-			
+
 			compareFullTextSearchTextMethodInfo = typeof(ICompareFulltext).GetMethod(nameof(ICompareFulltext.SearchText), new Type[] { typeof(string), typeof(bool) }) ?? throw new ArgumentNullException("ICompareFulltext.SearchText");
 			compareDateTimeSearchDateMethodInfo = typeof(ICompareDateTime).GetMethod(nameof(ICompareDateTime.SearchDate), new Type[] { typeof(DateTime), typeof(DateTime) }) ?? throw new ArgumentNullException("ICompareDateTime.SearchDate");
 
@@ -3221,7 +3229,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		public bool Equals(PpsDataOrderExpression other) 
+		public bool Equals(PpsDataOrderExpression other)
 			=> other.identifier.Equals(identifier) && other.negate == negate;
 
 		/// <summary></summary>
