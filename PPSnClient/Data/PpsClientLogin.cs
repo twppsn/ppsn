@@ -19,6 +19,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using TecWare.DE.Networking;
 
 namespace TecWare.PPSn.Data
 {
@@ -51,7 +52,7 @@ namespace TecWare.PPSn.Data
 
 		private PpsClientLoginSaveOptions saveOptions = PpsClientLoginSaveOptions.None;
 		private bool showErrorMessage;
-		private bool isLoaded;	// is the credential blob loaded
+		private readonly bool isLoaded;	// is the credential blob loaded
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -321,9 +322,11 @@ namespace TecWare.PPSn.Data
 		/// <summary>Get the stored passowrd.</summary>
 		/// <returns></returns>
 		public unsafe SecureString GetPassword()
-			=> password != IntPtr.Zero ?
+		{
+			return password != IntPtr.Zero ?
 				new SecureString((char*)password.ToPointer(), passwordLength) :
 				null;
+		} // func GetPassword
 
 		/// <summary>Set credentials.</summary>
 		/// <param name="credentials"></param>
@@ -376,13 +379,15 @@ namespace TecWare.PPSn.Data
 		/// <summary>Get the credentilas, as <c>NetworkCredential</c>.</summary>
 		/// <param name="enforceDefault"><c>false</c>, returns <c>null</c> if not credentials are stored, otherwise default credentials returned.</param>
 		/// <returns></returns>
-		public NetworkCredential GetCredentials(bool enforceDefault = false)
+		public ICredentials GetCredentials(bool enforceDefault = false)
 		{
 			if (TryParseUserName(out var domainName, out var userName, out var isDefaultUser))
 			{
 				return isDefaultUser
-					? CredentialCache.DefaultNetworkCredentials
-					: new NetworkCredential(userName, GetPassword(), domainName);
+					? (ICredentials)CredentialCache.DefaultNetworkCredentials
+					: String.IsNullOrEmpty(domainName)
+						? new UserCredential(userName, GetPassword())
+						: new UserCredential(domainName, userName, GetPassword());
 			}
 			else if (enforceDefault)
 				return CredentialCache.DefaultNetworkCredentials;
