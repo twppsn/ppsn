@@ -486,7 +486,7 @@ namespace TecWare.PPSn
 		private readonly App app;
 		private readonly int environmentId;             // unique id of the environment
 		private readonly PpsEnvironmentInfo info;       // source information of the environment
-		private readonly NetworkCredential userInfo;    // currently credentials of the user
+		private readonly ICredentials userInfo;    // currently credentials of the user
 
 		private long userId = -1;
 		private readonly DirectoryInfo localDirectory = null;   // local directory for the user data
@@ -504,7 +504,7 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		internal PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, App app)
+		internal PpsEnvironment(PpsEnvironmentInfo info, ICredentials userInfo, App app)
 			: base(new Lua(), app.Resources)
 		{
 			this.app = app;

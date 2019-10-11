@@ -1276,7 +1276,7 @@ namespace TecWare.PPSn
 			// build the remote request with absolute uri and credentials
 			var absoluteUri = new Uri(info.Uri, relativeUri);
 			var request = WebRequest.CreateHttp(absoluteUri);
-			request.Credentials = UserCredential.Wrap(userInfo); // override the current credentials
+			request.Credentials = userInfo is NetworkCredential nc ? UserCredential.Wrap(nc) : userInfo; // override the current credentials
 			request.Headers.Add("des-multiple-authentifications", "true");
 			request.Timeout = -1; // 600 * 1000;
 

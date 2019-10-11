@@ -23,6 +23,7 @@ namespace TecWare.PPSn.Stuff
 
 	/// <summary>Property implementation for Lazy via Binding or Task..</summary>
 	/// <typeparam name="T"></typeparam>
+	[Obsolete("use TecWare.DE.Stuff.LazyProperty")]	
 	public sealed class LazyProperty<T>
 	{
 		#region -- enum LazyPropertyState -----------------------------------------------

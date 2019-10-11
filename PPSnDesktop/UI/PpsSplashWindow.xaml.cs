@@ -80,7 +80,7 @@ namespace TecWare.PPSn.UI
 
 			/// <summary>Get current selected credentials (login data)</summary>
 			/// <returns></returns>
-			public NetworkCredential GetCredentials()
+			public ICredentials GetCredentials()
 			{
 				if (currentLogin == null)
 					return null;
@@ -451,7 +451,7 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc CloseLoginFrame
 
-		private Tuple<PpsEnvironmentInfo, NetworkCredential> ShowLogin(PpsEnvironmentInfo selectEnvironment, NetworkCredential userInfo = null)
+		private Tuple<PpsEnvironmentInfo, ICredentials> ShowLogin(PpsEnvironmentInfo selectEnvironment, ICredentials userInfo = null)
 		{
 			var loginState = LoginState;
 
@@ -494,7 +494,7 @@ namespace TecWare.PPSn.UI
 					Settings.Default.LastEnvironmentUri = loginState.CurrentEnvironment.Uri.ToString();
 					Settings.Default.Save();
 
-					return new Tuple<PpsEnvironmentInfo, NetworkCredential>(loginState.CurrentEnvironment, loginState.GetCredentials());
+					return new Tuple<PpsEnvironmentInfo, ICredentials>(loginState.CurrentEnvironment, loginState.GetCredentials());
 				}
 				else
 					return null;
@@ -505,7 +505,11 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc ShowLogin
 
-		public async Task<Tuple<PpsEnvironmentInfo, NetworkCredential>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment, NetworkCredential userInfo = null)
+		/// <summary>Show Login dialog</summary>
+		/// <param name="selectEnvironment"></param>
+		/// <param name="userInfo"></param>
+		/// <returns></returns>
+		public async Task<Tuple<PpsEnvironmentInfo, ICredentials>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment, ICredentials userInfo = null)
 			=> await Dispatcher.InvokeAsync(() => ShowLogin(selectEnvironment, userInfo));
 		
 		#endregion

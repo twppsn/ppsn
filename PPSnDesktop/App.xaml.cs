@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Threading;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Properties;
@@ -62,7 +63,7 @@ namespace TecWare.PPSn
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
 
-		internal async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, NetworkCredential _userInfo = null)
+		internal async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, ICredentials _userInfo = null)
 		{
 			var environment = _environment;
 			var userInfo = _userInfo;
@@ -233,7 +234,7 @@ namespace TecWare.PPSn
 			CloseApplicationAsync().AwaitTask();
 		} // proc OnExit
 
-		private static void ParseArguments(StartupEventArgs e, out PpsEnvironmentInfo environment, out NetworkCredential userCred)
+		private static void ParseArguments(StartupEventArgs e, out PpsEnvironmentInfo environment, out ICredentials userCred)
 		{
 			var userName = (string)null;
 			var userPass = (string)null;
