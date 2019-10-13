@@ -709,7 +709,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary></summary>
 			/// <param name="dataSource"></param>
 			/// <param name="credentials"></param>
-			public PpsSqlConnectionHandle(PpsSqlDataSource dataSource, PpsCredentials credentials)
+			protected PpsSqlConnectionHandle(PpsSqlDataSource dataSource, PpsCredentials credentials)
 			{
 				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
 				this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
@@ -721,15 +721,25 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary></summary>
 			public void Dispose()
 			{
-				if (isDisposed)
-					throw new ObjectDisposedException(GetType().Name);
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			} // proc Dispose
 
-				// clear connection
-				connection.Dispose();
-				isDisposed = true;
+			/// <summary></summary>
+			protected virtual void Dispose(bool disposing)
+			{
+				if (disposing)
+				{
+					if (isDisposed)
+						throw new ObjectDisposedException(GetType().Name);
 
-				// invoke disposed
-				Disposed?.Invoke(this, EventArgs.Empty);
+					// clear connection
+					connection.Dispose();
+					isDisposed = true;
+
+					// invoke disposed
+					Disposed?.Invoke(this, EventArgs.Empty);
+				}
 			} // proc Dispose
 
 			/// <summary></summary>

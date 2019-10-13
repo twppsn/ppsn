@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -206,7 +207,7 @@ namespace TecWare.PPSn.Server
 			{
 				this.field = field;
 			} // ctor
-			
+
 			public bool TryGetProperty(string name, out object value)
 			{
 				var p = field.GetProperty(name, new List<PpsFieldDescription>());
@@ -221,7 +222,7 @@ namespace TecWare.PPSn.Server
 					return false;
 				}
 			} // func TryGetProperty
-			
+
 			public IEnumerator<PropertyValue> GetEnumerator()
 				=> new PpsFieldAttributesEnumerator(field);
 
@@ -257,14 +258,14 @@ namespace TecWare.PPSn.Server
 			this.xDefinition = xDefinition;
 
 			inheritedFieldNames = Procs.GetStrings(xDefinition.Attribute(inheritedAttributeString)?.Value, false);
-						
+
 			displayName = new Lazy<string>(() => Attributes.GetProperty(displayNameAttributeString, null));
 			maxLength = new Lazy<int>(() => Attributes.GetProperty(maxLengthAttributeString, Int32.MaxValue));
 
 			var xDataType = xDefinition.Attribute(dataTypeAttributeString);
 
-			dataType = xDataType != null ? 
-				new Lazy<Type>(() => LuaType.GetType(xDataType.Value, lateAllowed: false)):
+			dataType = xDataType != null ?
+				new Lazy<Type>(() => LuaType.GetType(xDataType.Value, lateAllowed: false)) :
 				null;
 		} // ctor
 
@@ -279,7 +280,7 @@ namespace TecWare.PPSn.Server
 		{
 			// find inheritied field descriptions
 			inheritedDefinitions = inheritedFieldNames.Select(fn => DataSource.Application.GetFieldDescription(fn, true)).ToArray();
-			
+
 			// Resolve a native column description for the field.
 			nativeColumnDescription = DataSource.GetColumnDescription(Name); // no exception
 
@@ -398,7 +399,7 @@ namespace TecWare.PPSn.Server
 				? Attributes
 				: Attributes.Where(c => c.Name.StartsWith(attributeSelector)); // todo: convert standard attribute
 		} // func GetAttributes
-		
+
 		#endregion
 
 		/// <summary>Gets the specific column description.</summary>
@@ -454,7 +455,7 @@ namespace TecWare.PPSn.Server
 		{
 			if (String.IsNullOrEmpty(name))
 				throw new ArgumentNullException("name");
-			
+
 			this.name = name;
 			this.displayName = displayName;
 			this.parameter = parameter;
@@ -517,16 +518,16 @@ namespace TecWare.PPSn.Server
 		/// <summary>View to join to</summary>
 		public string ViewName { get; }
 		/// <summary>Alias to intendify joins to the same view</summary>
-		public string AliasName { get;  }
+		public string AliasName { get; }
 		/// <summary>Join type</summary>
 		public PpsDataJoinType Type { get; }
 		/// <summary>On statement for the view.</summary>
-		public PpsDataJoinStatement[] Statement { get;  }
+		public PpsDataJoinStatement[] Statement { get; }
 
 		/// <summary>Empty parameter array.</summary>
 		public static PpsViewJoinDefinition[] EmptyArray { get; } = Array.Empty<PpsViewJoinDefinition>();
 	} // class PpsViewJoinDefinition
-	
+
 	#endregion
 
 	#region -- class PpsViewDefinition ------------------------------------------------
@@ -616,7 +617,7 @@ namespace TecWare.PPSn.Server
 			private readonly PpsDataSource source;
 			private readonly string name;
 			private readonly XElement xDefinition;
-			
+
 			public PpsViewDescriptionInit(PpsDataSource source, string name, XElement xDefinition)
 			{
 				this.source = source;
@@ -655,7 +656,7 @@ namespace TecWare.PPSn.Server
 					throw new DEConfigurationException(xJoin, "@view is missing.");
 				var statement = ParseOnStatement(xJoin);
 				var aliasName = xJoin.GetAttribute("alias", null); // optional
-				var type= xJoin.GetAttribute("type", PpsDataJoinType.Inner);
+				var type = xJoin.GetAttribute("type", PpsDataJoinType.Inner);
 
 				return new PpsViewJoinDefinition(viewName, aliasName, type, statement);
 			} // func CreateJoinDefinition
@@ -784,7 +785,7 @@ namespace TecWare.PPSn.Server
 
 			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
 			{
-				var selectorAccess = selector as PpsDataSelector; 
+				var selectorAccess = selector as PpsDataSelector;
 
 				// create column export rights
 				rowAllowed = new bool[columns.Columns.Count];
@@ -992,15 +993,18 @@ namespace TecWare.PPSn.Server
 		private sealed class ViewCsvWriter : ViewWriter
 		{
 			private readonly TextCsvWriter writer;
+			private readonly string csvDescriptionFile;
 			private bool[] isText = null;
 			private string[] rowBuffer = null;
 
-			public ViewCsvWriter(TextWriter tw, TextCsvSettings settings = null)
+			public ViewCsvWriter(TextWriter tw, string fileName, TextCsvSettings settings = null)
 			{
 				writer = new TextCsvWriter(
 					tw,
 					settings ?? new TextCsvSettings()
 				);
+
+				csvDescriptionFile = String.IsNullOrEmpty(fileName) ? null : Path.ChangeExtension(csvDescriptionFile, ".fmt");
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -1015,17 +1019,120 @@ namespace TecWare.PPSn.Server
 				}
 			} // proc Dispose
 
+			private static StringBuilder AppendEscaped(StringBuilder sb, string value)
+			{
+				foreach (var c in value)
+				{
+					switch (c)
+					{
+						case '\t':
+							sb.Append("\\t");
+							break;
+						case '\r':
+							sb.Append("\\r");
+							break;
+						case '\n':
+							sb.Append("\\n");
+							break;
+						default:
+							sb.Append(c);
+							break;
+
+					}
+				}
+				return sb;
+			} // func AppendEscaped
+
+			private static (string typeName, int prefixLength, int dataLength, string collation) GetBcpDataType(IDataColumn dataColumn)
+			{
+				// https://docs.microsoft.com/de-de/sql/relational-databases/import-export/specify-file-storage-type-by-using-bcp-sql-server?view=sql-server-ver15
+				// https://docs.microsoft.com/de-de/sql/relational-databases/import-export/specify-prefix-length-in-data-files-by-using-bcp-sql-server?view=sql-server-ver15
+				// todo:
+				if (dataColumn.DataType == typeof(string))
+					return ("SQLNCHAR", 8, 0, "SQL_Latin1_General_CP1_CI_AS");
+
+				else if (dataColumn.DataType == typeof(float))
+					return ("SQLFLT4", 1, 0, null);
+				else if (dataColumn.DataType == typeof(double))
+					return ("SQLFLT8", 1, 0, null);
+				else if (dataColumn.DataType == typeof(decimal))
+					return ("SQLDECIMAL", 1, 0, null);
+
+				else if (dataColumn.DataType == typeof(sbyte))
+					return ("SQLTINYINT", 1, 0, null);
+				else if (dataColumn.DataType == typeof(short))
+					return ("SQLSMALLINT", 1, 0, null);
+				else if (dataColumn.DataType == typeof(int))
+					return ("SQLINT", 1, 0, null);
+				else if (dataColumn.DataType == typeof(long))
+					return ("SQLBIGINT", 1, 0, null);
+
+				else if (dataColumn.DataType == typeof(bool))
+					return ("SQLBIT", 1, 0, null);
+				else if (dataColumn.DataType == typeof(Guid))
+					return ("SQLUNIQUEID", 1, 0, null);
+				else if (dataColumn.DataType == typeof(DateTime))
+					return ("SQLDATETIME", 1, 0, null);
+
+				else
+					throw new NotImplementedException();
+			} // func GetBcpDataType
+
 			protected override void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
 			{
-				rowBuffer = new string[columns.Columns.Count];
+				var columnCount = columns.Columns.Count;
+
+				// generate bcd format file
+				// https://docs.microsoft.com/de-de/sql/relational-databases/import-export/non-xml-format-files-sql-server?view=sql-server-ver15
+				var formatFile = csvDescriptionFile != null ? new StringBuilder() : null;
+				if (formatFile != null)
+				{
+					formatFile.AppendLine("13.0");
+					formatFile.AppendLine(columnCount.ToString());
+				}
+
+				// prepare output
+				rowBuffer = new string[columnCount];
 				isText = new bool[rowBuffer.Length];
 				var isHeaderText = new bool[rowBuffer.Length];
-				for (var i = 0; i < columns.Columns.Count; i++)
+				for (var i = 0; i < columnCount; i++)
 				{
 					rowBuffer[i] = columns.Columns[i].Name;
 					isText[i] = columns.Columns[i].DataType == typeof(string);
 					isHeaderText[i] = true;
+
+					// write column definition
+					if (formatFile != null)
+					{
+						// field number
+						formatFile.Append(i + 1)
+							.Append('\t');
+						// data type, prefix, data
+						var (typeName, prefixLength, dataLength, collation) = GetBcpDataType(columns.Columns[i]);
+						formatFile.Append(typeName)
+							.Append('\t')
+							.Append(prefixLength)
+							.Append('\t')
+							.Append(dataLength)
+							.Append('\t');
+						// terminator
+						AppendEscaped(formatFile.Append('"'), i == columnCount - 1 ? Environment.NewLine : writer.Settings.Delemiter.ToString())
+							.Append('"')
+							.Append('\t');
+						// server column order
+						formatFile.Append(i + 1)
+							.Append('\t');
+						// server column name
+						formatFile.Append(columns.Columns[i].Name)
+							.Append('\t');
+						// collation
+						formatFile.Append(String.IsNullOrEmpty(collation) ? "\"\"" : collation)
+							.AppendLine();
+					}
 				}
+
+				if (formatFile != null)
+					File.WriteAllText(csvDescriptionFile, formatFile.ToString());
 
 				writer.WriteRow(rowBuffer, isHeaderText);
 			} // proc Begin
@@ -1050,7 +1157,7 @@ namespace TecWare.PPSn.Server
 		private readonly Dictionary<string, PpsDataSetServerDefinition> datasetDefinitions = new Dictionary<string, PpsDataSetServerDefinition>(StringComparer.OrdinalIgnoreCase);
 
 		#region -- Init/Done ----------------------------------------------------------
-		
+
 		private void BeginReadConfigurationData(IDEConfigLoading config)
 		{
 			// find mainDataSource
@@ -1061,7 +1168,7 @@ namespace TecWare.PPSn.Server
 			var newMainDataSource = this.UnsafeFind(mainDataSourceName);
 			if (newMainDataSource == null)
 				throw new DEConfigurationException(config.ConfigNew, String.Format("@mainDataSource '{0}' not found.", mainDataSourceName));
-			if(!(newMainDataSource is PpsSqlExDataSource))
+			if (!(newMainDataSource is PpsSqlExDataSource))
 				throw new DEConfigurationException(config.ConfigNew, String.Format("@mainDataSource '{0}' is a unsupported data source.", mainDataSourceName));
 
 			config.EndReadAction(() => mainDataSource = (PpsSqlExDataSource)newMainDataSource);
@@ -1072,7 +1179,7 @@ namespace TecWare.PPSn.Server
 			var fieldDeclarationList = new List<DependencyElement>();
 			var viewDeclarationList = new List<DependencyElement>();
 			var datasetDeclarationList = new List<DependencyElement>();
-		
+
 			// register views, columns, ...
 			// we add or overide elements, but there is no deletion -> reboot
 			foreach (var xRegister in config.ConfigNew.Elements(xnRegister))
@@ -1145,7 +1252,7 @@ namespace TecWare.PPSn.Server
 		} // void RegisterDataSet
 
 		#endregion
-		
+
 		/// <summary>Find a data source by name.</summary>
 		/// <param name="name"></param>
 		/// <param name="throwException"></param>
@@ -1233,12 +1340,17 @@ namespace TecWare.PPSn.Server
 			switch (csv)
 			{
 				case string file:
-					writer = new ViewCsvWriter(new StreamWriter(file));
+					writer = new ViewCsvWriter(new StreamWriter(file), file);
 					return true;
 				case LuaTable table:
 					var settings = new TextCsvSettings();
 					table.SetObjectMember(settings);
-					writer = new ViewCsvWriter(new StreamWriter((string)table.GetMemberValue("file")), settings);
+					var exporFile = (string)table.GetMemberValue("file");
+					writer = new ViewCsvWriter(
+						new StreamWriter(exporFile),
+						exporFile,
+						settings
+					);
 					return true;
 				default:
 					writer = null;
@@ -1288,7 +1400,7 @@ namespace TecWare.PPSn.Server
 		private static ViewWriter ViewGetCreateWriter(IDEWebRequestScope r)
 		{
 			if (r.AcceptType(MimeTypes.Text.Plain))
-				return new ViewCsvWriter(r.GetOutputTextWriter(MimeTypes.Text.Plain));
+				return new ViewCsvWriter(r.GetOutputTextWriter(MimeTypes.Text.Plain), null);
 			else
 				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Xml));
 		} // func ViewGetCreateWriter
