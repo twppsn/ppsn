@@ -1490,7 +1490,7 @@ namespace TecWare.PPSn.Server
 		} // proc ExportViewCore
 
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
-		private void HttpViewGetAction(IDEWebRequestScope r)
+		public void HttpViewGetAction(IDEWebRequestScope r)
 		{
 			// v=views,...&f={filterList}&o={orderList}&s={startAt]&c={count}&a={attributeSelector}
 			var startAt = r.GetProperty("s", 0);
