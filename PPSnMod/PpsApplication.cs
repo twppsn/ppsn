@@ -778,8 +778,18 @@ namespace TecWare.PPSn.Server
 					await WriteJsonGeometriesAsync(r);
 					return true;
 				default:
-					if (r.RelativeSubPath.StartsWith("geometry/") && await WriteSingleGeometry(r))
-						return true;
+					if (r.TryEnterSubPath(this, "geometry/"))
+					{
+						try
+						{
+							if (await WriteSingleGeometryAsync(r))
+								return true;
+						}
+						finally
+						{
+							r.ExitSubPath(this);
+						}
+					}
 					return await base.OnProcessRequestAsync(r);
 			}
 		} // proc OnProcessRequest
