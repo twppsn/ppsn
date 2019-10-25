@@ -36,8 +36,8 @@
 	  <PackageReference Include="Microsoft.CSharp" Version="4.6.0" />
 	  <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
 	  <PackageReference Include="NeoLua" Version="1.3.11" />
-	  <PackageReference Include="TecWare.DES.Core" Version="3.4.43" />
-	  <PackageReference Include="TecWare.DES.ServerLib" Version="3.4.43" />
+	  <PackageReference Include="TecWare.DES.Core" Version="3.4.44" />
+	  <PackageReference Include="TecWare.DES.ServerLib" Version="3.4.44" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\PPSnCore\PPSnCore.csproj" />
