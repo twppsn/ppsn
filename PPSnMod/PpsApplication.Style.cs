@@ -44,6 +44,10 @@ namespace TecWare.PPSn.Server
 			ViewPort = viewport ?? DefaultViewPort;
 		} // ctor
 
+		/// <summary>Split the raw path in fill type and path.</summary>
+		/// <param name="path"></param>
+		/// <param name="pathFill"></param>
+		/// <returns></returns>
 		public bool TryGetPath(out string path, out string pathFill)
 		{
 			var rawPath = RawPath;
@@ -233,9 +237,6 @@ namespace TecWare.PPSn.Server
 
 		#region -- Write single geometry ----------------------------------------------
 
-		[Obsolete]
-		const string svgMime = "image/svg+xml";
-
 		private ImageOuput GetImageOutputByMimeType(string mimeType, ImageOuput @default)
 		{
 			switch (mimeType)
@@ -246,7 +247,7 @@ namespace TecWare.PPSn.Server
 					return ImageOuput.Png;
 				case MimeTypes.Image.Jpeg:
 					return ImageOuput.Jpeg;
-				case svgMime: // MimeTypes.Image.Svg:
+				case MimeTypes.Image.Svg: // MimeTypes.Image.Svg:
 					return ImageOuput.Svg;
 				default:
 					return @default;
@@ -298,13 +299,14 @@ namespace TecWare.PPSn.Server
 				)
 			);
 
-			await r.WriteXmlAsync(svg, svgMime);
+			r.SetLastModified(Server.Configuration.ConfigurationStamp);
+			await r.WriteXmlAsync(svg, MimeTypes.Image.Svg);
 			return true;
 		} // func ProcessSingleGeometryAsSvgAsync
 
 		private Task<bool> ProcessSingleGeometryAsync(IDEWebRequestScope r, GeometryInfo geometry)
 		{
-			var outputType = GetImageOutputByArgument(r.GetProperty("t", null), GetImageOutputByMimeType(r.AcceptedTypes.FirstOrDefault(), ImageOuput.Svg));
+			var outputType = GetImageOutputByArgument(r.GetProperty("t", null), GetImageOutputByMimeType(r.AcceptedTypes?.FirstOrDefault(), ImageOuput.Svg));
 			switch(outputType)
 			{
 				case ImageOuput.Svg:

@@ -1489,6 +1489,8 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc ExportViewCore
 
+		/// <summary></summary>
+		/// <param name="r"></param>
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
 		public void HttpViewGetAction(IDEWebRequestScope r)
 		{
