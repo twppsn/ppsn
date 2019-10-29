@@ -1925,114 +1925,8 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class PpsHttpLibrary -------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class PpsHttpLibrary : LuaTable
-		{
-			private readonly PpsApplication application;
-
-			public PpsHttpLibrary(PpsApplication application)
-			{
-				this.application = application;
-			} // ctor
-
-			private static IDEWebRequestScope CheckContextArgument(IDEWebRequestScope r)
-			{
-				if (r == null)
-					throw new ArgumentNullException("r", "No context given.");
-				return r;
-			} // func CheckContextArgument
-
-			[LuaMember]
-			public static TextWriter CreateTextWriter(string mimeType = MimeTypes.Text.Plain)
-			{
-				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
-				return r.GetOutputTextWriter(mimeType, r.Http.DefaultEncoding);
-			} // func CreateTextReader
-
-			/// <summary>Creates a XmlWriter for the output stream</summary>
-			/// <returns></returns>
-			[LuaMember]
-			public static XmlWriter CreateXmlWriter()
-			{
-				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
-				return XmlWriter.Create(CreateTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings);
-			} // func CreateXmlWriter
-
-			[LuaMember]
-			public static TextReader CreateTextReader()
-			{
-				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
-				return r.GetInputTextReader();
-			} // func CreateTextReader
-
-			/// <summary>Creates a XmlReader for the input stream.</summary>
-			/// <returns></returns>
-			[LuaMember]
-			public static XmlReader CreateXmlReader()
-				=> XmlReader.Create(CreateTextReader(), Procs.XmlReaderSettings);
-
-			/// <summary>Writes the XElement in the output stream.</summary>
-			/// <param name="x"></param>
-			[LuaMember]
-			public static void WriteXml(XElement x)
-			{
-				using (var xml = CreateXmlWriter())
-					x.WriteTo(xml);
-			} // proc WriteXml
-
-			/// <summary>Gets the input stream as an XElement.</summary>
-			/// <returns></returns>
-			[LuaMember]
-			public static XElement GetXml()
-			{
-				using (var xml = CreateXmlReader())
-					return XElement.Load(xml);
-			} // proc WriteXml
-
-			[LuaMember]
-			public static string GetText()
-			{
-				using (var tr = CreateTextReader())
-					return tr.ReadToEnd();
-			} // func GetText
-
-			/// <summary>Write the table in the output stream.</summary>
-			/// <param name="t"></param>
-			[LuaMember]
-			public static void WriteTable(LuaTable t)
-				=> WriteXml(t.ToXml());
-
-			/// <summary>Gets the input stream as an lua-table.</summary>
-			/// <returns></returns>
-			[LuaMember]
-			public static LuaTable GetTable()
-			{
-				var r = CheckContextArgument(DEScope.GetScopeService<IDEWebRequestScope>(true));
-				if (MediaTypeHeaderValue.TryParse(r.InputContentType, out var contentType))
-				{
-					if (contentType.MediaType == MimeTypes.Text.Xml)
-						return Procs.CreateLuaTable(GetXml());
-					else if (contentType.MediaType == MimeTypes.Text.Lson)
-					{
-						using (var tr = CreateTextReader())
-							return FromLson(tr);
-					}
-					else
-						throw new ArgumentOutOfRangeException(nameof(r.InputContentType), r.InputContentType, "InputContentType is neither xml nor lson.");
-				}
-				else
-					throw new ArgumentException("InputContentType is missing.", nameof(r.InputContentType));
-			} // func GetTable
-		} // class PpsHttpLibrary
-
-		#endregion
-
 		private readonly PpsObjectsLibrary objectsLibrary;
 		private readonly PpsDatabaseLibrary databaseLibrary;
-		private readonly PpsHttpLibrary httpLibrary;
 		
 		/// <summary>Library for access the object store.</summary>
 		[LuaMember("Db")]
@@ -2041,8 +1935,5 @@ namespace TecWare.PPSn.Server
 		/// <summary>Library for access the object store.</summary>
 		[LuaMember]
 		public PpsObjectsLibrary Objects => objectsLibrary;
-		/// <summary>Library for easy creation of http-results.</summary>
-		[LuaMember]
-		public LuaTable Http => httpLibrary;
 	} // class PpsApplication
 }

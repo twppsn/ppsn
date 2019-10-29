@@ -139,7 +139,6 @@ namespace TecWare.PPSn.Server
 
 			this.databaseLibrary = new PpsDatabaseLibrary(this);
 			this.objectsLibrary = new PpsObjectsLibrary(this);
-			this.httpLibrary = new PpsHttpLibrary(this);
 			this.reportProvider = new PpsServerReportProvider(this);
  
 			// register shortcut for text
