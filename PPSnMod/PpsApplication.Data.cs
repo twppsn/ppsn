@@ -1235,11 +1235,27 @@ namespace TecWare.PPSn.Server
 		private void RegisterView(PpsDataSource source, string name, XElement x)
 		{
 			var cur = new PpsViewDescriptionInit(source, name, x);
-			RegisterInitializationTask(10002, "Build views", async () => RegisterView(await cur.InitializeAsync()));
+			RegisterInitializationTask(10002, "Build views",
+				async () =>
+				{
+					try
+					{
+						var view = await cur.InitializeAsync();
+						RegisterView(view);
+					}
+					catch (DEConfigurationException e)
+					{
+						Log.Warn(e);
+					}
+				}
+			);
 		} // func RegisterView
 
 		private void RegisterView(PpsViewDescription view)
 		{
+			if (view == null)
+				throw new ArgumentNullException(nameof(view));
+
 			lock (viewController)
 				viewController[view.Name] = view;
 		} // func RegisterView
