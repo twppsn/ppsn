@@ -714,7 +714,7 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public async Task<IDECommonScope> CreateSystemContextAsync()
 		{
-			var context = new DECommonScope(this, true);
+			var context = new DECommonScope(this, true, null);
 			await context.AuthentificateUserAsync(systemUser.User);
 			return context;
 		} // proc CreateSystemContextAsync
