@@ -13,21 +13,17 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using Neo.IronLua;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Security.Claims;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
-using TecWare.PPSn.Server.Sql;
 
 namespace TecWare.PPSn.Server
 {
@@ -44,7 +40,6 @@ namespace TecWare.PPSn.Server
 		/// <summary>User context optional wellknown property: User symbol</summary>
 		public const string UserContextIdenticon = "Identicon";
 
-		private const int noUserId = -1;
 		private const int sysUserId = Int32.MinValue;
 
 		#region -- class PrivateUserData ----------------------------------------------
