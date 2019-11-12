@@ -2386,7 +2386,7 @@ namespace TecWare.PPSn.Data
 				}
 				else if (cur is PpsDataFilterCompareTextValue text)
 					sb.Append(CreateParsableValue(text.Text, itemType));
-				if (cur is PpsDataFilterCompareIntegerValue num)
+				else if (cur is PpsDataFilterCompareIntegerValue num)
 					sb.Append(CreateParsableValue(num.Value.ChangeType<string>(), itemType));
 				else
 					throw new NotImplementedException($"{cur.Type} is not supported.");
