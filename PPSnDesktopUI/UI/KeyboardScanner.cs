@@ -236,7 +236,7 @@ namespace TecWare.PPSn.UI
 			private readonly IntPtr hDevice;
 			private readonly Config config;
 
-			private StringBuilder sbScannerBuffer = new StringBuilder();
+			private readonly StringBuilder sbScannerBuffer = new StringBuilder();
 			private int numInput = 0;
 			private readonly byte[] statesScanner = new byte[256];
 
@@ -418,12 +418,19 @@ namespace TecWare.PPSn.UI
 			);
 
 			// register WM_INPUT
-			var rid = new RAWINPUTDEVICE[1];
+			var rid = new RAWINPUTDEVICE[2];
+
 			rid[0].wUsagePage = 1;  // Generic Input Devices Desktop
 			rid[0].wUsage = 6;      // Keyboard
 			rid[0].hwndTarget = Handle;
 			rid[0].dwFlags = 0;
-			if (!RegisterRawInputDevices(rid, 1, Marshal.SizeOf(typeof(RAWINPUTDEVICE))))
+
+			rid[1].wUsagePage = 0x8C; // Bar Code Scanner page (POS)
+			rid[1].wUsage = 2;        // Bar Code Scanner
+			rid[1].hwndTarget = Handle;
+			rid[1].dwFlags = 0;
+			
+			if (!RegisterRawInputDevices(rid, rid.Length, Marshal.SizeOf(typeof(RAWINPUTDEVICE))))
 				throw new Win32Exception();
 
 			Debug.Print("[KeyboardScanner] CreateHandle");
@@ -475,8 +482,7 @@ namespace TecWare.PPSn.UI
 			if (GetRawInputDeviceList(IntPtr.Zero, ref numDevices, structSize) != 0)
 				return;
 
-			uint size;
-			var pData = Marshal.AllocHGlobal((int)(size = structSize * numDevices));
+			var pData = Marshal.AllocHGlobal((int)(structSize * numDevices));
 			try
 			{
 				if (GetRawInputDeviceList(pData, ref numDevices, structSize) < 0)
@@ -488,7 +494,13 @@ namespace TecWare.PPSn.UI
 					var data = (RAWINPUTDEVICELIST)Marshal.PtrToStructure(new IntPtr(offset), typeof(RAWINPUTDEVICELIST));
 					offset += Marshal.SizeOf(typeof(RAWINPUTDEVICELIST));
 					if (data.dwType == RIM_TYPEKEYBOARD)
-						TryGetDevice(data.hDevice, false, out var dev);
+						TryGetDevice(data.hDevice, false, null, out var dev);
+					else if(data.dwType == RIM_TYPEHID)
+					{
+						GetDeviceInfo(data.hDevice, out var usagePage, out var usage);
+						if (usage == 2 && usagePage == 0x8C)
+							TryGetDevice(data.hDevice, false, CreateGenericConfigForPOSdevices, out var dev);
+					}
 				}
 			}
 			finally
@@ -499,13 +511,13 @@ namespace TecWare.PPSn.UI
 			IsActive = devices.Count > 0;
 		} // proc RefreshDevices
 
-		private bool TryCreateDevice(IntPtr hDevice, bool updateLastSeenDevice, out Device dev)
+		private bool TryCreateDevice(IntPtr hDevice, bool updateLastSeenDevice, DeviceConfigFactoryDelegate configFactory, out Device dev)
 		{
 			// create new device from the known devices
 			if (TryExtractDeviceId(hDevice, out var deviceId)
 				&& TryParseVIDandPID(deviceId, out var vid, out var pid))
 			{
-				if (TryFindKnownDevice(vid, pid, out var deviceConfig))
+				if (TryFindKnownDevice(vid, pid, configFactory, out var deviceConfig))
 				{
 					dev = new Device(hDevice, deviceId, deviceConfig);
 					devices.Add(dev);
@@ -526,7 +538,7 @@ namespace TecWare.PPSn.UI
 			return false;
 		} // func CreateDevice
 
-		private bool TryGetDevice(IntPtr hDevice, bool updateLastSeenDevice, out Device dev)
+		private bool TryGetDevice(IntPtr hDevice, bool updateLastSeenDevice, DeviceConfigFactoryDelegate configFactory, out Device dev)
 		{
 			// find already registered device
 			for (var i = 0; i < devices.Count; i++)
@@ -540,8 +552,26 @@ namespace TecWare.PPSn.UI
 			}
 
 			// create new device from the known devices
-			return TryCreateDevice(hDevice, updateLastSeenDevice, out dev);
+			return TryCreateDevice(hDevice, updateLastSeenDevice, configFactory, out dev);
 		} // func CheckDeviceId
+
+		private static bool TryDecodeBarcodeData(byte[] bCode, out int offset, out int count)
+		{
+			offset = 2;
+		
+			// find count
+			for (var i = bCode.Length - 1; i >= offset; i--)
+			{
+				if (bCode[i] != 0)
+				{
+					count = i - offset + 1;
+					return count > 0;
+				}
+			}
+
+			count = bCode.Length - offset;
+			return count > 0;
+		} // func TryDecodeBarcodeData
 
 		private unsafe void ProcessInput(IntPtr lParam)
 		{
@@ -562,10 +592,10 @@ namespace TecWare.PPSn.UI
 				if (header.dwType == RIM_TYPEKEYBOARD && header.hDevice != IntPtr.Zero)
 				{
 					//Debug.Print("WM_INPUT: Device=0x{0:X8}, Message=0x{1:X4}, VKey=0x{2:X2}, MakeCode=0x{3:X}, Flags={4}, Extra={5}", raw.header.hDevice.ToInt32(), raw.keyboard.Message, raw.keyboard.VKey, raw.keyboard.MakeCode, raw.keyboard.Flags, raw.keyboard.ExtraInformation);
-					if (TryGetDevice(header.hDevice, true, out var dev))
+					if (TryGetDevice(header.hDevice, true, null, out var dev))
 					{
 						var buf = (byte*)pBuf.ToPointer();
-						buf = buf + Marshal.SizeOf(typeof(RAWINPUTHEADER));
+						buf += Marshal.SizeOf(typeof(RAWINPUTHEADER));
 						var keyboard = (RAWKEYBOARD)Marshal.PtrToStructure(new IntPtr(buf), typeof(RAWKEYBOARD));
 
 						// process key code to a string
@@ -576,6 +606,30 @@ namespace TecWare.PPSn.UI
 						}
 						else
 							ClearMessageLoop(); // clear all generated keydown messages
+					}
+				}
+				else if (header.dwType == RIM_TYPEHID && header.hDevice != IntPtr.Zero)
+				{
+					if (TryGetDevice(header.hDevice, true, CreateGenericConfigForPOSdevices, out var dev))
+					{
+						// read header
+						var buf = (byte*)pBuf.ToPointer();
+						buf += Marshal.SizeOf(typeof(RAWINPUTHEADER));
+
+						// read hid header
+						var hid = (RAWHID)Marshal.PtrToStructure(new IntPtr(buf), typeof(RAWHID));
+						buf += Marshal.SizeOf(typeof(RAWHID));
+
+						// parse packets
+						var bCode = new byte[hid.dwSizeHid];
+						for (var i = 0; i < hid.dwCount; i++)
+						{
+							Marshal.Copy(new IntPtr(buf), bCode, 0, bCode.Length);
+
+							if (TryDecodeBarcodeData(bCode, out var offset, out var count))
+								OnBarcode(dev, Encoding.Default.GetString(bCode, offset, count));
+							buf += hid.dwSizeHid;
+						}
 					}
 				}
 
@@ -622,7 +676,7 @@ namespace TecWare.PPSn.UI
 		{
 			do
 			{
-			} while (PeekMessage(out var m2, IntPtr.Zero, (int)WinMsg.WM_KEYFIRST, (int)WinMsg.WM_KEYLAST, 1)); // PM_REMOVE
+			} while (PeekMessage(out _, IntPtr.Zero, (int)WinMsg.WM_KEYFIRST, (int)WinMsg.WM_KEYLAST, 1)); // PM_REMOVE
 		} // proc ClearMessageLoop
 
 		/// <summary>Get all active devices.</summary>
@@ -734,6 +788,43 @@ namespace TecWare.PPSn.UI
 			return true;
 		} // func TryParseVIDandPID
 
+		private static uint GetDeviceInfo(IntPtr hDevice, out ushort usagePage, out ushort usage)
+		{
+			var sz = (uint)Marshal.SizeOf(typeof(RID_DEVICE_INFO));
+			var p = Marshal.AllocHGlobal((int)sz);
+			try
+			{
+				Marshal.WriteInt32(p, (int)sz);
+				if (GetRawInputDeviceInfo(hDevice, RIDI_DEVICEINFO, p, ref sz) < 0)
+					throw new Win32Exception();
+
+				var di = (RID_DEVICE_INFO)Marshal.PtrToStructure(p, typeof(RID_DEVICE_INFO));
+				if (di.dwType == RIM_TYPEHID)
+				{
+					usagePage = di.hid.usUsagePage;
+					usage = di.hid.usUsage;
+					return RIM_TYPEHID;
+				}
+				else if (di.dwType == RIM_TYPEKEYBOARD)
+				{
+					usagePage = 1;
+					usage = 6;
+					return RIM_TYPEKEYBOARD;
+				}
+				else
+				{
+
+					usagePage = 0;
+					usage = 0;
+					return unchecked((uint)-1);
+				}
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(p);
+			}
+		} // proc GetDeviceInfo
+
 		#endregion
 
 		#region -- Well Known Scanner -------------------------------------------------
@@ -741,7 +832,16 @@ namespace TecWare.PPSn.UI
 		private static readonly Config[] wellKnownScanner;
 
 		private static string CreateGenericDeviceName(uint vid, uint pid)
-			=> String.Format("PID=0x{0:X8},VID=0x{1:X8}", pid, vid);
+		{
+			return String.Format(
+				pid > 0xFFFF || vid > 0xFFFF ? "PID=0x{0:X8},VID=0x{1:X8}" : "PID=0x{0:X4},VID=0x{1:X4}",
+				pid, vid
+			);
+		} // func CreateGenericDeviceName
+
+
+		private static Config CreateGenericConfigForPOSdevices(uint vid, uint pid)
+			=> new Config(vid, pid, "Generic POS", null);
 
 		/// <summary>Create a generic configuration for a keyboard device.</summary>
 		/// <param name="vid"></param>
@@ -813,10 +913,11 @@ namespace TecWare.PPSn.UI
 			return fileInfo.Exists ? fileInfo.OpenRead() : null;
 		} // func GetOptKeyboardScannerFile
 
-		private static bool TryFindKnownDevice(uint vid, uint pid, out Config deviceConfig)
+		private static bool TryFindKnownDevice(uint vid, uint pid, DeviceConfigFactoryDelegate configFactory, out Config deviceConfig)
 		{
 			deviceConfig = Array.Find(wellKnownScanner, cur => cur.IsEqual(vid, pid))
-				?? DeviceConfigFactory?.Invoke(vid, pid);
+				?? DeviceConfigFactory?.Invoke(vid, pid)
+				?? configFactory?.Invoke(vid, pid);
 			return deviceConfig != null;
 		} // func TryFindKnownDevice
 

@@ -84,6 +84,78 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- struct RAWHID ----------------------------------------------------------
+
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct RAWHID
+	{
+		public uint dwSizeHid;
+		public uint dwCount;
+	} // struct RAWHID
+
+	#endregion
+
+	#region -- struct RID_DEVICE_INFO -------------------------------------------------
+
+	[StructLayout(LayoutKind.Explicit)]
+	internal struct RID_DEVICE_INFO
+	{
+		[FieldOffset(0)]
+		public uint cbSize;
+		[FieldOffset(4)]
+		public uint dwType;
+		//[FieldOffset(8)]
+		//public RID_DEVICE_INFO_MOUSE mouse;
+		[FieldOffset(8)]
+		public RID_DEVICE_INFO_KEYBOARD keyboard;
+		[FieldOffset(8)]
+		public RID_DEVICE_INFO_HID hid;
+	} // struct RID_DEVICE_INFO
+
+	#endregion
+
+	#region -- struct RID_DEVICE_INFO_MOUSE -------------------------------------------
+
+	//[StructLayout(LayoutKind.Sequential)]
+	//internal struct RID_DEVICE_INFO_MOUSE
+	//{
+	//	public int dwId;
+	//	public int dwNumberOfButtons;
+	//	public int dwSampleRate;
+	//	public bool fHasHorizontalWheel;
+	//} // struct RID_DEVICE_INFO_MOUSE
+
+	#endregion
+
+	#region -- struct RID_DEVICE_INFO_KEYBOARD ----------------------------------------
+
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct RID_DEVICE_INFO_KEYBOARD
+	{
+		public int dwType;
+		public int dwSubType;
+		public int dwKeyboardMode;
+		public int dwNumberOfFunctionKeys;
+		public int dwNumberOfIndicators;
+		public int dwNumberOfKeysTotal;
+	} // struct RID_DEVICE_INFO_KEYBOARD
+
+	#endregion
+
+	#region -- struct RID_DEVICE_INFO_HID ---------------------------------------------
+
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct RID_DEVICE_INFO_HID
+	{
+		public int dwVendorId;
+		public int dwProductId;
+		public int dwVersionNumber;
+		public ushort usUsagePage;
+		public ushort usUsage;
+	} // struct RID_DEVICE_INFO_HID
+
+	#endregion
+
 	#region -- class NativeMethods ----------------------------------------------------
 
 	internal static partial class NativeMethods
@@ -91,8 +163,10 @@ namespace TecWare.PPSn
 		public const uint KLF_NOTELLSHELL = 0x00000080;
 
 		public const uint RIDI_DEVICENAME = 0x20000007;
+		public const uint RIDI_DEVICEINFO = 0x2000000B;
 		public const uint RID_INPUT = 0x10000003;
 		public const uint RIM_TYPEKEYBOARD = 1;
+		public const uint RIM_TYPEHID = 2;
 
 		[DllImport(user32, SetLastError = true)]
 		public extern static bool RegisterRawInputDevices(RAWINPUTDEVICE[] pRawInputDevice, int iNumDevices, int cbSize);
@@ -101,7 +175,7 @@ namespace TecWare.PPSn
 		[DllImport(user32)]
 		public static extern int GetRawInputDeviceList(IntPtr pRawInputDeviceList, ref uint dwNumDevices, uint dwSize);
 		[DllImport(user32)]
-		public static extern uint GetRawInputDeviceInfo(IntPtr hDevice, uint dwCommand, IntPtr pData, ref uint dataSize);
+		public static extern int GetRawInputDeviceInfo(IntPtr hDevice, uint dwCommand, IntPtr pData, ref uint dataSize);
 		[return: MarshalAs(UnmanagedType.Bool)]
 		[DllImport(user32, SetLastError = true)]
 		public extern static bool DefRawInputProc(IntPtr paRawInput, uint dwInput, int cbSizeHeader);
@@ -116,7 +190,7 @@ namespace TecWare.PPSn
 
 		[DllImport(user32)]
 		public static extern IntPtr GetKeyboardLayout(uint idThread);
-		[DllImport(user32)]
+		[DllImport(user32, CharSet = CharSet.Auto)]
 		public static extern IntPtr LoadKeyboardLayout(string pwszKLID, uint Flags);
 		[DllImport(user32)]
 		public static extern bool UnloadKeyboardLayout(IntPtr hkl);
