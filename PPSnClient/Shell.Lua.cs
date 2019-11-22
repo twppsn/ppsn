@@ -156,7 +156,8 @@ namespace TecWare.PPSn
 			}
 		} // dtor
 
-		void IDisposable.Dispose()
+		/// <summary></summary>
+		public void Dispose()
 			=> Await();
 
 		private void DisposeContext()

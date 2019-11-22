@@ -3010,17 +3010,24 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlDataFilterVisitor -----------------------------------------
 
-		private sealed class SqlDataFilterVisitor : PpsDataFilterVisitorSql
+		/// <summary></summary>
+		protected class SqlDataFilterVisitor : PpsDataFilterVisitorSql
 		{
 			private readonly Func<string, string> lookupNative;
 			private readonly SqlColumnFinder columnLookup;
 
+			/// <summary></summary>
+			/// <param name="lookupNative"></param>
+			/// <param name="columnLookup"></param>
 			public SqlDataFilterVisitor(Func<string, string> lookupNative, SqlColumnFinder columnLookup)
 			{
 				this.lookupNative = lookupNative;
 				this.columnLookup = columnLookup;
 			} // ctor
 
+			/// <summary></summary>
+			/// <param name="columnToken"></param>
+			/// <returns></returns>
 			protected override Tuple<string, Type> LookupColumn(string columnToken)
 			{
 				var column = columnLookup.Find(columnToken);
@@ -3030,6 +3037,9 @@ namespace TecWare.PPSn.Server.Sql
 				return new Tuple<string, Type>(column.Expression, column.DataType);
 			} // func LookupColumn
 
+			/// <summary></summary>
+			/// <param name="key"></param>
+			/// <returns></returns>
 			protected override string LookupNativeExpression(string key)
 			{
 				var expr = lookupNative(key);
@@ -3107,7 +3117,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="lookupNative"></param>
 		/// <param name="columnLookup"></param>
 		/// <returns></returns>
-		protected static string FormatWhereExpression(PpsDataFilterExpression whereCondition, Func<string, string> lookupNative, SqlColumnFinder columnLookup)
+		protected virtual string FormatWhereExpression(PpsDataFilterExpression whereCondition, Func<string, string> lookupNative, SqlColumnFinder columnLookup)
 			=> new SqlDataFilterVisitor(lookupNative, columnLookup).CreateFilter(whereCondition);
 
 		/// <summary></summary>

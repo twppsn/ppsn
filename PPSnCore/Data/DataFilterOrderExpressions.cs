@@ -2092,7 +2092,7 @@ namespace TecWare.PPSn.Data
 				case PpsDataFilterCompareValueType.Number:
 					return CreateCompareFilterNumber(expression.Operand, expression.Operator, ((PpsDataFilterCompareNumberValue)expression.Value).Text);
 				case PpsDataFilterCompareValueType.Integer:
-					return CreateCompareFilterText(expression.Operand, expression.Operator, ((PpsDataFilterCompareIntegerValue)expression.Value).Value.ChangeType<string>());
+					return CreateCompareFilterInteger(expression.Operand, expression.Operator, ((PpsDataFilterCompareIntegerValue)expression.Value).Value);
 				case PpsDataFilterCompareValueType.Null:
 					return CreateCompareFilterNull(expression.Operand, expression.Operator);
 				default:
@@ -2141,7 +2141,7 @@ namespace TecWare.PPSn.Data
 			var column = LookupColumn(columnToken);
 			if (column == null)
 				return CreateColumnErrorFilter(columnToken);
-			var parseableValue = String.Empty;
+			string parseableValue;
 			try
 			{
 				parseableValue = CreateParsableValue(text, column.Item2);
@@ -2282,7 +2282,9 @@ namespace TecWare.PPSn.Data
 				case nameof(Char):
 					return String.IsNullOrEmpty(text) ? "char(0)" : "'" + text[0] + "'";
 				case nameof(DateTime):
-					return "'" + DateTime.Parse(text).ToString("yyyy-MM-dd HH:mm:ss") + "'";
+					return CreateDateString(DateTime.Parse(text));
+				case nameof(DateTimeOffset):
+					return CreateDateString(DateTimeOffset.Parse(text).LocalDateTime);
 				case nameof(String):
 					var sb = new StringBuilder(text.Length + 2);
 					var pos = 0;

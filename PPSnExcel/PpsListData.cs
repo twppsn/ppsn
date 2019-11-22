@@ -116,6 +116,7 @@ namespace PPSnExcel
 			{ typeof(decimal), "decimal" },
 			// todo: Check functionality. Try to find better type match.
 			{ typeof(DateTime), "dateTime" },
+			{ typeof(DateTimeOffset), "dateTime" },
 			// todo: Check functionality. Try to find better type match.
 			{ typeof(char), "string" },
 			{ typeof(string), "string" },

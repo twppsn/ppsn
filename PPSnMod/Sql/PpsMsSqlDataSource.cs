@@ -1080,6 +1080,9 @@ namespace TecWare.PPSn.Server.Sql
 
 					// dispose connection
 					masterConnection.Dispose();
+
+					databaseMainThread.Dispose();
+					sysPassword.Dispose();
 				}
 			}
 			finally
@@ -1359,6 +1362,29 @@ namespace TecWare.PPSn.Server.Sql
 		#endregion
 
 		#region -- View Management ----------------------------------------------------
+
+		#region -- class MsSqlDataFilterVisitor ---------------------------------------
+
+		private sealed class MsSqlDataFilterVisitor : SqlDataFilterVisitor
+		{
+			public MsSqlDataFilterVisitor(Func<string, string> lookupNative, SqlColumnFinder columnLookup) 
+				: base(lookupNative, columnLookup)
+			{
+			} // ctor
+
+			protected override string CreateDateString(DateTime value)
+				=> "convert(datetime, '" + value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss") + "', 126)";
+		} // class MsSqlDataFilterVisitor
+
+		#endregion
+
+		/// <summary></summary>
+		/// <param name="whereCondition"></param>
+		/// <param name="lookupNative"></param>
+		/// <param name="columnLookup"></param>
+		/// <returns></returns>
+		protected override string FormatWhereExpression(PpsDataFilterExpression whereCondition, Func<string, string> lookupNative, SqlColumnFinder columnLookup)
+			=> new MsSqlDataFilterVisitor(lookupNative, columnLookup).CreateFilter(whereCondition);
 
 		/// <summary></summary>
 		/// <param name="connection"></param>
