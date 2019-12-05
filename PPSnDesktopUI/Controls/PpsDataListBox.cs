@@ -94,8 +94,12 @@ namespace TecWare.PPSn.Controls
 			if (!e.Handled)
 			{
 				var defaultCommand = GetDefaultCommand();
-				if (defaultCommand != null && defaultCommand.Execute(this))
-					e.Handled = true;
+				if (defaultCommand != null)
+				{
+					defaultCommand.CommandParameter = DataContext;
+					if (defaultCommand.Execute(this))
+						e.Handled = true;
+				}
 			}
 			base.OnMouseDoubleClick(e);
 		} // proc OnMouseDoubleClick
