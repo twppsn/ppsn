@@ -1794,7 +1794,9 @@ namespace TecWare.PPSn.Server.Sql
 					if (parameterMappings.Count > 0 && args == null)
 						throw new ArgumentNullException(nameof(args), "Arguments are missing.");
 
-					command.Transaction = ((PpsSqlDataTransaction<DBCONNECTION, DBTRANSACTION, DBCOMMAND>)Transaction).DbTransaction;
+					// update transaction
+					if (!noTransaction)
+						command.Transaction = ((PpsSqlDataTransaction<DBCONNECTION, DBTRANSACTION, DBCOMMAND>)Transaction).DbTransaction;
 
 					// fill arguments
 					foreach (var p in parameterMappings)

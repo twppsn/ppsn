@@ -120,7 +120,7 @@ namespace TecWare.PPSn.Server
 		private Task initializationProcess = null;        // initialization process
 		private bool isInitializedSuccessful = false;     // is the system initialized properly
 
-		private List<InitializationTask> initializationTasks = new List<InitializationTask>(); // Action that should be done in the initialization process
+		private readonly List<InitializationTask> initializationTasks = new List<InitializationTask>(); // Action that should be done in the initialization process
 
 		private PpsReportEngine reporting = null;
 		private readonly PpsServerReportProvider reportProvider;
@@ -203,8 +203,9 @@ namespace TecWare.PPSn.Server
 				UpdateInitializationState("Shuting down");
 
 				DoneUser();
-				
+
 				initializationProgress.Dispose();
+				clientApplicationInfos.Dispose();
 			}
 			finally
 			{

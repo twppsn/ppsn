@@ -733,10 +733,18 @@ namespace TecWare.PPSn.UI
 
 		private static bool TryExtractDeviceId(IntPtr hDevice, out string deviceId)
 		{
-			var pStr = Marshal.AllocHGlobal(1024);
+			var strSize = 0u;
+			if (GetRawInputDeviceInfo(hDevice, RIDI_DEVICENAME, IntPtr.Zero, ref strSize) < 0)
+				throw new Win32Exception();
+			if (strSize == 0)
+			{
+				deviceId = null;
+				return false;
+			}
+
+			var pStr = Marshal.AllocHGlobal((int)strSize);
 			try
 			{
-				var strSize = 1024u;
 				if (GetRawInputDeviceInfo(hDevice, RIDI_DEVICENAME, pStr, ref strSize) < 0)
 				{
 					deviceId = null;

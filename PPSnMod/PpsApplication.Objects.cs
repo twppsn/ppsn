@@ -1847,8 +1847,8 @@ namespace TecWare.PPSn.Server
 				// create and register transaction
 				trans = await user.CreateTransactionAsync(dataSource, true);
 
-				scope.RegisterCommitAction(new Action(trans.Commit));
-				scope.RegisterRollbackAction(new Action(trans.Rollback));
+				scope.RegisterCommitAction(new Action(trans.Commit), true);
+				scope.RegisterRollbackAction(new Action(trans.Rollback), true);
 				scope.RegisterDispose(trans);
 
 				scope.SetGlobal(this, dataSource, trans);
