@@ -622,9 +622,9 @@ namespace TecWare.PPSn.Server.Sql
 		} // ctor
 
 		/// <summary>Initialize server logins view</summary>
-		protected override void InitializeSchemaCore()
+		protected override void RefreshSchemaCore(IPpsSqlSchemaUpdate log)
 		{
-			base.InitializeSchemaCore();
+			base.RefreshSchemaCore(log);
 
 			// Register Server logins
 			Application.RegisterView(CreateSelectorTokenFromResourceAsync("dbo.serverLogins", typeof(PpsSqlExDataSource), "tsql.ServerLogins.sql").AwaitTask());

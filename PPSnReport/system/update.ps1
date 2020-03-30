@@ -46,7 +46,7 @@ Add-Type -AssemblyName "System.IO.Compression.FileSystem, Version=4.0.0.0, Cultu
 
 
 if ([String]::IsNullOrEmpty($version)) {
-	$version = "3.2.0";
+	$version = "3.8.0";
 }
 
 # target directory for speedata
@@ -55,7 +55,7 @@ if ([String]::IsNullOrEmpty($targetDirectory)) {
 }
 
 # download source
-[string] $name = "speedata-publisher-windows-amd64-$($version).zip";
+[string] $name = "speedata-publisher-windows-386-$($version).zip";
 [string] $baseUri = "https://download.speedata.de/dl/$($name)"
 [string] $tempDestination = Join-Path ([System.IO.Path]::GetTempPath()) $name;
 

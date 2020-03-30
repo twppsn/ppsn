@@ -269,12 +269,32 @@ namespace TecWare.PPSn.Server
 						}
 						else
 						{
-							// start all tasks parallel
-							var currentTasks = new Task[count];
+							// start all tasks as batch parallel
+							var currentTasks = new Task[100];
+							var filled = 0;
 							for (var j = startAt; j < i; j++)
-								currentTasks[j - startAt] = initializationTasks[j].Task();
+							{
+								var t = initializationTasks[j].Task();
+								if (t.IsCompleted)
+									t.Wait();
+								else
+								{
+									currentTasks[filled++] = t;
+									if (filled == currentTasks.Length)
+									{
+										Task.WaitAll(currentTasks);
+										filled = 0;
+									}
+								}
+							}
 
-							Task.WaitAll(currentTasks);
+							// run last batch
+							if (filled > 0)
+							{
+								while (filled < currentTasks.Length)
+									currentTasks[filled++] = Task.CompletedTask;
+								Task.WaitAll(currentTasks);
+							}
 						}
 					}
 

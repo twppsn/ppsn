@@ -35,6 +35,36 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
 {
+	#region -- interface IPpsSqlSchemaUpdate ------------------------------------------
+
+	/// <summary>Add schema information.</summary>
+	public interface IPpsSqlSchemaUpdate
+	{
+		/// <summary>Add a table.</summary>
+		/// <param name="tableInfo"></param>
+		void AddTable(PpsSqlTableInfo tableInfo);
+		/// <summary>Add a column.</summary>
+		/// <param name="columnInfo"></param>
+		void AddColumn(PpsSqlColumnInfo columnInfo);
+		/// <summary>Add a relation.</summary>
+		/// <param name="relationInfo"></param>
+		void AddRelation(PpsSqlRelationInfo relationInfo);
+		/// <summary>Add a column.</summary>
+		/// <param name="procedureInfo"></param>
+		void AddProcedure(PpsSqlProcedureInfo procedureInfo);
+
+		/// <summary>Write a parse failure.</summary>
+		/// <param name="objectName"></param>
+		/// <param name="objectId"></param>
+		/// <param name="e"></param>
+		void Failed(string objectName, object objectId, Exception e);
+
+		/// <summary>Log scope for the schema update.</summary>
+		LogMessageScopeProxy Log { get; }
+	} // interface IPpsSqlSchemaUpdate
+
+	#endregion
+
 	#region -- class PpsSqlColumnInfo -------------------------------------------------
 
 	/// <summary>Column information</summary>
@@ -82,7 +112,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="isNullable"></param>
 		/// <param name="isIdentity"></param>
 		/// <param name="isPrimaryKey"></param>
-		public PpsSqlColumnInfo(PpsSqlTableInfo table, string columnName, Type dataType, int maxLength, byte precision, byte scale, bool isNullable, bool isIdentity, bool isPrimaryKey)
+		protected PpsSqlColumnInfo(PpsSqlTableInfo table, string columnName, Type dataType, int maxLength, byte precision, byte scale, bool isNullable, bool isIdentity, bool isPrimaryKey)
 			: base(null, columnName, dataType)
 		{
 			this.table = table ?? throw new ArgumentNullException(nameof(table));
@@ -296,7 +326,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary></summary>
 		/// <param name="schemaName"></param>
 		/// <param name="tableName"></param>
-		public PpsSqlTableInfo(string schemaName, string tableName)
+		protected PpsSqlTableInfo(string schemaName, string tableName)
 		{
 			this.schemaName = schemaName ?? throw new ArgumentNullException(nameof(schemaName));
 			this.tableName = tableName ?? throw new ArgumentNullException(nameof(tableName));
@@ -361,7 +391,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary>Qualified name within the server.</summary>
 		public string QualifiedName => schemaName + "." + tableName;
 
-		/// <summary></summary>
+		/// <summary>Has this table only one primary key.</summary>
 		public bool IsSinglePrimaryKey => isSinglePrimaryKey;
 		/// <summary>Get primary key of this table.</summary>
 		public PpsSqlColumnInfo PrimaryKey => isSinglePrimaryKey ? primaryKey : null;
@@ -372,7 +402,6 @@ namespace TecWare.PPSn.Server.Sql
 		public IEnumerable<PpsSqlColumnInfo> Columns => columns;
 		/// <summary>Relations of this table.</summary>
 		public IEnumerable<PpsSqlRelationInfo> RelationInfo => relations;
-
 
 		IReadOnlyList<IPpsColumnDescription> IPpsSqlTableOrView.Columns => columns;
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columns;
@@ -394,7 +423,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="name"></param>
 		/// <param name="parentColumn"></param>
 		/// <param name="referencedColumn"></param>
-		public PpsSqlRelationInfo(string name, PpsSqlColumnInfo parentColumn, PpsSqlColumnInfo referencedColumn)
+		protected PpsSqlRelationInfo(string name, PpsSqlColumnInfo parentColumn, PpsSqlColumnInfo referencedColumn)
 		{
 			this.name = name;
 			this.parentColumn = parentColumn;
@@ -427,9 +456,9 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="name"></param>
 		/// <param name="direction"></param>
 		/// <param name="hasDefault"></param>
-		public PpsSqlParameterInfo(string name, ParameterDirection direction, bool hasDefault)
+		protected PpsSqlParameterInfo(string name, ParameterDirection direction, bool hasDefault)
 		{
-			this.name = name;
+			this.name = name ?? throw new ArgumentNullException(nameof(name));
 			this.direction = direction;
 			this.hasDefault = hasDefault;
 		} // ctor
@@ -469,7 +498,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary></summary>
 		/// <param name="schemaName"></param>
 		/// <param name="procedureName"></param>
-		public PpsSqlProcedureInfo(string schemaName, string procedureName)
+		protected PpsSqlProcedureInfo(string schemaName, string procedureName)
 		{
 			this.schemaName = schemaName;
 			this.procedureName = procedureName;
@@ -2366,7 +2395,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- PrepareSql -----------------------------------------------------
 
-			private static Regex regExSqlParameter = new Regex(@"\@(\w+)", RegexOptions.Compiled);
+			private static readonly Regex regExSqlParameter = new Regex(@"\@(\w+)", RegexOptions.Compiled);
 
 			/// <summary>Get a table info from an object.</summary>
 			/// <param name="tableInfo"></param>
@@ -2539,9 +2568,93 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class InitializeScope ----------------------------------------------
+
+		private sealed class InitializeScope : IPpsSqlSchemaUpdate, IDisposable
+		{
+			private readonly PpsSqlDataSource parent;
+			private readonly LogMessageScopeProxy log;
+			
+			private int tableCounter = 0;
+			private int columnCounter = 0;
+			private int relationCounter = 0;
+			private int procedureCounter = 0;
+
+			public InitializeScope(PpsSqlDataSource parent, bool refreshMode)
+			{
+				this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+
+				if (parent.initializeScope != null)
+					throw new InvalidOperationException("Database schema operation active.");
+				parent.initializeScope = this;
+
+				Monitor.Enter(parent.schemaInfoInitialized);
+
+				log = parent.Log.CreateScope(LogMsgType.Information, stopTime: true);
+				log.WriteLine(refreshMode
+					? "Initialize Database Schema '{0}'."
+					: "Refresh Database Schema '{0}'.",
+					parent.Name
+				);
+			} // ctor
+
+			public void Dispose()
+			{
+				if (log.Typ != LogMsgType.Error)
+				{
+					log.NewLine();
+					log.WriteLine("Tables:     {0,-12:N0}", tableCounter);
+					log.WriteLine("Columns:    {0,-12:N0}", columnCounter);
+					log.WriteLine("Relations:  {0,-12:N0}", relationCounter);
+					log.WriteLine("Procedures: {0,-12:N0}", procedureCounter);
+				}
+				log.Dispose();
+
+				Monitor.Exit(parent.schemaInfoInitialized);
+				parent.initializeScope = null;
+			} // proc Dispose
+
+			public void AddTable(PpsSqlTableInfo table)
+			{
+				parent.tables[table.QualifiedName] = table;
+				tableCounter++;
+			} // proc AddTable
+
+			public void AddColumn(PpsSqlColumnInfo column)
+			{
+				parent.columns[column.TableColumnName] = column;
+				column.Table.AddColumn(column);
+				columnCounter++;
+			} // proc AddColumn
+
+			public void AddProcedure(PpsSqlProcedureInfo procedure)
+			{
+				parent.procedures[procedure.QualifiedName] = procedure;
+				procedureCounter++;
+			} // proc AddProcedure
+
+			public void AddRelation(PpsSqlRelationInfo relation)
+			{
+				relation.ParentColumn.Table.AddRelation(relation);
+				relationCounter++;
+				//relation.ReferencedColumn.Table.AddRelation(relation);
+			} // proc AddRelation
+
+			public void Failed(string objectName, object objectId, Exception e)
+			{
+				log.WriteLine("  Failed to add {0} ({1}): {2}", objectName, objectId, e.Message);
+				log.SetType(LogMsgType.Warning);
+			} // proc Failed
+
+			public LogMessageScopeProxy Log => log;
+		} // class InitializeScope
+
+		#endregion
+
 		private readonly ManualResetEventSlim schemaInfoInitialized = new ManualResetEventSlim(false);
 		private bool isSchemaInfoFailed = false;
 		private string lastReadedConnectionString = String.Empty;
+		private InitializeScope initializeScope = null;
 
 		private readonly Dictionary<string, PpsSqlTableInfo> tables = new Dictionary<string, PpsSqlTableInfo>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, PpsSqlColumnInfo> columns = new Dictionary<string, PpsSqlColumnInfo>(StringComparer.OrdinalIgnoreCase);
@@ -2552,9 +2665,10 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary></summary>
 		/// <param name="sp"></param>
 		/// <param name="name"></param>
-		public PpsSqlDataSource(IServiceProvider sp, string name)
+		protected PpsSqlDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
+			PublishItem(new DEConfigItemPublicAction("refreshSchema") { DisplayName = "Refresh database schema." });
 		} // ctor
 
 		/// <summary></summary>
@@ -2657,22 +2771,23 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- Schema Initialization ----------------------------------------------
 
+		/// <summary>Core code to read schema.</summary>
+		protected abstract void RefreshSchemaCore(IPpsSqlSchemaUpdate log);
+
 		/// <summary>Initialize schema</summary>
 		protected void InitializeSchema()
 		{
-			lock (schemaInfoInitialized)
+			using (var scope = new InitializeScope(this, false))
 			{
-				if (schemaInfoInitialized.IsSet)
-					throw new InvalidOperationException("Schema is already loaded.");
-
 				try
 				{
-					// load schema
-					InitializeSchemaCore();
+					// refresh schema
+					RefreshSchemaCore(scope);
 				}
 				catch (Exception e)
 				{
-					Log.Except("Schema initialization failed.", e);
+					scope.Log.NewLine();
+					scope.Log.WriteException(e);
 					isSchemaInfoFailed = true;
 				}
 				finally
@@ -2683,8 +2798,25 @@ namespace TecWare.PPSn.Server.Sql
 			}
 		} // proc InitializeSchema
 
-		/// <summary>Core code to read schema.</summary>
-		protected abstract void InitializeSchemaCore();
+		/// <summary>Reread schema information</summary>
+		[DEConfigHttpAction("refreshSchema", IsSafeCall = true, SecurityToken = SecuritySys)]
+		[LuaMember]
+		public void RefreshSchema()
+		{
+			using (var scope = new InitializeScope(this, true))
+			{
+				try
+				{
+					RefreshSchemaCore(scope);
+				}
+				catch (Exception e)
+				{
+					scope.Log.NewLine();
+					scope.Log.WriteException(e);
+					isSchemaInfoFailed = true;
+				}
+			}
+		} // proc RefreshSchema
 
 		/// <summary>Is schema readed.</summary>
 		public bool IsSchemaInitialized => schemaInfoInitialized.IsSet && !isSchemaInfoFailed;
@@ -2697,7 +2829,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="resourceName"></param>
 		/// <param name="type"></param>
 		/// <returns></returns>
-		protected string GetResourceScript(Type type, string resourceName)
+		protected static string GetResourceScript(Type type, string resourceName)
 		{
 			using (var src = type.Assembly.GetManifestResourceStream(type, resourceName))
 			{
@@ -2713,32 +2845,6 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- Schema Management --------------------------------------------------
 
-		/// <summary>Add this table to schema</summary>
-		/// <param name="table"></param>
-		protected void AddTable(PpsSqlTableInfo table)
-			=> tables.Add(table.QualifiedName, table);
-
-		/// <summary>Add colum to schema</summary>
-		/// <param name="column"></param>
-		protected void AddColumn(PpsSqlColumnInfo column)
-		{
-			columns[column.TableColumnName] = column;
-			column.Table.AddColumn(column);
-		} // proc AddColumn
-
-		/// <summary>Add this procedure to schema.</summary>
-		/// <param name="procedure"></param>
-		protected void AddProcedure(PpsSqlProcedureInfo procedure)
-			=> procedures.Add(procedure.QualifiedName, procedure);
-
-		/// <summary>Add relations to the tables.</summary>
-		/// <param name="relation"></param>
-		protected void AddRelation(PpsSqlRelationInfo relation)
-		{
-			relation.ParentColumn.Table.AddRelation(relation);
-			//relation.ReferencedColumn.Table.AddRelation(relation);
-		} // proc AddRelation
-
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="name"></param>
@@ -2746,9 +2852,14 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		protected T ResolveTableByName<T>(string name, bool throwException = false)
 			where T : PpsSqlTableInfo
-			=> tables.TryGetValue(name, out var tableInfo)
-				? (T)tableInfo
-				: (throwException ? throw new ArgumentNullException("name", $"Table '{name}' is not defined.") : (T)null);
+		{
+			lock (schemaInfoInitialized)
+			{
+				return tables.TryGetValue(name, out var tableInfo)
+				  ? (T)tableInfo
+				  : (throwException ? throw new ArgumentNullException(nameof(name), $"Table '{name}' is not defined.") : (T)null);
+			}
+		} // func ResolveTableByName
 
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
@@ -2757,9 +2868,14 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		protected T ResolveProcedureByName<T>(string name, bool throwException = false)
 			where T : PpsSqlProcedureInfo
-			=> procedures.TryGetValue(name, out var procedureInfo)
+		{
+			lock (schemaInfoInitialized)
+			{
+				return procedures.TryGetValue(name, out var procedureInfo)
 				? (T)procedureInfo
-				: (throwException ? throw new ArgumentNullException("name", $"Procedure '{name}' is not defined.") : (T)null);
+				: (throwException ? throw new ArgumentNullException(nameof(name), $"Procedure '{name}' is not defined.") : (T)null);
+			}
+		} // func ResolveProcedureByName
 
 		/// <summary>Full qualified column name.</summary>
 		/// <param name="columnName"></param>
@@ -2767,12 +2883,15 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		public override IPpsColumnDescription GetColumnDescription(string columnName, bool throwException)
 		{
-			if (columns.TryGetValue(columnName, out var column))
-				return column;
-			else if (throwException)
-				throw new ArgumentException($"Could not resolve column {columnName} to source {Name}.", columnName);
-			else
-				return null;
+			lock (schemaInfoInitialized)
+			{
+				if (columns.TryGetValue(columnName, out var column))
+					return column;
+				else if (throwException)
+					throw new ArgumentException($"Could not resolve column {columnName} to source {Name}.", columnName);
+				else
+					return null;
+			}
 		} // func GetColumnDescription
 
 		/// <summary></summary>

@@ -983,7 +983,10 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					case SqlDbType.NVarChar:
 					case SqlDbType.VarBinary:
+					case SqlDbType.Binary:
 					case SqlDbType.VarChar:
+					case SqlDbType.NChar:
+					case SqlDbType.Char:
 						p.Size = maxLength;
 						break;
 					case SqlDbType.Decimal:
@@ -1133,7 +1136,7 @@ namespace TecWare.PPSn.Server.Sql
 		} // func ResolveTableColumnById
 
 		/// <summary>Read database schema</summary>
-		protected override void InitializeSchemaCore()
+		protected override void RefreshSchemaCore(IPpsSqlSchemaUpdate scope)
 		{
 			using (UseMasterConnection(out var connection))
 			using (var cmd = ((SqlConnection)connection).CreateCommand())
@@ -1152,12 +1155,12 @@ namespace TecWare.PPSn.Server.Sql
 						try
 						{
 							var tab = new SqlTableInfo(r);
-							AddTable(tab);
+							scope.AddTable(tab);
 							tableIndex[objectId] = tab;
 						}
 						catch (Exception e)
 						{
-							Log.Except($"Table initialization failed: objectId={objectId}", e);
+							scope.Failed("table", objectId, e);
 						}
 					}
 
@@ -1170,11 +1173,11 @@ namespace TecWare.PPSn.Server.Sql
 						try
 						{
 							if (tableIndex.TryGetValue(r.GetInt32(0), out var table))
-								AddColumn(new SqlColumnInfo(table, r));
+								scope.AddColumn(new SqlColumnInfo(table, r));
 						}
 						catch (Exception e)
 						{
-							Log.Except($"Column initialization failed: {r.GetValue(2)}", e);
+							scope.Failed("column", r.GetValue(2), e);
 						}
 					}
 
@@ -1190,7 +1193,7 @@ namespace TecWare.PPSn.Server.Sql
 							var parentColumn = ResolveTableColumnById(parentTableInfo, r.GetInt32(3));
 							var referencedColumn = ResolveTableColumnById(referencedTableInfo, r.GetInt32(5));
 
-							AddRelation(new SqlRelationInfo(r.GetString(1), parentColumn, referencedColumn));
+							scope.AddRelation(new SqlRelationInfo(r.GetString(1), parentColumn, referencedColumn));
 						}
 					}
 
@@ -1205,12 +1208,12 @@ namespace TecWare.PPSn.Server.Sql
 						try
 						{
 							var tab = new SqlProcedureInfo(r);
-							AddProcedure(tab);
+							scope.AddProcedure(tab);
 							procedureIndex[objectId] = tab;
 						}
 						catch (Exception e)
 						{
-							Log.Except($"Procedure initialization failed: objectId={objectId}", e);
+							scope.Failed("procedure", objectId, e);
 						}
 					}
 
