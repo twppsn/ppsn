@@ -1181,7 +1181,7 @@ namespace TecWare.PPSn.Server
 			var datasetDeclarationList = new List<DependencyElement>();
 
 			// register views, columns, ...
-			// we add or overide elements, but there is no deletion -> reboot
+			// we add or override elements, but there is no deletion -> reboot
 			foreach (var xRegister in config.ConfigNew.Elements(xnRegister))
 			{
 				// evaluate the source, that is connected to the objects
@@ -1267,6 +1267,43 @@ namespace TecWare.PPSn.Server
 				datasetDefinitions.Add(datasetDefinition.Name, datasetDefinition);
 		} // void RegisterDataSet
 
+		private (PpsDataSource source, XElement xConfig) GetSingleConfigurationElement(XName cls, string name)
+		{
+			foreach(var xRegister in Config.Elements(xnRegister))
+			{
+				foreach(var xConfig in xRegister.Elements(cls))
+				{
+					if (String.Compare(xConfig.GetAttribute("name",String.Empty), name, StringComparison.OrdinalIgnoreCase) == 0)
+						return (GetDataSource(xRegister.GetAttribute("source", null)), xConfig);
+				}
+			}
+			return (null, null);
+		} // func GetSingleConfigurationElement
+
+		/// <summary>Refresh a view from configuration.</summary>
+		/// <param name="name"></param>
+		[DEConfigHttpAction("refreshView", IsSafeCall = true, SecurityToken = SecuritySys)]
+		[LuaMember]
+		public void RefreshView(string name)
+			=> RefreshViewAsync(name).AwaitTask();
+
+		/// <summary>Refresh a view from configuration.</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public async Task RefreshViewAsync(string name)
+		{
+			if (String.IsNullOrEmpty(name))
+				throw new ArgumentNullException(nameof(name));
+
+			var (source, xConfig) = GetSingleConfigurationElement(xnView, name);
+			if (source == null)
+				throw new ArgumentOutOfRangeException(nameof(name), name, "View not found in configuration.");
+
+			var view = await new PpsViewDescriptionInit(source, name, xConfig).InitializeAsync();
+			lock (viewController)
+				viewController[view.Name] = view;
+		} // proc RefreshViewAsync
+
 		#endregion
 
 		/// <summary>Find a data source by name.</summary>
@@ -1276,6 +1313,9 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public PpsDataSource GetDataSource(string name, bool throwException = true)
 		{
+			if (name == null)
+				throw new ArgumentNullException(nameof(name));
+
 			using (EnterReadLock())
 				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
 					?? (throwException ? throw new ArgumentOutOfRangeException(nameof(name), name, $"Data source is not defined ('{name}').") : (PpsDataSource)null);
