@@ -114,8 +114,12 @@ namespace TecWare.PPSn.Server.Wpf
 			return xColumn;
 		} // func CreateColumnInfo
 
+		/// <summary>Return information for a view.</summary>
+		/// <param name="v"></param>
+		/// <param name="a"></param>
+		/// <returns></returns>
 		[DEConfigHttpAction("tableinfo", IsSafeCall = true)]
-		private XElement HttpViewInfoAction(string v, string a)
+		public XElement HttpViewInfoAction(string v, string a)
 		{
 			var xReturn = new XElement("return");
 

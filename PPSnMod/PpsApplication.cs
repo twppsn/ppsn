@@ -189,6 +189,8 @@ namespace TecWare.PPSn.Server
 			BeginEndConfigurationUser(config);
 
 			lastConfigurationTimeStamp = config.LastWrite;
+
+			databaseLibrary.ClearCache();
 			
 			// restart main thread
 			initializationProcess = Task.Run(new Action(InitializeApplication));

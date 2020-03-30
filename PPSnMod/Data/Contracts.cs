@@ -372,6 +372,13 @@ namespace TecWare.PPSn.Server.Data
 		Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException = true);
 
 		/// <summary>Creates a selector for a view.</summary>
+		/// <param name="selectorToken"></param>
+		/// <param name="alias"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		Task<PpsDataSelector> CreateSelectorAsync(IPpsSelectorToken selectorToken, string alias = null, bool throwException = true);
+
+		/// <summary>Creates a selector for a view.</summary>
 		/// <param name="select">Name of the view</param>
 		/// <param name="columns">Column definition.</param>
 		/// <param name="filter">Filter rules</param>

@@ -1816,11 +1816,19 @@ namespace TecWare.PPSn.Server
 		public sealed class PpsDatabaseLibrary : LuaTable
 		{
 			private readonly PpsApplication application;
+			private readonly Dictionary<string, object> memberCache = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
 			internal PpsDatabaseLibrary(PpsApplication application)
 			{
 				this.application = application;
 			} // ctor
+
+			/// <summary>Clear dynamic member cache</summary>
+			public void ClearCache()
+			{
+				lock (memberCache)
+					memberCache.Clear();
+			} // proc ClearCache
 
 			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
 			/// <param name="name">Name of the database</param>
@@ -1881,8 +1889,7 @@ namespace TecWare.PPSn.Server
 			/// <param name="order"></param>
 			/// <returns></returns>
 			public Task<PpsDataSelector> CreateSelectorAsync(string select, string columns, string filter, string order)
-				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
-					.CreateSelectorAsync(select, columns, filter, order, true);
+				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true).CreateSelectorAsync(select, columns, filter, order, true);
 
 			/// <summary>Create a selector database views.</summary>
 			/// <param name="select"></param>
@@ -1891,15 +1898,20 @@ namespace TecWare.PPSn.Server
 			/// <param name="order"></param>
 			/// <returns></returns>
 			public Task<PpsDataSelector> CreateSelectorAsync(string select, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
-				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
-					.CreateSelectorAsync(select, columns, filter, order, true);
+				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true).CreateSelectorAsync(select, columns, filter, order, true);
 
 			/// <summary>Create a selector database views.</summary>
 			/// <param name="table"></param>
 			/// <returns></returns>
 			public Task<PpsDataSelector> CreateSelectorAsync(LuaTable table)
-				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
-					.CreateSelectorAsync(table, true);
+				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true).CreateSelectorAsync(table, true);
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="select"></param>
+			/// <returns></returns>
+			[LuaMember]
+			public PpsDataSelector CreateSelector(string select)
+				=> CreateSelectorAsync(select, (PpsDataColumnExpression[])null, null, null).AwaitTask();
 
 			/// <summary>Create a selector database views.</summary>
 			/// <param name="select"></param>
@@ -1917,6 +1929,55 @@ namespace TecWare.PPSn.Server
 			[LuaMember]
 			public PpsDataSelector CreateSelector(LuaTable table)
 				=> CreateSelectorAsync(table).AwaitTask();
+
+			private object GetMemberCacheItem(string memberName)
+			{
+				lock (memberCache)
+				{
+					if (memberCache.TryGetValue(memberName, out var cacheItem))
+						return cacheItem;
+					else
+					{
+						var dataSource = application.GetDataSource(memberName, false);
+						if (dataSource != null)
+						{
+							memberCache[memberName] = dataSource;
+							return dataSource;
+						}
+
+						var viewInfo = application.GetViewDefinition(memberName);
+						if (viewInfo != null)
+						{
+							memberCache[memberName] = viewInfo;
+							return viewInfo;
+						}
+
+						memberCache[memberName] = null;
+						return null;
+					}
+				}
+			} // func GetMemberCacheItem
+
+			/// <summary>Add virtual keys</summary>
+			/// <param name="key"></param>
+			/// <returns></returns>
+			protected override object OnIndex(object key)
+			{
+				if (key is string memberName)
+				{
+					switch (GetMemberCacheItem(memberName))
+					{
+						case PpsDataSource dataSource:
+							return GetDatabaseAsync(dataSource).AwaitTask();
+						case PpsViewDescription view:
+							return DEScope.GetScopeService<IPpsPrivateDataContext>(true).CreateSelectorAsync(view.SelectorToken).AwaitTask();
+						default:
+							return base.OnIndex(key);
+					}
+				}
+				else
+					return base.OnIndex(key);
+			} // func OnIndex
 
 			/// <summary>Get a global transaction to the main database.</summary>
 			[LuaMember]

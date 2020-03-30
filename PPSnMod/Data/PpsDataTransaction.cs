@@ -57,8 +57,11 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary></summary>
 		public void Dispose()
-			=> Dispose(true);
-		
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		} // proc Dispose
+
 		/// <summary></summary>
 		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
@@ -194,13 +197,16 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="connection"></param>
 		public PpsDataTransaction(PpsDataSource dataSource, IPpsConnectionHandle connection)
 		{
-			this.dataSource = dataSource;
-			this.connection = connection;
+			this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+			this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
 		} // ctor
 
 		/// <summary>Close transaction.</summary>
 		public void Dispose()
-			=> Dispose(true);
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		} // proc Dispose
 
 		/// <summary>Close transaction and rollback, if no commit is called.</summary>
 		/// <param name="disposing"></param>
@@ -237,7 +243,7 @@ namespace TecWare.PPSn.Server.Data
 
 		#region -- Prepare/Execute ----------------------------------------------------
 
-		/// <summary></summary>
+		/// <summary>Prepare a database statement.</summary>
 		/// <param name="parameter"></param>
 		/// <param name="firstArgs"></param>
 		/// <returns></returns>

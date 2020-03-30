@@ -1959,21 +1959,21 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- CreateCommand --------------------------------------------------
 
-			/// <summary></summary>
+			/// <summary>Get schema information for a stored procedure.</summary>
 			/// <param name="procedureName"></param>
 			/// <param name="throwException"></param>
 			/// <returns></returns>
 			public PpsSqlProcedureInfo FindProcedure(string procedureName, bool throwException = true)
 				=> ((PpsSqlDataSource)DataSource).ResolveProcedureByName<PpsSqlProcedureInfo>(procedureName, throwException);
 
-			/// <summary></summary>
+			/// <summary>Get schema information for a table.</summary>
 			/// <param name="tableName"></param>
 			/// <param name="throwException"></param>
 			/// <returns></returns>
 			public PpsSqlTableInfo FindTable(string tableName, bool throwException = true)
 				=> ((PpsSqlDataSource)DataSource).ResolveTableByName<PpsSqlTableInfo>(tableName, throwException);
 
-			/// <summary>Create a command</summary>
+			/// <summary>Create a native command object.</summary>
 			/// <param name="commandType"></param>
 			/// <param name="noTransaction"></param>
 			/// <returns></returns>
@@ -1986,7 +1986,7 @@ namespace TecWare.PPSn.Server.Sql
 				return cmd;
 			} // func CreateCommand
 
-			/// <summary></summary>
+			/// <summary>Create a prepared command object.</summary>
 			/// <param name="commandType"></param>
 			/// <param name="parameter"></param>
 			/// <returns></returns>

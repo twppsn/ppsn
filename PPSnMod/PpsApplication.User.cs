@@ -446,15 +446,14 @@ namespace TecWare.PPSn.Server
 					if (!openConnections.TryGetValue(dataSource, out var connectionHandle))
 					{
 						connectionHandle = context.EnsureConnectionAsync(dataSource, throwException).Result;
-						openConnections.Add(dataSource, connectionHandle);
-
 						if (connectionHandle == null)
 						{
 							if (throwException)
-								throw new ArgumentException(); // todo;
+								throw new ArgumentNullException("No connection handle returned.");
 							else
 								return null;
 						}
+						openConnections.Add(dataSource, connectionHandle);
 					}
 
 					// create the selector
@@ -491,7 +490,26 @@ namespace TecWare.PPSn.Server
 
 				return c != null && await c.EnsureConnectionAsync(throwException) ? c : null;
 			} // func EnsureConnection
-	
+
+			/// <summary>Create a selector from a view description.</summary>
+			/// <param name="selectorToken"></param>
+			/// <param name="alias"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public async Task<PpsDataSelector> CreateSelectorAsync(IPpsSelectorToken selectorToken, string alias = null, bool throwException = true)
+			{
+				// ensure the connection
+				var connectionHandle = await EnsureConnectionAsync(selectorToken.DataSource, throwException);
+				if (connectionHandle == null)
+				{
+					if (throwException)
+						throw new ArgumentNullException("No connection handle returned.");
+					else
+						return null;
+				}
+				return selectorToken.CreateSelector(connectionHandle, alias, throwException);
+			} // func CreateSelectorAsync
+
 			/// <summary>Create a selector from a select information.</summary>
 			/// <param name="select"></param>
 			/// <param name="columns"></param>

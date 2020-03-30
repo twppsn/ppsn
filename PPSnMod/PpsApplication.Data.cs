@@ -1153,6 +1153,7 @@ namespace TecWare.PPSn.Server
 		private PpsSqlExDataSource mainDataSource;
 		private long viewsVersion;
 		private readonly Dictionary<string, PpsFieldDescription> fieldDescription = new Dictionary<string, PpsFieldDescription>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, PpsViewDescription> viewAliases = new Dictionary<string, PpsViewDescription>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, PpsViewDescription> viewController = new Dictionary<string, PpsViewDescription>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, PpsDataSetServerDefinition> datasetDefinitions = new Dictionary<string, PpsDataSetServerDefinition>(StringComparer.OrdinalIgnoreCase);
 
@@ -1257,7 +1258,26 @@ namespace TecWare.PPSn.Server
 				throw new ArgumentNullException(nameof(view));
 
 			lock (viewController)
-				viewController[view.Name] = view;
+			{
+				var name = view.Name;
+				viewController[name] = view;
+
+				var p = name.LastIndexOf('.');
+				if (p >= 0)
+				{
+					var aliasName = name.Substring(p + 1);
+					if (!String.IsNullOrEmpty(aliasName))
+					{
+						if (viewAliases.TryGetValue(aliasName, out var desc))
+						{
+							if (desc.Name != view.Name)
+								viewAliases[aliasName] = null; // multiple views!
+						}
+						else
+							viewAliases[aliasName] = view;
+					}
+				}
+			}
 		} // func RegisterView
 
 		private void RegisterDataSet(PpsDataSource source, string name, XElement x)
@@ -1300,8 +1320,7 @@ namespace TecWare.PPSn.Server
 				throw new ArgumentOutOfRangeException(nameof(name), name, "View not found in configuration.");
 
 			var view = await new PpsViewDescriptionInit(source, name, xConfig).InitializeAsync();
-			lock (viewController)
-				viewController[view.Name] = view;
+			RegisterView(view);
 		} // proc RefreshViewAsync
 
 		#endregion
@@ -1340,6 +1359,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="name"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
+		/// <remarks>The view can created view the user context.</remarks>
 		[LuaMember]
 		public PpsViewDescription GetViewDefinition(string name, bool throwException = true)
 		{
@@ -1347,15 +1367,31 @@ namespace TecWare.PPSn.Server
 			{
 				if (viewController.TryGetValue(name, out var viewInfo))
 					return viewInfo;
-				else if (throwException)
-					throw new ArgumentOutOfRangeException(nameof(name), $"View definition is not defined ('{name}').");
+				else if (viewAliases.TryGetValue(name, out viewInfo)) // check for alias
+				{
+					if (viewInfo == null) // multiple views
+					{
+						if (throwException)
+							throw new ArgumentException(nameof(name), $"View alias '{name}' has multiple definitions.");
+						else
+							return null;
+					}
+					else
+						return viewInfo;
+				}
 				else
-					return null;
+				{
+					if (throwException)
+						throw new ArgumentOutOfRangeException(nameof(name), $"View definition is not defined ('{name}').");
+					else
+						return null;
+				}
 			}
 		} // func GetViewDefinition
 
 		/// <summary>Enumerate all registered view definitions.</summary>
 		/// <returns></returns>
+		[LuaMember]
 		public IEnumerable<PpsViewDescription> GetViewDefinitions()
 		{
 			lock (viewController)
