@@ -25,7 +25,7 @@ namespace TecWare.PPSn.Server.Data
 	#region -- class PpsDataSource ----------------------------------------------------
 
 	/// <summary>Abstract class for a data source configuration item.</summary>
-	public abstract class PpsDataSource : DEConfigItem
+	public abstract class PpsDataSource : DEConfigLogItem
 	{
 		/// <summary></summary>
 		/// <param name="sp"></param>

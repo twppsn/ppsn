@@ -433,7 +433,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		private PpsDataSetServerDefinition masterDataSetDefinition;
 		private ParsedXamlFile defaultTheme = null;
-		private List<PpsWpfApplicationFileItem> scriptAddedFiles = new List<PpsWpfApplicationFileItem>();
+		private readonly List<PpsWpfApplicationFileItem> scriptAddedFiles = new List<PpsWpfApplicationFileItem>();
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 

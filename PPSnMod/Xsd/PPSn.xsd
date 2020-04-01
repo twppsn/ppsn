@@ -10,7 +10,7 @@
 
 	<xs:complexType name="dataSourceType">
 		<xs:complexContent>
-			<xs:extension base="ConfigItemType">
+			<xs:extension base="ConfigLogItemType">
 			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>

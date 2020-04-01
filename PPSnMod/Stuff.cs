@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.IO;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -124,14 +125,60 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- Sql-Helper -----------------------------------------------------------
+		#region -- Sql-Helper ---------------------------------------------------------
+
+		#region -- class DataRecordValueStream ----------------------------------------
 		
+		// ist nur sinnvoll für Long binary, Image
+		// todo: Verallgemeinerung?
+		private sealed class DataRecordValueStream : Stream
+		{
+			private readonly IDataRecord r;
+			private readonly int columnIndex;
+			private long dataOffset = 0;
+
+			public DataRecordValueStream(IDataRecord r, int columnIndex)
+			{
+				this.r = r ?? throw new ArgumentNullException(nameof(r));
+				this.columnIndex = columnIndex;
+			} // ctor
+
+			public override void Flush() { }
+
+			public override int Read(byte[] buffer, int offset, int count)
+			{
+				var readed = (int)r.GetBytes(columnIndex, dataOffset, buffer, offset, count);
+				dataOffset += readed;
+				return readed;
+			} // func Read
+
+			public override long Seek(long offset, SeekOrigin origin)
+				=> throw new NotSupportedException();
+
+			public override void SetLength(long value)
+				=> throw new NotSupportedException();
+
+			public override void Write(byte[] buffer, int offset, int count)
+				=> throw new NotSupportedException();
+
+			public override bool CanRead => true;
+			public override bool CanWrite => false;
+			public override bool CanSeek => false;
+
+			public override long Position { get => dataOffset; set => throw new NotSupportedException(); }
+			public override long Length => throw new NotSupportedException();
+		} // class DataRecordValueStream
+
+		#endregion
+
+		#region -- class PropertyReadOnlyDictionaryRecord -----------------------------
+
 		private sealed class PropertyReadOnlyDictionaryRecord : IPropertyReadOnlyDictionary
 		{
 			private readonly IDataRecord record;
 
 			public PropertyReadOnlyDictionaryRecord(IDataRecord record)
-				=> this.record = record;
+				=> this.record = record ?? throw new ArgumentNullException(nameof(record));
 
 			public bool TryGetProperty(string name, out object value)
 			{
@@ -147,6 +194,8 @@ namespace TecWare.PPSn.Server
 				return false;
 			} // func TryGetProperty
 		} // class PropertyReadOnlyDictionaryRecord
+
+		#endregion
 
 		/// <summary>Execute the command and raise a exception with the command text included.</summary>
 		/// <param name="command"></param>
@@ -264,6 +313,13 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public static Type GetDataType(this DbParameter param)
 			=> GetDataTypeFromDbType(param.DbType);
+
+		/// <summary>Return a byte stream from a value.</summary>
+		/// <param name="r"></param>
+		/// <param name="columnIndex"></param>
+		/// <returns></returns>
+		public static Stream GetValueStream(this IDataRecord r, int columnIndex)
+			=> new DataRecordValueStream(r, columnIndex);
 
 		#endregion
 

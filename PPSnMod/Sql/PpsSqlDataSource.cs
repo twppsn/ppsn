@@ -16,9 +16,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -556,6 +558,9 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary>Base class for sql-based datasources.</summary>
 	public abstract class PpsSqlDataSource : PpsDataSource
 	{
+		/// <summary></summary>
+		public const string SchemaCategory = "Schema";
+
 		#region -- class SqlDataResultColumnDescription -------------------------------
 
 		private sealed class SqlDataResultColumnDescription : PpsColumnDescription
@@ -1893,8 +1898,9 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				// create a connection for the transaction
 				this.connection = (DBCONNECTION)((IPpsSqlConnectionHandle)connection).ForkConnection();
+
 				// create the sql transaction
-				this.transaction = CreateTransaction();
+				transaction = CreateTransaction();
 			} // ctor
 
 			/// <summary></summary>
@@ -2651,6 +2657,265 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class SchemaListController -----------------------------------------
+
+		private abstract class SchemaListController : IDEListController
+		{
+			private readonly PpsSqlDataSource parent;
+
+			public SchemaListController(PpsSqlDataSource parent)
+			{
+				this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+
+				parent.RegisterList(Id, this, true);
+			} // ctor
+
+			public void Dispose()
+			{
+				parent.UnregisterList(this);
+			} // proc Dispose
+
+			public void OnBeforeList() { }
+
+			public IDisposable EnterReadLock()
+			{
+				Monitor.Enter(parent.schemaInfoInitialized);
+				return new DisposableScope(() => Monitor.Exit(parent.schemaInfoInitialized));
+			} // proc EnterReadLock
+			
+			public IDisposable EnterWriteLock() 
+				=> throw new NotSupportedException();
+
+			public abstract string Id { get; }
+			public abstract string DisplayName { get; }
+			public abstract IDEListDescriptor Descriptor { get; }
+			public abstract IEnumerable List { get; }
+
+			public string SecurityToken => SecuritySys;
+
+			protected PpsSqlDataSource Parent => parent;
+		} // class SchemaListController
+
+		#endregion
+
+		#region -- class TablesListDescriptor -----------------------------------------
+
+		private sealed class TablesListDescriptor : IDEListDescriptor
+		{
+			private TablesListDescriptor() { }
+
+			public void WriteType(DEListTypeWriter xml)
+			{
+				xml.WriteStartType("column");
+				xml.WriteProperty("@name", typeof(string));
+				ColumnsListDescriptor.WriteColumnType(xml);
+				xml.WriteEndType();
+
+				xml.WriteStartType("table");
+				xml.WriteProperty("@schema", typeof(string));
+				xml.WriteProperty("@name", typeof(string));
+				xml.WriteProperty("@primaryKey", typeof(string));
+				xml.WriteProperty("columns", "column[]");
+				xml.WriteEndType();
+			} // proc WriteType
+
+			public void WriteItem(DEListItemWriter xml, object item)
+			{
+				var table = (PpsSqlTableInfo)item;
+
+				xml.WriteStartProperty("table");
+
+				xml.WriteAttributeProperty("schema", table.SchemaName);
+				xml.WriteAttributeProperty("name", table.TableName);
+
+				xml.WriteAttributeProperty("primaryKey", table.IsSinglePrimaryKey
+					? table.PrimaryKey?.Name
+					: String.Join(",", table.PrimaryKeys.Select(c=>c.Name))
+				);
+
+				xml.WriteStartProperty("columns");
+				foreach (var column in table.Columns)
+				{
+					xml.WriteStartProperty("column");
+					xml.WriteAttributeProperty("name", column.Name);
+					ColumnsListDescriptor.WriteColumnItem(xml, column);
+					xml.WriteEndProperty();
+				}
+				xml.WriteEndProperty();
+
+				xml.WriteEndProperty();
+			} // proc WriteItem
+
+			public static IDEListDescriptor Instance { get; } = new TablesListDescriptor();
+		} // class TablesListDescriptor
+
+		#endregion
+
+		#region -- class TablesListController -----------------------------------------
+
+		private sealed class TablesListController : SchemaListController
+		{
+			public TablesListController(PpsSqlDataSource parent)
+				: base(parent)
+			{
+			} // ctor
+
+			public override string Id => "tw_ppsn_tables";
+			public override string DisplayName => "Tables";
+
+			public override IDEListDescriptor Descriptor => TablesListDescriptor.Instance;
+
+			public override IEnumerable List => Parent.tables.Values;
+		} // class TablesListController
+
+		#endregion
+
+		#region -- class ColumnsListDescriptor ----------------------------------------
+
+		private sealed class ColumnsListDescriptor : IDEListDescriptor
+		{
+			private ColumnsListDescriptor() { }
+
+			public void WriteType(DEListTypeWriter xml)
+			{
+				xml.WriteStartType("column");
+				xml.WriteProperty("@name", typeof(string));
+				WriteColumnType(xml);
+				xml.WriteEndType();
+			} // proc WriteType
+
+			public void WriteItem(DEListItemWriter xml, object item)
+			{
+				var column = (PpsSqlColumnInfo)item;
+
+				xml.WriteStartProperty("column");
+				xml.WriteAttributeProperty("name", column.TableColumnName);
+				WriteColumnItem(xml, column);
+				xml.WriteEndProperty();
+			} // proc WriteItem
+
+			internal static void WriteColumnType(DEListTypeWriter xml)
+			{
+				xml.WriteProperty("@type", typeof(string));
+				xml.WriteProperty("@nullable", typeof(bool));
+				xml.WriteProperty("@isPrimaryKey", typeof(bool));
+				xml.WriteProperty("@isIdentity", typeof(bool));
+			} // proc WriteColumnType
+
+			internal static void WriteColumnItem(DEListItemWriter xml, PpsSqlColumnInfo column)
+			{
+				var dataType = column.DataType;
+				var typeName = dataType.Name;
+
+				if (dataType == typeof(string))
+					typeName += $"(" + (column.MaxLength == Int32.MaxValue ? "max" : column.MaxLength.ToString()) + ")";
+				else if (dataType == typeof(decimal))
+					typeName += $"({column.Scale},{column.Precision})";
+
+				xml.WriteAttributeProperty("type", typeName);
+				xml.WriteAttributeProperty("nullable", column.IsPrimaryKey);
+				xml.WriteAttributeProperty("isPrimaryKey", column.IsPrimaryKey);
+				xml.WriteAttributeProperty("isIdentity", column.IsIdentity);
+			} // proc WriteColumnItem
+
+			public static IDEListDescriptor Instance { get; } = new ColumnsListDescriptor();
+		} // class ColumnsListDescriptor
+
+		#endregion
+
+		#region -- class ColumnsListController ----------------------------------------
+
+		private sealed class ColumnsListController : SchemaListController
+		{
+			public ColumnsListController(PpsSqlDataSource parent)
+				: base(parent)
+			{
+			} // ctor
+
+			public override string Id => "tw_ppsn_columns";
+			public override string DisplayName => "Columns";
+
+			public override IDEListDescriptor Descriptor => ColumnsListDescriptor.Instance;
+
+			public override IEnumerable List => Parent.columns.Values;
+		} // class ColumnsListController
+
+		#endregion
+
+		#region -- class ProceduresListDescriptor -------------------------------------
+
+		private sealed class ProceduresListDescriptor : IDEListDescriptor
+		{
+			private ProceduresListDescriptor() { }
+
+			public void WriteType(DEListTypeWriter xml)
+			{
+				xml.WriteStartType("parm");
+				xml.WriteProperty("@name", typeof(string));
+				xml.WriteProperty("@direction", typeof(string));
+				xml.WriteProperty("@hasDefault", typeof(bool));
+				xml.WriteEndType();
+
+				xml.WriteStartType("procedure");
+				xml.WriteProperty("@schema", typeof(string));
+				xml.WriteProperty("@name", typeof(string));
+				xml.WriteProperty("@hasOutput", typeof(bool));
+				xml.WriteProperty("@hasResult", typeof(bool));
+				xml.WriteProperty("@hasReturnValue", typeof(bool));
+				xml.WriteEndType();
+			} // proc WriteType
+
+			public void WriteItem(DEListItemWriter xml, object item)
+			{
+				var procedure = (PpsSqlProcedureInfo)item;
+
+				xml.WriteStartProperty("procedure");
+				xml.WriteAttributeProperty("schema", procedure.SchemaName);
+				xml.WriteAttributeProperty("name", procedure.ProcedureName);
+
+				xml.WriteAttributeProperty("hasOutput", procedure.HasOutput);
+				xml.WriteAttributeProperty("hasResult", procedure.HasResult);
+				xml.WriteAttributeProperty("hasReturnValue", procedure.HasReturnValue);
+
+				xml.WriteStartProperty("parms");
+
+				foreach (var p in procedure.Parameters)
+				{
+					xml.WriteStartProperty("parm");
+					xml.WriteAttributeProperty("name", p.Name);
+					xml.WriteAttributeProperty("direction", p.Direction.ToString());
+					xml.WriteAttributeProperty("hasDefault", p.HasDefault);
+					xml.WriteEndProperty();
+				}
+
+				xml.WriteEndProperty();
+				xml.WriteEndProperty();
+			} // proc WriteItem
+
+			public static IDEListDescriptor Instance { get; } = new ProceduresListDescriptor();
+		} // class ProceduresListDescriptor
+
+		#endregion
+
+		#region -- class ProceduresListController -------------------------------------
+
+		private sealed class ProceduresListController : SchemaListController
+		{
+			public ProceduresListController(PpsSqlDataSource parent)
+				: base(parent)
+			{
+			} // ctor
+
+			public override string Id => "tw_ppsn_procedures";
+			public override string DisplayName => "Procedures";
+
+			public override IDEListDescriptor Descriptor => ProceduresListDescriptor.Instance;
+
+			public override IEnumerable List => Parent.procedures.Values;
+		} // class ProceduresListController
+
+		#endregion
+
 		private readonly ManualResetEventSlim schemaInfoInitialized = new ManualResetEventSlim(false);
 		private bool isSchemaInfoFailed = false;
 		private string lastReadedConnectionString = String.Empty;
@@ -2660,6 +2925,14 @@ namespace TecWare.PPSn.Server.Sql
 		private readonly Dictionary<string, PpsSqlColumnInfo> columns = new Dictionary<string, PpsSqlColumnInfo>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, PpsSqlProcedureInfo> procedures = new Dictionary<string, PpsSqlProcedureInfo>(StringComparer.OrdinalIgnoreCase);
 
+		private readonly IDEListController tablesListController;
+		private readonly IDEListController columnsListController; 
+		private readonly IDEListController proceduresListController;
+
+		private readonly SimpleConfigItemProperty<int> tableCountProperty;
+		private readonly SimpleConfigItemProperty<int> columnCountProperty;
+		private readonly SimpleConfigItemProperty<int> procedureCountProperty;
+
 		#region -- Ctor/Dtor/Config ---------------------------------------------------
 
 		/// <summary></summary>
@@ -2668,7 +2941,15 @@ namespace TecWare.PPSn.Server.Sql
 		protected PpsSqlDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
+			tableCountProperty = RegisterProperty("tw_ppsn_tablecount", "TableCount", SchemaCategory, "Number of tables.", "N0", 0);
+			columnCountProperty = RegisterProperty("tw_ppsn_columncount", "ColumnCount", SchemaCategory, "Number of columns.", "N0", 0);
+			procedureCountProperty = RegisterProperty("tw_ppsn_proccount", "ProcedureCount", SchemaCategory, "Number of procedures/functions.", "N0", 0);
+
 			PublishItem(new DEConfigItemPublicAction("refreshSchema") { DisplayName = "Refresh database schema." });
+
+			tablesListController = new TablesListController(this);
+			columnsListController = new ColumnsListController(this);
+			proceduresListController = new ProceduresListController(this);
 		} // ctor
 
 		/// <summary></summary>
@@ -2679,6 +2960,14 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				CloseMasterConnection();
 				schemaInfoInitialized?.Dispose();
+
+				tablesListController?.Dispose();
+				columnsListController?.Dispose();
+				proceduresListController?.Dispose();
+
+				tableCountProperty?.Dispose();
+				columnCountProperty?.Dispose();
+				procedureCountProperty?.Dispose();
 			}
 			finally
 			{
@@ -2774,6 +3063,16 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary>Core code to read schema.</summary>
 		protected abstract void RefreshSchemaCore(IPpsSqlSchemaUpdate log);
 
+		private void RefreshSchemaIntern(IPpsSqlSchemaUpdate scope)
+		{
+			// refresh schema
+			RefreshSchemaCore(scope);
+
+			tableCountProperty.Value = tables.Count;
+			columnCountProperty.Value = columns.Count;
+			procedureCountProperty.Value = procedures.Count;
+		} // proc RefreshSchemaIntern
+
 		/// <summary>Initialize schema</summary>
 		protected void InitializeSchema()
 		{
@@ -2781,8 +3080,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				try
 				{
-					// refresh schema
-					RefreshSchemaCore(scope);
+					RefreshSchemaIntern(scope);
 				}
 				catch (Exception e)
 				{
@@ -2794,6 +3092,7 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					// done
 					schemaInfoInitialized.Set();
+					OnPropertyChanged(nameof(IsSchemaInitialized));
 				}
 			}
 		} // proc InitializeSchema
@@ -2813,12 +3112,17 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					scope.Log.NewLine();
 					scope.Log.WriteException(e);
-					isSchemaInfoFailed = true;
 				}
 			}
 		} // proc RefreshSchema
 
 		/// <summary>Is schema readed.</summary>
+		[
+		PropertyName("tw_ppsn_init"),
+		DisplayName("Initialized"),
+		Description("Is the schema initialized."),
+		Category(SchemaCategory)
+		]
 		public bool IsSchemaInitialized => schemaInfoInitialized.IsSet && !isSchemaInfoFailed;
 
 		#endregion
@@ -2861,6 +3165,14 @@ namespace TecWare.PPSn.Server.Sql
 			}
 		} // func ResolveTableByName
 
+		/// <summary>Description of a single table.</summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsSqlTableInfo GetTableDescription(string name, bool throwException = false)
+			=> ResolveTableByName<PpsSqlTableInfo>(name, throwException);
+
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="name"></param>
@@ -2877,10 +3189,19 @@ namespace TecWare.PPSn.Server.Sql
 			}
 		} // func ResolveProcedureByName
 
+		/// <summary>Description of a single procedure.</summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsSqlProcedureInfo GetProcedureDescription(string name, bool throwException = false)
+			=> ResolveProcedureByName<PpsSqlProcedureInfo>(name, throwException);
+
 		/// <summary>Full qualified column name.</summary>
 		/// <param name="columnName"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
+		[LuaMember]
 		public override IPpsColumnDescription GetColumnDescription(string columnName, bool throwException)
 		{
 			lock (schemaInfoInitialized)
