@@ -206,19 +206,19 @@ namespace TecWare.PPSn.Server.Data
 	{
 		private readonly PpsApplication application;
 		private readonly IPpsConnectionHandle connection;
-		private readonly DateTime lastSynchronization;
+		private readonly bool leaveConnectionOpen;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Initialize the synchronization batch for the client.</summary>
 		/// <param name="application">Application instance.</param>
 		/// <param name="connection">Database connection.</param>
-		/// <param name="lastSynchronization">Last synchronization stamp from the client.</param>
-		public PpsDataSynchronization(PpsApplication application, IPpsConnectionHandle connection, DateTime lastSynchronization)
+		/// <param name="leaveConnectionOpen"></param>
+		public PpsDataSynchronization(PpsApplication application, IPpsConnectionHandle connection, bool leaveConnectionOpen)
 		{
 			this.application = application ?? throw new ArgumentNullException(nameof(application));
 			this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
-			this.lastSynchronization = lastSynchronization;
+			this.leaveConnectionOpen = leaveConnectionOpen;
 		} // ctor
 
 		/// <summary></summary>
@@ -238,8 +238,11 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
-			if (disposing)
-				connection.Dispose();
+			if(disposing)
+			{
+				if (!leaveConnectionOpen)
+					connection.Dispose();
+			}
 		} // proc Dispose
 
 		#endregion
@@ -346,12 +349,25 @@ namespace TecWare.PPSn.Server.Data
 				throw new FormatException("Synchronization token (only timestamp or full is allowed).");
 		} // proc GenerateBatch
 
+		/// <summary>Creates a selector with the synchronization batch.</summary>
+		/// <param name="tableName">Name of the synchronization table.</param>
+		/// <param name="lastSyncId">Last synchronization state.</param>
+		/// <returns></returns>
+		public virtual PpsDataSelector CreateSelector(string tableName, long lastSyncId)
+			=> throw new NotImplementedException();
+
+		/// <summary>Creates a selector with the raw changes of the table.</summary>
+		/// <param name="tableName">Name of the synchronization table.</param>
+		/// <param name="lastSyncId">Last synchronization state.</param>
+		/// <returns></returns>
+		public virtual IPpsDataSynchronizationBatch GetChanges(string tableName, long lastSyncId)
+			=> throw new NotImplementedException();
+
+
 		/// <summary>Access to Application</summary>
 		public PpsApplication Application => application;
 		/// <summary>Database connection</summary>
 		public IPpsConnectionHandle Connection => connection;
-		/// <summary>Global last synchronization stamp.</summary>
-		public DateTime LastSynchronization => lastSynchronization;
 	} // class PpsDataSynchronization
 
 	#endregion

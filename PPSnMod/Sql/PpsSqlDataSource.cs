@@ -488,7 +488,7 @@ namespace TecWare.PPSn.Server.Sql
 
 	#region -- class PpsSqlProcedureInfo ----------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Basic structur for procedure meta information.</summary>
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
 	public abstract class PpsSqlProcedureInfo
 	{
@@ -496,6 +496,7 @@ namespace TecWare.PPSn.Server.Sql
 		private readonly string procedureName;
 
 		private readonly List<PpsSqlParameterInfo> parameters = new List<PpsSqlParameterInfo>();
+		private readonly List<PpsSqlParameterInfo> result = new List<PpsSqlParameterInfo>();
 
 		/// <summary></summary>
 		/// <param name="schemaName"></param>
@@ -510,6 +511,11 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="parameterInfo"></param>
 		public virtual void AddParameter(PpsSqlParameterInfo parameterInfo)
 			=> parameters.Add(parameterInfo);
+
+		/// <summary></summary>
+		/// <param name="resultInfo"></param>
+		public virtual void AddResult(PpsSqlParameterInfo resultInfo)
+			=> result.Add(resultInfo);
 
 		private string DebuggerDisplay
 			=> $"ProcedureInfo: {QualifiedName} ({ (String.Join(", ", from p in parameters select p.ToString())) })";
@@ -528,12 +534,18 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary>Has this procedure an return value.</summary>
 		public virtual bool HasReturnValue => parameters[0].Direction == ParameterDirection.ReturnValue;
 		/// <summary>Has this procedure a result.</summary>
-		public abstract bool HasResult { get; }
+		public virtual bool HasResult => result.Count > 0;
 
-		/// <summary>Parameter information of this table.</summary>
-		public IEnumerable<PpsSqlParameterInfo> Parameters => parameters;
+		/// <summary>Return parameter for an function.</summary>
+		public PpsSqlParameterInfo ReturnValue => parameters[0].Direction == ParameterDirection.ReturnValue ? parameters[0] : null;
 		/// <summary>Number of arguments</summary>
 		public int ParameterCount => parameters.Count;
+		/// <summary>Parameter information of this table.</summary>
+		public IEnumerable<PpsSqlParameterInfo> Parameters => parameters;
+		/// <summary>Number columns in the result.</summary>
+		public int ResultCount => result.Count;
+		/// <summary>Result columns</summary>
+		public IEnumerable<PpsSqlParameterInfo> Result => result;
 	} // class PpsSqlProcedureInfo
 
 	#endregion
@@ -950,9 +962,11 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="column"></param>
 			/// <returns></returns>
 			public static string GetColumnExpression(PpsTableExpression table, IPpsColumnDescription column)
-				=> String.IsNullOrEmpty(table.Alias)
-					? table.Table.QualifiedName + ".[" + column.Name + "]"
-					: table.Alias + ".[" + column.Name + "]";
+			{
+				return String.IsNullOrEmpty(table.Alias)
+					  ? table.Table.QualifiedName + ".[" + column.Name + "]"
+					  : table.Alias + ".[" + column.Name + "]";
+			} // func GetColumnExpression
 
 			/// <summary>Create automatic on statement.</summary>
 			/// <param name="left"></param>
@@ -969,7 +983,6 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						if (r.ReferencedColumn.Table == leftTable)
 						{
-							var sb = new StringBuilder();
 							returnStatements.Add(new PpsDataJoinStatement(
 								GetColumnExpression(left, r.ReferencedColumn),
 								GetColumnExpression(right, r.ParentColumn)
@@ -1110,7 +1123,7 @@ namespace TecWare.PPSn.Server.Sql
 		#region -- class PpsSqlDataSelector -------------------------------------------
 
 		/// <summary></summary>
-		private sealed class PpsSqlDataSelector : PpsDataSelector
+		protected sealed class PpsSqlDataSelector : PpsDataSelector
 		{
 			#region -- class SelectColumn ---------------------------------------------
 
@@ -1275,9 +1288,9 @@ namespace TecWare.PPSn.Server.Sql
 			public PpsSqlDataSelector(IPpsSqlConnectionHandle connection, IPpsSqlTableOrView viewOrTable, string tableAlias)
 				: base(connection, GetAliasColumns(viewOrTable, tableAlias).ToArray())
 			{
-				this.from = new PpsSqlJoinExpression((PpsSqlDataSource)connection.DataSource, viewOrTable, tableAlias);
-				this.whereCondition = WhereConditionStore.Empty;
-				this.orderBy = OrderByStore.Empty;
+				from = new PpsSqlJoinExpression((PpsSqlDataSource)connection.DataSource, viewOrTable, tableAlias);
+				whereCondition = WhereConditionStore.Empty;
+				orderBy = OrderByStore.Empty;
 			} // ctor
 
 			/// <summary></summary>
@@ -1310,6 +1323,10 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // func GetAliasColumns
 
+			/// <summary></summary>
+			/// <param name="col"></param>
+			/// <param name="aliasColumn"></param>
+			/// <returns></returns>
 			protected override AliasColumn CreateColumnAliasFromExisting(PpsDataColumnExpression col, AliasColumn aliasColumn)
 			{
 				if (aliasColumn is SelectColumn selectColumn)
@@ -1323,20 +1340,32 @@ namespace TecWare.PPSn.Server.Sql
 					throw new InvalidOperationException("Wrong type.");
 			} // func CreateColumnAliasFromExisting
 
+			/// <summary></summary>
+			/// <param name="col"></param>
+			/// <returns></returns>
 			protected override AliasColumn CreateColumnAliasFromNative(PpsDataColumnExpression col)
 			{
 				var (table, nativeColumn) = from.FindNativeColumn(col.Name, false);
 				if (nativeColumn == null)
 					return null;
 
+				// todo: var a = ((PpsSqlDataSource)DataSource).GetProcedureDescription("", false);
+				
 				return new SelectColumn(FormatColumnExpression(table.Alias, nativeColumn.Name), nativeColumn, col.HasAlias ? col.Alias : col.Name);
 			} // func CreateColumnAliasFromNative
 
+			/// <summary></summary>
+			/// <param name="columns"></param>
+			/// <returns></returns>
 			protected override PpsDataSelector ApplyColumnsCore(AliasColumn[] columns)
 				=> new PpsSqlDataSelector(SqlConnection, columns, from, whereCondition, orderBy);
 
 			#endregion
 
+			/// <summary></summary>
+			/// <param name="expression"></param>
+			/// <param name="lookupNative"></param>
+			/// <returns></returns>
 			public sealed override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, new WhereConditionStore(whereCondition, expression, lookupNative), orderBy);
 
@@ -1348,12 +1377,22 @@ namespace TecWare.PPSn.Server.Sql
 				);
 			} // func CreateWhereExpressionStore
 
+			/// <summary></summary>
+			/// <param name="expression"></param>
+			/// <returns></returns>
 			public PpsDataSelector ApplyNativeFilter(string expression)
 				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, CreateWhereExpressionStore(whereCondition, expression), orderBy);
 
+			/// <summary></summary>
+			/// <param name="columnName"></param>
+			/// <returns></returns>
 			public sealed override bool IsOrderDesc(string columnName)
 				=> orderBy.IsOrderDesc(columnName);
 
+			/// <summary></summary>
+			/// <param name="expressions"></param>
+			/// <param name="lookupNative"></param>
+			/// <returns></returns>
 			public sealed override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, whereCondition, new OrderByStore(orderBy, expressions, lookupNative));
 
@@ -1365,9 +1404,17 @@ namespace TecWare.PPSn.Server.Sql
 				);
 			} // func CreateOrderExpressionStore
 
+			/// <summary></summary>
+			/// <param name="expression"></param>
+			/// <returns></returns>
 			public PpsDataSelector ApplyNativeOrder(string expression)
 				=> new PpsSqlDataSelector(SqlConnection, AliasColumns, from, whereCondition, CreateOrderExpressionStore(orderBy, expression));
 
+			/// <summary></summary>
+			/// <param name="selector"></param>
+			/// <param name="joinType"></param>
+			/// <param name="statements"></param>
+			/// <returns></returns>
 			public sealed override PpsDataSelector ApplyJoin(PpsDataSelector selector, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
 			{
 				return selector is PpsSqlDataSelector tableOrView
@@ -1375,6 +1422,12 @@ namespace TecWare.PPSn.Server.Sql
 					: base.ApplyJoin(selector, joinType, statements);
 			} // func ApplyJoin
 
+			/// <summary></summary>
+			/// <param name="sqlSelector"></param>
+			/// <param name="aliasName"></param>
+			/// <param name="joinType"></param>
+			/// <param name="statements"></param>
+			/// <returns></returns>
 			public PpsDataSelector ApplyJoin(PpsSqlDataSelector sqlSelector, string aliasName, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
 			{
 				if (sqlSelector.DataSource != DataSource) // teste datasource
@@ -1388,12 +1441,16 @@ namespace TecWare.PPSn.Server.Sql
 				);
 			} // func ApplyJoin
 
+			/// <summary></summary>
+			/// <param name="start"></param>
+			/// <param name="count"></param>
+			/// <returns></returns>
 			protected sealed override IEnumerator<IDataRow> GetEnumeratorCore(int start, int count)
 				=> new DbRowEnumerator(((PpsSqlDataSource)DataSource).CreateViewCommand(SqlConnection, Columns, from, whereCondition.Expression, whereCondition.NativeLookup, orderBy.Expression, orderBy.NativeLookup, start, count));
 
 			/// <summary>Access sql connection handle.</summary>
 			private IPpsSqlConnectionHandle SqlConnection => (IPpsSqlConnectionHandle)Connection;
-		} // class SqlDataSelector
+		} // class PpsSqlDataSelector
 
 		#endregion
 

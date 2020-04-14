@@ -16,13 +16,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.Caching;
 using System.Xml;
 using System.Xml.Linq;
+using Markdig.Extensions.Tables;
+using Microsoft.Deployment.WindowsInstaller;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -415,7 +419,7 @@ namespace TecWare.PPSn.Server
 			else if (inheritedDefinitions != null)
 				return inheritedDefinitions.Select(d => d.GetColumnDescription<T>()).FirstOrDefault();
 			else
-				return default(T);
+				return default;
 		} // func GetColumnDescription
 
 		/// <summary>Defined in.</summary>
@@ -1581,7 +1585,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc ExportViewCore
 
-		/// <summary></summary>
+		/// <summary>Return a registered view.</summary>
 		/// <param name="r"></param>
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
 		public void HttpViewGetAction(IDEWebRequestScope r)
@@ -1611,6 +1615,261 @@ namespace TecWare.PPSn.Server
 				ExportViewCore(viewWriter, selector, startAt, count, ctx, attributeSelector);
 			}
 		} // func HttpViewGetAction
+
+		private Dictionary<string, long> ParseSyncGetParameters(IDEWebRequestScope r)
+		{
+			var syncIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+		
+			if (r.HasInputData) // complex sync structure
+			{
+				using (var xml = XmlReader.Create(r.GetInputTextReader(), Procs.XmlReaderSettings))
+				{
+					if (xml.MoveToContent() != XmlNodeType.Element)
+						throw new ArgumentException("Invalid content");
+
+					// get time stamp of last synchronization
+					var lastSyncTimeStamp = xml.GetAttribute("lastSyncTimeStamp", -1L); // utc time stamp
+					if (lastSyncTimeStamp > 0)
+						syncIds[String.Empty] = lastSyncTimeStamp;
+
+					// collect table based sync states
+					if (!xml.IsEmptyElement)
+					{
+						xml.Read();
+
+						while (xml.NodeType == XmlNodeType.Element)
+						{
+							if (xml.LocalName == "sync")
+							{
+								var table = xml.GetAttribute("table");
+								syncIds[table] = Int64.Parse(xml.GetAttribute("syncId"));
+								if (!xml.IsEmptyElement)
+									xml.Skip();
+								else
+									xml.Read();
+							}
+							else
+								xml.Skip();
+						}
+
+						xml.ReadEndElement();
+					}
+				}
+			}
+			else // sync info is encoded in the parameters (table=syncId)
+			{
+				// get time stamp of last synchronization
+				var lastSyncTimeStamp = r.GetProperty("_ls", -1L);
+				if(lastSyncTimeStamp > 0)
+					syncIds[String.Empty] = lastSyncTimeStamp;
+
+				foreach (var p in r.ParameterNames)
+				{
+					if (p.Length == 0 || p[0] == '_')
+						continue;
+
+					var state = r.GetProperty(p, -1L);
+					if (state >= 0)
+						syncIds[p] = state;
+				}
+			}
+
+			return syncIds;
+		} // proc ParseSyncGetParameters
+
+		private bool TryParseSyncInfo(string tableExpression, out PpsDataSource dataSource, out string tableName)
+		{
+			var p = tableExpression.IndexOf('/');
+			if (p >= 0) // dataSource/tableName
+			{
+				dataSource = GetDataSource(tableExpression.Substring(0, p), false);
+				tableName = tableExpression.Substring(p + 1);
+				return dataSource != null;
+			}
+			else // viewName
+			{
+				var view = GetViewDefinition(tableExpression, false);
+				if (view != null)
+				{
+					dataSource = view.SelectorToken.DataSource;
+					return view.Attributes.TryGetProperty("syncTable", out tableName);
+				}
+				else
+				{
+					dataSource = null;
+					tableName = null;
+					return false;
+				}
+			}
+		} // func TryParseSyncInfo
+
+		private void ExecuteSyncAction(IDEWebRequestScope r, LogMessageScopeProxy log, ref int openElements, XmlWriter xml, long globalLastSyncId, Dictionary<PpsDataSource, PpsDataSynchronization> sessions, string tableExpression, long lastSyncid)
+		{
+			log.Write($"{tableExpression} last={lastSyncid}");
+			using (log.Indent())
+			{
+				if (TryParseSyncInfo(tableExpression, out var dataSource, out var tableName))
+				{
+					if (!sessions.TryGetValue(dataSource, out var syncSession))
+					{
+						var connection = dataSource.CreateConnection(r.GetUser<IPpsPrivateDataContext>());
+						syncSession = dataSource.CreateSynchronizationSession(connection, globalLastSyncId, false);
+						sessions.Add(dataSource, syncSession);
+					}
+
+					using (var batch = syncSession.GetChanges(tableName, lastSyncid))
+					{
+						xml.WriteStartElement("table");
+						openElements++;
+
+						xml.WriteAttributeString("name", tableName);
+						xml.WriteAttributeString("expr", tableExpression);
+						
+						if (batch.IsFullSync)
+						{
+							xml.WriteStartElement("full");
+							openElements++;
+							xml.WriteAttributeString("id", batch.CurrentSyncId.ChangeType<string>());
+							xml.WriteEndElement();
+							openElements--;
+						}
+						else
+						{
+							var cn = (from i in Enumerable.Range(0, batch.Columns.Count) select "r" + (i + 1).ToString()).ToArray();
+
+							// emit columns
+							xml.WriteStartElement("columns");
+							openElements++;
+							for (var i = 0; i < cn.Length; i++)
+							{
+								xml.WriteStartElement(cn[i]);
+								openElements++;
+
+								var col = batch.Columns[i];
+								xml.WriteAttributeString("name", col.Name);
+								xml.WriteAttributeString("type", LuaType.GetType(col.DataType).AliasOrFullName);
+								if (i == 0)
+									xml.WriteAttributeString("isPrimary", "true");
+								xml.WriteEndElement();
+								openElements--;
+							}
+							xml.WriteEndElement();
+							openElements--;
+
+							// emit data
+							while (batch.MoveNext())
+							{
+								xml.WriteStartElement(batch.CurrentMode.ToString());
+								openElements++;
+								xml.WriteAttributeString("id", batch.CurrentSyncId.ChangeType<string>());
+
+								for (var i = 0; i < batch.Columns.Count; i++)
+								{
+									var v = batch.Current[i];
+									if (v != null)
+										xml.WriteElementString(cn[i], v.ChangeType<string>());
+								}
+
+								xml.WriteEndElement();
+								openElements--;
+							}
+						}
+
+						xml.WriteEndElement();
+						openElements--;
+					}
+				}
+				else
+				{
+					log.WriteLine(" Expression not resolved.");
+					log.AutoFlush(true);
+					log.SetType(LogMsgType.Warning);
+				}
+			}
+		} // proc ExecuteSync
+
+		/// <summary>Return synchronization information.</summary>
+		/// <param name="r"></param>
+		[DEConfigHttpAction("syncget", SecurityToken = SecurityUser, IsSafeCall = false)]
+		public void HttpSyncGetAction(IDEWebRequestScope r)
+		{
+			using (var log = Log.CreateScope(LogMsgType.Information, autoFlush: IsDebug, stopTime: true))
+			{
+				try
+				{
+					log.WriteLine("Synchronization requested: {0}", r.RemoteEndPoint.Address);
+
+					// get sync ids
+					var syncIds = ParseSyncGetParameters(r);
+					// generate timestamp for the next request
+					var nextSyncStamp = DateTime.Now.ToFileTimeUtc();
+
+					// open response
+					var openElements = 0;
+					var sessions = new Dictionary<PpsDataSource, PpsDataSynchronization>();
+					using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, Encoding.UTF8), Procs.XmlWriterSettings))
+					{
+						try
+						{
+							// start sync information
+							xml.WriteStartDocument();
+							xml.WriteStartElement("sync");
+
+							// get gloal sync
+							if (syncIds.TryGetValue(String.Empty, out var globalLastSyncId))
+								syncIds.Remove(String.Empty);
+							else
+								globalLastSyncId = -1;
+
+							// write sync state for the tables
+							foreach (var kv in syncIds)
+								ExecuteSyncAction(r, log, ref openElements, xml, globalLastSyncId, sessions, kv.Key, kv.Value);
+							
+							// finish with sync stamp
+							xml.WriteStartElement("syncStamp");
+							xml.WriteValue(nextSyncStamp);
+							xml.WriteEndElement();
+						}
+						catch (Exception e)
+						{
+							// recover xml state and write exception in the output
+							try
+							{
+								while (openElements-- > 0)
+									xml.WriteEndElement();
+
+								xml.WriteStartElement("exception");
+								xml.WriteAttributeString("text", e.Message);
+								xml.WriteValue(e.ToString());
+								xml.WriteEndElement();
+							}
+							catch { }
+
+							throw;
+						}
+						finally
+						{
+							// finish the sync sessions
+							foreach (var c in sessions.Values)
+								c.Dispose();
+
+							try
+							{
+								xml.WriteEndElement();
+								xml.WriteEndDocument();
+							}
+							catch { }
+						}
+					}
+				}
+				catch (Exception e)
+				{
+					log.AutoFlush(true);
+					log.WriteException(e);
+					throw;
+				}
+			}
+		} // proc HttpSyncGetAction
 
 		/// <summary>Main data source, MS Sql Server</summary>
 		public PpsDataSource MainDataSource => mainDataSource;

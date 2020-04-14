@@ -386,6 +386,28 @@ namespace TecWare.PPSn.Server.Data
 		public PpsDataSelector CreateSelector(string selectorName)
 			=> DataSource.CreateSelector(connection, selectorName);
 
+		/// <summary>Create a selector for a table change set.</summary>
+		/// <param name="globalLastSyncId"></param>
+		/// <param name="tableName"></param>
+		/// <param name="lastSyncId"></param>
+		/// <returns></returns>
+		public PpsDataSelector CreateDataChangeSelector(long globalLastSyncId, string tableName, long lastSyncId)
+		{
+			using (var session = DataSource.CreateSynchronizationSession(connection, globalLastSyncId, leaveConnectionOpen: true))
+				return session.CreateSelector(tableName, lastSyncId);
+		} // func CreateDataChangeSelector
+
+		/// <summary>Create a complete change set.</summary>
+		/// <param name="globalLastSyncId"></param>
+		/// <param name="tableName"></param>
+		/// <param name="lastSyncId"></param>
+		/// <returns></returns>
+		public IPpsDataSynchronizationBatch CreateSynchronizationBatch(long globalLastSyncId, string tableName, long lastSyncId)
+		{
+			using (var session = DataSource.CreateSynchronizationSession(connection, globalLastSyncId, leaveConnectionOpen: true))
+				return session.GetChanges(tableName, lastSyncId);
+		} // func 
+
 		/// <summary>DataSource of the transaction.</summary>
 		public PpsDataSource DataSource => dataSource;
 		/// <summary>Connection assigned to this transaction.</summary>

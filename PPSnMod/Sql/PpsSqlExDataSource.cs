@@ -440,13 +440,13 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- Ctor/Dtor --------------------------------------------------------
 
-			public SqlSynchronizationTransaction(PpsApplication application, PpsDataSource dataSource, IPpsPrivateDataContext privateDataContext, DateTime lastSynchronization)
-				:base(application, dataSource.CreateConnection(privateDataContext, true), lastSynchronization)
+			public SqlSynchronizationTransaction(PpsApplication application, IPpsSqlConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen)
+				: base(application, connection, leaveConnectionOpen)
 			{
 				Connection.EnsureConnectionAsync(true).AwaitTask();
 
 				// create transaction
-				this.transaction = SqlConnection.BeginTransaction(IsolationLevel.ReadCommitted);
+				transaction = SqlConnection.BeginTransaction(IsolationLevel.ReadCommitted);
 
 				// get the current sync id
 				using (var cmd = SqlConnection.CreateCommand())
@@ -463,7 +463,7 @@ namespace TecWare.PPSn.Server.Sql
 							throw new ArgumentException("Change tracking is not active in this database.");
 
 						startCurrentSyncId = r.GetInt64(0); // get highest SyncId
-						isForceFull = r.GetDateTime(1).ToUniversalTime() > lastSynchronization; // recreate database
+						isForceFull = r.GetDateTime(1).ToFileTimeUtc() > lastSyncronizationStamp; // recreate database
 					}
 				}
 			} // ctor
@@ -639,11 +639,12 @@ namespace TecWare.PPSn.Server.Sql
 			=> new SqlDataTransaction(this, connection);
 
 		/// <summary></summary>
-		/// <param name="privateUserData"></param>
-		/// <param name="lastSynchronization"></param>
+		/// <param name="connection"></param>
+		/// <param name="lastSyncronizationStamp"></param>
+		/// <param name="leaveConnectionOpen"></param>
 		/// <returns></returns>
-		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
-			=> new SqlSynchronizationTransaction(Application, this, privateUserData, lastSynchronization);
+		public override PpsDataSynchronization CreateSynchronizationSession(IPpsConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen)
+			=> new SqlSynchronizationTransaction(Application, (IPpsSqlConnectionHandle)connection, lastSyncronizationStamp, leaveConnectionOpen);
 
 		/// <summary>Returns always mssql</summary>
 		public override string Type => "sqlex";

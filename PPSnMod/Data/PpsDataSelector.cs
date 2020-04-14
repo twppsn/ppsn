@@ -45,7 +45,7 @@ namespace TecWare.PPSn.Server.Data
 			{
 				Alias = aliasName ?? throw new ArgumentNullException(nameof(aliasName));
 
-				this.columnDescription = nativeColumn ?? throw new ArgumentNullException(nameof(nativeColumn));
+				columnDescription = nativeColumn ?? throw new ArgumentNullException(nameof(nativeColumn));
 			} // ctor
 
 			T IPpsColumnDescription.GetColumnDescription<T>()
@@ -234,14 +234,14 @@ namespace TecWare.PPSn.Server.Data
 			return ApplyColumnsCore(columnList.ToArray());
 		} // func ApplyColumns
 
-		/// <summary></summary>
-		/// <param name="col"></param>
-		/// <param name="aliasColumn"></param>
+		/// <summary>Create a alias column from a existing column.</summary>
+		/// <param name="col">Column expression that is applied.</param>
+		/// <param name="aliasColumn">Alias column, that is already applied (Name of the applied column is an alias of the an existing column).</param>
 		/// <returns></returns>
 		protected abstract AliasColumn CreateColumnAliasFromExisting(PpsDataColumnExpression col, AliasColumn aliasColumn);
 			
-		/// <summary></summary>
-		/// <param name="col"></param>
+		/// <summary>Create a alias column from a column expression.</summary>
+		/// <param name="col">Column expression.</param>
 		/// <returns></returns>
 		protected abstract AliasColumn CreateColumnAliasFromNative(PpsDataColumnExpression col);
 
@@ -335,7 +335,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public virtual PpsDataSelector ApplyJoin(PpsDataSelector selector, PpsDataJoinType joinType, PpsDataJoinStatement[] statements)
 		{
-			var left = this.ApplyOrder(GetOrderExpressionFromStatements(statements, this, true));
+			var left = ApplyOrder(GetOrderExpressionFromStatements(statements, this, true));
 			var right = selector.ApplyOrder(GetOrderExpressionFromStatements(statements, selector, false));
 
 			return new PpsJoinDataSelector(connection, left, joinType, right, CreateEqualsFunctionFromStatements(left, right, statements), null);

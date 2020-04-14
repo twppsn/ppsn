@@ -223,11 +223,12 @@ namespace TecWare.PPSn.Server
 			=> throw new NotSupportedException();
 
 		/// <summary></summary>
-		/// <param name="userData"></param>
-		/// <param name="lastSynchronization"></param>
+		/// <param name="connection"></param>
+		/// <param name="lastSyncronizationStamp"></param>
+		/// <param name="leaveConnectionOpen"></param>
 		/// <returns></returns>
-		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext userData, DateTime lastSynchronization)
-			=> new PpsDataSynchronization(application, CreateConnection(userData, true), lastSynchronization);
+		public override PpsDataSynchronization CreateSynchronizationSession(IPpsConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen = false)
+			=> new PpsDataSynchronization(application, connection, leaveConnectionOpen);
 
 		/// <summary>Get the system connection handle.</summary>
 		public IPpsConnectionHandle SystemConnection => systemConnection;

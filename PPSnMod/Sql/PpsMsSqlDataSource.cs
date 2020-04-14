@@ -1033,7 +1033,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				if (ParameterCount == 0)
 				{
-					if (parameterInfo.Direction != ParameterDirection.ReturnValue)
+					if (parameterInfo.Direction != ParameterDirection.ReturnValue) // enforce int return, but mark procedure/function that it has no return
 					{
 						base.AddParameter(new SqlParameterInfo("@RETURN_VALUE"));
 						hasReturnValue = false;
@@ -1046,6 +1046,9 @@ namespace TecWare.PPSn.Server.Sql
 
 				base.AddParameter(parameterInfo);
 			} // func AddParameter
+
+			public override void AddResult(PpsSqlParameterInfo resultInfo) 
+				=> base.AddResult(resultInfo);
 
 			public override bool HasResult => hasResult;
 			public override bool HasOutput => hasOutput;
@@ -1226,6 +1229,10 @@ namespace TecWare.PPSn.Server.Sql
 						if (procedureIndex.TryGetValue(r.GetInt32(0), out var procedureInfo))
 							procedureInfo.AddParameter(new SqlParameterInfo(r));
 					}
+
+					// todo: read all result columns
+					// select * from sys.columns where object_id = 1931934750
+
 				} // using r
 			}
 		} // proc InitializeSchemaCore

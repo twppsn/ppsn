@@ -44,7 +44,7 @@ SELECT
 		, cast(case when u.[type] = 'FT' then 1 else 0 end as bit)
 	FROM sys.objects u
 		INNER JOIN sys.schemas s ON (u.schema_id = s.schema_id)
-	WHERE u.[type] IN ('FN', 'FS', 'FT', 'P', 'PC');
+	WHERE u.[type] IN ('FN', 'FS', 'FT', 'TF', 'P', 'PC');
 -- arguments
 SELECT 
 		object_id

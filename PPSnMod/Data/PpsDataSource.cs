@@ -48,12 +48,13 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns>Selector</returns>
 		public virtual Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
 			=> throw new NotImplementedException();
-		
+
 		/// <summary>Create a synchronization session for the client.</summary>
-		/// <param name="userContext"></param>
-		/// <param name="lastSynchronization"></param>
+		/// <param name="connection"></param>
+		/// <param name="lastSyncronizationStamp"></param>
+		/// <param name="leaveConnectionOpen"></param>
 		/// <returns></returns>
-		public virtual PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext userContext, DateTime lastSynchronization)
+		public virtual PpsDataSynchronization CreateSynchronizationSession(IPpsConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen)
 			=> throw new NotImplementedException();
 
 		/// <summary>Create a data manipulation session.</summary>

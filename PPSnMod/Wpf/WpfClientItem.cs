@@ -981,7 +981,31 @@ namespace TecWare.PPSn.Server.Wpf
 		#endregion
 
 		#region -- Master-Data Synchronisation ----------------------------------------
-		
+
+		#region -- class SynchronizationSession ---------------------------------------
+
+		private sealed class SynchronizationSession : IDisposable
+		{
+			private readonly IPpsConnectionHandle connection;
+			private readonly PpsDataSynchronization session;
+
+			public SynchronizationSession(IPpsConnectionHandle connection, PpsDataSynchronization session)
+			{
+				this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+				this.session = session ?? throw new ArgumentNullException(nameof(session));
+			} // ctor
+
+			public void Dispose()
+			{
+				session.Dispose();
+				connection.Dispose();
+			} // proc Dispose
+
+			public PpsDataSynchronization Session => session;
+		} // class SynchronizationSession
+
+		#endregion
+
 		private static void PrepareMasterDataSyncArguments(IDEWebRequestScope r, string tableName, long syncId, long lastSyncTimeStamp, out Dictionary<string, long> syncIds, out bool syncAllTables, out DateTime lastSynchronization, LuaTable updateTags)
 		{
 			syncIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
@@ -1055,7 +1079,7 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc PrepareMasterDataSyncArguments
 
-		private static void ExecuteMasterDataTableSync(LogMessageScopeProxy msg, IPpsPrivateDataContext user, Dictionary<PpsDataSource, PpsDataSynchronization> synchronisationSessions, XmlWriter xml, PpsDataTableDefinition table, long lastSyncId, DateTime lastSynchronization)
+		private static void ExecuteMasterDataTableSync(LogMessageScopeProxy msg, IPpsPrivateDataContext user, Dictionary<PpsDataSource, SynchronizationSession> synchronisationSessions, XmlWriter xml, PpsDataTableDefinition table, long lastSyncId, DateTime lastSynchronization)
 		{
 			msg.WriteLine("Sync: {0}", table.Name);
 			using (msg.Indent())
@@ -1078,7 +1102,8 @@ namespace TecWare.PPSn.Server.Wpf
 				// start a session
 				if (!synchronisationSessions.TryGetValue(dataSource, out var session))
 				{
-					session = dataSource.CreateSynchronizationSession(user, lastSynchronization);
+					var connection = dataSource.CreateConnection(user);
+					session = new SynchronizationSession(connection, dataSource.CreateSynchronizationSession(connection, lastSynchronization.ToFileTimeUtc(), true));
 					synchronisationSessions[dataSource] = session;
 				}
 
@@ -1088,7 +1113,7 @@ namespace TecWare.PPSn.Server.Wpf
 				{
 					xml.WriteAttributeString("table", table.Name);
 
-					using (var rows = session.GenerateBatch(table, syncType, lastSyncId))
+					using (var rows = session.Session.GenerateBatch(table, syncType, lastSyncId))
 					{
 						if (rows.IsFullSync)
 							xml.WriteAttributeString("isFull", rows.IsFullSync.ChangeType<string>());
@@ -1174,8 +1199,13 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc ExecuteMasterDataTableSync
 
+		/// <summary></summary>
+		/// <param name="r"></param>
+		/// <param name="tableName"></param>
+		/// <param name="syncId"></param>
+		/// <param name="syncStamp"></param>
 		[DEConfigHttpAction("mdata", SecurityToken = SecurityUser, IsSafeCall = false)]
-		private void HttpMasterDataSyncAction(IDEWebRequestScope r, string tableName = null, long syncId = -1, long syncStamp = -1)
+		public void HttpMasterDataSyncAction(IDEWebRequestScope r, string tableName = null, long syncId = -1, long syncStamp = -1)
 		{
 			var user = r.GetUser<IPpsPrivateDataContext>();
 
@@ -1193,7 +1223,7 @@ namespace TecWare.PPSn.Server.Wpf
 			// parse incomming sync id's
 			PrepareMasterDataSyncArguments(r, tableName, syncId, syncStamp, out var syncIds, out var syncAllTables, out var lastSynchronization, updateTags);
 
-			var synchronisationSessions = new Dictionary<PpsDataSource, PpsDataSynchronization>();
+			var synchronisationSessions = new Dictionary<PpsDataSource, SynchronizationSession>();
 			var msg = Log.CreateScope(LogMsgType.Information, autoFlush: false, stopTime: true);
 
 			// update tags
