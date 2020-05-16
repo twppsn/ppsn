@@ -236,7 +236,7 @@ namespace TecWare.PPSn.UI
 			private readonly IntPtr hDevice;
 			private readonly Config config;
 
-			private readonly StringBuilder sbScannerBuffer = new StringBuilder();
+			private readonly StringBuilder scannerBuffer = new StringBuilder();
 			private int numInput = 0;
 			private readonly byte[] statesScanner = new byte[256];
 
@@ -334,17 +334,17 @@ namespace TecWare.PPSn.UI
 						|| wVKey == KeyCode.LineFeed
 						|| ((statesScanner[(byte)KeyCode.ControlKey] & 0x80) != 0 && wVKey == KeyCode.M))
 					{
-						if (sbScannerBuffer.Length > 0)
+						if (scannerBuffer.Length > 0)
 						{
 							// Jump over possible prefixes
 							var start = 0;
-							while (start < sbScannerBuffer.Length && sbScannerBuffer[start] < (char)32)
+							while (start < scannerBuffer.Length && scannerBuffer[start] < (char)32)
 								start++;
-							barcode = sbScannerBuffer.ToString(start, sbScannerBuffer.Length - start);
+							barcode = scannerBuffer.ToString(start, scannerBuffer.Length - start);
 
 							//System.IO.File.AppendAllText("c:\\temp\\test.txt", "BarCode=" + sBarCode + Environment.NewLine);
 							Debug.Print("BarCode: {0}", barcode);
-							sbScannerBuffer.Length = 0;
+							scannerBuffer.Length = 0;
 							return true;
 						}
 					}
@@ -358,7 +358,7 @@ namespace TecWare.PPSn.UI
 						var sb = new StringBuilder(64);
 						var ret = ToUnicodeEx((uint)wVKey, (uint)wMakeCode, statesScanner, sb, 64, 0, hkl);
 						if (ret > 0)
-							sbScannerBuffer.Append(sb.ToString());
+							scannerBuffer.Append(sb.ToString());
 					}
 				}
 				else if (dwMsg == WinMsg.WM_KEYUP || dwMsg == WinMsg.WM_SYSKEYUP)
@@ -368,7 +368,7 @@ namespace TecWare.PPSn.UI
 					{
 						try
 						{
-							sbScannerBuffer.Append(Convert.ToChar(numInput));
+							scannerBuffer.Append(Convert.ToChar(numInput));
 						}
 						catch (Exception)
 						{
@@ -381,6 +381,40 @@ namespace TecWare.PPSn.UI
 				//System.IO.File.AppendAllText("c:\\temp\\test.txt", "   Buf=" + sbScannerBuffer.ToString() + Environment.NewLine);
 				return false;
 			} // proc HandleScannerCommand
+
+			#endregion
+
+			#region -- HandleScannerPacket --------------------------------------------
+
+			internal bool HandleScannerPacket(string code, bool endMark, out string barcode)
+			{
+				if (endMark && scannerBuffer.Length == 0) // code kann direkt weiter gegeben werden
+				{
+					barcode = code;
+					return true;
+				}
+
+				// verknüpfe die einzelnen Buffer
+				if (code.Length >= 3 && scannerBuffer.Length > 0
+					&& scannerBuffer[0] == code[0]
+					&& scannerBuffer[1] == code[1]
+					&& scannerBuffer[2] == code[2])
+					scannerBuffer.Append(code, 3, code.Length - 3); // wenn mehrerer blöcke folgen sind die ersten 3 Zeichen gleich?
+				else
+					scannerBuffer.Append(code);
+
+				if (endMark)
+				{
+					barcode = scannerBuffer.ToString();
+					scannerBuffer.Length = 0;
+					return true;
+				}
+				else
+				{
+					barcode = null;
+					return false;
+				}
+			} // func HandleScannerPacket
 
 			#endregion
 
@@ -555,21 +589,46 @@ namespace TecWare.PPSn.UI
 			return TryCreateDevice(hDevice, updateLastSeenDevice, configFactory, out dev);
 		} // func CheckDeviceId
 
-		private static bool TryDecodeBarcodeData(byte[] bCode, out int offset, out int count)
+		private static bool TryDecodeBarcodeData(bool prefixDetection, byte[] bCode, out int offset, out int count, out bool endMark)
 		{
-			offset = 2;
-		
-			// find count
-			for (var i = bCode.Length - 1; i >= offset; i--)
+			if (bCode.Length < 2)
 			{
-				if (bCode[i] != 0)
-				{
-					count = i - offset + 1;
-					return count > 0;
-				}
+				offset = 0;
+				count = 0;
+				endMark = false;
+				return false;
 			}
 
-			count = bCode.Length - offset;
+			offset = bCode[0]; // byte 1 scheint offset
+			count = bCode[1]; // byte 2 scheint länge -3
+
+
+			if (bCode[offset] == ']') // skip AIM ID
+				offset += 3; // count bleibt gleich
+			else
+				count += 3;
+
+			if (prefixDetection)
+			{
+				// check for endmark -> 01 58 1E 61 6E 2F 2F 6E 04 -> seems to be packet in 01 ?? 0x04 frame
+				if (bCode[offset + count - 1] == 0x04) // End Of Transmission
+				{
+					// find SOH Start Of Heading
+					for (var i = offset + count - 2; i >= offset; i--)
+					{
+						if (bCode[i] == 0x01)
+						{
+							endMark = true;
+							count = i - offset;
+							return true;
+						}
+					}
+				}
+
+				endMark = false;
+			}
+			else
+				endMark = true;
 			return count > 0;
 		} // func TryDecodeBarcodeData
 
@@ -626,8 +685,17 @@ namespace TecWare.PPSn.UI
 						{
 							Marshal.Copy(new IntPtr(buf), bCode, 0, bCode.Length);
 
-							if (TryDecodeBarcodeData(bCode, out var offset, out var count))
-								OnBarcode(dev, Encoding.Default.GetString(bCode, offset, count));
+							//using (var dst = new FileStream("c:\\temp\\t.dat", FileMode.OpenOrCreate))
+							//{
+							//	dst.Position = dst.Length;
+							//	dst.Write(bCode, 0, bCode.Length);
+							//}
+
+							if (TryDecodeBarcodeData(PrefixDetection, bCode, out var offset, out var count, out var endMark)
+								&& dev.HandleScannerPacket(Encoding.Default.GetString(bCode, offset, count), endMark, out var barcode))
+							{
+								OnBarcode(dev, barcode);
+							}
 							buf += hid.dwSizeHid;
 						}
 					}
@@ -728,6 +796,9 @@ namespace TecWare.PPSn.UI
 		} // prop IsActive
 
 		#endregion
+
+		/// <summary>Global prefix detection for POS-Devices.</summary>
+		public bool PrefixDetection { get; set; } = true;
 
 		#region -- Raw Input Helper ---------------------------------------------------
 
