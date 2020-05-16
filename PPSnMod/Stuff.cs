@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Reflection;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -233,6 +235,13 @@ namespace TecWare.PPSn.Server
 		public static IPropertyReadOnlyDictionary ToDictionary(this IDataRecord record)
 			=> new PropertyReadOnlyDictionaryRecord(record);
 
+		private static void SetValueWithSize(DbParameter parameter, int length, object value)
+		{
+			if (parameter.Size == 0)
+				parameter.Size = length;
+			parameter.Value = value;
+		} // proc SetValueWithSize
+
 		/// <summary>Set the DbParameter value, <c>null</c> will be converted to <c>DbNull</c>.</summary>
 		/// <param name="parameter"></param>
 		/// <param name="value"></param>
@@ -240,9 +249,40 @@ namespace TecWare.PPSn.Server
 		/// <param name="defaultValue"></param>
 		public static void SetValue(this DbParameter parameter, object value, Type parameterType, object defaultValue)
 		{
-			parameter.Value = value == null
-				? defaultValue
-				: (value != DBNull.Value ? Procs.ChangeType(value, parameterType) : value);
+			switch (parameter.DbType)
+			{
+				case DbType.Xml:
+				case DbType.String:
+				case DbType.AnsiString:
+					if (value == null)
+						SetValueWithSize(parameter, 1, defaultValue);
+					else if (value == DBNull.Value)
+						SetValueWithSize(parameter, 1, DBNull.Value);
+					else // this is only needed for SACommand, but should not harm other provider
+					{
+						var t = value.ChangeType<string>();
+						SetValueWithSize(parameter, t.Length > 0 ? t.Length : 1, t);
+					}
+					break;
+				case DbType.Binary:
+					if (value == null)
+						SetValueWithSize(parameter, 1, defaultValue);
+					if (value == DBNull.Value)
+						SetValueWithSize(parameter, 1, DBNull.Value);
+					else
+					{
+						var b = value is string t
+							? Encoding.Default.GetBytes(t)
+							: value.ChangeType<byte[]>();
+						SetValueWithSize(parameter, b.Length > 0 ? b.Length : 1, b);
+					}
+					break;
+				default:
+					parameter.Value = value == null
+						? defaultValue
+						: value != DBNull.Value ? Procs.ChangeType(value, parameterType) : value;
+					break;
+			}
 		} // proc SetValue
 
 		/// <summary></summary>
