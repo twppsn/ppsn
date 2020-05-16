@@ -1677,25 +1677,42 @@ namespace TecWare.PPSn.Server
 			return syncIds;
 		} // proc ParseSyncGetParameters
 
-		private bool TryParseSyncInfo(string tableExpression, out PpsDataSource dataSource, out string tableName)
+		private bool TryFindSyncRowId(IPpsSelectorToken view, out string tableName, out IDataColumn rowIdColumn)
+		{
+			foreach (var col in view.Columns)
+			{
+				if (col.Attributes.TryGetProperty("SyncTableRowId", out tableName))
+				{
+					rowIdColumn = col;
+					return true;
+				}
+			}
+			rowIdColumn = null;
+			tableName = null;
+			return false;
+		} // func TryFindSyncRowId
+
+		private bool TryParseSyncInfo(string tableExpression, out PpsDataSource dataSource, out string tableName, out IDataColumn rowIdColumn)
 		{
 			var p = tableExpression.IndexOf('/');
 			if (p >= 0) // dataSource/tableName
 			{
 				dataSource = GetDataSource(tableExpression.Substring(0, p), false);
 				tableName = tableExpression.Substring(p + 1);
+				rowIdColumn = null;
 				return dataSource != null;
 			}
 			else // viewName
 			{
 				var view = GetViewDefinition(tableExpression, false);
-				if (view != null)
+				if (view != null && TryFindSyncRowId(view.SelectorToken, out tableName, out rowIdColumn))
 				{
 					dataSource = view.SelectorToken.DataSource;
-					return view.Attributes.TryGetProperty("syncTable", out tableName);
+					return true;
 				}
 				else
 				{
+					rowIdColumn = null;
 					dataSource = null;
 					tableName = null;
 					return false;
@@ -1703,13 +1720,14 @@ namespace TecWare.PPSn.Server
 			}
 		} // func TryParseSyncInfo
 
-		private void ExecuteSyncAction(IDEWebRequestScope r, LogMessageScopeProxy log, ref int openElements, XmlWriter xml, long globalLastSyncId, Dictionary<PpsDataSource, PpsDataSynchronization> sessions, string tableExpression, long lastSyncid)
+		private void ExecuteSyncAction(IDEWebRequestScope r, LogMessageScopeProxy log, ref int openElements, XmlWriter xml, long globalLastSyncId, Dictionary<PpsDataSource, PpsDataSynchronization> sessions, string tableExpression, long lastSyncId)
 		{
-			log.Write($"{tableExpression} last={lastSyncid}");
+			log.Write($"{tableExpression} last={lastSyncId}");
 			using (log.Indent())
 			{
-				if (TryParseSyncInfo(tableExpression, out var dataSource, out var tableName))
+				if (TryParseSyncInfo(tableExpression, out var dataSource, out var tableName, out var rowIdColumn))
 				{
+					// create synchronization session for the table expression
 					if (!sessions.TryGetValue(dataSource, out var syncSession))
 					{
 						var connection = dataSource.CreateConnection(r.GetUser<IPpsPrivateDataContext>());
@@ -1717,67 +1735,74 @@ namespace TecWare.PPSn.Server
 						sessions.Add(dataSource, syncSession);
 					}
 
-					using (var batch = syncSession.GetChanges(tableName, lastSyncid))
+					// check for changes
+					using (var batch = syncSession.GetChanges(tableName, lastSyncId))
 					{
-						xml.WriteStartElement("table");
-						openElements++;
-
-						xml.WriteAttributeString("name", tableName);
-						xml.WriteAttributeString("expr", tableExpression);
-						
-						if (batch.IsFullSync)
+						// is a synchronization scheduled
+						if (batch.Mode != PpsSynchonizationMode.None)
 						{
-							xml.WriteStartElement("full");
+							xml.WriteStartElement("table");
 							openElements++;
-							xml.WriteAttributeString("id", batch.CurrentSyncId.ChangeType<string>());
-							xml.WriteEndElement();
-							openElements--;
-						}
-						else
-						{
-							var cn = (from i in Enumerable.Range(0, batch.Columns.Count) select "r" + (i + 1).ToString()).ToArray();
 
-							// emit columns
-							xml.WriteStartElement("columns");
-							openElements++;
-							for (var i = 0; i < cn.Length; i++)
+							xml.WriteAttributeString("name", tableName);
+							xml.WriteAttributeString("expr", tableExpression);
+							if (rowIdColumn != null)
+								xml.WriteAttributeString("rowId", rowIdColumn.Name);
+
+							if (batch.Mode == PpsSynchonizationMode.Full) // return the full statement
 							{
-								xml.WriteStartElement(cn[i]);
-								openElements++;
-
-								var col = batch.Columns[i];
-								xml.WriteAttributeString("name", col.Name);
-								xml.WriteAttributeString("type", LuaType.GetType(col.DataType).AliasOrFullName);
-								if (i == 0)
-									xml.WriteAttributeString("isPrimary", "true");
-								xml.WriteEndElement();
-								openElements--;
-							}
-							xml.WriteEndElement();
-							openElements--;
-
-							// emit data
-							while (batch.MoveNext())
-							{
-								xml.WriteStartElement(batch.CurrentMode.ToString());
+								xml.WriteStartElement("full");
 								openElements++;
 								xml.WriteAttributeString("id", batch.CurrentSyncId.ChangeType<string>());
-
-								for (var i = 0; i < batch.Columns.Count; i++)
-								{
-									var v = batch.Current[i];
-									if (v != null)
-										xml.WriteElementString(cn[i], v.ChangeType<string>());
-								}
-
 								xml.WriteEndElement();
 								openElements--;
 							}
-						}
+							else // return all rows that are changed
+							{
+								var cn = (from i in Enumerable.Range(0, batch.Columns.Count) select "r" + (i + 1).ToString()).ToArray();
 
-						xml.WriteEndElement();
-						openElements--;
-					}
+								// emit columns
+								xml.WriteStartElement("columns");
+								openElements++;
+								for (var i = 0; i < cn.Length; i++)
+								{
+									xml.WriteStartElement(cn[i]);
+									openElements++;
+
+									var col = batch.Columns[i];
+									xml.WriteAttributeString("name", col.Name);
+									xml.WriteAttributeString("type", LuaType.GetType(col.DataType).AliasOrFullName);
+									if (i == 0)
+										xml.WriteAttributeString("isPrimary", "true");
+									xml.WriteEndElement();
+									openElements--;
+								}
+								xml.WriteEndElement();
+								openElements--;
+
+								// emit data
+								while (batch.MoveNext())
+								{
+									xml.WriteStartElement(batch.CurrentMode.ToString());
+									openElements++;
+									xml.WriteAttributeString("id", batch.CurrentSyncId.ChangeType<string>());
+
+									for (var i = 0; i < batch.Columns.Count; i++)
+									{
+										var v = batch.Current[i];
+										if (v != null)
+											xml.WriteElementString(cn[i], v.ChangeType<string>());
+									}
+
+									xml.WriteEndElement();
+									openElements--;
+								}
+							}
+
+							xml.WriteEndElement();
+							openElements--;
+						}
+					} 
 				}
 				else
 				{

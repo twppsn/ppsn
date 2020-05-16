@@ -1085,10 +1085,10 @@ namespace TecWare.PPSn.Server.Sql
 					CloseMasterConnection();
 
 					// dispose connection
-					masterConnection.Dispose();
+					masterConnection?.Dispose();
 
-					databaseMainThread.Dispose();
-					sysPassword.Dispose();
+					databaseMainThread?.Dispose();
+					sysPassword?.Dispose();
 				}
 			}
 			finally

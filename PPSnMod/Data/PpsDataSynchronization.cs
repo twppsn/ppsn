@@ -16,11 +16,29 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Web.Caching;
 using TecWare.DE.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server.Data
 {
+	#region -- enum PpsSynchonizationMode ---------------------------------------------
+
+	/// <summary>Synchronization state.</summary>
+	public enum PpsSynchonizationMode
+	{
+		/// <summary>Unknown, call the synchronization function.</summary>
+		Unknown = -1,
+		/// <summary>No synchronization needed.</summary>
+		None,
+		/// <summary>Full synchronization is scheduled.</summary>
+		Full,
+		/// <summary>Diff synchronization is scheduled.</summary>
+		Parts
+	} // enum PpsSynchonizationMode
+
+	#endregion
+
 	#region -- interface IPpsDataSynchronizationBatch ---------------------------------
 
 	/// <summary>Needs to be implemented by a synchronization batch part.</summary>
@@ -31,7 +49,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Update mode i,u,d,r of the current row.</summary>
 		char CurrentMode { get; }
 		/// <summary>Is the a whole batch part a full sync.</summary>
-		bool IsFullSync { get; }
+		PpsSynchonizationMode Mode { get; }
 	} // class PpsDataSynchronizationBatch
 
 	#endregion
@@ -130,7 +148,7 @@ namespace TecWare.PPSn.Server.Data
 		} // prop CurrentSyncId
 
 		/// <summary>Is always <c>false</c>.</summary>
-		public bool IsFullSync => isFull;
+		public PpsSynchonizationMode Mode => isFull ? PpsSynchonizationMode.Full : PpsSynchonizationMode.Parts;
 	} // class PpsDataSynchronizationTimeStampBatch
 
 	#endregion
@@ -194,7 +212,7 @@ namespace TecWare.PPSn.Server.Data
 		public long CurrentSyncId => newSyncId;
 
 		/// <summary>Is always <c>true</c>.</summary>
-		public bool IsFullSync => emitRows;
+		public PpsSynchonizationMode Mode => emitRows ? PpsSynchonizationMode.Full : PpsSynchonizationMode.Parts;
 	} // class PpsDataSynchronizationFullBatch
 
 	#endregion
@@ -329,6 +347,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="syncType">Synchronization type, description.</param>
 		/// <param name="lastSyncId">Last synchronization stamp.</param>
 		/// <returns>Synchronization batch part.</returns>
+		[Obsolete]
 		public virtual IPpsDataSynchronizationBatch GenerateBatch(PpsDataTableDefinition table, string syncType, long lastSyncId)
 		{
 			ParseSynchronizationArguments(syncType, out var syncAlgorithm, out var syncArguments);
@@ -356,13 +375,12 @@ namespace TecWare.PPSn.Server.Data
 		public virtual PpsDataSelector CreateSelector(string tableName, long lastSyncId)
 			=> throw new NotImplementedException();
 
-		/// <summary>Creates a selector with the raw changes of the table.</summary>
+		/// <summary>Creates a enumeration with the raw changes of the table.</summary>
 		/// <param name="tableName">Name of the synchronization table.</param>
 		/// <param name="lastSyncId">Last synchronization state.</param>
 		/// <returns></returns>
 		public virtual IPpsDataSynchronizationBatch GetChanges(string tableName, long lastSyncId)
 			=> throw new NotImplementedException();
-
 
 		/// <summary>Access to Application</summary>
 		public PpsApplication Application => application;

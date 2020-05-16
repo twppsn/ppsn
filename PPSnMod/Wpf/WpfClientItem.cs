@@ -1115,8 +1115,8 @@ namespace TecWare.PPSn.Server.Wpf
 
 					using (var rows = session.Session.GenerateBatch(table, syncType, lastSyncId))
 					{
-						if (rows.IsFullSync)
-							xml.WriteAttributeString("isFull", rows.IsFullSync.ChangeType<string>());
+						if (rows.Mode == PpsSynchonizationMode.Full)
+							xml.WriteAttributeString("isFull", "true");
 
 						// create column names
 						var columnNames = new string[table.Columns.Count];

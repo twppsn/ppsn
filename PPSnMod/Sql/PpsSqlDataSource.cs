@@ -1349,6 +1349,14 @@ namespace TecWare.PPSn.Server.Sql
 				if (nativeColumn == null)
 					return null;
 
+				//var expr = col.Name.Trim();
+				// todo: function benötigen expression
+				//       direkte sql-expressions sind keine gute idee, da sql-injection, könnte man nur verhindert in dem man den ausdruck parsed, nach sql-regeln
+				//       ggf. etwas auf basis von LUA?
+				//       rückgabe muss definiert sein, und ggf. durch ein SQL-Cast forciert
+				//col.Name.StartsWith("(")
+				//col.Name.Contains("(");
+				//(type(),native expr)
 				// todo: var a = ((PpsSqlDataSource)DataSource).GetProcedureDescription("", false);
 				
 				return new SelectColumn(FormatColumnExpression(table.Alias, nativeColumn.Name), nativeColumn, col.HasAlias ? col.Alias : col.Name);
@@ -1788,8 +1796,8 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary></summary>
 			protected sealed class PpsSqlDataCommand : PpsDataCommand
 			{
-				private readonly bool noTransaction;
 				private readonly DBCOMMAND command;
+				private readonly bool useTransaction;
 				private readonly LuaTable defaults;
 				private readonly List<ParameterMapping> parameterMappings = new List<ParameterMapping>();
 				private readonly List<ResultMapping> resultMappings = new List<ResultMapping>();
@@ -1805,7 +1813,7 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					this.command = command;
 
-					noTransaction = command.Transaction == null;
+					useTransaction = command.Transaction != null;
 					defaults = parameter.GetMemberValue("defaults") as LuaTable;
 				} // ctor
 
@@ -1886,7 +1894,7 @@ namespace TecWare.PPSn.Server.Sql
 						throw new ArgumentNullException(nameof(args), "Arguments are missing.");
 
 					// update transaction
-					if (!noTransaction)
+					if (useTransaction)
 						command.Transaction = ((PpsSqlDataTransaction<DBCONNECTION, DBTRANSACTION, DBCOMMAND>)Transaction).DbTransaction;
 
 					// fill arguments

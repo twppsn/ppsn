@@ -429,7 +429,7 @@ namespace TecWare.PPSn.Server.Sql
 
 				public long CurrentSyncId => currentSyncId;
 				public char CurrentMode => reader.Current[0].ToString()[0];
-				public bool IsFullSync => isFull;
+				public PpsSynchonizationMode Mode => isFull ? PpsSynchonizationMode.Full : PpsSynchonizationMode.Parts;
 			} // class SqlSynchronizationBatch
 
 			#endregion
