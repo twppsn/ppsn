@@ -261,7 +261,7 @@ namespace TecWare.PPSn.Server
 					else // this is only needed for SACommand, but should not harm other provider
 					{
 						var t = value.ChangeType<string>();
-						SetValueWithSize(parameter, t.Length > 0 ? t.Length : 1, t);
+						SetValueWithSize(parameter, t != null && t.Length > 0 ? t.Length : 1, t);
 					}
 					break;
 				case DbType.Binary:
@@ -274,7 +274,7 @@ namespace TecWare.PPSn.Server
 						var b = value is string t
 							? Encoding.Default.GetBytes(t)
 							: value.ChangeType<byte[]>();
-						SetValueWithSize(parameter, b.Length > 0 ? b.Length : 1, b);
+						SetValueWithSize(parameter, b != null && b.Length > 0 ? b.Length : 1, b);
 					}
 					break;
 				default:
