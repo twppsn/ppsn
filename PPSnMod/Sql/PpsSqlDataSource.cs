@@ -3294,10 +3294,23 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string viewOrTableName, string alias)
 		{
+			bool TryCreateSelector(PpsViewDescription v, out PpsDataSelector r)
+			{
+				if (v != null && v.SelectorToken.DataSource == this)
+				{
+					r = v.SelectorToken.CreateSelector(connection, alias, true);
+					return true;
+				}
+				else { r = null;
+					return false;
+				}
+			} // func TryCreateSelector
+
 			// first look up view
-			var view = Application.GetViewDefinition(viewOrTableName, false);
-			if (view != null && view.SelectorToken.DataSource == this)
-				return view.SelectorToken.CreateSelector(connection, alias, true);
+			if (TryCreateSelector(Application.GetViewDefinition(viewOrTableName, false), out var r))
+				return r;
+			else if (TryCreateSelector(Application.GetViewDefinition(Name + "." + viewOrTableName, false), out r))
+				return r;
 
 			// try to create from table
 			return new PpsSqlDataSelector((IPpsSqlConnectionHandle)connection, ResolveTableByName<PpsSqlTableInfo>(viewOrTableName, true), alias);

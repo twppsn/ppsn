@@ -152,8 +152,8 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		public void Dispose()
 		{
-			GC.SuppressFinalize(this);
 			Dispose(true);
+			GC.SuppressFinalize(this);
 		} // proc Dispose
 
 		/// <summary></summary>

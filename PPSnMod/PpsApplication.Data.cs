@@ -548,14 +548,7 @@ namespace TecWare.PPSn.Server
 
 		private readonly IPropertyReadOnlyDictionary attributes;
 
-		/// <summary></summary>
-		/// <param name="selectorToken"></param>
-		/// <param name="displayName"></param>
-		/// <param name="joins"></param>
-		/// <param name="filters"></param>
-		/// <param name="orders"></param>
-		/// <param name="attributes"></param>
-		public PpsViewDescription(IPpsSelectorToken selectorToken, string displayName, PpsViewJoinDefinition[] joins, PpsViewParameterDefinition[] filters, PpsViewParameterDefinition[] orders, IPropertyReadOnlyDictionary attributes)
+		internal PpsViewDescription(IPpsSelectorToken selectorToken, string displayName, PpsViewJoinDefinition[] joins, PpsViewParameterDefinition[] filters, PpsViewParameterDefinition[] orders, IPropertyReadOnlyDictionary attributes)
 		{
 			this.selectorToken = selectorToken;
 			this.displayName = displayName;
@@ -1231,12 +1224,6 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc RegisterField
 
-		/// <summary>Register a view to the view list.</summary>
-		/// <param name="selectorToken"></param>
-		/// <param name="displayName"></param>
-		public void RegisterView(IPpsSelectorToken selectorToken, string displayName = null)
-			=> RegisterView(new PpsViewDescription(selectorToken, displayName, null, null, null, null));
-
 		private void RegisterView(PpsDataSource source, string name, XElement x)
 		{
 			var cur = new PpsViewDescriptionInit(source, name, x);
@@ -1254,34 +1241,6 @@ namespace TecWare.PPSn.Server
 					}
 				}
 			);
-		} // func RegisterView
-
-		private void RegisterView(PpsViewDescription view)
-		{
-			if (view == null)
-				throw new ArgumentNullException(nameof(view));
-
-			lock (viewController)
-			{
-				var name = view.Name;
-				viewController[name] = view;
-
-				var p = name.LastIndexOf('.');
-				if (p >= 0)
-				{
-					var aliasName = name.Substring(p + 1);
-					if (!String.IsNullOrEmpty(aliasName))
-					{
-						if (viewAliases.TryGetValue(aliasName, out var desc))
-						{
-							if (desc.Name != view.Name)
-								viewAliases[aliasName] = null; // multiple views!
-						}
-						else
-							viewAliases[aliasName] = view;
-					}
-				}
-			}
 		} // func RegisterView
 
 		private void RegisterDataSet(PpsDataSource source, string name, XElement x)
@@ -1303,6 +1262,55 @@ namespace TecWare.PPSn.Server
 			}
 			return (null, null);
 		} // func GetSingleConfigurationElement
+
+		#endregion
+
+		#region -- Views --------------------------------------------------------------
+
+		private static string MakeFullQualifiedViewName(PpsViewDescription view)
+			=> view.SelectorToken.DataSource.Name + "." + view.Name;
+
+		private void AddViewAliasIntern(string aliasName, PpsViewDescription view)
+		{
+			if (viewAliases.TryGetValue(aliasName, out var desc))
+			{
+				if (desc.Name != view.Name)
+					viewAliases[aliasName] = null; // multiple views!
+			}
+			else
+				viewAliases[aliasName] = view;
+		} // proc AddViewAliasIntern
+
+		/// <summary>Register a view to the view list.</summary>
+		/// <param name="selectorToken">Selector for the view</param>
+		/// <param name="displayName">Name of the view.</param>
+		public void RegisterView(IPpsSelectorToken selectorToken, string displayName = null)
+			=> RegisterView(new PpsViewDescription(selectorToken, displayName, null, null, null, null));
+
+		private void RegisterView(PpsViewDescription view)
+		{
+			if (view == null)
+				throw new ArgumentNullException(nameof(view));
+
+			lock (viewController)
+			{
+				var name = view.Name;
+				viewController[MakeFullQualifiedViewName(view)] = view;
+
+				// create aliases
+				// [datasource].[namespace].[name]
+				var p = name.LastIndexOf('.'); // search for name
+				if (p >= 0)
+				{
+					var aliasName = name.Substring(p + 1);
+					if (!String.IsNullOrEmpty(aliasName))
+						AddViewAliasIntern(aliasName, view);
+				}
+
+				// add view name
+				AddViewAliasIntern(name, view);
+			}
+		} // func RegisterView
 
 		/// <summary>Refresh a view from configuration.</summary>
 		/// <param name="name"></param>
@@ -1326,38 +1334,6 @@ namespace TecWare.PPSn.Server
 			var view = await new PpsViewDescriptionInit(source, name, xConfig).InitializeAsync();
 			RegisterView(view);
 		} // proc RefreshViewAsync
-
-		#endregion
-
-		/// <summary>Find a data source by name.</summary>
-		/// <param name="name"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public PpsDataSource GetDataSource(string name, bool throwException = true)
-		{
-			if (name == null)
-				throw new ArgumentNullException(nameof(name));
-
-			using (EnterReadLock())
-				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
-					?? (throwException ? throw new ArgumentOutOfRangeException(nameof(name), name, $"Data source is not defined ('{name}').") : (PpsDataSource)null);
-		} // func GetDataSource
-
-		/// <summary>Find a field description.</summary>
-		/// <param name="name"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public PpsFieldDescription GetFieldDescription(string name, bool throwException = true)
-		{
-			if (fieldDescription.TryGetValue(name, out var fieldInfo))
-				return fieldInfo;
-			else if (throwException)
-				throw new ArgumentOutOfRangeException(nameof(name), name, $"Field is not defined ({name}).");
-			else
-				return null;
-		} // func GetFieldDescription
 
 		/// <summary>Get a specific view definition.</summary>
 		/// <param name="name"></param>
@@ -1410,6 +1386,38 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public PpsDataSelector GetViewDefinitionSelector(PpsSysDataSource dataSource)
 			=> new PpsGenericSelector<PpsViewDescription>(dataSource.SystemConnection, "sys.views", viewsVersion, GetViewDefinitions());
+
+		#endregion
+
+		/// <summary>Find a data source by name.</summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsDataSource GetDataSource(string name, bool throwException = true)
+		{
+			if (name == null)
+				throw new ArgumentNullException(nameof(name));
+
+			using (EnterReadLock())
+				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
+					?? (throwException ? throw new ArgumentOutOfRangeException(nameof(name), name, $"Data source is not defined ('{name}').") : (PpsDataSource)null);
+		} // func GetDataSource
+
+		/// <summary>Find a field description.</summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsFieldDescription GetFieldDescription(string name, bool throwException = true)
+		{
+			if (fieldDescription.TryGetValue(name, out var fieldInfo))
+				return fieldInfo;
+			else if (throwException)
+				throw new ArgumentOutOfRangeException(nameof(name), name, $"Field is not defined ({name}).");
+			else
+				return null;
+		} // func GetFieldDescription
 
 		/// <summary></summary>
 		/// <param name="name"></param>
