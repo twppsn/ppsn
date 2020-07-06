@@ -407,39 +407,28 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- class ColumnSource -------------------------------------------------
+		#region -- class ColumnData ---------------------------------------------------
 
-		private sealed class ColumnSource : IPpsTableColumn
+		private abstract class ColumnData : IPpsTableColumn, IEquatable<ColumnData>
 		{
-			public ColumnSource(TreeNodeData columnSource, IDataColumn column)
-			{
-				Source = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
-				Column = column ?? throw new ArgumentNullException(nameof(column));
-
-				DisplayName = column.Attributes.GetProperty<string>("DisplayName", column.Name);
-			} // ctor
+			private string displayName;
+			private SortOrder sortOrder = SortOrder.None;
 
 			public override string ToString()
 				=> DisplayName;
 
-			public bool IsEqualColumn(ColumnSource other)
-				=> Column == other.Column && Source == other.Source;
+			protected abstract string GetColumnExpression();
 
-			public TreeNodeData Source { get; }
-			public IDataColumn Column { get; }
+			public abstract bool Equals(ColumnData other);
 
-			string IPpsTableColumn.Name => DisplayName;
-			PpsTableColumnType IPpsTableColumn.Type => PpsTableColumnType.Data;
+			string IPpsTableColumn.Expression => GetColumnExpression();
+			string IPpsTableColumn.Name => displayName;
 
-			public string DisplayName { get; }
-			public string SourcePath => Source.Path;
-
-			string IPpsTableColumn.Expression => Source.GetColumnName(Column);
 			bool? IPpsTableColumn.Ascending
 			{
 				get
 				{
-					switch (ColumnSort)
+					switch (sortOrder)
 					{
 						case SortOrder.Ascending:
 							return true;
@@ -449,10 +438,74 @@ namespace TecWare.PPSn.Controls
 							return null;
 					}
 				}
-			} // prop Ascending
+			} // prop IPpsTableColumn.Ascending
 
-			public SortOrder ColumnSort { get; set; } = SortOrder.None;
-		} // class ColumnSource
+			public abstract PpsTableColumnType Type { get; }
+			public abstract string SourcePath { get; }
+
+			public string DisplayName { get => displayName; set => displayName = value; }
+			public SortOrder ColumnSort { get => sortOrder; set => sortOrder = value; }
+		} // class ColumnData
+
+		#endregion
+
+		#region -- class UserColumnData -----------------------------------------------
+
+		private sealed class UserColumnData : ColumnData
+		{
+			private readonly PpsTableColumnType type;
+			private readonly string expression;
+
+			public UserColumnData(PpsTableColumnType type, string expression)
+			{
+				this.type = type;
+				this.expression = expression;
+			} // ctor
+
+			public override bool Equals(ColumnData other)
+				=> other is UserColumnData uc && IsEqualColumn(uc);
+
+			public bool IsEqualColumn(UserColumnData other)
+				=> type == other.type && expression == other.expression;
+
+			protected override string GetColumnExpression()
+				=> expression;
+
+			public override PpsTableColumnType Type => type;
+			public override string SourcePath => expression;
+		} // class UserColumnData
+
+		#endregion
+
+		#region -- class SourceColumnData ---------------------------------------------
+
+		private sealed class SourceColumnData : ColumnData
+		{
+			private readonly TreeNodeData columnSource;
+			private readonly IDataColumn column;
+
+			public SourceColumnData(TreeNodeData columnSource, IDataColumn column)
+			{
+				this.columnSource = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
+				this.column = column ?? throw new ArgumentNullException(nameof(column));
+
+				DisplayName = column.Attributes.GetProperty<string>("DisplayName", column.Name);
+			} // ctor
+
+			public override bool Equals(ColumnData other)
+				=> other is SourceColumnData sc && IsEqualColumn(sc);
+
+			public bool IsEqualColumn(SourceColumnData other)
+				=> column == other.column && columnSource == other.columnSource;
+
+			protected override string GetColumnExpression() 
+				=> Source.GetColumnName(column);
+
+			public override PpsTableColumnType Type => PpsTableColumnType.Data;
+			public TreeNodeData Source => columnSource;
+			public IDataColumn Column => column;
+			public override string SourcePath => columnSource.Path;
+		} // class SourceColumnData
 
 		#endregion
 
@@ -460,12 +513,12 @@ namespace TecWare.PPSn.Controls
 
 		private sealed class ColumnCondition : IPpsFilterColumn
 		{
-			private readonly ColumnSource columnSource;
+			private readonly SourceColumnData columnSource;
 			private PpsDataFilterCompareOperator op;
 			private string compareValue;
 			private IPpsFilterGroup groupdIndex = null;
 
-			public ColumnCondition(ColumnSource columnSource, PpsDataFilterCompareOperator op = PpsDataFilterCompareOperator.Contains, PpsDataFilterCompareValue value = null)
+			public ColumnCondition(SourceColumnData columnSource, PpsDataFilterCompareOperator op = PpsDataFilterCompareOperator.Contains, PpsDataFilterCompareValue value = null)
 			{
 				this.columnSource = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
 
@@ -556,7 +609,7 @@ namespace TecWare.PPSn.Controls
 					: PpsDataFilterExpression.Compare(Source.Source.GetColumnName(Source.Column), op, compareValue).ToString();
 			} // func FormatFilterExpression
 
-			internal ColumnSource Source => columnSource;
+			internal SourceColumnData Source => columnSource;
 
 			public string ColumnName => columnSource.DisplayName;
 			public string ColumnSource => columnSource.SourcePath;
@@ -582,16 +635,22 @@ namespace TecWare.PPSn.Controls
 				activeTreeNodes = resultView.ActiveChildren().ToArray();
 			} // ctor
 
-			public bool IsVisibleColumn(ColumnSource column)
+			public bool IsVisibleColumn(ColumnData column)
 			{
-				if (resultView == column.Source)
-					return true;
-
-				foreach (var c in activeTreeNodes)
-					if (c == column.Source)
+				if (column is SourceColumnData sourceColumn)
+				{
+					if (resultView == sourceColumn.Source)
 						return true;
 
-				return false;
+					foreach (var c in activeTreeNodes)
+					{
+						if (c == sourceColumn.Source)
+							return true;
+					}
+					return false;
+				}
+				else
+					return true; // other column types always visible
 			} // func IsVisibleColumn
 
 			public bool IsVisibleColumn2(IPpsFilterColumn filterColumn)
@@ -613,7 +672,7 @@ namespace TecWare.PPSn.Controls
 				return r && currentResultColumn != null;
 			} // func TryFindColumn
 
-			public ColumnSource FindColumnSource(string expression)
+			public SourceColumnData FindColumnSource(string expression)
 			{
 				PpsDataColumnExpression.ParseQualifiedName(expression, out var exprAlias, out var exprColumn);
 
@@ -621,15 +680,15 @@ namespace TecWare.PPSn.Controls
 				var resultColumn = (IDataColumn)null;
 
 				if (TryFindColumn(resultView, exprAlias, exprColumn, ref resultColumnSource, ref resultColumn))
-					return new ColumnSource(resultColumnSource, resultColumn);
+					return new SourceColumnData(resultColumnSource, resultColumn);
 
 				foreach (var c in activeTreeNodes)
 				{
 					if (TryFindColumn(c, exprAlias, exprColumn, ref resultColumnSource, ref resultColumn))
-						return new ColumnSource(resultColumnSource, resultColumn);
+						return new SourceColumnData(resultColumnSource, resultColumn);
 				}
 
-				return resultColumnSource == null || resultColumn == null ? null : new ColumnSource(resultColumnSource, resultColumn);
+				return resultColumnSource == null || resultColumn == null ? null : new SourceColumnData(resultColumnSource, resultColumn);
 			} // func FindColumnSource
 		} // class VisibleColumnHelper
 
@@ -643,7 +702,7 @@ namespace TecWare.PPSn.Controls
 
 		private IPpsTableData currentData = null;   // current selected mapping
 		private ViewTreeNodeData resultView = null;   // current selected root table
-		private readonly List<ColumnSource> resultColumns = new List<ColumnSource>(); // result column set
+		private readonly List<ColumnData> resultColumns = new List<ColumnData>(); // result column set
 		private readonly List<IPpsFilterColumn> resultFilter = new List<IPpsFilterColumn>(); // filter expression
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -701,11 +760,18 @@ namespace TecWare.PPSn.Controls
 				{
 					foreach (var col in data.Columns)
 					{
-						var columnSource = visibleResultView.FindColumnSource(col.Expression);
-						if (columnSource != null)
+						ColumnData columnData;
+						if (col.Type == PpsTableColumnType.Data)
+							columnData = visibleResultView.FindColumnSource(col.Expression);
+						else
+							columnData = new UserColumnData(col.Type, col.Expression);
+
+						if (columnData != null)
 						{
-							resultColumns.Add(columnSource);
-							columnSource.ColumnSort = col.Ascending.HasValue ? (col.Ascending.Value ? SortOrder.Ascending : SortOrder.Descending) : SortOrder.None;
+							columnData.ColumnSort = col.Ascending.HasValue ? (col.Ascending.Value ? SortOrder.Ascending : SortOrder.Descending) : SortOrder.None;
+							columnData.DisplayName = col.Name;
+
+							resultColumns.Add(columnData);
 						}
 					}
 				}
@@ -892,14 +958,14 @@ namespace TecWare.PPSn.Controls
 					// remove columns
 					for (var i = currentColumnsListView.Items.Count - 1; i >= 0; i--)
 					{
-						if (currentColumnsListView.Items[i].Tag is ColumnSource columnSource && columnSource.Source != nodeData)
+						if (currentColumnsListView.Items[i].Tag is SourceColumnData columnSource && columnSource.Source != nodeData)
 							currentColumnsListView.Items.RemoveAt(i);
 					}
 
 					// add new columns
 					foreach (var col in nodeData.View.Columns)
 					{
-						var newCol = new ColumnSource(nodeData, col);
+						var newCol = new SourceColumnData(nodeData, col);
 						var idx = BinarySearch(
 							i => currentColumnsListView.Items[i].Text,
 							0, currentColumnsListView.Items.Count,
@@ -922,8 +988,8 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc RefreshAvailableColumns
 
-		private IEnumerable<ColumnSource> GetSelectedColumns(ListView listView)
-			=> from lvi in listView.SelectedItems.Cast<ListViewItem>() select (ColumnSource)lvi.Tag;
+		private IEnumerable<ColumnData> GetSelectedColumns(ListView listView)
+			=> from lvi in listView.SelectedItems.Cast<ListViewItem>() select (ColumnData)lvi.Tag;
 
 		private void MoveColumnsToResult(bool selectNext)
 		{
@@ -946,7 +1012,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc MoveColumnsToResult
 
-		private void MoveColumnsToResult(IEnumerable<ColumnSource> columnSource, int insertAt = -1)
+		private void MoveColumnsToResult(IEnumerable<ColumnData> columnSource, int insertAt = -1)
 		{
 			if (insertAt < 0)
 				insertAt = resultColumns.Count;
@@ -955,10 +1021,10 @@ namespace TecWare.PPSn.Controls
 			resultColumnsListView.SelectedItems.Clear();
 
 			// add new items in target
-			var toSelect = new List<ColumnSource>();
+			var toSelect = new List<ColumnData>();
 			foreach (var col in columnSource)
 			{
-				var existsIndex = resultColumns.FindIndex(col.IsEqualColumn);
+				var existsIndex = resultColumns.FindIndex(col.Equals);
 				if (existsIndex >= 0)
 				{
 					resultColumns.RemoveAt(existsIndex);
@@ -974,15 +1040,15 @@ namespace TecWare.PPSn.Controls
 		} // proc MoveColumnsToResult
 
 		private void RemoveColumnsFromResult(bool selectColumn)
-			=> RemoveColumnsFromResult(resultColumnsListView.SelectedItems.Cast<ListViewItem>().Select(lvi => (ColumnSource)lvi.Tag), selectColumn);
+			=> RemoveColumnsFromResult(resultColumnsListView.SelectedItems.Cast<ListViewItem>().Select(lvi => (ColumnData)lvi.Tag), selectColumn);
 
-		private void RemoveColumnsFromResult(IEnumerable<ColumnSource> columnSource, bool selectColumn)
+		private void RemoveColumnsFromResult(IEnumerable<ColumnData> columnSource, bool selectColumn)
 		{
 			var maxIndex = -1;
 
 			foreach (var column in columnSource)
 			{
-				var selectedIndex = resultColumns.FindIndex(column.IsEqualColumn);
+				var selectedIndex = resultColumns.FindIndex(column.Equals);
 				if (selectedIndex >= 0)
 					resultColumns.RemoveAt(selectedIndex);
 
@@ -991,14 +1057,14 @@ namespace TecWare.PPSn.Controls
 					maxIndex--;
 			}
 
-			var toSelect = (ColumnSource[])null;
+			var toSelect = (ColumnData[])null;
 			if (selectColumn)
 			{
 				maxIndex++;
 				if (maxIndex < resultColumns.Count)
-					toSelect = new ColumnSource[] { resultColumns[maxIndex] };
+					toSelect = new ColumnData[] { resultColumns[maxIndex] };
 				else if (resultColumns.Count > 0)
-					toSelect = new ColumnSource[] { resultColumns[resultColumns.Count - 1] };
+					toSelect = new ColumnData[] { resultColumns[resultColumns.Count - 1] };
 			}
 
 			RefreshResultColumns(toSelect);
@@ -1008,7 +1074,7 @@ namespace TecWare.PPSn.Controls
 		{
 			foreach (var lvi in resultColumnsListView.SelectedItems.Cast<ListViewItem>())
 			{
-				var column = (ColumnSource)lvi.Tag;
+				var column = (ColumnData)lvi.Tag;
 				column.ColumnSort = sort;
 			}
 
@@ -1043,7 +1109,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc SelectInverse
 
-		private static void UpdateResultColumnListViewItem(ColumnSource currentColumn, ListViewItem currentLvi)
+		private static void UpdateResultColumnListViewItem(ColumnData currentColumn, ListViewItem currentLvi)
 		{
 			var columnSourcePath = currentColumn.SourcePath;
 			var columnDisplayName = currentColumn.DisplayName;
@@ -1069,17 +1135,17 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc UpdateResultColumnListViewItem
 
-		private ListViewItem FindResultColumnListViewItem(ColumnSource column, int offset)
+		private ListViewItem FindResultColumnListViewItem(ColumnData column, int offset)
 		{
 			for (var i = offset; i < resultColumnsListView.Items.Count; i++)
 			{
-				if (resultColumnsListView.Items[i].Tag is ColumnSource other && column.IsEqualColumn(other))
+				if (resultColumnsListView.Items[i].Tag is ColumnData other && column.Equals(other))
 					return resultColumnsListView.Items[i];
 			}
 			return null;
 		} // func FindResultColumnListViewItem
 
-		private void RefreshResultColumns(ColumnSource[] toSelect = null)
+		private void RefreshResultColumns(ColumnData[] toSelect = null)
 		{
 			if (IsTableSelectMode)
 			{
@@ -1126,7 +1192,7 @@ namespace TecWare.PPSn.Controls
 
 						// update selection
 						if (toSelect != null)
-							currentLvi.Selected = Array.Exists(toSelect, currentColumn.IsEqualColumn);
+							currentLvi.Selected = Array.Exists(toSelect, currentColumn.Equals);
 
 						targetIndex++;
 					}
@@ -1154,9 +1220,9 @@ namespace TecWare.PPSn.Controls
 
 		private Rectangle dragStartRectangle = Rectangle.Empty;
 
-		private static IEnumerable<ColumnSource> CheckResultColumnsDragSource(DragEventArgs e)
+		private static IEnumerable<ColumnData> CheckResultColumnsDragSource(DragEventArgs e)
 		{
-			var columns = e.Data.GetData(dataObjectFormat) as ColumnSource[];
+			var columns = e.Data.GetData(dataObjectFormat) as ColumnData[];
 			if (columns != null && columns.Length > 0)
 				e.Effect = DragDropEffects.Move & e.AllowedEffect;
 			return columns;
@@ -1233,8 +1299,8 @@ namespace TecWare.PPSn.Controls
 				var dragData = new DataObject(dataObjectFormat,
 					(
 						from lvi in listView.SelectedItems.Cast<ListViewItem>()
-						where lvi.Tag is ColumnSource
-						select (ColumnSource)lvi.Tag
+						where lvi.Tag is ColumnData
+						select (ColumnData)lvi.Tag
 					).ToArray()
 				);
 
@@ -1268,10 +1334,10 @@ namespace TecWare.PPSn.Controls
 				var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
 			if (hoverItem == null)
 				MoveColumnsToResult(columns, insertAfter ? -1 : 0); // append at end
-			else if (hoverItem.Tag is ColumnSource columnSource)
+			else if (hoverItem.Tag is ColumnData columnSource)
 			{
 				// get index to insert
-				var insertAt = resultColumns.FindIndex(columnSource.IsEqualColumn);
+				var insertAt = resultColumns.FindIndex(columnSource.Equals);
 				if (insertAfter)
 					insertAt++;
 
@@ -1290,7 +1356,7 @@ namespace TecWare.PPSn.Controls
 		{
 			var columns = CheckResultColumnsDragSource(e);
 			if (columns != null)
-				filterGrid.InsertFilter(columns.Select(c => new ColumnCondition(c)), new Point(e.X, e.Y));
+				filterGrid.InsertFilter(columns.OfType<SourceColumnData>().Select(c => new ColumnCondition(c)), new Point(e.X, e.Y));
 		} // event filterGrid_DragDrop
 
 		private void currentColumnsListView_KeyUp(object sender, KeyEventArgs e)
@@ -1328,11 +1394,11 @@ namespace TecWare.PPSn.Controls
 			if (sender == currentColumnAddToResultMenuItem)
 				MoveColumnsToResult(false);
 			else if (sender == currentColumnAddToCondition)
-				filterGrid.InsertFilter(GetSelectedColumns(currentColumnsListView).Select(c => new ColumnCondition(c)));
+				filterGrid.InsertFilter(GetSelectedColumns(currentColumnsListView).OfType<SourceColumnData>().Select(c => new ColumnCondition(c)));
 			else if (sender == resultColumnRemoveMenuItem)
 				RemoveColumnsFromResult(false);
 			else if (sender == resultColumnAddToCondition)
-				filterGrid.InsertFilter(GetSelectedColumns(resultColumnsListView).Select(c => new ColumnCondition(c)));
+				filterGrid.InsertFilter(GetSelectedColumns(resultColumnsListView).OfType<SourceColumnData>().Select(c => new ColumnCondition(c)));
 			// sort
 			else if (sender == resultColumnSortAscMenuItem)
 				SetColumnResultSortOrder(SortOrder.Ascending);

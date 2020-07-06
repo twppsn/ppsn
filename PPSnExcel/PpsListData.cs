@@ -1128,6 +1128,10 @@ namespace PPSnExcel
 			
 			var (isOrderChanged, order) = CompareOrder(currentColumns, columns);
 
+			// remove filters if column set is changed
+			if (columns != null)
+				xlList.AutoFilter.ShowAllData();
+
 			using (var result = await Task.Run(() => map.GetViewData(order, worksheet, syncContext, false)))
 			{
 				// prepare data mapping
