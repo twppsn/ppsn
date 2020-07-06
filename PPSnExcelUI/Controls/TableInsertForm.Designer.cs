@@ -298,6 +298,7 @@
 			this.resultColumnsListView.ContextMenuStrip = resultColumnsContextMenuStrip;
 			this.resultColumnsListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
 			this.resultColumnsListView.HideSelection = false;
+			this.resultColumnsListView.LabelEdit = true;
 			this.resultColumnsListView.Location = new System.Drawing.Point(540, 16);
 			this.resultColumnsListView.Name = "resultColumnsListView";
 			this.resultColumnsListView.ShowGroups = false;
@@ -307,6 +308,7 @@
 			this.resultColumnsListView.TabIndex = 2;
 			this.resultColumnsListView.UseCompatibleStateImageBehavior = false;
 			this.resultColumnsListView.View = System.Windows.Forms.View.Details;
+			this.resultColumnsListView.AfterLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.resultColumnsListView_AfterLabelEdit);
 			this.resultColumnsListView.DragDrop += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragDrop);
 			this.resultColumnsListView.DragEnter += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragEnter);
 			this.resultColumnsListView.DragOver += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragOver);

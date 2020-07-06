@@ -16,10 +16,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Export
@@ -32,6 +34,7 @@ namespace TecWare.PPSn.Export
 		{
 			public PpsColumnInfo(IPpsTableColumn c)
 			{
+				Name = c.Name;
 				Ascending = c.Ascending;
 				Expression = c.Expression;
 			} // ctor
@@ -51,35 +54,48 @@ namespace TecWare.PPSn.Export
 					length--;
 				}
 
-				Expression = expr.Substring(offset, length);
+				var sep = expr.IndexOf('=', offset);
+				if (sep < length)
+				{
+					Name = expr.Substring(sep + 1, length - sep - offset).Trim();
+					Expression = expr.Substring(offset, sep - offset);
+				}
+				else
+				{
+					Name = null;
+					Expression = expr.Substring(offset, length);
+				}
 			} // ctor
 
 			public StringBuilder ToString(StringBuilder sb)
 			{
 				if (Ascending.HasValue)
 					sb.Append(Ascending.Value ? '+' : '-');
+				
 				sb.Append(Expression);
+
+				if (!String.IsNullOrEmpty(Name))
+					sb.Append('=').Append(Name);
+
 				return sb;
 			} // func ToString
 
 			public override string ToString()
-			{
-				return Ascending.HasValue
-					? (Ascending.Value ? "+" : "-") + Expression
-					: Expression;
-			} // func ToString
-
+				=> ToString(new StringBuilder()).ToString();
+	
 			public bool Equals(PpsColumnInfo other)
 				=> Ascending == other.Ascending && Expression != other.Expression;
 
 			public PpsDataOrderExpression ToOrder()
-				=> XlProcs.ToOrder(this);
+				=> Ascending.HasValue ? new PpsDataOrderExpression(!Ascending.Value, Expression) : null;
 
-			public PpsDataColumnExpression ToColumn()
-				=> XlProcs.ToColumn(this);
+			public PpsDataColumnExpression ToColumn(bool includeColumnAlias)
+				=> includeColumnAlias ? new PpsDataColumnExpression(Expression, Name) : new PpsDataColumnExpression(Expression);
 
+			public string Name { get; }
 			public string Expression { get; }
 			public bool? Ascending { get; }
+			public PpsTableColumnType Type => PpsTableColumnType.Data;
 		} // class class PpsColumnInfo
 
 		#endregion
@@ -89,17 +105,22 @@ namespace TecWare.PPSn.Export
 		private string filter = null;
 		private PpsColumnInfo[] columnInfos = Array.Empty<PpsColumnInfo>();
 		
-		public PpsShellGetList GetShellList()
+		public PpsDataQuery GetShellList(bool includeColumnAlias)
 		{
 			if (IsEmpty)
 				return null;
 			else
 			{
-				return new PpsShellGetList(Views)
+				return new PpsDataQuery(Views)
 				{
 					Filter = PpsDataFilterExpression.Parse(Filter),
-					Columns = columnInfos.Select(c => c.ToColumn()).ToArray(),
-					Order = columnInfos.ToOrder().ToArray()
+					Columns = columnInfos.Select(c => c.ToColumn(includeColumnAlias)).ToArray(),
+					Order = (
+						from col in columnInfos 
+						let o = col.ToOrder()
+						where o != null
+						select o
+					).ToArray()
 				};
 			}
 		} // func GetShellList
@@ -108,7 +129,7 @@ namespace TecWare.PPSn.Export
 		{
 			Views = views;
 			Filter = filter;
-			SetColumnCore(columns.Select(c => new PpsColumnInfo(c)));
+			SetColumnCore(columns.Where(c => c.Type == PpsTableColumnType.Data).Select(c => new PpsColumnInfo(c)));
 
 			return Task.CompletedTask;
 		} // func UpdateAsync
@@ -144,13 +165,13 @@ namespace TecWare.PPSn.Export
 			set => Set(ref filter, value, nameof(Filter));
 		} // prop Filter
 
-		private static PpsColumnInfo[] EqualColumns(PpsColumnInfo[] columnInfos, IEnumerable< PpsColumnInfo> newColumnInfos)
+		private static PpsColumnInfo[] EqualColumns(PpsColumnInfo[] columnInfos, IEnumerable<PpsColumnInfo> newColumnInfos)
 		{
 			using (var nc = newColumnInfos.GetEnumerator())
 			{
 				var result = new List<PpsColumnInfo>();
 				var idx = 0;
-				var isNew = false;
+				var isNew = columnInfos.Length == 0;
 				while (nc.MoveNext())
 				{
 					if (isNew)

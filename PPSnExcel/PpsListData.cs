@@ -1093,7 +1093,8 @@ namespace PPSnExcel
 								j++;
 
 							// check if the columns are equal
-							if (!PpsListColumnInfo.Equals(col, currentColumns[j]) || col.Ascending != currentColumns[j].Ascending)
+							if (j >= currentColumns.Length &&
+								!PpsListColumnInfo.Equals(col, currentColumns[j]) || col.Ascending != currentColumns[j].Ascending)
 								isChanged = true;
 						}
 

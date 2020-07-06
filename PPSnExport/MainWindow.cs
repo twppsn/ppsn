@@ -46,8 +46,8 @@ namespace TecWare.PPSn.Export
 			environment = new PpsEnvironment(lua, this, new PpsEnvironmentInfo("Test") { Uri = new Uri("http://localhost:8080/ppsn/") });
 			environment.ContinueCatch(InitEnvironmentAsync());
 
-			button1.Enabled = environment.IsAuthentificated;
-			environment.IsAuthentificatedChanged += (sender, e) => button1.Enabled = environment.IsAuthentificated;
+			cmdEdit.Enabled = environment.IsAuthentificated;
+			environment.IsAuthentificatedChanged += (sender, e) => cmdEdit.Enabled = environment.IsAuthentificated;
 
 			joinTextBox.DataBindings.Add(new Binding("Text", listInfo, "Views",true, DataSourceUpdateMode.OnPropertyChanged));
 			filterTextBox.DataBindings.Add(new Binding("Text", listInfo, "Filter", true, DataSourceUpdateMode.OnPropertyChanged));
@@ -79,7 +79,7 @@ namespace TecWare.PPSn.Export
 		} // proc InitEnvironmentAsync
 
 		private void UpdateUri()
-			=> textBox1.Text = listInfo.IsEmpty ? String.Empty : CreateUriSafe(listInfo.GetShellList().ToQuery());
+			=> uriText.Text = listInfo.IsEmpty ? String.Empty : CreateUriSafe(listInfo.GetShellList(columnAliasCheck.Checked).ToQuery());
 
 		private string CreateUriSafe(string query)
 			=> environment?.Request?.CreateFullUri(Uri.EscapeUriString(query))?.ToString() ?? query;
@@ -139,6 +139,11 @@ namespace TecWare.PPSn.Export
 		private void button1_Click(object sender, EventArgs e)
 		{
 			environment.EditTable(listInfo);
+		}
+
+		private void columnAliasCheck_CheckedChanged(object sender, EventArgs e)
+		{
+			UpdateUri();
 		}
 	} // class MainWindow
 }

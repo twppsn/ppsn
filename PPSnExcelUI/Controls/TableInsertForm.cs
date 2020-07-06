@@ -1384,6 +1384,9 @@ namespace TecWare.PPSn.Controls
 				case Keys.Delete:
 					RemoveColumnsFromResult(true);
 					break;
+				case Keys.F2:
+					resultColumnsListView.FocusedItem?.BeginEdit();
+					break;
 			}
 		} // event resultColumnsListView_KeyUp
 
@@ -1457,5 +1460,16 @@ namespace TecWare.PPSn.Controls
 				Enabled = true;
 			}
 		} // event cmdInsert_Click
+
+		private void resultColumnsListView_AfterLabelEdit(object sender, LabelEditEventArgs e)
+		{
+			if (e.Item >= 0 && resultColumnsListView.Items[e.Item].Tag is ColumnData col)
+			{
+				col.DisplayName = e.Label;
+				e.CancelEdit = false;
+			}
+			else
+				e.CancelEdit = true;
+		} // event resultColumnsListView_AfterLabelEdit
 	} // class TableInsertForm
 }

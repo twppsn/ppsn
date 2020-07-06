@@ -166,9 +166,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public static PpsDataColumnExpression ToColumn(this IPpsTableColumn column)
-			=> new PpsDataColumnExpression(column.Expression);
-
 		public static bool GetIsNullable(this IDataColumn col)
 			=> col.Attributes.TryGetProperty<bool>("nullable", out var tmp) && tmp;
 	} // class XlProcs
