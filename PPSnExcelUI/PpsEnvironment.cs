@@ -33,6 +33,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
@@ -228,10 +229,10 @@ namespace TecWare.PPSn
 		public Task<XElement> GetXmlData(string requestUri)
 			=> request.GetXmlAsync(requestUri);
 
-		public override IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
+		public override IEnumerable<IDataRow> GetViewData(PpsDataQuery arguments)
 			=> request.CreateViewDataReader(arguments.ToQuery());
 
-		public async Task<DataTable> GetViewDataAsync(PpsShellGetList arguments)
+		public async Task<DataTable> GetViewDataAsync(PpsDataQuery arguments)
 		{
 			var dt = new DataTable();
 			using (var e = (await Task.Run(() => GetViewData(arguments))).GetEnumerator())

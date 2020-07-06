@@ -166,15 +166,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public static PpsDataOrderExpression ToOrder(this IPpsTableColumn column)
-			=> column.Ascending.HasValue ? new PpsDataOrderExpression(!column.Ascending.Value, column.Expression) : null;
-
-		public static IEnumerable<PpsDataOrderExpression> ToOrder(this IEnumerable<IPpsTableColumn> columns)
-			=> columns?.Select(ToOrder).Where(c => c != null) ?? Array.Empty<PpsDataOrderExpression>();
-
-		public static IEnumerable<PpsDataOrderExpression> ToOrder(this IPpsTableData tableData)
-			=> ToOrder(tableData.Columns);
-
 		public static PpsDataColumnExpression ToColumn(this IPpsTableColumn column)
 			=> new PpsDataColumnExpression(column.Expression);
 

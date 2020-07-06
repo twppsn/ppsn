@@ -428,6 +428,9 @@ namespace TecWare.PPSn.Controls
 			public TreeNodeData Source { get; }
 			public IDataColumn Column { get; }
 
+			string IPpsTableColumn.Name => DisplayName;
+			PpsTableColumnType IPpsTableColumn.Type => PpsTableColumnType.Data;
+
 			public string DisplayName { get; }
 			public string SourcePath => Source.Path;
 
@@ -621,8 +624,10 @@ namespace TecWare.PPSn.Controls
 					return new ColumnSource(resultColumnSource, resultColumn);
 
 				foreach (var c in activeTreeNodes)
+				{
 					if (TryFindColumn(c, exprAlias, exprColumn, ref resultColumnSource, ref resultColumn))
 						return new ColumnSource(resultColumnSource, resultColumn);
+				}
 
 				return resultColumnSource == null || resultColumn == null ? null : new ColumnSource(resultColumnSource, resultColumn);
 			} // func FindColumnSource
@@ -638,8 +643,8 @@ namespace TecWare.PPSn.Controls
 
 		private IPpsTableData currentData = null;   // current selected mapping
 		private ViewTreeNodeData resultView = null;   // current selected root table
-		private List<ColumnSource> resultColumns = new List<ColumnSource>(); // result column set
-		private List<IPpsFilterColumn> resultFilter = new List<IPpsFilterColumn>(); // filter expression
+		private readonly List<ColumnSource> resultColumns = new List<ColumnSource>(); // result column set
+		private readonly List<IPpsFilterColumn> resultFilter = new List<IPpsFilterColumn>(); // filter expression
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 

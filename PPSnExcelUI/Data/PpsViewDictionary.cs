@@ -22,6 +22,7 @@ using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Data
@@ -221,7 +222,7 @@ namespace TecWare.PPSn.Data
 		public async Task RefreshAsync()
 		{
 			// fetch all tables from the server
-			var list = new PpsShellGetList("bi.reports")
+			var list = new PpsDataQuery("bi.reports")
 			{
 				Columns = new PpsDataColumnExpression[]
 				{

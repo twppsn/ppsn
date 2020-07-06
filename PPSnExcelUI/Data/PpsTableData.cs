@@ -21,11 +21,34 @@ using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Data
 {
+	#region -- enum PpsTableColumnType ------------------------------------------------
+
+	/// <summary>Column type</summary>
+	[Flags]
+	public enum PpsTableColumnType
+	{
+		/// <summary>Unknown column: Expression is the name.</summary>
+		User = 0 | ReadOnly,
+		/// <summary>Data column: expression the full qualified column name.</summary>
+		Data = 1,
+		/// <summary>Formula column: Expression is the name.</summary>
+		Formula = 2 | ReadOnly,
+		ReadOnly = 0x100
+	} // enum PpsTableColumnType
+
+	#endregion
+
 	#region -- interface IPpsTableColumn ----------------------------------------------
 
 	public interface IPpsTableColumn
 	{
+		/// <summary>Display name of the column.</summary>
+		string Name { get; }
+		/// <summary>Type of the column.</summary>
+		PpsTableColumnType Type { get; }
+		/// <summary>Expression to descripe the column.</summary>
 		string Expression { get; }
+		/// <summary>Sort order</summary>
 		bool? Ascending { get; }
 	} // interface IPpsTableColumn
 
