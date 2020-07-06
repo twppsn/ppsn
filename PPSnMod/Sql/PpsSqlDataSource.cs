@@ -3307,10 +3307,10 @@ namespace TecWare.PPSn.Server.Sql
 			} // func TryCreateSelector
 
 			// first look up view
-			if (TryCreateSelector(Application.GetViewDefinition(viewOrTableName, false), out var r))
-				return r;
-			else if (TryCreateSelector(Application.GetViewDefinition(Name + "." + viewOrTableName, false), out r))
-				return r;
+			if (TryCreateSelector(Application.GetViewDefinition(viewOrTableName, false), out var r1))
+				return r1;
+			else if (TryCreateSelector(Application.GetViewDefinition(Name + "." + viewOrTableName, false), out r1))
+				return r1;
 
 			// try to create from table
 			return new PpsSqlDataSelector((IPpsSqlConnectionHandle)connection, ResolveTableByName<PpsSqlTableInfo>(viewOrTableName, true), alias);

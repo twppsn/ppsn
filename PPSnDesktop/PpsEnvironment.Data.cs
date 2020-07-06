@@ -39,6 +39,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
@@ -4193,10 +4194,10 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		public override IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
+		public override IEnumerable<IDataRow> GetViewData(PpsDataQuery arguments)
 			=> GetRemoteViewData(arguments);
 
-		private IEnumerable<IDataRow> GetRemoteViewData(PpsShellGetList arguments)
+		private IEnumerable<IDataRow> GetRemoteViewData(PpsDataQuery arguments)
 		{
 			const string masterDataPrefix = "masterdata.";
 			if (arguments.ViewId.StartsWith("local.", StringComparison.OrdinalIgnoreCase)) // it references the local db

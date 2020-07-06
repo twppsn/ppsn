@@ -26,6 +26,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
@@ -481,7 +482,7 @@ namespace TecWare.PPSn
 		/// <summary>Request a list from the shell client.</summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		public abstract IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments);
+		public abstract IEnumerable<IDataRow> GetViewData(PpsDataQuery arguments);
 
 		/// <summary></summary>
 		[LuaMember]

@@ -41,6 +41,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
@@ -4713,7 +4714,7 @@ order by t_liefnr.value desc
 
 		#endregion
 
-		private IEnumerable<IDataRow> CreateObjectFilter(PpsShellGetList arguments)
+		private IEnumerable<IDataRow> CreateObjectFilter(PpsDataQuery arguments)
 			=> new PpsObjectGenerator(this, arguments.Filter, arguments.Order, arguments.Start, arguments.Count);
 
 		#endregion
@@ -5083,7 +5084,7 @@ order by t_liefnr.value desc
 
 		public async Task<PpsObject> GetObjectAsync(PpsDataFilterExpression filter, bool throwException = false)
 		{
-			var obj = await Task.Run(() => GetViewData(new PpsShellGetList("local.objects")
+			var obj = await Task.Run(() => GetViewData(new PpsDataQuery("local.objects")
 			{
 				Columns = new PpsDataColumnExpression[] { new PpsDataColumnExpression("Id") },
 				Filter = filter ?? throw new ArgumentNullException(nameof(filter))

@@ -24,6 +24,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using Neo.IronLua;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -334,7 +335,7 @@ namespace TecWare.PPSn.UI
 			itemsSource = new CollectionViewSource
 			{
 				// Source = Environment.MasterData.GetTable("Objects") 
-				Source = Environment.GetViewData(new PpsShellGetList(viewId) { Filter = baseFilterExpr })
+				Source = Environment.GetViewData(new PpsDataQuery(viewId) { Filter = baseFilterExpr })
 			};
 
 			itemsSource.View.CurrentChanged += CurrentItemChanged;
