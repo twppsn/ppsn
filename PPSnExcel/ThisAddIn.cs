@@ -54,6 +54,8 @@ namespace PPSnExcel
 		private WaitForm waitForm;
 		private int mainThreadId = 0;
 
+		private IPpsnFunctions modul = null;
+
 		private void ThisAddIn_Startup(object sender, EventArgs e)
 		{
 			// create wait form
@@ -65,6 +67,13 @@ namespace PPSnExcel
 		private void ThisAddIn_Shutdown(object sender, EventArgs e)
 		{
 		} // event ThisAddIn_Shutdown
+
+		protected override object RequestComAddInAutomationService()
+		{
+			if (modul == null)
+				modul = new PpsnFunctions();
+			return modul;
+		} // func RequestComAddInAutomationService
 
 		#region -- Environment Handling -----------------------------------------------
 
@@ -239,7 +248,7 @@ namespace PPSnExcel
 				await RefreshTableAsync(worksheet.ListObjects[i], false);
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.ListObject _xlList, bool refreshLayout)
+		internal async Task RefreshTableAsync(Excel.ListObject _xlList, bool refreshLayout)
 		{
 			using (var progress = CreateProgress())
 			{
@@ -248,7 +257,7 @@ namespace PPSnExcel
 				progress.Report(String.Format("Aktualisiere {0}...", xlList.Name ?? "Tabelle"));
 
 				if (PpsListObject.TryGet(FindEnvironment, xlList, out var ppsList))
-					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style | PpsXlRefreshList.Columns : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
+					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
 				else
 				{
 					//if (refreshColumnLayout)
@@ -272,44 +281,12 @@ namespace PPSnExcel
 
 		internal void ShowTableInfo()
 		{
-			GetActiveXlObjects(out var worksheet, out var workbook);
+			GetActiveXlObjects(out _, out var workbook);
 
 			var sb = new StringBuilder();
 
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
-			{
-				var xlMap = range.ListObject.XmlMap;
-				if (PpsListMapping.TryParse(xlMap, out var environmentName, out var environmentUri, out var viewId, out var filterExpr, out var columns))
-				{
-					sb.AppendLine("Mapping found:");
-					sb.AppendFormat("\tEnvironment: {0} ({1})", environmentName, environmentUri).AppendLine();
-					sb.Append("\tView: ").Append(viewId).AppendLine();
-					sb.Append("\tFilter: ").Append(filterExpr).AppendLine();
-					sb.AppendLine();
-					if (columns == null || columns.Length == 0)
-						sb.Append("Column information not found.");
-					else
-					{
-						var i = 0;
-						foreach (var col in columns)
-						{
-							sb.AppendFormat("{0}: {1} | {2} [{3}]", ++i, col.SelectColumnName, col.ResultColumnName, col.XmlType);
-							if (col.IsNullable)
-								sb.Append(" OPT");
-							sb.AppendLine();
-						}
-					}
-				}
-				else
-				{
-					sb.AppendLine("Could not parse Mapping.");
-					sb.AppendLine();
-					if (xlMap == null || xlMap.Schemas.Count == 0)
-						sb.AppendLine("Xml-Schema is missing.");
-					else
-						sb.Append(xlMap.Schemas[1].XML);
-				}
-			}
+				PpsListMapping.DebugInfo(range.ListObject.XmlMap, sb);
 			else // show mappings in workbook
 			{
 				sb.AppendLine("Mappings of the workbook:");
@@ -321,7 +298,7 @@ namespace PPSnExcel
 					for (var j = 1; j <= map.Schemas.Count; j++)
 					{
 						var schema = map.Schemas[j];
-						sb.AppendLine($"  {j}: name={schema.Name}, uri={schema.Namespace.Uri.ToString()}");
+						sb.AppendLine($"  {j}: name={schema.Name}, uri={schema.Namespace.Uri}");
 					}
 				}
 			}

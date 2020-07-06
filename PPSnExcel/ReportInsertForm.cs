@@ -22,6 +22,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using TecWare.PPSn;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 
 namespace PPSnExcel
@@ -59,7 +60,7 @@ namespace PPSnExcel
 		private async Task RefreshViewAsync()
 		{
 			var dt = await env.GetViewDataAsync(
-				new PpsShellGetList("bi.reports")
+				new PpsDataQuery("bi.reports")
 				{
 					Columns = new PpsDataColumnExpression[]
 					{
