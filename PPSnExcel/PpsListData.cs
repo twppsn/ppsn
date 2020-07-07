@@ -323,10 +323,123 @@ namespace PPSnExcel
 
 		#region -- GetViewData --------------------------------------------------------
 
-		private IPropertyReadOnlyDictionary GetVariables(Microsoft.Office.Tools.Excel.Worksheet worksheet, SynchronizationContext context)
-			=> null;
+		#region -- class WorksheetPropertyDictionary ----------------------------------
 
-		internal IPpsViewResult GetViewData(PpsDataOrderExpression[] order, Microsoft.Office.Tools.Excel.Worksheet current, SynchronizationContext context = null, bool headerOnly = false)
+		private sealed class WorksheetPropertyDictionary : IPropertyReadOnlyDictionary
+		{
+			private static readonly Regex cellExpr = new Regex(@"((?<t>\w+)_)?(?<c>[A-Za-z]{1,3}\d{1,9})", RegexOptions.Singleline | RegexOptions.Compiled);
+			private static readonly Regex cellExprRC = new Regex(@"((?<t>\w+)_)?R(?<r>\d{1,9})C(?<c>\d{1,9})", RegexOptions.Singleline | RegexOptions.Compiled);
+
+			private readonly Worksheet worksheet;
+
+			public WorksheetPropertyDictionary(Worksheet worksheet)
+			{
+				this.worksheet = worksheet ?? throw new ArgumentNullException(nameof(worksheet));
+			} // ctor
+
+			private bool TryGetName(Excel.Workbook workbook, string name, out object value)
+			{
+				for (var i = 1; i <= workbook.Names.Count; i++)
+				{
+					var n = workbook.Names.Item(i);
+					if (String.Compare(n.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						try
+						{
+							value = n.RefersToRange.Value;
+							return true;
+						}
+						catch (COMException)
+						{
+							value = null;
+							return false;
+						}
+					}
+				}
+
+				value = null;
+				return false;
+			} // func TryGetName
+
+			private Worksheet GetWorksheet(Excel.Workbook workbook, string sheetName)
+			{
+				if (String.IsNullOrEmpty(sheetName))
+					return worksheet;
+
+				for (var i = 1; i <= workbook.Sheets.Count; i++)
+				{
+					if (workbook.Sheets[i] is Excel.Worksheet wks && String.Compare(wks.Name, sheetName, StringComparison.OrdinalIgnoreCase) == 0)
+						return Globals.Factory.GetVstoObject(wks);
+				}
+
+				throw new ArgumentException(String.Format("Could not find worksheet: {0}", sheetName));
+			} // func GetWorksheet
+
+			private bool TryGetCellA1(Worksheet worksheet, string cell, out object value)
+			{
+				try
+				{
+					value = (object)worksheet.Range[cell].Value;
+					return true;
+				}
+				catch (COMException)
+				{
+					value = null;
+					return false;
+				}
+			} // func TryGetCell
+
+			private bool TryGetCellRC(Worksheet worksheet, int row, int col, out object value)
+			{
+				try
+				{
+					value = (object)worksheet.Cells[row, col].Value;
+					return true;
+				}
+				catch (COMException)
+				{
+					value = null;
+					return false;
+				}
+			} // func TryGetCell
+
+			private bool TryGetCell(Excel.Workbook workbook, string name, out object value)
+			{
+				var m = cellExpr.Match(name); // test for A1
+				if (m.Success)
+					return TryGetCellA1(GetWorksheet(workbook, m.Groups["t"].Value), m.Groups["c"].Value, out value);
+				m = cellExprRC.Match(name);
+				if (m.Success)
+					return TryGetCellRC(GetWorksheet(workbook, m.Groups["t"].Value), Int32.Parse(m.Groups["r"].Value), Int32.Parse(m.Groups["c"].Value), out value);
+
+				value = null;
+				return false;
+			} // func TryGetCell
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				// lookup name manager
+				var workbook = (Excel.Workbook)worksheet.InnerObject.Parent;
+
+				// search for the name
+				if (TryGetName(workbook, name, out value))
+					return true;
+
+				// search cell value
+				if (TryGetCell(workbook, name, out value))
+					return true;
+
+				value = null;
+				return false;
+			} // func TryGetProperty
+		} // class WorksheetPropertyDictionary
+
+		#endregion
+
+		private IPropertyReadOnlyDictionary GetVariables(Worksheet worksheet, SynchronizationContext context)
+			=> new WorksheetPropertyDictionary(worksheet);
+
+		internal IPpsViewResult GetViewData(PpsDataOrderExpression[] order, Worksheet current, SynchronizationContext context = null, bool headerOnly = false)
 		{
 			var request = new PpsDataQuery(viewId)
 			{
@@ -616,7 +729,7 @@ namespace PPSnExcel
 			}
 		} // func TryParseSchema
 
-		public static bool TryParse(Func<string, Uri, PpsEnvironment> findEnvironment, Microsoft.Office.Tools.Excel.ListObject xlList, out PpsListMapping ppsMap)
+		public static bool TryParse(Func<string, Uri, PpsEnvironment> findEnvironment, ListObject xlList, out PpsListMapping ppsMap)
 			=> TryParse(findEnvironment, xlList?.XmlMap, out ppsMap);
 
 		public static bool TryParse(Func<string, Uri, PpsEnvironment> findEnvironment, Excel.XmlMap xlMap, out PpsListMapping ppsMap)
@@ -833,12 +946,12 @@ namespace PPSnExcel
 
 		#endregion
 
-		private readonly Microsoft.Office.Tools.Excel.ListObject xlList; // attached excel list object
+		private readonly ListObject xlList; // attached excel list object
 		private PpsListMapping map;
 
 		#region -- Ctor ---------------------------------------------------------------
 
-		private PpsListObject(Microsoft.Office.Tools.Excel.ListObject xlList, PpsListMapping map)
+		private PpsListObject(ListObject xlList, PpsListMapping map)
 		{
 			this.xlList = xlList ?? throw new ArgumentNullException(nameof(xlList));
 			this.map = map ?? throw new ArgumentNullException(nameof(map));
@@ -848,7 +961,7 @@ namespace PPSnExcel
 
 		#region -- ImportLayout -------------------------------------------------------
 
-		private static bool ListColumnNameExists(string displayName, Microsoft.Office.Tools.Excel.ListObject xlList, int ofs, int last)
+		private static bool ListColumnNameExists(string displayName, ListObject xlList, int ofs, int last)
 		{
 			for (var i = ofs; i <= last; i++)
 			{
@@ -859,7 +972,7 @@ namespace PPSnExcel
 			return false;
 		} // func ListColumnNameExists
 
-		private static string GetUniqueListColumnName(string displayName, Microsoft.Office.Tools.Excel.ListObject xlList, int ofs, int last)
+		private static string GetUniqueListColumnName(string displayName, ListObject xlList, int ofs, int last)
 		{
 			if (ListColumnNameExists(displayName, xlList, ofs, last))
 			{
@@ -1051,14 +1164,6 @@ namespace PPSnExcel
 			return ofs >= 1 && xPath[ofs - 1] == '/' && String.Compare(xPath, ofs, columnName, 0, columnName.Length, StringComparison.OrdinalIgnoreCase) == 0;
 		} // func IsXPathEqualColumnName
 
-		//private string GetSortXPath(Excel.SortField f)
-		//{
-		//	var column = f.Key.Column;
-		//	if (column >= 1 && column <= xlList.ListColumns.Count)
-		//		return xlList.ListColumns[column].XPath?.Value;
-		//	return null;
-		//} // func GetSortXPath
-
 		private bool? IsListColumnSortedAscending(Excel.ListColumn column)
 		{
 			var sortFields = xlList.Sort.SortFields;
@@ -1130,7 +1235,7 @@ namespace PPSnExcel
 			var (isOrderChanged, order) = CompareOrder(currentColumns, columns);
 
 			// remove filters if column set is changed
-			if (columns != null)
+			if (columns != null && xlList.AutoFilter != null)
 				xlList.AutoFilter.ShowAllData();
 
 			using (var result = await Task.Run(() => map.GetViewData(order, worksheet, syncContext, false)))
@@ -1236,7 +1341,7 @@ namespace PPSnExcel
 
 		#endregion
 
-		public Microsoft.Office.Tools.Excel.ListObject List => xlList;
+		public ListObject List => xlList;
 		public PpsListMapping Mapping => map;
 
 		#region -- New ----------------------------------------------------------------
@@ -1285,7 +1390,7 @@ namespace PPSnExcel
 
 		#region -- TryGet -------------------------------------------------------------
 
-		public static bool TryGet(Func<string, Uri, PpsEnvironment> findEnvironment, Microsoft.Office.Tools.Excel.ListObject xlList, out PpsListObject ppsList)
+		public static bool TryGet(Func<string, Uri, PpsEnvironment> findEnvironment, ListObject xlList, out PpsListObject ppsList)
 		{
 			if (PpsListMapping.TryParse(findEnvironment, xlList, out var info))
 			{
