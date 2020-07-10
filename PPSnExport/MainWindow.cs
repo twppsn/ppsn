@@ -54,10 +54,16 @@ namespace TecWare.PPSn.Export
 			columnsTextBox.DataBindings.Add(new Binding("Text", listInfo, "Columns", true, DataSourceUpdateMode.OnPropertyChanged));
 			listInfo.PropertyChanged += ListInfo_PropertyChanged;
 
-			////joinTextBox.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
-			//listInfo.Views = "views.Betriebsmittelstamm t=views.Werkzeugstamm t1=views.WkzLebenslauf t2";
-			//listInfo.Filter = "t.BMKKID:test";
-			//listInfo.Columns = String.Join(Environment.NewLine, "+t.BMKKIDENT", "t.BMKKBEZ", "t.BMKKCRDAT", "t.BMKKCRUSER", "t.BMKKFBERIDENT", "t.FBERNAME", "t.BMKKUPDAT", "t.BMKKUPUSER");
+			//joinTextBox.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
+#if DEBUG
+			listInfo.Views = "views.Artikel t";
+			listInfo.Filter = "or(t.TEILBEST:<10 t.TEILBEST:>100)";
+			listInfo.Columns = String.Join(Environment.NewLine, 
+				"+t.TEILTNR=Artikel_Nr",
+				"t.TEILNAME1=Artikelbezeichnung",
+				"t.TEILBEST=Bestand"
+			);
+#endif
 		} // ctor
 
 		private void ListInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)

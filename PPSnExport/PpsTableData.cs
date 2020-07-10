@@ -55,9 +55,9 @@ namespace TecWare.PPSn.Export
 				}
 
 				var sep = expr.IndexOf('=', offset);
-				if (sep < length)
+				if (sep > 0 && sep < offset + length)
 				{
-					Name = expr.Substring(sep + 1, length - sep - offset).Trim();
+					Name = expr.Substring(sep + 1, length - sep + offset - 1).Trim();
 					Expression = expr.Substring(offset, sep - offset);
 				}
 				else

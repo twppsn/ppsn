@@ -189,7 +189,21 @@ namespace TecWare.PPSn.Data
 			}
 
 			return sb.ToString();
-		} // func ParseConstant
+		} // func ParseEscaped
+
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <param name="allowFields"></param>
+		/// <param name="variables"></param>
+		/// <returns></returns>
+		public static PpsDataFilterCompareValue ParseCompareValue(string expression, bool allowFields = true, IPropertyReadOnlyDictionary variables = null)
+		{
+			var offset = 0;
+			if (EatExpressionCharacter(expression, ref offset, '('))
+				return new PpsDataFilterCompareArrayValue(ParseCompareValues(expression, allowFields, variables, ref offset));
+			else
+				return ParseCompareValue(expression, allowFields, variables, ref offset);
+		} // func ParseCompareValue
 
 		private static PpsDataFilterCompareValue ParseCompareValue(string expression, bool allowFields, IPropertyReadOnlyDictionary variables, ref int offset)
 		{
@@ -271,7 +285,9 @@ namespace TecWare.PPSn.Data
 					if (allowFields && textValueLength > 1 && textValue[0] == ':')
 						value = new PpsDataFilterCompareFieldValue(textValue.Substring(1));
 					else
+					{
 						value = new PpsDataFilterCompareTextValue(textValue);
+					}
 				}
 				else
 					value = PpsDataFilterCompareNullValue.Default;
@@ -1925,7 +1941,7 @@ namespace TecWare.PPSn.Data
 					throw new ArgumentException("method is wrong.");
 			}
 			if (arguments == null || arguments.Length < 1)
-				throw new ArgumentNullException("arguments");
+				throw new ArgumentNullException(nameof(arguments));
 
 			this.arguments = arguments;
 		} // ctor

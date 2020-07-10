@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -441,6 +442,7 @@ namespace TecWare.PPSn.Controls
 			} // prop IPpsTableColumn.Ascending
 
 			public abstract PpsTableColumnType Type { get; }
+			public abstract string SourceName { get; }
 			public abstract string SourcePath { get; }
 
 			public string DisplayName { get => displayName; set => displayName = value; }
@@ -454,11 +456,13 @@ namespace TecWare.PPSn.Controls
 		private sealed class UserColumnData : ColumnData
 		{
 			private readonly PpsTableColumnType type;
+			private readonly string name;
 			private readonly string expression;
 
-			public UserColumnData(PpsTableColumnType type, string expression)
+			public UserColumnData(PpsTableColumnType type, string name, string expression)
 			{
 				this.type = type;
+				this.name = name;
 				this.expression = expression;
 			} // ctor
 
@@ -472,6 +476,7 @@ namespace TecWare.PPSn.Controls
 				=> expression;
 
 			public override PpsTableColumnType Type => type;
+			public override string SourceName => name;
 			public override string SourcePath => expression;
 		} // class UserColumnData
 
@@ -479,17 +484,19 @@ namespace TecWare.PPSn.Controls
 
 		#region -- class SourceColumnData ---------------------------------------------
 
-		private sealed class SourceColumnData : ColumnData
+		private sealed class SourceColumnData : ColumnData, IPpsFilterColumnFactory
 		{
 			private readonly TreeNodeData columnSource;
 			private readonly IDataColumn column;
+			private readonly string sourceDisplayName;
 
 			public SourceColumnData(TreeNodeData columnSource, IDataColumn column)
 			{
 				this.columnSource = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
 				this.column = column ?? throw new ArgumentNullException(nameof(column));
 
-				DisplayName = column.Attributes.GetProperty<string>("DisplayName", column.Name);
+				sourceDisplayName = column.Attributes.GetProperty<string>("DisplayName", column.Name);
+				DisplayName = sourceDisplayName;
 			} // ctor
 
 			public override bool Equals(ColumnData other)
@@ -501,124 +508,240 @@ namespace TecWare.PPSn.Controls
 			protected override string GetColumnExpression() 
 				=> Source.GetColumnName(column);
 
+			IPpsFilterColumn IPpsFilterColumnFactory.CreateFilterColumn(IPpsFilterExpression filterExpression, IPpsFilterGroup group)
+				=> new FilterColumn((FilterExpression)filterExpression, (FilterGroup)group, this, PpsDataFilterCompareOperator.Contains, PpsDataFilterCompareNullValue.Default);
+
 			public override PpsTableColumnType Type => PpsTableColumnType.Data;
 			public TreeNodeData Source => columnSource;
 			public IDataColumn Column => column;
+			public override string SourceName => sourceDisplayName;
 			public override string SourcePath => columnSource.Path;
 		} // class SourceColumnData
 
 		#endregion
 
-		#region -- class ColumCondition -----------------------------------------------
+		#region -- class FilterColumn -------------------------------------------------
 
-		private sealed class ColumnCondition : IPpsFilterColumn
+		private sealed class FilterColumn : IPpsFilterColumn
 		{
+			private readonly FilterExpression filterExpression;
 			private readonly SourceColumnData columnSource;
+			private FilterGroup group;
 			private PpsDataFilterCompareOperator op;
-			private string compareValue;
-			private IPpsFilterGroup groupdIndex = null;
+			private PpsDataFilterCompareValue value;
 
-			public ColumnCondition(SourceColumnData columnSource, PpsDataFilterCompareOperator op = PpsDataFilterCompareOperator.Contains, PpsDataFilterCompareValue value = null)
+			internal FilterColumn(FilterExpression filterExpression, FilterGroup group, SourceColumnData columnSource, PpsDataFilterCompareOperator op, PpsDataFilterCompareValue value)
 			{
-				this.columnSource = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
-
+				this.filterExpression = filterExpression ?? throw new ArgumentNullException(nameof(filterExpression));
+				this.group = group ?? throw new ArgumentNullException(nameof(group));
+				this.columnSource = columnSource;
 				this.op = op;
-				this.compareValue = value is PpsDataFilterCompareTextValue textValue ? textValue.Text : null;
+				this.value = value;
 			} // ctor
 
-			private void SetExpression(string expr)
+			private string GetFormattedValue()
 			{
-				if (expr == null)
-				{
-					op = PpsDataFilterCompareOperator.Contains;
-					compareValue = null;
-				}
+				if (value == null)
+					return null;
 				else
 				{
-					expr = expr.Trim();
-					var (newOp, valueOfs) = ParsePrefix(expr);
-					op = newOp;
-					compareValue = expr.Substring(valueOfs).Trim();
+					var sb = new StringBuilder();
+					value.ToString(sb);
+					return sb.ToString();
 				}
-			} // proc SetExpression
+			} // func GetFormattedValue
 
-			private static (PpsDataFilterCompareOperator, int) ParsePrefix(string expr)
+			bool IPpsFilterColumn.TrySetValue(string text)
 			{
-				if (expr.Length >= 1)
-				{
-					switch (expr[0])
-					{
-						case '!':
-							if (expr.Length >= 2 && expr[1] == '=')
-								return (PpsDataFilterCompareOperator.NotEqual, 2);
-							else
-								return (PpsDataFilterCompareOperator.NotContains, 1);
-						case '=':
-							return (PpsDataFilterCompareOperator.Equal, 1);
-						case '>':
-							if (expr.Length >= 2 && expr[1] == '=')
-								return (PpsDataFilterCompareOperator.GreaterOrEqual, 2);
-							else
-								return (PpsDataFilterCompareOperator.Greater, 1);
-						case '<':
-							if (expr.Length >= 2 && expr[1] == '=')
-								return (PpsDataFilterCompareOperator.LowerOrEqual, 2);
-							else
-								return (PpsDataFilterCompareOperator.Lower, 1);
-						default:
-							return (PpsDataFilterCompareOperator.Contains, 0);
-					}
-				}
+				if (String.IsNullOrEmpty(text))
+					value = PpsDataFilterCompareNullValue.Default;
 				else
-					return (PpsDataFilterCompareOperator.Contains, 0);
-			} // func ParsePrefix
+					value = PpsDataFilterExpression.ParseCompareValue(text);
+				return true;
 
-			private static string GetPrefix(PpsDataFilterCompareOperator op)
-			{
-				switch (op)
-				{
-					case PpsDataFilterCompareOperator.NotContains:
-						return "!";
-					case PpsDataFilterCompareOperator.NotEqual:
-						return "!=";
-					case PpsDataFilterCompareOperator.Equal:
-						return "=";
-					case PpsDataFilterCompareOperator.Greater:
-						return ">";
-					case PpsDataFilterCompareOperator.GreaterOrEqual:
-						return ">=";
-					case PpsDataFilterCompareOperator.Lower:
-						return "<";
-					case PpsDataFilterCompareOperator.LowerOrEqual:
-						return "<=";
-					case PpsDataFilterCompareOperator.Contains:
-					default:
-						return String.Empty;
-				}
-			} // func GetPrefix
+				//Source.Column.DataType
+				//PpsDataFilterCompareValueType.
+			} // func TrySetValue
 
-			private string GetExpression()
-			{
-				return GetPrefix(op) + compareValue;
-			} // func GetExpression
-
-			internal string FormatFilterExpression()
-			{
-				return IsEmpty
-					? null
-					: PpsDataFilterExpression.Compare(Source.Source.GetColumnName(Source.Column), op, compareValue).ToString();
-			} // func FormatFilterExpression
+			public PpsDataFilterExpression ToExpression()
+				=> new PpsDataFilterCompareExpression(columnSource.Source.GetColumnName(columnSource.Column), op, value);
 
 			internal SourceColumnData Source => columnSource;
 
-			public string ColumnName => columnSource.DisplayName;
+			public string ColumnName => columnSource.SourceName;
 			public string ColumnSource => columnSource.SourcePath;
 
-			public string Expression { get => GetExpression(); set => SetExpression(value); }
-			public IPpsFilterGroup Group { get => groupdIndex; set => groupdIndex = value; }
+			public FilterGroup Group
+			{
+				get => group;
+				set
+				{
+					if (group != value)
+					{
+						group = value;
+						filterExpression.OnFilterChanged();
+					}
+				}
+			} // prop Group
 
-			public bool IsEmpty => compareValue == null;
-		} // class ColumnCondition
+			public bool IsEmpty => false;
+
+			IPpsFilterGroup IPpsFilterColumn.Group { get => group; set => Group = (FilterGroup)value; }
+			PpsDataFilterCompareOperator IPpsFilterColumn.Operator { get => op; set => op = value; }
+			string IPpsFilterColumn.Value => GetFormattedValue();
+		} // class FilterColumn
+
+		#endregion
+
+		#region -- class FilterGroup --------------------------------------------------
+
+		private sealed class FilterGroup : IPpsFilterGroup
+		{
+			private readonly int groupLevel;
+			private readonly FilterGroup group;
+			private PpsDataFilterExpressionType type;
+
+			public FilterGroup(FilterGroup group, PpsDataFilterExpressionType type)
+			{
+				this.group = group;
+				this.groupLevel = group == null ? 0 : group.groupLevel + 1;
+				this.type = type;
+			} // ctor
+
+			public override string ToString()
+				=> type.ToString();
+
+			public FilterGroup GetGroup(int level)
+			{
+				var b = groupLevel - level;
+				if (b < 0)
+					throw new ArgumentOutOfRangeException(nameof(level));
+
+				var c = this;
+				while (b > 0)
+					c = c.group;
+				return c;
+			} // func GetGroup
+
+			public PpsDataFilterExpressionType Type { get => type; set => type = value; }
+			public FilterGroup Group => group;
+			public int Level => groupLevel;
+
+			IPpsFilterGroup IPpsFilterGroup.Group => group;
+		} // class FilterGroup
+
+		#endregion
+
+		#region -- class FilterExpression ---------------------------------------------
+
+		private sealed class FilterExpression : IPpsFilterExpression
+		{
+			public event EventHandler FilterChanged;
+
+			private readonly List<FilterColumn> filterColumns = new List<FilterColumn>();
+			private readonly FilterGroup root = new FilterGroup(null, PpsDataFilterExpressionType.And);
+
+			internal void OnFilterChanged()
+				=> FilterChanged?.Invoke(this, EventArgs.Empty);
+
+			#region -- Load/Compile ---------------------------------------------------
+
+			private void LoadCore(FilterGroup currentGroup, VisibleColumnHelper visibleResultView, PpsDataFilterExpression expr)
+			{
+				switch (expr.Type)
+				{
+					case PpsDataFilterExpressionType.And:
+					case PpsDataFilterExpressionType.NAnd:
+					case PpsDataFilterExpressionType.Or:
+					case PpsDataFilterExpressionType.NOr:
+						var logicExpr = (PpsDataFilterLogicExpression)expr;
+						var subGroup = new FilterGroup(currentGroup, logicExpr.Type);
+						foreach (var cur in logicExpr.Arguments)
+							LoadCore(subGroup, visibleResultView, cur);
+						break;
+
+					case PpsDataFilterExpressionType.Compare:
+						var compareExpr = (PpsDataFilterCompareExpression)expr;
+						var columnSource = visibleResultView.FindColumnSource(compareExpr.Operand);
+						if (columnSource != null)
+							filterColumns.Add(new FilterColumn(this, currentGroup, columnSource, compareExpr.Operator, compareExpr.Value));
+						break;
+
+					case PpsDataFilterExpressionType.Native: // ignore!
+					case PpsDataFilterExpressionType.True: // ignore!
+						break;
+				}
+			} // proc LoadCore
+
+			public void Load(VisibleColumnHelper visibleResultView, PpsDataFilterExpression expr)
+			{
+				filterColumns.Clear();
+
+				LoadCore(root, visibleResultView, expr);
+
+				OnFilterChanged();
+			} // proc Load
+
+			public void Refresh(VisibleColumnHelper visibleColumnHelper)
+				=> OnFilterChanged();
+
+			private PpsDataFilterExpression CompileCore(VisibleColumnHelper visibleResultView, FilterGroup currentGroup, ref int offset)
+			{
+				var parts = new List<PpsDataFilterExpression>();
+
+				while (offset < filterColumns.Count)
+				{
+					var group = filterColumns[offset].Group;
+					if (group == currentGroup) // same group level
+					{
+						parts.Add(filterColumns[offset].ToExpression());
+						offset++;
+					}
+					else if (group.Level > currentGroup.Level)  // sub group, compile sub group
+					{
+						parts.Add(CompileCore(visibleResultView, group.GetGroup(currentGroup.Level + 1), ref offset));
+					}
+					else  // new group same level, or lower group
+					{
+						break;
+					}
+				}
+				return new PpsDataFilterLogicExpression(currentGroup.Type, parts.ToArray());
+			} // func CompileCore
+
+			public PpsDataFilterExpression Compile(VisibleColumnHelper visibleResultView)
+			{
+				var parts = new List<PpsDataFilterExpression>();
+				var offset = 0;
+
+				while (offset < filterColumns.Count)
+					parts.Add(CompileCore(visibleResultView, root, ref offset));
+
+				return new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.And, parts.ToArray()).Reduce();
+			} // func Compile
+
+			#endregion
+
+			public void Insert(int insertAt, IPpsFilterColumn column)
+			{
+				filterColumns.Insert(insertAt, (FilterColumn)column);
+				OnFilterChanged();
+			} // proc Insert
+
+			IPpsFilterGroup IPpsFilterExpression.CreateFilterGroup(IPpsFilterGroup parentGroup, PpsDataFilterExpressionType type)
+				=> new FilterGroup((FilterGroup)parentGroup, type);
+
+			public IEnumerator<IPpsFilterColumn> GetEnumerator()
+				=> filterColumns.GetEnumerator();
+
+			IEnumerator IEnumerable.GetEnumerator() 
+				=> filterColumns.GetEnumerator();
+
+			public int Count => filterColumns.Count;
+			public IPpsFilterColumn this[int index] => filterColumns[index];
+
+			public IPpsFilterGroup Group => root;
+		} // class FilterExpression
 
 		#endregion
 
@@ -654,7 +777,7 @@ namespace TecWare.PPSn.Controls
 			} // func IsVisibleColumn
 
 			public bool IsVisibleColumn2(IPpsFilterColumn filterColumn)
-				=> IsVisibleColumn(((ColumnCondition)filterColumn).Source);
+				=> IsVisibleColumn(((FilterColumn)filterColumn).Source);
 
 			private bool TryFindColumn(TreeNodeData view, string exprAlias, string exprColumn, ref TreeNodeData resultColumnSource, ref IDataColumn resultColumn)
 			{
@@ -703,7 +826,7 @@ namespace TecWare.PPSn.Controls
 		private IPpsTableData currentData = null;   // current selected mapping
 		private ViewTreeNodeData resultView = null;   // current selected root table
 		private readonly List<ColumnData> resultColumns = new List<ColumnData>(); // result column set
-		private readonly List<IPpsFilterColumn> resultFilter = new List<IPpsFilterColumn>(); // filter expression
+		private readonly FilterExpression resultFilter = new FilterExpression(); // filter expression
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -713,34 +836,11 @@ namespace TecWare.PPSn.Controls
 
 			InitializeComponent();
 
-			filterGrid.RequireRefreshFilter += (sender, e) => RefreshResultColumns();
+			filterGrid.SetFilter(resultFilter);
 			availableViews = new PpsViewDictionary(env);
+
+			UpdateLayout();
 		} // ctor
-
-		private void AddCompareExpression(VisibleColumnHelper visibleResultView, PpsDataFilterCompareExpression compareExpr)
-		{
-			if (compareExpr.Operand == null)
-				return;
-
-			var columnSource = visibleResultView.FindColumnSource(compareExpr.Operand); // todo: reuse columns?
-			if (columnSource != null)
-				resultFilter.Add(new ColumnCondition(columnSource, compareExpr.Operator, compareExpr.Value));
-		} // proc AddCompareExpression
-
-		private void LoadFilterExpression(VisibleColumnHelper visibleResultView, PpsDataFilterExpression expr)
-		{
-			if (expr == PpsDataFilterExpression.True)
-				resultFilter.Clear();
-			else if (expr is PpsDataFilterCompareExpression compareExpr)
-			{
-				AddCompareExpression(visibleResultView, compareExpr);
-			}
-			else if (expr is PpsDataFilterLogicExpression logicExpr)
-			{
-				foreach (var c in logicExpr.Arguments.OfType<PpsDataFilterCompareExpression>())
-					AddCompareExpression(visibleResultView, c);
-			}
-		} // proc LoadFilterExpression
 
 		private async Task RefreshAllAsync(IPpsTableData data)
 		{
@@ -764,7 +864,7 @@ namespace TecWare.PPSn.Controls
 						if (col.Type == PpsTableColumnType.Data)
 							columnData = visibleResultView.FindColumnSource(col.Expression);
 						else
-							columnData = new UserColumnData(col.Type, col.Expression);
+							columnData = new UserColumnData(col.Type, col.Name, col.Expression);
 
 						if (columnData != null)
 						{
@@ -778,12 +878,13 @@ namespace TecWare.PPSn.Controls
 
 				// update filter
 				var expr = PpsDataFilterExpression.Parse(data.Filter);
-				LoadFilterExpression(visibleResultView, expr);
+				resultFilter.Load(visibleResultView, expr);
 			}
 
 			// update view
 			UpdateTreeView();
 			RefreshResultColumns();
+			UpdateLayout();
 
 			// update selection
 			if (hasData && tableTree.SelectedNode == null && tableTree.Nodes.Count > 0)
@@ -803,6 +904,30 @@ namespace TecWare.PPSn.Controls
 			currentData = tableData;
 			env.ContinueCatch(RefreshAllAsync(currentData));
 		} // proc LoadData
+
+		private void UpdateLayout()
+		{
+			var defaultCap = resultColumnsListView.Left - tableTree.Right;
+			var clientArea = new Rectangle(tableTree.Left, tableTree.Top, ClientSize.Width - tableTree.Left, ClientSize.Height - cmdClose.Height - tableTree.Top * 2 - defaultCap);
+
+			// position of tabletree, do not touch top/left and width
+			if (IsTableSelectMode)
+			{
+				var h = tableTree.Top * 8;
+				tableTree.SetBounds(clientArea.Left, clientArea.Top, tableTree.Width, h);
+				var t = h + defaultCap;
+				currentColumnsListView.SetBounds(clientArea.Left, clientArea.Top + t, tableTree.Width, clientArea.Height - t);
+				currentColumnsListView.Visible = true;
+			}
+			else
+			{
+				tableTree.SetBounds(clientArea.Left, clientArea.Top, tableTree.Width, clientArea.Height);
+				currentColumnsListView.Visible = false;
+			}
+
+			// set result, do not touch left and width
+			resultColumnsListView.SetBounds(resultColumnsListView.Left, clientArea.Top, resultColumnsListView.Width, clientArea.Height);
+		} // proc UpdateLayout
 
 		#endregion
 
@@ -911,12 +1036,14 @@ namespace TecWare.PPSn.Controls
 					view.SetActive(true);
 					SetResultView(view);
 					UpdateTreeView();
+					UpdateLayout();
 				}
 				else
 				{
 					SetResultView(null);
 					view.SetActive(false);
 					UpdateTreeView();
+					UpdateLayout();
 				}
 				RefreshResultColumns();
 				tableTree.SelectedNode = e.Node;
@@ -1112,10 +1239,9 @@ namespace TecWare.PPSn.Controls
 		private static void UpdateResultColumnListViewItem(ColumnData currentColumn, ListViewItem currentLvi)
 		{
 			var columnSourcePath = currentColumn.SourcePath;
-			var columnDisplayName = currentColumn.DisplayName;
 
-			currentLvi.Text = columnDisplayName;
-			currentLvi.ToolTipText = columnDisplayName + "\n" + columnSourcePath;
+			currentLvi.Text = currentColumn.DisplayName;
+			currentLvi.ToolTipText = currentColumn.SourceName + "\n" + columnSourcePath;
 
 			if (currentLvi.SubItems.Count == 1)
 				currentLvi.SubItems.Add(String.Empty);
@@ -1153,8 +1279,7 @@ namespace TecWare.PPSn.Controls
 				var visibleColumnHelper = new VisibleColumnHelper(resultView);
 
 				// update filter
-				filterGrid.SetFilter(resultFilter);
-				filterGrid.RefreshFilter(visibleColumnHelper.IsVisibleColumn2);
+				resultFilter.Refresh(visibleColumnHelper);
 
 				// update view
 				resultColumnsListView.BeginUpdate();
@@ -1227,6 +1352,9 @@ namespace TecWare.PPSn.Controls
 				e.Effect = DragDropEffects.Move & e.AllowedEffect;
 			return columns;
 		} // func CheckResultColumnsDragSource
+
+		public static IEnumerable<IPpsFilterColumnFactory> CheckDragSourceForFilter(DragEventArgs e)
+			=> CheckResultColumnsDragSource(e)?.OfType<IPpsFilterColumnFactory>();
 
 		private ListViewItem GetListViewHoverItem(ListView listView, DragEventArgs e, out bool insertAfter)
 		{
@@ -1331,7 +1459,7 @@ namespace TecWare.PPSn.Controls
 			if ((e.AllowedEffect & DragDropEffects.Move) == 0)
 				return;
 
-				var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
+			var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
 			if (hoverItem == null)
 				MoveColumnsToResult(columns, insertAfter ? -1 : 0); // append at end
 			else if (hoverItem.Tag is ColumnData columnSource)
@@ -1345,19 +1473,6 @@ namespace TecWare.PPSn.Controls
 				MoveColumnsToResult(columns, insertAt);
 			}
 		} // event resultColumnsListView_DragDrop
-
-		private void filterGrid_DragEnter(object sender, DragEventArgs e)
-			=> CheckResultColumnsDragSource(e);
-
-		private void filterGrid_DragOver(object sender, DragEventArgs e)
-			=> CheckResultColumnsDragSource(e);
-
-		private void filterGrid_DragDrop(object sender, DragEventArgs e)
-		{
-			var columns = CheckResultColumnsDragSource(e);
-			if (columns != null)
-				filterGrid.InsertFilter(columns.OfType<SourceColumnData>().Select(c => new ColumnCondition(c)), new Point(e.X, e.Y));
-		} // event filterGrid_DragDrop
 
 		private void currentColumnsListView_KeyUp(object sender, KeyEventArgs e)
 		{
@@ -1396,12 +1511,12 @@ namespace TecWare.PPSn.Controls
 		{
 			if (sender == currentColumnAddToResultMenuItem)
 				MoveColumnsToResult(false);
-			else if (sender == currentColumnAddToCondition)
-				filterGrid.InsertFilter(GetSelectedColumns(currentColumnsListView).OfType<SourceColumnData>().Select(c => new ColumnCondition(c)));
+			//else if (sender == currentColumnAddToCondition)
+			//	filterGrid.InsertFilter(GetSelectedColumns(currentColumnsListView).OfType<SourceColumnData>().Select(c => new ColumnCondition(c)));
 			else if (sender == resultColumnRemoveMenuItem)
 				RemoveColumnsFromResult(false);
-			else if (sender == resultColumnAddToCondition)
-				filterGrid.InsertFilter(GetSelectedColumns(resultColumnsListView).OfType<SourceColumnData>().Select(c => new ColumnCondition(c)));
+			//else if (sender == resultColumnAddToCondition)
+			//	filterGrid.InsertFilter(GetSelectedColumns(resultColumnsListView).OfType<SourceColumnData>().Select(c => new ColumnCondition(c)));
 			// sort
 			else if (sender == resultColumnSortAscMenuItem)
 				SetColumnResultSortOrder(SortOrder.Ascending);
@@ -1445,7 +1560,7 @@ namespace TecWare.PPSn.Controls
 
 				await currentData.UpdateAsync(
 					sbView.ToString(),
-					String.Join(" ", from f in resultFilter.Cast<ColumnCondition>() where !f.IsEmpty && visibleColumnHelper.IsVisibleColumn2(f) select f.FormatFilterExpression()),
+					resultFilter.Compile(visibleColumnHelper).ToString(),
 					from col in resultColumns where visibleColumnHelper.IsVisibleColumn(col) select col
 				);
 

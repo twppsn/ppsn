@@ -176,7 +176,7 @@
 			// 
 			// cmdRefresh
 			// 
-			this.cmdRefresh.Location = new System.Drawing.Point(707, 540);
+			this.cmdRefresh.Location = new System.Drawing.Point(926, 536);
 			this.cmdRefresh.Name = "cmdRefresh";
 			this.cmdRefresh.Size = new System.Drawing.Size(100, 23);
 			this.cmdRefresh.TabIndex = 4;
@@ -187,7 +187,7 @@
 			// cmdClose
 			// 
 			this.cmdClose.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.cmdClose.Location = new System.Drawing.Point(813, 540);
+			this.cmdClose.Location = new System.Drawing.Point(1032, 536);
 			this.cmdClose.Name = "cmdClose";
 			this.cmdClose.Size = new System.Drawing.Size(100, 23);
 			this.cmdClose.TabIndex = 5;
@@ -202,7 +202,7 @@
 			this.tableTree.Name = "tableTree";
 			this.tableTree.ShowPlusMinus = false;
 			this.tableTree.ShowRootLines = false;
-			this.tableTree.Size = new System.Drawing.Size(269, 355);
+			this.tableTree.Size = new System.Drawing.Size(269, 151);
 			this.tableTree.TabIndex = 0;
 			this.tableTree.AfterCheck += new System.Windows.Forms.TreeViewEventHandler(this.tableTree_AfterCheck);
 			this.tableTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.tableTree_AfterSelect);
@@ -212,20 +212,18 @@
 			this.filterGrid.AllowDrop = true;
 			this.filterGrid.AllowUserToAddRows = false;
 			this.filterGrid.AllowUserToDeleteRows = false;
-			this.filterGrid.AllowUserToOrderColumns = true;
+			this.filterGrid.AllowUserToOrderColumns = false;
 			this.filterGrid.AllowUserToResizeRows = false;
 			this.filterGrid.BackgroundColor = System.Drawing.SystemColors.Window;
 			this.filterGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.filterGrid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
 			this.filterGrid.GridColor = System.Drawing.SystemColors.Window;
-			this.filterGrid.Location = new System.Drawing.Point(16, 377);
+			this.filterGrid.Location = new System.Drawing.Point(670, 16);
 			this.filterGrid.Name = "filterGrid";
+			this.filterGrid.MultiSelect = false;
 			this.filterGrid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
-			this.filterGrid.Size = new System.Drawing.Size(897, 157);
+			this.filterGrid.Size = new System.Drawing.Size(462, 514);
 			this.filterGrid.TabIndex = 3;
-			this.filterGrid.DragDrop += new System.Windows.Forms.DragEventHandler(this.filterGrid_DragDrop);
-			this.filterGrid.DragEnter += new System.Windows.Forms.DragEventHandler(this.filterGrid_DragEnter);
-			this.filterGrid.DragOver += new System.Windows.Forms.DragEventHandler(this.filterGrid_DragOver);
 			// 
 			// currentColumnsListView
 			// 
@@ -235,10 +233,10 @@
 			this.currentColumnsListView.ContextMenuStrip = this.currentContextMenuStrip;
 			this.currentColumnsListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
 			this.currentColumnsListView.HideSelection = false;
-			this.currentColumnsListView.Location = new System.Drawing.Point(291, 16);
+			this.currentColumnsListView.Location = new System.Drawing.Point(16, 191);
 			this.currentColumnsListView.Name = "currentColumnsListView";
 			this.currentColumnsListView.ShowGroups = false;
-			this.currentColumnsListView.Size = new System.Drawing.Size(243, 355);
+			this.currentColumnsListView.Size = new System.Drawing.Size(269, 343);
 			this.currentColumnsListView.TabIndex = 1;
 			this.currentColumnsListView.UseCompatibleStateImageBehavior = false;
 			this.currentColumnsListView.View = System.Windows.Forms.View.Details;
@@ -299,7 +297,7 @@
 			this.resultColumnsListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
 			this.resultColumnsListView.HideSelection = false;
 			this.resultColumnsListView.LabelEdit = true;
-			this.resultColumnsListView.Location = new System.Drawing.Point(540, 16);
+			this.resultColumnsListView.Location = new System.Drawing.Point(291, 16);
 			this.resultColumnsListView.Name = "resultColumnsListView";
 			this.resultColumnsListView.ShowGroups = false;
 			this.resultColumnsListView.ShowItemToolTips = true;
@@ -328,7 +326,7 @@
 			this.AcceptButton = this.cmdRefresh;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(934, 575);
+			this.ClientSize = new System.Drawing.Size(1148, 575);
 			this.Controls.Add(this.resultColumnsListView);
 			this.Controls.Add(this.currentColumnsListView);
 			this.Controls.Add(this.filterGrid);
