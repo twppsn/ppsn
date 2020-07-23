@@ -19,9 +19,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls.WebParts;
 using System.Windows.Forms;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
@@ -566,6 +568,9 @@ namespace TecWare.PPSn.Controls
 			public PpsDataFilterExpression ToExpression()
 				=> new PpsDataFilterCompareExpression(columnSource.Source.GetColumnName(columnSource.Column), op, value);
 
+			IPpsFilterColumn IPpsFilterColumnFactory.CreateFilterColumn(IPpsFilterExpression filterExpression, IPpsFilterGroup group)
+				=> new FilterColumn((FilterExpression)filterExpression, (FilterGroup)group, columnSource, op, value);
+
 			internal SourceColumnData Source => columnSource;
 
 			public string ColumnName => columnSource.SourceName;
@@ -619,7 +624,10 @@ namespace TecWare.PPSn.Controls
 
 				var c = this;
 				while (b > 0)
+				{
 					c = c.group;
+					b--;
+				}
 				return c;
 			} // func GetGroup
 
@@ -717,7 +725,9 @@ namespace TecWare.PPSn.Controls
 				while (offset < filterColumns.Count)
 					parts.Add(CompileCore(visibleResultView, root, ref offset));
 
-				return new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.And, parts.ToArray()).Reduce();
+				return parts.Count > 0
+					? new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.And, parts.ToArray()).Reduce()
+					: PpsDataFilterExpression.True;
 			} // func Compile
 
 			#endregion
@@ -727,6 +737,16 @@ namespace TecWare.PPSn.Controls
 				filterColumns.Insert(insertAt, (FilterColumn)column);
 				OnFilterChanged();
 			} // proc Insert
+
+			public bool Remove(int index)
+			{
+				filterColumns.RemoveAt(index);
+				OnFilterChanged();
+				return true;
+			} // func Remove
+
+			public int IndexOf(IPpsFilterColumn column)
+				=> filterColumns.IndexOf((FilterColumn)column);
 
 			IPpsFilterGroup IPpsFilterExpression.CreateFilterGroup(IPpsFilterGroup parentGroup, PpsDataFilterExpressionType type)
 				=> new FilterGroup((FilterGroup)parentGroup, type);
@@ -818,6 +838,7 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		private const string dataObjectFormat = "PpsnColumnSource[]";
+		private const string dataSourceFormat = "PpsnColumnSource";
 
 		private readonly PpsEnvironment env;
 		private readonly PpsViewDictionary availableViews; // list of all server tables
@@ -1335,7 +1356,6 @@ namespace TecWare.PPSn.Controls
 			else
 			{
 				resultColumnsListView.Items.Clear();
-				filterGrid.SetFilter(null);
 			}
 		} // proc RefreshAvailableColumns
 
@@ -1345,16 +1365,20 @@ namespace TecWare.PPSn.Controls
 
 		private Rectangle dragStartRectangle = Rectangle.Empty;
 
-		private static IEnumerable<ColumnData> CheckResultColumnsDragSource(DragEventArgs e)
+		private static bool TryGetDataColumnsInDragSource(DragEventArgs e, out IReadOnlyList<ColumnData> columns)
 		{
-			var columns = e.Data.GetData(dataObjectFormat) as ColumnData[];
-			if (columns != null && columns.Length > 0)
-				e.Effect = DragDropEffects.Move & e.AllowedEffect;
-			return columns;
-		} // func CheckResultColumnsDragSource
+			columns = e.Data.GetData(dataObjectFormat) as ColumnData[];
+			return columns != null && columns.Count > 0;
+		} // func TryGetDataColumnsInDragSource
 
-		public static IEnumerable<IPpsFilterColumnFactory> CheckDragSourceForFilter(DragEventArgs e)
-			=> CheckResultColumnsDragSource(e)?.OfType<IPpsFilterColumnFactory>();
+		private static bool IsDataColumnsSourceInDragSource(DragEventArgs e, string expectedSource)
+			=> Equals(e.Data.GetData(dataSourceFormat), expectedSource);
+
+		public static bool TryGetFilterFactoriesInDragSource(DragEventArgs e, out IReadOnlyList<IPpsFilterColumnFactory> filterFactories)
+		{
+			filterFactories = (e.Data.GetData(dataObjectFormat) as ColumnData[])?.OfType<IPpsFilterColumnFactory>().ToArray();
+			return filterFactories != null && filterFactories.Count > 0;
+		} // func TryGetFilterFactoriesInDragSource
 
 		private ListViewItem GetListViewHoverItem(ListView listView, DragEventArgs e, out bool insertAfter)
 		{
@@ -1420,10 +1444,11 @@ namespace TecWare.PPSn.Controls
 
 		private void listView_MouseMove(object sender, MouseEventArgs e)
 		{
-			if (sender is ListView listView && (e.Button & MouseButtons.Left) != 0 && !dragStartRectangle.Contains(e.X, e.Y))
+			if (sender is ListView listView && (e.Button & MouseButtons.Left) != 0 && !dragStartRectangle.IsEmpty && !dragStartRectangle.Contains(e.X, e.Y))
 			{
 				dragStartRectangle = Rectangle.Empty;
 
+				// setze die spalten
 				var dragData = new DataObject(dataObjectFormat,
 					(
 						from lvi in listView.SelectedItems.Cast<ListViewItem>()
@@ -1432,45 +1457,55 @@ namespace TecWare.PPSn.Controls
 					).ToArray()
 				);
 
-				if (DoDragDrop(dragData, DragDropEffects.Move) == DragDropEffects.Move)
-					listView.SelectedItems.Clear();
+				// setze die quelle der columns
+				if (sender == resultColumnsListView)
+					dragData.SetData(dataSourceFormat, "result");
+				else if (sender == currentColumnsListView)
+					dragData.SetData(dataSourceFormat, "current");
+
+				// drag&drop starten
+				if (DoDragDrop(dragData, DragDropEffects.All) != DragDropEffects.None)
+					listView.SelectedItems.Clear(); // bei Erfolg Markierung entfernen
 			}
 		} // event listView_MouseMove
 
 		private void currentColumnsListView_DragEnter(object sender, DragEventArgs e)
-			=> CheckResultColumnsDragSource(e);
+		{
+			if (TryGetDataColumnsInDragSource(e, out _) && IsDataColumnsSourceInDragSource(e, "result"))
+				e.Effect = e.AllowedEffect & DragDropEffects.Move;
+		} // event currentColumnsListView_DragEnter
 
 		private void currentColumnsListView_DragDrop(object sender, DragEventArgs e)
 		{
-			var columns = CheckResultColumnsDragSource(e);
-			if ((e.AllowedEffect & DragDropEffects.Move) != 0)
+			if (TryGetDataColumnsInDragSource(e, out var columns) && IsDataColumnsSourceInDragSource(e, "result"))
 				RemoveColumnsFromResult(columns, false);
 		} // event currentColumnsListView_DragDrop
 
 		private void resultColumnsListView_DragEnter(object sender, DragEventArgs e)
-			=> CheckResultColumnsDragSource(e);
-
-		private void resultColumnsListView_DragOver(object sender, DragEventArgs e)
-			=> CheckResultColumnsDragSource(e);
+		{
+			if (TryGetDataColumnsInDragSource(e, out _))
+				e.Effect = e.AllowedEffect & DragDropEffects.Move;
+		} // event resultColumnsListView_DragEnter
 
 		private void resultColumnsListView_DragDrop(object sender, DragEventArgs e)
 		{
-			var columns = CheckResultColumnsDragSource(e);
-			if ((e.AllowedEffect & DragDropEffects.Move) == 0)
-				return;
-
-			var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
-			if (hoverItem == null)
-				MoveColumnsToResult(columns, insertAfter ? -1 : 0); // append at end
-			else if (hoverItem.Tag is ColumnData columnSource)
+			if (TryGetDataColumnsInDragSource(e, out var columns))
 			{
-				// get index to insert
-				var insertAt = resultColumns.FindIndex(columnSource.Equals);
-				if (insertAfter)
-					insertAt++;
+				// hover item ermitteln
+				var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
+				
+				if (hoverItem == null) // append at end
+					MoveColumnsToResult(columns, insertAfter ? -1 : 0);
+				else if (hoverItem.Tag is ColumnData columnSource)
+				{
+					// get index to insert
+					var insertAt = resultColumns.FindIndex(columnSource.Equals);
+					if (insertAfter)
+						insertAt++;
 
-				// insert items
-				MoveColumnsToResult(columns, insertAt);
+					// insert items
+					MoveColumnsToResult(columns, insertAt);
+				}
 			}
 		} // event resultColumnsListView_DragDrop
 
@@ -1511,12 +1546,12 @@ namespace TecWare.PPSn.Controls
 		{
 			if (sender == currentColumnAddToResultMenuItem)
 				MoveColumnsToResult(false);
-			//else if (sender == currentColumnAddToCondition)
-			//	filterGrid.InsertFilter(GetSelectedColumns(currentColumnsListView).OfType<SourceColumnData>().Select(c => new ColumnCondition(c)));
+			else if (sender == currentColumnAddToCondition)
+				filterGrid.Insert(GetSelectedColumns(currentColumnsListView).OfType<IPpsFilterColumnFactory>().ToArray());
 			else if (sender == resultColumnRemoveMenuItem)
 				RemoveColumnsFromResult(false);
-			//else if (sender == resultColumnAddToCondition)
-			//	filterGrid.InsertFilter(GetSelectedColumns(resultColumnsListView).OfType<SourceColumnData>().Select(c => new ColumnCondition(c)));
+			else if (sender == resultColumnAddToCondition)
+				filterGrid.Insert(GetSelectedColumns(resultColumnsListView).OfType<IPpsFilterColumnFactory>().ToArray());
 			// sort
 			else if (sender == resultColumnSortAscMenuItem)
 				SetColumnResultSortOrder(SortOrder.Ascending);

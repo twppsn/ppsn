@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!-- version, productcode und assemblyfile ändern!!!! -->
-<?define ProductVersion = "1.2.11.0" ?>
-<?define ProductCode = "a3b57101-e325-4eab-8818-dcf50b2ab92d" ?>
+<?define ProductVersion = "1.2.12.0" ?>
+<?define ProductCode = "8e30055a-cd89-477e-a7ee-0c2f0ea7185a" ?>
 
 <?define ProductUpgradeCode = "59d50ec7-25af-4684-9681-ea8e4c7c593f" ?>
 

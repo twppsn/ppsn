@@ -16,10 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using TecWare.PPSn.Data;
@@ -33,7 +32,11 @@ namespace TecWare.PPSn.Controls
 		event EventHandler FilterChanged;
 
 		IPpsFilterGroup CreateFilterGroup(IPpsFilterGroup parentGroup, PpsDataFilterExpressionType type);
+
 		void Insert(int insertAt, IPpsFilterColumn filterColumn);
+		bool Remove(int index);
+
+		int IndexOf(IPpsFilterColumn filterColumn);
 
 		IPpsFilterGroup Group { get; }
 	} // interface IPpsFilterExpression
@@ -53,7 +56,7 @@ namespace TecWare.PPSn.Controls
 
 	#region -- interface IPpsFilterColumn ---------------------------------------------
 
-	internal interface IPpsFilterColumn
+	internal interface IPpsFilterColumn : IPpsFilterColumnFactory
 	{
 		bool TrySetValue(string value);
 
@@ -121,11 +124,12 @@ namespace TecWare.PPSn.Controls
 				// render group
 				var isStart = prevGroup == null || prevGroup != group;
 				var isEnd = nextGroup == null || group != nextGroup;
+				var isHighlighed = ((PpsFilterEditor)DataGridView).highlightedGroup == group;
 
 				var left = bounds.Left + (bounds.Width / 2 - halfWidth / 2);
 				var top = bounds.Top;
 				var bottom = bounds.Bottom;
-				var br = GetCachedBrush(cellStyle.ForeColor);
+				var br = isHighlighed ? SystemBrushes.Highlight : GetCachedBrush(cellStyle.ForeColor);
 
 				if (isStart)
 				{
@@ -148,8 +152,8 @@ namespace TecWare.PPSn.Controls
 								g.DrawString("+", cellStyle.Font, br, textLeft, textTop);
 								break;
 							case PpsDataFilterExpressionType.NOr:
-								using(var fnt = new Font(cellStyle.Font, FontStyle.Underline))
-								g.DrawString("+", fnt, br, textLeft, textTop);
+								using (var fnt = new Font(cellStyle.Font, FontStyle.Underline))
+									g.DrawString("+", fnt, br, textLeft, textTop);
 								break;
 							case PpsDataFilterExpressionType.NAnd:
 								using (var fnt = new Font(cellStyle.Font, FontStyle.Underline))
@@ -200,8 +204,30 @@ namespace TecWare.PPSn.Controls
 				);
 			} // proc Paint
 
+			public IPpsFilterGroup GetHoverGroup(int rowIndex, int x)
+			{
+				var column = GetFilterColumn(DataGridView, rowIndex);
+				if (column != null)
+				{
+					var g = column.Group;
+					var level = (x / groupColumnWidth) + 1;
+
+					while (level < g.Level)
+						g = g.Group;
+
+					return g.Level == level ? g : null;
+				}
+				else
+					return null;
+			} // func GetHoverGroup
+
 			protected override void OnMouseClick(DataGridViewCellMouseEventArgs e)
 			{
+				if (e.Button == MouseButtons.Left)
+					((PpsFilterEditor)DataGridView).SetGroupChecked(GetHoverGroup(e.RowIndex, e.X));
+				else if (e.Button == MouseButtons.Right)
+					((PpsFilterEditor)DataGridView).ShowContextMenu(e.ColumnIndex, e.RowIndex, e.X, e.Y, GetHoverGroup(e.RowIndex, e.X));
+
 				base.OnMouseClick(e);
 			} // proc OnMouseClick
 
@@ -348,7 +374,7 @@ namespace TecWare.PPSn.Controls
 
 				// draw text
 				cellRect.Inflate(-3, 0);
-				using(var fmt = new StringFormat(StringFormatFlags.NoWrap) { Alignment = StringAlignment.Near, LineAlignment= StringAlignment.Center, Trimming= StringTrimming.EllipsisCharacter })
+				using (var fmt = new StringFormat(StringFormatFlags.NoWrap) { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter })
 					g.DrawString((string)formattedValue, cellStyle.Font, GetForegroundBrush(cellState, cellStyle), cellRect, fmt);
 			}
 
@@ -457,10 +483,25 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		private static readonly Dictionary<int, Brush> brushes = new Dictionary<int, Brush>();
+		private static readonly object useSelection = new object();
 
 		private IPpsFilterExpression resultFilter = null;
 		private int startRowSelection = -1;
 		private int endRowSelection = -1;
+		private IPpsFilterGroup highlightedGroup = null;
+
+		private Rectangle dragStartRectangle = Rectangle.Empty;
+		private object dragSourceInfo = null;
+
+		private readonly ContextMenuStrip contextMenu;
+		private readonly ToolStripMenuItem logicGroupAddMenuItem;
+		private readonly ToolStripMenuItem logicGroupRemoveMenuItem;
+		private readonly ToolStripMenuItem logicAndMenuItem;
+		private readonly ToolStripMenuItem logicOrMenuItem;
+		private readonly ToolStripMenuItem logicNotAndMenuItem; 
+		private readonly ToolStripMenuItem logicNotOrMenuItem;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsFilterEditor()
 		{
@@ -471,6 +512,7 @@ namespace TecWare.PPSn.Controls
 			SelectionMode = DataGridViewSelectionMode.CellSelect;
 			ColumnHeadersVisible = false;
 			RowHeadersVisible = false;
+			MultiSelect = false;
 
 			Columns.Add(new FilterGroupColumn());
 			Columns.Add(new FilterGroupSelectColumn());
@@ -481,7 +523,29 @@ namespace TecWare.PPSn.Controls
 			ReadOnly = false;
 			VirtualMode = true;
 			EditMode = DataGridViewEditMode.EditOnEnter;
+
+			contextMenu = new ContextMenuStrip();
+			contextMenu.Items.Add(logicGroupAddMenuItem = new ToolStripMenuItem("Logische Gruppe erstellen", null, contextMenu_LogicOperation) { ShortcutKeyDisplayString = "F9" }); 
+			contextMenu.Items.Add(logicGroupRemoveMenuItem = new ToolStripMenuItem("Logische Gruppe entfernen", null, contextMenu_LogicOperation) { ShortcutKeyDisplayString = "F8" });
+			contextMenu.Items.Add(new ToolStripSeparator());
+			contextMenu.Items.Add(logicAndMenuItem = new ToolStripMenuItem("Logisches Und", null, contextMenu_LogicOperation));
+			contextMenu.Items.Add(logicOrMenuItem = new ToolStripMenuItem("Logisches Oder", null, contextMenu_LogicOperation));
+			contextMenu.Items.Add(logicNotAndMenuItem = new ToolStripMenuItem("Logisches Nicht Und", null, contextMenu_LogicOperation));
+			contextMenu.Items.Add(logicNotOrMenuItem = new ToolStripMenuItem("Logisches Nicht Oder", null, contextMenu_LogicOperation));
+			contextMenu.Items.Add(new ToolStripSeparator());
+			contextMenu.Items.Add(new ToolStripMenuItem("Filter &Entfernen", null, contextMenu_RemoveItem) { ShortcutKeyDisplayString = "Entf" });
 		} // ctor
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+				contextMenu.Dispose();
+			base.Dispose(disposing);
+		} // proc Dispose
+
+		#endregion
+
+		#region -- SetFilter, RefreshFilter -------------------------------------------
 
 		protected override void OnCellToolTipTextNeeded(DataGridViewCellToolTipTextNeededEventArgs e)
 		{
@@ -534,8 +598,81 @@ namespace TecWare.PPSn.Controls
 			Invalidate();
 		} // proc RefreshFilterView
 
+		#endregion
+
+		#region -- Filter Group Manager -----------------------------------------------
+
 		private bool IsRowChecked(int rowIndex)
 			=> rowIndex >= startRowSelection && rowIndex <= endRowSelection;
+
+		private static bool GontainsGroup(IPpsFilterGroup g, IPpsFilterGroup t)
+		{
+			while (g != null)
+			{
+				if (g == t)
+					return true;
+				g = g.Group;
+			}
+			return false;
+		} // func GontainsGroup
+
+		private void SetGroupChecked(IPpsFilterGroup group)
+		{
+			if (group == null)
+				return;
+
+			var s = 0;
+			var isChanged = false;
+			for (var i = 0; i < resultFilter.Count; i++)
+			{
+				var containsGroup = GontainsGroup(resultFilter[i].Group, group);
+				if (s == 0)// before group
+				{
+					if (containsGroup)
+					{
+						s = 1;
+						if (startRowSelection != i)
+						{
+							startRowSelection = i;
+							isChanged = true;
+						}
+					}
+				}
+				else if (s == 1) // in group
+				{
+					if (!containsGroup)
+					{
+						s = 2;
+						if (endRowSelection != i - 1)
+						{
+							endRowSelection = i - 1;
+							isChanged = true;
+						}
+					}
+				}
+				else // after group
+					break;
+			}
+
+			if (s == 1)
+			{
+				var i = resultFilter.Count - 1;
+				if (i != endRowSelection)
+				{
+					endRowSelection = i;
+					isChanged = true;
+				}
+			}
+
+			if (isChanged)
+				InvalidateColumn(1);
+			else
+			{
+				startRowSelection = -1;
+				endRowSelection = -1;
+				InvalidateColumn(1);
+			}
+		} // func SetGroupChecked
 
 		private void SetRowChecked(int rowIndex, bool collapse)
 		{
@@ -603,6 +740,15 @@ namespace TecWare.PPSn.Controls
 			return false;
 		} // func TryGetRowGroupSelection
 
+		private IEnumerable<IPpsFilterColumn> GetRowGroupSelection()
+		{
+			if(TryGetRowGroupSelection(out var startRow, out var endRow))
+			{
+				for (var i = startRow; i <= endRow; i++)
+					yield return resultFilter[i];
+			}
+		} // func GetRowGroupSelection
+
 		private PpsDataFilterExpressionType SpinRowGroup(PpsDataFilterExpressionType type)
 		{
 			// just change the type of the group
@@ -626,7 +772,7 @@ namespace TecWare.PPSn.Controls
 			var g = resultFilter[startRow].Group;
 			var t = g;
 			var isEqual = true;
-			
+
 			for (var i = startRow + 1; i <= endRow; i++)
 			{
 				var c = resultFilter[i].Group;
@@ -779,10 +925,125 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc UpdateRowGroup
 
-		protected override void OnKeyDown(KeyEventArgs e)
+		#endregion
+
+		#region -- Insert -------------------------------------------------------------
+
+		private int GetInsertPosition(int rowIndex, bool after, out IPpsFilterGroup group)
 		{
-			base.OnKeyDown(e);
-		} // proc OnkeyDown
+			if (rowIndex < 0)
+			{
+				rowIndex = -1;
+				group = resultFilter.Group;
+				return rowIndex;
+			}
+			else if (rowIndex >= resultFilter.Count)
+			{
+				rowIndex = resultFilter.Count - 1;
+				group = rowIndex >= 0 ? resultFilter[rowIndex].Group : resultFilter.Group;
+				return rowIndex + 1;
+			}
+			else
+			{
+				group = resultFilter[rowIndex].Group;
+				return after ? rowIndex + 1 : rowIndex;
+			}
+		} // func GetInsertPosition
+
+		private int Insert(IReadOnlyList<IPpsFilterColumnFactory> filterFactories, int insertAt, IPpsFilterGroup group, bool moveItems)
+		{
+			foreach (var c in filterFactories)
+			{
+				if (moveItems && c is IPpsFilterColumn column)
+				{
+					var existsIndex = resultFilter.IndexOf(column);
+					if (existsIndex >= 0)
+					{
+						if (resultFilter.Remove(existsIndex) && insertAt >= resultFilter.Count)
+							insertAt--;
+					}
+				}
+				resultFilter.Insert(insertAt++, c.CreateFilterColumn(resultFilter, group));
+			}
+			return insertAt;
+		} // func Insert
+
+		public void Insert(IReadOnlyList<IPpsFilterColumnFactory> columnFactories)
+		{
+			var atSelectionEnd = endRowSelection >= 0;
+			var i = Insert(columnFactories, GetInsertPosition(atSelectionEnd ? endRowSelection : resultFilter.Count, true, out var group), group, false);
+			if (atSelectionEnd)
+			{
+				endRowSelection = i - 1;
+				SelectRow(i - 1);
+				InvalidateColumn(1);
+			}
+		} // proc Insert
+
+		private void SelectRow(int rowIndex)
+		{
+			CurrentCell = this[2, rowIndex];
+		} // proc SelectRow
+
+		#endregion
+
+		private void ShowContextMenu(int columnIndex, int rowIndex, int x, int y, IPpsFilterGroup selectedGroup)
+		{
+			var rc = GetCellDisplayRectangle(columnIndex, rowIndex, false);
+
+			// activate or deactivate menu items
+			logicGroupAddMenuItem.Enabled = startRowSelection >= 0;
+			logicGroupRemoveMenuItem.Enabled = startRowSelection >= 0;
+
+			logicAndMenuItem.Enabled = selectedGroup != null && selectedGroup.Type != PpsDataFilterExpressionType.And && selectedGroup.Group.Type != PpsDataFilterExpressionType.And;
+			logicOrMenuItem.Enabled = selectedGroup != null && selectedGroup.Type != PpsDataFilterExpressionType.Or && selectedGroup.Group.Type != PpsDataFilterExpressionType.Or;
+			logicNotAndMenuItem.Enabled = selectedGroup != null && selectedGroup.Type != PpsDataFilterExpressionType.NAnd && selectedGroup.Group.Type != PpsDataFilterExpressionType.NAnd;
+			logicNotOrMenuItem.Enabled = selectedGroup != null && selectedGroup.Type != PpsDataFilterExpressionType.NOr && selectedGroup.Group.Type != PpsDataFilterExpressionType.NOr;
+
+			// open menu
+			highlightedGroup = selectedGroup;
+			if (highlightedGroup != null)
+				InvalidateColumn(0);
+
+			contextMenu.Tag = new object[] { rowIndex, selectedGroup };
+			contextMenu.Show(this, rc.Left + x, rc.Top + y);
+			contextMenu.Closed += ContextMenu_Closed;
+		} // proc ShowContextMenu
+
+		private void contextMenu_LogicOperation(object sender, EventArgs e)
+		{
+			if (sender == logicGroupAddMenuItem)
+				CreateRowGroup();
+			else if (sender == logicGroupRemoveMenuItem)
+				RemoveRowGroup();
+			else if (contextMenu.Tag is object[] args)
+			{
+				if (args[1] is IPpsFilterGroup group)
+				{
+					if (sender == logicAndMenuItem)
+						group.Type = PpsDataFilterExpressionType.And;
+					else if (sender == logicOrMenuItem)
+						group.Type = PpsDataFilterExpressionType.Or;
+					else if (sender == logicNotAndMenuItem)
+						group.Type = PpsDataFilterExpressionType.NAnd;
+					else if (sender == logicNotOrMenuItem)
+						group.Type = PpsDataFilterExpressionType.NOr;
+					InvalidateColumn(0);
+				}
+			}
+		} // event contextMenu_LogicOperation
+
+		private void contextMenu_RemoveItem(object sender, EventArgs e)
+		{
+			if (contextMenu.Tag is object[] args && args[0] is int rowIndex && rowIndex >= 0)
+				resultFilter.Remove(rowIndex);
+		} // event contextMenu_RemoveItem
+
+		private void ContextMenu_Closed(object sender, ToolStripDropDownClosedEventArgs e)
+		{
+			highlightedGroup = null;
+			InvalidateColumn(0);
+		} // event ContextMenu_Closed
 
 		protected override void OnKeyUp(KeyEventArgs e)
 		{
@@ -807,36 +1068,123 @@ namespace TecWare.PPSn.Controls
 		} // proc OnKeyUp
 
 		protected override void OnCellMouseDown(DataGridViewCellMouseEventArgs e)
-			=> base.OnCellMouseDown(e);
+		{
+			if (e.RowIndex >= 0 && (e.Button & MouseButtons.Left) != 0)
+			{
+				if (e.ColumnIndex == 0) // gruppe verschieben!!!
+				{
+					dragSourceInfo = ((FilterGroupCell)this[e.ColumnIndex, e.RowIndex]).GetHoverGroup(e.RowIndex, e.X);
+				}
+				else if (e.ColumnIndex == 1) // ggf. markierung verschieben
+				{
+					if (startRowSelection >= 0)
+						dragSourceInfo = useSelection;
+					else
+						dragSourceInfo = null;
+				}
+				if (e.ColumnIndex > 1) // einzelne Zeile verschieben
+				{
+					dragSourceInfo = e.RowIndex;
+				}
+
+				if (dragSourceInfo != null)
+				{
+					var dragSize = SystemInformation.DragSize;
+					dragStartRectangle = new Rectangle(new Point(e.X - (dragSize.Width / 2), e.Y - (dragSize.Height / 2)), dragSize);
+				}
+				else
+					dragStartRectangle = Rectangle.Empty;
+			}
+			else if (e.ColumnIndex > 0 && e.RowIndex >= 0 && (e.Button & MouseButtons.Right) != 0)
+				ShowContextMenu(e.ColumnIndex, e.RowIndex, e.X, e.Y, null);
+
+			base.OnCellMouseDown(e);
+		} // proc OnCellMouseDown
 
 		protected override void OnMouseMove(MouseEventArgs e)
-			=> base.OnMouseMove(e);
-
-		protected override void OnDragEnter(DragEventArgs e)
-			=> TableInsertForm.CheckDragSourceForFilter(e);
-
-		protected override void OnDragOver(DragEventArgs e)
-			=> TableInsertForm.CheckDragSourceForFilter(e);
-
-		protected override void OnDragDrop(DragEventArgs e)
 		{
-			var cols = TableInsertForm.CheckDragSourceForFilter(e);
-			if ((e.AllowedEffect & DragDropEffects.Move) == 0)
-				return;
+			if ((e.Button & MouseButtons.Left) != 0 && !dragStartRectangle.IsEmpty && !dragStartRectangle.Contains(e.Location))
+			{
+				dragStartRectangle = Rectangle.Empty;
 
+				if (dragSourceInfo is int rowIndex)
+				{
+					var dragData = new DataObject("filterRow[]", new IPpsFilterColumn[] { resultFilter[rowIndex] });
+					DoDragDrop(dragData, DragDropEffects.Move | DragDropEffects.Copy);
+				}
+				else if (dragSourceInfo == useSelection)
+				{
+					var dragData = new DataObject("filterRow[]", GetRowGroupSelection().ToArray());
+					DoDragDrop(dragData, DragDropEffects.Move | DragDropEffects.Copy);
+				}
+				else if (dragSourceInfo is IPpsFilterGroup filterGroup)
+				{
+					var dragData = new DataObject("filterGroup", dragSourceInfo);
+					highlightedGroup = filterGroup;
+					InvalidateColumn(0);
+					try
+					{
+						DoDragDrop(dragData, DragDropEffects.Move | DragDropEffects.Copy);
+					}
+					finally
+					{
+						highlightedGroup = null;
+						InvalidateColumn(0);
+					}
+				}
+			}
+			else
+				base.OnMouseMove(e);
+		} // proc OnMouseMove
+
+		private int TryGetHoverGroup(DragEventArgs e, out IPpsFilterGroup group)
+		{
 			// get current cell
 			var pt = PointToClient(new Point(e.X, e.Y));
 			var ht = HitTest(pt.X, pt.Y);
-			var i = ht.RowIndex >= 0 ? ht.RowIndex : resultFilter.Count;
 
 			// find group
-			var group = i < resultFilter.Count
-				? resultFilter[i].Group
-				: (resultFilter.Count > 0 ? resultFilter[resultFilter.Count - 1].Group : resultFilter.Group);
+			return GetInsertPosition(ht.RowIndex >= 0 ? ht.RowIndex : resultFilter.Count, false, out group);
+		} // func TryGetHoverGroup
 
-			// add columns
-			foreach (var c in cols)
-				resultFilter.Insert(i++, c.CreateFilterColumn(resultFilter, group));
+		protected override void OnDragEnter(DragEventArgs e)
+		{
+			if (TableInsertForm.TryGetFilterFactoriesInDragSource(e, out _))
+				e.Effect = e.AllowedEffect & DragDropEffects.Copy;
+			else if (e.Data.GetData("filterRow[]") is IPpsFilterColumn[]
+				|| e.Data.GetData("filterGroup") is IPpsFilterGroup)
+			{
+				e.Effect = e.AllowedEffect & (((e.KeyState & 8) != 0) ? DragDropEffects.Copy : DragDropEffects.Move);
+			}
+		} // proc OnDragEnter
+
+		protected override void OnDragOver(DragEventArgs e)
+			=> OnDragEnter(e);
+
+		protected override void OnDragDrop(DragEventArgs e)
+		{
+			if (TableInsertForm.TryGetFilterFactoriesInDragSource(e, out var filterFactories))
+				Insert(filterFactories, TryGetHoverGroup(e, out var group), group, true);
+			else
+			{
+				var insertAt = TryGetHoverGroup(e, out var group);
+
+				if (e.Data.GetData("filterRow[]") is IPpsFilterColumn[] columns)
+				{
+					// prüfe die position;
+					if (columns.Length == 1 && resultFilter.IndexOf(columns[0]) == insertAt
+						|| resultFilter.IndexOf(columns[0]) >= insertAt && resultFilter.IndexOf(columns[columns.Length - 1]) <= insertAt)
+						return;
+
+					SelectRow(Insert(columns, insertAt, group, (e.Effect & DragDropEffects.Copy) == 0) - 1);
+				}
+				else if (e.Data.GetData("filterGroup") is IPpsFilterGroup filterGroup)
+				{
+					// todo:
+					//if (insertAt == -1)
+					//	;
+				}
+			}
 		} // proc OnDragDrop
 
 		// -- Static ----------------------------------------------------------

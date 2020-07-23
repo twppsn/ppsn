@@ -220,8 +220,6 @@
 			this.filterGrid.GridColor = System.Drawing.SystemColors.Window;
 			this.filterGrid.Location = new System.Drawing.Point(670, 16);
 			this.filterGrid.Name = "filterGrid";
-			this.filterGrid.MultiSelect = false;
-			this.filterGrid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
 			this.filterGrid.Size = new System.Drawing.Size(462, 514);
 			this.filterGrid.TabIndex = 3;
 			// 
@@ -309,7 +307,6 @@
 			this.resultColumnsListView.AfterLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.resultColumnsListView_AfterLabelEdit);
 			this.resultColumnsListView.DragDrop += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragDrop);
 			this.resultColumnsListView.DragEnter += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragEnter);
-			this.resultColumnsListView.DragOver += new System.Windows.Forms.DragEventHandler(this.resultColumnsListView_DragOver);
 			this.resultColumnsListView.KeyUp += new System.Windows.Forms.KeyEventHandler(this.resultColumnsListView_KeyUp);
 			this.resultColumnsListView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listView_MouseDown);
 			this.resultColumnsListView.MouseMove += new System.Windows.Forms.MouseEventHandler(this.listView_MouseMove);
