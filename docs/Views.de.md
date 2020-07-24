@@ -1,9 +1,9 @@
-# Views 
+ï»¿# Views 
 
 ## Registrierung eines Views
 
 Views werden immer an Datenquellen gebunden und mittels des Register-Knotes
-zur Verfügung gestellt.
+zur VerfÃ¼gung gestellt.
 
 ```Xml
 <pps:ppsn name="ppsn">
@@ -21,7 +21,7 @@ eigentlichen View-Name.
 Der Namespace muss in der Datenbank existieren.
 :::
 
-Es sollte zusätzlich für den Anwender ein `displayName` definiert werden.
+Es sollte zusÃ¤tzlich fÃ¼r den Anwender ein `displayName` definiert werden.
 
 ### Quelle
 
@@ -34,7 +34,7 @@ Select-Ausdruck.
 - `resource` - Der Select ist in einem geladenen Assembly definiert.
 - `view` - Die Quelle ist ein in der DB vorhandener View.
 
-### Join-Vorschläge
+### Join-VorschlÃ¤ge
 
 todo!
 
@@ -52,7 +52,7 @@ todo!
 
 ### Attribute
 
-Es können beliebige Attribute an den View gebunden werden.
+Es kÃ¶nnen beliebige Attribute an den View gebunden werden.
 
 ```Xml
 <pps:view>
@@ -63,7 +63,7 @@ Es können beliebige Attribute an den View gebunden werden.
 
 ## Views neu laden
 
-Wurde der View geändert so kann er einzeln im Server aktualisiert werden, ohne
+Wurde der View geÃ¤ndert so kann er einzeln im Server aktualisiert werden, ohne
 das der Server neugestartet werden muss.
 
 Dazu muss am Knoten `ppsn` `RefreshView` aufgerufen werden.
@@ -76,7 +76,7 @@ RefreshView("Cat.dbo.KataView");
 
 ### `GetViewDefinition`
 
-Gibt die View-Registrierungsdaten zurück. Siehe Klasse `PpsViewDescription`.
+Gibt die View-Registrierungsdaten zurÃ¼ck. Siehe Klasse `PpsViewDescription`.
 
 Der Name kann dabei voll qualifiziert sein, also: [Datenquelle].[Namespace].[ViewName]
 

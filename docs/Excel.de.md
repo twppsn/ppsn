@@ -1,36 +1,36 @@
-# Excel-Plugin
+ï»¿# Excel-Plugin
 
-Lädt Smart-Tables auf Basis von Xml-Datenströmen in ein Excel Formula.
+LÃ¤dt Smart-Tables auf Basis von Xml-DatenstrÃ¶men in ein Excel Formula.
 
-![Menü](Imgs/Excel.Menu.png)
+![MenÃ¼](Imgs/Excel.Menu.png)
 
-Zuerst muss eine Umgebung/Datenbankverbindung gewählt werden.
+Zuerst muss eine Umgebung/Datenbankverbindung gewÃ¤hlt werden.
 
-Danach können `Reporte` eingefügt/geladen oder Smart-Table definiert werden (`Tabelle`).
+Danach kÃ¶nnen `Reporte` eingefÃ¼gt/geladen oder Smart-Table definiert werden (`Tabelle`).
 
 ## Tabelle definieren
 
-Als erstes wählt man eine Basis-Tabelle aus, 
+Als erstes wÃ¤hlt man eine Basis-Tabelle aus, 
 
-![Tabelle auswählen](Imgs/Excel.Table1.png)
+![Tabelle auswÃ¤hlen](Imgs/Excel.Table1.png)
 
 ## Spalten definieren
 
 Spalten werden in der mittleren Liste definiert. Dies werden per Drag&Drop in die 
-Rückgabe aufgenommen.
+RÃ¼ckgabe aufgenommen.
 
-Sortierung, Name kann mittels des Kontextmenüs beeinflusst werden.
+Sortierung, Name kann mittels des KontextmenÃ¼s beeinflusst werden.
 
-![Tabelle auswählen](Imgs/Excel.Table2.png)
+![Tabelle auswÃ¤hlen](Imgs/Excel.Table2.png)
 
 ## Bedingungen
 
-Die dritte Spalte beinhält die Filterbedingungen.
+Die dritte Spalte beinhÃ¤lt die Filterbedingungen.
 
-![Tabelle auswählen](Imgs/Excel.Table3.png)
+![Tabelle auswÃ¤hlen](Imgs/Excel.Table3.png)
 
-Neben Konstanten und anderen Felder können auch Excel-Zellen referenziert werden.
+Neben Konstanten und anderen Felder kÃ¶nnen auch Excel-Zellen referenziert werden.
 
 - Via Namen z.B. `$Feld`
 - Oder Zelladresse z.B. `$C23` oder `$R23C3`
-- Tabellen können auch angegebn werden, z.B. `$Tabelle1_C23`
+- Tabellen kÃ¶nnen auch angegebn werden, z.B. `$Tabelle1_C23`
