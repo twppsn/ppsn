@@ -19,11 +19,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.UI.WebControls.WebParts;
 using System.Windows.Forms;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
@@ -1427,6 +1425,7 @@ namespace TecWare.PPSn.Controls
 			resultColumnsSelectInverseMenuItem.Enabled = hasItems;
 			resultColumnAddToCondition.Enabled = hasSelectedItems;
 			resultColumnRemoveMenuItem.Enabled = hasSelectedItems;
+			resultColumnRenameMenuItem.Enabled = resultColumnsListView.FocusedItem != null;
 			resultColumnSortAscMenuItem.Enabled = hasSelectedItems;
 			resultColumnSortDescMenuItem.Enabled = hasSelectedItems;
 			resultColumnSortNoneMenuItem.Enabled = hasSelectedItems;
@@ -1550,6 +1549,8 @@ namespace TecWare.PPSn.Controls
 				filterGrid.Insert(GetSelectedColumns(currentColumnsListView).OfType<IPpsFilterColumnFactory>().ToArray());
 			else if (sender == resultColumnRemoveMenuItem)
 				RemoveColumnsFromResult(false);
+			else if (sender == resultColumnRenameMenuItem)
+				resultColumnsListView.FocusedItem?.BeginEdit();
 			else if (sender == resultColumnAddToCondition)
 				filterGrid.Insert(GetSelectedColumns(resultColumnsListView).OfType<IPpsFilterColumnFactory>().ToArray());
 			// sort

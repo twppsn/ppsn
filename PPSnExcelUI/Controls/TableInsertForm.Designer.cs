@@ -57,6 +57,7 @@
 			this.currentColumnsSelectInverseMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.resultColumnsListView = new System.Windows.Forms.ListView();
 			this.imageListSort = new System.Windows.Forms.ImageList(this.components);
+			this.resultColumnRenameMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			resultColumnsContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
@@ -91,9 +92,10 @@
             this.resultColumnSortAscMenuItem,
             this.resultColumnSortDescMenuItem,
             this.toolStripSeparator1,
+            this.resultColumnRenameMenuItem,
             this.resultColumnRemoveMenuItem});
 			resultColumnsContextMenuStrip.Name = "resultColumnsContextMenuStrip";
-			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(200, 176);
+			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(200, 220);
 			resultColumnsContextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.resultColumnsContextMenuStrip_Opening);
 			// 
 			// resultColumnAddToCondition
@@ -212,16 +214,21 @@
 			this.filterGrid.AllowDrop = true;
 			this.filterGrid.AllowUserToAddRows = false;
 			this.filterGrid.AllowUserToDeleteRows = false;
-			this.filterGrid.AllowUserToOrderColumns = false;
+			this.filterGrid.AllowUserToResizeColumns = false;
 			this.filterGrid.AllowUserToResizeRows = false;
 			this.filterGrid.BackgroundColor = System.Drawing.SystemColors.Window;
 			this.filterGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.filterGrid.ColumnHeadersVisible = false;
 			this.filterGrid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
 			this.filterGrid.GridColor = System.Drawing.SystemColors.Window;
 			this.filterGrid.Location = new System.Drawing.Point(670, 16);
+			this.filterGrid.MultiSelect = false;
 			this.filterGrid.Name = "filterGrid";
+			this.filterGrid.RowHeadersVisible = false;
+			this.filterGrid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
 			this.filterGrid.Size = new System.Drawing.Size(462, 514);
 			this.filterGrid.TabIndex = 3;
+			this.filterGrid.VirtualMode = true;
 			// 
 			// currentColumnsListView
 			// 
@@ -318,6 +325,14 @@
 			this.imageListSort.Images.SetKeyName(0, "sort_ascending.png");
 			this.imageListSort.Images.SetKeyName(1, "sort_descending.png");
 			// 
+			// resultColumnRenameMenuItem
+			// 
+			this.resultColumnRenameMenuItem.Name = "resultColumnRenameMenuItem";
+			this.resultColumnRenameMenuItem.ShortcutKeyDisplayString = "F2";
+			this.resultColumnRenameMenuItem.Size = new System.Drawing.Size(199, 22);
+			this.resultColumnRenameMenuItem.Text = "Umbe&nennen";
+			this.resultColumnRenameMenuItem.Click += new System.EventHandler(this.CommandExec);
+			// 
 			// TableInsertForm
 			// 
 			this.AcceptButton = this.cmdRefresh;
@@ -367,5 +382,6 @@
 		private System.Windows.Forms.ToolStripMenuItem currentColumnsSelectAllMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem resultColumnAddToCondition;
 		private System.Windows.Forms.ToolStripMenuItem currentColumnAddToCondition;
+		private System.Windows.Forms.ToolStripMenuItem resultColumnRenameMenuItem;
 	}
 }
