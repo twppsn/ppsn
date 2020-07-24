@@ -6,7 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{3AFE3696-3A14-45A8-A079-333850913BFA}"
 	ProjectSection(SolutionItems) = preProject
 		docs\Excel.de.md = docs\Excel.de.md
-		docs\Fields.md = docs\Fields.md
+		docs\Fields.de.md = docs\Fields.de.md
 		docs\Views.de.md = docs\Views.de.md
 	EndProjectSection
 EndProject
