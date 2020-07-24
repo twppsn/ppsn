@@ -1250,14 +1250,20 @@ namespace TecWare.PPSn.Server
 				datasetDefinitions.Add(datasetDefinition.Name, datasetDefinition);
 		} // void RegisterDataSet
 
-		private (PpsDataSource source, XElement xConfig) GetSingleConfigurationElement(XName cls, string name)
+		private (PpsDataSource source, XElement xConfig) GetSingleConfigurationElement(XName cls, string sourceName, string name)
 		{
 			foreach(var xRegister in Config.Elements(xnRegister))
 			{
-				foreach(var xConfig in xRegister.Elements(cls))
+				// get source name
+				var currentSourceName = xRegister.GetAttribute("source", null);
+				if (!String.IsNullOrEmpty(sourceName) && String.Compare(currentSourceName, sourceName, StringComparison.OrdinalIgnoreCase) != 0)
+					continue;
+
+				// find named element
+				foreach (var xConfig in xRegister.Elements(cls))
 				{
 					if (String.Compare(xConfig.GetAttribute("name",String.Empty), name, StringComparison.OrdinalIgnoreCase) == 0)
-						return (GetDataSource(xRegister.GetAttribute("source", null)), xConfig);
+						return (GetDataSource(currentSourceName), xConfig);
 				}
 			}
 			return (null, null);
@@ -1317,17 +1323,30 @@ namespace TecWare.PPSn.Server
 		[DEConfigHttpAction("refreshView", IsSafeCall = true, SecurityToken = SecuritySys)]
 		[LuaMember]
 		public void RefreshView(string name)
-			=> RefreshViewAsync(name).AwaitTask();
+		{
+			var firstDot = name.IndexOf('.');
+			var lastDot = name.LastIndexOf('.');
+
+			if (firstDot == lastDot)
+				RefreshViewAsync(null, name).AwaitTask();
+			else
+			{
+				var sourceName = name.Substring(0, firstDot);
+				var viewName = name.Substring(firstDot + 1);
+				RefreshViewAsync(sourceName, viewName).AwaitTask();
+			}
+		} // proc RefreshView
 
 		/// <summary>Refresh a view from configuration.</summary>
 		/// <param name="name"></param>
+		/// <param name="sourceName"></param>
 		/// <returns></returns>
-		public async Task RefreshViewAsync(string name)
+		public async Task RefreshViewAsync(string sourceName, string name)
 		{
 			if (String.IsNullOrEmpty(name))
 				throw new ArgumentNullException(nameof(name));
 
-			var (source, xConfig) = GetSingleConfigurationElement(xnView, name);
+			var (source, xConfig) = GetSingleConfigurationElement(xnView, sourceName, name);
 			if (source == null)
 				throw new ArgumentOutOfRangeException(nameof(name), name, "View not found in configuration.");
 

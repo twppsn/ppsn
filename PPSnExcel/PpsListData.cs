@@ -1168,7 +1168,7 @@ namespace PPSnExcel
 		{
 			var sortFields = xlList.Sort.SortFields;
 
-			for (var i = 1; i < sortFields.Count; i++)
+			for (var i = 1; i <= sortFields.Count; i++)
 			{
 				var sortField = sortFields[i];
 				var columnIndex = sortField.Key.Column;
@@ -1198,7 +1198,7 @@ namespace PPSnExcel
 								j++;
 
 							// check if the columns are equal
-							if (j >= currentColumns.Length &&
+							if (j >= currentColumns.Length ||
 								!PpsListColumnInfo.Equals(col, currentColumns[j]) || col.Ascending != currentColumns[j].Ascending)
 								isChanged = true;
 						}
