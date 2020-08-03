@@ -1484,7 +1484,7 @@ namespace TecWare.PPSn.Server
 			/// <param name="nr"></param>
 			/// <param name="nextNumber"></param>
 			/// <param name="data"></param>
-			[LuaMember(nameof(ValidateNumber))]
+			[LuaMember]
 			public void ValidateNumber(string nr, object nextNumber, object data)
 			{
 				//throw new NotImplementedException("todo");
