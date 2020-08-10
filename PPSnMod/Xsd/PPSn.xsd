@@ -4,7 +4,7 @@
            elementFormDefault="qualified"
            xmlns="http://tecware-gmbh.de/dev/des/2014"
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
-					 xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+		   xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
 
 	<xs:import namespace="http://tecware-gmbh.de/dev/des/2014" />
 

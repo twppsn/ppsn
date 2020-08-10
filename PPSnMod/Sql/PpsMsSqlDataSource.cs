@@ -22,6 +22,7 @@ using System.Linq;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.SqlServer.Server;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
@@ -685,18 +686,41 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- interface ISqlParameterTypeInfo ------------------------------------
+
+		private interface ISqlParameterTypeInfo
+		{
+			SqlDbType SqlType { get; }
+			int MaxLength { get; }
+			byte Precision { get; }
+			byte Scale { get; }
+
+			string TypeName { get; }
+
+			string XmlSchemaCollectionDatabase { get; }
+			string XmlSchemaCollectionName { get; }
+			string XmlSchemaCollectionOwningSchema { get; }
+		} // interface ISqlParameterTypeInfo
+
+		#endregion
+
 		#region -- class SqlColumnInfo ------------------------------------------------
 
-		private sealed class SqlColumnInfo : PpsSqlColumnInfo
+		private sealed class SqlColumnInfo : PpsSqlColumnInfo, ISqlParameterTypeInfo
 		{
 			private readonly int columnId;
 			private readonly SqlDbType sqlType;
-			private readonly string udtName;
+
+			private readonly string typeName;
+
+			private readonly string xmlSchemaCollectionDatabase;
+			private readonly string xmlSchemaCollectionName;
+			private readonly string xmlSchemaCollectionOwningSchema;
 
 			public SqlColumnInfo(PpsSqlTableInfo table, SqlDataReader r)
 				: base(table,
 					  columnName: r.GetString(2),
-					  dataType: GetFieldType(r.GetByte(3)),
+					  dataType: GetFieldType(r.GetByte(3), r.IsDBNull(10) ? null : r.GetString(10)),
 					  maxLength: r.GetInt16(4),
 					  precision: r.GetByte(5),
 					  scale: r.GetByte(6),
@@ -705,13 +729,16 @@ namespace TecWare.PPSn.Server.Sql
 					  isPrimaryKey: r.GetBoolean(9)
 				)
 			{
-				this.columnId = r.GetInt32(1);
+				columnId = r.GetInt32(1);
+				
 				var t = r.GetByte(3);
-				this.sqlType = GetSqlType(t);
-				if (t == 240)
-					udtName = "geography";
-				else
-					udtName = null;
+				sqlType = GetSqlType(t);
+			
+				typeName = typeName = r.IsDBNull(10) ? null : r.GetString(10);
+
+				xmlSchemaCollectionDatabase = r.IsDBNull(11) ? null : r.GetString(11);
+				xmlSchemaCollectionName = r.IsDBNull(12) ? null : r.GetString(12);
+				xmlSchemaCollectionOwningSchema = r.IsDBNull(13) ? null : r.GetString(13);
 			} // ctor
 
 			protected override IEnumerator<PropertyValue> GetProperties()
@@ -733,10 +760,12 @@ namespace TecWare.PPSn.Server.Sql
 						value = SqlType;
 						return true;
 					}
-				}
 
-				value = null;
-				return false;
+					value = null;
+					return false;
+				}
+				else
+					return true;
 			} // func TryGetProperty
 
 			public override void InitSqlParameter(DbParameter parameter, string parameterName, object value)
@@ -746,17 +775,70 @@ namespace TecWare.PPSn.Server.Sql
 
 				base.InitSqlParameter(parameter, parameterName, value);
 
-				if (parameter.Size == 0 && (sqlType == SqlDbType.NVarChar || sqlType == SqlDbType.VarChar || sqlType == SqlDbType.VarBinary))
-					parameter.Size = -1;
-
-				((SqlParameter)parameter).SqlDbType = sqlType;
-				if (sqlType == SqlDbType.Udt)
-					((SqlParameter)parameter).UdtTypeName = udtName;
+				InitSqlParameterType((SqlParameter)parameter, this);
 			} // proc InitSqlParameter
+
+			internal static void InitSqlParameterType(SqlParameter p, ISqlParameterTypeInfo sqlType)
+			{
+				var t = sqlType.SqlType;
+				p.SqlDbType = t;
+				switch (t)
+				{
+					case SqlDbType.NVarChar:
+					case SqlDbType.VarBinary:
+					case SqlDbType.VarChar:
+						p.Size = -1;
+						break;
+					case SqlDbType.Binary:
+					case SqlDbType.NChar:
+					case SqlDbType.Char:
+						p.Size = sqlType.MaxLength;
+						break;
+					case SqlDbType.Decimal:
+						p.Precision = sqlType.Precision;
+						p.Scale = sqlType.Scale;
+						break;
+					case SqlDbType.Udt:
+						p.UdtTypeName = sqlType.TypeName;
+						break;
+					case SqlDbType.Structured:
+						p.TypeName = sqlType.TypeName;
+						break;
+					case SqlDbType.Xml:
+						p.XmlSchemaCollectionDatabase = sqlType.XmlSchemaCollectionDatabase;
+						p.XmlSchemaCollectionName = sqlType.XmlSchemaCollectionName;
+						p.XmlSchemaCollectionOwningSchema = sqlType.XmlSchemaCollectionOwningSchema;
+						break;
+					case SqlDbType.Time:
+					case SqlDbType.DateTime2:
+						p.SqlDbType = SqlDbType.DateTimeOffset;
+						p.Scale = sqlType.Scale;
+						break;
+				}
+			} // proc InitSqlParameterType
 
 			#region -- GetFieldType, GetSqlType -----------------------------------------------
 
-			private static Type GetFieldType(byte systemTypeId)
+			private static readonly string[] geometryTypeNames = {  
+				"sys.Geometry",
+				"sys.Point",
+				"sys.LineString",
+				"sys.Polygon",
+				"sys.Curve",
+				"sys.Surface",
+				"sys.MultiPoint",
+				"sys.MultiLineString",
+				"sys.MultiPolygon",
+				"sys.MultiCurve",
+				"sys.MultiSurface",
+				"sys.GeometryCollection",
+				"sys.FullGlobe",
+				"sys.CircularString",
+				"sys.CompoundCurve",
+				"sys.CurvePolygon"
+			};
+
+			private static Type GetFieldType(byte systemTypeId, string userTypeName)
 			{
 				switch (systemTypeId)
 				{
@@ -809,11 +891,17 @@ namespace TecWare.PPSn.Server.Sql
 					case 239: // nchar
 						return typeof(string);
 
-					case 240: // GEOGRAPHY
-						return typeof(Microsoft.SqlServer.Types.SqlGeography);
+					case 240: // GEOGRAPHY, UserDefinedType
+						if (userTypeName != null && Array.Exists(geometryTypeNames, c => String.Compare(c, userTypeName, StringComparison.OrdinalIgnoreCase) == 0))
+							return typeof(Microsoft.SqlServer.Types.SqlGeography);
+						else
+							return typeof(object);
 
 					case 241: // xml
 						return typeof(string);
+
+					case 243: // table_type
+						return typeof(IEnumerable<SqlDataRecord>);
 
 					default:
 						throw new IndexOutOfRangeException($"Unexpected sql server system type: {systemTypeId}");
@@ -887,11 +975,14 @@ namespace TecWare.PPSn.Server.Sql
 					case 239: // nchar
 						return SqlDbType.NChar;
 
-					case 240: // GEOGRAPHY
+					case 240: // GEOGRAPHY, User Defined Type
 						return SqlDbType.Udt;
 
 					case 241: // xml
 						return SqlDbType.Xml;
+
+					case 243: // table type
+						return SqlDbType.Structured;
 
 					default:
 						throw new IndexOutOfRangeException($"Unexpected sql server system type: {systemTypeId}");
@@ -901,7 +992,14 @@ namespace TecWare.PPSn.Server.Sql
 			#endregion
 
 			public int ColumnId => columnId;
+
 			public SqlDbType SqlType => sqlType;
+
+			public string TypeName => typeName;
+
+			public string XmlSchemaCollectionDatabase => xmlSchemaCollectionDatabase;
+			public string XmlSchemaCollectionName => xmlSchemaCollectionName;
+			public string XmlSchemaCollectionOwningSchema => xmlSchemaCollectionOwningSchema;
 		} // class SqlColumnInfo
 
 		#endregion
@@ -932,7 +1030,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlParameterInfo ---------------------------------------------
 
-		private sealed class SqlParameterInfo : PpsSqlParameterInfo
+		private sealed class SqlParameterInfo : PpsSqlParameterInfo, ISqlParameterTypeInfo
 		{
 			private readonly SqlDbType dbType;
 			private readonly int maxLength;
@@ -964,7 +1062,9 @@ namespace TecWare.PPSn.Server.Sql
 				maxLength = r.GetInt16(4);
 				precision = r.GetByte(5);
 				scale = r.GetByte(6);
+
 				typeName = r.IsDBNull(8) ? null : r.GetString(8);
+				
 				xmlSchemaCollectionDatabase = r.IsDBNull(9) ? null : r.GetString(9);
 				xmlSchemaCollectionName = r.IsDBNull(10) ? null : r.GetString(10);
 				xmlSchemaCollectionOwningSchema = r.IsDBNull(11) ? null : r.GetString(11);
@@ -977,40 +1077,22 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var p = (SqlParameter)parameter;
 				p.ParameterName = Name;
-				p.SqlDbType = dbType;
 				p.Direction = Direction;
-				switch (dbType)
-				{
-					case SqlDbType.NVarChar:
-					case SqlDbType.VarBinary:
-					case SqlDbType.Binary:
-					case SqlDbType.VarChar:
-					case SqlDbType.NChar:
-					case SqlDbType.Char:
-						p.Size = maxLength;
-						break;
-					case SqlDbType.Decimal:
-						p.Precision = precision;
-						p.Scale = scale;
-						break;
-					case SqlDbType.Udt:
-						p.UdtTypeName = typeName;
-						break;
-					case SqlDbType.Structured:
-						p.TypeName = typeName;
-						break;
-					case SqlDbType.Xml:
-						p.XmlSchemaCollectionDatabase = xmlSchemaCollectionDatabase;
-						p.XmlSchemaCollectionName = xmlSchemaCollectionName;
-						p.XmlSchemaCollectionOwningSchema = xmlSchemaCollectionOwningSchema;
-						break;
-					case SqlDbType.Time:
-					case SqlDbType.DateTime2:
-						p.SqlDbType = SqlDbType.DateTimeOffset;
-						p.Scale = scale;
-						break;
-				}
+
+				SqlColumnInfo.InitSqlParameterType(p, this);
 			} // proc InitSqlParameter
+
+			public SqlDbType SqlType => dbType;
+			public int MaxLength => maxLength;
+			public byte Precision => precision;
+			public byte Scale => scale;
+
+			public string TypeName => typeName;
+
+			public string XmlSchemaCollectionDatabase => xmlSchemaCollectionDatabase;
+			public string XmlSchemaCollectionName => xmlSchemaCollectionName;
+			public string XmlSchemaCollectionOwningSchema => xmlSchemaCollectionOwningSchema;
+
 		} // class SqlParameterInfo
 
 		#endregion
