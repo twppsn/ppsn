@@ -1036,6 +1036,9 @@ namespace TecWare.PPSn.Server.Sql
 
 			private void SplitColumnName(string name, out string alias, out string columnName)
 			{
+				if (name == null)
+					throw new ArgumentNullException(nameof(name));
+
 				var p = name.IndexOf('.'); // alias?
 				if (p >= 0)
 				{

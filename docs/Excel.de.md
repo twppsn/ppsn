@@ -19,9 +19,13 @@ Als erstes wählt man eine Basis-Tabelle aus,
 Spalten werden in der mittleren Liste definiert. Dies werden per Drag&Drop in die 
 Rückgabe aufgenommen.
 
-Sortierung, Name kann mittels des Kontextmenüs beeinflusst werden.
+Sortierung, Name einer Spalte kann mittels des Kontextmenüs beeinflusst werden.
 
 ![Tabelle auswählen](Imgs/Excel.Table2.png)
+
+:::tip
+Mit F4 kann die Liste der Quellspalten auf die internen Datenbanknamen umgeschaltet werden.
+:::
 
 ## Bedingungen
 
@@ -34,3 +38,8 @@ Neben Konstanten und anderen Felder können auch Excel-Zellen referenziert werde
 - Via Namen z.B. `$Feld`
 - Oder Zelladresse z.B. `$C23` oder `$R23C3`
 - Tabellen können auch angegebn werden, z.B. `$Tabelle1_C23`
+
+:::warn
+Sind die Namen der Spalten durchgestrichen, so ist diese Bedingung irrelevant für
+die Rückgabe und wird beim Aktualisieren entfernt.
+:::

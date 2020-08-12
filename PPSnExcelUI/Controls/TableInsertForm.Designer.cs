@@ -29,7 +29,6 @@
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.Windows.Forms.ColumnHeader columnHeader1;
 			System.Windows.Forms.ColumnHeader columnHeader2;
 			System.Windows.Forms.ContextMenuStrip resultColumnsContextMenuStrip;
 			System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
@@ -44,12 +43,15 @@
 			this.resultColumnSortAscMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.resultColumnSortDescMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.resultColumnRenameMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.resultColumnRemoveMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.columnListHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			this.cmdRefresh = new System.Windows.Forms.Button();
 			this.cmdClose = new System.Windows.Forms.Button();
 			this.tableTree = new TecWare.PPSn.Controls.PpsTreeView();
 			this.filterGrid = new TecWare.PPSn.Controls.PpsFilterEditor();
 			this.currentColumnsListView = new System.Windows.Forms.ListView();
+			this.columnListTechHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			this.currentContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
 			this.currentColumnAddToResultMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.currentColumnAddToCondition = new System.Windows.Forms.ToolStripMenuItem();
@@ -57,8 +59,6 @@
 			this.currentColumnsSelectInverseMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.resultColumnsListView = new System.Windows.Forms.ListView();
 			this.imageListSort = new System.Windows.Forms.ImageList(this.components);
-			this.resultColumnRenameMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			resultColumnsContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
 			toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
@@ -69,11 +69,6 @@
 			((System.ComponentModel.ISupportInitialize)(this.filterGrid)).BeginInit();
 			this.currentContextMenuStrip.SuspendLayout();
 			this.SuspendLayout();
-			// 
-			// columnHeader1
-			// 
-			columnHeader1.Text = "Spalte";
-			columnHeader1.Width = 220;
 			// 
 			// columnHeader2
 			// 
@@ -95,7 +90,7 @@
             this.resultColumnRenameMenuItem,
             this.resultColumnRemoveMenuItem});
 			resultColumnsContextMenuStrip.Name = "resultColumnsContextMenuStrip";
-			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(200, 220);
+			resultColumnsContextMenuStrip.Size = new System.Drawing.Size(200, 198);
 			resultColumnsContextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.resultColumnsContextMenuStrip_Opening);
 			// 
 			// resultColumnAddToCondition
@@ -158,6 +153,14 @@
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
 			this.toolStripSeparator1.Size = new System.Drawing.Size(196, 6);
 			// 
+			// resultColumnRenameMenuItem
+			// 
+			this.resultColumnRenameMenuItem.Name = "resultColumnRenameMenuItem";
+			this.resultColumnRenameMenuItem.ShortcutKeyDisplayString = "F2";
+			this.resultColumnRenameMenuItem.Size = new System.Drawing.Size(199, 22);
+			this.resultColumnRenameMenuItem.Text = "Umbe&nennen";
+			this.resultColumnRenameMenuItem.Click += new System.EventHandler(this.CommandExec);
+			// 
 			// resultColumnRemoveMenuItem
 			// 
 			this.resultColumnRemoveMenuItem.Name = "resultColumnRemoveMenuItem";
@@ -175,6 +178,11 @@
 			// 
 			columnHeader3.Text = "Quelle";
 			columnHeader3.Width = 140;
+			// 
+			// columnListHeader
+			// 
+			this.columnListHeader.Text = "Spalte";
+			this.columnListHeader.Width = 220;
 			// 
 			// cmdRefresh
 			// 
@@ -234,9 +242,9 @@
 			// 
 			this.currentColumnsListView.AllowDrop = true;
 			this.currentColumnsListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            columnHeader1});
+            this.columnListHeader,
+            this.columnListTechHeader});
 			this.currentColumnsListView.ContextMenuStrip = this.currentContextMenuStrip;
-			this.currentColumnsListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
 			this.currentColumnsListView.HideSelection = false;
 			this.currentColumnsListView.Location = new System.Drawing.Point(16, 191);
 			this.currentColumnsListView.Name = "currentColumnsListView";
@@ -245,11 +253,17 @@
 			this.currentColumnsListView.TabIndex = 1;
 			this.currentColumnsListView.UseCompatibleStateImageBehavior = false;
 			this.currentColumnsListView.View = System.Windows.Forms.View.Details;
+			this.currentColumnsListView.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.currentColumnsListView_ColumnClick);
 			this.currentColumnsListView.DragDrop += new System.Windows.Forms.DragEventHandler(this.currentColumnsListView_DragDrop);
 			this.currentColumnsListView.DragEnter += new System.Windows.Forms.DragEventHandler(this.currentColumnsListView_DragEnter);
 			this.currentColumnsListView.KeyUp += new System.Windows.Forms.KeyEventHandler(this.currentColumnsListView_KeyUp);
 			this.currentColumnsListView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listView_MouseDown);
 			this.currentColumnsListView.MouseMove += new System.Windows.Forms.MouseEventHandler(this.listView_MouseMove);
+			// 
+			// columnListTechHeader
+			// 
+			this.columnListTechHeader.Text = "Intern";
+			this.columnListTechHeader.Width = 0;
 			// 
 			// currentContextMenuStrip
 			// 
@@ -325,14 +339,6 @@
 			this.imageListSort.Images.SetKeyName(0, "sort_ascending.png");
 			this.imageListSort.Images.SetKeyName(1, "sort_descending.png");
 			// 
-			// resultColumnRenameMenuItem
-			// 
-			this.resultColumnRenameMenuItem.Name = "resultColumnRenameMenuItem";
-			this.resultColumnRenameMenuItem.ShortcutKeyDisplayString = "F2";
-			this.resultColumnRenameMenuItem.Size = new System.Drawing.Size(199, 22);
-			this.resultColumnRenameMenuItem.Text = "Umbe&nennen";
-			this.resultColumnRenameMenuItem.Click += new System.EventHandler(this.CommandExec);
-			// 
 			// TableInsertForm
 			// 
 			this.AcceptButton = this.cmdRefresh;
@@ -383,5 +389,7 @@
 		private System.Windows.Forms.ToolStripMenuItem resultColumnAddToCondition;
 		private System.Windows.Forms.ToolStripMenuItem currentColumnAddToCondition;
 		private System.Windows.Forms.ToolStripMenuItem resultColumnRenameMenuItem;
+		private System.Windows.Forms.ColumnHeader columnListHeader;
+		private System.Windows.Forms.ColumnHeader columnListTechHeader;
 	}
 }

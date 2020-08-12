@@ -69,6 +69,8 @@ namespace TecWare.PPSn.Controls
 		IPpsFilterGroup Group { get; set; }
 
 		bool IsEmpty { get; }
+		/// <summary>Is this column visible, does the table exist in the result.</summary>
+		bool IsVisible { get; }
 	} // interface IPpsFilterColumn
 
 	#endregion
@@ -346,7 +348,7 @@ namespace TecWare.PPSn.Controls
 				=> GetFilterColumn(DataGridView, rowIndex)?.ColumnName;
 
 			protected override object GetFormattedValue(object value, int rowIndex, ref DataGridViewCellStyle cellStyle, TypeConverter valueTypeConverter, TypeConverter formattedValueTypeConverter, DataGridViewDataErrorContexts context)
-				=> value.ToString();
+				=> value?.ToString();
 
 			public string GetToolTip(int rowIndex)
 			{
@@ -373,10 +375,19 @@ namespace TecWare.PPSn.Controls
 				g.FillRectangle(GetBackgroundBrush(cellState, cellStyle), cellRect);
 
 				// draw text
+				var isVisible = GetFilterColumn(DataGridView, rowIndex)?.IsVisible ?? true;
 				cellRect.Inflate(-3, 0);
 				using (var fmt = new StringFormat(StringFormatFlags.NoWrap) { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter })
-					g.DrawString((string)formattedValue, cellStyle.Font, GetForegroundBrush(cellState, cellStyle), cellRect, fmt);
-			}
+				{
+					if (isVisible)
+						g.DrawString((string)formattedValue, cellStyle.Font, GetForegroundBrush(cellState, cellStyle), cellRect, fmt);
+					else
+					{
+						using (var fnt = new Font(cellStyle.Font, FontStyle.Strikeout))
+							g.DrawString((string)formattedValue, fnt, GetForegroundBrush(cellState, cellStyle), cellRect, fmt);
+					}
+				}
+			} // proc Paint
 
 			public override Type FormattedValueType => typeof(string);
 			public override Type ValueType { get => typeof(string); set { } }
@@ -514,18 +525,12 @@ namespace TecWare.PPSn.Controls
 			RowHeadersVisible = false;
 			MultiSelect = false;
 
-			Columns.Add(new FilterGroupColumn());
-			Columns.Add(new FilterGroupSelectColumn());
-			Columns.Add(new FilterFieldColumn());
-			Columns.Add(new FilterOperatorColumn());
-			Columns.Add(new FilterExpressionColumn());
-
 			ReadOnly = false;
 			VirtualMode = true;
 			EditMode = DataGridViewEditMode.EditOnEnter;
 
 			contextMenu = new ContextMenuStrip();
-			contextMenu.Items.Add(logicGroupAddMenuItem = new ToolStripMenuItem("Logische Gruppe erstellen", null, contextMenu_LogicOperation) { ShortcutKeyDisplayString = "F9" }); 
+			contextMenu.Items.Add(logicGroupAddMenuItem = new ToolStripMenuItem("Logische Gruppe erstellen", null, contextMenu_LogicOperation) { ShortcutKeyDisplayString = "F9" });
 			contextMenu.Items.Add(logicGroupRemoveMenuItem = new ToolStripMenuItem("Logische Gruppe entfernen", null, contextMenu_LogicOperation) { ShortcutKeyDisplayString = "F8" });
 			contextMenu.Items.Add(new ToolStripSeparator());
 			contextMenu.Items.Add(logicAndMenuItem = new ToolStripMenuItem("Logisches Und", null, contextMenu_LogicOperation));
@@ -535,6 +540,15 @@ namespace TecWare.PPSn.Controls
 			contextMenu.Items.Add(new ToolStripSeparator());
 			contextMenu.Items.Add(new ToolStripMenuItem("Filter &Entfernen", null, contextMenu_RemoveItem) { ShortcutKeyDisplayString = "Entf" });
 		} // ctor
+
+		public void AddColumns()
+		{
+			Columns.Add(new FilterGroupColumn());
+			Columns.Add(new FilterGroupSelectColumn());
+			Columns.Add(new FilterFieldColumn());
+			Columns.Add(new FilterOperatorColumn());
+			Columns.Add(new FilterExpressionColumn());
+		} // proc AddColumns
 
 		protected override void Dispose(bool disposing)
 		{
@@ -1061,6 +1075,12 @@ namespace TecWare.PPSn.Controls
 			{
 				if (CurrentCell != null)
 					SetRowChecked(CurrentCell.RowIndex, (ModifierKeys & Keys.Control) != 0);
+				e.Handled = true;
+			}
+			else if(e.KeyCode == Keys.Delete)
+			{
+				if (CurrentRow != null)
+					resultFilter.Remove(CurrentRow.Index);
 				e.Handled = true;
 			}
 			else

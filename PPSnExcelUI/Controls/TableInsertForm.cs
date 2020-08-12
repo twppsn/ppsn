@@ -22,6 +22,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.WebSockets;
 using System.Windows.Forms;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
@@ -529,6 +530,7 @@ namespace TecWare.PPSn.Controls
 			private FilterGroup group;
 			private PpsDataFilterCompareOperator op;
 			private PpsDataFilterCompareValue value;
+			private bool isVisible = true;
 
 			internal FilterColumn(FilterExpression filterExpression, FilterGroup group, SourceColumnData columnSource, PpsDataFilterCompareOperator op, PpsDataFilterCompareValue value)
 			{
@@ -588,6 +590,12 @@ namespace TecWare.PPSn.Controls
 			} // prop Group
 
 			public bool IsEmpty => false;
+
+			public bool IsVisible
+			{
+				get => isVisible;
+				set => isVisible = value;
+			} // prop IsVisible
 
 			IPpsFilterGroup IPpsFilterColumn.Group { get => group; set => Group = (FilterGroup)value; }
 			PpsDataFilterCompareOperator IPpsFilterColumn.Operator { get => op; set => op = value; }
@@ -689,7 +697,13 @@ namespace TecWare.PPSn.Controls
 			} // proc Load
 
 			public void Refresh(VisibleColumnHelper visibleColumnHelper)
-				=> OnFilterChanged();
+			{
+				// check filter columns, if they are still active
+				for (var i = 0; i < filterColumns.Count; i++)
+					filterColumns[i].IsVisible = visibleColumnHelper?.IsVisibleColumn(filterColumns[i].Source) ?? false;
+
+				OnFilterChanged();
+			} // proc OnFilterChanged
 
 			private PpsDataFilterExpression CompileCore(VisibleColumnHelper visibleResultView, FilterGroup currentGroup, ref int offset)
 			{
@@ -847,6 +861,9 @@ namespace TecWare.PPSn.Controls
 		private readonly List<ColumnData> resultColumns = new List<ColumnData>(); // result column set
 		private readonly FilterExpression resultFilter = new FilterExpression(); // filter expression
 
+		private bool showInternalName = false;
+		private int currentColumnsSortOrder = 1;
+
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public TableInsertForm(PpsEnvironment env)
@@ -855,6 +872,7 @@ namespace TecWare.PPSn.Controls
 
 			InitializeComponent();
 
+			filterGrid.AddColumns(); // the designer will generate code, if this is done before initialize component
 			filterGrid.SetFilter(resultFilter);
 			availableViews = new PpsViewDictionary(env);
 
@@ -936,6 +954,19 @@ namespace TecWare.PPSn.Controls
 				tableTree.SetBounds(clientArea.Left, clientArea.Top, tableTree.Width, h);
 				var t = h + defaultCap;
 				currentColumnsListView.SetBounds(clientArea.Left, clientArea.Top + t, tableTree.Width, clientArea.Height - t);
+
+				var scrollSize = SystemInformation.VerticalScrollBarWidth + SystemInformation.FrameBorderSize.Width;
+				if (showInternalName)
+				{
+					var techWidth = tableTree.Top * 6;
+					columnListHeader.Width = currentColumnsListView.Width - techWidth - scrollSize;
+					columnListTechHeader.Width = techWidth;
+				}
+				else
+				{
+					columnListHeader.Width = currentColumnsListView.Width - scrollSize;
+					columnListTechHeader.Width = 0;
+				}
 				currentColumnsListView.Visible = true;
 			}
 			else
@@ -952,7 +983,7 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Tree View Management -----------------------------------------------
 
-		private static int BinarySearch(Func<int, string> g, int offset, int length, string text)
+		private static int BinarySearch(Func<int, string> g, int offset, int length, string text, bool ascending)
 		{
 			var startAt = offset;
 			var endAt = offset + length - 1;
@@ -963,7 +994,7 @@ namespace TecWare.PPSn.Controls
 				var t = String.Compare(g(middle), text, StringComparison.OrdinalIgnoreCase);
 				if (t == 0)
 					return middle;
-				else if (t < 0)
+				else if (ascending && t < 0 || !ascending && t > 0)
 					startAt = middle + 1;
 				else
 					endAt = middle - 1;
@@ -974,7 +1005,7 @@ namespace TecWare.PPSn.Controls
 
 		private static void UpsertTreeNode(TreeNodeCollection nodes, TreeNodeData data)
 		{
-			var pos = BinarySearch(i => nodes[i].Text, 0, nodes.Count, data.NodeText);
+			var pos = BinarySearch(i => nodes[i].Text, 0, nodes.Count, data.NodeText, true);
 			if (pos < 0)
 			{
 				pos = ~pos;
@@ -1090,6 +1121,9 @@ namespace TecWare.PPSn.Controls
 				RefreshAvailableColumns(nodeData);
 		} // event tableTree_AfterSelect
 
+		private void RefreshAvailableColumns()
+			=> RefreshAvailableColumns(tableTree.SelectedNode?.Tag is TreeNodeData nodeData ? nodeData : null);
+
 		private void RefreshAvailableColumns(TreeNodeData nodeData)
 		{
 			currentColumnsListView.BeginUpdate();
@@ -1109,22 +1143,29 @@ namespace TecWare.PPSn.Controls
 					}
 
 					// add new columns
+					var sortField = currentColumnsSortOrder == 2 || currentColumnsSortOrder == -2 ? 1 : 0;
 					foreach (var col in nodeData.View.Columns)
 					{
 						var newCol = new SourceColumnData(nodeData, col);
 						var idx = BinarySearch(
-							i => currentColumnsListView.Items[i].Text,
+							i => currentColumnsListView.Items[i].SubItems[sortField].Text,
 							0, currentColumnsListView.Items.Count,
-							newCol.DisplayName
+							sortField == 1 ? newCol.Column.Name : newCol.DisplayName,
+							currentColumnsSortOrder > 0
 						);
 
 						ListViewItem lvi;
 						if (idx < 0)
-							currentColumnsListView.Items.Insert(~idx, lvi = new ListViewItem() { Tag = newCol });
+						{
+							lvi = new ListViewItem() { Tag = newCol };
+							lvi.SubItems.Add("");
+							currentColumnsListView.Items.Insert(~idx, lvi);
+						}
 						else
 							lvi = currentColumnsListView.Items[idx];
 
 						lvi.Text = newCol.DisplayName;
+						lvi.SubItems[1].Text = newCol.Column.Name;
 					}
 				}
 			}
@@ -1317,7 +1358,7 @@ namespace TecWare.PPSn.Controls
 
 						// get target
 						var currentLvi = FindResultColumnListViewItem(currentColumn, targetIndex);
-						if (currentLvi == null) // not in lsit -> insert new 
+						if (currentLvi == null) // not in list -> insert new 
 						{
 							currentLvi = new ListViewItem { Tag = currentColumn };
 							UpdateResultColumnListViewItem(currentColumn, currentLvi);
@@ -1354,6 +1395,7 @@ namespace TecWare.PPSn.Controls
 			else
 			{
 				resultColumnsListView.Items.Clear();
+				resultFilter.Refresh(null);
 			}
 		} // proc RefreshAvailableColumns
 
@@ -1519,8 +1561,22 @@ namespace TecWare.PPSn.Controls
 				case Keys.Insert:
 					MoveColumnsToResult(true);
 					break;
+				case Keys.F4:
+					showInternalName = !showInternalName;
+					UpdateLayout();
+					break;
 			}
 		} // event currentColumnsListView_KeyUp
+
+		private void currentColumnsListView_ColumnClick(object sender, ColumnClickEventArgs e)
+		{
+			var sortColumnIndex = e.Column + 1;
+			if (currentColumnsSortOrder == sortColumnIndex)
+				currentColumnsSortOrder = -sortColumnIndex;
+			else
+				currentColumnsSortOrder = sortColumnIndex;
+			RefreshAvailableColumns();
+		} // event currentColumnsListView_ColumnClick
 
 		private void resultColumnsListView_KeyUp(object sender, KeyEventArgs e)
 		{
