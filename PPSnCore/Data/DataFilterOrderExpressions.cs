@@ -2731,6 +2731,7 @@ namespace TecWare.PPSn.Data
 				case PpsDataFilterCompareValueType.Date:
 					{
 						var a = (PpsDataFilterCompareDateValue)expression.Value;
+						left = Expression.Convert(left, typeof(DateTime));
 						switch (expression.Operator)
 						{
 							case PpsDataFilterCompareOperator.Contains:

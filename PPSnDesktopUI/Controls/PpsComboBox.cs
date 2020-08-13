@@ -83,20 +83,33 @@ namespace TecWare.PPSn.Controls
 		#region -- UserFilterText - Property ------------------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty FilterExpressionProperty = DependencyProperty.Register(nameof(FilterExpression), typeof(PpsDataFilterExpression), typeof(PpsComboBox), new FrameworkPropertyMetadata(new PropertyChangedCallback(OnFilterExpressionChanged), new CoerceValueCallback(OnCoerceFilterExpression)));
 		public static readonly DependencyProperty UserFilterTextProperty = DependencyProperty.Register(nameof(UserFilterText), typeof(string), typeof(PpsComboBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnUserFilterTextChanged)));
 
 		private static readonly DependencyPropertyKey isFilteredPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFiltered), typeof(bool), typeof(PpsComboBox), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty IsFilteredProperty = isFilteredPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+	
+		private static object OnCoerceFilterExpression(DependencyObject d, object baseValue)
+			=> baseValue is PpsDataFilterExpression expr ? expr.Reduce() : PpsDataFilterExpression.True;
+
+		private static void OnFilterExpressionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsComboBox)d).UpdateFilterExpression();
 
 		private static void OnUserFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsComboBox)d).UpdateFilterExpression();
 
-		private void UpdateFilterExpression()
+		/// <summary>Convert filter-text to expresion</summary>
+		/// <returns></returns>
+		protected virtual PpsDataFilterExpression GetUserFilterExpression()
+			=> PpsDataFilterExpression.Parse(UserFilterText);
+
+		/// <summary>Refresh filter</summary>
+		protected void UpdateFilterExpression()
 		{
 			if (filterView != null && AllowFilter)
 			{
-				var expr = PpsDataFilterExpression.Parse(UserFilterText);
+				var expr = PpsDataFilterExpression.Combine(FilterExpression, GetUserFilterExpression());
 				filterView.FilterExpression = expr;
 				SetValue(isFilteredPropertyKey, expr == PpsDataFilterExpression.True);
 			}
@@ -108,6 +121,8 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc UpdateFilterExpression
 
+		/// <summary>Static filter for the collection view.</summary>
+		public PpsDataFilterExpression FilterExpression { get => (PpsDataFilterExpression)GetValue(FilterExpressionProperty); set => SetValue(FilterExpressionProperty, value); }
 		/// <summary>Filter the collection view, this property is used by the template. Type is string because we do not want to change the source e.g. spaces. </summary>
 		public string UserFilterText { get => (string)GetValue(UserFilterTextProperty); set => SetValue(UserFilterTextProperty, value); }
 		/// <summary>Is the view filterd, currently.</summary>
@@ -399,8 +414,8 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		private static PropertyInfo highlightedInfoPropertyInfo;
-		private static MethodInfo itemInfoFromContainerMethodInfo;
+		private static readonly PropertyInfo highlightedInfoPropertyInfo;
+		private static readonly MethodInfo itemInfoFromContainerMethodInfo;
 
 		static PpsComboBox()
 		{

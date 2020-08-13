@@ -1624,7 +1624,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Notifies about changes in this collection.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-		private List<PpsDataRow> rows;
+		private readonly List<PpsDataRow> rows;
 		private NotifyCollectionChangedEventHandler evCollectionListener;
 		private ColumnValueChangedEventHandler evColumnListener;
 

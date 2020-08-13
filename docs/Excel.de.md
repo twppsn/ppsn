@@ -23,7 +23,7 @@ Sortierung, Name einer Spalte kann mittels des Kontextmenüs beeinflusst werden.
 
 ![Tabelle auswählen](Imgs/Excel.Table2.png)
 
-:::tip
+:::tipp
 Mit F4 kann die Liste der Quellspalten auf die internen Datenbanknamen umgeschaltet werden.
 :::
 
