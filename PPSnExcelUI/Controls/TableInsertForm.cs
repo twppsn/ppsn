@@ -849,6 +849,31 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region -- class CurrentColumnsSortComparer -----------------------------------
+
+		private sealed class CurrentColumnsSortComparer : IComparer
+		{
+			private readonly TableInsertForm tableInsertForm;
+
+			public CurrentColumnsSortComparer(TableInsertForm tableInsertForm)
+				=> this.tableInsertForm = tableInsertForm ?? throw new ArgumentNullException(nameof(tableInsertForm));
+
+			public int Compare(object x, object y)
+				=> Compare((ListViewItem)x, (ListViewItem)y);
+
+			private int Compare(ListViewItem x, ListViewItem y)
+			{
+				var sortOrder = tableInsertForm.currentColumnsSortOrder;
+				var index = sortOrder > 0 ? sortOrder - 1 : -sortOrder - 1;
+				var r = String.Compare(x.SubItems[index].Text, y.SubItems[index].Text, StringComparison.OrdinalIgnoreCase);
+				if (sortOrder < 0)
+					r *= -1;
+				return r;
+			}
+		} // class CurrentColumnsSortComparer
+
+		#endregion
+
 		private const string dataObjectFormat = "PpsnColumnSource[]";
 		private const string dataSourceFormat = "PpsnColumnSource";
 
@@ -875,6 +900,8 @@ namespace TecWare.PPSn.Controls
 			filterGrid.AddColumns(); // the designer will generate code, if this is done before initialize component
 			filterGrid.SetFilter(resultFilter);
 			availableViews = new PpsViewDictionary(env);
+
+			currentColumnsListView.ListViewItemSorter = new CurrentColumnsSortComparer(this);
 
 			UpdateLayout();
 		} // ctor
@@ -1124,6 +1151,15 @@ namespace TecWare.PPSn.Controls
 		private void RefreshAvailableColumns()
 			=> RefreshAvailableColumns(tableTree.SelectedNode?.Tag is TreeNodeData nodeData ? nodeData : null);
 
+		private void ToggleCurrentColumnsListViewSort(int sortColumnIndex)
+		{
+			if (currentColumnsSortOrder == sortColumnIndex)
+				currentColumnsSortOrder = -sortColumnIndex;
+			else
+				currentColumnsSortOrder = sortColumnIndex;
+			currentColumnsListView.Sort();
+		} // proc ToggleCurrentColumnsListViewSort
+
 		private void RefreshAvailableColumns(TreeNodeData nodeData)
 		{
 			currentColumnsListView.BeginUpdate();
@@ -1143,23 +1179,30 @@ namespace TecWare.PPSn.Controls
 					}
 
 					// add new columns
-					var sortField = currentColumnsSortOrder == 2 || currentColumnsSortOrder == -2 ? 1 : 0;
 					foreach (var col in nodeData.View.Columns)
 					{
 						var newCol = new SourceColumnData(nodeData, col);
-						var idx = BinarySearch(
-							i => currentColumnsListView.Items[i].SubItems[sortField].Text,
-							0, currentColumnsListView.Items.Count,
-							sortField == 1 ? newCol.Column.Name : newCol.DisplayName,
-							currentColumnsSortOrder > 0
-						);
+						
+						// search column
+						int FindColumn()
+						{
+							for (var i = 0; i < currentColumnsListView.Items.Count; i++)
+							{
+								if (currentColumnsListView.Items[i].Tag is SourceColumnData columnSource && columnSource.IsEqualColumn(newCol))
+									return i;
+							}
+							return -1;
+						} // func FindColumn
 
+						var idx = FindColumn();
 						ListViewItem lvi;
 						if (idx < 0)
 						{
 							lvi = new ListViewItem() { Tag = newCol };
 							lvi.SubItems.Add("");
-							currentColumnsListView.Items.Insert(~idx, lvi);
+
+							currentColumnsListView.Items.Add(lvi);
+
 						}
 						else
 							lvi = currentColumnsListView.Items[idx];
@@ -1167,6 +1210,8 @@ namespace TecWare.PPSn.Controls
 						lvi.Text = newCol.DisplayName;
 						lvi.SubItems[1].Text = newCol.Column.Name;
 					}
+
+					currentColumnsListView.Sort();
 				}
 			}
 			finally
@@ -1569,14 +1614,7 @@ namespace TecWare.PPSn.Controls
 		} // event currentColumnsListView_KeyUp
 
 		private void currentColumnsListView_ColumnClick(object sender, ColumnClickEventArgs e)
-		{
-			var sortColumnIndex = e.Column + 1;
-			if (currentColumnsSortOrder == sortColumnIndex)
-				currentColumnsSortOrder = -sortColumnIndex;
-			else
-				currentColumnsSortOrder = sortColumnIndex;
-			RefreshAvailableColumns();
-		} // event currentColumnsListView_ColumnClick
+			=> ToggleCurrentColumnsListViewSort(e.Column + 1);
 
 		private void resultColumnsListView_KeyUp(object sender, KeyEventArgs e)
 		{
