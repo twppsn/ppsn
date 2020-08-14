@@ -669,7 +669,7 @@ namespace TecWare.PPSn.Controls
 					case PpsDataFilterExpressionType.Or:
 					case PpsDataFilterExpressionType.NOr:
 						var logicExpr = (PpsDataFilterLogicExpression)expr;
-						var subGroup = new FilterGroup(currentGroup, logicExpr.Type);
+						var subGroup = currentGroup.Type == expr.Type ? root : new FilterGroup(currentGroup, logicExpr.Type);
 						foreach (var cur in logicExpr.Arguments)
 							LoadCore(subGroup, visibleResultView, cur);
 						break;
