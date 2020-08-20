@@ -413,34 +413,70 @@ namespace TecWare.PPSn.Server.Sql
 
 	#region -- class PpsSqlRelationInfo -----------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Descripes a relation between two tables.</summary>
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
 	public abstract class PpsSqlRelationInfo
 	{
 		private readonly string name;
-		private readonly PpsSqlColumnInfo parentColumn;
-		private readonly PpsSqlColumnInfo referencedColumn;
+		private readonly PpsSqlColumnInfo[] parentColumns;
+		private readonly PpsSqlColumnInfo[] referencedColumns;
 
 		/// <summary></summary>
 		/// <param name="name"></param>
 		/// <param name="parentColumn"></param>
 		/// <param name="referencedColumn"></param>
 		protected PpsSqlRelationInfo(string name, PpsSqlColumnInfo parentColumn, PpsSqlColumnInfo referencedColumn)
+			: this(name, new PpsSqlColumnInfo[] { parentColumn }, new PpsSqlColumnInfo[] { referencedColumn }, false)
+		{
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="parentColumns"></param>
+		/// <param name="referencedColumns"></param>
+		protected PpsSqlRelationInfo(string name, PpsSqlColumnInfo[] parentColumns, PpsSqlColumnInfo[] referencedColumns)
+			: this(name, parentColumns, referencedColumns, true)
+		{
+		} // ctor
+
+		private PpsSqlRelationInfo(string name, PpsSqlColumnInfo[] parentColumns, PpsSqlColumnInfo[] referencedColumns, bool validateColumns)
 		{
 			this.name = name;
-			this.parentColumn = parentColumn;
-			this.referencedColumn = referencedColumn;
+			this.parentColumns = parentColumns;
+			this.referencedColumns = referencedColumns;
+
+			if (validateColumns)
+			{
+				if (parentColumns == null || parentColumns.Any(c => c == null))
+					throw new ArgumentNullException(nameof(parentColumns));
+
+				if (referencedColumns == null || referencedColumns.Any(c => c == null))
+					throw new ArgumentNullException(nameof(referencedColumns));
+
+				if (parentColumns.Length != referencedColumns.Length)
+					throw new ArgumentException("Invalid length.");
+			}
 		} // ctor
 
 		private string DebuggerDisplay
-			=> $"RelationInfo: {name} [parent: {parentColumn?.Name ?? "null"}; child: {referencedColumn?.Name ?? "null"}]";
+			=> $"RelationInfo: {name} [parent: {parentColumns[0].Name ?? "null"}; child: {referencedColumns[0].Name ?? "null"}]";
 
-		/// <summary></summary>
+		private PpsSqlColumnInfo GetSingleColumn(PpsSqlColumnInfo[] columns)
+			=> columns.Length == 1 ? columns[0] : throw new InvalidOperationException($"Relation '{name}' has multiple columns.");
+
+		/// <summary>Name of the relation.</summary>
 		public string Name => name;
-		/// <summary></summary>
-		public PpsSqlColumnInfo ParentColumn => parentColumn;
-		/// <summary></summary>
-		public PpsSqlColumnInfo ReferencedColumn => referencedColumn;
+		/// <summary>Is this a single column relation.</summary>
+		public bool IsSingleColumnRelation => parentColumns.Length == 1;
+		/// <summary>Parent relation column</summary>
+		public PpsSqlColumnInfo ParentColumn => GetSingleColumn(parentColumns);
+		/// <summary>Child relation column</summary>
+		public PpsSqlColumnInfo ReferencedColumn => GetSingleColumn(referencedColumns);
+
+		/// <summary>Parent relation columns</summary>
+		public IReadOnlyList<PpsSqlColumnInfo> ParentColumns => parentColumns;
+		/// <summary>Child relation columns</summary>
+		public IReadOnlyList<PpsSqlColumnInfo> ReferencedColumns => referencedColumns;
 	} // class PpsSqlTableInfo
 
 	#endregion

@@ -42,6 +42,8 @@ todo!
 <pps:join id="joinLief" view="dbo.LiefView" on="KATALIEFID=LIEFID" />
 ```
 
+todo: beschreibung `alias`
+
 ### Native Filter
 
 todo!
@@ -76,7 +78,7 @@ RefreshView("Cat.dbo.KataView");
 
 ### `GetViewDefinition`
 
-Gibt die View-Registrierungsdaten zurück. Siehe Klasse `PpsViewDescription`.
+Gibt die View-Registrierungsdaten zurück. Siehe Klasse [`PpsViewDescription`](@type:TecWare.PPSn.Server.PpsViewDescription).
 
 Der Name kann dabei voll qualifiziert sein, also: [Datenquelle].[Namespace].[ViewName]
 
