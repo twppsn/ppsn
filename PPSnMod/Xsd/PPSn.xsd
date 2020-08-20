@@ -329,6 +329,11 @@
 												<xs:documentation>Join statement for the view.</xs:documentation>
 											</xs:annotation>
 										</xs:attribute>
+										<xs:attribute name="displayName" type="xs:string" use="optional">
+											<xs:annotation>
+												<xs:documentation>Displayname for the join expression.</xs:documentation>
+											</xs:annotation>
+										</xs:attribute>
 									</xs:complexType>
 								</xs:element>
 								<xs:element name="filter" minOccurs="0" maxOccurs="unbounded">

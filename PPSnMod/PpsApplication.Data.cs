@@ -509,12 +509,14 @@ namespace TecWare.PPSn.Server
 		/// <summary></summary>
 		/// <param name="viewName"></param>
 		/// <param name="aliasName"></param>
+		/// <param name="displayName">Display name for the user.</param>
 		/// <param name="type"></param>
 		/// <param name="statement"></param>
-		public PpsViewJoinDefinition(string viewName, string aliasName, PpsDataJoinType type, PpsDataJoinStatement[] statement)
+		public PpsViewJoinDefinition(string viewName, string aliasName, string displayName, PpsDataJoinType type, PpsDataJoinStatement[] statement)
 		{
 			ViewName = viewName;
 			AliasName = aliasName;
+			DisplayName = displayName;
 			Statement = statement;
 			Type = type;
 		} // ctor
@@ -523,6 +525,8 @@ namespace TecWare.PPSn.Server
 		public string ViewName { get; }
 		/// <summary>Alias to intendify joins to the same view</summary>
 		public string AliasName { get; }
+		/// <summary>Display name for the user.</summary>
+		public string DisplayName { get; }
 		/// <summary>Join type</summary>
 		public PpsDataJoinType Type { get; }
 		/// <summary>On statement for the view.</summary>
@@ -655,7 +659,7 @@ namespace TecWare.PPSn.Server
 				var aliasName = xJoin.GetAttribute("alias", null); // optional
 				var type = xJoin.GetAttribute("type", PpsDataJoinType.Inner);
 
-				return new PpsViewJoinDefinition(viewName, aliasName, type, statement);
+				return new PpsViewJoinDefinition(viewName, aliasName, xJoin.GetAttribute("displayName", null), type, statement);
 			} // func CreateJoinDefinition
 
 			private static PpsDataJoinStatement[] ParseOnStatement(XElement xJoin)
