@@ -46,7 +46,7 @@
     
     mimetype: application/x-microsoft.net.object.binary.base64
     value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : System.Serialization.Formatters.Binary.BinaryFormatter
             : and then encoded with base64 encoding.
     
     mimetype: application/x-microsoft.net.object.soap.base64
@@ -60,7 +60,6 @@
             : and then encoded with base64 encoding.
     -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
       <xsd:complexType>
         <xsd:choice maxOccurs="unbounded">
@@ -69,10 +68,9 @@
               <xsd:sequence>
                 <xsd:element name="value" type="xsd:string" minOccurs="0" />
               </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
               <xsd:attribute name="type" type="xsd:string" />
               <xsd:attribute name="mimetype" type="xsd:string" />
-              <xsd:attribute ref="xml:space" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="assembly">
@@ -87,10 +85,9 @@
                 <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
                 <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
               <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
               <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
-              <xsd:attribute ref="xml:space" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="resheader">
@@ -112,64 +109,9 @@
     <value>2.0</value>
   </resheader>
   <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <metadata name="columnHeader2.GenerateMember" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>False</value>
-  </metadata>
-  <metadata name="resultColumnsContextMenuStrip.GenerateMember" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>False</value>
-  </metadata>
-  <metadata name="resultColumnsContextMenuStrip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>207, 17</value>
-  </metadata>
-  <metadata name="toolStripSeparator3.GenerateMember" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>False</value>
-  </metadata>
-  <metadata name="toolStripSeparator2.GenerateMember" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>False</value>
-  </metadata>
-  <metadata name="toolStripMenuItem1.GenerateMember" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>False</value>
-  </metadata>
-  <metadata name="columnHeader3.GenerateMember" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-    <value>False</value>
-  </metadata>
-  <metadata name="currentContextMenuStrip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>17, 17</value>
-  </metadata>
-  <metadata name="imageListSort.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>436, 17</value>
-  </metadata>
-  <data name="imageListSort.ImageStream" mimetype="application/x-microsoft.net.object.binary.base64">
-    <value>
-        AAEAAAD/////AQAAAAAAAAAMAgAAAFdTeXN0ZW0uV2luZG93cy5Gb3JtcywgVmVyc2lvbj00LjAuMC4w
-        LCBDdWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPWI3N2E1YzU2MTkzNGUwODkFAQAAACZTeXN0
-        ZW0uV2luZG93cy5Gb3Jtcy5JbWFnZUxpc3RTdHJlYW1lcgEAAAAERGF0YQcCAgAAAAkDAAAADwMAAAC2
-        BAAAAk1TRnQBSQFMAgEBAgEAAdABAAHQAQABEAEAARABAAT/ASEBAAj/AUIBTQE2BwABNgMAASgDAAFA
-        AwABEAMAAQEBAAEgBgABEP8AYwADOwFkAzsBZLgAA2QB8QNkAfEMAAG4AYIBMwH/AbgBggEzAf8BuAGC
-        ATMB/wG4AYIBMwH/AbgBggEzAf8UAAM+AWsDfwH+A38B/gM+AWu0AAOAAf8DgAH/DAABuAGCATMB/wG4
-        AYIBMwH/AbgBggEzAf8BuAGCATMB/wG4AYIBMwH/EAADPgFrA38B/gOAAf8DgAH/A38B/gM+AWsQAAG4
-        AYIBMwH/AbgBggEzAf+YAAOAAf8DgAH/LAADMQFPA38B/gN/Af4DgAH/A4AB/wN/Af4DfwH+AzEBTwwA
-        AbgBggEzAf8BuAGCATMB/5gAA4AB/wOAAf8QAAG4AYIBMwH/AbgBggEzAf8BuAGCATMB/wG4AYIBMwH/
-        DAADgAH/A38B/gM+AWsDgAH/A4AB/wM+AWsDfwH+A4AB/6wAA4AB/wOAAf8QAAG4AYIBMwH/AbgBggEz
-        Af8BuAGCATMB/wG4AYIBMwH/DAADgAH/Az4BawQAA4AB/wOAAf8EAAM+AWsDgAH/CAABuAGCATMB/wG4
-        AYIBMwH/AbgBggEzAf+YAAOAAf8DgAH/LAADMQFOCAADgAH/A4AB/wgAAzEBTggAAbgBggEzAf8BuAGC
-        ATMB/wG4AYIBMwH/jAADMQFOCAADgAH/A4AB/wgAAzEBTggAAbgBggEzAf8BuAGCATMB/wG4AYIBMwH/
-        GAADgAH/A4AB/6wAA4AB/wM+AWsEAAOAAf8DgAH/BAADPgFrA4AB/wgAAbgBggEzAf8BuAGCATMB/wG4
-        AYIBMwH/GAADgAH/A4AB/xAAAbgBggEzAf8BuAGCATMB/wG4AYIBMwH/AbgBggEzAf+MAAOAAf8DfwH+
-        Az4BawOAAf8DgAH/Az4BawN/Af4DgAH/LAADgAH/A4AB/xAAAbgBggEzAf8BuAGCATMB/wG4AYIBMwH/
-        AbgBggEzAf+MAAMxAU8DfwH+A38B/gOAAf8DgAH/A38B/gN/Af4DMQFPDAABuAGCATMB/wG4AYIBMwH/
-        GAADgAH/A4AB/7AAAz4BawN/Af4DgAH/A4AB/wN/Af4DPgFrEAABuAGCATMB/wG4AYIBMwH/GAADgAH/
-        A4AB/wwAAbgBggEzAf8BuAGCATMB/wG4AYIBMwH/AbgBggEzAf8BuAGCATMB/5QAAz4BawN/Af4DfwH+
-        Az4BazQAA2QB8QNkAfEMAAG4AYIBMwH/AbgBggEzAf8BuAGCATMB/wG4AYIBMwH/AbgBggEzAf+YAAM7
-        AWQDOwFk/wDpAAFCAU0BPgcAAT4DAAEoAwABQAMAARADAAEBAQABAQUAAYAXAAP/AQAE/wQAAv8B8wH/
-        BAAB8wGDAeEB/wQAAfMBgwHAAfMEAAHzAf8BgAFzBAAB8wHDAYABfwQAAfMBwwGSAWMEAAHzAf8BswFj
-        BAABswFjAfMB/wQAAZIBYwHzAcMEAAGAAX8B8wHDBAABgAFzAfMB/wQAAcAC8wGDBAAB4QH/AfMBgwQA
-        AfMD/wQABP8EAAs=
-</value>
-  </data>
 </root>

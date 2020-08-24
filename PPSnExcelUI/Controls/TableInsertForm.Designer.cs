@@ -245,6 +245,7 @@
             this.columnListHeader,
             this.columnListTechHeader});
 			this.currentColumnsListView.ContextMenuStrip = this.currentContextMenuStrip;
+			this.currentColumnsListView.FullRowSelect = true;
 			this.currentColumnsListView.HideSelection = false;
 			this.currentColumnsListView.Location = new System.Drawing.Point(16, 191);
 			this.currentColumnsListView.Name = "currentColumnsListView";
