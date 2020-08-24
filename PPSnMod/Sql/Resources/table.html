@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html>
+<%
+local tableInfo = GetTableDescription(table, true);
+%>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Table <%=tableInfo.Name%></title>
+</head>
+<body>
+    <h2>Spalten</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>p</th>
+                <th>Type</th>
+                <th>Beschreibung</th>
+            </tr>
+        </thead>
+        <tbody>
+            <%foreach c in tableInfo.Columns do%>
+            <tr>
+                <td><%=c.Name%></td>
+                <td><%=c.IsPrimaryKey%></td>
+                <td><%=c.DataType%></td>
+                <td><%=c.Description%></td>
+            </tr>
+            <%end;%>
+        </tbody>
+    </table>
+
+    <!--<h2>Relationen</h2>-->
+</body>
+</html>

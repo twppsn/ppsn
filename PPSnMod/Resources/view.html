@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html>
+<%
+local viewInfo = GetViewDefinition(view);
+%>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>View <%=view%></title>
+</head>
+<body>
+    
+    <a href="?action=viewget&v=<%=view%>&c=10">Raw</a>
+
+    <h2>Attribute</h2>
+    <table>
+        <tbody>
+            <%foreach a in viewInfo.Attributes do%>
+            <tr>
+                <td><%=a.Name%></td>
+                <td><%=a.Value%></td>
+            </tr>
+            <%end;%>
+        </tbody>
+    </table>
+
+    <h2>Spalten</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Datentype</th>
+            </tr>
+        </thead>
+        <tbody>
+            <%foreach col in viewInfo.SelectorToken.Columns do%>
+            <tr>
+                <td><%=col.Name%></td>
+                <td><%=col.DataType.Name%></td>
+            </tr>
+            <%end;%>
+        </tbody>
+    </table>
+</body>
+</html>

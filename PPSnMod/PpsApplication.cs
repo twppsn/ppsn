@@ -777,6 +777,15 @@ namespace TecWare.PPSn.Server
 			}
 		} // func WriteApplicationInfo
 
+		private async Task WriteInfoPageAsync(IDEWebRequestScope r)
+		{
+			r.DemandToken(SecuritySys);
+			if (r.TryGetProperty<string>("view", out _))
+				await Task.Run(() => r.WriteResource(typeof(PpsApplication), "Resources.view.html", MimeTypes.Text.Html));
+			else
+				await Task.Run(() => r.WriteResource(typeof(PpsApplication), "Resources.info.html", MimeTypes.Text.Html));
+		} // proc WriteInfoPageAsync
+
 		/// <summary></summary>
 		/// <param name="r"></param>
 		/// <returns></returns>
@@ -799,6 +808,10 @@ namespace TecWare.PPSn.Server
 				case "geometries.json":
 					await WriteJsonGeometriesAsync(r);
 					return true;
+				case "info.html":
+					await WriteInfoPageAsync(r);
+					return true;
+
 				default:
 					if (r.TryEnterSubPath(this, "geometry/"))
 					{
@@ -812,6 +825,7 @@ namespace TecWare.PPSn.Server
 							r.ExitSubPath(this);
 						}
 					}
+				
 					return await base.OnProcessRequestAsync(r);
 			}
 		} // proc OnProcessRequest

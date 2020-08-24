@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Info</title>
+</head>
+<body>
+    <h2>Views</h2>
+    <table>
+        <tbody>
+            <%foreach v in GetViewDefinitions() do%>
+            <tr>
+                <td><a href="info.html?view=<%=v.Name%>"><%=v.Name%></a></td>
+                <td><%=v.DisplayName%></td>
+                <td><%=v.SecurityToken%></td>
+                <% local r, t = v.Attributes.TryGetProperty("Description");
+                if r then%>
+                <td><%=t%></td>
+                <%else%>
+                <td />
+                <% end; %>
+            </tr>
+            <%end%>
+        </tbody>
+    </table>
+</body>
+</html>

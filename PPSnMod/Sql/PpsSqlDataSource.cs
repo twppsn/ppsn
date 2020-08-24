@@ -23,6 +23,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -30,7 +31,9 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
+using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
@@ -3220,6 +3223,30 @@ namespace TecWare.PPSn.Server.Sql
 			}
 		} // proc RefreshSchema
 
+		/// <summary>Returns all tables as.</summary>
+		/// <returns></returns>
+		[LuaMember]
+		public IEnumerable<PpsSqlTableInfo> GetTableInfo()
+		{
+			using (tablesListController.EnterReadLock())
+			{
+				foreach (var t in tables.Values)
+					yield return t;
+			}
+		} // func GetTableInfo
+
+		/// <summary>Returns all procedures</summary>
+		/// <returns></returns>
+		[LuaMember]
+		public IEnumerable<PpsSqlProcedureInfo> GetProcedureInfo()
+		{
+			using (proceduresListController.EnterReadLock())
+			{
+				foreach (var p in procedures.Values)
+					yield return p;
+			}
+		} // func GetProcedureInfo
+
 		/// <summary>Is schema readed.</summary>
 		[
 		PropertyName("tw_ppsn_init"),
@@ -3769,6 +3796,30 @@ namespace TecWare.PPSn.Server.Sql
 		} // func GetDataRowValue
 
 		#endregion
+
+		private async Task<bool> WriteDatabaseInfoAsync(IDEWebRequestScope r)
+		{
+			r.DemandToken(SecuritySys);
+			if (r.TryGetProperty("table", out var _))
+				await Task.Run(() => r.WriteResource(typeof(PpsSqlDataSource), "Resources.table.html", MimeTypes.Text.Html));
+			else
+				await Task.Run(() => r.WriteResource(typeof(PpsSqlDataSource), "Resources.info.html", MimeTypes.Text.Html));
+			return true;
+		} // func WriteDatabaseInfoAsync
+
+		/// <summary>Add info.html to the results</summary>
+		/// <param name="r"></param>
+		/// <returns></returns>
+		protected override Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
+		{
+			switch (r.RelativeSubPath)
+			{
+				case "info.html":
+					return WriteDatabaseInfoAsync(r);
+				default:
+					return base.OnProcessRequestAsync(r);
+			}
+		} // func OnProcessRequestAsync
 	} // class PpsSqlDataSource
 
 	#endregion
