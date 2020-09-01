@@ -1647,7 +1647,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // func HttpViewGetAction
 
-		private Dictionary<string, long> ParseSyncGetParameters(IDEWebRequestScope r)
+		private Dictionary<string, long> ParseSyncGetParameters(IDEWebRequestScope r, out bool enforceCDC)
 		{
 			var syncIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 		
@@ -1662,6 +1662,9 @@ namespace TecWare.PPSn.Server
 					var lastSyncTimeStamp = xml.GetAttribute("lastSyncTimeStamp", -1L); // utc time stamp
 					if (lastSyncTimeStamp > 0)
 						syncIds[String.Empty] = lastSyncTimeStamp;
+
+					// is enforce read data capture set
+					enforceCDC = xml.GetAttribute("enforceCDC", false);
 
 					// collect table based sync states
 					if (!xml.IsEmptyElement)
@@ -1693,6 +1696,8 @@ namespace TecWare.PPSn.Server
 				var lastSyncTimeStamp = r.GetProperty("_ls", -1L);
 				if(lastSyncTimeStamp > 0)
 					syncIds[String.Empty] = lastSyncTimeStamp;
+
+				enforceCDC = false;
 
 				foreach (var p in r.ParameterNames)
 				{
@@ -1751,7 +1756,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // func TryParseSyncInfo
 
-		private void ExecuteSyncAction(IDEWebRequestScope r, LogMessageScopeProxy log, ref int openElements, XmlWriter xml, long globalLastSyncId, Dictionary<PpsDataSource, PpsDataSynchronization> sessions, string tableExpression, long lastSyncId)
+		private void ExecuteSyncAction(IDEWebRequestScope r, LogMessageScopeProxy log, ref int openElements, XmlWriter xml, long globalLastSyncId, bool enforceCDC, Dictionary<PpsDataSource, PpsDataSynchronization> sessions, string tableExpression, long lastSyncId)
 		{
 			log.Write($"{tableExpression} last={lastSyncId}");
 			using (log.Indent())
@@ -1763,6 +1768,8 @@ namespace TecWare.PPSn.Server
 					{
 						var connection = dataSource.CreateConnection(r.GetUser<IPpsPrivateDataContext>());
 						syncSession = dataSource.CreateSynchronizationSession(connection, globalLastSyncId, false);
+						if (enforceCDC)
+							syncSession.RefreshChanges();
 						sessions.Add(dataSource, syncSession);
 					}
 
@@ -1856,7 +1863,7 @@ namespace TecWare.PPSn.Server
 					log.WriteLine("Synchronization requested: {0}", r.RemoteEndPoint.Address);
 
 					// get sync ids
-					var syncIds = ParseSyncGetParameters(r);
+					var syncIds = ParseSyncGetParameters(r, out var enforceCDC);
 					// generate timestamp for the next request
 					var nextSyncStamp = DateTime.Now.ToFileTimeUtc();
 
@@ -1879,7 +1886,7 @@ namespace TecWare.PPSn.Server
 
 							// write sync state for the tables
 							foreach (var kv in syncIds)
-								ExecuteSyncAction(r, log, ref openElements, xml, globalLastSyncId, sessions, kv.Key, kv.Value);
+								ExecuteSyncAction(r, log, ref openElements, xml, globalLastSyncId, enforceCDC, sessions, kv.Key, kv.Value);
 							
 							// finish with sync stamp
 							xml.WriteStartElement("syncStamp");

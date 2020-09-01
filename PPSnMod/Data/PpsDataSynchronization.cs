@@ -382,6 +382,9 @@ namespace TecWare.PPSn.Server.Data
 		public virtual IPpsDataSynchronizationBatch GetChanges(string tableName, long lastSyncId)
 			=> throw new NotImplementedException();
 
+		/// <summary>Enforce a refresh of the change set.</summary>
+		public virtual void RefreshChanges() { }
+
 		/// <summary>Access to Application</summary>
 		public PpsApplication Application => application;
 		/// <summary>Database connection</summary>
