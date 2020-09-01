@@ -217,6 +217,14 @@
 		</xs:restriction>
 	</xs:simpleType>
 
+	<xs:simpleType name="dataJoinType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Inner" />
+			<xs:enumeration value="Left" />
+			<xs:enumeration value="Right" />
+		</xs:restriction>
+	</xs:simpleType>
+
 	<xs:element name="register">
 		<xs:annotation>
 			<xs:appinfo>
@@ -322,6 +330,11 @@
 										<xs:attribute name="alias" type="xs:string" use="optional">
 											<xs:annotation>
 												<xs:documentation>Optional alias, if the view is used more than once.</xs:documentation>
+											</xs:annotation>
+										</xs:attribute>
+										<xs:attribute name="type" type="pps:dataJoinType" use="optional" default="Inner">
+											<xs:annotation>
+												<xs:documentation>Define the join type.</xs:documentation>
 											</xs:annotation>
 										</xs:attribute>
 										<xs:attribute name="on" type="xs:string" use="required">
