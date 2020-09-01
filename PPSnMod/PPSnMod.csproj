@@ -17,6 +17,7 @@
 	<Import Project="..\Common\AssemblyInfo.targets" />
 	<ItemGroup>
 	  <None Remove="Resources\info.html" />
+	  <None Remove="Resources\key.png" />
 	  <None Remove="Resources\view.html" />
 	  <None Remove="Sql\Resources\info.html" />
 	  <None Remove="Sql\Resources\table.html" />
@@ -25,6 +26,7 @@
 	  <None Remove="Xsd\PPSn.xsd" />
 	</ItemGroup>
 	<ItemGroup>
+	  <EmbeddedResource Include="Resources\key.png" />
 	  <EmbeddedResource Include="Sql\Resources\info.html" />
 	  <EmbeddedResource Include="Sql\Resources\table.html" />
 	  <EmbeddedResource Include="Sql\tsql\ConnectionInitScript.sql" />

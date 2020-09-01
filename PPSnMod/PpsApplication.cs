@@ -151,6 +151,28 @@ namespace TecWare.PPSn.Server
 			InitUser();
 		} // ctor
 
+		/// <summary>Add resource extension.</summary>
+		/// <param name="config"></param>
+		protected override void ValidateConfig(XElement config)
+		{
+			base.ValidateConfig(config);
+
+			var xHttpInfo = config.Elements(DEConfigurationConstants.xnResources).FirstOrDefault(x => x.Attribute("name")?.Value == "httpInfo");
+			if (xHttpInfo != null)
+				return;
+
+			xHttpInfo = new XElement(DEConfigurationConstants.xnResources,
+				new XAttribute("name", "httpInfo"),
+				new XAttribute("assembly", typeof(PpsApplication).Assembly.FullName),
+				new XAttribute("namespace", "TecWare.PPSn.Server.Resources"),
+				new XElement(DEConfigurationConstants.xnSecurityDef, SecuritySys)
+			);
+#if DEBUG
+			xHttpInfo.Add(new XElement(DEConfigurationConstants.xnAlternativeRoot, @"C:\Projects\PPSnOS\ppsn\PPSnMod\Resources"));
+#endif
+			config.Add(xHttpInfo);
+		} // proc ValidateConfig
+
 		/// <summary></summary>
 		/// <param name="config"></param>
 		protected override void OnBeginReadConfiguration(IDEConfigLoading config)
@@ -711,6 +733,72 @@ namespace TecWare.PPSn.Server
 		} // proc RefreshClientApplicationInfosAsync
 
 		#endregion
+
+		/// <summary>Used for info.html to print the column name.</summary>
+		/// <param name="column"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public string GetColumnDataTypeName(IDataColumn column)
+		{
+			bool TryGetMaxLength(out int maxLength)
+				=> column.Attributes.TryGetProperty("MaxLength", out maxLength) && maxLength > 0 && maxLength < Int32.MaxValue;
+
+			if (column.DataType == typeof(decimal))
+			{
+				if (!column.Attributes.TryGetProperty<byte>("Precision", out var precision))
+					precision = 0;
+				if (!column.Attributes.TryGetProperty<byte>("Scale", out var scale))
+					scale = 0;
+
+				return $"decimal({scale},{precision})";
+			}
+			else if (column.DataType == typeof(byte[]) && TryGetMaxLength(out var maxLength))
+				return $"byte({maxLength})";
+			else if (column.DataType == typeof(string) && TryGetMaxLength(out maxLength))
+				return $"string({maxLength})";
+			else
+				return LuaType.GetType(column.DataType).AliasOrFullName;
+		} // func GetColumnDataTypeName
+
+		/// <summary>Used for info.html to print the key symbol.</summary>
+		/// <param name="column"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public LuaResult IsKeyColumn(IDataColumn column)
+		{
+			if (column.Attributes.TryGetProperty<bool>("IsIdentity", out var isIdentity) && isIdentity)
+				return new LuaResult(true, 0);
+			else if (column.Attributes.TryGetProperty<bool>("IsKey", out var isKey) && isKey)
+				return new LuaResult(true, 1);
+			else
+				return LuaResult.Empty;
+		} // func IsKeyColumn
+
+		/// <summary>Used for info.html to print all attribues.</summary>
+		/// <param name="tw"></param>
+		/// <param name="column"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public void WriteColumnAttributes(TextWriter tw, IDataColumn column)
+		{
+			foreach (var a in column.Attributes)
+			{
+				if (a.Name == "IsIdentity"
+					|| a.Name == "IsKey"
+					|| a.Name == "displayName"
+					|| a.Name == "description"
+					|| a.Name == "Nullable"
+					|| a.Name == "Precision"
+					|| a.Name == "MaxLength"
+					|| a.Name == "Scale")
+					continue;
+
+				tw.Write(a.Name);
+				tw.Write(" = ");
+				tw.Write(a.Value.ChangeType<string>());
+				tw.WriteLine("<br/>");
+			}
+		} // proc WriteColumnAttributes
 
 		/// <summary></summary>
 		/// <param name="database"></param>

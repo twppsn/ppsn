@@ -9,7 +9,7 @@ local viewInfo = GetViewDefinition(view);
 </head>
 <body>
     
-    <a href="?action=viewget&v=<%=view%>&c=10">Raw</a>
+    <a href="./?action=viewget&v=<%=view%>&c=10">Raw</a>
 
     <h2>Attribute</h2>
     <table>
@@ -29,16 +29,74 @@ local viewInfo = GetViewDefinition(view);
             <tr>
                 <th>Name</th>
                 <th>Datentype</th>
+                <th>Nullable</th>
+                <th>DisplayName</th>
+                <th>Description</th>
+                <th>Attribues</th>
             </tr>
         </thead>
         <tbody>
-            <%foreach col in viewInfo.SelectorToken.Columns do%>
+            <%foreach col in viewInfo.SelectorToken.Columns do
+            local column = viewInfo.SelectorToken.GetFieldDescription(col.Name) or col;
+
+            local t, isNullable, displayName, description;
+            t, isNullable = column.Attributes.TryGetProperty("Nullable");
+            isNullable = t and isNullable;
+            t, displayName = column.Attributes.TryGetProperty("displayName");
+            t, description = column.Attributes.TryGetProperty("description");
+            %>
             <tr>
-                <td><%=col.Name%></td>
-                <td><%=col.DataType.Name%></td>
+                <td>
+                    <%=col.Name%>
+                    <% if IsKeyColumn(column) then %>
+                    <img src="key.png" width="16" height="16" alt="key" />
+                    <%end;%>
+                </td>
+                <td><%=GetColumnDataTypeName(col)%></td>
+                <td><%=isNullable%></td>
+                <td><%=displayName%></td>
+                <td><%=description%></td>
+                <td><% WriteColumnAttributes(out, column); %></td>
             </tr>
             <%end;%>
         </tbody>
     </table>
+
+    <% if #viewInfo.Joins > 0 then %>
+    <h2>Joins</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ViewName</th>
+                <th>DisplayName</th>
+                <th>Type</th>
+                <th>Expression</th>
+            </tr>
+        </thead>
+        <tbody>
+            <%foreach join in viewInfo.Joins do%>
+            <tr>
+                <td>
+                    <a href="info.html?view=<%=join.ViewName%>"><%=join.ViewName%></a>
+                    <% if #join.AliasName > 0 then %>
+                    as <%=join.AliasName%>
+                    <%end;%>
+                </td>
+                <td><%=join.DisplayName%></td>
+                <td><%=join.Type%></td>
+                <td>
+                    <%
+                    foreach s in join.Statement do
+                    %>
+                    <%=s.Right%>=<%=s.Left%>
+                    <%
+                    end;
+                    %>
+                </td>
+            </tr>
+            <%end;%>
+        </tbody>
+    </table>
+    <%end;%>
 </body>
 </html>
