@@ -16,17 +16,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Caching;
 using System.Xml;
 using System.Xml.Linq;
-using Markdig.Extensions.Tables;
-using Microsoft.Deployment.WindowsInstaller;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -389,20 +385,6 @@ namespace TecWare.PPSn.Server
 
 			return null;
 		} // func GetProperty
-
-		#endregion
-
-		#region -- IEnumerable --------------------------------------------------------
-
-		/// <summary>Get attributes of this field.</summary>
-		/// <param name="attributeSelector">String selector for attribute names.</param>
-		/// <returns></returns>
-		public IEnumerable<PropertyValue> GetAttributes(string attributeSelector)
-		{
-			return attributeSelector == null || attributeSelector.Length == 0 || attributeSelector == "*"
-				? Attributes
-				: Attributes.Where(c => c.Name.StartsWith(attributeSelector)); // todo: convert standard attribute
-		} // func GetAttributes
 
 		#endregion
 
@@ -782,7 +764,7 @@ namespace TecWare.PPSn.Server
 				=> rowAllowed[columnIndex];
 
 			protected bool IsColumnAllowed(int columnIndex)
-				=> rowAllowed == null || columnIndex < 0 || columnIndex >= rowAllowed.Length ? false : rowAllowed[columnIndex];
+				=> rowAllowed != null && columnIndex >= 0 && columnIndex < rowAllowed.Length && rowAllowed[columnIndex];
 
 			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
 			{
@@ -883,13 +865,12 @@ namespace TecWare.PPSn.Server
 
 					columnNames[i] = nativeColumnName;
 
-					var fieldDescription = fieldDefinition?.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
 					var fieldType = fieldDefinition?.DataType ?? columns.Columns[i].DataType;
 
-					if (fieldDescription == null)
+					if (fieldDefinition == null)
 					{
 						xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
-						xml.WriteAttributeString("field", fieldDefinition?.Name ?? nativeColumnName);
+						xml.WriteAttributeString("field", nativeColumnName);
 
 						WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
 						isNullable = true;
@@ -898,7 +879,7 @@ namespace TecWare.PPSn.Server
 					{
 						xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
 
-						foreach (var c in fieldDescription.GetAttributes(attributeSelector))
+						foreach (var c in fieldDefinition.GetAttributes(attributeSelector))
 						{
 							if (String.Compare(c.Name, "Nullable", true) == 0)
 							{
@@ -1635,7 +1616,7 @@ namespace TecWare.PPSn.Server
 				true
 			).AwaitTask();
 
-			var attributeSelector = r.GetProperty("a", String.Empty);
+			var attributeSelector = r.GetProperty("a", "*");
 
 			// emit the selector
 			using (var viewWriter = ViewGetCreateWriter(r))

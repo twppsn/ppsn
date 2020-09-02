@@ -138,11 +138,16 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		protected virtual IEnumerator<PropertyValue> GetProperties()
 		{
-			yield return new PropertyValue(nameof(MaxLength), MaxLength);
-			yield return new PropertyValue(nameof(Precision), Precision);
-			yield return new PropertyValue(nameof(Scale), Scale);
-			yield return new PropertyValue(nameof(Nullable), Nullable);
-			yield return new PropertyValue(nameof(IsIdentity), IsIdentity);
+			if (maxLength > 0 && maxLength < Int32.MaxValue)
+				yield return new PropertyValue(nameof(MaxLength), maxLength);
+			if (precision > 0)
+				yield return new PropertyValue(nameof(Precision), precision);
+			if (scale > 0)
+				yield return new PropertyValue(nameof(Scale), scale);
+			if (isNullable)
+				yield return new PropertyValue(nameof(Nullable), isNullable);
+			if (IsIdentity)
+				yield return new PropertyValue(nameof(IsIdentity), isIdentity);
 		} // func GetProperties
 
 		/// <summary>Return default properties.</summary>
@@ -649,10 +654,33 @@ namespace TecWare.PPSn.Server.Sql
 				} // func TryTranslateAttribute
 
 				private bool TryTranslateFromAttribute(string attributeName, out string rowName)
-					=> TryTranslateAttribute(attributeName, 0, 1, out rowName);
+				{
+					if (TryTranslateAttribute(attributeName, 0, 1, out rowName))
+						return true;
+					else if (rowName.StartsWith("Dt.", StringComparison.OrdinalIgnoreCase))
+					{
+						// remove prefix
+						rowName = rowName.Substring(3);
+						return false;
+					}
+					else
+					{
+						rowName = null;
+						return false;
+					}
+				} // func TryTranslateFromAttribute
 
 				private bool TryTranslateToAttribute(string rowName, out string attributeName)
-					=> TryTranslateAttribute(rowName, 1, 0, out attributeName);
+				{
+					if (TryTranslateAttribute(rowName, 1, 0, out attributeName))
+						return true;
+					else
+					{
+						// add prefix
+						attributeName = "Dt." + attributeName;
+						return false;
+					}
+				} // func TryTranslateToAttribute
 
 				public bool TryGetProperty(string name, out object value)
 				{
@@ -662,11 +690,11 @@ namespace TecWare.PPSn.Server.Sql
 						value = column.row[rowName];
 						return value != DBNull.Value;
 					}
-					else
+					else if (rowName != null)
 					{
 						foreach (var c in column.row.Table.Columns.Cast<DataColumn>())
 						{
-							if (String.Compare(c.ColumnName, name, StringComparison.OrdinalIgnoreCase) == 0)
+							if (String.Compare(c.ColumnName, rowName, StringComparison.OrdinalIgnoreCase) == 0)
 							{
 								value = column.row[c];
 								return value != DBNull.Value;

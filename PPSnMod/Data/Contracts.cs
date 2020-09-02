@@ -425,7 +425,7 @@ namespace TecWare.PPSn.Server.Data
 	/// <summary>Description for a column.</summary>
 	public interface IPpsColumnDescription : IDataColumn
 	{
-		/// <summary>Returns a specific column implemenation.</summary>
+		/// <summary>Returns a specific column implementation.</summary>
 		/// <typeparam name="T"></typeparam>
 		/// <returns></returns>
 		T GetColumnDescription<T>() where T : IPpsColumnDescription;
@@ -492,15 +492,14 @@ namespace TecWare.PPSn.Server.Data
 		{
 			private readonly IPropertyEnumerableDictionary self;
 			private readonly IPropertyEnumerableDictionary parent;
-			private readonly List<string> emittedProperties = new List<string>();
 
 			public PpsColumnDescriptionAttributes(IPropertyEnumerableDictionary self, IPropertyEnumerableDictionary parent)
 			{
-				this.self = self;
+				this.self = self ?? throw new ArgumentNullException(nameof(self));
 				this.parent = parent;
 			} // ctor
 
-			private bool PropertyEmitted(string name)
+			private bool PropertyEmitted(List<string> emittedProperties, string name)
 			{
 				var idx = emittedProperties.BinarySearch(name, StringComparer.OrdinalIgnoreCase);
 				if (idx >= 0)
@@ -511,9 +510,11 @@ namespace TecWare.PPSn.Server.Data
 
 			public IEnumerator<PropertyValue> GetEnumerator()
 			{
+				var emittedProperties = new List<string>();
+
 				foreach (var c in self)
 				{
-					if (!PropertyEmitted(c.Name))
+					if (!PropertyEmitted(emittedProperties, c.Name))
 						yield return c;
 				}
 
@@ -521,7 +522,7 @@ namespace TecWare.PPSn.Server.Data
 				{
 					foreach (var c in parent)
 					{
-						if (!PropertyEmitted(c.Name))
+						if (!PropertyEmitted(emittedProperties, c.Name))
 							yield return c;
 					}
 				}
@@ -570,6 +571,89 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
+		#region -- class PpsAttributeComparer -----------------------------------------
+
+		private sealed class PpsAttributeComparer : IComparer<string>
+		{
+			private PpsAttributeComparer()
+			{
+			} // ctor
+
+			public int Compare(string x, string y)
+			{
+				SplitAttributeName(x, out var xc, out var xn);
+				SplitAttributeName(y, out var yc, out var yn);
+
+				var r = String.Compare(xc, yc, StringComparison.OrdinalIgnoreCase);
+				if (r == 0)
+					return String.Compare(xn, yn, StringComparison.OrdinalIgnoreCase);
+				else
+					return r;
+			} // func Compare
+
+			public static IComparer<string> Comparer { get; } = new PpsAttributeComparer();
+		} // class PpsAttributeComparer
+
+		#endregion
+
+		#region -- class PpsAttributeSelector -----------------------------------------
+
+		private sealed class PpsAttributeSelector
+		{
+			private readonly bool emitAll = false;
+			private readonly bool emitRoot = false;
+			private readonly Dictionary<string, List<Func<string, bool>>> expressions = new Dictionary<string, List<Func<string, bool>>>(StringComparer.OrdinalIgnoreCase);
+
+			public PpsAttributeSelector(string expression)
+			{
+				if (expression == "*.*")
+					emitAll = true;
+				else if (expression == "*" || expression == null)
+					emitRoot = true;
+				else
+				{
+					foreach (var expr in expression.Split(','))
+					{
+						if (String.IsNullOrEmpty(expr))
+							continue;
+
+						SplitAttributeName(expr, out var attributeClass, out var attributeName);
+						if (attributeClass == "*")
+							continue; // invalid filter
+						else
+							AddExpression(attributeClass ?? String.Empty, Procs.GetFilerFunction(attributeName, false));
+					}
+				}
+			} // ctor
+
+			private void AddExpression(string attributeClass, Func<string, bool> func)
+			{
+				if (!expressions.TryGetValue(attributeClass, out var fn))
+					expressions[attributeClass] = fn = new List<Func<string, bool>>();
+				fn.Add(func);
+			} // proc AddExpression
+
+			public bool IsSelected(string name)
+			{
+				if (emitAll)
+					return true;
+				else if (emitRoot && name.IndexOf('.') == -1)
+					return true;
+				else
+				{
+					SplitAttributeName(name, out var attributeClass, out var attributeName);
+					return expressions.TryGetValue(attributeClass ?? String.Empty, out var fn) && fn != null && fn.Count > 0 && fn.Any(f => f(attributeName));
+				}
+			} // func IsSelected
+
+			public bool IsSelected(PropertyValue property)
+				=> IsSelected(property.Name);
+
+			public bool IsEmitAll => emitAll;
+		} // class PpsAttributeSelector
+
+		#endregion
+
 		/// <summary></summary>
 		/// <param name="properties"></param>
 		/// <param name="parent"></param>
@@ -586,13 +670,13 @@ namespace TecWare.PPSn.Server.Data
 			where T : IPpsColumnDescription
 		{
 			if (parent == null)
-				return default(T);
+				return default;
 			else if (typeof(T).IsAssignableFrom(@this.GetType()))
-				return (T)(IPpsColumnDescription)@this;
+				return (T)@this;
 			else if (parent != null)
 				return parent.GetColumnDescription<T>();
 			else
-				return default(T);
+				return default;
 		} // func GetColumnDescriptionParentImplementation
 
 		/// <summary></summary>
@@ -610,6 +694,41 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public static IPpsColumnDescription ToColumnDescription(this IDataColumn column, IPpsColumnDescription parent = null)
 			=> new PpsDataColumnDescription(parent, column);
+
+		/// <summary>Get attributes of this field.</summary>
+		/// <param name="column"></param>
+		/// <param name="attributeSelector">String selector for attribute names.</param>
+		/// <returns></returns>
+		public static IEnumerable<PropertyValue> GetAttributes(this IPpsColumnDescription column, string attributeSelector)
+		{
+			var sel = new PpsAttributeSelector(attributeSelector);
+
+			return sel.IsEmitAll
+				? column.Attributes
+				: column.Attributes.Where(sel.IsSelected);
+		} // func GetAttributes
+
+		/// <summary>Split a attribute name in his parts.</summary>
+		/// <param name="name"></param>
+		/// <param name="attributeClass"></param>
+		/// <param name="attributeName"></param>
+		public static void SplitAttributeName(string name, out string attributeClass, out string attributeName)
+		{
+			var groupSeperator = name.IndexOf('.');
+			if (groupSeperator == -1)
+			{
+				attributeClass = null;
+				attributeName = name;
+			}
+			else
+			{
+				attributeClass = name.Substring(0, groupSeperator);
+				attributeName = name.Substring(groupSeperator + 1);
+			}
+		} // func GetAttributeClass
+
+		/// <summary>Return a attribute comparer</summary>
+		public static IComparer<string> AttributeNameComparer => PpsAttributeComparer.Comparer;
 	} // class PpsColumnDescriptionHelper
 
 	#endregion

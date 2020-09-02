@@ -734,6 +734,11 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- info-html - helper -------------------------------------------------
+
+		private static string GetTypeName(LuaType luaType)
+			=> luaType.AliasName ?? luaType.Name;
+
 		/// <summary>Used for info.html to print the column name.</summary>
 		/// <param name="column"></param>
 		/// <returns></returns>
@@ -750,14 +755,14 @@ namespace TecWare.PPSn.Server
 				if (!column.Attributes.TryGetProperty<byte>("Scale", out var scale))
 					scale = 0;
 
-				return $"decimal({scale},{precision})";
+				return $"decimal({precision},{scale})";
 			}
 			else if (column.DataType == typeof(byte[]) && TryGetMaxLength(out var maxLength))
 				return $"byte({maxLength})";
 			else if (column.DataType == typeof(string) && TryGetMaxLength(out maxLength))
 				return $"string({maxLength})";
 			else
-				return LuaType.GetType(column.DataType).AliasOrFullName;
+				return GetTypeName(LuaType.GetType(column.DataType));
 		} // func GetColumnDataTypeName
 
 		/// <summary>Used for info.html to print the key symbol.</summary>
@@ -768,37 +773,57 @@ namespace TecWare.PPSn.Server
 		{
 			if (column.Attributes.TryGetProperty<bool>("IsIdentity", out var isIdentity) && isIdentity)
 				return new LuaResult(true, 0);
-			else if (column.Attributes.TryGetProperty<bool>("IsKey", out var isKey) && isKey)
+			else if (column.Attributes.TryGetProperty<bool>("IsPrimary", out var isPrimary) && isPrimary)
 				return new LuaResult(true, 1);
 			else
 				return LuaResult.Empty;
 		} // func IsKeyColumn
 
-		/// <summary>Used for info.html to print all attribues.</summary>
+		/// <summary>Used for info.html to print all attributes.</summary>
 		/// <param name="tw"></param>
-		/// <param name="column"></param>
+		/// <param name="attributes"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public void WriteColumnAttributes(TextWriter tw, IDataColumn column)
+		public void WriteAttributes(TextWriter tw, IPropertyEnumerableDictionary attributes)
 		{
-			foreach (var a in column.Attributes)
+			tw.Write("<table>");
+			tw.Write("<thead>");
+			tw.Write("<tr>");
+			tw.Write("<th>Name</th>");
+			tw.Write("<th>Type</th>");
+			tw.Write("<th>Wert</th>");
+			tw.Write("</tr>");
+			tw.Write("</thead>");
+			tw.Write("<tbody>");
+			foreach (var attr in attributes.OrderBy(a => a.Name, PpsColumnDescriptionHelper.AttributeNameComparer))
 			{
-				if (a.Name == "IsIdentity"
-					|| a.Name == "IsKey"
-					|| a.Name == "displayName"
-					|| a.Name == "description"
-					|| a.Name == "Nullable"
-					|| a.Name == "Precision"
-					|| a.Name == "MaxLength"
-					|| a.Name == "Scale")
-					continue;
+				tw.Write("<tr>");
+				tw.Write("<td>");
+				tw.Write(attr.Name);
+				tw.Write("</td>");
+				tw.Write("<td><code>");
+				tw.Write(GetTypeName(LuaType.GetType(attr.Type)));
+				tw.Write("</code></td>");
+				tw.Write("<td>");
 
-				tw.Write(a.Name);
-				tw.Write(" = ");
-				tw.Write(a.Value.ChangeType<string>());
-				tw.WriteLine("<br/>");
+				if (attr.Type.IsEnum)
+				{
+					tw.Write("<code>");
+					tw.Write(attr.Value.ChangeType<int>());
+					tw.Write("</code> ");
+					tw.Write(attr.Value.ChangeType<string>());
+				}
+				else
+					tw.Write(attr.Value.ChangeType<string>());
+
+				tw.Write("</td>");
+				tw.Write("</tr>");
 			}
+			tw.Write("</tbody>");
+			tw.Write("</table>");
 		} // proc WriteColumnAttributes
+
+		#endregion
 
 		/// <summary></summary>
 		/// <param name="database"></param>

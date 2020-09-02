@@ -8,20 +8,11 @@ local viewInfo = GetViewDefinition(view);
     <title>View <%=view%></title>
 </head>
 <body>
-    
+
     <a href="./?action=viewget&v=<%=view%>&c=10">Raw</a>
 
     <h2>Attribute</h2>
-    <table>
-        <tbody>
-            <%foreach a in viewInfo.Attributes do%>
-            <tr>
-                <td><%=a.Name%></td>
-                <td><%=a.Value%></td>
-            </tr>
-            <%end;%>
-        </tbody>
-    </table>
+    <% WriteAttributes(out, viewInfo.Attributes); %>
 
     <h2>Spalten</h2>
     <table>
@@ -32,23 +23,21 @@ local viewInfo = GetViewDefinition(view);
                 <th>Nullable</th>
                 <th>DisplayName</th>
                 <th>Description</th>
-                <th>Attribues</th>
             </tr>
         </thead>
         <tbody>
             <%foreach col in viewInfo.SelectorToken.Columns do
-            local column = viewInfo.SelectorToken.GetFieldDescription(col.Name) or col;
 
             local t, isNullable, displayName, description;
-            t, isNullable = column.Attributes.TryGetProperty("Nullable");
+            t, isNullable = col.Attributes.TryGetProperty("Nullable");
             isNullable = t and isNullable;
-            t, displayName = column.Attributes.TryGetProperty("displayName");
-            t, description = column.Attributes.TryGetProperty("description");
+            t, displayName = col.Attributes.TryGetProperty("displayName");
+            t, description = col.Attributes.TryGetProperty("Doc.Description");
             %>
             <tr>
                 <td>
-                    <%=col.Name%>
-                    <% if IsKeyColumn(column) then %>
+                    <a href="#<%=col.Name%>"><%=col.Name%></a>
+                    <% if IsKeyColumn(col) then %>
                     <img src="key.png" width="16" height="16" alt="key" />
                     <%end;%>
                 </td>
@@ -56,7 +45,6 @@ local viewInfo = GetViewDefinition(view);
                 <td><%=isNullable%></td>
                 <td><%=displayName%></td>
                 <td><%=description%></td>
-                <td><% WriteColumnAttributes(out, column); %></td>
             </tr>
             <%end;%>
         </tbody>
@@ -97,6 +85,12 @@ local viewInfo = GetViewDefinition(view);
             <%end;%>
         </tbody>
     </table>
+    <%end;%>
+
+    <h2>Spalten</h2>
+    <% foreach col in viewInfo.SelectorToken.Columns do %>
+        <h3 id="<%=col.Name%>"><%=col.Name%></h3>
+        <% WriteAttributes(out, col.Attributes); %>
     <%end;%>
 </body>
 </html>

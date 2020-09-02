@@ -84,12 +84,23 @@ Der Name kann dabei voll qualifiziert sein, also: [Datenquelle].[Namespace].[Vie
 
 Datenquelle und Namespace kann wegelassen werden.
 
+Ein gute Übersicht über alle Views befindet sich unter /ppsn/info.html. Dort können die Metadaten enumeriert und kontrolliert werden.
+
 ### Web-Interface
 
 ```
 http://server/ppsn/?action=viewget&v=views.Artikel%20t&f=or%28t.TEILBEST%3A%3C10%20t.TEILBEST%3A%3E100%29&r=t.TEILTNR:Artikel_Nr,t.TEILNAME1:Artikelbezeichnung,t.TEILBEST:Bestand&o=%2Bt.TEILTNR
 ```
 
-`v`: Name der Views
-`f`: Filter-Bedingung
-`r`: Spaltendefinition
+- `v`: Name der Views
+- `f`: Filter-Bedingung
+- `r`: Spaltendefinition
+- `a`: Selectiert die Attribute
+
+### Attribute Selektion
+
+- `,` lädt keine Attribute
+- `*` lädt nur Wurzelattribute
+- `*.*` lädt alle Attribute
+- `Doc.*' lädt alle Attribute der Klasse doc
+- `*,Doc.*` lädt alle Root-Attribute und alle Attribute der Klasse doc

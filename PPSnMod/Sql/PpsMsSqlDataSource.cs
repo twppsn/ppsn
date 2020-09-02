@@ -748,21 +748,32 @@ namespace TecWare.PPSn.Server.Sql
 					while (e.MoveNext())
 						yield return e.Current;
 				}
-				yield return new PropertyValue(nameof(SqlType), SqlType);
+
+				yield return new PropertyValue("Sql.Type", typeof(SqlDbType), SqlType);
+
+				if (typeName != null)
+					yield return new PropertyValue("Sql.TypeName", typeof(string), typeName);
 			} // func GetProperties
 
 			protected override bool TryGetProperty(string propertyName, out object value)
 			{
 				if (!base.TryGetProperty(propertyName, out value))
 				{
-					if (String.Compare(propertyName, nameof(SqlType), StringComparison.OrdinalIgnoreCase) == 0)
+					if (String.Compare(propertyName, "Sql.Type", StringComparison.OrdinalIgnoreCase) == 0)
 					{
 						value = SqlType;
 						return true;
 					}
-
-					value = null;
-					return false;
+					else if (String.Compare(propertyName, "Sql.TypeName", StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						value = typeName;
+						return true;
+					}
+					else
+					{
+						value = null;
+						return false;
+					}
 				}
 				else
 					return true;
