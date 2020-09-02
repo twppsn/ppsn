@@ -43,7 +43,7 @@ namespace PPSnExcel.Data
 			// set number format
 			if (attributes.TryGetProperty("xl.format", out string tmp))
 				range.NumberFormat = tmp;
-			else if (attributes.TryGetProperty("format", out tmp))
+			else if (attributes.TryGetProperty("v.format", out tmp))
 				range.NumberFormat = ConvertNetToExcelFormat(baseCellType, tmp, CultureInfo.CurrentUICulture);
 						
 			// set alignment

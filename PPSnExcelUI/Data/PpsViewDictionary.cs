@@ -265,7 +265,7 @@ namespace TecWare.PPSn.Data
 				return;
 
 			// fetch info
-			var xResult = await environment.GetXmlData("bi/?action=tableinfo&v=" + viewList+ "&a=*,Doc.Description");
+			var xResult = await environment.GetXmlData("bi/?action=tableinfo&v=" + viewList+ "&a=*,doc.description");
 
 			// update views
 			foreach (var x in xResult.Elements("table"))

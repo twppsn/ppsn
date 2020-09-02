@@ -1206,7 +1206,7 @@ namespace TecWare.PPSn.Controls
 
 						lvi.Text = newCol.DisplayName;
 						lvi.SubItems[1].Text = newCol.Column.Name;
-						if (newCol.Column.Attributes.TryGetProperty<string>("Doc.Description", out var description))
+						if (newCol.Column.Attributes.TryGetProperty<string>("doc.description", out var description))
 							lvi.ToolTipText = description;
 					}
 
@@ -1344,7 +1344,7 @@ namespace TecWare.PPSn.Controls
 		{
 			var columnSourcePath = currentColumn.SourcePath;
 			var toolTip = currentColumn.SourceName + "\n" + columnSourcePath;
-			if (currentColumn is SourceColumnData sourceColumnData && sourceColumnData.Column.Attributes.TryGetProperty("Doc.Description", out var description))
+			if (currentColumn is SourceColumnData sourceColumnData && sourceColumnData.Column.Attributes.TryGetProperty("doc.description", out var description))
 				toolTip += "\n" + description;
 
 			currentLvi.Text = currentColumn.DisplayName;
