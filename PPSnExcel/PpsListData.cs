@@ -439,20 +439,15 @@ namespace PPSnExcel
 		private IPropertyReadOnlyDictionary GetVariables(Worksheet worksheet, SynchronizationContext context)
 			=> new WorksheetPropertyDictionary(worksheet);
 
-		internal IPpsViewResult GetViewData(PpsDataOrderExpression[] order, Worksheet current, SynchronizationContext context = null, bool headerOnly = false)
+		internal IPpsViewResult GetViewData(PpsDataOrderExpression[] order, Worksheet current, SynchronizationContext context = null)
 		{
 			var request = new PpsDataQuery(viewId)
 			{
 				Columns = columns.Select(c => c.ToColumnExpression()).Where(c => c != null).ToArray(),
 				Filter = PpsDataFilterExpression.Parse(filterExpr, GetVariables(current, context)),
-				Order = order
+				Order = order,
+				AttributeSelector = "*,V.*,Xl.*"
 			};
-
-			if (headerOnly)
-			{
-				request.Start = 0;
-				request.Count = 0;
-			}
 
 			return new PpsViewResult(this, environment.GetViewData(request));
 		} // func GetViewData

@@ -56,7 +56,7 @@ namespace TecWare.PPSn.Export
 
 			//joinTextBox.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
 #if DEBUG
-			listInfo.Views = "views.Artikel t";
+			listInfo.Views = "views.Teil t";
 			listInfo.Filter = "or(t.TEILBEST:<10 t.TEILBEST:>100)";
 			listInfo.Columns = String.Join(Environment.NewLine, 
 				"+t.TEILTNR=Artikel_Nr",

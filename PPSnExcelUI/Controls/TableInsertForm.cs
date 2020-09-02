@@ -1148,9 +1148,6 @@ namespace TecWare.PPSn.Controls
 				RefreshAvailableColumns(nodeData);
 		} // event tableTree_AfterSelect
 
-		private void RefreshAvailableColumns()
-			=> RefreshAvailableColumns(tableTree.SelectedNode?.Tag is TreeNodeData nodeData ? nodeData : null);
-
 		private void ToggleCurrentColumnsListViewSort(int sortColumnIndex)
 		{
 			if (currentColumnsSortOrder == sortColumnIndex)
@@ -1209,6 +1206,8 @@ namespace TecWare.PPSn.Controls
 
 						lvi.Text = newCol.DisplayName;
 						lvi.SubItems[1].Text = newCol.Column.Name;
+						if (newCol.Column.Attributes.TryGetProperty<string>("Doc.Description", out var description))
+							lvi.ToolTipText = description;
 					}
 
 					currentColumnsListView.Sort();
@@ -1344,9 +1343,12 @@ namespace TecWare.PPSn.Controls
 		private static void UpdateResultColumnListViewItem(ColumnData currentColumn, ListViewItem currentLvi)
 		{
 			var columnSourcePath = currentColumn.SourcePath;
+			var toolTip = currentColumn.SourceName + "\n" + columnSourcePath;
+			if (currentColumn is SourceColumnData sourceColumnData && sourceColumnData.Column.Attributes.TryGetProperty("Doc.Description", out var description))
+				toolTip += "\n" + description;
 
 			currentLvi.Text = currentColumn.DisplayName;
-			currentLvi.ToolTipText = currentColumn.SourceName + "\n" + columnSourcePath;
+			currentLvi.ToolTipText = toolTip;
 
 			if (currentLvi.SubItems.Count == 1)
 				currentLvi.SubItems.Add(String.Empty);

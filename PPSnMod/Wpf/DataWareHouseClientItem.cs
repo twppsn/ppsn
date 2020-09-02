@@ -95,29 +95,29 @@ namespace TecWare.PPSn.Server.Wpf
 			);
 		} // func CreateJoinInfo
 
-		private static XElement CreateColumnInfo(IDataColumn c, string a)
+		private static XElement CreateColumnInfo(IDataColumn column, string attributeSelector)
 		{
 			var xColumn = new XElement("field",
-				new XAttribute("name", c.Name),
-				new XAttribute("type", LuaType.GetType(c.DataType).AliasOrFullName)
+				new XAttribute("name", column.Name),
+				new XAttribute("type", LuaType.GetType(column.DataType).AliasOrFullName)
 			);
 
 			// filter attributes
-			var desc = c is IPpsColumnDescription columnDescription ? columnDescription.GetColumnDescription<PpsFieldDescription>() : null;
+			var desc = column is IPpsColumnDescription columnDescription ? columnDescription.GetColumnDescription<PpsFieldDescription>() : null;
 			if (desc == null)
 			{
-				if (c.Attributes.TryGetProperty<string>("displayName", out var displayName))
+				if (column.Attributes.TryGetProperty<string>("displayName", out var displayName))
 					xColumn.Add(new PropertyValue("displayName", displayName).ToXml());
 			}
 			else
-				xColumn.Add(from p in desc.GetAttributes(a) where p.Value != null select p.ToXml());
+				xColumn.Add(from p in desc.GetAttributes(attributeSelector) where p.Value != null select p.ToXml());
 
 			return xColumn;
 		} // func CreateColumnInfo
 
 		/// <summary>Return information for a view.</summary>
-		/// <param name="v"></param>
-		/// <param name="a"></param>
+		/// <param name="v">view list to that will returned</param>
+		/// <param name="a">Attribute selector</param>
 		/// <returns></returns>
 		[DEConfigHttpAction("tableinfo", IsSafeCall = true)]
 		public XElement HttpViewInfoAction(string v, string a)
