@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -24,6 +25,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Office.Tools.Excel;
 using Neo.IronLua;
+using TecWare.DE.Networking;
 using TecWare.PPSn;
 using TecWare.PPSn.Data;
 using Excel = Microsoft.Office.Interop.Excel;
@@ -193,11 +195,8 @@ namespace PPSnExcel
 		/// <param name="environment"></param>
 		/// <param name="range"></param>
 		/// <param name="reportId"></param>
-		/// <param name="reportName"></param>
-		internal async Task ImportTableAsync(PpsEnvironment environment, Excel.Range range, string reportId, string reportName)
+		internal void NewTable(PpsEnvironment environment, Excel.Range range, string reportId)
 		{
-			GetActiveXlObjects(out var worksheet, out var workbook);
-
 			// prepare target
 			if (range == null)
 				range = Globals.ThisAddIn.Application.Selection;
@@ -205,13 +204,9 @@ namespace PPSnExcel
 				throw new ExcelException("Keine Tabellen-Ziel (Range) definiert.");
 			if (range.ListObject != null)
 				throw new ExcelException("Tabelle darf nicht innerhalb einer anderen Tabelle eingefügt werden.");
-
-			using (var progress = CreateProgress())
-			{
-				progress.Report(String.Format("Importiere '{0}'...", reportName));
-				await PpsListObject.NewAsync(environment, range, reportId);
-			}
-		} // func ImportTableAsync
+			
+			PpsListObject.New(environment, range, reportId);
+		} // func NewTable
 
 		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook)
 		{
@@ -278,6 +273,45 @@ namespace PPSnExcel
 				}
 			}
 		} // func RefreshTableAsync
+
+		private static readonly DEAction xlsxTemplateAction = DEAction.Create("xlsxtmpl", "bi/", new DEActionParam("id", typeof(string)));
+
+		private static async Task<string> DownloadXlsxReportAsync(DEHttpClient http, string reportId)
+		{
+			// erzeuge temp datei
+			var fiTemp = new FileInfo(Path.Combine(Path.GetTempPath(), "ppsn", reportId));
+			if (!fiTemp.Directory.Exists)
+				fiTemp.Directory.Create();
+			if (fiTemp.Exists)
+				fiTemp.Delete();
+
+			// download file
+			using (var src = await http.GetStreamAsync(xlsxTemplateAction.ToQuery(reportId)))
+			using (var dst = fiTemp.Create())
+				await src.CopyToAsync(dst);
+
+			return fiTemp.FullName;
+		} // proc DownloadXlsxReportAsync
+
+		internal void LoadXlsxReport(PpsEnvironment environment, string reportId, string reportName)
+		{
+			var http = environment.Request;
+
+			using (var p = CreateProgress())
+			{
+				p.Text = String.Format("Lade Auswertung {0}...", reportName);
+				var documentTemplate = Run(() => DownloadXlsxReportAsync(http, reportId));
+
+				// open and activate workbook
+				p.Text = String.Format("Öffne Auswertung {0}...", reportName);
+				var wkb = Globals.ThisAddIn.Application.Workbooks.Add(documentTemplate);
+				wkb.Activate();
+
+				// refresh tables
+				p.Text = String.Format("Aktualisiere Auswertung {0}...", reportName);
+				Run(() => RefreshTableAsync(RefreshContext.ActiveWorkBook));
+			}
+		} // LoadXlsxReport
 
 		internal void ShowTableInfo()
 		{

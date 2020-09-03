@@ -78,6 +78,8 @@ namespace PPSnExcel
 			var hasListObjectInfo = PpsListMapping.TryParseFromSelection();
 			cmdReport.Enabled = hasEnvironment;
 			cmdTable.Enabled = hasEnvironment || hasListObjectInfo;
+
+			editTableExCommand.Enabled = hasListObjectInfo;
 			cmdListObjectInfo.Enabled = hasListObjectInfo;
 
 			cmdRefresh.Enabled =
@@ -116,9 +118,6 @@ namespace PPSnExcel
 
 		private static Excel.Range GetTopLeftCell() 
 			=> Globals.ThisAddIn.Application.Selection as Excel.Range;
-
-		private static void ImportTableCommand(PpsEnvironment environment, string reportName, string reportId)
-			=> Globals.ThisAddIn.Run(() => Globals.ThisAddIn.ImportTableAsync(environment, GetTopLeftCell(), reportId, reportName));
 		
 		public static bool IsSingleLineModeToggle()
 			=> (Control.ModifierKeys & (Keys.Control | Keys.Alt)) == (Keys.Control | Keys.Alt);
@@ -132,27 +131,34 @@ namespace PPSnExcel
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
 					{
-						var singleLineMode = IsSingleLineModeToggle();
 						if (frm.ReportType == "table")
-							ImportTableCommand(env, frm.ReportName, frm.ReportId);
+							Globals.ThisAddIn.NewTable(env, GetTopLeftCell(), frm.ReportId);
+						else if (frm.ReportType == "xlsx")
+							Globals.ThisAddIn.LoadXlsxReport(env, frm.ReportId, frm.ReportName);
 						else
-							MessageBox.Show("todo");
+							MessageBox.Show("Unbekannter ReportType.");
 					}
 				}
 			}
 		} // proc InsertReport
 
 		private static void InsertTable()
+			=> InsertTableCore(false);
+
+		private static void InsertTableEx()
+			=> InsertTableCore(true);
+
+		private static void InsertTableCore(bool extendedEdit)
 		{
 			if (PpsListObject.TryGetFromSelection(out var ppsList)) // edit the current selected table
-				ppsList.Edit();
-			else // create a fresh table
+				ppsList.Edit(extendedEdit);
+			else if (!extendedEdit) // create a fresh table
 			{
 				var env = Globals.ThisAddIn.CurrentEnvironment; // get environment
 				if (env != null)
 					PpsListObject.New(env, GetTopLeftCell());
 			}
-		} // proc InsertTable
+		} // proc InsertTableCore
 
 		private void WorkbookStateChanged(Excel._Workbook wb, bool activate)
 		{
@@ -192,6 +198,9 @@ namespace PPSnExcel
 
 		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateEnvironment());
+
+		private void editTableExCommand_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(InsertTableEx);
 
 		/// <summary>Was Loaded called.</summary>
 		public bool IsMenuLoaded => isMenuLoaded;

@@ -912,7 +912,7 @@ namespace TecWare.PPSn.Controls
 			await availableViews.RefreshAsync();
 
 			// check current view
-			var hasData = data != null && !data.IsEmpty;
+			var hasData = data != null && (!data.IsEmpty || data.Views != null);
 			if (hasData)
 			{
 				// joins
@@ -955,14 +955,17 @@ namespace TecWare.PPSn.Controls
 				tableTree.SelectedNode = tableTree.Nodes[0];
 		} // func RefreshAllAsync
 
+		internal static string GetEditTitle(IPpsTableData tableData)
+			=> tableData.IsEmpty ? "Neue Tabelle einfügen" : String.Format("{0} bearbeiten", tableData.DisplayName);
+
+		internal static string GetOkTitle(IPpsTableData tableData)
+			=> tableData.IsEmpty ? "Einfügen" : "Aktualisieren";
+
 		public void LoadData(IPpsTableData tableData)
 		{
-			Text = tableData.IsEmpty
-				? "Neue Tabelle einfügen"
-				: String.Format("{0} bearbeiten", tableData.DisplayName);
-			cmdRefresh.Text = tableData.IsEmpty
-				? "Einfügen"
-				: "Aktualisieren";
+			Text = GetEditTitle(tableData);
+
+			cmdRefresh.Text = GetOkTitle(tableData);
 
 			// update view
 			currentData = tableData;

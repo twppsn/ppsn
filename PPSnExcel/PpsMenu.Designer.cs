@@ -50,9 +50,9 @@
 			this.separator2 = this.Factory.CreateRibbonSeparator();
 			this.logoutButton = this.Factory.CreateRibbonButton();
 			this.cmdExtended = this.Factory.CreateRibbonMenu();
+			this.editTableExCommand = this.Factory.CreateRibbonButton();
 			this.cmdStyles = this.Factory.CreateRibbonButton();
 			this.cmdListObjectInfo = this.Factory.CreateRibbonButton();
-			this.cmdOptions = this.Factory.CreateRibbonButton();
 			this.groupCommands = this.Factory.CreateRibbonGroup();
 			this.tabPPSn.SuspendLayout();
 			this.groupData.SuspendLayout();
@@ -189,14 +189,21 @@
 			// 
 			// cmdExtended
 			// 
+			this.cmdExtended.Items.Add(this.editTableExCommand);
 			this.cmdExtended.Items.Add(this.cmdStyles);
 			this.cmdExtended.Items.Add(this.cmdListObjectInfo);
-			this.cmdExtended.Items.Add(this.cmdOptions);
 			this.cmdExtended.Label = "Erweitert";
 			this.cmdExtended.Name = "cmdExtended";
 			this.cmdExtended.OfficeImageId = "PropertySheet";
 			this.cmdExtended.ShowImage = true;
 			this.cmdExtended.SuperTip = "Erweiterte Menüpunkte";
+			// 
+			// editTableExCommand
+			// 
+			this.editTableExCommand.Label = "Tabelle bearbeiten...";
+			this.editTableExCommand.Name = "editTableExCommand";
+			this.editTableExCommand.ShowImage = true;
+			this.editTableExCommand.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.editTableExCommand_Click);
 			// 
 			// cmdStyles
 			// 
@@ -214,13 +221,6 @@
 			this.cmdListObjectInfo.Name = "cmdListObjectInfo";
 			this.cmdListObjectInfo.ShowImage = true;
 			this.cmdListObjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdListObjectInfo_Click);
-			// 
-			// cmdOptions
-			// 
-			this.cmdOptions.Label = "Optionen";
-			this.cmdOptions.Name = "cmdOptions";
-			this.cmdOptions.ShowImage = true;
-			this.cmdOptions.Visible = false;
 			// 
 			// groupCommands
 			// 
@@ -249,7 +249,6 @@
 		private Microsoft.Office.Tools.Ribbon.RibbonGroup groupData;
 		private Microsoft.Office.Tools.Ribbon.RibbonButton cmdReport;
 		internal Microsoft.Office.Tools.Ribbon.RibbonGroup groupConnection;
-		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdOptions;
 		internal Microsoft.Office.Tools.Ribbon.RibbonMenu cmdExtended;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdStyles;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdTable;
@@ -265,6 +264,7 @@
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdListObjectInfo;
 		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator1;
 		internal Microsoft.Office.Tools.Ribbon.RibbonGroup groupCommands;
+		internal Microsoft.Office.Tools.Ribbon.RibbonButton editTableExCommand;
 	}
 
 	partial class ThisRibbonCollection

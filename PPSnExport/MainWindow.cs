@@ -24,13 +24,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Neo.IronLua;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Export
 {
 	public partial class MainWindow : Form, IPpsFormsApplication
 	{
-		private readonly PpsTableData listInfo = new PpsTableData();
+		private readonly PpsTableTextData listInfo = new PpsTableTextData();
 
 		private readonly Lua lua = new Lua();
 		private readonly PpsEnvironment environment;
@@ -66,13 +67,28 @@ namespace TecWare.PPSn.Export
 #endif
 		} // ctor
 
+		private PpsDataQuery ToQuery(bool includeColumnAlias)
+		{
+			if (listInfo.IsEmpty)
+				return null;
+			else
+			{
+				return new PpsDataQuery(listInfo.Views)
+				{
+					Filter = PpsDataFilterExpression.Parse(listInfo.Filter),
+					Columns = listInfo.GetColumnExpressions(includeColumnAlias).ToArray(),
+					Order = listInfo.GetOrderExpression().ToArray()
+				};
+			}
+		} // func ToQuery
+
 		private void ListInfo_PropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
 			switch (e.PropertyName)
 			{
-				case nameof(PpsTableData.Views):
-				case nameof(PpsTableData.Filter):
-				case nameof(PpsTableData.Columns):
+				case nameof(PpsTableTextData.Views):
+				case nameof(PpsTableTextData.Filter):
+				case nameof(PpsTableTextData.Columns):
 					UpdateUri();
 					break;
 			}
@@ -85,7 +101,7 @@ namespace TecWare.PPSn.Export
 		} // proc InitEnvironmentAsync
 
 		private void UpdateUri()
-			=> uriText.Text = listInfo.IsEmpty ? String.Empty : CreateUriSafe(listInfo.GetShellList(columnAliasCheck.Checked).ToQuery());
+			=> uriText.Text = listInfo.IsEmpty ? String.Empty : CreateUriSafe(ToQuery(columnAliasCheck.Checked).ToQuery());
 
 		private string CreateUriSafe(string query)
 			=> environment?.Request?.CreateFullUri(Uri.EscapeUriString(query))?.ToString() ?? query;
@@ -144,7 +160,7 @@ namespace TecWare.PPSn.Export
 
 		private void button1_Click(object sender, EventArgs e)
 		{
-			environment.EditTable(listInfo);
+			environment.EditTable(listInfo, false);
 		}
 
 		private void columnAliasCheck_CheckedChanged(object sender, EventArgs e)

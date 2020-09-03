@@ -72,7 +72,14 @@
     <Compile Include="Controls\TableInsertForm.Designer.cs">
       <DependentUpon>TableInsertForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Controls\TableInsertFormEx.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\TableInsertFormEx.Designer.cs">
+      <DependentUpon>TableInsertFormEx.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\PpsTableData.cs" />
+    <Compile Include="Data\PpsTableTextData.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -102,6 +109,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Controls\TableInsertForm.resx">
       <DependentUpon>TableInsertForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Controls\TableInsertFormEx.resx">
+      <DependentUpon>TableInsertFormEx.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

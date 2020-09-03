@@ -1233,7 +1233,7 @@ namespace PPSnExcel
 			if (columns != null && xlList.AutoFilter != null)
 				xlList.AutoFilter.ShowAllData();
 
-			using (var result = await Task.Run(() => map.GetViewData(order, worksheet, syncContext, false)))
+			using (var result = await Task.Run(() => map.GetViewData(order, worksheet, syncContext)))
 			{
 				// prepare data mapping
 				var isChanged = result.PrepareMapping(xlList.InnerObject);
@@ -1314,8 +1314,8 @@ namespace PPSnExcel
 
 		#region -- Editor -------------------------------------------------------------
 
-		public void Edit()
-			=> map.Environment.EditTable(this);
+		public void Edit(bool extended)
+			=> map.Environment.EditTable(this, extended);
 
 		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
 		{
@@ -1369,17 +1369,17 @@ namespace PPSnExcel
 
 			public string DisplayName { get; set; } = null;
 
-			public string Views => null;
+			public string Views { get; set; } = null;
 			public string Filter => null;
 			public IEnumerable<IPpsTableColumn> Columns => null;
 			public bool IsEmpty => true;
 		} // class NewModel 
 
-		public static Task NewAsync(PpsEnvironment environment, Excel.Range topLeftCell, string views, string filter = null)
-			=> new NewModel(environment, topLeftCell).UpdateAsync(views, filter, null);
+		public static void New(PpsEnvironment env, Excel.Range topLeftCell, string views)
+			=> env.EditTable(new NewModel(env, topLeftCell) { Views = views }, false);
 
 		public static void New(PpsEnvironment env, Excel.Range topLeftCell)
-			=> env.EditTable(new NewModel(env, topLeftCell));
+			=> env.EditTable(new NewModel(env, topLeftCell), false);
 
 		#endregion
 
