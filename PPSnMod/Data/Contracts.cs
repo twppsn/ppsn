@@ -600,20 +600,29 @@ namespace TecWare.PPSn.Server.Data
 
 		private sealed class PpsAttributeSelector
 		{
-			private readonly bool emitAll = false;
-			private readonly bool emitRoot = false;
+#pragma warning disable IDE1006 // Naming Styles
+			private const int ALL = 1;
+			private const int ROOT = 2;
+			private const int NONE = -1;
+#pragma warning restore IDE1006 // Naming Styles
+
+			private readonly int emitType = 0; // -1 emit none, 0 check rules, 1 emit all, 2 emit root
 			private readonly Dictionary<string, List<Func<string, bool>>> expressions = new Dictionary<string, List<Func<string, bool>>>(StringComparer.OrdinalIgnoreCase);
 
 			public PpsAttributeSelector(string expression)
 			{
-				if (expression == "*.*")
-					emitAll = true;
-				else if (expression == "*" || expression == null)
-					emitRoot = true;
+				if (expression == "*" || expression == null)
+					emitType = ROOT;
+				else if (expression.Length == 0 || expression == ".")
+					emitType = NONE;
+				else if (expression == "*.*")
+					emitType = ALL;
 				else
 				{
-					foreach (var expr in expression.Split(','))
+					foreach (var _expr in expression.Split(','))
 					{
+						var expr = _expr.Trim();
+
 						if (String.IsNullOrEmpty(expr))
 							continue;
 
@@ -635,9 +644,11 @@ namespace TecWare.PPSn.Server.Data
 
 			public bool IsSelected(string name)
 			{
-				if (emitAll)
+				if (IsEmitNone)
+					return false;
+				else if (IsEmitAll)
 					return true;
-				else if (emitRoot && name.IndexOf('.') == -1)
+				else if (IsEmitRoot && name.IndexOf('.') == -1)
 					return true;
 				else
 				{
@@ -649,7 +660,9 @@ namespace TecWare.PPSn.Server.Data
 			public bool IsSelected(PropertyValue property)
 				=> IsSelected(property.Name);
 
-			public bool IsEmitAll => emitAll;
+			public bool IsEmitAll => emitType == ALL;
+			public bool IsEmitRoot => emitType == ROOT;
+			public bool IsEmitNone => emitType == NONE;
 		} // class PpsAttributeSelector
 
 		#endregion
@@ -702,10 +715,14 @@ namespace TecWare.PPSn.Server.Data
 		public static IEnumerable<PropertyValue> GetAttributes(this IPpsColumnDescription column, string attributeSelector)
 		{
 			var sel = new PpsAttributeSelector(attributeSelector);
-
-			return sel.IsEmitAll
-				? column.Attributes
-				: column.Attributes.Where(sel.IsSelected);
+			if (sel.IsEmitNone)
+				return Array.Empty<PropertyValue>();
+			else
+			{
+				return sel.IsEmitAll
+				  ? column.Attributes
+				  : column.Attributes.Where(sel.IsSelected);
+			}
 		} // func GetAttributes
 
 		/// <summary>Split a attribute name in his parts.</summary>
