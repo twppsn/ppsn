@@ -847,6 +847,11 @@
 				<xs:extension base="ConfigItemType">
 					<xs:sequence minOccurs="0" maxOccurs="unbounded">
 					</xs:sequence>
+					<xs:attribute name="xlsxTemplates" type="PathType" use="optional">
+						<xs:annotation>
+							<xs:documentation>Directory for xlsx templates.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
 				</xs:extension>
 			</xs:complexContent>
 		</xs:complexType>
