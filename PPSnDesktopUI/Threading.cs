@@ -43,7 +43,7 @@ namespace TecWare.PPSn
 				Thread.Sleep(1); // force context change
 				if (frame.Continue)
 				{
-					using (PpsShell.Current?.CreateProgress(true))
+					using (_PpsShell.Current?.CreateProgress(true))
 						Dispatcher.PushFrame(frame);
 				}
 

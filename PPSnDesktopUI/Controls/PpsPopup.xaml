@@ -53,7 +53,7 @@ specific language governing permissions and limitations under the Licence.
 												  Margin="6,0,0,0"
 												  Width="20"
 												  Height="20"
-												  Foreground="{DynamicResource PPSnActionButtonBrush}"
+												  Foreground="{DynamicResource PPSnWindowForegroundBrush}"
 												  Opacity=".75" />
 							<ContentPresenter Grid.Column="1"
 											  Content="{TemplateBinding Header}"

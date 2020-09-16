@@ -41,7 +41,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private readonly PpsShell shell;
+		private readonly _PpsShell shell;
 		private readonly string schema;
 		private readonly PpsDataSetMetaCollectionClient metaInfo;
 
@@ -49,7 +49,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="shell"></param>
 		/// <param name="schema"></param>
 		/// <param name="xSchema"></param>
-		public PpsDataSetDefinitionClient(PpsShell shell, string schema, XElement xSchema)
+		public PpsDataSetDefinitionClient(_PpsShell shell, string schema, XElement xSchema)
 		{
 			this.shell = shell;
 			this.schema = schema;
@@ -111,7 +111,7 @@ namespace TecWare.PPSn.Data
 		public string SchemaType => schema;
 
 		/// <summary></summary>
-		public PpsShell Shell => shell;
+		public _PpsShell Shell => shell;
 		/// <summary>Give access to the shell lua engine.</summary>
 		public override Lua Lua => shell.Lua;
 
@@ -155,7 +155,7 @@ namespace TecWare.PPSn.Data
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private LuaTable arguments;
-		private readonly PpsShell shell;
+		private readonly _PpsShell shell;
 
 		private bool isDirty = false;             // is this document changed since the last dump
 
@@ -164,7 +164,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="datasetDefinition"></param>
 		/// <param name="shell"></param>
-		public PpsDataSetClient(PpsDataSetDefinition datasetDefinition, PpsShell shell)
+		public PpsDataSetClient(PpsDataSetDefinition datasetDefinition, _PpsShell shell)
 			: base(datasetDefinition)
 		{
 			this.shell = shell;
@@ -239,7 +239,7 @@ namespace TecWare.PPSn.Data
 		public bool IsInitialized => arguments != null;
 
 		/// <summary>Environment of the dataset.</summary>
-		public PpsShell Shell => shell;
+		public _PpsShell Shell => shell;
 		/// <summary>Is the current dataset changed.</summary>
 		public bool IsDirty => isDirty;
 	} // class PpsDataSetClient

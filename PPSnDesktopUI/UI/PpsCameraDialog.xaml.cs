@@ -27,7 +27,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -36,6 +35,7 @@ using System.Windows.Threading;
 using AForge.Video;
 using AForge.Video.DirectShow;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -783,10 +783,10 @@ namespace TecWare.PPSn.UI
 		private void OnCurrentDeviceChanged(PpsCameraDevice newValue, PpsCameraDevice oldValue)
 		{
 			if (oldValue != null)
-				oldValue.InitAsync(initialPreviewSize).SpawnTask(Environment);
+				oldValue.InitAsync(initialPreviewSize).SpawnTask(shell);
 
 			if (newValue != null)
-				newValue.InitAsync(fullPreviewSize, forTakePicture: true).SpawnTask(Environment);
+				newValue.InitAsync(fullPreviewSize, forTakePicture: true).SpawnTask(shell);
 		} // proc OnCurrentDeviceChanged
 
 		public PpsCameraDevice CurrentDevice => (PpsCameraDevice)GetValue(CurrentDeviceProperty);
@@ -832,17 +832,19 @@ namespace TecWare.PPSn.UI
 		/// <summary>Template name for the settings box</summary>
 		private const string settingsBoxTemplateName = "PART_SettingsBox";
 
-		private readonly PpsShellWpf environment;
+		private readonly IPpsShell shell;
+		private readonly IPpsUIService uiService;
 		private readonly DispatcherTimer refreshCameraDevices;
 		private readonly List<PpsCameraDevice> devices = new List<PpsCameraDevice>(); // list of current camera devices
 		private readonly ICollectionView devicesView;
 		private readonly Size initialPreviewSize = new Size(80, 80);
 		private readonly Size fullPreviewSize = new Size(1024, 1024);
 
-		public PpsCameraDialog(PpsShellWpf environment)
+		public PpsCameraDialog(IPpsShell shell)
 		{
-			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
-
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+			uiService = shell.GetService<IPpsUIService>(true);
+			
 			InitializeComponent();
 
 			devicesView = CollectionViewSource.GetDefaultView(devices);
@@ -851,10 +853,10 @@ namespace TecWare.PPSn.UI
 
 			refreshCameraDevices = new DispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Send, RefreshDevicesTick, Dispatcher) { IsEnabled = true };
 
-			this.AddCommandBinding(environment, ApplicationCommands.New,
+			this.AddCommandBinding(shell, ApplicationCommands.New,
 				new PpsAsyncCommand(TakePictureImpl, CanTakePicture)
 			);
-			this.AddCommandBinding(environment, ApplicationCommands.Close,
+			this.AddCommandBinding(shell, ApplicationCommands.Close,
 				new PpsCommand(ctx =>
 					{
 						SetValue(currentImagePropertyKey, null);
@@ -862,7 +864,7 @@ namespace TecWare.PPSn.UI
 					}
 				)
 			);
-			this.AddCommandBinding(environment, ApplicationCommands.Redo,
+			this.AddCommandBinding(shell, ApplicationCommands.Redo,
 				new PpsCommand(
 					ctx =>
 					{
@@ -872,7 +874,7 @@ namespace TecWare.PPSn.UI
 					},
 					CanTakePicture)
 			);
-			this.AddCommandBinding(environment, ApplicationCommands.Save,
+			this.AddCommandBinding(shell, ApplicationCommands.Save,
 				new PpsCommand(ctx =>
 					{
 						DialogResult = true;
@@ -880,7 +882,7 @@ namespace TecWare.PPSn.UI
 					ctx => CurrentImage != null
 				)
 			);
-			this.AddCommandBinding(environment, ApplicationCommands.Properties,
+			this.AddCommandBinding(shell, ApplicationCommands.Properties,
 				new PpsCommand(ctx =>
 					{
 						SetValue(isSettingsActivePropertyKey, !IsSettingsActive);
@@ -946,7 +948,7 @@ namespace TecWare.PPSn.UI
 					}
 					catch (Exception ex)
 					{
-						Environment.ShowException(ex);
+						uiService.ShowException(ex);
 					}
 					finally
 					{
@@ -961,6 +963,7 @@ namespace TecWare.PPSn.UI
 			var deviceFilterCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
 
 			// check for new camera
+			var log = shell.GetService<IPpsLogger>(false);
 			var newCameras = new List<PpsCameraDevice>();
 			foreach (var deviceFilter in deviceFilterCollection.OfType<FilterInfo>())
 			{
@@ -972,14 +975,14 @@ namespace TecWare.PPSn.UI
 				{
 					if (!devices.Exists(d => d.Moniker == deviceFilter.MonikerString))
 					{
-						var camera = PpsCameraDevice.TryCreateAsync(environment.Log, deviceFilter, initialPreviewSize).Result;
+						var camera = PpsCameraDevice.TryCreateAsync(log, deviceFilter, initialPreviewSize).Result;
 						if (camera != null)
 							newCameras.Add(camera);
 					}
 				}
 				catch (Exception e)
 				{
-					environment.Log.Append(PpsLogType.Exception, e);
+					log.Append(PpsLogType.Exception, e);
 				}
 			}
 
@@ -1028,7 +1031,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception ex)
 			{
-				Environment.ShowException(ex);
+				uiService.ShowException(ex);
 			}
 		} // func TakePictureImpl
 
@@ -1036,13 +1039,12 @@ namespace TecWare.PPSn.UI
 			=> CurrentDevice != null && !CurrentDevice.IsCameraLost && !CurrentDevice.IsDisposed;
 
 		public ICollectionView Devices => devicesView;
-		private PpsShellWpf Environment => environment;
 
 		// -- static  ---------------------------------------------------------
 
 		public static ImageSource TakePicture(DependencyObject owner)
 		{
-			var window = new PpsCameraDialog(PpsShellWpf.GetShell(owner));
+			var window = new PpsCameraDialog(PpsWpfShell.GetShell(owner));
 			window.SetFullscreen(owner);
 			return owner.ShowModalDialog(window) == true
 				? window.CurrentImage

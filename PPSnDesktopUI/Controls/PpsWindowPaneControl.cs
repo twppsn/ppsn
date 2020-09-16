@@ -209,7 +209,7 @@ namespace TecWare.PPSn.Controls
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
 
-		/// <summary></summary>
-		public PpsShellWpf Shell => paneHost.PaneManager.Shell;
+		/// <summary>Access shell interface.</summary>
+		public IPpsShell Shell => paneHost.PaneManager.Shell;
 	} // class PpsWindowPaneControl
 }

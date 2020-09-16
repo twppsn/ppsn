@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -24,6 +25,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 using System.Xaml;
 using System.Xml;
@@ -33,6 +36,462 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
+	#region -- class PpsWpfShell ------------------------------------------------------
+
+	/// <summary>Shell extensions für Wpf-applications</summary>
+	public static class PpsWpfShell
+	{
+		#region -- class InstanceKey --------------------------------------------------
+
+		/// <summary>Special key to select templates.</summary>
+		private sealed class InstanceKey<T> : ResourceKey
+			where T : class
+		{
+			public InstanceKey()
+			{
+			} // ctor
+
+			public override int GetHashCode()
+				=> typeof(T).GetHashCode();
+
+			public override bool Equals(object obj)
+				=> obj is T;
+
+			public override Assembly Assembly => null;
+		} // class DefaultEnvironmentKeyImpl
+
+		#endregion
+
+		#region -- class DefaultResourceProvider --------------------------------------
+
+		private sealed class DefaultResourceProvider : ResourceDictionary
+		{
+			private readonly IPpsShell shell;
+
+			public DefaultResourceProvider(IPpsShell shell)
+			{
+				this.shell = shell;
+
+				Add(DefaultEnvironmentKey, shell); // register environment
+			} // ctor
+		} // class DefaultResourceProvider
+
+		#endregion
+
+		#region -- GetShell, GetControlService ----------------------------------------
+
+		/// <summary>Adds command handler</summary>
+		/// <param name="element"></param>
+		/// <param name="shell"></param>
+		public static void AddCommandDefaultHandler(this UIElement element, IPpsShell shell)
+		{
+			var commandManager = shell.GetService<IPpsCommandManager>(true);
+			CommandManager.AddExecutedHandler(element, commandManager.DefaultExecutedHandler);
+			CommandManager.AddCanExecuteHandler(element, commandManager.DefaultCanExecuteHandler);
+		} // proc AddCommandDefaultHandler
+
+		/// <summary>Register shell in wpf resource tree.</summary>
+		/// <param name="element"></param>
+		/// <param name="shell"></param>
+		public static void RegisterShell(this FrameworkElement element, IPpsShell shell)
+		{
+			var mergedDictionaries = element.Resources.MergedDictionaries;
+			var currentShell = mergedDictionaries.OfType<DefaultResourceProvider>().FirstOrDefault();
+			if (currentShell != null)
+				mergedDictionaries.Remove(currentShell);
+			mergedDictionaries.Add(new DefaultResourceProvider(shell));
+		} // proc AddShell
+
+		/// <summary>Get the shell, that is attached to the current element.</summary>
+		/// <param name="dependencyObject"></param>
+		/// <returns></returns>
+		public static IPpsShell GetShell(DependencyObject dependencyObject = null)
+			=> GetShell<IPpsShell>(dependencyObject);
+
+		/// <summary>Get the shell, that is attached to the current element.</summary>
+		/// <param name="dependencyObject"></param>
+		/// <returns></returns>
+		/// <typeparam name="T"></typeparam>
+		public static T GetShell<T>(DependencyObject dependencyObject = null)
+			where T : class, IPpsShell
+		{
+			switch (dependencyObject)
+			{
+				case null:
+					goto default;
+				case FrameworkElement fe:
+					return (T)fe.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
+				case FrameworkContentElement fce:
+					return (T)fce.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
+				default:
+					return (T)Application.Current.TryFindResource(DefaultEnvironmentKey);
+			}
+		} // func GetShell	
+
+		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its 
+		/// parents on the logical tree.</summary>
+		/// <typeparam name="T">Type of the service.</typeparam>
+		/// <param name="current">Current object in the logical tree.</param>
+		/// <param name="throwException"><c>true</c>, to throw an not found exception.</param>
+		/// <returns>The service of the default value.</returns>
+		public static T GetControlService<T>(this DependencyObject current, bool throwException = false)
+			=> (T)GetControlService(current, typeof(T), throwException);
+
+		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its
+		/// parents in the logical tree.</summary>
+		/// <param name="current">Current object in the logical tree.</param>
+		/// <param name="serviceType">Type of the service.</param>
+		/// <param name="useVisualTree"></param>
+		/// <returns>The service of the default value.</returns>
+		public static object GetControlService(this DependencyObject current, Type serviceType, bool useVisualTree = false)
+		{
+			object r = null;
+
+			if (current == null)
+				return null;
+			else if (current is IServiceProvider sp)
+				r = sp.GetService(serviceType);
+			else if (serviceType.IsAssignableFrom(current.GetType()))
+				r = current;
+
+			if (r != null)
+				return r;
+
+			return GetControlService(
+				useVisualTree
+					? GetVisualParent(current)
+					: GetLogicalParent(current), serviceType, useVisualTree
+			);
+		} // func GetControlService
+
+		#endregion
+
+		#region -- GetName, CompareName -----------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <returns></returns>
+		public static string GetName(this DependencyObject current)
+		{
+			switch (current)
+			{
+				case FrameworkElement fe:
+					return fe.Name;
+				case FrameworkContentElement fce:
+					return fce.Name;
+				default:
+					return null;
+			}
+		} // func GetName
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="name"></param>
+		/// <param name="comparison"></param>
+		/// <returns></returns>
+		public static int CompareName(this DependencyObject current, string name, StringComparison comparison = StringComparison.Ordinal)
+			=> String.Compare(GetName(current), name, comparison);
+
+		#endregion
+
+		#region -- GetLogicalParent, GetVisualParent, GetVisualChild ------------------
+
+		/// <summary>Get the logical parent or the template parent.</summary>
+		/// <param name="current"></param>
+		/// <returns></returns>
+		public static DependencyObject GetLogicalParent(this DependencyObject current)
+		{
+			switch (current)
+			{
+				case FrameworkContentElement fce:
+					return fce.Parent ?? fce.TemplatedParent;
+				case FrameworkElement fe:
+					return fe.Parent ?? fe.TemplatedParent;
+				default:
+					return null;
+			}
+		} // func GetLogicalParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="typeOfParent"></param>
+		/// <returns></returns>
+		public static DependencyObject GetLogicalParent(this DependencyObject current, Type typeOfParent)
+		{
+			if (current == null)
+				return null;
+			else if (typeOfParent == null)
+				return GetLogicalParent(current);
+			else if (typeOfParent.IsAssignableFrom(current.GetType()))
+				return current;
+			else
+				return GetLogicalParent(GetLogicalParent(current), typeOfParent);
+		} // func GetVisualParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static DependencyObject GetLogicalParent(this DependencyObject current, string name)
+		{
+			if (current == null || name == null)
+				return null;
+			else if (CompareName(current, name) == 0)
+				return current;
+			else
+				return GetLogicalParent(GetLogicalParent(current), name);
+		} // func GetVisualParent
+
+		/// <summary>Get the logical parent or the template parent.</summary>
+		/// <param name="current"></param>
+		/// <returns></returns>
+		public static T GetLogicalParent<T>(this DependencyObject current)
+			where T : DependencyObject
+		{
+			var parent = GetLogicalParent(current);
+			return parent is T r
+				? r
+				: GetLogicalParent<T>(parent);
+		} // func GetLogicalParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <returns></returns>
+		public static DependencyObject GetVisualParent(this DependencyObject current)
+			=> current is Visual || current is Visual3D ? VisualTreeHelper.GetParent(current) : null;
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="typeOfParent"></param>
+		/// <returns></returns>
+		public static DependencyObject GetVisualParent(this DependencyObject current, Type typeOfParent)
+		{
+			if (current == null)
+				return null;
+			else if (typeOfParent == null)
+				return GetVisualParent(current);
+			else if (typeOfParent.IsAssignableFrom(current.GetType()))
+				return current;
+			else
+			{
+				var parent = GetVisualParent(current);
+				if (parent == null && current.GetType().Name == "PopupRoot")
+					parent = GetLogicalParent(current);
+				return GetVisualParent(parent, typeOfParent);
+			}
+		} // func GetVisualParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static DependencyObject GetVisualParent(this DependencyObject current, string name)
+		{
+			if (current == null || name == null)
+				return null;
+			else if (CompareName(current, name) == 0)
+				return current;
+			else
+			{
+				var parent = GetVisualParent(current);
+				if (parent == null && current.GetType().Name == "PopupRoot")
+					parent = GetLogicalParent(current);
+				return GetVisualParent(parent, name);
+			}
+		} // func GetVisualParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		public static T GetVisualParent<T>(this DependencyObject current)
+			where T : DependencyObject
+		{
+			var parent = GetVisualParent(current);
+			return parent is T r
+				? r
+				: GetVisualParent<T>(parent);
+		} // func GetVisualParent
+
+		/// <summary>Find a child in the Visual tree.</summary>
+		/// <typeparam name="T">Type of the child</typeparam>
+		/// <param name="current">Current visual element.</param>
+		/// <returns>Child or <c>null</c>.</returns>
+		public static T GetVisualChild<T>(this DependencyObject current)
+			where T : DependencyObject
+		{
+			var c = VisualTreeHelper.GetChildrenCount(current);
+			for (var i = 0; i < c; i++)
+			{
+				var v = VisualTreeHelper.GetChild(current, i);
+				if (v is T child)
+					return child;
+				else
+				{
+					child = GetVisualChild<T>(v);
+					if (child != null)
+						return child;
+				}
+			}
+			return default;
+		} // func GetVisualChild
+
+		#endregion
+
+		#region -- Print Object Tree --------------------------------------------------
+
+		private static DependencyObject InvokeGetUIParent<T>(DependencyObject current)
+			where T : class
+		{
+			var mi = typeof(T).GetMethod("GetUIParentCore", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null, Array.Empty<Type>(), null);
+			return (DependencyObject)mi.Invoke(current, Array.Empty<object>());
+		} // proc InvokeGetUIParent
+
+		private static DependencyObject GetUIParent(DependencyObject current)
+		{
+			switch (current)
+			{
+				case UIElement ui:
+					return InvokeGetUIParent<UIElement>(current);
+				case UIElement3D ui3d:
+					return InvokeGetUIParent<UIElement3D>(current);
+				case ContentElement c:
+					;
+					return InvokeGetUIParent<ContentElement>(current);
+				default:
+					return null;
+			}
+		} // func GetUIParent
+
+		private static StringBuilder GetDependencyObjectTree(StringBuilder sb, string prefix, DependencyObject current, Func<DependencyObject, DependencyObject> next)
+		{
+			while (current != null)
+			{
+				sb.AppendFormat("{0}{1}: {2}", prefix, current.GetType().Name, current.GetName() ?? "<null>").AppendLine();
+				current = next(current);
+			}
+			return sb;
+		} // func GetDependencyObjectTree
+
+		internal static void PrintVisualTreeToConsole(DependencyObject current)
+			=> Debug.Print(GetDependencyObjectTree(new StringBuilder("Visual Tree:").AppendLine(), "V ", current, GetVisualParent).ToString());
+
+		internal static void PrintLogicalTreeToConsole(DependencyObject current)
+			=> Debug.Print(GetDependencyObjectTree(new StringBuilder("Logical Tree:").AppendLine(), "L ", current, GetLogicalParent).ToString());
+
+		internal static void PrintEventTreeToConsole(DependencyObject current)
+				=> Debug.Print(GetDependencyObjectTree(new StringBuilder("UI Tree:").AppendLine(), "U ", current, GetUIParent).ToString());
+
+		#endregion
+
+		/// <summary>Resource key for the environment.</summary>
+		public static ResourceKey DefaultEnvironmentKey { get; } = new InstanceKey<PpsShellWpf>();
+		/// <summary>Resource key for the current pane.</summary>
+		public static ResourceKey CurrentWindowPaneKey { get; } = new InstanceKey<IPpsWindowPane>();
+	} // class PpsWpfShell
+
+	#endregion
+
+	#region -- class PpsWpfSerivce ----------------------------------------------------
+
+	[PpsService(typeof(IPpsUIService))]
+	internal class PpsWpfSerivce : IPpsUIService
+	{
+		private readonly Dispatcher dispatcher;
+
+		public PpsWpfSerivce()
+		{
+			dispatcher = Application.Current.Dispatcher;
+		} // ctor
+
+		public void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		{
+			// todo: Log.Append(PpsLogType.Exception, exception, alternativeMessage);
+
+			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
+			{
+				// show message simple
+				MsgBox(alternativeMessage ?? exception.UnpackException().ToString(), PpsImage.Error, Ok);
+
+				// shutdown application
+				if ((flags & PpsExceptionShowFlags.Shutown) == PpsExceptionShowFlags.Shutown)
+					Application.Current.Shutdown(1);
+			}
+		} // proc ShowException
+
+		public int MsgBox(string text, PpsImage image = PpsImage.Information, params string[] buttons)
+		{
+			MessageBox.Show(text);
+			return 0;
+		} // func MsgBox
+
+		public async Task RunUI(Action action)
+		{
+			await dispatcher.InvokeAsync(action);
+		} // func IPpsUIService
+
+		public async Task<T> RunUI<T>(Func<T> func)
+		{
+			return await dispatcher.InvokeAsync(func);
+		} // func IPpsUIService
+
+		public string[] Ok { get; } = new string[] { "Ok" };
+		public string[] YesNo { get; } = new string[] { "Ja", "Nein" };
+		public string[] OkCancel { get; } = new string[] { "Ok", "Abbrechen" };
+	} // class PpsWpfSerivce
+
+	#endregion
+
+	#region -- class PpsWpfShellService -----------------------------------------------
+
+	[PpsService(typeof(IPpsCommandManager))]
+	internal sealed class PpsWpfShellService : IPpsCommandManager
+	{
+		private readonly IPpsShell shell;
+
+		public PpsWpfShellService(IPpsShell shell)
+		{
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+
+			DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, shell, e));
+			DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, shell, e));
+		} // ctor
+
+		#region -- Command Service ----------------------------------------------------
+
+		private static void CanExecuteCommandHandlerImpl(object _, IPpsShell shell, CanExecuteRoutedEventArgs e)
+		{
+			if (!e.Handled && e.Command is PpsCommandBase c)
+			{
+				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(shell, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
+				e.Handled = true;
+			}
+		} // func CanExecuteCommandHandlerImpl
+
+		private static void ExecutedCommandHandlerImpl(object _, IPpsShell shell, ExecutedRoutedEventArgs e)
+		{
+			if (!e.Handled && e.Command is PpsCommandBase c)
+			{
+				c.ExecuteCommand(new PpsCommandContext(shell, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
+				e.Handled = true;
+			}
+		} // func CanExecuteCommandHandlerImpl
+
+		public ExecutedRoutedEventHandler DefaultExecutedHandler { get; }
+		public CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
+
+		#endregion
+
+		public IPpsShell Shell { get => shell; set { } }
+	} // class PpsWpfShellService
+
+	#endregion
+
+
+
+
+
+
 	#region -- interface IPpsIdleAction -----------------------------------------------
 
 	/// <summary>Implementation for a idle action.</summary>
@@ -49,7 +508,7 @@ namespace TecWare.PPSn
 	#region -- class PpsShellWpf ------------------------------------------------------
 
 	/// <summary></summary>
-	public abstract class PpsShellWpf : PpsShell, IPpsXamlCode
+	public abstract class PpsShellWpf : _PpsShell, IPpsXamlCode
 	{
 		#region -- class InstanceKey --------------------------------------------------
 
@@ -147,8 +606,6 @@ namespace TecWare.PPSn
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer(e);
 
 			DefaultDataTemplateSelector = new DefaultInstanceDataTemplateSelector(this);
-			DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, this, e));
-			DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, this, e));
 		} // ctor
 
 		/// <summary></summary>
@@ -523,7 +980,7 @@ namespace TecWare.PPSn
 		/// <param name="alternativeMessage"></param>
 		[LuaMember(nameof(AppendException))]
 		public void AppendException(Exception exception, string alternativeMessage = null)
-			=> ShowException(ExceptionShowFlags.Background, exception, alternativeMessage);
+			=> ShowException(PpsExceptionShowFlags.Background, exception, alternativeMessage);
 
 		private static string GetMessageCaptionFromImage(MessageBoxImage image)
 		{
@@ -567,17 +1024,17 @@ namespace TecWare.PPSn
 		/// <param name="flags"></param>
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
-		public override void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		public override void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
 			Log.Append(PpsLogType.Exception, exception, alternativeMessage);
 
-			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background)
+			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
 			{
 				// show message simple
 				MsgBox(alternativeMessage ?? exception.UnpackException().ToString(), MessageBoxButton.OK, MessageBoxImage.Error);
 
 				// shutdown application
-				if ((flags & ExceptionShowFlags.Shutown) == ExceptionShowFlags.Shutown)
+				if ((flags & PpsExceptionShowFlags.Shutown) == PpsExceptionShowFlags.Shutown)
 					Application.Current.Shutdown(1);
 			}
 		} // proc ShowException
@@ -607,33 +1064,6 @@ namespace TecWare.PPSn
 					return Neo.IronLua.LuaType.GetType(paneType, lateAllowed: false).Type;
 			}
 		} // func GetPaneTypeFromString
-
-		#endregion
-
-		#region -- Command Service ----------------------------------------------------
-
-		private static void CanExecuteCommandHandlerImpl(object sender, PpsShellWpf environment, CanExecuteRoutedEventArgs e)
-		{
-			if (!e.Handled && e.Command is PpsCommandBase c)
-			{
-				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
-				e.Handled = true;
-			}
-		} // func CanExecuteCommandHandlerImpl
-
-		private static void ExecutedCommandHandlerImpl(object sender, PpsShellWpf environment, ExecutedRoutedEventArgs e)
-		{
-			if (!e.Handled && e.Command is PpsCommandBase c)
-			{
-				c.ExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
-				e.Handled = true;
-			}
-		} // func CanExecuteCommandHandlerImpl
-
-		/// <summary></summary>
-		public ExecutedRoutedEventHandler DefaultExecutedHandler { get; }
-		/// <summary></summary>
-		public CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
 
 		#endregion
 

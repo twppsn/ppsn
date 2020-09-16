@@ -23,6 +23,7 @@ using System.Globalization;
 using System.Text;
 using System.Threading;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Data
 {

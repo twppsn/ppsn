@@ -26,6 +26,7 @@ using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
@@ -35,7 +36,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>Command context extension for the service model.</summary>
 	public sealed class PpsCommandContext : IServiceProvider
 	{
-		private readonly PpsShellWpf shell;
+		private readonly IPpsShell shell;
 		private readonly object target;
 		private readonly object source;
 		private readonly object parameter;
@@ -47,7 +48,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="target">Command target object</param>
 		/// <param name="source">Command source object</param>
 		/// <param name="parameter">Command parameter</param>
-		public PpsCommandContext(PpsShellWpf shell, object target, object source, object parameter)
+		public PpsCommandContext(IPpsShell shell, object target, object source, object parameter)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 			this.target = target ?? throw new ArgumentNullException(nameof(target));
@@ -82,16 +83,16 @@ namespace TecWare.PPSn.UI
 
 			// next ask controls
 			if (r == null && target is DependencyObject dc1)
-				r = StuffUI.GetControlService(dc1, serviceType, true);
+				r = PpsWpfShell.GetControlService(dc1, serviceType, true);
 
 			if (r == null && target != source && source is DependencyObject dc2)
-				r = StuffUI.GetControlService(dc2, serviceType, false);
+				r = PpsWpfShell.GetControlService(dc2, serviceType, false);
 
 			return r ?? shell.GetService(serviceType);
 		} // func GetService
 
 		/// <summary>Shell</summary>
-		public PpsShellWpf Shell => shell;
+		public IPpsShell Shell => shell;
 		/// <summary>Target control</summary>
 		public object Target => target;
 		/// <summary>Source control</summary>
@@ -204,7 +205,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="target"></param>
 		/// <param name="command"></param>
 		/// <returns></returns>
-		public static CommandBinding CreateBinding(PpsShellWpf shell, object target, PpsCommandBase command)
+		public static CommandBinding CreateBinding(IPpsShell shell, object target, PpsCommandBase command)
 		{
 			return new CommandBinding(command,
 				(sender, e) =>
@@ -225,7 +226,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="command"></param>
 		/// <param name="commandImpl"></param>
 		/// <returns></returns>
-		public static CommandBinding CreateBinding(PpsShellWpf shell, RoutedCommand command, PpsCommandBase commandImpl)
+		public static CommandBinding CreateBinding(IPpsShell shell, RoutedCommand command, PpsCommandBase commandImpl)
 		{
 			return new CommandBinding(command,
 				(sender, e) =>
@@ -303,7 +304,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception e)
 			{
-				commandContext.Shell.ShowException(ExceptionShowFlags.None, e);
+				commandContext.Shell.GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, e);
 			}
 		} // proc Execute
 
@@ -611,7 +612,7 @@ namespace TecWare.PPSn.UI
 			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 				=> value is PpsCommandOrder o ? (object)o.Group : DependencyProperty.UnsetValue;
 
-			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) 
+			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 				=> throw new NotSupportedException();
 		} // class GetGroupConverter
 
@@ -834,7 +835,7 @@ namespace TecWare.PPSn.UI
 
 	/// <summary>View object for command collections</summary>
 	public sealed class PpsUICommandsView : CollectionView, IPpsUICommandsList
-	{       
+	{
 		private readonly List<PpsUICommand> viewCommands;
 		private readonly List<IPpsUICommandsList> commandCollections = new List<IPpsUICommandsList>();
 
@@ -843,7 +844,7 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		/// <param name="commandCollections"></param>
 		public PpsUICommandsView(params PpsUICommandCollection[] commandCollections)
-			:base(new List<PpsUICommand>())
+			: base(new List<PpsUICommand>())
 		{
 			viewCommands = (List<PpsUICommand>)base.SourceCollection;
 
@@ -962,7 +963,7 @@ namespace TecWare.PPSn.UI
 		{
 			// rebuild command list
 			viewCommands.Clear();
-			
+
 			foreach (var cmds in commandCollections)
 			{
 				var currentGroup = 0;
@@ -1214,6 +1215,19 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		PpsUICommandCollection SelectCommands(object item, DependencyObject container);
 	} // interface IPpsCommandsSelector
+
+	#endregion
+
+	#region -- interface IPpsCommandManager -------------------------------------------
+
+	/// <summary>Extention of the shell for redirecting commands.</summary>
+	public interface IPpsCommandManager : IPpsShellService
+	{
+		/// <summary></summary>
+		ExecutedRoutedEventHandler DefaultExecutedHandler { get; }
+		/// <summary></summary>
+		CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
+	} // interface IPpsCommandManager
 
 	#endregion
 }

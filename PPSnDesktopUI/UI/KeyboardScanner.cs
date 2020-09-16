@@ -30,6 +30,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Interop;
 
@@ -55,26 +56,6 @@ namespace TecWare.PPSn.UI
 			/// <summary>Device</summary>
 			public Device Device { get; }
 		} // class DeviceEventArgs
-
-		#endregion
-
-		#region -- class BarcodeEventArgs ---------------------------------------------
-
-		/// <summary>Barcode event arguments</summary>
-		public class BarcodeEventArgs : DeviceEventArgs
-		{
-			/// <summary>Barcode parsed event arguments</summary>
-			/// <param name="dev"></param>
-			/// <param name="barcode"></param>
-			public BarcodeEventArgs(Device dev, string barcode)
-				: base(dev)
-			{
-				Barcode = barcode ?? throw new ArgumentNullException(nameof(barcode));
-			} // ctor
-
-			/// <summary>Raw barcode.</summary>
-			public string Barcode { get; }
-		} // class BarcodeEventArgs
 
 		#endregion
 
@@ -230,11 +211,12 @@ namespace TecWare.PPSn.UI
 		#region -- class Device -------------------------------------------------------
 
 		/// <summary>Active and configurated keyboard device.</summary>
-		public sealed class Device
+		public sealed class Device : IPpsBarcodeProvider
 		{
 			private readonly string deviceId;
 			private readonly IntPtr hDevice;
 			private readonly Config config;
+			private readonly IDisposable providerToken;
 
 			private readonly StringBuilder scannerBuffer = new StringBuilder();
 			private int numInput = 0;
@@ -248,24 +230,19 @@ namespace TecWare.PPSn.UI
 				this.hDevice = hDevice;
 				this.config = config ?? throw new ArgumentNullException(nameof(config));
 
+				providerToken = PpsShell.Current.GetService<PpsBarcodeService>(false)?.RegisterProvider(this);
+
 				config.LoadConfig();
 			} // ctor
 
 			internal void Unload()
-				=> config.UnloadConfig();
-
-			internal bool CheckHandle(bool throwException)
 			{
-				if (TryExtractDeviceId(hDevice, out var deviceId) || this.deviceId != deviceId)
-				{
-					if (throwException)
-						throw new ArgumentOutOfRangeException(nameof(DeviceId), deviceId, "Device not found.");
-					else
-						return false;
-				}
-				else
-					return true;
-			} // func CheckHandle
+				config.UnloadConfig();
+				providerToken.Dispose();
+			} // proc Unload
+
+			internal bool CheckHandle()
+				=> TryExtractDeviceId(hDevice, out var deviceId) || this.deviceId != deviceId;
 
 			#endregion
 
@@ -418,6 +395,9 @@ namespace TecWare.PPSn.UI
 
 			#endregion
 
+			string IPpsBarcodeProvider.Description => config.DisplayName;
+			string IPpsBarcodeProvider.Type => "Keyboard";
+
 			internal IntPtr Handle => hDevice;
 
 			/// <summary>Device id</summary>
@@ -432,8 +412,6 @@ namespace TecWare.PPSn.UI
 		public event PropertyChangedEventHandler PropertyChanged;
 		/// <summary></summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
-		/// <summary>Notifies a barcode.</summary>
-		public event EventHandler<BarcodeEventArgs> Barcode;
 
 		private static WindowClass keyboardScannerClass = null;
 		private readonly List<Device> devices = new List<Device>();
@@ -444,7 +422,7 @@ namespace TecWare.PPSn.UI
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Create keyboard scanner.</summary>
-		public KeyboardScanner()
+		private KeyboardScanner()
 		{
 			CreateWindow(
 				caption: "KeyboardScanner Sink",
@@ -502,7 +480,7 @@ namespace TecWare.PPSn.UI
 			for (var i = devices.Count - 1; i >= 0; i--)
 			{
 				var dev = devices[i];
-				if (!dev.CheckHandle(false))
+				if (!dev.CheckHandle())
 				{
 					dev.Unload();
 					devices.RemoveAt(i);
@@ -756,7 +734,7 @@ namespace TecWare.PPSn.UI
 			=> GetEnumerator();
 
 		private void OnBarcode(Device dev, string barcode)
-			=> Barcode?.Invoke(this, new BarcodeEventArgs(dev, barcode));
+			=> PpsShell.GetService<PpsBarcodeService>(false)?.DispatchBarcode(dev, barcode);
 
 		private void OnNewDevice(Device dev)
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dev));
@@ -918,7 +896,6 @@ namespace TecWare.PPSn.UI
 			);
 		} // func CreateGenericDeviceName
 
-
 		private static Config CreateGenericConfigForPOSdevices(uint vid, uint pid)
 			=> new Config(vid, pid, "Generic POS", null);
 
@@ -1005,6 +982,8 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		private static KeyboardScanner instance = null;
+
 		static KeyboardScanner()
 		{
 			wellKnownScanner =
@@ -1012,6 +991,19 @@ namespace TecWare.PPSn.UI
 				.Union(ParseScannerStream(GetResourceKeyboardScannerFile()), ConfigEqualComparer.Default)
 				.ToArray();
 		} // sctor
+
+		/// <summary>Create a keyboard scanner.</summary>
+		public static void Init()
+		{
+			if (instance != null)
+				return;
+
+			Application.Current.Dispatcher.VerifyAccess();
+			instance = new KeyboardScanner();
+		} // proc Init
+
+		/// <summary>Get the keyboard scanner instance.</summary>
+		public static KeyboardScanner Default => instance;
 	} // class KeyboardScanner
 
 	#endregion

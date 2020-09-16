@@ -30,6 +30,8 @@ using TecWare.PPSn.Properties;
 
 namespace TecWare.PPSn.UI
 {
+	// todo: statie -> shell auswahl -> login -> fertig
+
 	/// <summary>Login and loading dialog.</summary>
 	public partial class PpsSplashWindow : Window, IProgress<string>
 	{
@@ -55,8 +57,8 @@ namespace TecWare.PPSn.UI
 
 			private readonly PpsSplashWindow parent;
 
-			private PpsEnvironmentInfo[] environments = null;
-			private PpsEnvironmentInfo currentEnvironment = null;
+			//private PpsEnvironmentInfo[] environments = null;
+			//private PpsEnvironmentInfo currentEnvironment = null;
 			private PpsClientLogin currentLogin = null;
 			private bool passwordHasChanged = false;
 
@@ -93,62 +95,62 @@ namespace TecWare.PPSn.UI
 				return currentLogin.GetCredentials();
 			} // func GetCredentials
 
-			/// <summary>Refresh environment list.</summary>
-			/// <param name="getCurrentEnvironment"></param>
-			/// <returns></returns>
-			public async Task RefreshEnvironmentsAsync(Func<PpsEnvironmentInfo[], PpsEnvironmentInfo> getCurrentEnvironment)
-			{
-				// parse all environment
-				environments = await Task.Run(() => PpsEnvironmentInfo.GetLocalEnvironments().ToArray());
-				OnPropertyChanged(nameof(Environments));
+			///// <summary>Refresh environment list.</summary>
+			///// <param name="getCurrentEnvironment"></param>
+			///// <returns></returns>
+			//public async Task RefreshEnvironmentsAsync(Func<PpsEnvironmentInfo[], PpsEnvironmentInfo> getCurrentEnvironment)
+			//{
+			//	// parse all environment
+			//	environments = await Task.Run(() => PpsEnvironmentInfo.GetLocalEnvironments().ToArray());
+			//	OnPropertyChanged(nameof(Environments));
 
-				// update current environment
-				if (environments.Length > 0)
-					CurrentEnvironment = getCurrentEnvironment?.Invoke(environments) ?? environments[0];
-			} // proc RefreshEnvironments
+			//	// update current environment
+			//	if (environments.Length > 0)
+			//		CurrentEnvironment = getCurrentEnvironment?.Invoke(environments) ?? environments[0];
+			//} // proc RefreshEnvironments
 
-			/// <summary>Access a environment list</summary>
-			public PpsEnvironmentInfo[] Environments => environments;
+			///// <summary>Access a environment list</summary>
+			//public PpsEnvironmentInfo[] Environments => environments;
 
-			/// <summary>Current selected environment</summary>
-			public PpsEnvironmentInfo CurrentEnvironment
-			{
-				get => currentEnvironment;
-				set
-				{
-					if (currentEnvironment == value)
-						return;
-					currentEnvironment = value;
+			///// <summary>Current selected environment</summary>
+			//public PpsEnvironmentInfo CurrentEnvironment
+			//{
+			//	get => currentEnvironment;
+			//	set
+			//	{
+			//		if (currentEnvironment == value)
+			//			return;
+			//		currentEnvironment = value;
 
-					if (currentEnvironment?.Uri != null)
-					{
-						// change login
-						currentLogin?.Dispose();
-						currentLogin = new PpsClientLogin("ppsn_env:" + currentEnvironment.Uri.ToString(), currentEnvironment.Name, false);
+			//		if (currentEnvironment?.Uri != null)
+			//		{
+			//			// change login
+			//			currentLogin?.Dispose();
+			//			currentLogin = new PpsClientLogin("ppsn_env:" + currentEnvironment.Uri.ToString(), currentEnvironment.Name, false);
 
-						// currect save options
-						if (currentLogin.SaveOptions == PpsClientLoginSaveOptions.None)
-							currentLogin.SaveOptions = PpsClientLoginSaveOptions.UserName; // at least write a username
+			//			// currect save options
+			//			if (currentLogin.SaveOptions == PpsClientLoginSaveOptions.None)
+			//				currentLogin.SaveOptions = PpsClientLoginSaveOptions.UserName; // at least write a username
 
-						// set dummy password
-						if (currentLogin.PasswordLength > 0)
-							parent.pbPassword.Password = new string('\x01', currentLogin.PasswordLength);
-						if (!IsPasswordEnabled)
-							parent.pbPassword.Password = String.Empty;
-						passwordHasChanged = false;
-					}
+			//			// set dummy password
+			//			if (currentLogin.PasswordLength > 0)
+			//				parent.pbPassword.Password = new string('\x01', currentLogin.PasswordLength);
+			//			if (!IsPasswordEnabled)
+			//				parent.pbPassword.Password = String.Empty;
+			//			passwordHasChanged = false;
+			//		}
 
-					// mark properties as changed
-					OnPropertyChanged(nameof(CurrentEnvironment));
-					OnPropertyChanged(nameof(UserName));
-					OnPropertyChanged(nameof(SavePassword));
+			//		// mark properties as changed
+			//		OnPropertyChanged(nameof(CurrentEnvironment));
+			//		OnPropertyChanged(nameof(UserName));
+			//		OnPropertyChanged(nameof(SavePassword));
 
-					OnPropertyChanged(nameof(IsUserNameEnabled));
-					OnPropertyChanged(nameof(IsPasswordEnabled));
-					OnPropertyChanged(nameof(IsPasswordSaveEnabled));
-					OnPropertyChanged(nameof(IsValid));
-				}
-			} // prop CurrentEnvironment
+			//		OnPropertyChanged(nameof(IsUserNameEnabled));
+			//		OnPropertyChanged(nameof(IsPasswordEnabled));
+			//		OnPropertyChanged(nameof(IsPasswordSaveEnabled));
+			//		OnPropertyChanged(nameof(IsValid));
+			//	}
+			//} // prop CurrentEnvironment
 
 			/// <summary>Return user name</summary>
 			public string UserName
@@ -248,12 +250,12 @@ namespace TecWare.PPSn.UI
 						return false;
 
 					// fastest check if EnvironmentName already exists or if the directory is otherwise already existing
-					if (Directory.Exists(Path.GetFullPath(Path.Combine(PpsEnvironmentInfo.LocalEnvironmentsPath, NewEnvironmentName))))
-						return false;
+					//if (Directory.Exists(Path.GetFullPath(Path.Combine(PpsEnvironmentInfo.LocalEnvironmentsPath, NewEnvironmentName))))
+					//	return false;
 
-					// check if the Uri is already configured
-					if (PpsEnvironmentInfo.GetLocalEnvironments().Any(env => env.Uri.Equals(new Uri(NewEnvironmentUri + (NewEnvironmentUri.EndsWith("/") ? String.Empty : "/"), UriKind.Absolute))))
-						return false;
+					//// check if the Uri is already configured
+					//if (PpsEnvironmentInfo.GetLocalEnvironments().Any(env => env.Uri.Equals(new Uri(NewEnvironmentUri + (NewEnvironmentUri.EndsWith("/") ? String.Empty : "/"), UriKind.Absolute))))
+					//	return false;
 
 					return true;
 				}
@@ -327,11 +329,11 @@ namespace TecWare.PPSn.UI
 						async (sender, e) =>
 						{
 							e.Handled = true;
-							await errorEnvironment.ShowTraceAsync(Owner);
+							//await errorShell.ShowTraceAsync(Owner);
 						},
 						(sender, e) =>
 						{
-							e.CanExecute = errorEnvironment != null;
+							e.CanExecute = errorShell != null;
 							e.Handled = true;
 						}
 					)
@@ -415,12 +417,12 @@ namespace TecWare.PPSn.UI
 
 		private async Task SaveEnvironmentAsync()
 		{
-			var newEnv = new PpsEnvironmentInfo(EditLoginState.NewEnvironmentName)
-			{
-				Uri = new Uri(EditLoginState.NewEnvironmentUri)
-			};
-			await Task.Run(new Action(newEnv.Save));
-			await LoginState.RefreshEnvironmentsAsync(l => l.Contains(newEnv) ? newEnv : null);
+			//var newEnv = new PpsEnvironmentInfo(EditLoginState.NewEnvironmentName)
+			//{
+			//	Uri = new Uri(EditLoginState.NewEnvironmentUri)
+			//};
+			//await Task.Run(new Action(newEnv.Save));
+			//await LoginState.RefreshEnvironmentsAsync(l => l.Contains(newEnv) ? newEnv : null);
 
 			ActivateState = StatePanes.Login;
 		} // procSaveEnvironmentAsync
@@ -451,26 +453,26 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc CloseLoginFrame
 
-		private Tuple<PpsEnvironmentInfo, ICredentials> ShowLogin(PpsEnvironmentInfo selectEnvironment, ICredentials userInfo = null)
+		private Tuple<bool, ICredentials> ShowLogin(IPpsShell shell, ICredentials userInfo = null)
 		{
 			var loginState = LoginState;
 
 			// refresh environments
-			loginState.RefreshEnvironmentsAsync(envs =>
-				{
-					if (selectEnvironment != null && envs.Contains(selectEnvironment))
-						return selectEnvironment;
-					else
-					{
-						var name = Settings.Default.LastEnvironmentName;
-						return String.IsNullOrEmpty(name)
-							? null
-							: envs.FirstOrDefault(e => e.Name == name);
-					}
-				}
-			).AwaitTask();
-			if (userInfo != null)
-				loginState.UserName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
+			//loginState.RefreshEnvironmentsAsync(envs =>
+			//	{
+			//		if (selectEnvironment != null && envs.Contains(selectEnvironment))
+			//			return selectEnvironment;
+			//		else
+			//		{
+			//			var name = Settings.Default.LastEnvironmentName;
+			//			return String.IsNullOrEmpty(name)
+			//				? null
+			//				: envs.FirstOrDefault(e => e.Name == name);
+			//		}
+			//	}
+			//).AwaitTask();
+			//if (userInfo != null)
+			//	loginState.UserName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
 
 			// show login page only if there is no error page
 			if (ActivateState != StatePanes.Error)
@@ -490,11 +492,11 @@ namespace TecWare.PPSn.UI
 				loginFrame = null;
 				if (dialogResult && loginState.IsValid)
 				{
-					Settings.Default.LastEnvironmentName = loginState.CurrentEnvironment.Name;
-					Settings.Default.LastEnvironmentUri = loginState.CurrentEnvironment.Uri.ToString();
+					//Settings.Default.LastEnvironmentName = loginState.CurrentEnvironment.Name;
+					//Settings.Default.LastEnvironmentUri = loginState.CurrentEnvironment.Uri.ToString();
 					Settings.Default.Save();
 
-					return new Tuple<PpsEnvironmentInfo, ICredentials>(loginState.CurrentEnvironment, loginState.GetCredentials());
+					return new Tuple<bool, ICredentials>(false, loginState.GetCredentials());
 				}
 				else
 					return null;
@@ -505,28 +507,30 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc ShowLogin
 
+		public Task<IPpsShellInfo> ShowShellAsync(IPpsShellInfo shellInfo)
+			=> Task.FromResult(PpsShell.GetShellInfo().FirstOrDefault());
+
 		/// <summary>Show Login dialog</summary>
-		/// <param name="selectEnvironment"></param>
 		/// <param name="userInfo"></param>
 		/// <returns></returns>
-		public async Task<Tuple<PpsEnvironmentInfo, ICredentials>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment, ICredentials userInfo = null)
-			=> await Dispatcher.InvokeAsync(() => ShowLogin(selectEnvironment, userInfo));
+		public async Task<Tuple<bool, ICredentials>> ShowLoginAsync(IPpsShell shell, ICredentials userInfo = null)
+			=> await Dispatcher.InvokeAsync(() => ShowLogin(shell, userInfo));
 		
 		#endregion
 
 		#region -- Progress -----------------------------------------------------------
 
-		public void SetProgressTextAsync(string text)
+		public void SetProgressText(string text)
 			=> Dispatcher.BeginInvoke(new Action<string>(t => StatusText = t), DispatcherPriority.Normal, text);
 
 		void IProgress<string>.Report(string text)
-			=> SetProgressTextAsync(text);
+			=> SetProgressText(text);
 
 		#endregion
 
 		#region -- SetError -----------------------------------------------------------
 
-		private PpsEnvironment errorEnvironment = null;
+		private IPpsShell errorShell = null;
 
 		private void SetError(object errorInfo)
 		{
@@ -537,15 +541,15 @@ namespace TecWare.PPSn.UI
 			ActivateState = StatePanes.Error;
 		} // proc SetError
 
-		private void SetErrorEnvironment(PpsEnvironment environment)
-			=> errorEnvironment = environment;
+		private void SetErrorShell(IPpsShell shell)
+			=> errorShell = shell;
 
-		public async Task SetErrorAsync(object errorInfo, PpsEnvironment environment)
+		public async Task SetErrorAsync(object errorInfo, IPpsShell shell)
 			=> await Dispatcher.InvokeAsync(
 				() =>
 				{
 					SetError(errorInfo);
-					SetErrorEnvironment(environment);
+					SetErrorShell(shell);
 				}
 			);
 

@@ -120,9 +120,15 @@
     <Compile Include="PpsEnvironment.Lua.cs" />
     <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Views.cs" />
+    <Compile Include="Bde\PpsBdePaneHost.cs" />
+    <Compile Include="UI\PpsBarcodePopup.cs" />
     <Compile Include="UI\FieldFactory.cs" />
     <Compile Include="UI\PpsAttachmentsControl.xaml.cs">
       <DependentUpon>PpsAttachmentsControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UI\PpsBarcodeProvider.cs" />
+    <Compile Include="Bde\PpsBdeWindow.xaml.cs">
+      <DependentUpon>PpsBdeWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsHelpPagePane.cs" />
@@ -138,6 +144,7 @@
       <DependentUpon>PpsNavigatorPane.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsObjectLinkEditor.cs" />
+    <Compile Include="UI\PpsPaneHost.cs" />
     <Compile Include="UI\PpsSingleWindow.xaml.cs">
       <DependentUpon>PpsSingleWindow.xaml</DependentUpon>
     </Compile>
@@ -196,7 +203,9 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Main\" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">
       <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
@@ -205,6 +214,10 @@
     <ProjectReference Include="..\PPSnDesktopUI\PPSnDesktopUI.csproj">
       <Project>{c7d09a93-da78-4b81-8d3c-260442c61c5f}</Project>
       <Name>PPSnDesktopUI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PPSnUI\PPSnUI.csproj">
+      <Project>{5a34fd03-f9c4-464a-9268-2b4c7b59469a}</Project>
+      <Name>PPSnUI</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -221,6 +234,10 @@
       <Generator>XamlIntelliSenseFileGenerator</Generator>
     </Page>
     <Page Include="UI\PpsAttachmentsControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Bde\PpsBdeWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

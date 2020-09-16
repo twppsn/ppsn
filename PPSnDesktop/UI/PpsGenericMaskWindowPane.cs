@@ -297,7 +297,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception ex)
 			{
-				await Shell.ShowExceptionAsync(ExceptionShowFlags.None, ex, "Veröffentlichung ist fehlgeschlagen.");
+				await Shell.ShowExceptionAsync(PpsExceptionShowFlags.None, ex, "Veröffentlichung ist fehlgeschlagen.");
 			}
 		} // proc PushDataAsync
 

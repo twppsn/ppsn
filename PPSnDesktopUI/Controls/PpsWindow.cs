@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.ComponentModel;
+using System.ComponentModel.Design;
 using System.Configuration;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -23,6 +24,8 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -40,7 +43,7 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsWindow --------------------------------------------------------
 
 	/// <summary>Contains the generic layout of all windows of the the application.</summary>
-	public partial class PpsWindow : Window
+	public partial class PpsWindow : Window, IServiceContainer
 	{
 		/// <summary>Command for minimizing the window.</summary>
 		public readonly static RoutedCommand MinimizeCommand = new RoutedCommand("Minimize", typeof(PpsWindow));
@@ -56,13 +59,25 @@ namespace TecWare.PPSn.Controls
 		/// <summary>GlowColor when window is inactive.</summary>
 		public static readonly DependencyProperty InactiveGlowColorProperty = DependencyProperty.Register("InactiveGlowColor", typeof(Color), typeof(PpsWindow), new FrameworkPropertyMetadata(Colors.LightGray, new PropertyChangedCallback(OnGlowColorChanged)));
 
-		private PpsShellWpf shell;
+		private readonly ServiceContainer serviceContainer;
+		private readonly IPpsShell shell;
 
 		/// <summary>Window</summary>
 		public PpsWindow()
+			: this(PpsShell.Current)
 		{
+		} // ctor
+		
+		/// <summary>Window</summary>
+		public PpsWindow(IServiceProvider service)
+		{
+			serviceContainer = new ServiceContainer(service ?? throw new ArgumentNullException(nameof(service)));
+			shell = serviceContainer.GetService<IPpsShell>(true);
+
+			this.RegisterShell(shell);
+
 			InitChrome();
-			
+
 			CommandBindings.AddRange(
 				new CommandBinding[]
 				{
@@ -71,8 +86,7 @@ namespace TecWare.PPSn.Controls
 					new CommandBinding(CloseCommand, (sender, e) => Close())
 				});
 
-			CommandManager.AddExecutedHandler(this, Shell.DefaultExecutedHandler);
-			CommandManager.AddCanExecuteHandler(this, Shell.DefaultCanExecuteHandler);
+			this.AddCommandDefaultHandler(shell);
 		} // ctor
 
 		/// <summary>Caption clicked</summary>
@@ -86,11 +100,11 @@ namespace TecWare.PPSn.Controls
 		protected override void OnKeyUp(KeyEventArgs e)
 		{
 			if (e.Key == Key.F9)
-				StuffUI.PrintLogicalTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+				PpsWpfShell.PrintLogicalTreeToConsole(Keyboard.FocusedElement as DependencyObject);
 			else if (e.Key == Key.F8)
-				StuffUI.PrintVisualTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+				PpsWpfShell.PrintVisualTreeToConsole(Keyboard.FocusedElement as DependencyObject);
 			else if (e.Key == Key.F7)
-				StuffUI.PrintEventTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+				PpsWpfShell.PrintEventTreeToConsole(Keyboard.FocusedElement as DependencyObject);
 			base.OnKeyUp(e);
 		} // proc OnKeyUp
 #endif
@@ -119,16 +133,37 @@ namespace TecWare.PPSn.Controls
 			);
 		} // func GetWorkingArea
 
+		#region -- IServiceContainer - members ----------------------------------------
+
+		void IServiceContainer.AddService(Type serviceType, object serviceInstance) 
+			=> serviceContainer.AddService(serviceType, serviceInstance);
+
+		void IServiceContainer.AddService(Type serviceType, object serviceInstance, bool promote) 
+			=> serviceContainer.AddService(serviceType, serviceInstance, promote);
+
+		void IServiceContainer.AddService(Type serviceType, ServiceCreatorCallback callback) 
+			=> serviceContainer.AddService(serviceType, callback);
+
+		void IServiceContainer.AddService(Type serviceType, ServiceCreatorCallback callback, bool promote) 
+			=> serviceContainer.AddService(serviceType, callback, promote);
+
+		void IServiceContainer.RemoveService(Type serviceType) 
+			=> serviceContainer.RemoveService(serviceType);
+
+		void IServiceContainer.RemoveService(Type serviceType, bool promote) 
+			=> serviceContainer.RemoveService(serviceType, promote);
+
+		object IServiceProvider.GetService(Type serviceType) 
+			=> serviceContainer.GetService(serviceType);
+
+		#endregion
+
+		/// <summary>Return services.</summary>
+		public IServiceContainer Services => this;
 		/// <summary>Current environment of the window.</summary>
-		public PpsShellWpf Shell
-		{
-			get
-			{
-				if (shell == null)
-					shell = PpsShellWpf.GetShell(this);
-				return shell;
-			}
-		} // prop Environment
+		public IPpsShell Shell => shell; 
+
+		public PpsShellWpf _Shell => null;
 	} // class PpsWindow
 
 	#endregion

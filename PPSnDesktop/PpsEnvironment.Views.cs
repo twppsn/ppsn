@@ -20,6 +20,7 @@ using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
@@ -223,7 +224,7 @@ namespace TecWare.PPSn
 			}
 			catch (Exception e)
 			{
-				Environment.ShowException(ExceptionShowFlags.None, e);
+				Environment.ShowException(PpsExceptionShowFlags.None, e);
 				return new LuaResult(false);
 			}
 		} // func Execute

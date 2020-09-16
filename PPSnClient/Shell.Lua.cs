@@ -26,6 +26,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
@@ -39,7 +40,7 @@ namespace TecWare.PPSn
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
 		/// <returns></returns>
-		Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
+		Task ShowExceptionAsync(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
 
 		/// <summary></summary>
 		/// <param name="task"></param>
@@ -199,7 +200,7 @@ namespace TecWare.PPSn
 			if (currentException != null)
 			{
 
-				parent.Await(parent.ShowExceptionAsync(ExceptionShowFlags.None, e, "Handler failed."));
+				parent.Await(parent.ShowExceptionAsync(PpsExceptionShowFlags.None, e, "Handler failed."));
 				return;
 			}
 
@@ -422,7 +423,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	public partial class PpsShell : IPpsLuaTaskParent
+	public partial class _PpsShell : IPpsLuaTaskParent
 	{
 		#region -- Lua Compiler -------------------------------------------------------
 
@@ -444,7 +445,7 @@ namespace TecWare.PPSn
 					throw;
 				else
 				{
-					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {sourceLocation} failed.");
+					await ShowExceptionAsync(PpsExceptionShowFlags.Background, e, $"Compile for {sourceLocation} failed.");
 					return null;
 				}
 			}
@@ -470,7 +471,7 @@ namespace TecWare.PPSn
 					throw;
 				else
 				{
-					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {sourceLocation} failed.");
+					await ShowExceptionAsync(PpsExceptionShowFlags.Background, e, $"Compile for {sourceLocation} failed.");
 					return null;
 				}
 			}
@@ -563,7 +564,7 @@ namespace TecWare.PPSn
 				else
 				{
 					// notify exception as warning
-					ShowExceptionAsync(ExceptionShowFlags.Background, ex, "Execution failed.");
+					ShowExceptionAsync(PpsExceptionShowFlags.Background, ex, "Execution failed.");
 					return LuaResult.Empty;
 				}
 			}
@@ -683,7 +684,7 @@ namespace TecWare.PPSn
 				alternativeMessage = String.Format("{0} konnte nicht gelöscht werden.", objectName);
 			}
 
-			ShowException(ExceptionShowFlags.None, e, alternativeMessage);
+			ShowException(PpsExceptionShowFlags.None, e, alternativeMessage);
 		} // proc HandleDataRemoveException
 
 		/// <summary>Write in the trace log.</summary>

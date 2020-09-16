@@ -28,6 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
@@ -965,7 +966,7 @@ namespace TecWare.PPSn
 					catch (Exception e)
 					{
 						// todo: connect lost?
-						await environment.ShowExceptionAsync(ExceptionShowFlags.Background, e);
+						await environment.ShowExceptionAsync(PpsExceptionShowFlags.Background, e);
 					}
 					finally
 					{

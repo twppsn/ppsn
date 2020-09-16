@@ -1,0 +1,185 @@
+﻿<ui:PpsWindow x:Class="TecWare.PPSn.Bde.PpsBdeWindow"
+			  x:ClassModifier="internal"
+			  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+              xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
+			  xmlns:bde="clr-namespace:TecWare.PPSn.Bde"
+			  xmlns:uic="clr-namespace:TecWare.PPSn.UI"
+              mc:Ignorable="d"
+			  DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
+			  Title="PpsBdeWindow" Height="450" Width="800">
+	<ui:PpsWindow.Resources>
+		<PathGeometry x:Key="gotoBack">M21,11H6.83L10.41,7.41L9,6L3,12L9,18L10.41,16.58L6.83,13H21V11Z</PathGeometry>
+	</ui:PpsWindow.Resources>
+	
+	<Grid TextBlock.Foreground="{StaticResource PPSnWindowForegroundBrush}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="40" />
+			<RowDefinition />
+			<RowDefinition Height="41" />
+		</Grid.RowDefinitions>
+
+		<!--ModulCaptionBar-->
+		<Grid Background="{StaticResource PPSnWindowActiveBrush}">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="46" />
+				<ColumnDefinition />
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<ui:PpsGeometryImage Geometry="{Binding TopPaneHost.Image}" Foreground="{StaticResource PPSnWindowBackgroundBrush}" Width="26" Height="26" Opacity=".85" GeometryCircled="False" />
+			<Label Grid.Column="1" FontSize="20" Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+				   VerticalContentAlignment="Center" Padding="0" Margin="0,0,12,0">
+				<Label.Tag>
+					<ui:PpsWindowHitTest HitTest="2" />
+				</Label.Tag>
+				<Label.Content>
+					<TextBlock>
+						<Run Text="{Binding TopPaneHost.Title,Mode=OneWay}" />
+						/
+						<Run Text="{Binding TopPaneHost.SubTitle,Mode=OneWay}" />
+					</TextBlock>
+				</Label.Content>
+			</Label>
+			<StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+				<Grid Margin="16,0" DataContext="{Binding IsScannerActive}">
+					<ui:PpsGeometryImage GeometryName="scannerActive" Padding="6" GeometryCircled="False" Foreground="{StaticResource PPSnWindowBackgroundBrush}">
+						<ui:PpsGeometryImage.Visibility>
+							<Binding Converter="{x:Static ui:PpsConverter.Visibility}">
+								<Binding.ConverterParameter>
+									<ui:VisibilityConverterParameter TrueValue="Visible" FalseValue="Hidden" />
+								</Binding.ConverterParameter>
+							</Binding>
+						</ui:PpsGeometryImage.Visibility>
+					</ui:PpsGeometryImage>
+					<ui:PpsGeometryImage GeometryName="scannerInActive" Padding="6" GeometryCircled="False" Foreground="{StaticResource PPSnWindowBackgroundBrush}">
+						<ui:PpsGeometryImage.Visibility>
+							<Binding Converter="{x:Static ui:PpsConverter.Visibility}">
+								<Binding.ConverterParameter>
+									<ui:VisibilityConverterParameter TrueValue="Hidden" FalseValue="Visible" />
+								</Binding.ConverterParameter>
+							</Binding>
+						</ui:PpsGeometryImage.Visibility>
+					</ui:PpsGeometryImage>
+				</Grid>
+				<TextBlock Text="{Binding CurrentTimeString}"
+						   FontSize="14"
+						   LineStackingStrategy="BlockLineHeight"
+						   LineHeight="16"
+						   TextAlignment="Center"
+						   TextWrapping="Wrap"
+						   VerticalAlignment="Center"
+						   Margin="16,0"
+						   Foreground="{StaticResource PPSnWindowBackgroundBrush}" />
+				<ui:PpsButton Command="{x:Static ui:PpsWindow.TraceLogCommand}"
+							  ToolTip="System"
+							  DisplayMode="Image"
+							  GeometryName="appInfo"
+							  GeometrySize="24"
+							  ImageOpacity="1"
+							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+							  Width="40"
+							  Margin="0,0,6,0"/>
+				<ToggleButton x:Name="barcodeButton"
+							  ToolTip="Barcode Simulator"
+							  Width="40"
+							  Margin="0,0,24,0"
+							  Focusable="False"
+							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}">
+					<ToggleButton.Style>
+						<Style TargetType="{x:Type ToggleButton}">
+							<Setter Property="Template">
+								<Setter.Value>
+									<ControlTemplate TargetType="{x:Type ToggleButton}">
+										<Border x:Name="border">
+											<ui:PpsGeometryImage GeometryName="barcodeScan" Width="24" Height="24" Foreground="{StaticResource PPSnWindowBackgroundBrush}" GeometryCircled="False" />
+										</Border>
+										<ControlTemplate.Triggers>
+											<Trigger Property="IsEnabled" Value="False">
+												<Setter Property="Background" Value="Transparent" />
+												<Setter Property="Opacity" Value="0.35" />
+											</Trigger>
+											<Trigger Property="IsMouseOver" Value="False">
+												<Setter TargetName="border" Property="Background" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+											</Trigger>
+										</ControlTemplate.Triggers>
+									</ControlTemplate>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</ToggleButton.Style>
+				</ToggleButton>
+				<ui:PpsButton Command="{x:Static ui:PpsWindow.MinimizeCommand}"
+							  ToolTip="Minimieren"
+							  DisplayMode="Image"
+							  GeometryName="windowMinimize"
+							  GeometrySize="24"
+							  ImageOpacity="1"
+							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+							  Width="34"
+							  Height="26"
+							  VerticalAlignment="Top"
+							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}" />
+				<ui:PpsButton Command="{x:Static ui:PpsWindow.MaximizeCommand}"
+							  ToolTip="Maximieren"
+							  DisplayMode="Image"
+							  GeometryName="windowMaximize"
+							  GeometrySize="24"
+							  ImageOpacity="1"
+							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+							  Width="34"
+							  Height="26"
+							  VerticalAlignment="Top"
+							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}" />
+				<ui:PpsButton Command="{x:Static ui:PpsWindow.CloseCommand}"
+							  ToolTip="Schließen"
+							  DisplayMode="Image"
+							  GeometryName="windowClose"
+							  GeometrySize="16"
+							  ImageOpacity="1"
+							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+							  Width="34"
+							  Height="26"
+							  VerticalAlignment="Top"
+							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}" />
+			</StackPanel>
+		</Grid>
+
+		<uic:PpsBarcodePopup IsOpen="{Binding IsChecked,ElementName=barcodeButton,Mode=TwoWay}" PlacementTarget="{Binding ElementName=barcodeButton}" Placement="Bottom" />
+
+		<ContentControl Grid.Row="1" Content="{Binding TopPaneHost}" />
+
+		<!--Separator-->
+		<Rectangle Grid.Row="2" Height="1" StrokeThickness="0" Fill="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Top" SnapsToDevicePixels="True" Opacity=".5"/>
+		<!--Navigation-->
+		<ui:PpsButton Grid.Row="2" Command="{x:Static bde:PpsBdeWindow.BackCommand}" Width="72" HorizontalAlignment="Left"
+					   Foreground="{StaticResource PPSnWindowForegroundBrush}" Background="Transparent" >
+
+			<ui:PpsButton.Content>
+				<Viewbox>
+					<Canvas Width="24" Height="24">
+						<Path Data="{StaticResource gotoBack}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
+					</Canvas>
+				</Viewbox>
+			</ui:PpsButton.Content>
+		</ui:PpsButton>
+
+		<!-- Notification 
+		<Border DataContext="{Binding CurrentNotification,RelativeSource={RelativeSource AncestorType={x:Type local:PpsBdeWindow}}}" 
+				Grid.RowSpan="4"
+				Background="DarkGray" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="100" Padding="16"
+				Visibility="{Binding IsVisible,Converter={x:Static ui:PpsConverter.Visibility}}">
+			<StackPanel Orientation="Horizontal">
+				<lui:MdeImage XImageSource="{Binding Image}" Foreground="White" Width="30" Height="30"  />
+				<TextBlock Text="{Binding Text}" Foreground="White" FontSize="30" />
+			</StackPanel>
+		</Border>-->
+
+		<!--Alert
+		<Popup x:Name="alertPopup" StaysOpen="True" Placement="Center">
+			<lui:MdeAlertControl x:Name="altertView" />
+		</Popup>-->
+	</Grid>
+</ui:PpsWindow>

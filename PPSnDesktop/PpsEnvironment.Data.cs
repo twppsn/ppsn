@@ -41,6 +41,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {

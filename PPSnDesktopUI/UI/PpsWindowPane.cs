@@ -21,8 +21,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
@@ -53,6 +51,9 @@ namespace TecWare.PPSn.UI
 	/// <summary>The host of the window pane.</summary>
 	public interface IPpsWindowPaneHost
 	{
+		/// <summary>Close this pane.</summary>
+		Task<bool> ClosePaneAsync();
+
 		/// <summary>Dispatcher of the host.</summary>
 		Dispatcher Dispatcher { get; }
 		/// <summary>Progress bar of the host.</summary>
@@ -118,6 +119,20 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- interface IPpsWindowPaneBack -------------------------------------------
+
+	/// <summary>Pane supports a back-button</summary>
+	public interface IPpsWindowPaneBack
+	{
+		/// <summary>Invoke the back button.</summary>
+		void InvokeBackButton();
+
+		/// <summary>Is back button active.</summary>
+		bool? CanBackButton { get; }
+	} // interface IPpsWindowPaneBack
+
+	#endregion
+
 	#region -- enum PpsOpenPaneMode ---------------------------------------------------
 
 	/// <summary>Prefered mode to open the pane.</summary>
@@ -142,7 +157,7 @@ namespace TecWare.PPSn.UI
 	#region -- interface IPpsWindowPaneManager ----------------------------------------
 
 	/// <summary>Interface to open new panes.</summary>
-	public interface IPpsWindowPaneManager
+	public interface IPpsWindowPaneManager : IServiceProvider
 	{
 		/// <summary>Activate the pane.</summary>
 		/// <param name="pane"></param>
@@ -164,7 +179,9 @@ namespace TecWare.PPSn.UI
 		IEnumerable<IPpsWindowPane> Panes { get; }
 
 		/// <summary>Access the environment.</summary>
-		PpsShellWpf Shell { get; }
+		PpsShellWpf _Shell { get; }
+		/// <summary>Access the assigned shell.</summary>
+		IPpsShell Shell { get; }
 
 		/// <summary>Is this pane manager currenty the active pane manager.</summary>
 		bool IsActive { get; }
@@ -215,8 +232,8 @@ namespace TecWare.PPSn.UI
 			{
 				var pi = parameterInfo[i];
 				var tiParam = pi.ParameterType.GetTypeInfo();
-				if (tiParam.IsAssignableFrom(paneManager.Shell.GetType()))
-					paneArguments[i] = paneManager.Shell;
+				if (tiParam.IsAssignableFrom(typeof(IServiceProvider)))
+					paneArguments[i] = paneManager;
 				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneManager)))
 					paneArguments[i] = paneManager;
 				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneHost)))
@@ -242,7 +259,7 @@ namespace TecWare.PPSn.UI
 				case LuaType luaType:
 					return luaType.Type;
 				case string typeString:
-					return paneManager.Shell.GetPaneTypeFromString(typeString);
+					return paneManager._Shell.GetPaneTypeFromString(typeString);
 				case null:
 					throw new ArgumentNullException("paneType");
 				default:
@@ -259,7 +276,7 @@ namespace TecWare.PPSn.UI
 			if (arguments != null && arguments.Mode != null)
 				return Procs.ChangeType<PpsOpenPaneMode>(arguments.Mode);
 
-			return paneManager.Shell.GetOptionalValue("NewPaneMode", true) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
+			return paneManager._Shell.GetOptionalValue("NewPaneMode", true) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
 		} // func GetDefaultPaneMode
 
 		/// <summary>Loads a generic wpf window pane <see cref="PpsGenericWpfWindowPane"/>.</summary>
@@ -367,7 +384,7 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public static IPpsProgress DisableUI(this IPpsWindowPaneHost pane, string text = null, int value = -1)
 		{
-			var progress = pane.Progress.CreateProgress() ?? PpsShell.EmptyProgress;
+			var progress = pane.Progress.CreateProgress() ?? _PpsShell.EmptyProgress;
 			if (text != null)
 				progress.Text = text;
 			progress.Value = value;

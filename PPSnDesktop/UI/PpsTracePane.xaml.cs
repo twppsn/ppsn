@@ -71,14 +71,14 @@ namespace TecWare.PPSn.UI
 			#endregion
 			
 			protected override object OnIndex(object key)
-				=> base.OnIndex(key) ?? Context?.GetValue(key) ?? paneHost.PaneManager.Shell.GetValue(key);
+				=> base.OnIndex(key) ?? Context?.GetValue(key) ?? paneHost.PaneManager._Shell.GetValue(key);
 
 			public LuaTable Context { get; set; } = null;
 
 			[LuaMember]
 			public IPpsWindowPaneManager Window => paneHost.PaneManager;
 			[LuaMember]
-			public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager.Shell;
+			public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager._Shell;
 		} // class PpsTraceEnvironment
 
 		#endregion
@@ -96,13 +96,13 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
-			this.AddCommandBinding(Environment, ApplicationCommands.SaveAs,
+			this.AddCommandBinding(Shell, ApplicationCommands.SaveAs,
 				new PpsCommand(
 					 ctx => SaveTrace()
 				)
 			);
 
-			this.AddCommandBinding(Environment, ApplicationCommands.Copy,
+			this.AddCommandBinding(Shell, ApplicationCommands.Copy,
 				new PpsCommand(
 					 ctx => CopyToClipboard(ctx.Parameter),
 					 ctx => CanCopyToClipboard(ctx.Parameter)
@@ -110,14 +110,14 @@ namespace TecWare.PPSn.UI
 			);
 
 			this.AddCommandBinding(
-				Environment, ApplicationCommands.Open,
+				Shell, ApplicationCommands.Open,
 				new PpsAsyncCommand(
 					ctx => ExecuteCommandAsync(ConsoleCommandTextBox.Text),
 					ctx => !String.IsNullOrEmpty(ConsoleCommandTextBox.Text)
 				)
 			);
 
-			this.AddCommandBinding(Environment, AssignDebugTarget,
+			this.AddCommandBinding(Shell, AssignDebugTarget,
 				new PpsAsyncCommand(
 					ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, false),
 					ctx => ctx.Parameter is PpsMasterDataRow
@@ -125,15 +125,15 @@ namespace TecWare.PPSn.UI
 			);
 
 
-			this.AddCommandBinding(Environment, ClearDebugTarget,
+			this.AddCommandBinding(Shell, ClearDebugTarget,
 				new PpsAsyncCommand(
 					ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, true),
 					ctx => ctx.Parameter is PpsMasterDataRow row && row.GetProperty("DebugPath", null) != null
 				)
 			);
 
-			var collectionView = CollectionViewSource.GetDefaultView(Environment.Log);
-			collectionView.SortDescriptions.Add(new SortDescription(nameof(PpsTraceItemBase.Stamp), ListSortDirection.Descending));
+			//var collectionView = CollectionViewSource.GetDefaultView(Environment?.Log);
+			//collectionView.SortDescriptions.Add(new SortDescription(nameof(PpsTraceItemBase.Stamp), ListSortDirection.Descending));
 		} // ctor
 
 		protected override Task OnLoadAsync(LuaTable args)
@@ -316,7 +316,7 @@ namespace TecWare.PPSn.UI
 			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
 
 		/// <summary>Access the environment</summary>
-		public PpsEnvironment Environment => (PpsEnvironment)PaneHost.PaneManager.Shell;
+		public PpsEnvironment Environment => (PpsEnvironment)PaneHost.PaneManager._Shell;
 	} // class PpsTracePane
 
 	#endregion

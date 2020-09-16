@@ -46,6 +46,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static VisibilityConverterParameter VisibilityCollapsedParameter { get; } = new VisibilityConverterParameter() { FalseValue = System.Windows.Visibility.Collapsed };
 		/// <summary>Convert between Visibility and bool.</summary>
+		public static VisibilityConverterParameter VisibilityNotCollapsedParameter { get; } = new VisibilityConverterParameter() { TrueValue = System.Windows.Visibility.Collapsed, FalseValue = System.Windows.Visibility.Visible };
+		/// <summary>Convert between Visibility and bool.</summary>
 		public static VisibilityConverterParameter VisibilityOnNullParameter { get; } = new VisibilityConverterParameter() { TrueValue = System.Windows.Visibility.Hidden, FalseValue = System.Windows.Visibility.Visible };
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static VisibilityConverterParameter VisibilityNotNullParameter { get; } = new VisibilityConverterParameter() { TrueValue = System.Windows.Visibility.Visible, FalseValue = System.Windows.Visibility.Hidden };
@@ -104,14 +106,14 @@ namespace TecWare.PPSn.UI
 	[ContentProperty("ConvertExpression")]
 	public class LuaValueConverter : IValueConverter, IMultiValueConverter
 	{
-		private delegate object ConvertDelegate(object value, object targetType, object parameter, PpsShell shell, CultureInfo culture);
+		private delegate object ConvertDelegate(object value, object targetType, object parameter, _PpsShell shell, CultureInfo culture);
 		private static readonly Lua lua = new Lua(); // lua engine for the value converters
 
 		private string convert;
 		private ConvertDelegate convertDelegate;
 		private string convertBack;
 		private ConvertDelegate convertBackDelegate;
-		private Lazy<PpsShell> getShell = null;
+		private Lazy<_PpsShell> getShell = null;
 
 		private object ConvertIntern(string script, ref ConvertDelegate dlg, object value, object targetType, object parameter, CultureInfo culture)
 		{
@@ -180,7 +182,7 @@ namespace TecWare.PPSn.UI
 		public bool UseEnvironment
 		{
 			get => getShell != null;
-			set => getShell = new Lazy<PpsShell>(PpsShell.GetShell);
+			set => getShell = new Lazy<_PpsShell>(_PpsShell.GetShell);
 		} // prop UseEnvironment
 	} // class LuaValueConverter
 

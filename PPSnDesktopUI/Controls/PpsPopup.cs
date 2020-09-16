@@ -19,6 +19,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -54,10 +56,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnInitialized(EventArgs e)
 		{
-			var env = PpsShellWpf.GetShell(this);
-
-			CommandManager.AddExecutedHandler(this, env.DefaultExecutedHandler);
-			CommandManager.AddCanExecuteHandler(this, env.DefaultCanExecuteHandler);
+			this.AddCommandDefaultHandler(PpsWpfShell.GetShell(this));
 
 			base.OnInitialized(e);
 		} // proc OnInitialized
@@ -146,13 +145,13 @@ namespace TecWare.PPSn.Controls
 		protected override void OnKeyUp(KeyEventArgs e)
 		{
 			if (e.Key == Key.F9)
-				StuffUI.PrintLogicalTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+				PpsWpfShell.PrintLogicalTreeToConsole(Keyboard.FocusedElement as DependencyObject);
 			else if (e.Key == Key.F8)
-				StuffUI.PrintVisualTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+				PpsWpfShell.PrintVisualTreeToConsole(Keyboard.FocusedElement as DependencyObject);
 			else if (e.Key == Key.F7)
-				StuffUI.PrintEventTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+				PpsWpfShell.PrintEventTreeToConsole(Keyboard.FocusedElement as DependencyObject);
 			base.OnKeyUp(e);
-		}
+		} // proc OnKeyUp
 #endif
 
 		static PpsPopupContent()

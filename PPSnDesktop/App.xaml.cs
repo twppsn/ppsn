@@ -14,17 +14,23 @@
 //
 #endregion
 using System;
+using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Threading;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Bde;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Properties;
 using TecWare.PPSn.UI;
@@ -46,12 +52,12 @@ namespace TecWare.PPSn
 			public override void Write(string message) { }
 
 			public override void WriteLine(string message)
-				=> app.Environment?.Log.Append(PpsLogType.Warning, message.Replace(";", ";\n"));
+				=> app.LogException(PpsLogType.Warning, message.Replace(";", ";\n"));
 		} // class BindingErrorListener
 
 		#endregion
 
-		private PpsEnvironment currentEnvironment = null;
+		private IPpsShell shell = null;
 
 		/// <summary>Start application</summary>
 		public App()
@@ -63,132 +69,134 @@ namespace TecWare.PPSn
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
 
-		internal async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, ICredentials _userInfo = null)
+		private bool IsApplicationOutdated(IPpsShell shell)
+			=> false;
+
+		internal async Task<bool> StartApplicationAsync(IPpsShellInfo _shellInfo = null, ICredentials _userInfo = null)
 		{
-			var environment = _environment;
+			var shellInfo = _shellInfo;
 			var userInfo = _userInfo;
-			var errorInfo = (object)null;
-			PpsEnvironment errorEnvironment = null;
+
+			object errorInfo = null;
+			IPpsShell newShell = null; 
+			IPpsShell errorShell = null;
 
 			// we will have no windows
-			await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
+			ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
 			// show a login/splash
-			var splashWindow = await Dispatcher.InvokeAsync(() =>
-				{
-					var w = new PpsSplashWindow()
-					{
-						Owner = currentEnvironment?.GetWindows().FirstOrDefault(),
-						StatusText = PPSn.Properties.Resources.AppStartApplicationAsyncInitApp
-					};
-					w.Show();
-					return w;
-				}
-			);
+			var splashWindow =  new PpsSplashWindow()
+			{
+				Owner = GetWindows().FirstOrDefault(),
+				StatusText = PPSn.Properties.Resources.AppStartApplicationAsyncInitApp
+			};
+			splashWindow.Show();
+				
 			try
 			{
 				while (true)
 				{
 					try
 					{
-						// no arguments are given, show user interface
-						if (environment == null || userInfo == null || errorInfo != null)
+						// no arguments are given, show user interface to select a shell
+						if (newShell == null)
 						{
-							if (errorInfo != null)
-								await splashWindow.SetErrorAsync(errorInfo, errorEnvironment);
-
-							try
+							if (shellInfo == null || errorInfo != null)
 							{
-								var t = await splashWindow.ShowLoginAsync(environment, userInfo);
-								if (t == null)
-									return false;
+								if (errorInfo != null)
+									await splashWindow.SetErrorAsync(errorInfo, errorShell);
 
-								environment = t.Item1;
-								userInfo = t.Item2;
+								var newShellInfo = await splashWindow.ShowShellAsync(shellInfo);
+								if (newShellInfo == null)
+									return false;
+								shellInfo = newShellInfo;
 								errorInfo = null;
 							}
-							finally
-							{
-								errorEnvironment?.Dispose();
-							}
-						}
 
-						// close the current environment
-						if (currentEnvironment != null && !await CloseApplicationAsync())
-							return false;
-
-						// create the application environment
-						splashWindow.SetProgressTextAsync("Starte Anwendung...");
-						var env = await Dispatcher.InvokeAsync(() => new PpsEnvironment(environment, userInfo, this));
-						errorEnvironment = env;
-
-						// create environment
-						switch (await env.InitAsync(splashWindow))
-						{
-							case PpsEnvironmentModeResult.LoginFailed:
-								errorInfo = "Anmeldung fehlgeschlagen.";
-								errorEnvironment.Log.Append(PpsLogType.Fail, (string)errorInfo);
-								break;
-							case PpsEnvironmentModeResult.Shutdown:
+							// close the current shell
+							if (shell != null && !await CloseApplicationAsync())
 								return false;
 
-							case PpsEnvironmentModeResult.ServerConnectFailure:
-								errorInfo = "Verbindung zum Server fehlgeschlagen.";
-								errorEnvironment.Log.Append(PpsLogType.Fail, (string)errorInfo);
-								break;
+							// create the application shell
+							splashWindow.SetProgressText("Starte Anwendung...");
+							newShell = await PpsShell.StartAsync(shellInfo, true);
+							errorShell = newShell;
+						}
 
-							case PpsEnvironmentModeResult.NeedsUpdate:
-								errorInfo = "Update ist erforderlich.";
-								errorEnvironment.Log.Append(PpsLogType.Fail, (string)errorInfo);
-								break;
+						// check shell state
+						if (IsApplicationOutdated(newShell))
+							errorInfo = "Update ist erforderlich.";
+						else
+						{
+							// login user
+							if (userInfo == null && errorInfo == null) // try find auto login
+							{
+							}
 
-							case PpsEnvironmentModeResult.NeedsSynchronization:
-								errorInfo = "Synchronization ist erforderlich.";
-								errorEnvironment.Log.Append(PpsLogType.Fail, (string)errorInfo);
-								break;
+							if (userInfo == null || errorInfo != null) // show login page
+							{
+								if (errorInfo != null)
+									await splashWindow.SetErrorAsync(errorInfo, errorShell);
 
-							case PpsEnvironmentModeResult.Online:
-							case PpsEnvironmentModeResult.Offline:
-								// set new environment
-								SetEnvironment(env);
+								var (doBack, newUserInfo) = await splashWindow.ShowLoginAsync(newShell, userInfo);
+								if (doBack)
+								{
+									await newShell.ShutdownAsync();
 
-								// create first window
-								await currentEnvironment.CreateMainWindowAsync();
+									errorShell = null;
+									newShell = null;
+								}
+								else if (newUserInfo == null)
+									return false;
 
-								// now, we have windows
-								ShutdownMode = ShutdownMode.OnLastWindowClose;
+								userInfo = newUserInfo;
+							}
 
-								return true;
-							default:
-								throw new InvalidOperationException();
+							// login user info
+							splashWindow.SetProgressText("Anmelden des Nutzers...");
+							await newShell.LoginAsync(userInfo);
+
+							// start window
+							var bde = new PpsBdeWindow(newShell);
+							bde.Show();
+							var paneType = Type.GetType("TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null", true);
+							bde.OpenPaneAsync(paneType, arguments: new LuaTable()).Spawn(bde);
+
+							// now, we have windows
+							ShutdownMode = ShutdownMode.OnLastWindowClose;
+							return true;
 						}
 					}
 					catch (Exception e)
 					{
-						errorEnvironment.Log.Append(PpsLogType.Exception, e);
+						LogException(e);
 						errorInfo = e;
 					}
 				}
 			}
 			finally
 			{
+				if (errorShell != null)
+					errorShell.ShutdownAsync().Await();
+
 				// close dialog
-				await Dispatcher.InvokeAsync(splashWindow.ForceClose);
+				splashWindow.ForceClose();
 			}
 		} // proc StartApplicationAsync
 
 		private async Task<bool> CloseApplicationAsync()
 		{
-			if (currentEnvironment == null)
+			if (shell == null)
 				return true;
 
-			if (!await Dispatcher.Invoke(currentEnvironment.ShutdownAsync))
+			if (await shell.ShutdownAsync())
 			{
-				SetEnvironment(null);
+				shell = null;
 				return true;
 			}
 			else
 				return false;
+			
 		} // func CloseApplicationAsync
 
 		private static string GetNativeLibrariesPath()
@@ -206,16 +214,20 @@ namespace TecWare.PPSn
 			}
 
 			// change environment for specific dll's
-			System.Environment.SetEnvironmentVariable("PATH",
-				System.Environment.GetEnvironmentVariable("PATH") + ";" + GetNativeLibrariesPath(),
+			Environment.SetEnvironmentVariable("PATH",
+				Environment.GetEnvironmentVariable("PATH") + ";" + GetNativeLibrariesPath(),
 				EnvironmentVariableTarget.Process
 			);
 
-			ParseArguments(e, out var environment, out var userCred);
+			// Init services
+			PpsShell.Collect(typeof(StuffUI).Assembly);
+			PpsShell.Collect(typeof(App).Assembly);
+
+			ParseArguments(e, out var shellInfo, out var userCred);
 
 			FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
-			StartApplicationAsync(environment, userCred)
+			StartApplicationAsync(shellInfo, userCred)
 				.ContinueWith(t =>
 				{
 					if (!t.Result)
@@ -231,21 +243,21 @@ namespace TecWare.PPSn
 		protected override void OnExit(ExitEventArgs e)
 		{
 			base.OnExit(e);
-			CloseApplicationAsync().AwaitTask();
+			CloseApplicationAsync().Await();
 		} // proc OnExit
 
-		private static void ParseArguments(StartupEventArgs e, out PpsEnvironmentInfo environment, out ICredentials userCred)
+		private static void ParseArguments(StartupEventArgs e, out IPpsShellInfo shellInfo, out ICredentials userCred)
 		{
 			var userName = (string)null;
 			var userPass = (string)null;
 
-			environment = null;
+			shellInfo = null;
 			userCred = null;
 
 			if (e.Args.Length == 0)
 				return;
 
-			var environmentsInfos = new Lazy<PpsEnvironmentInfo[]>(PpsEnvironmentInfo.GetLocalEnvironments().ToArray);
+			var localShells = new Lazy<IPpsShellInfo[]>(PpsShell.GetShellInfo().ToArray);
 
 			// first parse arguments for environment or user information
 			foreach (var arg in e.Args)
@@ -262,8 +274,8 @@ namespace TecWare.PPSn
 							userPass = arg.Substring(2);
 							break;
 						case 'a':
-							var environmentname = arg.Substring(2);
-							environment = environmentsInfos.Value.FirstOrDefault(c => String.Compare(c.Name, environmentname, StringComparison.OrdinalIgnoreCase) == 0);
+							var shellName = arg.Substring(2);
+							shellInfo = localShells.Value.FirstOrDefault(c => String.Compare(c.Name, shellName, StringComparison.OrdinalIgnoreCase) == 0);
 							break;
 						case 'l': // enforce load of an remote assembly
 							var path = arg.Substring(2);
@@ -278,9 +290,9 @@ namespace TecWare.PPSn
 			}
 
 			// load user name from environment
-			if (environment != null)
+			if (shellInfo != null)
 			{
-				using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), environment.Name, false))
+				using (var pcl = new PpsClientLogin("ppsn_env:" + shellInfo.Uri.ToString(), shellInfo.Name, false))
 					userCred = pcl.GetCredentials();
 			}
 
@@ -295,22 +307,33 @@ namespace TecWare.PPSn
 				Clipboard.SetText(ex.GetMessageString());
 		} // proc CoreExceptionHandler
 
+		private void LogException(PpsLogType type, string message)
+			=> (shell ?? PpsShell.Global).GetService<IPpsLogger>(false)?.Append(type, message);
+
+		private void LogException(Exception e)
+			=> (shell ?? PpsShell.Global).GetService<IPpsLogger>(false)?.Append(PpsLogType.Exception, e);
+
 		private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
 		{
-			currentEnvironment?.Log.Append(PpsLogType.Exception, e.Exception);
+			LogException(e.Exception);
 			CoreExceptionHandler(e.Exception);
 			e.Handled = true;
 		} // event App_DispatcherUnhandledException
 
 		#endregion
 
-		private void SetEnvironment(PpsEnvironment env)
+		/// <summary>Enumerate all top level windows.</summary>
+		/// <returns></returns>
+		public static IEnumerable<PpsWindow> GetWindows()
 		{
-			currentEnvironment = env;
-			PpsShell.SetShell(env);
-		} // proc SetEnvironment
+			foreach (var c in Current.Windows)
+			{
+				if (c is PpsMainWindow w)
+					yield return w;
+			}
+		} // func GetWindows
 
 		/// <summary>Return the current environemnt</summary>
-		public PpsEnvironment Environment => currentEnvironment;
+		public IPpsShell Shell => shell;
 	} // class App
 }

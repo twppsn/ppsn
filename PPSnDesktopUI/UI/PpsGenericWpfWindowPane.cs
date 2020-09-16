@@ -174,11 +174,11 @@ namespace TecWare.PPSn.UI
 		/// <summary>Create the pane.</summary>
 		/// <param name="paneHost"></param>
 		public PpsGenericWpfWindowPane(IPpsWindowPaneHost paneHost)
-			: base(paneHost.PaneManager.Shell)
+			: base(paneHost.PaneManager._Shell)
 		{
 			PaneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
 			
-			PaneManager.Shell.AddIdleAction(this);
+			PaneManager._Shell.AddIdleAction(this);
 		} // ctor
 
 		/// <summary></summary>
@@ -200,7 +200,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (disposing)
 			{
-				PaneManager.Shell.RemoveIdleAction(this);
+				PaneManager._Shell.RemoveIdleAction(this);
 				CallMemberDirect("Dispose", new object[0], rawGet: true, throwExceptions: false);
 			}
 		} // proc Dispose
@@ -363,7 +363,7 @@ namespace TecWare.PPSn.UI
 		/// <returns><c>null</c>, if the resource was not found.</returns>
 		[LuaMember]
 		private object GetResource(object key, DependencyObject dependencyObject = null)
-			=> PaneManager.Shell.GetResource(key, dependencyObject ?? Control);
+			=> PaneManager._Shell.GetResource(key, dependencyObject ?? Control);
 
 		/// <summary>Load a sub control panel.</summary>
 		/// <param name="self"></param>

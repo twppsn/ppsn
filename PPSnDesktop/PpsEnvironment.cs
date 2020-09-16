@@ -485,7 +485,7 @@ namespace TecWare.PPSn
 	{
 		private readonly App app;
 		private readonly int environmentId;             // unique id of the environment
-		private readonly PpsEnvironmentInfo info;       // source information of the environment
+		private readonly IPpsShellInfo info;       // source information of the environment
 		private readonly ICredentials userInfo;    // currently credentials of the user
 
 		private long userId = -1;
@@ -504,7 +504,7 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		internal PpsEnvironment(PpsEnvironmentInfo info, ICredentials userInfo, App app)
+		internal PpsEnvironment(IPpsShellInfo info, ICredentials userInfo, App app)
 			: base(new Lua(), app.Resources)
 		{
 			this.app = app;
@@ -518,7 +518,7 @@ namespace TecWare.PPSn
 				environmentId = environmentCounter++;
 
 			// create user name
-			var userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
+			var userName = PpsShell.GetUserNameFromCredentials(userInfo);
 			SetMemberValue("UserName", userName);
 
 			actions = new PpsEnvironmentCollection<PpsActionDefinition>(this);
@@ -770,7 +770,7 @@ namespace TecWare.PPSn
 			catch (WebException ex)
 			{
 				if (ex.Status == WebExceptionStatus.ProtocolError) // e.g. file not found
-					await ShowExceptionAsync(ExceptionShowFlags.Background, ex);
+					await ShowExceptionAsync(PpsExceptionShowFlags.Background, ex);
 				else
 					throw;
 			}
@@ -913,7 +913,7 @@ namespace TecWare.PPSn
 			return (IPpsWindowPaneManager)w ?? this;
 		} // func GetDefaultPaneManager
 
-		PpsShellWpf IPpsWindowPaneManager.Shell => this;
+		PpsShellWpf IPpsWindowPaneManager._Shell => this;
 		bool IPpsWindowPaneManager.IsActive => false;
 
 		#endregion
@@ -1110,21 +1110,21 @@ namespace TecWare.PPSn
 
 							// load application info
 							var xInfo = await Request.GetXmlAsync("remote/info.xml", rootName: "ppsn");
-							info.Update(xInfo);
-							if (info.IsModified)
-								info.Save();
+							//info.Update(xInfo);
+							//if (info.IsModified)
+							//	info.Save();
 
-							PpsShellExtensions.UpdateMimeTypesFromInfo(xInfo); // update mime type mappings
+							//PpsShellExtensions.UpdateMimeTypesFromInfo(xInfo); // update mime type mappings
 
 							// new version
-							if (!info.IsApplicationLatest)
-							{
-								// application needs a update
-								state = PpsEnvironmentState.None;
-								if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsUpdate))
-									state = PpsEnvironmentState.Offline; // todo: User message to update client
-							}
-							else
+							//if (!info.IsApplicationLatest)
+							//{
+							//	// application needs a update
+							//	state = PpsEnvironmentState.None;
+							//	if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsUpdate))
+							//		state = PpsEnvironmentState.Offline; // todo: User message to update client
+							//}
+							//else
 							{
 								// try login for the user
 								var xUser = await Request.GetXmlAsync("remote/login.xml", rootName: "user");
@@ -1521,6 +1521,8 @@ namespace TecWare.PPSn
 		public PpsProgressStack BackgroundProgressState => backgroundProgress;
 		[LuaMember(nameof(ForegroundProgressState))]
 		public PpsProgressStack ForegroundProgressState => forgroundProgress;
+
+		public IPpsShell Shell => throw new NotImplementedException();
 
 		// -- Static ----------------------------------------------------------
 

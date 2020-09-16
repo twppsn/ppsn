@@ -28,6 +28,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<sys:String x:Key="PPSnApplicationTitle">PPSn</sys:String>
 
+	<SolidColorBrush x:Key="PPSnWindowActiveBrush" Color="#007ACC" />
 	<SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
 	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
 

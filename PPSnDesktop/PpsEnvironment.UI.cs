@@ -411,7 +411,7 @@ namespace TecWare.PPSn
 		/// <param name="flags"></param>
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
-		public override void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		public void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
 			var exceptionToShow = exception.UnpackException();
 
@@ -419,14 +419,14 @@ namespace TecWare.PPSn
 			Log.Append(PpsLogType.Exception, exception, alternativeMessage ?? exceptionToShow.Message);
 
 			// show the exception if it is not marked as background
-			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background
+			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background
 				&& Application.Current != null)
 			{
 				var dialogOwner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
 				if (ShowExceptionDialog(dialogOwner, flags, exceptionToShow, alternativeMessage)) // should follow a detailed dialog
 					ShowTraceAsync(dialogOwner).AwaitTask();
 
-				if ((flags & ExceptionShowFlags.Shutown) != 0) // close application
+				if ((flags & PpsExceptionShowFlags.Shutown) != 0) // close application
 					Application.Current.Shutdown(1);
 			}
 		} // proc ShowException
@@ -437,7 +437,7 @@ namespace TecWare.PPSn
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
 		/// <returns></returns>
-		public bool ShowExceptionDialog(Window dialogOwner, ExceptionShowFlags flags, Exception exception, string alternativeMessage)
+		public bool ShowExceptionDialog(Window dialogOwner, PpsExceptionShowFlags flags, Exception exception, string alternativeMessage)
 		{
 			switch (exception)
 			{
@@ -446,7 +446,7 @@ namespace TecWare.PPSn
 				case ILuaUserRuntimeException urex:
 					return MsgBox(urex.Message, MessageBoxButton.OK, MessageBoxImage.Information) != MessageBoxResult.OK;
 				default:
-					var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;
+					var shutDown = (flags & PpsExceptionShowFlags.Shutown) != 0;
 
 					if (!shutDown && alternativeMessage != null)
 					{

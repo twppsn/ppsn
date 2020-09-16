@@ -217,7 +217,7 @@ namespace TecWare.PPSn.UI
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsNavigatorDataModel(PpsNavigatorPane pane, PpsUICommandCollection globalCommands, PpsUICommandCollection listCommands, PpsUICommandCollection itemCommands)
-			: base(pane.PaneHost.PaneManager.Shell)
+			: base(pane.PaneHost.PaneManager._Shell)
 		{
 			this.pane = pane ?? throw new ArgumentNullException(nameof(pane));
 
@@ -489,7 +489,7 @@ namespace TecWare.PPSn.UI
 			catch (Exception ex)
 			{
 				e.IsFailed = true;
-				Model.Environment.ShowException(ExceptionShowFlags.None, ex, "Execution failed.\n" + ex.GetBaseException().Message);
+				Model.Environment.ShowException(PpsExceptionShowFlags.None, ex, "Execution failed.\n" + ex.GetBaseException().Message);
 			}
 		} // proc OnExecuteEvent
 

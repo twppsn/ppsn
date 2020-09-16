@@ -28,27 +28,10 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-	#region -- enum ExceptionShowFlags ------------------------------------------------
-
-	/// <summary>Propose of the exception.</summary>
-	[Flags]
-	public enum ExceptionShowFlags
-	{
-		/// <summary>No hint</summary>
-		None = 0,
-		/// <summary>Start the shutdown of the application.</summary>
-		Shutown = 1,
-		/// <summary>Do not show any user message.</summary>
-		Background = 4,
-		/// <summary>Classify the exception as warning</summary>
-		Warning = 8
-	} // enum ExceptionShowFlags
-
-	#endregion
-
 	#region -- struct PpsShellGetList -------------------------------------------------
 
 	/// <summary>Define all parameter of the ppsn viewget command.</summary>
@@ -215,45 +198,8 @@ namespace TecWare.PPSn
 		DEHttpClient Request { get; }
 
 		/// <summary>Get the assigned environment for the request.</summary>
-		PpsShell Shell { get; }
+		_PpsShell Shell { get; }
 	} // interface IPpsRequest
-
-	#endregion
-
-	#region -- enum PpsLogType --------------------------------------------------------
-
-	/// <summary>Log item classification, compatible to <see cref="LogMsgType"/></summary>
-	public enum PpsLogType
-	{
-		/// <summary>This TraceItem is neutral</summary>
-		Information = 0,
-		/// <summary>This TraceItem marks an recoverable error</summary>
-		Warning,
-		/// <summary>This TraceItem marks an event, which may reduce the useability</summary>
-		Fail,
-		/// <summary>This TraceItem is only for internal debugging</summary>
-		Debug,
-		/// <summary>This TraceItem shows an Exception</summary>
-		Exception
-	} // enum PpsTraceItemType
-
-	#endregion
-
-	#region -- interface IPpsLogger ---------------------------------------------------
-
-	/// <summary>Pps Log interface</summary>
-	public interface IPpsLogger
-	{
-		/// <summary>Append a simple message to the log.</summary>
-		/// <param name="type"></param>
-		/// <param name="message"></param>
-		void Append(PpsLogType type, string message);
-		/// <summary>Append a exception to the log.</summary>
-		/// <param name="type"></param>
-		/// <param name="exception"></param>
-		/// <param name="alternativeMessage"></param>
-		void Append(PpsLogType type, Exception exception, string alternativeMessage = null);
-	} // interface IPpsLogger
 
 	#endregion
 
@@ -263,7 +209,7 @@ namespace TecWare.PPSn
 	/// - Implements a basic Lua execution environment
 	/// - Server access model
 	/// - Basic code execution paths</summary>
-	public abstract partial class PpsShell : LuaGlobal, IPpsRequest, IPpsProgressFactory, IServiceProvider, IDisposable
+	public abstract partial class _PpsShell : LuaGlobal, IPpsRequest, IPpsProgressFactory, IServiceProvider, IDisposable
 	{
 		#region -- class PpsDummyProgress ---------------------------------------------
 
@@ -308,7 +254,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Initialize shell.</summary>
 		/// <param name="lua"></param>
-		protected PpsShell(Lua lua)
+		protected _PpsShell(Lua lua)
 			: base(lua)
 		{
 		} // ctor
@@ -433,7 +379,7 @@ namespace TecWare.PPSn
 		/// <param name="alternativeMessage"></param>
 		[LuaMember(nameof(ShowException))]
 		public void ShowException(Exception exception, string alternativeMessage = null)
-			=> ShowException(ExceptionShowFlags.None, exception, alternativeMessage);
+			=> ShowException(PpsExceptionShowFlags.None, exception, alternativeMessage);
 
 		/// <summary>Display the exception dialog in the main ui-thread.</summary>
 		/// <param name="exception"></param>
@@ -441,20 +387,20 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		[LuaMember(nameof(ShowExceptionAsync))]
 		public Task ShowExceptionAsync(Exception exception, string alternativeMessage = null)
-			=> ShowExceptionAsync(ExceptionShowFlags.None, exception, alternativeMessage);
+			=> ShowExceptionAsync(PpsExceptionShowFlags.None, exception, alternativeMessage);
 
 		/// <summary>Notifies a exception in the UI context.</summary>
 		/// <param name="flags"></param>
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
-		public abstract void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
+		public abstract void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
 
 		/// <summary>Notifies a exception in the UI context.</summary>
 		/// <param name="flags"></param>
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
 		/// <returns></returns>
-		public virtual Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		public virtual Task ShowExceptionAsync(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 			=> InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
 
 		/// <summary></summary>
@@ -542,15 +488,15 @@ namespace TecWare.PPSn
 		/// <summary>Returns the default Encoding for the Application.</summary>
 		public abstract Encoding Encoding { get; }
 
-		PpsShell IPpsRequest.Shell => this;
+		_PpsShell IPpsRequest.Shell => this;
 
 		#region -- Current Shell Management -------------------------------------------
 
-		private static PpsShell currentShell = null;
+		private static _PpsShell currentShell = null;
 
 		/// <summary></summary>
 		/// <param name="shell"></param>
-		public static void SetShell(PpsShell shell)
+		public static void SetShell(_PpsShell shell)
 		{
 			if (currentShell != null)
 				throw new ArgumentException();
@@ -561,20 +507,20 @@ namespace TecWare.PPSn
 		/// <summary>Returns the current shell.</summary>
 		/// <param name="shell"></param>
 		/// <returns></returns>
-		public static bool TryGetShell(out PpsShell shell)
+		public static bool TryGetShell(out _PpsShell shell)
 			=> (shell = currentShell) != null;
 
 		/// <summary>Returns the current shell.</summary>
 		/// <returns></returns>
-		public static PpsShell GetShell()
+		public static _PpsShell GetShell()
 			=> TryGetShell(out var shell) ? shell : throw new ArgumentException("For this environment is no shell definied.");
 
 		/// <summary>Returns the current shell.</summary>
-		public static PpsShell Current => TryGetShell(out var shell) ? shell : null;
+		public static _PpsShell Current => TryGetShell(out var shell) ? shell : null;
 
 		#endregion
 
-		static PpsShell()
+		static _PpsShell()
 		{
 			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
@@ -596,7 +542,7 @@ namespace TecWare.PPSn
 	/// <summary>Connects the current table with the shell.</summary>
 	public class LuaShellTable : LuaTable
 	{
-		private readonly PpsShell shell;
+		private readonly _PpsShell shell;
 		private readonly LuaShellTable parentShellTable;
 
 		private readonly Dictionary<string, Action> onPropertyChanged = new Dictionary<string, Action>();
@@ -611,7 +557,7 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		/// <param name="shell"></param>
-		public LuaShellTable(PpsShell shell)
+		public LuaShellTable(_PpsShell shell)
 		{
 			this.shell = shell;
 			this.parentShellTable = null;
@@ -668,7 +614,7 @@ namespace TecWare.PPSn
 		public LuaShellTable Parent => parentShellTable;
 		/// <summary>Access to the current environemnt.</summary>
 		[LuaMember("Environment")]
-		public PpsShell Shell => shell;
+		public _PpsShell Shell => shell;
 	} // class LuaShellTable
 
 	#endregion
@@ -741,7 +687,7 @@ namespace TecWare.PPSn
 					return null;
 				else
 				{
-					await request.Shell.ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile failed for {source}.");
+					await request.Shell.ShowExceptionAsync(PpsExceptionShowFlags.Background, e, $"Compile failed for {source}.");
 					return null;
 				}
 			}
@@ -752,28 +698,14 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="task"></param>
 		/// <param name="shell"></param>
-		public static void SpawnTask(this Task task, PpsShell shell)
+		public static void SpawnTask(this Task task, _PpsShell shell)
 			=> task.ContinueWith(t => shell.ShowException(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
 
 		/// <summary></summary>
-		/// <param name="xInfo"></param>
-		public static void UpdateMimeTypesFromInfo(XElement xInfo)
-		{
-			var x = xInfo.Element("mimeTypes")?.Elements("mimeType");
-			if (x != null)
-			{
-				foreach (var c in x)
-				{
-					var mimeType = c.GetAttribute("id", null);
-					if (mimeType != null)
-					{
-						var isCompressedContent = c.GetAttribute("isCompressedContent", false);
-						var extensions = c.GetAttribute("extensions", null)?.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
-						MimeTypeMapping.Update(mimeType, isCompressedContent, false, extensions);
-					}
-				}
-			}
-		} // proc UpdateMimeTypesFromInfo
+		/// <param name="task"></param>
+		/// <param name="shell"></param>
+		public static void SpawnTask(this Task task, IPpsShell shell)
+			=> task.ContinueWith(t => shell.GetService<IPpsUIService>(true).ShowException(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
 	} // class PpsShellExtensions
 
 	#endregion

@@ -424,7 +424,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception e)
 			{
-				await Environment.ShowExceptionAsync(ExceptionShowFlags.None, e, "Die Ansicht konnte nicht geladen werden.");
+				await Environment.ShowExceptionAsync(PpsExceptionShowFlags.None, e, "Die Ansicht konnte nicht geladen werden.");
 				return null;
 			}
 		} // proc OpenPaneAsync

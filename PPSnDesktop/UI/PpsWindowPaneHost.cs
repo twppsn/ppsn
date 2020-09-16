@@ -23,6 +23,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
@@ -109,8 +110,7 @@ namespace TecWare.PPSn.UI
 				charmBarControl.HelpKey = currentPane.HelpKey;
 			}
 
-			CommandManager.AddExecutedHandler(this, PaneManager.Shell.DefaultExecutedHandler);
-			CommandManager.AddCanExecuteHandler(this, PaneManager.Shell.DefaultCanExecuteHandler);
+			this.AddCommandDefaultHandler(PaneManager.Shell);
 
 			UpdateFocus(false);
 		} // proc OnApplyTemplate
@@ -286,6 +286,8 @@ namespace TecWare.PPSn.UI
 
 			return transformed;
 		} // func Render
+
+		public Task<bool> ClosePaneAsync() => throw new NotImplementedException();
 
 		IPpsProgressFactory IPpsWindowPaneHost.Progress => PaneProgress;
 

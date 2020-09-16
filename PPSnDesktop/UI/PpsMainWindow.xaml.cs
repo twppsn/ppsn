@@ -75,25 +75,25 @@ namespace TecWare.PPSn.UI
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 
 			#region -- set basic command bindings --
-			this.AddCommandBinding(Environment, TraceLogCommand,
+			this.AddCommandBinding(Shell, TraceLogCommand,
 				new PpsAsyncCommand(
 					ctx => OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewPane)
 				)
 			);
 
-			this.AddCommandBinding(Environment, NextPaneCommand,
+			this.AddCommandBinding(Shell, NextPaneCommand,
 				new PpsCommand(
 					ctx => ActivateNextPane(true, false),
 					ctx => paneHosts.IndexOf(CurrentPaneHost) < PaneHosts.Count - 1
 				)
 			);
-			this.AddCommandBinding(Environment, PrevPaneCommand,
+			this.AddCommandBinding(Shell, PrevPaneCommand,
 				new PpsCommand(
 					ctx => ActivateNextPane(false, false),
 					ctx => paneHosts.IndexOf(CurrentPaneHost) > 0
 				)
 			);
-			this.AddCommandBinding(Environment, GoToPaneCommand,
+			this.AddCommandBinding(Shell, GoToPaneCommand,
 				new PpsCommand(
 					ctx =>
 					{
@@ -105,14 +105,14 @@ namespace TecWare.PPSn.UI
 			);
 
 
-			this.AddCommandBinding(Environment, UndockPaneCommand,
+			this.AddCommandBinding(Shell, UndockPaneCommand,
 				new PpsCommand(
 					ctx => UndockWindowPane(GetPaneFromParameter(ctx.Parameter)),
 					ctx => !(GetPaneFromParameter(ctx.Parameter)?.IsFixed ?? true)
 				)
 			);
 
-			this.AddCommandBinding(Environment, ClosePaneCommand,
+			this.AddCommandBinding(Shell, ClosePaneCommand,
 				new PpsAsyncCommand(
 					ctx => UnloadPaneHostAsync(GetPaneFromParameter(ctx.Parameter), null),
 					ctx => CanUnloadPane(GetPaneFromParameter(ctx.Parameter))
@@ -230,7 +230,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Index of the current window</summary>
 		public int WindowIndex => windowIndex;
 		/// <summary>Access to the current environment,</summary>
-		public PpsEnvironment Environment => (PpsEnvironment)Shell;
+		public PpsEnvironment Environment => (PpsEnvironment)_Shell;
 
 		public bool IsPaneVisible
 		{

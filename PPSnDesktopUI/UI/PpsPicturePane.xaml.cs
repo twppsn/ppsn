@@ -130,7 +130,7 @@ namespace TecWare.PPSn.UI
 
 			DataContext = this;
 
-			this.AddCommandBinding(Shell, ApplicationCommands.New,
+			this.AddCommandBinding(paneHost.PaneManager.Shell, ApplicationCommands.New,
 				new PpsCommand(
 					ctx =>
 					{
@@ -291,9 +291,8 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Return current image object data.</summary>
 		protected override IPpsDataInfo CurrentData => currentPictureInfo;
-		/// <summary></summary>
-		public new PpsShellWpf Shell => PaneHost.PaneManager.Shell;
-
+		/// <summary>Access the shell</summary>
+		public IPpsShell Shell => PaneHost.PaneManager.Shell;
 
 
 

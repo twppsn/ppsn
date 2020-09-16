@@ -218,206 +218,6 @@ namespace TecWare.PPSn
 		public static readonly XName xnCondition = "condition";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its 
-		/// parents on the logical tree.</summary>
-		/// <typeparam name="T">Type of the service.</typeparam>
-		/// <param name="current">Current object in the logical tree.</param>
-		/// <param name="throwException"><c>true</c>, to throw an not found exception.</param>
-		/// <returns>The service of the default value.</returns>
-		public static T GetControlService<T>(this DependencyObject current, bool throwException = false)
-			=> (T)GetControlService(current, typeof(T), throwException);
-
-		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its
-		/// parents in the logical tree.</summary>
-		/// <param name="current">Current object in the logical tree.</param>
-		/// <param name="serviceType">Type of the service.</param>
-		/// <param name="useVisualTree"></param>
-		/// <returns>The service of the default value.</returns>
-		public static object GetControlService(this DependencyObject current, Type serviceType, bool useVisualTree = false)
-		{
-			object r = null;
-
-			if (current == null)
-				return null;
-			else if (current is IServiceProvider sp)
-				r = sp.GetService(serviceType);
-			else if (serviceType.IsAssignableFrom(current.GetType()))
-				r = current;
-
-			if (r != null)
-				return r;
-
-			return GetControlService(
-				useVisualTree
-					? GetVisualParent(current)
-					: GetLogicalParent(current), serviceType, useVisualTree
-			);
-		} // func GetControlService
-
-		/// <summary></summary>
-		/// <param name="current"></param>
-		/// <returns></returns>
-		public static string GetName(this DependencyObject current)
-		{
-			switch (current)
-			{
-				case FrameworkElement fe:
-					return fe.Name;
-				case FrameworkContentElement fce:
-					return fce.Name;
-				default:
-					return null;
-			}
-		} // func GetName
-
-		/// <summary></summary>
-		/// <param name="current"></param>
-		/// <param name="name"></param>
-		/// <param name="comparison"></param>
-		/// <returns></returns>
-		public static int CompareName(this DependencyObject current, string name, StringComparison comparison = StringComparison.Ordinal)
-			=> String.Compare(GetName(current), name, comparison);
-
-		/// <summary>Get the logical parent or the template parent.</summary>
-		/// <param name="current"></param>
-		/// <returns></returns>
-		public static DependencyObject GetLogicalParent(this DependencyObject current)
-		{
-			switch (current)
-			{
-				case FrameworkContentElement fce:
-					return fce.Parent ?? fce.TemplatedParent;
-				case FrameworkElement fe:
-					return fe.Parent ?? fe.TemplatedParent;
-				default:
-					return null;
-			}
-		} // func GetLogicalParent
-
-		/// <summary></summary>
-		/// <param name="current"></param>
-		/// <param name="typeOfParent"></param>
-		/// <returns></returns>
-		public static DependencyObject GetLogicalParent(this DependencyObject current, Type typeOfParent)
-		{
-			if (current == null)
-				return null;
-			else if (typeOfParent == null)
-				return GetLogicalParent(current);
-			else if (typeOfParent.IsAssignableFrom(current.GetType()))
-				return current;
-			else
-				return GetLogicalParent(GetLogicalParent(current), typeOfParent);
-		} // func GetVisualParent
-
-		/// <summary></summary>
-		/// <param name="current"></param>
-		/// <param name="name"></param>
-		/// <returns></returns>
-		public static DependencyObject GetLogicalParent(this DependencyObject current, string name)
-		{
-			if (current == null || name == null)
-				return null;
-			else if (CompareName(current, name) == 0)
-				return current;
-			else
-				return GetLogicalParent(GetLogicalParent(current), name);
-		} // func GetVisualParent
-
-		/// <summary>Get the logical parent or the template parent.</summary>
-		/// <param name="current"></param>
-		/// <returns></returns>
-		public static T GetLogicalParent<T>(this DependencyObject current)
-			where T : DependencyObject
-		{
-			var parent = GetLogicalParent(current);
-			return parent is T r
-				? r
-				: GetLogicalParent<T>(parent);
-		} // func GetLogicalParent
-
-		/// <summary></summary>
-		/// <param name="current"></param>
-		/// <returns></returns>
-		public static DependencyObject GetVisualParent(this DependencyObject current)
-			=> current is Visual || current is Visual3D ? VisualTreeHelper.GetParent(current) : null;
-
-		/// <summary></summary>
-		/// <param name="current"></param>
-		/// <param name="typeOfParent"></param>
-		/// <returns></returns>
-		public static DependencyObject GetVisualParent(this DependencyObject current, Type typeOfParent)
-		{
-			if (current == null)
-				return null;
-			else if (typeOfParent == null)
-				return GetVisualParent(current);
-			else if (typeOfParent.IsAssignableFrom(current.GetType()))
-				return current;
-			else
-			{
-				var parent = GetVisualParent(current);
-				if (parent == null && current.GetType().Name == "PopupRoot")
-					parent = GetLogicalParent(current);
-				return GetVisualParent(parent, typeOfParent);
-			}
-		} // func GetVisualParent
-
-		/// <summary></summary>
-		/// <param name="current"></param>
-		/// <param name="name"></param>
-		/// <returns></returns>
-		public static DependencyObject GetVisualParent(this DependencyObject current, string name)
-		{
-			if (current == null || name == null)
-				return null;
-			else if (CompareName(current, name) == 0)
-				return current;
-			else
-			{
-				var parent = GetVisualParent(current);
-				if (parent == null && current.GetType().Name == "PopupRoot")
-					parent = GetLogicalParent(current);
-				return GetVisualParent(parent, name);
-			}
-		} // func GetVisualParent
-
-		/// <summary></summary>
-		/// <param name="current"></param>
-		/// <typeparam name="T"></typeparam>
-		/// <returns></returns>
-		public static T GetVisualParent<T>(this DependencyObject current)
-			where T : DependencyObject
-		{
-			var parent = GetVisualParent(current);
-			return parent is T r
-				? r
-				: GetVisualParent<T>(parent);
-		} // func GetVisualParent
-
-		/// <summary>Find a child in the Visual tree.</summary>
-		/// <typeparam name="T">Type of the child</typeparam>
-		/// <param name="current">Current visual element.</param>
-		/// <returns>Child or <c>null</c>.</returns>
-		public static T GetVisualChild<T>(this DependencyObject current)
-			where T : DependencyObject
-		{
-			var c = VisualTreeHelper.GetChildrenCount(current);
-			for (var i = 0; i < c; i++)
-			{
-				var v = VisualTreeHelper.GetChild(current, i);
-				if (v is T child)
-					return child;
-				else
-				{
-					child = GetVisualChild<T>(v);
-					if (child != null)
-						return child;
-				}
-			}
-			return default(T);
-		} // func GetVisualChild
-
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="value"></param>
@@ -451,47 +251,6 @@ namespace TecWare.PPSn
 			}
 		} // func ChangeTypeWithConverter
 
-		private static StringBuilder GetDependencyObjectTree(StringBuilder sb, string prefix, DependencyObject current, Func<DependencyObject, DependencyObject> next)
-		{
-			while(current != null)
-			{
-				sb.AppendFormat("{0}{1}: {2}", prefix, current.GetType().Name, current.GetName() ?? "<null>").AppendLine();
-				current = next(current);
-			}
-			return sb;
-		} // func GetDependencyObjectTree
-
-		internal static void PrintVisualTreeToConsole(DependencyObject current)
-			=> Debug.Print(GetDependencyObjectTree(new StringBuilder("Visual Tree:").AppendLine(), "V ", current, GetVisualParent).ToString());
-
-		internal static void PrintLogicalTreeToConsole(DependencyObject current)
-			=> Debug.Print(GetDependencyObjectTree(new StringBuilder("Logical Tree:").AppendLine(), "L ", current, GetLogicalParent).ToString());
-
-		private static DependencyObject InvokeGetUIParent<T>(DependencyObject current)
-			where T : class
-		{
-			var mi = typeof(T).GetMethod("GetUIParentCore", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null, Array.Empty<Type>(), null);
-			return (DependencyObject)mi.Invoke(current, Array.Empty<object>());
-		} // proc InvokeGetUIParent
-
-		private static DependencyObject GetUIParent(DependencyObject current)
-		{
-			switch (current)
-			{
-				case UIElement ui:
-					return InvokeGetUIParent<UIElement>(current);
-				case UIElement3D ui3d:
-					return InvokeGetUIParent<UIElement3D>(current);
-				case ContentElement c:;
-					return InvokeGetUIParent<ContentElement>(current);
-				default:
-					return null;
-			}
-		} // func GetUIParent
-
-		internal static void PrintEventTreeToConsole(DependencyObject current)
-				=> Debug.Print(GetDependencyObjectTree(new StringBuilder("UI Tree:").AppendLine(), "U ", current, GetUIParent).ToString());
-
 		#region -- Commands -----------------------------------------------------------
 
 		/// <summary></summary>
@@ -499,7 +258,7 @@ namespace TecWare.PPSn
 		/// <param name="shell"></param>
 		/// <param name="target"></param>
 		/// <param name="command"></param>
-		public static void AddCommandBinding(this UIElement ui, PpsShellWpf shell, object target, PpsCommandBase command)
+		public static void AddCommandBinding(this UIElement ui, IPpsShell shell, object target, PpsCommandBase command)
 			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, target, command));
 
 		/// <summary></summary>
@@ -507,7 +266,7 @@ namespace TecWare.PPSn
 		/// <param name="shell"></param>
 		/// <param name="command"></param>
 		/// <param name="commandImpl"></param>
-		public static void AddCommandBinding(this UIElement ui, PpsShellWpf shell, RoutedCommand command, PpsCommandBase commandImpl)
+		public static void AddCommandBinding(this UIElement ui, IPpsShell shell, RoutedCommand command, PpsCommandBase commandImpl)
 			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, command, commandImpl));
 
 		/// <summary>Executes a command</summary>
