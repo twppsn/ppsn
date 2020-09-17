@@ -115,6 +115,7 @@
     <Compile Include="Data\PpsDataSetDesktop.cs" />
     <Compile Include="Data\PpsTraceLog.cs" />
     <Compile Include="Data\SQLiteExtensions.cs" />
+    <Compile Include="Main\PpsMainWindowService.cs" />
     <Compile Include="PpsEnvironment.Data.cs" />
     <Compile Include="PpsEnvironment.Http.cs" />
     <Compile Include="PpsEnvironment.Lua.cs" />
@@ -133,8 +134,8 @@
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsHelpPagePane.cs" />
     <Compile Include="UI\PpsHelpPageViewer.cs" />
-    <Compile Include="UI\PpsMainWindow.Panes.cs" />
-    <Compile Include="UI\PpsMainWindow.xaml.cs">
+    <Compile Include="Main\PpsMainWindow.Panes.cs" />
+    <Compile Include="Main\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsMarkdownPane.xaml.cs">
@@ -145,7 +146,7 @@
     </Compile>
     <Compile Include="UI\PpsObjectLinkEditor.cs" />
     <Compile Include="UI\PpsPaneHost.cs" />
-    <Compile Include="UI\PpsSingleWindow.xaml.cs">
+    <Compile Include="Main\PpsSingleWindow.xaml.cs">
       <DependentUpon>PpsSingleWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsSplashWindow.xaml.cs">
@@ -158,8 +159,8 @@
       <DependentUpon>PpsTracePane.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsWindowPaneCharmBarControl.cs" />
-    <Compile Include="UI\PpsWindowPaneHost.cs" />
-    <Compile Include="UI\PpsWindowPaneStrip.cs" />
+    <Compile Include="Main\PpsWindowPaneHost.cs" />
+    <Compile Include="Main\PpsWindowPaneStrip.cs" />
     <EmbeddedResource Include="Properties\Resources.en.resx">
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
@@ -203,9 +204,7 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Main\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">
       <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
@@ -241,7 +240,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="UI\PpsMainWindow.xaml">
+    <Page Include="Main\PpsMainWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
     </Page>
@@ -253,7 +252,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="UI\PpsSingleWindow.xaml">
+    <Page Include="Main\PpsSingleWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
     </Page>

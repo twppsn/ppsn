@@ -1,8 +1,9 @@
-﻿<ui:PpsWindow x:Class="TecWare.PPSn.UI.PpsSingleWindow"
+﻿<ui:PpsWindow x:Class="TecWare.PPSn.Main.PpsSingleWindow"
+			  x:ClassModifier="internal"
 			  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			  xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
-			  xmlns:ui="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+			  xmlns:uiL="clr-namespace:TecWare.PPSn.Main"
+			  xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
 			  Title="{Binding Title}" Height="700" Width="700"
 			  Background="{StaticResource PPSnWindowBackgroundBrush}">
 	<ui:PpsWindow.CommandBindings>

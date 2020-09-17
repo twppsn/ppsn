@@ -25,8 +25,9 @@ using System.Windows.Threading;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.UI;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn.Main
 {
 	#region -- enum PpsPaneHostState --------------------------------------------------
 

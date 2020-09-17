@@ -402,34 +402,34 @@ namespace TecWare.PPSn
 
 		#region -- UI - Helper --------------------------------------------------------
 
-		/// <summary>Show Trace as window.</summary>
-		/// <param name="owner"></param>
-		public Task ShowTraceAsync(Window owner)
-			=> OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewSingleDialog, new LuaTable() { ["DialogOwner"] = owner });
+		///// <summary>Show Trace as window.</summary>
+		///// <param name="owner"></param>
+		//public Task ShowTraceAsync(Window owner)
+		//	=> OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewSingleDialog, new LuaTable() { ["DialogOwner"] = owner });
 
-		/// <summary>Display the exception dialog.</summary>
-		/// <param name="flags"></param>
-		/// <param name="exception"></param>
-		/// <param name="alternativeMessage"></param>
-		public void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-		{
-			var exceptionToShow = exception.UnpackException();
+		///// <summary>Display the exception dialog.</summary>
+		///// <param name="flags"></param>
+		///// <param name="exception"></param>
+		///// <param name="alternativeMessage"></param>
+		//public void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+		//{
+		//	var exceptionToShow = exception.UnpackException();
 
-			// always add the exception to the list
-			Log.Append(PpsLogType.Exception, exception, alternativeMessage ?? exceptionToShow.Message);
+		//	// always add the exception to the list
+		//	Log.Append(PpsLogType.Exception, exception, alternativeMessage ?? exceptionToShow.Message);
 
-			// show the exception if it is not marked as background
-			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background
-				&& Application.Current != null)
-			{
-				var dialogOwner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-				if (ShowExceptionDialog(dialogOwner, flags, exceptionToShow, alternativeMessage)) // should follow a detailed dialog
-					ShowTraceAsync(dialogOwner).AwaitTask();
+		//	// show the exception if it is not marked as background
+		//	if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background
+		//		&& Application.Current != null)
+		//	{
+		//		var dialogOwner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+		//		if (ShowExceptionDialog(dialogOwner, flags, exceptionToShow, alternativeMessage)) // should follow a detailed dialog
+		//			ShowTraceAsync(dialogOwner).AwaitTask();
 
-				if ((flags & PpsExceptionShowFlags.Shutown) != 0) // close application
-					Application.Current.Shutdown(1);
-			}
-		} // proc ShowException
+		//		if ((flags & PpsExceptionShowFlags.Shutown) != 0) // close application
+		//			Application.Current.Shutdown(1);
+		//	}
+		//} // proc ShowException
 
 		/// <summary>Display the exception dialog.</summary>
 		/// <param name="dialogOwner"></param>

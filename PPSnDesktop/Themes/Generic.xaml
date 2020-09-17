@@ -3,6 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
 	xmlns:bde="clr-namespace:TecWare.PPSn.Bde"
+	xmlns:main="clr-namespace:TecWare.PPSn.Main"
     xmlns:uic="clr-namespace:TecWare.PPSn.UI"
 	xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
@@ -19,14 +20,14 @@
 		</Setter>
 	</Style>
 
-	<Style TargetType="uic:PpsWindowPaneHost">
+	<Style TargetType="main:PpsWindowPaneHost">
 		<!--<Setter Property="FocusManager.IsFocusScope" Value="True" />-->
 		<!--<Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />-->
 
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="uic:PpsWindowPaneHost">
+				<ControlTemplate TargetType="main:PpsWindowPaneHost">
 					<Grid>
 						<Grid>
 							<Grid.ColumnDefinitions>
@@ -242,19 +243,19 @@
 
 	<SolidColorBrush x:Key="PaneItemSeparatorBrush" Color="{DynamicResource PPSnAccentColor}" Opacity=".15" />
 
-	<Style TargetType="uic:PpsWindowPaneStrip">
+	<Style TargetType="main:PpsWindowPaneStrip">
 		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
-					<uic:PpsWindowPaneStripPanel />
+					<main:PpsWindowPaneStripPanel />
 				</ItemsPanelTemplate>
 			</Setter.Value>
 		</Setter>
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type uic:PpsWindowPaneStrip}">
+				<ControlTemplate TargetType="{x:Type main:PpsWindowPaneStrip}">
 					<Grid Background="{DynamicResource PPSnWindowHeaderBrush}">
 						<Grid.RowDefinitions>
 							<RowDefinition />
@@ -366,8 +367,8 @@
 							</Popup.Resources>
 							<ListBox ItemsSource="{Binding PaneHosts}" Background="{DynamicResource PPSnControlBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}">
 								<ListBox.ItemTemplate>
-									<DataTemplate DataType="{x:Type uic:PpsWindowPaneHost}">
-										<Button Command="{x:Static uic:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}" TextBlock.FontSize="14">
+									<DataTemplate DataType="{x:Type main:PpsWindowPaneHost}">
+										<Button Command="{x:Static main:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}" TextBlock.FontSize="14">
 											<Button.Content>
 												<TextBlock Foreground="{DynamicResource PPSnWindowForegroundBrush}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxWidth="300">
 													<Run Text="{Binding Title, Mode=OneWay,Converter={x:Static ui:PpsConverter.MultiToSingleLine}}"/>
@@ -421,7 +422,7 @@
 														<ContentPresenter x:Name="content" />
 														<ui:PpsButton x:Name="closeButton"
 																	   Grid.Column="1"
-																	   Command="{x:Static ui:PpsMainWindow.ClosePaneCommand}"
+																	   Command="{x:Static main:PpsMainWindow.ClosePaneCommand}"
 																	   CommandParameter="{TemplateBinding Content}"
 																	   Visibility="Hidden"
 																	   Foreground="{DynamicResource PPSnWindowForegroundBrush}"
@@ -468,11 +469,11 @@
 		</Setter>
 	</Style>
 	
-	<Style TargetType="uic:PpsWindowPaneStripItem">
+	<Style TargetType="main:PpsWindowPaneStripItem">
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type uic:PpsWindowPaneStripItem}">
+				<ControlTemplate TargetType="{x:Type main:PpsWindowPaneStripItem}">
 					<Border x:Name="itemBorder" BorderBrush="{StaticResource PaneItemSeparatorBrush}" BorderThickness="0,0,1,0" Margin="0,0,0,-1">
 						<Grid Background="Transparent" TextBlock.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
 							<Grid.ColumnDefinitions>
@@ -483,7 +484,7 @@
 							<TextBlock x:Name="dirtyText" Text="*" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Hidden" />
 							<ui:PpsButton x:Name="closeButton"
 										   Grid.Column="1"
-										   Command="{x:Static ui:PpsMainWindow.ClosePaneCommand}"
+										   Command="{x:Static main:PpsMainWindow.ClosePaneCommand}"
 										   CommandParameter="{TemplateBinding Content}"
 										   Width="32"
 										   Visibility="Hidden"

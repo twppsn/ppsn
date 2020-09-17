@@ -73,8 +73,8 @@ namespace TecWare.PPSn.Controls
 		{
 			serviceContainer = new ServiceContainer(service ?? throw new ArgumentNullException(nameof(service)));
 			shell = serviceContainer.GetService<IPpsShell>(true);
-
-			this.RegisterShell(shell);
+			if (shell != null)
+				this.RegisterShell(shell);
 
 			InitChrome();
 

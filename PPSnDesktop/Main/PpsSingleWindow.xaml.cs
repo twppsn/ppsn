@@ -20,24 +20,23 @@ using System.Windows;
 using System.Windows.Input;
 using Neo.IronLua;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.UI;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn.Main
 {
 	/// <summary>Single Window to show one pane.</summary>
-	public partial class PpsSingleWindow : PpsWindow, IPpsWindowPaneManager
+	internal partial class PpsSingleWindow : PpsWindow, IPpsWindowPaneManager
 	{
 		private readonly static DependencyPropertyKey isDialogModePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsDialogMode), typeof(bool), typeof(PpsSingleWindow), new FrameworkPropertyMetadata(false));
 		/// <summary>Dialog mode of the window.</summary>
 		public readonly static DependencyProperty IsDialogModeProperty = isDialogModePropertyKey.DependencyProperty;
 
-		private readonly PpsEnvironment environment;
-		
 		/// <summary></summary>
-		/// <param name="environment"></param>
+		/// <param name="shell"></param>
 		/// <param name="dialogMode"></param>
-		public PpsSingleWindow(PpsEnvironment environment, bool dialogMode)
+		public PpsSingleWindow(IPpsShell shell, bool dialogMode)
+			: base(shell)
 		{
-			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
 			this.IsDialogMode = dialogMode;
 
 			InitializeComponent();
@@ -75,7 +74,7 @@ namespace TecWare.PPSn.UI
 			=> CurrentPane != null && CurrentPane.EqualPane(paneType, arguments) ? CurrentPane : null;
 
 		bool IPpsWindowPaneManager.ActivatePane(IPpsWindowPane pane)
-			=> pane == CurrentPane ? Activate() : false;
+			=> pane == CurrentPane && Activate();
 
 		IPpsWindowPane IPpsWindowPaneManager.FindOpenPane(Type paneType, LuaTable arguments)
 			=> FindOpenPane(paneType, arguments);
@@ -98,9 +97,9 @@ namespace TecWare.PPSn.UI
 							: Task.FromResult(pane);
 					}
 				case PpsOpenPaneMode.NewPane:
-					return environment.OpenPaneAsync(paneType, PpsOpenPaneMode.NewSingleWindow, arguments);
+					return this.GetControlService<IPpsMainWindowService>(true).OpenPaneAsync(paneType, PpsOpenPaneMode.NewSingleWindow, arguments);
 				default:
-					return environment.OpenPaneAsync(paneType, newPaneMode, arguments);
+					return this.GetControlService<IPpsMainWindowService>(true).OpenPaneAsync(paneType, newPaneMode, arguments);
 			}
 		} // func OpenPaneAsync
 

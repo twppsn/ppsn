@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -99,11 +100,17 @@ namespace TecWare.PPSn.UI
 
 	public static class PpsUI
 	{
-		public static void ShowException(this IPpsUIService ui, Exception exception)
-			=> ui.ShowException(PpsExceptionShowFlags.None, exception);
+		public static void ShowException(this IPpsUIService ui, Exception exception, string alternativeMessage = null)
+			=> ui.ShowException(PpsExceptionShowFlags.None, exception, alternativeMessage);
 
-		public static Task ShowExceptionAsync(this IPpsUIService ui, bool background, Exception exception)
-			=> ui.RunUI(() => ui.ShowException(background ? PpsExceptionShowFlags.Background : PpsExceptionShowFlags.None, exception));
+		public static void ShowException(this IServiceProvider sp, Exception exception, string alternativeMessage = null)
+			=> ShowException(sp.GetService<IPpsUIService>(true), exception, alternativeMessage);
+
+		public static Task ShowExceptionAsync(this IPpsUIService ui, bool background, Exception exception, string alternativeMessage = null)
+			=> ui.RunUI(() => ui.ShowException(background ? PpsExceptionShowFlags.Background : PpsExceptionShowFlags.None, exception, alternativeMessage));
+
+		public static Task ShowExceptionAsync(this IServiceProvider sp, bool background, Exception exception, string alternativeMessage = null)
+			=> ShowExceptionAsync(sp.GetService<IPpsUIService>(true), background, exception, alternativeMessage);
 	} // class PpsUI
 
 	#endregion

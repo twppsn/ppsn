@@ -123,8 +123,8 @@ namespace TecWare.PPSn.UI
 				}
 			}
 
-			if (helpObj != null)
-				await helpObj.OpenPaneAsync(environment.GetDefaultPaneManager(), PpsOpenPaneMode.NewPane, new LuaTable { ["Object"] = helpObj });
+			//if (helpObj != null)
+			//	await helpObj.OpenPaneAsync(environment.GetDefaultPaneManager(), PpsOpenPaneMode.NewPane, new LuaTable { ["Object"] = helpObj });
 		} // proc EditHelpPageAsync
 
 		private async Task RefreshHelpPageAsync()

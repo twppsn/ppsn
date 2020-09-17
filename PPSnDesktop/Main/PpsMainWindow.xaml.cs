@@ -23,19 +23,20 @@ using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.UI;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn.Main
 {
 	/// <summary></summary>
-	public partial class PpsMainWindow : PpsWindow
+	internal partial class PpsMainWindow : PpsWindow, IPpsMainWindow
 	{
 		/// <summary>Move to next pane.</summary>
 		public readonly static RoutedCommand NextPaneCommand = new RoutedUICommand("Nächstes", "NextPane", typeof(PpsMainWindow),
-				new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.Right, ModifierKeys.Control | ModifierKeys.Alt) })
+			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.Right, ModifierKeys.Control | ModifierKeys.Alt) })
 		);
 		/// <summary>Move to previous pane.</summary>
 		public readonly static RoutedCommand PrevPaneCommand = new RoutedUICommand("Vorheriges", "PrevPane", typeof(PpsMainWindow),
-				new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.Left, ModifierKeys.Control | ModifierKeys.Alt) })
+			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.Left, ModifierKeys.Control | ModifierKeys.Alt) })
 		);
 		/// <summary>Go to a secific pane.</summary>
 		public readonly static RoutedCommand GoToPaneCommand = new RoutedUICommand("Gehe zu", "GoToPane", typeof(PpsMainWindow));
@@ -51,18 +52,21 @@ namespace TecWare.PPSn.UI
 		/// <summary>Is the a pane visible</summary>
 		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
 		
-		private int windowIndex = -1;                                       // settings key
-		private PpsWindowApplicationSettings settings;                      // current settings for the window
+		private readonly int windowIndex = -1;                                       // settings key
+		private readonly PpsWindowApplicationSettings settings;                      // current settings for the window
 
 		private Task<bool> unloadTask = null;
 
 		#region -- Ctor/Dtor -------------------------------------------------------------
 
 		/// <summary></summary>
+		/// <param name="shell"></param>
 		/// <param name="windowIndex"></param>
-		public PpsMainWindow(int windowIndex)
+		public PpsMainWindow(IPpsShell shell, int windowIndex)
+			: base(shell)
 		{
 			this.windowIndex = windowIndex;
+			this.mainWindowService = shell.GetService<IPpsMainWindowService>(true);
 
 			InitializeComponent();
 
@@ -123,8 +127,8 @@ namespace TecWare.PPSn.UI
 
 			DataContext = this;
 
-			// start navigator pane
-			OpenPaneAsync(typeof(PpsNavigatorPane), PpsOpenPaneMode.NewPane).SpawnTask(Environment);
+			//// start navigator pane
+			//OpenPaneAsync(typeof(PpsNavigatorPane), PpsOpenPaneMode.NewPane).SpawnTask(Environment);
 
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 		} // ctor
@@ -229,8 +233,6 @@ namespace TecWare.PPSn.UI
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>
 		public int WindowIndex => windowIndex;
-		/// <summary>Access to the current environment,</summary>
-		public PpsEnvironment Environment => (PpsEnvironment)_Shell;
 
 		public bool IsPaneVisible
 		{

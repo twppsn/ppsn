@@ -3602,8 +3602,8 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public Task<IPpsWindowPane> OpenPaneAsync(IPpsWindowPaneManager paneManager = null, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null)
 		{
-			if (paneManager == null)
-				paneManager = environment.GetDefaultPaneManager(); // use default pane manager
+			//if (paneManager == null)
+			//	paneManager = environment.GetDefaultPaneManager(); // use default pane manager
 
 			// get pane type for the new pane
 			var paneType = GetPaneTypeFromObject();

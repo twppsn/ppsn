@@ -26,6 +26,7 @@ using Neo.IronLua;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Main;
 
 namespace TecWare.PPSn.UI
 {
@@ -401,7 +402,7 @@ namespace TecWare.PPSn.UI
 		public PpsEnvironment Environment => (PpsEnvironment)base.Shell;
 		/// <summary>Access parent-window</summary>
 		[LuaMember]
-		public PpsMainWindow Window => (PpsMainWindow)pane.PaneHost.PaneManager;
+		internal PpsMainWindow Window => (PpsMainWindow)pane.PaneHost.PaneManager;
 		/// <summary>Selected item</summary>
 		[LuaMember]
 		public object CurrentItem

@@ -32,6 +32,7 @@ using TecWare.DE.Stuff;
 using TecWare.PPSn.Bde;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
 using TecWare.PPSn.UI;
 
@@ -87,7 +88,7 @@ namespace TecWare.PPSn
 			// show a login/splash
 			var splashWindow =  new PpsSplashWindow()
 			{
-				Owner = GetWindows().FirstOrDefault(),
+				Owner = Current.Windows.OfType<PpsMainWindow>().FirstOrDefault(),
 				StatusText = PPSn.Properties.Resources.AppStartApplicationAsyncInitApp
 			};
 			splashWindow.Show();
@@ -321,17 +322,6 @@ namespace TecWare.PPSn
 		} // event App_DispatcherUnhandledException
 
 		#endregion
-
-		/// <summary>Enumerate all top level windows.</summary>
-		/// <returns></returns>
-		public static IEnumerable<PpsWindow> GetWindows()
-		{
-			foreach (var c in Current.Windows)
-			{
-				if (c is PpsMainWindow w)
-					yield return w;
-			}
-		} // func GetWindows
 
 		/// <summary>Return the current environemnt</summary>
 		public IPpsShell Shell => shell;

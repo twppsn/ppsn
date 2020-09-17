@@ -20,9 +20,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn.Main
 {
 	#region -- class PpsWindowPaneStripItemMoveArgs -----------------------------------
 
@@ -219,7 +218,7 @@ namespace TecWare.PPSn.UI
 
 		static PpsWindowPaneStrip()
 		{
-			ItemMoveEvent = EventManager.RegisterRoutedEvent("", RoutingStrategy.Bubble, typeof(PpsWindowPaneStripItemMoveEventEventHandler), typeof(PpsWindowPaneStripItem));
+			ItemMoveEvent = EventManager.RegisterRoutedEvent(String.Empty, RoutingStrategy.Bubble, typeof(PpsWindowPaneStripItemMoveEventEventHandler), typeof(PpsWindowPaneStripItem));
 
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsWindowPaneStrip), new FrameworkPropertyMetadata(typeof(PpsWindowPaneStrip)));
 		} // ctor

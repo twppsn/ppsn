@@ -27,8 +27,9 @@ using System.Windows.Data;
 using System.Windows.Input;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn.Main
 {
 	#region -- class PpsPaneCollection ------------------------------------------------
 
@@ -185,7 +186,7 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsMainWindow ----------------------------------------------------
 
 	/// <summary></summary>
-	public partial class PpsMainWindow : IPpsWindowPaneManager
+	internal partial class PpsMainWindow : IPpsWindowPaneManager
 	{
 		#region -- class RenderHostPaneConverter --------------------------------------
 
@@ -211,6 +212,7 @@ namespace TecWare.PPSn.UI
 		internal readonly static DependencyProperty SelectionOrderProperty = selectionOrderPropertyKey.DependencyProperty;
 #pragma warning restore IDE1006 // Naming Styles
 
+		private readonly IPpsMainWindowService mainWindowService;
 		private readonly PpsPaneCollection paneHosts = new PpsPaneCollection();
 
 		#region -- Pane Manager  ------------------------------------------------------
@@ -228,7 +230,7 @@ namespace TecWare.PPSn.UI
 			if (pane.PaneHost.PaneManager == this)
 				return ActivatePaneHost(FindPaneHost(pane, true));
 			else
-				return Environment.ActivatePane(pane);
+				return mainWindowService.ActivatePane(pane);
 		} // func ActivatePane
 
 		private bool ActivatePaneHost(PpsWindowPaneHost paneHost)
@@ -403,7 +405,7 @@ namespace TecWare.PPSn.UI
 				{
 					case PpsOpenPaneMode.NewMainWindow:
 					case PpsOpenPaneMode.NewSingleWindow:
-						return await Environment.OpenPaneAsync(paneType, newPaneMode, arguments);
+						return await mainWindowService.OpenPaneAsync(paneType, newPaneMode, arguments);
 					case PpsOpenPaneMode.ReplacePane:
 
 						// replace pane => will close all panes an open an new one
@@ -424,7 +426,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception e)
 			{
-				await Environment.ShowExceptionAsync(PpsExceptionShowFlags.None, e, "Die Ansicht konnte nicht geladen werden.");
+				await Services.ShowExceptionAsync(false, e, "Die Ansicht konnte nicht geladen werden.");
 				return null;
 			}
 		} // proc OpenPaneAsync
@@ -535,7 +537,7 @@ namespace TecWare.PPSn.UI
 			paneHosts.RemovePane(paneHost);
 
 			// create new window and move pane
-			var newWindow = new PpsSingleWindow(Environment, false);
+			var newWindow = new PpsSingleWindow(Shell, false);
 			paneHost.MoveWindowPane(newWindow, newWindow.paneHost);
 			newWindow.Show();
 		} // proc UndockWindowPane
