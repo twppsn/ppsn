@@ -185,15 +185,6 @@ namespace TecWare.PPSn.Bde
 
 		#endregion
 
-		#region -- IsScannerActive - property -----------------------------------------
-
-		private static readonly DependencyPropertyKey isScannerActivePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsScannerActive), typeof(bool), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(BooleanBox.False));
-		public static readonly DependencyProperty IsScannerActiveProperty = isScannerActivePropertyKey.DependencyProperty;
-
-		public bool IsScannerActive => BooleanBox.GetBool(IsScannerActiveProperty);
-
-		#endregion
-
 		bool IPpsBarcodeReceiver.IsActive => IsActive;
 
 		public string CurrentTimeString => currentDateTimeFormat;

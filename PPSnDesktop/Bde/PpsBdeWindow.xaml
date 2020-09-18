@@ -44,26 +44,8 @@
 				</Label.Content>
 			</Label>
 			<StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-				<Grid Margin="16,0" DataContext="{Binding IsScannerActive}">
-					<ui:PpsGeometryImage GeometryName="scannerActive" Padding="6" GeometryCircled="False" Foreground="{StaticResource PPSnWindowBackgroundBrush}">
-						<ui:PpsGeometryImage.Visibility>
-							<Binding Converter="{x:Static ui:PpsConverter.Visibility}">
-								<Binding.ConverterParameter>
-									<ui:VisibilityConverterParameter TrueValue="Visible" FalseValue="Hidden" />
-								</Binding.ConverterParameter>
-							</Binding>
-						</ui:PpsGeometryImage.Visibility>
-					</ui:PpsGeometryImage>
-					<ui:PpsGeometryImage GeometryName="scannerInActive" Padding="6" GeometryCircled="False" Foreground="{StaticResource PPSnWindowBackgroundBrush}">
-						<ui:PpsGeometryImage.Visibility>
-							<Binding Converter="{x:Static ui:PpsConverter.Visibility}">
-								<Binding.ConverterParameter>
-									<ui:VisibilityConverterParameter TrueValue="Hidden" FalseValue="Visible" />
-								</Binding.ConverterParameter>
-							</Binding>
-						</ui:PpsGeometryImage.Visibility>
-					</ui:PpsGeometryImage>
-				</Grid>
+				<uic:PpsBarcodeState Margin="16,0" />
+				<uic:PpsConnectionState Margin="16,0" />
 				<TextBlock Text="{Binding CurrentTimeString}"
 						   FontSize="14"
 						   LineStackingStrategy="BlockLineHeight"

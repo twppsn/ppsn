@@ -131,6 +131,8 @@
     <Compile Include="Bde\PpsBdeWindow.xaml.cs">
       <DependentUpon>PpsBdeWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsBarcodeState.cs" />
+    <Compile Include="UI\PpsConnectionState.cs" />
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsHelpPagePane.cs" />
     <Compile Include="UI\PpsHelpPageViewer.cs" />

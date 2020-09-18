@@ -160,7 +160,7 @@ namespace TecWare.PPSn
 							// start window
 							var bde = new PpsBdeWindow(newShell);
 							bde.Show();
-							var paneType = Type.GetType("TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null", true);
+							var paneType = Type.GetType("TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000.Bde, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null", true);
 							bde.OpenPaneAsync(paneType, arguments: new LuaTable()).Spawn(bde);
 
 							// now, we have windows
@@ -227,6 +227,9 @@ namespace TecWare.PPSn
 			ParseArguments(e, out var shellInfo, out var userCred);
 
 			FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
+
+			// init keyboard scanner
+			KeyboardScanner.Init();
 
 			StartApplicationAsync(shellInfo, userCred)
 				.ContinueWith(t =>

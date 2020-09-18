@@ -77,11 +77,34 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- interface IPpsShellServiceInit -----------------------------------------
+
+	/// <summary>Service supports initialization.</summary>
+	public interface IPpsShellServiceInit
+	{
+		/// <summary>Init shell service</summary>
+		/// <returns></returns>
+		Task InitAsync();
+		/// <summary>Init user</summary>
+		/// <returns></returns>
+		Task InitUserAsync();
+		/// <summary>Done user</summary>
+		/// <returns></returns>
+		Task DoneUserAsync();
+		/// <summary>Destruct shell service</summary>
+		/// <returns></returns>
+		Task DoneAsync();
+	} // interface IPpsShellServiceInit
+
+	#endregion
+
 	#region -- interface IPpsShellServiceSite -----------------------------------------
 
 	/// <summary>Service that is hosted with a shell environment.</summary>
 	public interface IPpsShellServiceSite : IPpsShellService
 	{
+		/// <summary>Set shell from the site</summary>
+		/// <param name="shell"></param>
 		void SetShell(IPpsShell shell);
 	} // interface IPpsShellService
 
