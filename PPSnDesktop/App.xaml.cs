@@ -92,7 +92,10 @@ namespace TecWare.PPSn
 				StatusText = PPSn.Properties.Resources.AppStartApplicationAsyncInitApp
 			};
 			splashWindow.Show();
-				
+
+			// todo: config
+			PpsShell.Collect(Assembly.Load("PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
+
 			try
 			{
 				while (true)
@@ -158,13 +161,22 @@ namespace TecWare.PPSn
 							await newShell.LoginAsync(userInfo);
 
 							// start window
-							var bde = new PpsBdeWindow(newShell);
-							bde.Show();
-							var paneType = Type.GetType("TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000.Bde, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null", true);
-							bde.OpenPaneAsync(paneType, arguments: new LuaTable()).Spawn(bde);
+							var mws = newShell.GetService<IPpsMainWindowService>(true);
+							await mws.OpenPaneAsync(Type.GetType("TecWare.PPSn.Pps2000.VO.VoWindowPane,PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
+							//await mws.OpenPaneAsync(typeof(PpsTracePane));
+
+							//var bde = new PpsBdeWindow(newShell);
+							//bde.Show();
+							//var paneType = Type.GetType("TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000.Bde, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null", true);
+							//bde.OpenPaneAsync(paneType, arguments: new LuaTable()).Spawn(bde);
+
+							// set active shell
+							errorShell = null;
+							shell = newShell;
 
 							// now, we have windows
 							ShutdownMode = ShutdownMode.OnLastWindowClose;
+
 							return true;
 						}
 					}

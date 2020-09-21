@@ -582,6 +582,10 @@ namespace TecWare.PPSn
 						AddServices(this, sv, CreateShellService(sv));
 				}
 
+				// load shell services
+				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+					await init.InitAsync();
+
 				// notify 
 				IsInitialized = true;
 				OnPropertyChanged(nameof(IsInitialized));
@@ -765,6 +769,10 @@ namespace TecWare.PPSn
 					// update http
 					http = newHttp;
 					OnPropertyChanged(nameof(Http));
+
+					// notify login to services
+					foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+						await init.InitUserAsync();
 				}
 				catch
 				{

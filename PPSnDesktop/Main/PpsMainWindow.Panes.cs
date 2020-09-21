@@ -355,7 +355,7 @@ namespace TecWare.PPSn.Main
 		#region -- OpenPaneAsync ------------------------------------------------------
 
 		private PpsWindowPaneHostState GetDefaultPaneState(Type paneType)
-			=> paneType== typeof(PpsNavigatorPane) ? PpsWindowPaneHostState.Fixed : PpsWindowPaneHostState.Root;
+			=> paneType == typeof(PpsNavigatorPane) ? PpsWindowPaneHostState.Fixed : PpsWindowPaneHostState.Root;
 
 		private async Task<IPpsWindowPane> LoadPaneInternAsync(Type paneType, LuaTable arguments)
 		{

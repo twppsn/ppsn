@@ -187,7 +187,6 @@ namespace TecWare.PPSn.Main
 			}
 		} // func OpenPaneAsync
 
-
 		public IPpsWindowPaneManager GetDefaultPaneManager()
 		{
 			// get the current pane manager
