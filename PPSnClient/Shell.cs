@@ -163,32 +163,6 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsProgress -------------------------------------------------
-
-	/// <summary>Return a progress control.</summary>
-	public interface IPpsProgress : IProgress<string>, IDisposable
-	{
-		/// <summary>Statustext</summary>
-		string Text { get; set; }
-		/// <summary>Progressbar position (0...1000)</summary>
-		int Value { get; set; }
-	} // interface IPpsProgress
-
-	#endregion
-
-	#region -- interface IPpsProgressFactory ------------------------------------------
-
-	/// <summary>Progress bar contract.</summary>
-	public interface IPpsProgressFactory
-	{
-		/// <summary>Create a new progress.</summary>
-		/// <param name="blockUI">Should the whole ui blocked.</param>
-		/// <returns>Progress bar or a dummy implementation.</returns>
-		IPpsProgress CreateProgress(bool blockUI = true);
-	} // interface IPpsProgressFactory
-
-	#endregion
-
 	#region -- interface IPpsRequest --------------------------------------------------
 
 	/// <summary>Defines a new base for a request. The uri </summary>

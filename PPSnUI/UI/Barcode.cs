@@ -73,10 +73,10 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Callback in UI-Thread with the scanned barcode.</summary>
 		/// <param name="provider"></param>
-		/// <param name="text"></param>
+		/// <param name="code"></param>
 		/// <param name="format"></param>
 		/// <returns><c>true</c>, if barcode is processed.</returns>
-		Task OnBarcodeAsync(IPpsBarcodeProvider provider, string text, string format);
+		Task OnBarcodeAsync(IPpsBarcodeProvider provider, string code, string format);
 
 		bool IsActive { get; }
 	} // interface IPpsBarcodeReceiver

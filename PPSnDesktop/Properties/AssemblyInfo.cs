@@ -14,7 +14,6 @@ using System.Windows.Markup;
 
 [assembly: ComVisible(false)]
 
-
 [assembly: ThemeInfo(
 		ResourceDictionaryLocation.None, 
 		ResourceDictionaryLocation.SourceAssembly

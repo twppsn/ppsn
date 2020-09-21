@@ -98,7 +98,7 @@ namespace TecWare.PPSn.UI
 
 	#region -- interface PpsUI --------------------------------------------------------
 
-	public static class PpsUI
+	public static partial class PpsUI
 	{
 		public static void ShowException(this IPpsUIService ui, Exception exception, string alternativeMessage = null)
 			=> ui.ShowException(PpsExceptionShowFlags.None, exception, alternativeMessage);

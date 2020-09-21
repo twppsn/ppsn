@@ -73,11 +73,19 @@ namespace TecWare.PPSn.Bde
 		private bool CanAppInfoCommandExecute(PpsCommandContext arg)
 			=> FindOpenPane(typeof(PpsTracePane)) == null;
 
-		Task IPpsBarcodeReceiver.OnBarcodeAsync(IPpsBarcodeProvider provider, string text, string format)
+		async Task IPpsBarcodeReceiver.OnBarcodeAsync(IPpsBarcodeProvider provider, string text, string format)
 		{
 			if (TopPaneHost.Pane is IPpsBarcodeReceiver receiver && receiver.IsActive)
-				return receiver.OnBarcodeAsync(provider, text, format);
-			return Task.CompletedTask;
+			{
+				try
+				{
+					await receiver.OnBarcodeAsync(provider, text, format);
+				}
+				catch (Exception e)
+				{
+					await Shell.ShowExceptionAsync(false, e, "Barcode nicht verarbeitet.");
+				}
+			}
 		} // proc IPpsBarcodeReceiver.OnBarcodeAsync
 
 		#region -- Pane Manager -------------------------------------------------------
