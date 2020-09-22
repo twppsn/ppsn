@@ -14,8 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -26,11 +24,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Threading;
-using Neo.IronLua;
-using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Bde;
-using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
@@ -69,9 +63,6 @@ namespace TecWare.PPSn
 		} // ctor
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
-
-		private bool IsApplicationOutdated(IPpsShell shell)
-			=> false;
 
 		internal async Task<bool> StartApplicationAsync(IPpsShellInfo _shellInfo = null, ICredentials _userInfo = null)
 		{
@@ -127,35 +118,42 @@ namespace TecWare.PPSn
 							errorShell = newShell;
 						}
 
-						// check shell state
-						if (IsApplicationOutdated(newShell))
-							errorInfo = "Update ist erforderlich.";
-						else
+						// login user
+						if (userInfo == null && errorInfo == null) // try find auto login
 						{
-							// login user
-							if (userInfo == null && errorInfo == null) // try find auto login
-							{
-							}
+							// check shell settings for user information
+							// todo: get auto login
+						}
 
-							if (userInfo == null || errorInfo != null) // show login page
-							{
-								if (errorInfo != null)
-									await splashWindow.SetErrorAsync(errorInfo, errorShell);
+						if (userInfo == null || errorInfo != null) // show login page
+						{
+							if (errorInfo != null)
+								await splashWindow.SetErrorAsync(errorInfo, errorShell);
 
-								var (doBack, newUserInfo) = await splashWindow.ShowLoginAsync(newShell, userInfo);
-								if (doBack)
+							try
+							{
+								var (newLoginShellInfo, newUserInfo) = await splashWindow.ShowLoginAsync(newShell, userInfo);
+								if (newUserInfo == null)
+									return false;
+								else if (newLoginShellInfo != null && !newLoginShellInfo.Equals(newShell.Info))
 								{
 									await newShell.ShutdownAsync();
 
 									errorShell = null;
 									newShell = null;
 								}
-								else if (newUserInfo == null)
-									return false;
 
 								userInfo = newUserInfo;
 							}
+							catch
+							{
+								newShell = null;
+								throw;
+							}
+						}
 
+						if (newShell != null)
+						{
 							// login user info
 							splashWindow.SetProgressText("Anmelden des Nutzers...");
 							await newShell.LoginAsync(userInfo);
@@ -182,7 +180,7 @@ namespace TecWare.PPSn
 					}
 					catch (Exception e)
 					{
-						LogException(e);
+						newShell?.GetService<IPpsLogger>(false)?.Append(PpsLogType.Exception, e);
 						errorInfo = e;
 					}
 				}

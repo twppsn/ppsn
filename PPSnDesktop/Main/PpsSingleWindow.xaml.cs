@@ -41,6 +41,8 @@ namespace TecWare.PPSn.Main
 
 			InitializeComponent();
 
+			paneHost.PaneManager = this;
+
 			if (dialogMode)
 			{
 				if (Owner != null)

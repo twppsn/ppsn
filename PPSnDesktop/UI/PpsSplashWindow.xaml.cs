@@ -14,6 +14,8 @@
 //
 #endregion
 using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -22,148 +24,375 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
 
 namespace TecWare.PPSn.UI
 {
-	// todo: statie -> shell auswahl -> login -> fertig
-
 	/// <summary>Login and loading dialog.</summary>
-	public partial class PpsSplashWindow : Window, IProgress<string>
+	internal partial class PpsSplashWindow : Window, IProgress<string>
 	{
 		#region -- enum StatePanes ----------------------------------------------------
 
 		private enum StatePanes : int
 		{
 			Status = 0,
-			NewEnvironment,
-			Login,
-			Error
+			ShellList,
+			NewShell,
+			Login
 		} // prop Panse
+
+		#endregion
+
+		#region -- interface IReturnState ---------------------------------------------
+
+		private interface IReturnState 
+		{
+			bool Finish(object parameter);
+			bool CanFinish(object parameter);
+
+			StatePanes State { get; }
+		} // interface IReturnState
+
+		#endregion
+
+		#region -- class ShellInfoData ------------------------------------------------
+
+		public sealed class ShellInfo
+		{
+			private readonly IPpsShellInfo shellInfo;
+
+			public ShellInfo(IPpsShellInfo shellInfo)
+				=> this.shellInfo = shellInfo ?? throw new ArgumentNullException(nameof(shellInfo));
+
+			public override bool Equals(object obj)
+				=> obj is ShellInfo o && o.shellInfo.Equals(shellInfo);
+
+			public override int GetHashCode()
+				=> shellInfo.GetHashCode();
+
+			public IPpsShellInfo Info => shellInfo;
+
+			public string Name => shellInfo.Name;
+			public string DisplayName => shellInfo.DisplayName;
+			public string Uri => shellInfo.Uri.ToString();
+		} // class ShellInfo
+
+		public sealed class ShellInfoData : ObservableObject, IEnumerable<ShellInfo>, INotifyCollectionChanged, IReturnState, IDisposable
+		{
+			public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+			private readonly PpsSplashWindow splashWindow;
+			private readonly TaskCompletionSource<IPpsShellInfo> returnShellInfo = null;
+
+			private ShellInfo[] shellInfos = Array.Empty<ShellInfo>();
+
+			public ShellInfoData(PpsSplashWindow splashWindow)
+			{
+				this.splashWindow = splashWindow ?? throw new ArgumentNullException(nameof(splashWindow));
+				returnShellInfo = new TaskCompletionSource<IPpsShellInfo>();
+
+				Refresh();
+			} // ctor
+
+			public void Dispose()
+			{
+				returnShellInfo.TrySetResult(null);
+			} // proc Dispose
+
+			public void Select(IPpsShellInfo shellInfo)
+			{
+				var shellView = CollectionViewSource.GetDefaultView(this);
+				shellView.MoveCurrentTo(new ShellInfo(shellInfo));
+			} // proc Select
+
+			public void SelectLast()
+			{
+				var lastShellName = Settings.Default.LastEnvironmentName;
+				var lastUri = Settings.Default.LastEnvironmentUri;
+				if (lastShellName != null && lastUri != null)
+				{
+					var shellView = CollectionViewSource.GetDefaultView(this);
+
+					foreach (var s in shellView.Cast<ShellInfo>())
+					{
+						if (String.Compare(s.Name, lastShellName, StringComparison.OrdinalIgnoreCase) == 0
+							&& String.Compare(s.Uri.ToString(), lastUri, StringComparison.OrdinalIgnoreCase) == 0)
+						{
+							shellView.MoveCurrentTo(s);
+							return;
+						}
+					}
+				}
+			} // proc SelectLast
+
+			public void Refresh()
+			{
+				shellInfos = (from s in PpsShell.GetShellInfo() select new ShellInfo(s)).ToArray();
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			} // proc Refresh
+
+			public IEnumerator<ShellInfo> GetEnumerator()
+				=> shellInfos.OfType<ShellInfo>().GetEnumerator();
+
+			System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+
+			private ShellInfo GetCurrentShellInfo(object parameter)
+				=> parameter as ShellInfo ?? CollectionViewSource.GetDefaultView(this)?.CurrentItem as ShellInfo;
+
+			bool IReturnState.Finish(object parameter)
+			{
+				var shellInfo = GetCurrentShellInfo(parameter);
+				if (shellInfo != null)
+				{
+					Settings.Default.LastEnvironmentName = shellInfo.Name;
+					Settings.Default.LastEnvironmentUri = shellInfo.Uri.ToString();
+					Settings.Default.Save();
+
+					returnShellInfo.SetResult(shellInfo.Info);
+				}
+				return true;
+			} // func IReturnState.Finish
+
+			bool IReturnState.CanFinish(object parameter)
+				=> GetCurrentShellInfo(parameter) != null;
+
+			StatePanes IReturnState.State => StatePanes.ShellList;
+
+			public bool IsOnlyOne()
+			{
+				if (shellInfos.Length == 1)
+				{
+					returnShellInfo.SetResult(shellInfos[0].Info);
+					return true;
+				}
+				else
+					return false;
+			} // func IsOnlyOne
+
+			public Task<IPpsShellInfo> Result => returnShellInfo.Task;
+		} // ShellInfoData
+
+		#endregion
+
+		#region -- class EditShellData ------------------------------------------------
+
+		public sealed class EditShellData : ObservableObject, IReturnState
+		{
+			private readonly PpsSplashWindow splashWindow;
+			private string shellName = String.Empty;
+			private string shellUri = String.Empty;
+
+			public EditShellData(PpsSplashWindow splashWindow)
+				=> this.splashWindow = splashWindow ?? throw new ArgumentNullException(nameof(splashWindow));
+
+			private string CleanName(string name)
+			{
+				var sb = new StringBuilder();
+				foreach(var c in name)
+				{
+					if (Array.IndexOf(Path.GetInvalidPathChars(), c) >= 0)
+						continue;
+					if (Array.IndexOf(Path.GetInvalidFileNameChars(), c) >= 0)
+						continue;
+
+					sb.Append(c);
+				}
+				return sb.ToString();
+			} // func CleanName
+
+			private bool TryGetParameter(IPpsShellFactory shellFactory, out string instanceName, out string displayName, out Uri uri)
+			{
+				instanceName = shellName;
+				displayName = shellName;
+				uri = null;
+
+				// check content -> should not raise
+				if (String.IsNullOrWhiteSpace(shellName))
+					return false;
+
+				// check name exists
+				if (shellFactory.Any(s => String.Compare(s.Name, shellName, StringComparison.OrdinalIgnoreCase) == 0))
+				{
+					MessageBox.Show("Mandant existiert schon.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+					return false;
+				}
+
+				// check uri
+				if (String.IsNullOrWhiteSpace(shellUri))
+					return false;
+
+				if (!Uri.IsWellFormedUriString(shellUri, UriKind.Absolute))
+				{
+					MessageBox.Show("Uri ist ungültig.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+					return false;
+				}
+
+				// create uri
+				if (shellUri[shellUri.Length - 1] != '/')
+					shellUri += '/';
+				uri = new Uri(shellUri, UriKind.Absolute);
+
+				return true;
+			} // func TryGetParameter
+
+			bool IReturnState.Finish(object parameter)
+			{
+				var shellFactory = PpsShell.Global.GetService<IPpsShellFactory>(true);
+				if (TryGetParameter(shellFactory, out var instanceName, out var displayName, out var uri))
+				{
+					var shellInfo = shellFactory.CreateNew(instanceName, displayName, uri);
+
+					if (splashWindow.ShellState != null)
+					{
+						splashWindow.ShellState.Refresh();
+						splashWindow.ShellState.Select(shellInfo);
+					}
+					if (splashWindow.LoginState != null)
+						splashWindow.LoginState.UpdateShellInfo(shellInfo);
+
+					return true;
+				}
+				else
+					return false;
+			} // func IReturnState.Finish
+
+			bool IReturnState.CanFinish(object parameter)
+				=> !String.IsNullOrEmpty(shellName) && !String.IsNullOrEmpty(shellUri);
+
+			StatePanes IReturnState.State => StatePanes.NewShell;
+
+			public string NewName
+			{
+				get => shellName;
+				set => Set(ref shellName, CleanName(value), nameof(NewName));
+			} // prop NewName
+
+			public string NewUri
+			{
+				get => shellUri;
+				set => Set(ref shellUri, value, nameof(NewUri));
+			} // prop NewUri
+		} // class EditShellData
 
 		#endregion
 
 		#region -- class LoginState ---------------------------------------------------
 
 		/// <summary>State of the login data.</summary>
-		public sealed class LoginStateData : INotifyPropertyChanged, IDisposable
+		public sealed class LoginStateData : INotifyPropertyChanged, IReturnState, IDisposable
 		{
-			/// <summary>Property changed event.</summary>
 			public event PropertyChangedEventHandler PropertyChanged;
 
-			private readonly PpsSplashWindow parent;
+			private readonly PpsSplashWindow splashWindow;
+			private readonly TaskCompletionSource<Tuple<IPpsShellInfo, ICredentials>> result;
 
-			//private PpsEnvironmentInfo[] environments = null;
-			//private PpsEnvironmentInfo currentEnvironment = null;
-			private PpsClientLogin currentLogin = null;
+			private PpsClientLogin login = null;
+			private IPpsShellInfo shellInfo;
+
 			private bool passwordHasChanged = false;
 
-			#region -- Ctor/Dtor ------------------------------------------------------
-
-			internal LoginStateData(PpsSplashWindow parent)
+			public LoginStateData(PpsSplashWindow splashWindow, IPpsShellInfo shellInfo, ICredentials credentials)
 			{
-				this.parent = parent;
+				this.splashWindow = splashWindow ?? throw new ArgumentNullException(nameof(splashWindow));
+				result = new TaskCompletionSource<Tuple<IPpsShellInfo, ICredentials>>();
+
+				UpdateShellInfo(shellInfo ?? throw new ArgumentNullException(nameof(shellInfo)));
+
+				// get user name from parameter
+				if (credentials != null)
+					UserName = PpsShell.GetUserNameFromCredentials(credentials);
 			} // ctor
 
-			/// <summary>Release system resources</summary>
 			public void Dispose()
 			{
-				currentLogin?.Dispose();
+				result.TrySetResult(new Tuple<IPpsShellInfo, ICredentials>(null, null));
+				login?.Dispose();
 			} // proc Dispose
 
 			private void OnPropertyChanged(string propertyName)
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-			#endregion
-
-			/// <summary>Get current selected credentials (login data)</summary>
-			/// <returns></returns>
-			public ICredentials GetCredentials()
+			public void UpdateShellInfo(IPpsShellInfo shellInfo)
 			{
-				if (currentLogin == null)
-					return null;
+				this.shellInfo = shellInfo;
 
+				// close old login
+				login?.Dispose();
+
+				// create new login
+				login = new PpsClientLogin("ppsn_env:" + shellInfo.Uri.ToString(), shellInfo.Name, false);
+
+				// currect save options
+				if (login.SaveOptions == PpsClientLoginSaveOptions.None)
+					login.SaveOptions = PpsClientLoginSaveOptions.UserName; // at least write a username
+
+				// set default user name
+				if (String.IsNullOrEmpty(login.UserName))
+					login.UserName = PpsShell.GetUserNameFromCredentials(CredentialCache.DefaultCredentials);
+
+				// set dummy password
+				if (login.PasswordLength > 0)
+					splashWindow.passwordTextBox.Password = new string('\x01', login.PasswordLength);
+				if (!IsPasswordEnabled)
+					splashWindow.passwordTextBox.Password = String.Empty;
+				passwordHasChanged = false;
+
+				OnPropertyChanged(nameof(ShellName));
+				OnPropertyChanged(nameof(UserName));
+				OnPropertyChanged(nameof(IsPasswordEnabled));
+				OnPropertyChanged(nameof(IsPasswordSaveEnabled));
+				OnPropertyChanged(nameof(SavePassword));
+			} // proc UpdateShellInfo
+
+			bool IReturnState.Finish(object parameter)
+			{
 				// update password
 				if (HasParentPassword && passwordHasChanged)
-					currentLogin.SetPassword(parent.pbPassword.SecurePassword);
-				currentLogin.Commit();
-				
-				return currentLogin.GetCredentials();
-			} // func GetCredentials
+					login.SetPassword(splashWindow.passwordTextBox.SecurePassword);
+				login.Commit();
 
-			///// <summary>Refresh environment list.</summary>
-			///// <param name="getCurrentEnvironment"></param>
-			///// <returns></returns>
-			//public async Task RefreshEnvironmentsAsync(Func<PpsEnvironmentInfo[], PpsEnvironmentInfo> getCurrentEnvironment)
-			//{
-			//	// parse all environment
-			//	environments = await Task.Run(() => PpsEnvironmentInfo.GetLocalEnvironments().ToArray());
-			//	OnPropertyChanged(nameof(Environments));
+				result.SetResult(new Tuple<IPpsShellInfo, ICredentials>(shellInfo, login.GetCredentials()));
 
-			//	// update current environment
-			//	if (environments.Length > 0)
-			//		CurrentEnvironment = getCurrentEnvironment?.Invoke(environments) ?? environments[0];
-			//} // proc RefreshEnvironments
+				return true;
+			} // func IReturnState.Finish
 
-			///// <summary>Access a environment list</summary>
-			//public PpsEnvironmentInfo[] Environments => environments;
+			bool IReturnState.CanFinish(object parameter)
+				=> IsValid;
+			
+			public void Validate(bool passwordHasChanged)
+			{
+				if (passwordHasChanged)
+				{
+					this.passwordHasChanged = passwordHasChanged;
+					OnPropertyChanged(nameof(IsPasswordSaveEnabled));
+				}
+				CommandManager.InvalidateRequerySuggested();
+			} // proc Validate
 
-			///// <summary>Current selected environment</summary>
-			//public PpsEnvironmentInfo CurrentEnvironment
-			//{
-			//	get => currentEnvironment;
-			//	set
-			//	{
-			//		if (currentEnvironment == value)
-			//			return;
-			//		currentEnvironment = value;
+			StatePanes IReturnState.State => StatePanes.Login;
 
-			//		if (currentEnvironment?.Uri != null)
-			//		{
-			//			// change login
-			//			currentLogin?.Dispose();
-			//			currentLogin = new PpsClientLogin("ppsn_env:" + currentEnvironment.Uri.ToString(), currentEnvironment.Name, false);
+			public string ShellName => shellInfo.DisplayName ?? shellInfo.Name;
 
-			//			// currect save options
-			//			if (currentLogin.SaveOptions == PpsClientLoginSaveOptions.None)
-			//				currentLogin.SaveOptions = PpsClientLoginSaveOptions.UserName; // at least write a username
-
-			//			// set dummy password
-			//			if (currentLogin.PasswordLength > 0)
-			//				parent.pbPassword.Password = new string('\x01', currentLogin.PasswordLength);
-			//			if (!IsPasswordEnabled)
-			//				parent.pbPassword.Password = String.Empty;
-			//			passwordHasChanged = false;
-			//		}
-
-			//		// mark properties as changed
-			//		OnPropertyChanged(nameof(CurrentEnvironment));
-			//		OnPropertyChanged(nameof(UserName));
-			//		OnPropertyChanged(nameof(SavePassword));
-
-			//		OnPropertyChanged(nameof(IsUserNameEnabled));
-			//		OnPropertyChanged(nameof(IsPasswordEnabled));
-			//		OnPropertyChanged(nameof(IsPasswordSaveEnabled));
-			//		OnPropertyChanged(nameof(IsValid));
-			//	}
-			//} // prop CurrentEnvironment
-
-			/// <summary>Return user name</summary>
 			public string UserName
 			{
-				get => currentLogin?.UserName;
+				get => login.UserName;
 				set
 				{
-					if (currentLogin != null)
+					if (login != null)
 					{
-						currentLogin.UserName = value;
-						if (currentLogin.IsDefaultUserName) // clear password
+						login.UserName = value;
+						if (login.IsDefaultUserName) // clear password
 						{
-							parent.pbPassword.Password = String.Empty;
+							splashWindow.passwordTextBox.Password = String.Empty;
 							SavePassword = false;
 							OnPropertyChanged(nameof(SavePassword));
 						}
@@ -175,92 +404,25 @@ namespace TecWare.PPSn.UI
 				}
 			} // prop UserName
 
-			/// <summary>Validate input</summary>
-			/// <param name="passwordHasChanged"></param>
-			public void Validate(bool passwordHasChanged)
-			{
-				if (passwordHasChanged)
-				{
-					this.passwordHasChanged = passwordHasChanged;
-					OnPropertyChanged(nameof(IsPasswordSaveEnabled));
-				}
-				OnPropertyChanged(nameof(IsValid));
-			} // proc Validate
+			public bool IsPasswordEnabled => !login.IsDefaultUserName;
+			public bool IsPasswordSaveEnabled => !login.IsDefaultUserName && HasParentPassword;
 
-			/// <summary>Is user name editable.</summary>
-			public bool IsUserNameEnabled => currentLogin != null;
-			/// <summary>Is password enabled</summary>
-			public bool IsPasswordEnabled => currentLogin != null && !currentLogin.IsDefaultUserName;
-			/// <summary>Is password save enabled</summary>
-			public bool IsPasswordSaveEnabled => currentLogin != null && !currentLogin.IsDefaultUserName && HasParentPassword;
-			/// <summary>Is current login data valid.</summary>
-			public bool IsValid => currentLogin != null && (currentLogin.IsDefaultUserName || HasParentPassword);
-
-			/// <summary>Has the password box a password.</summary>
-			public bool HasParentPassword => parent.pbPassword.SecurePassword != null && parent.pbPassword.SecurePassword.Length > 0;
-
-			/// <summary>Option if the password should be saved.</summary>
 			public bool SavePassword
 			{
-				get => currentLogin?.SaveOptions == PpsClientLoginSaveOptions.Password;
+				get => login.SaveOptions == PpsClientLoginSaveOptions.Password;
 				set
 				{
-					if (currentLogin != null)
-						currentLogin.SaveOptions = value
-							? PpsClientLoginSaveOptions.Password
-							: PpsClientLoginSaveOptions.UserName;
-				}							
+					login.SaveOptions = value
+						? PpsClientLoginSaveOptions.Password
+						: PpsClientLoginSaveOptions.UserName;
+				}
 			} // prop SavePassword
+
+			internal bool IsValid => login != null && (login.IsDefaultUserName || HasParentPassword);
+			private bool HasParentPassword => splashWindow.passwordTextBox.SecurePassword != null && splashWindow.passwordTextBox.SecurePassword.Length > 0;
+
+			public Task<Tuple<IPpsShellInfo, ICredentials>> Result => result.Task;
 		} // class LoginStateData
-
-		#endregion
-
-		#region -- class EditLoginStateData -------------------------------------------
-
-		/// <summary></summary>
-		public sealed class EditLoginStateData : ObservableObject
-		{
-			private string newEnvironmentName = String.Empty;
-			public string NewEnvironmentName
-			{
-				get => newEnvironmentName;
-				set
-				{
-					// because the name is later used as the directory name, it has to be sanitized
-					var cleanName = new StringBuilder();
-					// only get the chars once
-					var illegalChars = Path.GetInvalidPathChars().Union(Path.GetInvalidFileNameChars());
-					foreach (var ch in value)
-						if (illegalChars.Contains(ch))
-							cleanName.Append('_');
-						else
-							cleanName.Append(ch);
-					Set(ref newEnvironmentName, cleanName.ToString(), nameof(NewEnvironmentName));
-				}
-			}
-			private string newEnvironmentUri = String.Empty;
-			public string NewEnvironmentUri { get => newEnvironmentUri; set => Set(ref newEnvironmentUri, value, nameof(NewEnvironmentUri)); }
-			public bool NewEnvironmentIsValid
-			{
-				get
-				{
-					if (String.IsNullOrWhiteSpace(NewEnvironmentName))
-						return false;
-					if (!Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute))
-						return false;
-
-					// fastest check if EnvironmentName already exists or if the directory is otherwise already existing
-					//if (Directory.Exists(Path.GetFullPath(Path.Combine(PpsEnvironmentInfo.LocalEnvironmentsPath, NewEnvironmentName))))
-					//	return false;
-
-					//// check if the Uri is already configured
-					//if (PpsEnvironmentInfo.GetLocalEnvironments().Any(env => env.Uri.Equals(new Uri(NewEnvironmentUri + (NewEnvironmentUri.EndsWith("/") ? String.Empty : "/"), UriKind.Absolute))))
-					//	return false;
-
-					return true;
-				}
-			}
-		} // class EditLoginStateData
 
 		#endregion
 
@@ -269,27 +431,36 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		public sealed class ErrorStateData : ObservableObject
 		{
-			private string errorText = null;
+			private readonly string errorText = null;
+			private readonly Exception exceptionInfo;
+			private readonly IPpsShell errorShell;
 
-			/// <summary>Error Text</summary>
-			public string ErrorText { get => errorText; set => Set(ref errorText, value, nameof(ErrorText)); }
+			public ErrorStateData(object errorInfo, IPpsShell errorShell)
+			{
+				if (errorInfo is Exception exceptionInfo) // show exception
+				{
+					this.exceptionInfo = exceptionInfo;
+					errorInfo = exceptionInfo.GetInnerException().Message;
+				}
+				else
+					this.exceptionInfo = null;
+
+				errorText = errorInfo.ToString();
+				this.errorShell = errorShell;
+			} // ctor
+
+			public IPpsShell Shell=> errorShell; 
+			public bool HasShell => errorShell != null;
+
+			public string Text => errorText;
+			public Exception ExceptionInfo => exceptionInfo;
 		} // class EErrorStateDatarrorState
 
 		#endregion
 
-		private readonly static DependencyPropertyKey loginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
-		private readonly static DependencyPropertyKey errorStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(ErrorState), typeof(ErrorStateData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
-		private readonly static DependencyPropertyKey editLoginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(EditLoginState), typeof(EditLoginStateData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		public static readonly RoutedUICommand ShowErrorDetailsCommand = new RoutedUICommand("ShowErrorDetails", "ShowErrorDetails", typeof(PpsSplashWindow));
 
-		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
-		public readonly static DependencyProperty LoginStateProperty = loginStatePropertyKey.DependencyProperty;
-		public readonly static DependencyProperty ErrorStateProperty = errorStatePropertyKey.DependencyProperty;
-		public readonly static DependencyProperty EditLoginStateProperty = editLoginStatePropertyKey.DependencyProperty;
-
-		public readonly static DependencyProperty ActivePageNumProperty = DependencyProperty.Register("ActivePageNum", typeof(int), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(0));
-
-		private bool dialogResult = false;
-		private DispatcherFrame loginFrame = null;
+		private readonly Stack<IReturnState> dialogStates = new Stack<IReturnState>();
 		private bool allowClose = false;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -301,16 +472,9 @@ namespace TecWare.PPSn.UI
 			CommandBindings.AddRange(
 				new CommandBinding[]
 				{
-					new CommandBinding(ApplicationCommands.New, CreateNewEnvironment, LoginFrameActive),
-					new CommandBinding(ApplicationCommands.Save, ExecuteFrame,
-						(sender, e) =>
-						{
-							e.CanExecute = (ActivateState == StatePanes.NewEnvironment && EditLoginState.NewEnvironmentIsValid)
-								|| (ActivateState == StatePanes.Login && LoginState.IsValid);
-							e.Handled = true;
-						}
-					),
-					new CommandBinding(ApplicationCommands.Close, CloseFrame, LoginFrameActive),
+					new CommandBinding(ApplicationCommands.New, CreateNewShell, CanCreateNewShell),
+					new CommandBinding(ApplicationCommands.Open, FinishState, CanFinishState),
+					new CommandBinding(ApplicationCommands.Close, CancelState, CanCancelState),
 					new CommandBinding(EnterKeyCommand,
 						(sender, e) =>
 						{
@@ -318,39 +482,97 @@ namespace TecWare.PPSn.UI
 							e.Handled = true;
 						}
 					),
-					new CommandBinding(ReStartCommand,
-						(sender, e) =>
-						{
-							ActivateState = StatePanes.Login;
-							e.Handled = true;
-						}
-					),
 					new CommandBinding(ShowErrorDetailsCommand,
 						async (sender, e) =>
 						{
 							e.Handled = true;
-							//await errorShell.ShowTraceAsync(Owner);
+							await ShowTracePaneAsync();
 						},
 						(sender, e) =>
 						{
-							e.CanExecute = errorShell != null;
+							e.CanExecute = ErrorState?.Shell != null || ErrorState?.ExceptionInfo != null;
 							e.Handled = true;
 						}
 					)
 				}
 			);
 
-			ActivateState = StatePanes.Status;
-			SetValue(loginStatePropertyKey, new LoginStateData(this));
-			SetValue(errorStatePropertyKey, new ErrorStateData());
-			SetValue(editLoginStatePropertyKey, new EditLoginStateData());
+			ActiveState = StatePanes.Status;
 
-			this.DataContext = this;
+			DataContext = this;
 		} // ctor
+
+		private async Task ShowTracePaneAsync()
+		{
+			if (ErrorState != null)
+			{
+				if (ErrorState.Shell != null)
+				{
+					var shell = ErrorState.Shell;
+					try
+					{
+						await shell.GetService<IPpsMainWindowService>(true).OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewSingleWindow);
+					}
+					catch (Exception ex)
+					{
+						PpsShell.GetService<IPpsUIService>(true).ShowException(ex, "Kann Fehler nicht anzeigen.");
+					}
+				}
+				else if (ErrorState.ExceptionInfo != null)
+				{
+					MessageBox.Show(ErrorState.ExceptionInfo.GetMessageString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+				}
+			}
+		} // func ShowTracePaneAsync
+
+		private void PushState(IReturnState state)
+		{
+			dialogStates.Push(state);
+			ActiveState = state.State;
+			CommandManager.InvalidateRequerySuggested();
+		} // proc PushState
+
+		private void PopState()
+		{
+			if (dialogStates.Pop() is IDisposable d)
+				d.Dispose();
+
+			ActiveState = dialogStates.Count > 0 ? dialogStates.Peek().State : StatePanes.Status;
+			CommandManager.InvalidateRequerySuggested();
+		} // prop PopState
+
+		private void FinishState(object sender, ExecutedRoutedEventArgs e)
+		{
+			if (dialogStates.Count > 0)
+			{
+				var top = dialogStates.Peek();
+				if (top.CanFinish(e.Parameter) && top.Finish(e.Parameter))
+					PopState();
+			}
+			e.Handled = true;
+		} // proc ExecuteResult
+
+		private void CanFinishState(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.CanExecute = dialogStates.Count > 0 && dialogStates.Peek().CanFinish(e.Parameter);
+			e.Handled = true;
+		} // proc ExecuteResult
+
+		private void CancelState(object sender, ExecutedRoutedEventArgs e)
+		{
+			if (dialogStates.Count > 0)
+				PopState();
+		} // proc CancelState
+
+		private void CanCancelState(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.CanExecute = dialogStates.Count > 0;
+			e.Handled = true;
+		} // proc CanCancelState
 
 		protected override void OnClosing(CancelEventArgs e)
 		{
-			if (loginFrame != null)
+			if (dialogStates.Count > 0)
 			{
 				ApplicationCommands.Close.Execute(null, this);
 				e.Cancel = true;
@@ -360,12 +582,6 @@ namespace TecWare.PPSn.UI
 			
 			base.OnClosing(e);
 		} // proc OnClosing
-
-		protected override void OnClosed(EventArgs e)
-		{
-			base.OnClosed(e);
-			LoginState?.Dispose();
-		} // proc Dispose
 
 		public void ForceClose()
 		{
@@ -378,144 +594,119 @@ namespace TecWare.PPSn.UI
 			base.OnMouseDown(e);
 			if (!e.Handled && e.ChangedButton == MouseButton.Left)
 			{
-				e.Handled = true;
-				DragMove();
+				var pt = e.GetPosition(this);
+				var ht = VisualTreeHelper.HitTest(this, pt);
+				if (ht != null && ht.VisualHit != null)
+				{
+					var b = ht.VisualHit as Border ?? PpsWpfShell.GetVisualParent<Border>(ht.VisualHit);
+					if (b.CompareName("leftBar") == 0)
+					{
+						e.Handled = true;
+						DragMove();
+					}
+				}
 			}
 		} // proc OnMouseDown
 
 		#endregion
 
-		#region -- Login --------------------------------------------------------------
+		#region -- StatusText - property ----------------------------------------------
 
-		private void LoginFrameActive(object sender, CanExecuteRoutedEventArgs e)
-		{
-			e.CanExecute = loginFrame != null;
-			e.Handled = true;
-		} // proc LoginFrameActive
+		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
 
-		private void CreateNewEnvironment(object sender, ExecutedRoutedEventArgs e)
-		{
-			ActivateState = StatePanes.NewEnvironment;
-			e.Handled = true;
-		} // proc CreateNewEnvironment
+		/// <summary>Set or get text</summary>
+		public string StatusText { get => (string)GetValue(StatusTextProperty); set => SetValue(StatusTextProperty, value); }
 
-		private void ExecuteFrame(object sender, ExecutedRoutedEventArgs e)
-		{
-			if (ActivateState == StatePanes.Login && LoginState.IsValid)
-			{
-				loginFrame.Continue = false;
-				dialogResult = true;
-				e.Handled = true;
-			}
-			else if (ActivateState == StatePanes.NewEnvironment)
-			{
-				loginFrame.Continue = true;
-				e.Handled = true;
-				SaveEnvironmentAsync().AwaitTask();
-			}
-		} // proc ExecuteLoginFrame
+		#endregion
 
-		private async Task SaveEnvironmentAsync()
-		{
-			//var newEnv = new PpsEnvironmentInfo(EditLoginState.NewEnvironmentName)
-			//{
-			//	Uri = new Uri(EditLoginState.NewEnvironmentUri)
-			//};
-			//await Task.Run(new Action(newEnv.Save));
-			//await LoginState.RefreshEnvironmentsAsync(l => l.Contains(newEnv) ? newEnv : null);
+		#region -- ShellState - property ----------------------------------------------
 
-			ActivateState = StatePanes.Login;
-		} // procSaveEnvironmentAsync
-
-		private void AbortEnvironment()
-		{
-			ActivateState = StatePanes.Login;
-		}
-
-		private void CloseFrame(object sender, ExecutedRoutedEventArgs e)
-		{
-			switch (ActivateState)
-			{
-				case StatePanes.Login:
-					{
-						loginFrame.Continue = false;
-						dialogResult = false;
-						e.Handled = true;
-					}
-					break;
-				case StatePanes.NewEnvironment:
-					{
-						loginFrame.Continue = true;
-						e.Handled = true;
-						AbortEnvironment();
-					}
-					break;
-			}
-		} // proc CloseLoginFrame
-
-		private Tuple<bool, ICredentials> ShowLogin(IPpsShell shell, ICredentials userInfo = null)
-		{
-			var loginState = LoginState;
-
-			// refresh environments
-			//loginState.RefreshEnvironmentsAsync(envs =>
-			//	{
-			//		if (selectEnvironment != null && envs.Contains(selectEnvironment))
-			//			return selectEnvironment;
-			//		else
-			//		{
-			//			var name = Settings.Default.LastEnvironmentName;
-			//			return String.IsNullOrEmpty(name)
-			//				? null
-			//				: envs.FirstOrDefault(e => e.Name == name);
-			//		}
-			//	}
-			//).AwaitTask();
-			//if (userInfo != null)
-			//	loginState.UserName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
-
-			// show login page only if there is no error page
-			if (ActivateState != StatePanes.Error)
-				ActivateState = StatePanes.Login;
-
-			try
-			{
-				if (loginFrame != null) // we are within a login dialog
-					throw new InvalidOperationException();
-
-				// spawn new event loop
-				loginFrame = new DispatcherFrame();
-				CommandManager.InvalidateRequerySuggested();
-				Dispatcher.PushFrame(loginFrame);
-
-				// clear message loop and return result
-				loginFrame = null;
-				if (dialogResult && loginState.IsValid)
-				{
-					//Settings.Default.LastEnvironmentName = loginState.CurrentEnvironment.Name;
-					//Settings.Default.LastEnvironmentUri = loginState.CurrentEnvironment.Uri.ToString();
-					Settings.Default.Save();
-
-					return new Tuple<bool, ICredentials>(false, loginState.GetCredentials());
-				}
-				else
-					return null;
-			}
-			finally
-			{
-				ActivateState = StatePanes.Status;
-			}
-		} // proc ShowLogin
+		private static readonly DependencyPropertyKey shellStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(ShellState), typeof(ShellInfoData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty ShellStateProperty = shellStatePropertyKey.DependencyProperty;
 
 		public Task<IPpsShellInfo> ShowShellAsync(IPpsShellInfo shellInfo)
-			=> Task.FromResult(PpsShell.GetShellInfo().FirstOrDefault());
+		{
+			// init shell data
+			var shell = new ShellInfoData(this);
+			if (shell.IsOnlyOne())
+				return shell.Result;
 
-		/// <summary>Show Login dialog</summary>
-		/// <param name="userInfo"></param>
-		/// <returns></returns>
-		public async Task<Tuple<bool, ICredentials>> ShowLoginAsync(IPpsShell shell, ICredentials userInfo = null)
-			=> await Dispatcher.InvokeAsync(() => ShowLogin(shell, userInfo));
-		
+			SetValue(shellStatePropertyKey, shell);
+			if (shellInfo != null)
+				shell.Select(shellInfo);
+			else
+				shell.SelectLast();
+
+			PushState(shell);
+
+			return shell.Result;
+		} // proc ShowShellAsync
+
+		public ShellInfoData ShellState => (ShellInfoData)GetValue(ShellStateProperty);
+
+		#endregion
+
+		#region -- EditShellState - property ------------------------------------------
+
+		private readonly static DependencyPropertyKey editShellStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(EditShellState), typeof(EditShellData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		public readonly static DependencyProperty EditShellStateProperty = editShellStatePropertyKey.DependencyProperty;
+
+		private void CreateNewShell(object sender, ExecutedRoutedEventArgs e)
+		{
+			var edit = new EditShellData(this);
+			SetValue(editShellStatePropertyKey, edit);
+			PushState(edit);
+			
+			e.Handled = true;
+		} // proc CreateNewShell
+
+		private void CanCreateNewShell(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.CanExecute = ActiveState == StatePanes.ShellList || ActiveState == StatePanes.Login;
+			e.Handled = true;
+		} // proc CanCreateNewShell
+
+		public EditShellData EditShellState => (EditShellData)GetValue(EditShellStateProperty);
+
+		#endregion
+
+		#region -- LoginState - property ----------------------------------------------
+
+		public static readonly RoutedUICommand EnterKeyCommand = new RoutedUICommand("EnterKey", "EnterKey", typeof(PpsSplashWindow));
+
+		private readonly static DependencyPropertyKey loginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		public readonly static DependencyProperty LoginStateProperty = loginStatePropertyKey.DependencyProperty;
+
+		public Task<Tuple<IPpsShellInfo, ICredentials>> ShowLoginAsync(IPpsShell shell, ICredentials userInfo = null)
+		{
+			var login = new LoginStateData(this, shell.Info, userInfo);
+			SetValue(loginStatePropertyKey, login);
+			PushState(login);
+			return login.Result;
+		} // func ShowLoginAsync
+
+		private void PasswordChanged(object sender, RoutedEventArgs e)
+			=> LoginState.Validate(true);
+
+		private void EnterKey(object sender, ExecutedRoutedEventArgs e)
+		{
+			if (e.OriginalSource is TextBox || e.OriginalSource is PasswordBox)
+			{
+				dynamic textBox = e.OriginalSource;
+				var bindingExpression = textBox.GetBindingExpression(TextBox.TextProperty);
+
+				if (bindingExpression == null)
+					ApplicationCommands.Open.Execute(null, null);
+				else if (bindingExpression.ResolvedSourcePropertyName == "UserName")
+					if (LoginState.IsValid)
+						ApplicationCommands.Open.Execute(null, null);
+					else
+						textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+			}
+		} // proc EnterKey
+
+		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
+
 		#endregion
 
 		#region -- Progress -----------------------------------------------------------
@@ -528,72 +719,45 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- SetError -----------------------------------------------------------
+		#region -- ErrorState - property ----------------------------------------------
 
-		private IPpsShell errorShell = null;
+		private readonly static DependencyPropertyKey errorStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(ErrorState), typeof(ErrorStateData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		public readonly static DependencyProperty ErrorStateProperty = errorStatePropertyKey.DependencyProperty;
 
-		private void SetError(object errorInfo)
-		{
-			if (errorInfo is Exception exceptionInfo) // show exception
-				errorInfo = exceptionInfo.Message;
-			
-			ErrorState.ErrorText = errorInfo is string s ? s: errorInfo?.ToString();
-			ActivateState = StatePanes.Error;
-		} // proc SetError
-
-		private void SetErrorShell(IPpsShell shell)
-			=> errorShell = shell;
+		private readonly static DependencyPropertyKey hasErrorStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasErrorState), typeof(bool), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(BooleanBox.False));
+		public readonly static DependencyProperty HasErrorStateProperty = hasErrorStatePropertyKey.DependencyProperty;
 
 		public async Task SetErrorAsync(object errorInfo, IPpsShell shell)
-			=> await Dispatcher.InvokeAsync(
+		{
+			await Dispatcher.InvokeAsync(
 				() =>
 				{
-					SetError(errorInfo);
-					SetErrorShell(shell);
+					if (errorInfo is null)
+					{
+						SetValue(errorStatePropertyKey, null);
+						SetValue(hasErrorStatePropertyKey, false);
+					}
+					else
+					{
+						SetValue(errorStatePropertyKey, new ErrorStateData(errorInfo, shell));
+						SetValue(hasErrorStatePropertyKey, true);
+					}
 				}
 			);
+		} // func SetErrorAsync
+
+		public ErrorStateData ErrorState => (ErrorStateData)GetValue(ErrorStateProperty);
+		public bool HasErrorState => BooleanBox.GetBool(GetValue(HasErrorStateProperty));
 
 		#endregion
 
-		/// <summary>Status text</summary>
-		public string StatusText { get => (string)GetValue(StatusTextProperty); set => SetValue(StatusTextProperty, value); }
+		#region -- ActivateState - property -------------------------------------------
 
-		/// <summary>Current login state</summary>
-		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
-		/// <summary>Current error state</summary>
-		public ErrorStateData ErrorState => (ErrorStateData)GetValue(ErrorStateProperty);
-		/// <summary>Current edit state</summary>
-		public EditLoginStateData EditLoginState => (EditLoginStateData)GetValue(EditLoginStateProperty);
+		public readonly static DependencyProperty ActivePageNumProperty = DependencyProperty.Register("ActivePageNum", typeof(int), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(0));
 
 		/// <summary>Current active state.</summary>
-		private StatePanes ActivateState { get => (StatePanes)(int)GetValue(ActivePageNumProperty); set => SetValue(ActivePageNumProperty, (int)value); }
-
-		#region -- RoutedUICommand ------------------------------------------------------
-
-		public static RoutedUICommand EnterKeyCommand { get; } = new RoutedUICommand("EnterKey", "EnterKey", typeof(PpsSplashWindow));
-		public static RoutedUICommand ReStartCommand { get; } = new RoutedUICommand("ReStart", "ReStart", typeof(PpsSplashWindow));
-		public static RoutedUICommand ShowErrorDetailsCommand { get; } = new RoutedUICommand("ShowErrorDetails", "ShowErrorDetails", typeof(PpsSplashWindow));
-
-		private void EnterKey(object sender, ExecutedRoutedEventArgs e)
-		{
-			if (e.OriginalSource is TextBox || e.OriginalSource is PasswordBox)
-			{
-				dynamic textBox = e.OriginalSource;
-				var bindingExpression = textBox.GetBindingExpression(TextBox.TextProperty);
-
-				if (bindingExpression == null)
-					ApplicationCommands.Save.Execute(null, null);
-				else if (bindingExpression.ResolvedSourcePropertyName == "UserName")
-					if (LoginState.IsValid)
-						ApplicationCommands.Save.Execute(null, null);
-					else
-						textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
-			}
-		} // proc EnterKey
+		private StatePanes ActiveState { get => (StatePanes)(int)GetValue(ActivePageNumProperty); set => SetValue(ActivePageNumProperty, (int)value); }
 
 		#endregion
-
-		private void PasswordChanged(object sender, RoutedEventArgs e)
-			=> LoginState.Validate(true);
 	} // class PpsSplashWindow
 }

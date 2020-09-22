@@ -106,8 +106,7 @@ namespace TecWare.PPSn.Controls
 
 			private void GetBounds(IntPtr handle)
 			{
-				RECT rect;
-				NativeMethods.GetWindowRect(handle, out rect);
+				NativeMethods.GetWindowRect(handle, out var rect);
 				left = rect.Left;
 				top = rect.Top;
 				width = rect.Width;
@@ -121,48 +120,48 @@ namespace TecWare.PPSn.Controls
 				if (orientation == Orientation.Horizontal)
 					BlendHorizontal(bitmaps, offset);
 				else
-					BlendVertical(bitmaps, offset);
+					BlendVertical(bitmaps);
 
 				Render();
-			}
+			} // proc DrawBitmap
 
-			private void BlendVertical(GlowBitmap[] bitmaps, int offset)
+			private void BlendVertical(GlowBitmap[] bitmaps)
 			{
-				GlowBitmap bmpTop = bitmaps[0];
-				GlowBitmap bmpMiddle = bitmaps[1];
-				GlowBitmap bmpBottom = bitmaps[2];
+				var bmpTop = bitmaps[0];
+				var bmpMiddle = bitmaps[1];
+				var bmpBottom = bitmaps[2];
 
-				int yMiddle = bmpTop.Height;
-				int yBottom = height - bmpBottom.Height;
-				int hMiddle = yBottom - yMiddle;
+				var yMiddle = bmpTop.Height;
+				var yBottom = height - bmpBottom.Height;
+				var hMiddle = yBottom - yMiddle;
 
 				Blend(bmpTop, 0, 0, bmpTop.Width, bmpTop.Height);
 				if (hMiddle > 0)
 					Blend(bmpMiddle, 0, yMiddle, bmpMiddle.Width, hMiddle);
 				Blend(bmpBottom, 0, yBottom, bmpBottom.Width, bmpBottom.Height);
-			}
+			} // proc BlendVertical
 
 			private void BlendHorizontal(GlowBitmap[] bitmaps, int offset)
 			{
-				GlowBitmap bmpLeft = bitmaps[0];
-				GlowBitmap bmpMiddle = bitmaps[1];
-				GlowBitmap bmpRight = bitmaps[2];
+				var bmpLeft = bitmaps[0];
+				var bmpMiddle = bitmaps[1];
+				var bmpRight = bitmaps[2];
 
-				int xLeft = offset;
-				int xMiddle = xLeft + bmpLeft.Width;
-				int xRight = width - offset - bmpRight.Width;
-				int wMiddle = xRight - xMiddle;
+				var xLeft = offset;
+				var xMiddle = xLeft + bmpLeft.Width;
+				var xRight = width - offset - bmpRight.Width;
+				var wMiddle = xRight - xMiddle;
 				Blend(bmpLeft, xLeft, 0, bmpLeft.Width, bmpLeft.Height);
 				if (wMiddle > 0)
 					Blend(bmpMiddle, xMiddle, 0, wMiddle, bmpMiddle.Height);
 				Blend(bmpRight, xRight, 0, bmpRight.Width, bmpRight.Height);
-			}
+			} // proc BlendHorizontal
 
 			private void Blend(GlowBitmap bmp, int xOriginDest, int yOriginDest, int widthDest, int heightDest)
 			{
 				NativeMethods.SelectObject(hdcBackground, bmp.Handle);
 				NativeMethods.AlphaBlend(hdcWindow, xOriginDest, yOriginDest, widthDest, heightDest, hdcBackground, 0, 0, bmp.Width, bmp.Height, blendFunc);
-			}
+			} // proc Blend
 
 			private void Render()
 			{
@@ -170,7 +169,7 @@ namespace TecWare.PPSn.Controls
 				var psize = new SIZE { cx = width, cy = height };
 				var pptSrc = new POINT { x = 0, y = 0 };
 				NativeMethods.UpdateLayeredWindow(windowHandle, hdcScreen, ref pptDst, ref psize, hdcWindow, ref pptSrc, 0u, ref blendFunc, NativeMethods.ULW_ALPHA);
-			}
+			} // proc Render
 
 			#endregion
 		} // class GlowDrawingHelper
@@ -243,15 +242,15 @@ namespace TecWare.PPSn.Controls
 			public static GlowBitmap FromImage(int imagePos, Color color)
 			{
 				CreateAlphaMask();
-				CachedBitmapInfo alphaMask = alphaMasks[imagePos];
-				IntPtr hdc = NativeMethods.GetDC(IntPtr.Zero);
+				var alphaMask = alphaMasks[imagePos];
+				var hdc = NativeMethods.GetDC(IntPtr.Zero);
 				var glowBitmap = new GlowBitmap(hdc, alphaMask.Width, alphaMask.Height);
-				for (int i = 0; i < alphaMask.DIBits.Length; i += 4)
+				for (var i = 0; i < alphaMask.DIBits.Length; i += 4)
 				{
-					byte alpha = alphaMask.DIBits[i + 3];
-					byte red = (byte)((double)(color.R * alpha) / 255.0);
-					byte green = (byte)((double)(color.G * alpha) / 255.0);
-					byte blue = (byte)((double)(color.B * alpha) / 255.0);
+					var alpha = alphaMask.DIBits[i + 3];
+					var red = (byte)((double)(color.R * alpha) / 255.0);
+					var green = (byte)((double)(color.G * alpha) / 255.0);
+					var blue = (byte)((double)(color.B * alpha) / 255.0);
 					Marshal.WriteByte(glowBitmap.DIBits, i, blue);
 					Marshal.WriteByte(glowBitmap.DIBits, i + 1, green);
 					Marshal.WriteByte(glowBitmap.DIBits, i + 2, red);
@@ -291,14 +290,14 @@ namespace TecWare.PPSn.Controls
 				if (alphaMasks[0] != null)
 					return;
 
-				string assembly = typeof(GlowBitmap).Assembly.GetName().Name;
-				for (int i = 0; i < 12; i++)
+				var assembly = typeof(GlowBitmap).Assembly.GetName().Name;
+				for (var i = 0; i < 12; i++)
 				{
-					string path = String.Format("Images/{0}.png", (BitmapPart)i);
+					var path = String.Format("Images/{0}.png", (BitmapPart)i);
 					var uri = new Uri(String.Format("pack://application:,,,/{0};component/{1}", assembly, path), UriKind.Absolute);
 					var bitmapImage = new BitmapImage(uri);
-					byte[] array = new byte[4 * bitmapImage.PixelWidth * bitmapImage.PixelHeight];
-					int stride = 4 * bitmapImage.PixelWidth;
+					var array = new byte[4 * bitmapImage.PixelWidth * bitmapImage.PixelHeight];
+					var stride = 4 * bitmapImage.PixelWidth;
 					bitmapImage.CopyPixels(array, stride, 0);
 					alphaMasks[i] = new CachedBitmapInfo(array, bitmapImage.PixelWidth, bitmapImage.PixelHeight);
 				}
@@ -698,63 +697,56 @@ namespace TecWare.PPSn.Controls
 			CreateGlowWindows();
 		} // ctor
 
-		/// <summary></summary>
-		/// <param name="e"></param>
+		/// <inheritdoc/>
 		protected override void OnSourceInitialized(EventArgs e)
 		{
 			hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
 			hwndSource.AddHook(wndProc);
 			base.OnSourceInitialized(e);
-		}
+		} // proc OnSourceInitialized
 
-		/// <summary></summary>
-		/// <param name="e"></param>
+		/// <inheritdoc/>
 		protected override void OnClosed(EventArgs e)
 		{
 			hwndSource.RemoveHook(wndProc);
 			DestroyGlowWindows();
 			base.OnClosed(e);
-		}
+		} // proc OnClosed
 
-		/// <summary></summary>
-		/// <param name="e"></param>
+		/// <inheritdoc/>
 		protected override void OnStateChanged(EventArgs e)
 		{
 			UpdateGlowWindowVisibility();
 			base.OnStateChanged(e);
-		}
+		} // proc OnStateChanged
 
-		/// <summary></summary>
-		/// <param name="e"></param>
+		/// <inheritdoc/>
 		protected override void OnLocationChanged(EventArgs e)
 		{
 			UpdateGlowWindowBounds();
 			base.OnLocationChanged(e);
-		}
+		} // proc OnLocationChanged
 
-		/// <summary></summary>
-		/// <param name="sizeInfo"></param>
+		/// <inheritdoc/>
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
 			UpdateGlowWindowBounds();
 			base.OnRenderSizeChanged(sizeInfo);
-		}
+		} // proc OnRenderSizeChanged
 
-		/// <summary></summary>
-		/// <param name="e"></param>
+		/// <inheritdoc/>
 		protected override void OnActivated(EventArgs e)
 		{
 			UpdateGlowWindowActiveState();
 			base.OnActivated(e);
-		}
+		} // proc OnActivated
 
-		/// <summary></summary>
-		/// <param name="e"></param>
+		/// <inheritdoc/>
 		protected override void OnDeactivated(EventArgs e)
 		{
 			UpdateGlowWindowActiveState();
 			base.OnDeactivated(e);
-		}
+		} // proc OnDeactivated
 
 		private static void OnGlowColorChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
 			=> ((PpsWindow)obj).UpdateGlowWindowColors();
@@ -763,13 +755,13 @@ namespace TecWare.PPSn.Controls
 
 		private void CreateGlowWindows()
 		{
-			for (int i = 0; i < 4; i++)
+			for (var i = 0; i < 4; i++)
 				glowWindows[i] = new GlowWindow(this, (GlowDirection)i);
 		} // proc CreateGlowWindows
 
 		private void DestroyGlowWindows()
 		{
-			for (int i = 0; i < 4; i++)
+			for (var i = 0; i < 4; i++)
 				glowWindows[i].Dispose();
 		} // proc DestroyGlowWindows
 
@@ -778,39 +770,39 @@ namespace TecWare.PPSn.Controls
 			using (var gwc = new GlowWindowChanging(this))
 			{
 				UpdateGlowWindowVisibility();
-				for (int i = 0; i < 4; i++)
+				for (var i = 0; i < 4; i++)
 					glowWindows[i].UpdateBounds();
 			}
-		}
+		} // proc UpdateGlowWindowBounds
 
 		private void UpdateGlowWindowColors()
 		{
 			using (var gwc = new GlowWindowChanging(this))
 			{
-				for (int i = 0; i < 4; i++)
+				for (var i = 0; i < 4; i++)
 					glowWindows[i].UpdateColors(ActiveGlowColor, InactiveGlowColor);
 			}
-		}
+		} // proc UpdateGlowWindowColors
 
 		private void UpdateGlowWindowVisibility()
 		{
-			bool showGlow = Visibility == Visibility.Visible && WindowState == System.Windows.WindowState.Normal;
+			var showGlow = Visibility == Visibility.Visible && WindowState == System.Windows.WindowState.Normal;
 			if (showGlow != isGlowVisible)
 			{
 				isGlowVisible = showGlow;
-				for (int i = 0; i < 4; i++)
+				for (var i = 0; i < 4; i++)
 					glowWindows[i].IsVisible = isGlowVisible;
 			}
-		}
+		} // proc UpdateGlowWindowVisibility
 
 		private void UpdateGlowWindowActiveState()
 		{
 			using (var gwc = new GlowWindowChanging(this))
 			{
-				for (int i = 0; i < 4; i++)
-					glowWindows[i].IsActive = base.IsActive;
+				for (var i = 0; i < 4; i++)
+					glowWindows[i].IsActive = IsActive;
 			}
-		}
+		} // proc UpdateGlowWindowActiveState
 
 		private void UpdateGlowWindowZOrder()
 		{
@@ -820,10 +812,10 @@ namespace TecWare.PPSn.Controls
 			{
 				updatingZOrder = true;
 				var windowInteropHelper = new WindowInteropHelper(this);
-				IntPtr handle = windowInteropHelper.Handle;
+				var handle = windowInteropHelper.Handle;
 				foreach (var cur in glowWindows)
 				{
-					IntPtr prevHandle = NativeMethods.GetWindow(cur.Handle, NativeMethods.GW_HWNDPREV);
+					var prevHandle = NativeMethods.GetWindow(cur.Handle, NativeMethods.GW_HWNDPREV);
 					if (prevHandle != handle)
 						NativeMethods.SetWindowPos(cur.Handle, handle, 0, 0, 0, 0, NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOACTIVATE);
 					handle = cur.Handle;
@@ -837,9 +829,9 @@ namespace TecWare.PPSn.Controls
 
 		private void CommitGlowChanges()
 		{
-			for (int i = 0; i < 4; i++)
+			for (var i = 0; i < 4; i++)
 				glowWindows[i].CommitChanges();
-		}
+		} // proc CommitGlowChanges
 
 		#endregion
 
@@ -884,12 +876,12 @@ namespace TecWare.PPSn.Controls
 
 		private IntPtr WmNcCalcSize(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 		{
-			WINDOWPLACEMENT wp = NativeMethods.GetWindowPlacement(hwnd);
+			var wp = NativeMethods.GetWindowPlacement(hwnd);
 			if (wp.showCmd == NativeMethods.SW_SHOWMAXIMIZED)
 			{
-				RECT rcWindow = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
+				var rcWindow = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
 				NativeMethods.DefWindowProc(hwnd, (int)WinMsg.WM_NCCALCSIZE, wParam, lParam);
-				RECT rcClient = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
+				var rcClient = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
 				var windowinfo = new WINDOWINFO();
 				NativeMethods.GetWindowInfo(hwnd, windowinfo);
 				rcClient.Top = rcWindow.Top + (int)windowinfo.cyWindowBorders;
@@ -903,22 +895,21 @@ namespace TecWare.PPSn.Controls
 		{
 			UpdateGlowWindowZOrder();
 			return IntPtr.Zero;
-		}
+		} // func WmWindowPosChanged
 
 		private IntPtr WmNcHitTest(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 		{
 			var value = lParam.ToInt32();
-			var x = (int)((short)(value & 0xFFFF));
-			var y = (int)((short)(value >> 16));
-			Point point = PointFromScreen(new Point(x, y));
+			var x = (int)(short)(value & 0xFFFF);
+			var y = (int)(short)(value >> 16);
+			var point = PointFromScreen(new Point(x, y));
 
 			DependencyObject visualHit = null;
 			VisualTreeHelper.HitTest(
 				this,
 				delegate (DependencyObject target)
 				{
-					var f = target as FrameworkElement;
-					if (f != null && (!f.IsVisible || !f.IsEnabled))
+					if (target is FrameworkElement f && (!f.IsVisible || !f.IsEnabled))
 						return HitTestFilterBehavior.ContinueSkipSelfAndChildren;
 					return HitTestFilterBehavior.Continue;
 				},
@@ -927,14 +918,13 @@ namespace TecWare.PPSn.Controls
 					visualHit = target.VisualHit;
 					return HitTestResultBehavior.Stop;
 				},
-				new PointHitTestParameters(point));
+				new PointHitTestParameters(point)
+			);
 
-			int num = (int)HitTestValues.HTCLIENT;
+			var num = (int)HitTestValues.HTCLIENT;
 			while (visualHit != null)
 			{
-				var f = visualHit as FrameworkElement;
-				PpsWindowHitTest t;
-				if (f != null && f.IsVisible && ((t = f.Tag as PpsWindowHitTest) != null) && t.HitTest != 0)
+				if (visualHit is FrameworkElement f && f.IsVisible && f.Tag is PpsWindowHitTest t && t.HitTest != 0)
 				{
 					num = t.HitTest;
 					break;

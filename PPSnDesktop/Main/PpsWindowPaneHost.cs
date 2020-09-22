@@ -297,7 +297,7 @@ namespace TecWare.PPSn.Main
 		/// <summary></summary>
 		public PpsProgressStack PaneProgress => (PpsProgressStack)GetValue(PaneProgressProperty);
 		/// <summary></summary>
-		public IPpsWindowPaneManager PaneManager { get; private set; }
+		public IPpsWindowPaneManager PaneManager { get; set; }
 		/// <summary></summary>
 		public bool HasPaneSideBar => BooleanBox.GetBool(GetValue(HasPaneSideBarProperty));
 

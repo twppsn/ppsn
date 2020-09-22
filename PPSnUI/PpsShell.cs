@@ -1127,10 +1127,18 @@ namespace TecWare.PPSn
 		public static async Task<IPpsShell> StartAsync(IPpsShellInfo shellInfo, bool isDefault = false)
 		{
 			var n = new PpsShellImplementation(global, shellInfo);
-			await n.LoadAsync();
-			if (isDefault || currentShell == null)
-				SetCurrent(n);
-			return n;
+			try
+			{
+				await n.LoadAsync();
+				if (isDefault || currentShell == null)
+					SetCurrent(n);
+				return n;
+			}
+			catch
+			{
+				n?.Dispose();
+				throw;
+			}
 		} // proc StartAsync
 
 		/// <summary>Get all registered shell.</summary>

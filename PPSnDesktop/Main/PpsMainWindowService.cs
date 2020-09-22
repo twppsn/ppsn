@@ -163,7 +163,7 @@ namespace TecWare.PPSn.Main
 						{
 							var window = new PpsSingleWindow(shell, false);
 							window.Show();
-							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.NewPane, arguments);
+							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.ReplacePane, arguments);
 						}
 					case PpsOpenPaneMode.NewSingleDialog:
 						{
