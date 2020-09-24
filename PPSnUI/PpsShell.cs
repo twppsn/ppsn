@@ -1246,6 +1246,24 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- Settings -----------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <returns></returns>
+		public static PpsSettingsInfoBase GetSettings(this IServiceProvider sp)
+			=> PpsSettingsInfoBase.GetGeneric(sp);
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="sp"></param>
+		/// <returns></returns>
+		public static T GetSettings<T>(this IServiceProvider sp)
+			where T : PpsSettingsInfoBase
+			=> (T)Activator.CreateInstance(typeof(T), sp.GetService<IPpsSettingsService>(true));
+
+		#endregion
+
 		/// <summary>Current shell</summary>
 		public static IPpsShell Current => currentShell;
 

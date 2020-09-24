@@ -160,9 +160,8 @@ namespace TecWare.PPSn
 
 							// start window
 							var mws = newShell.GetService<IPpsMainWindowService>(true);
-							await mws.OpenPaneAsync(Type.GetType("TecWare.PPSn.Pps2000.VO.VoWindowPane,PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
-							//await mws.OpenPaneAsync(typeof(PpsTracePane));
-
+							await mws.OpenPaneAsync(Type.GetType("TecWare.PPSn.Pps2000.UI.PpsMenuPane,PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
+							
 							//var bde = new PpsBdeWindow(newShell);
 							//bde.Show();
 							//var paneType = Type.GetType("TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000.Bde, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null", true);

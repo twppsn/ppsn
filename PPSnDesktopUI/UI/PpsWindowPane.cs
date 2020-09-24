@@ -189,6 +189,24 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- class PpsWindowPaneSettings --------------------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsWindowPaneSettings :PpsSettingsInfoBase
+	{
+		/// <summary></summary>
+		/// <param name="settingsService"></param>
+		public PpsWindowPaneSettings(IPpsSettingsService settingsService)
+			: base(settingsService)
+		{
+		} // ctor
+
+		/// <summary>Open pane mode</summary>
+		public bool NewPaneMode => this.GetProperty("PPSn.Panes.NewPaneMode", true);
+	} // class PpsWindowPaneSettings
+
+	#endregion
+
 	#region -- class PpsWindowPaneHelper ----------------------------------------------
 
 	/// <summary>Extensions for the Pane, or PaneControl</summary>
@@ -276,7 +294,7 @@ namespace TecWare.PPSn.UI
 			if (arguments != null && arguments.Mode != null)
 				return Procs.ChangeType<PpsOpenPaneMode>(arguments.Mode);
 
-			return paneManager._Shell.GetOptionalValue("NewPaneMode", true) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
+			return paneManager.Shell.GetSettings<PpsWindowPaneSettings>().NewPaneMode ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
 		} // func GetDefaultPaneMode
 
 		/// <summary>Loads a generic wpf window pane <see cref="PpsGenericWpfWindowPane"/>.</summary>

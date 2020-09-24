@@ -288,6 +288,21 @@ namespace TecWare.PPSn.UI
 			=> new SettingsEditor(settingsService);
 
 		#endregion
+
+		#region -- class PpsGenericSettingsInfo ---------------------------------------
+
+		private sealed class PpsGenericSettingsInfo : PpsSettingsInfoBase
+		{
+			public PpsGenericSettingsInfo(IPpsSettingsService settingsService) 
+				: base(settingsService)
+			{
+			}
+		} // class PpsGenericSettingsInfo
+
+		#endregion
+
+		internal static PpsSettingsInfoBase GetGeneric(IServiceProvider sp)
+			=> new PpsGenericSettingsInfo(sp.GetService<IPpsSettingsService>(true));
 	} // class PpsSettingsInfoBase
 
 	#endregion
