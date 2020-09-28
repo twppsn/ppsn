@@ -591,10 +591,17 @@ namespace TecWare.PPSn
 				OnPropertyChanged(nameof(IsInitialized));
 			} // proc LoadAsync
 
-			public Task<bool> ShutdownAsync()
+			public async Task<bool> ShutdownAsync()
 			{
+				// logout user
+				await LogoutAsync();
+
+				// notify shell services
+				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+					await init.DoneAsync();
+
 				Dispose();
-				return Task.FromResult(true);
+				return true;
 			} // func ShutdownAsync
 
 			private void Info_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -781,6 +788,12 @@ namespace TecWare.PPSn
 				}
 			} // proc LoginAsync
 		
+			private async Task LogoutAsync()
+			{
+				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+					await init.DoneUserAsync();
+			} // proc LogoutAsync
+
 			internal Task RunBackgroundTasksAsync()
 			{
 				// must not return any exception
