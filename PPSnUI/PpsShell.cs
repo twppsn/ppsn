@@ -22,6 +22,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -129,6 +130,8 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		Task<bool> ShutdownAsync();
 
+		/// <summary>Startup parameter for the device.</summary>
+		string DeviceId { get; }
 		/// <summary>Return the shell info for this shell.</summary>
 		IPpsShellInfo Info { get; }
 		/// <summary>Settings of this shell.</summary>
@@ -512,6 +515,7 @@ namespace TecWare.PPSn
 			public event PropertyChangedEventHandler PropertyChanged;
 
 			private readonly IServiceProvider parentProvider;
+			private readonly string deviceId;
 			private readonly IPpsShellInfo info;
 			private readonly Dictionary<Type, object> services = new Dictionary<Type, object>(TypeComparer.Default);
 			private IPpsSettingsService settingsService = null;
@@ -526,8 +530,9 @@ namespace TecWare.PPSn
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
-			public PpsShellImplementation(IServiceProvider parentProvider, IPpsShellInfo info)
+			public PpsShellImplementation(IServiceProvider parentProvider, string deviceId, IPpsShellInfo info)
 			{
+				this.deviceId = deviceId ?? GetDefaultDeviceKey();
 				this.info = info ?? throw new ArgumentNullException(nameof(info));
 				this.parentProvider = parentProvider ?? throw new ArgumentNullException(nameof(parentProvider));
 
@@ -591,10 +596,17 @@ namespace TecWare.PPSn
 				OnPropertyChanged(nameof(IsInitialized));
 			} // proc LoadAsync
 
-			public Task<bool> ShutdownAsync()
+			public async Task<bool> ShutdownAsync()
 			{
+				// logout user
+				await LogoutAsync();
+
+				// notify shell services
+				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+					await init.DoneAsync();
+
 				Dispose();
-				return Task.FromResult(true);
+				return true;
 			} // func ShutdownAsync
 
 			private void Info_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -605,6 +617,9 @@ namespace TecWare.PPSn
 
 			private void OnPropertyChanged(string propertyName)
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+			private static string GetDefaultDeviceKey()
+				=> Environment.MachineName;
 
 			#endregion
 
@@ -742,7 +757,7 @@ namespace TecWare.PPSn
 				using (var http = CreateHttpCore(info.Uri, Settings.GetDpcCredentials()))
 				{
 					// load settings from server
-					await LoadSettingsFromServerAsync(settingsService, http);
+					await LoadSettingsFromServerAsync(settingsService, http, deviceId, 0);
 				}
 			} // proc InitAsync
 
@@ -781,6 +796,12 @@ namespace TecWare.PPSn
 				}
 			} // proc LoginAsync
 		
+			private async Task LogoutAsync()
+			{
+				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+					await init.DoneUserAsync();
+			} // proc LogoutAsync
+
 			internal Task RunBackgroundTasksAsync()
 			{
 				// must not return any exception
@@ -831,6 +852,7 @@ namespace TecWare.PPSn
 
 			#endregion
 
+			public string DeviceId => deviceId;
 			public IPpsShellInfo Info => info;
 			
 			public DEHttpClient Http => http;
@@ -1124,9 +1146,9 @@ namespace TecWare.PPSn
 		/// <param name="shellInfo"></param>
 		/// <param name="isDefault"></param>
 		/// <returns></returns>
-		public static async Task<IPpsShell> StartAsync(IPpsShellInfo shellInfo, bool isDefault = false)
+		public static async Task<IPpsShell> StartAsync(string deviceKey, IPpsShellInfo shellInfo, bool isDefault = false)
 		{
-			var n = new PpsShellImplementation(global, shellInfo);
+			var n = new PpsShellImplementation(global, deviceKey, shellInfo);
 			try
 			{
 				await n.LoadAsync();
@@ -1151,22 +1173,43 @@ namespace TecWare.PPSn
 		/// <param name="client"></param>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
-		public static async Task LoadSettingsFromServerAsync(IPpsSettingsService settingsService, DEHttpClient http)
+		public static async Task<int> LoadSettingsFromServerAsync(IPpsSettingsService settingsService, DEHttpClient http, string deviceId, int lastRefreshTick)
 		{
-			// refresh properties from server
-			var xInfo = await http.GetXmlAsync("info.xml", rootName: "ppsn");
+			if (deviceId == null)
+				throw new ArgumentNullException(nameof(deviceId));
 
-			// update mime type mappings
-			var xMimeTypes = xInfo.Element("mimeTypes");
-			if (xMimeTypes != null)
+			// refresh properties from server
+			var sb = new StringBuilder("info.xml");
+			HttpStuff.MakeUriArguments(sb, false,
+				new PropertyValue[]
+				{
+					new PropertyValue("app", "PPSnDesktop"),
+					new PropertyValue("id", deviceId),
+					new PropertyValue("last", lastRefreshTick)
+				}
+			);
+
+			using (var r = await http.GetResponseAsync(sb.ToString(), MimeTypes.Text.Xml))
 			{
-				UpdateMimeTypesFromInfo(xMimeTypes);
-				xMimeTypes.Remove();
+				if (r.Headers.TryGetValue("x-ppsn-lastrefresh", out var lastRefreshTickValue) && Int32.TryParse(lastRefreshTickValue, out var tmp))
+					lastRefreshTick = tmp;
+
+				var xInfo = await r.GetXmlAsync(MimeTypes.Text.Xml, "ppsn");
+
+				// update mime type mappings
+				var xMimeTypes = xInfo.Element("mimeTypes");
+				if (xMimeTypes != null)
+				{
+					UpdateMimeTypesFromInfo(xMimeTypes);
+					xMimeTypes.Remove();
+				}
+
+				// write server settings to file
+				using (var xml = xInfo.CreateReader())
+					await settingsService.UpdateAsync(FileSettingsInfo.ParseInstanceSettings(xml).ToArray());
 			}
 
-			// write server settings to file
-			using (var xml = xInfo.CreateReader())
-				await settingsService.UpdateAsync(FileSettingsInfo.ParseInstanceSettings(xml).ToArray());
+			return lastRefreshTick;
 		} // proc LoadSettingsFromServerAsync
 
 		/// <summary></summary>

@@ -309,6 +309,26 @@ namespace TecWare.PPSn
 		public static ImageSource TakePicture(DependencyObject owner)
 			=> PpsCameraDialog.TakePicture(owner);
 
+		#region -- PpsUI - Extensions -------------------------------------------------
+
+		/// <summary>Return a dummy progress.</summary>
+		/// <param name="sender"></param>
+		/// <param name="blockUI"></param>
+		/// <param name="progressText"></param>
+		/// <returns></returns>
+		public static IPpsProgress CreateProgress(this DependencyObject sender, bool blockUI = true, string progressText = null)
+			=> PpsUI.CreateProgress(PpsWpfShell.GetControlService<IServiceProvider>(sender, true), blockUI, progressText);
+
+		/// <summary></summary>
+		/// <param name="sender"></param>
+		/// <param name="taskText"></param>
+		/// <param name="action"></param>
+		/// <returns></returns>
+		public static Task RunTaskAsync(this DependencyObject sender, string taskText, Func<IPpsProgress, Task> action)
+			=> PpsUI.RunTaskAsync(PpsWpfShell.GetControlService<IServiceProvider>(sender, true), taskText, action);
+
+		#endregion
+
 		#region -- remove after update DES --
 
 		#endregion

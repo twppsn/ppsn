@@ -52,7 +52,7 @@ namespace TecWare.PPSn.Main
 	TemplatePart(Name = "PART_CommandBar", Type = typeof(PpsCommandBar)),
 	TemplatePart(Name = "PART_Control", Type = typeof(ContentPresenter))
 	]
-	internal class PpsWindowPaneHost : Control, IPpsWindowPaneHost
+	internal class PpsWindowPaneHost : Control, IPpsWindowPaneHost // todo: ableiten von PpsPaneHost
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey currentPanePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPane), typeof(IPpsWindowPane), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
@@ -76,6 +76,8 @@ namespace TecWare.PPSn.Main
 		private static readonly DependencyPropertyKey isFixedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsFixed), typeof(bool), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty IsFixedProperty = isFixedPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		public event EventHandler<PaneUnloadedEventArgs> PaneUnloaded;
 
 		private PpsWindowPaneCharmBarControl charmBarControl = null;
 		private PpsCommandBar commandBar = null;
@@ -288,7 +290,11 @@ namespace TecWare.PPSn.Main
 			return transformed;
 		} // func Render
 
-		public Task<bool> ClosePaneAsync() => throw new NotImplementedException();
+		public Task<bool> ClosePaneAsync()
+			=> throw new NotImplementedException();
+
+		object IServiceProvider.GetService(Type serviceType)
+			=> PaneManager.GetService(serviceType);
 
 		IPpsProgressFactory IPpsWindowPaneHost.Progress => PaneProgress;
 

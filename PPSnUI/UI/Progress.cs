@@ -78,6 +78,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Return a dummy progress.</summary>
 		/// <param name="sp"></param>
 		/// <param name="blockUI"></param>
+		/// <param name="progressText"></param>
 		/// <returns></returns>
 		public static IPpsProgress CreateProgress(this IServiceProvider sp, bool blockUI = true, string progressText = null)
 			=> SetProgressText(sp.GetService<IPpsProgressFactory>()?.CreateProgress(blockUI), progressText) ?? EmptyProgress;

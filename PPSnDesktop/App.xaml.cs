@@ -19,12 +19,12 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Threading;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Bde;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
@@ -64,10 +64,25 @@ namespace TecWare.PPSn
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
 
-		internal async Task<bool> StartApplicationAsync(IPpsShellInfo _shellInfo = null, ICredentials _userInfo = null)
+		private static IPpsWindowPaneManager GetMainWindowPaneManager(IPpsShell shell, string applicationMode)
+		{
+			if (applicationMode == null || String.Compare(applicationMode, "main", StringComparison.OrdinalIgnoreCase) == 0) // start window service
+				return shell.GetService<IPpsMainWindowService>(true);
+			else if (String.Compare(applicationMode, "bde", StringComparison.OrdinalIgnoreCase) == 0)
+			{
+				var bde = new PpsBdeWindow(shell);
+				bde.Show();
+				return bde;
+			}
+			else
+				throw new ArgumentOutOfRangeException(nameof(applicationMode), applicationMode, "Invalid application mode.");
+		} // func GetMainWindowManager
+
+		internal async Task<bool> StartApplicationAsync(string _deviceKey, IPpsShellInfo _shellInfo = null, ICredentials _userInfo = null)
 		{
 			var shellInfo = _shellInfo;
 			var userInfo = _userInfo;
+			var deviceKey = _deviceKey;
 
 			object errorInfo = null;
 			IPpsShell newShell = null; 
@@ -85,7 +100,7 @@ namespace TecWare.PPSn
 			splashWindow.Show();
 
 			// todo: config
-			PpsShell.Collect(Assembly.Load("PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
+			PpsShell.Collect(System.Reflection.Assembly.Load("PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
 
 			try
 			{
@@ -114,15 +129,27 @@ namespace TecWare.PPSn
 
 							// create the application shell
 							splashWindow.SetProgressText("Starte Anwendung...");
-							newShell = await PpsShell.StartAsync(shellInfo, true);
+							newShell = await PpsShell.StartAsync(deviceKey, shellInfo, true);
 							errorShell = newShell;
 						}
+
+#if DEBUG
+						var genericSettings = newShell.GetSettings();
+						using (var settingsEdit = genericSettings.Edit())
+						{
+							settingsEdit.Set(PpsWpfShellSettings.ApplicationModeKey, "main");
+							settingsEdit.Set(PpsWpfShellSettings.ApplicationModulKey, "TecWare.PPSn.Pps2000.UI.PpsMenuPane,PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+							//settingsEdit.Set(PpsWpfShellSettings.ApplicationModeKey, "bde");
+							//settingsEdit.Set(PpsWpfShellSettings.ApplicationModulKey, "TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000.Bde, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+							await settingsEdit.CommitAsync();
+						}
+#endif
 
 						// login user
 						if (userInfo == null && errorInfo == null) // try find auto login
 						{
 							// check shell settings for user information
-							// todo: get auto login
+							userInfo = newShell.GetSettings<PpsWpfShellSettings>().GetAutoLogin();
 						}
 
 						if (userInfo == null || errorInfo != null) // show login page
@@ -137,7 +164,7 @@ namespace TecWare.PPSn
 									return false;
 								else if (newLoginShellInfo != null && !newLoginShellInfo.Equals(newShell.Info))
 								{
-									await newShell.ShutdownAsync();
+									await newShell.ShutdownAsync(); // shutdown partly loaded shell
 
 									errorShell = null;
 									newShell = null;
@@ -158,14 +185,13 @@ namespace TecWare.PPSn
 							splashWindow.SetProgressText("Anmelden des Nutzers...");
 							await newShell.LoginAsync(userInfo);
 
-							// start window
-							var mws = newShell.GetService<IPpsMainWindowService>(true);
-							await mws.OpenPaneAsync(Type.GetType("TecWare.PPSn.Pps2000.UI.PpsMenuPane,PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
-							
-							//var bde = new PpsBdeWindow(newShell);
-							//bde.Show();
-							//var paneType = Type.GetType("TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000.Bde, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null", true);
-							//bde.OpenPaneAsync(paneType, arguments: new LuaTable()).Spawn(bde);
+							// start up main window manager
+							var settings = newShell.GetSettings<PpsWpfShellSettings>(); // create a new one, with new cached settings
+							var mw = GetMainWindowPaneManager(newShell, settings.ApplicationMode);
+
+							// open first window
+							var paneType = String.IsNullOrEmpty(settings.ApplicationModul) ? null : Type.GetType(settings.ApplicationModul, true);
+							await mw.OpenPaneAsync(paneType);
 
 							// set active shell
 							errorShell = null;
@@ -233,14 +259,14 @@ namespace TecWare.PPSn
 			PpsShell.Collect(typeof(StuffUI).Assembly);
 			PpsShell.Collect(typeof(App).Assembly);
 
-			ParseArguments(e, out var shellInfo, out var userCred);
+			ParseArguments(e, out var deviceKey, out var shellInfo, out var userCred);
 
 			FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
 			// init keyboard scanner
 			KeyboardScanner.Init();
 
-			StartApplicationAsync(shellInfo, userCred)
+			StartApplicationAsync(deviceKey, shellInfo, userCred)
 				.ContinueWith(t =>
 				{
 					if (!t.Result)
@@ -259,13 +285,14 @@ namespace TecWare.PPSn
 			CloseApplicationAsync().Await();
 		} // proc OnExit
 
-		private static void ParseArguments(StartupEventArgs e, out IPpsShellInfo shellInfo, out ICredentials userCred)
+		private static void ParseArguments(StartupEventArgs e, out string deviceKey, out IPpsShellInfo shellInfo, out ICredentials userCred)
 		{
 			var userName = (string)null;
 			var userPass = (string)null;
 
 			shellInfo = null;
 			userCred = null;
+			deviceKey = null;
 
 			if (e.Args.Length == 0)
 				return;
@@ -280,6 +307,9 @@ namespace TecWare.PPSn
 					var cmd = arg[1];
 					switch (cmd)
 					{
+						case 'd':
+							deviceKey = arg.Substring(2);
+							break;
 						case 'u':
 							userName = arg.Substring(2);
 							break;
@@ -290,14 +320,14 @@ namespace TecWare.PPSn
 							var shellName = arg.Substring(2);
 							shellInfo = localShells.Value.FirstOrDefault(c => String.Compare(c.Name, shellName, StringComparison.OrdinalIgnoreCase) == 0);
 							break;
-						case 'l': // enforce load of an remote assembly
-							var path = arg.Substring(2);
-							if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-								|| path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-								Task.Run(() => PpsEnvironment.LoadAssemblyFromLocalAsync(arg.Substring(2))).Wait();
-							else
-							{ }
-							break;
+						//case 'l': // enforce load of an remote assembly
+						//	var path = arg.Substring(2);
+						//	if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+						//		|| path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+						//		Task.Run(() => PpsEnvironment.LoadAssemblyFromLocalAsync(arg.Substring(2))).Wait();
+						//	else
+						//	{ }
+						//	break;
 					}
 				}
 			}

@@ -19,6 +19,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -46,11 +47,30 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- class PaneUnloadedEventArgs --------------------------------------------
+
+	/// <summary></summary>
+	public class PaneUnloadedEventArgs : EventArgs
+	{
+		/// <summary></summary>
+		/// <param name="pane"></param>
+		public PaneUnloadedEventArgs(IPpsWindowPane pane)
+			=> Pane = pane ?? throw new ArgumentNullException(nameof(pane));
+
+		/// <summary></summary>
+		public IPpsWindowPane Pane { get; }
+	} // class PaneUnloadedEventArgs
+
+	#endregion
+
 	#region -- interface IPpsWindowPaneHost -------------------------------------------
 
 	/// <summary>The host of the window pane.</summary>
-	public interface IPpsWindowPaneHost
+	public interface IPpsWindowPaneHost : IServiceProvider
 	{
+		/// <summary>Is raised, when the pane of the host is unloaded.</summary>
+		event EventHandler<PaneUnloadedEventArgs> PaneUnloaded;
+
 		/// <summary>Close this pane.</summary>
 		Task<bool> ClosePaneAsync();
 
@@ -379,6 +399,29 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- ShowModalPane ------------------------------------------------------
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="paneManager"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public static async Task<T> ShowModalPaneAsync<T>(this IPpsWindowPaneManager paneManager, LuaTable arguments = null)
+			where T : class, IPpsWindowPane
+		{
+			// open new pane
+			var pane = (T)await paneManager.OpenPaneAsync(typeof(T), PpsOpenPaneMode.NewPane, arguments);
+
+			// wait for unload
+			var paneClosedTask = new TaskCompletionSource<T>();
+			pane.PaneHost.PaneUnloaded += (sender, e) => paneClosedTask.SetResult(pane);
+			return await paneClosedTask.Task;
+		} // func ShowModalPaneAsync
+
+		#endregion
+
+		#region -- EqualPane ----------------------------------------------------------
+
 		/// <summary>Are the pane equal to the pane arguments.</summary>
 		/// <param name="pane">Pane to compare with.</param>
 		/// <param name="paneType">Type of the other pane.</param>
@@ -387,11 +430,14 @@ namespace TecWare.PPSn.UI
 		public static bool EqualPane(this IPpsWindowPane pane, Type paneType, LuaTable arguments)
 			=> pane != null && paneType == pane.GetType() && pane.CompareArguments(arguments ?? new LuaTable()) == PpsWindowPaneCompareResult.Same;
 
+		#endregion
+
 		/// <summary></summary>
 		/// <param name="pane"></param>
 		/// <param name="text"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
+		[Obsolete]
 		public static IPpsProgress DisableUI(this IPpsWindowPane pane, string text = null, int value = -1)
 			=> DisableUI(pane.PaneHost, text, value);
 
@@ -400,6 +446,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="text"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
+		[Obsolete]
 		public static IPpsProgress DisableUI(this IPpsWindowPaneHost pane, string text = null, int value = -1)
 		{
 			var progress = pane.Progress.CreateProgress() ?? _PpsShell.EmptyProgress;

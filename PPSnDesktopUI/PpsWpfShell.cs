@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -31,6 +32,7 @@ using System.Windows.Threading;
 using System.Xaml;
 using System.Xml;
 using Neo.IronLua;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
@@ -484,6 +486,46 @@ namespace TecWare.PPSn
 
 		public IPpsShell Shell { get => shell; set { } }
 	} // class PpsWpfShellService
+
+	#endregion
+
+	#region -- class PpsWpfShellSettings ----------------------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsWpfShellSettings : PpsSettingsInfoBase
+	{
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public const string ApplicationModeKey = "PPSn.Application.Mode";
+		public const string ApplicationModulKey = "PPSn.Application.Modul";
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		/// <summary></summary>
+		/// <param name="settingsService"></param>
+		public PpsWpfShellSettings(IPpsSettingsService settingsService)
+			: base(settingsService)
+		{
+		} // ctor
+
+		/// <summary>Automatic login</summary>
+		/// <return></return>
+		public ICredentials GetAutoLogin()
+		{
+			if (String.IsNullOrEmpty(AutoLoginUser))
+				return null;
+
+			return UserCredential.Create(AutoLoginUser, AutoLoginPassword);
+		} // func GetAutoLogin
+
+		/// <summary>Automatic login</summary>
+		public string AutoLoginUser => this.GetProperty("PPSn.AutoLogin.UserName", null);
+		/// <summary>Automatic login</summary>
+		public string AutoLoginPassword => this.GetProperty("PPSn.AutoLogin.Password", null);
+
+		/// <summary>Application mode</summary>
+		public string ApplicationMode => this.GetProperty(ApplicationModeKey, "main");
+		/// <summary>Initial modul to load.</summary>
+		public string ApplicationModul => this.GetProperty(ApplicationModulKey, null);
+	} // class PpsWpfShellSettings
 
 	#endregion
 
