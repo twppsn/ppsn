@@ -20,8 +20,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -144,7 +142,7 @@ namespace TecWare.PPSn.UI
 		private sealed class InstanceSettingsInfo : FileSettingsInfo
 		{
 			private readonly FileShellInfo info;
-
+			
 			public InstanceSettingsInfo(FileShellInfo info)
 				: base(info.SettingsInfo)
 			{
@@ -178,7 +176,7 @@ namespace TecWare.PPSn.UI
 				if (Shell == null || Shell.Http == null)
 					throw new InvalidOperationException();
 
-				return PpsShell.LoadSettingsFromServerAsync(this, Shell.Http);
+				return PpsShell.LoadSettingsFromServerAsync(this, Shell.Http, Shell.DeviceId, 0);
 			} // proc LoadSettingsFromServerAsync
 
 			protected override IReadOnlyList<Tuple<XName, string>> TranslateProperties => translateInstanceProperties;
@@ -472,6 +470,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Opens a local environment information.</summary>
 		/// <param name="info"></param>
+		/// <param name="deviceKey"></param>
 		public static FileSettingsInfo CreateInstanceSettings(FileShellInfo info)
 			=> new InstanceSettingsInfo(info);
 

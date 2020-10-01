@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using TecWare.DE.Stuff;
@@ -111,6 +112,12 @@ namespace TecWare.PPSn.UI
 
 		public static Task ShowExceptionAsync(this IServiceProvider sp, bool background, Exception exception, string alternativeMessage = null)
 			=> ShowExceptionAsync(sp.GetService<IPpsUIService>(true), background, exception, alternativeMessage);
+
+		public static async Task RunTaskAsync(this IServiceProvider sp, string taskText, Func<IPpsProgress,Task> action)
+		{
+			using (var p = sp.CreateProgress(true, taskText))
+				await action(p);
+		} // proc RunTaskAsync
 	} // class PpsUI
 
 	#endregion

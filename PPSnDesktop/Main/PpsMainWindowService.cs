@@ -136,6 +136,9 @@ namespace TecWare.PPSn.Main
 
 		public IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments = null)
 		{
+			if (paneType == null)
+				throw new ArgumentNullException(nameof(paneType));
+
 			foreach (var p in Panes)
 			{
 				if (p.EqualPane(paneType, arguments))
@@ -147,7 +150,7 @@ namespace TecWare.PPSn.Main
 		public async Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null)
 		{
 			// find pane
-			var pane = FindOpenPane(paneType, arguments);
+			var pane = paneType != null ? FindOpenPane(paneType, arguments) : null;
 			if (pane == null)
 			{
 				// open pane
@@ -157,6 +160,8 @@ namespace TecWare.PPSn.Main
 					case PpsOpenPaneMode.NewMainWindow:
 						{
 							var window = CreateMainWindow();
+							if (paneType == null)
+								return null; // do not create any pane, only a empty window
 							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.NewPane, arguments);
 						}
 					case PpsOpenPaneMode.NewSingleWindow:

@@ -25,8 +25,12 @@ namespace TecWare.PPSn.UI
 	/// <summary>Base class for window pane hosts.</summary>
 	internal abstract class PpsPaneHost : Control, IPpsWindowPaneHost
 	{
+		public event EventHandler<PaneUnloadedEventArgs> PaneUnloaded;
+
 		private readonly IPpsWindowPaneManager paneManager;
 		private readonly IPpsWindowPane pane;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		protected PpsPaneHost(IPpsWindowPaneManager paneManager, Type paneType)
 		{
@@ -45,6 +49,8 @@ namespace TecWare.PPSn.UI
 			SetValue(panePropertyKey, pane);
 		} // ctor
 
+		#endregion
+
 		#region -- Pane ---------------------------------------------------------------
 
 		/// <summary>Load the pane content</summary>
@@ -56,12 +62,20 @@ namespace TecWare.PPSn.UI
 		/// <summary>Unload pane content.</summary>
 		/// <param name="commit"></param>
 		/// <returns></returns>
-		public Task<bool> UnloadPaneAsync(bool? commit = null)
-			=> pane.UnloadAsync(commit);
+		public async Task<bool> UnloadPaneAsync(bool? commit = null)
+		{
+			var r = await pane.UnloadAsync(commit);
+			if (r)
+				PaneUnloaded?.Invoke(this, new PaneUnloadedEventArgs(pane));
+			return r;
+		} // func UnloadPaneAsync
 
 		/// <summary>Close this pane.</summary>
 		/// <returns></returns>
 		public abstract Task<bool> ClosePaneAsync();
+
+		object IServiceProvider.GetService(Type serviceType)
+			=> paneManager.GetService(serviceType);
 
 		private void Pane_PropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
