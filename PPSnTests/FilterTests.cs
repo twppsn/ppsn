@@ -14,13 +14,9 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TecWare.PPSn.Data;
 
@@ -222,6 +218,34 @@ namespace TecWare.PPSn
 			var f = PpsDataFilterExpression.Parse("Int64:(1 2 3 4 5)");
 			var p = PpsDataFilterVisitorLambda.CompileTypedFilter<Props>(f);
 			var f2 = PpsDataFilterExpression.Parse("or(or(Int64:=1 Int64:=2 Int64:=3 Int64:=4 Int64:=2) Int64:=5)").Reduce();
+		}
+
+		private sealed class TextSqlVisitor : PpsDataFilterVisitorSql
+		{
+			private readonly Tuple<string, Type>[] columns;
+
+			public TextSqlVisitor(params Tuple<string, Type>[] columns)
+			{
+				this.columns = columns;
+			} // ctor
+
+			protected override Tuple<string, Type> LookupColumn(string columnToken)
+				=> columns.FirstOrDefault(c => String.Compare(c.Item1, columnToken, StringComparison.OrdinalIgnoreCase) == 0);
+
+			protected override string LookupNativeExpression(string key)
+				=> null;
+		}
+
+		[TestMethod]
+		public void TestSqlVisitor()
+		{
+			var t = new TextSqlVisitor(
+				new Tuple<string, Type>("DD", typeof(DateTime))
+			).CreateFilter(PpsDataFilterExpression.Combine(
+				PpsDataFilterExpression.Compare("DD", PpsDataFilterCompareOperator.Equal, new DateTime(2010, 5, 26))
+			));
+
+			Assert.AreEqual("DD BETWEEN '26.05.2010 00:00:00' AND '26.05.2010 23:59:59'", t);
 		}
 	}
 }

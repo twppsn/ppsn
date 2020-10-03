@@ -2608,6 +2608,8 @@ namespace TecWare.PPSn.Data
 					return CreateCompareFilterNumber(expression.Operand, expression.Operator, ((PpsDataFilterTextKeyValue)expression.Value).Text);
 				case PpsDataFilterValueType.Integer:
 					return CreateCompareFilterInteger(expression.Operand, expression.Operator, ((PpsDataFilterIntegerValue)expression.Value).Value);
+				case PpsDataFilterValueType.Decimal:
+					return CreateCompareFilterDecimal(expression.Operand, expression.Operator, ((PpsDataFilterDecimalValue)expression.Value).Value);
 				case PpsDataFilterValueType.Null:
 					return CreateCompareFilterNull(expression.Operand, expression.Operator);
 				default:
@@ -2676,6 +2678,14 @@ namespace TecWare.PPSn.Data
 				: CreateDefaultCompareValue(column.Item1, op, value.ChangeType<string>(), false);
 		} // func CreateCompareFilterText
 
+		private string CreateCompareFilterDecimal(string columnToken, PpsDataFilterCompareOperator op, decimal value)
+		{
+			var column = LookupColumn(columnToken);
+			return column == null
+				? CreateColumnErrorFilter(columnToken)
+				: CreateDefaultCompareValue(column.Item1, op, value.ChangeType<string>(), false);
+		} // func CreateCompareFilterDecimal
+
 		private string CreateCompareFilterNumber(string columnToken, PpsDataFilterCompareOperator op, string text)
 		{
 			var column = LookupNumberColumn(columnToken);
@@ -2709,19 +2719,19 @@ namespace TecWare.PPSn.Data
 			{
 				case PpsDataFilterCompareOperator.Contains:
 				case PpsDataFilterCompareOperator.Equal:
-					return column.Item1 + " BETWEEN " + CreateDateString(from) + " AND " + CreateDateString(to);
+					return column.Item1 + " BETWEEN " + CreateDateString(from) + " AND " + CreateDateString(to.AddMilliseconds(-1));
 				case PpsDataFilterCompareOperator.NotContains:
 				case PpsDataFilterCompareOperator.NotEqual:
-					return "NOT " + column.Item1 + " BETWEEN " + CreateDateString(from) + " AND " + CreateDateString(to);
+					return "NOT " + column.Item1 + " BETWEEN " + CreateDateString(from) + " AND " + CreateDateString(to.AddMilliseconds(-1));
 
 				case PpsDataFilterCompareOperator.Greater:
-					return column.Item1 + " > " + CreateDateString(to);
+					return column.Item1 + " > " + CreateDateString(to.AddMilliseconds(-1));
 				case PpsDataFilterCompareOperator.GreaterOrEqual:
 					return column.Item1 + " >= " + CreateDateString(from);
 				case PpsDataFilterCompareOperator.Lower:
 					return column.Item1 + " < " + CreateDateString(from);
 				case PpsDataFilterCompareOperator.LowerOrEqual:
-					return column.Item1 + " <= " + CreateDateString(to);
+					return column.Item1 + " <= " + CreateDateString(to.AddMilliseconds(-1));
 
 				default:
 					throw new NotImplementedException();
@@ -3189,6 +3199,11 @@ namespace TecWare.PPSn.Data
 					{
 						var right = Expression.Constant(((PpsDataFilterIntegerValue)expression.Value).Value);
 						return Expression.MakeBinary(GetBinaryExpressionType(expression), ConvertTo(left, typeof(long)), right);
+					}
+				case PpsDataFilterValueType.Decimal:
+					{
+						var right = Expression.Constant(((PpsDataFilterIntegerValue)expression.Value).Value);
+						return Expression.MakeBinary(GetBinaryExpressionType(expression), ConvertTo(left, typeof(decimal)), right);
 					}
 				case PpsDataFilterValueType.Number:
 					{
