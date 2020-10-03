@@ -54,6 +54,8 @@
 			this.cmdStyles = this.Factory.CreateRibbonButton();
 			this.cmdListObjectInfo = this.Factory.CreateRibbonButton();
 			this.groupCommands = this.Factory.CreateRibbonGroup();
+			this.separator4 = this.Factory.CreateRibbonSeparator();
+			this.removeTableSourceData = this.Factory.CreateRibbonButton();
 			this.tabPPSn.SuspendLayout();
 			this.groupData.SuspendLayout();
 			this.groupConnection.SuspendLayout();
@@ -190,8 +192,10 @@
 			// cmdExtended
 			// 
 			this.cmdExtended.Items.Add(this.editTableExCommand);
-			this.cmdExtended.Items.Add(this.cmdStyles);
+			this.cmdExtended.Items.Add(this.removeTableSourceData);
 			this.cmdExtended.Items.Add(this.cmdListObjectInfo);
+			this.cmdExtended.Items.Add(this.separator4);
+			this.cmdExtended.Items.Add(this.cmdStyles);
 			this.cmdExtended.Label = "Erweitert";
 			this.cmdExtended.Name = "cmdExtended";
 			this.cmdExtended.OfficeImageId = "PropertySheet";
@@ -217,7 +221,7 @@
 			// 
 			// cmdListObjectInfo
 			// 
-			this.cmdListObjectInfo.Label = "Xml-Quell-Daten anzeigen";
+			this.cmdListObjectInfo.Label = "Query anzeigen...";
 			this.cmdListObjectInfo.Name = "cmdListObjectInfo";
 			this.cmdListObjectInfo.ShowImage = true;
 			this.cmdListObjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdListObjectInfo_Click);
@@ -227,6 +231,17 @@
 			this.groupCommands.Label = "Befehle";
 			this.groupCommands.Name = "groupCommands";
 			this.groupCommands.Visible = false;
+			// 
+			// separator4
+			// 
+			this.separator4.Name = "separator4";
+			// 
+			// removeTableSourceData
+			// 
+			this.removeTableSourceData.Label = "Tabellendaten löschen";
+			this.removeTableSourceData.Name = "removeTableSourceData";
+			this.removeTableSourceData.ShowImage = true;
+			this.removeTableSourceData.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.removeTableSourceData_Click);
 			// 
 			// PpsMenu
 			// 
@@ -265,6 +280,8 @@
 		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator1;
 		internal Microsoft.Office.Tools.Ribbon.RibbonGroup groupCommands;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton editTableExCommand;
+		internal Microsoft.Office.Tools.Ribbon.RibbonButton removeTableSourceData;
+		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator4;
 	}
 
 	partial class ThisRibbonCollection

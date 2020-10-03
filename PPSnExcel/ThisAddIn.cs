@@ -208,7 +208,7 @@ namespace PPSnExcel
 			PpsListObject.New(environment, range, reportId);
 		} // func NewTable
 
-		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook)
+		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, PpsEnvironment replaceEnvironment = null)
 		{
 			using (var progress = CreateProgress())
 			{
@@ -217,33 +217,33 @@ namespace PPSnExcel
 				switch (context)
 				{
 					case RefreshContext.ActiveWorkBook:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook);
+						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook, replaceEnvironment);
 					case RefreshContext.ActiveWorkSheet:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet);
+						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet, replaceEnvironment);
 					default:
 						if (Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null))
-							return RefreshTableAsync(r.ListObject, context == RefreshContext.ActiveListObjectLayout);
+							return RefreshTableAsync(r.ListObject, replaceEnvironment, context == RefreshContext.ActiveListObjectLayout);
 						return Task.CompletedTask;
 				}
 			}
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Workbook workbook)
+		private async Task RefreshTableAsync(Excel.Workbook workbook, PpsEnvironment replaceEnvironment)
 		{
 			for (var i = 1; i <= workbook.Sheets.Count; i++)
 			{
 				if (workbook.Sheets[i] is Excel.Worksheet worksheet)
-					await RefreshTableAsync(worksheet);
+					await RefreshTableAsync(worksheet, replaceEnvironment);
 			}
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Worksheet worksheet)
+		private async Task RefreshTableAsync(Excel.Worksheet worksheet, PpsEnvironment replaceEnvironment)
 		{
 			for (var i = 1; i <= worksheet.ListObjects.Count; i++)
-				await RefreshTableAsync(worksheet.ListObjects[i], false);
+				await RefreshTableAsync(worksheet.ListObjects[i], replaceEnvironment, false);
 		} // func RefreshTableAsync
 
-		internal async Task RefreshTableAsync(Excel.ListObject _xlList, bool refreshLayout)
+		internal async Task RefreshTableAsync(Excel.ListObject _xlList, PpsEnvironment replaceEnvironment, bool refreshLayout)
 		{
 			using (var progress = CreateProgress())
 			{
@@ -251,7 +251,11 @@ namespace PPSnExcel
 
 				progress.Report(String.Format("Aktualisiere {0}...", xlList.Name ?? "Tabelle"));
 
-				if (PpsListObject.TryGet(FindEnvironment, xlList, out var ppsList))
+				var f = replaceEnvironment == null
+					? new Func<string, Uri, PpsEnvironment>(FindEnvironment)
+					: new Func<string, Uri, PpsEnvironment>((n, u) => replaceEnvironment);
+
+				if (PpsListObject.TryGet(f, xlList, out var ppsList))
 					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
 				else
 				{
@@ -309,7 +313,7 @@ namespace PPSnExcel
 
 				// refresh tables
 				p.Text = String.Format("Aktualisiere Auswertung {0}...", reportName);
-				Run(() => RefreshTableAsync(RefreshContext.ActiveWorkBook));
+				Run(() => RefreshTableAsync(RefreshContext.ActiveWorkBook, environment));
 			}
 		} // LoadXlsxReport
 

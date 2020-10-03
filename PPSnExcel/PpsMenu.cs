@@ -16,6 +16,7 @@
 using System;
 using System.Linq;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
 using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
@@ -81,6 +82,7 @@ namespace PPSnExcel
 
 			editTableExCommand.Enabled = hasListObjectInfo;
 			cmdListObjectInfo.Enabled = hasListObjectInfo;
+			removeTableSourceData.Enabled = hasListObjectInfo;
 
 			cmdRefresh.Enabled =
 				cmdRefreshLayout.Enabled = Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null);
@@ -148,6 +150,18 @@ namespace PPSnExcel
 		private static void InsertTableEx()
 			=> InsertTableCore(true);
 
+		private static void RemoveTableData()
+		{
+			if (!PpsListObject.TryGetFromSelection(out var list))
+				return;
+
+			if (MessageBox.Show(String.Format("Remove Xml-Data of {0} ({1})?", list.List.DisplayName, list.List.XmlMap.Name), "Question", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				var x = new XElement(list.List.XmlMap.RootElementName).ToString();
+				list.List.XmlMap.ImportXml(x.ToString(), true);
+			}
+		} // proc RemoveTableData
+
 		private static void InsertTableCore(bool extendedEdit)
 		{
 			if (PpsListObject.TryGetFromSelection(out var ppsList)) // edit the current selected table
@@ -171,12 +185,18 @@ namespace PPSnExcel
 		private void cmdTable_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(InsertTable);
 
-		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
-		{
-		}
+		private void editTableExCommand_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(InsertTableEx);
+
+		private void removeTableSourceData_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(RemoveTableData);
 
 		private void cmdListObjectInfo_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(Globals.ThisAddIn.ShowTableInfo);
+
+		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
+		{
+		}
 
 		private void RunRefreshTableCommand(ThisAddIn.RefreshContext refreshContext)
 			=> RunActionSafe(() => Globals.ThisAddIn.Run(() => Globals.ThisAddIn.RefreshTableAsync(refreshContext)));
@@ -198,9 +218,6 @@ namespace PPSnExcel
 
 		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateEnvironment());
-
-		private void editTableExCommand_Click(object sender, RibbonControlEventArgs e)
-			=> RunActionSafe(InsertTableEx);
 
 		/// <summary>Was Loaded called.</summary>
 		public bool IsMenuLoaded => isMenuLoaded;

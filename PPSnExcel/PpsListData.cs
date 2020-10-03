@@ -444,7 +444,7 @@ namespace PPSnExcel
 			var request = new PpsDataQuery(viewId)
 			{
 				Columns = columns.Select(c => c.ToColumnExpression()).Where(c => c != null).ToArray(),
-				Filter = PpsDataFilterExpression.Parse(filterExpr, GetVariables(current, context)),
+				Filter = PpsDataFilterExpression.Parse(filterExpr, CultureInfo.InvariantCulture, PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.AllowVariables).Reduce(GetVariables(current, context)),
 				Order = order,
 				AttributeSelector = "*,V.*,Xl.*"
 			};
@@ -543,8 +543,11 @@ namespace PPSnExcel
 				=> typeToXsdType.TryGetValue(netType, out var tmp) && tmp == xsdType;
 
 			// test base params
-			if (!TryParse(map, out _, out _, out var currentViewId, out var currentFilterExpr, out var currentColumns))
+			if (!TryParse(map, out _, out var environmentUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
 				return (false, null);
+
+			if (Uri.Compare(environmentUri, environment.Request.BaseAddress, UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) != 0)
+				return (true, null);
 
 			if (viewId != currentViewId)
 				return (true, null);

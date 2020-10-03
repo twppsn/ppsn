@@ -845,8 +845,8 @@ namespace TecWare.PPSn.Server
 
 			return x;
 		} // func GetMimeTypesInfo
-
-		private void WriteApplicationInfo(IDEWebRequestScope r, string applicationName, bool returnAll)
+				
+		private void WriteApplicationInfo(IDEWebRequestScope r, string applicationName, string applicationId, bool returnAll)
 		{
 			using (clientApplicationInfos.EnterReadLock())
 			{
@@ -907,7 +907,11 @@ namespace TecWare.PPSn.Server
 			switch (r.RelativeSubPath)
 			{
 				case "info.xml":
-					await Task.Run(() => WriteApplicationInfo(r, r.GetProperty("app", (string)null), r.GetProperty("all", false)));
+					await Task.Run(() => WriteApplicationInfo(r, 
+						r.GetProperty("app", null), 
+						r.GetProperty("id", null), 
+						r.GetProperty("all", false)
+					));
 					return true;
 				case "login.xml":
 					r.DemandToken(SecurityUser);

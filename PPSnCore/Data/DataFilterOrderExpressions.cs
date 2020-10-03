@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.ComponentModel.Design.Serialization;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -105,24 +104,32 @@ namespace TecWare.PPSn.Data
 	{
 		/// <summary></summary>
 		/// <param name="method"></param>
-		public PpsDataFilterExpression(PpsDataFilterExpressionType method)
+		protected PpsDataFilterExpression(PpsDataFilterExpressionType method)
 		{
 			Type = method;
 		} // ctor
 
-		/// <summary></summary>
-		public virtual PpsDataFilterExpression Reduce()
+		/// <summary>Removes expression parts</summary>
+		/// <param name="variables">Allow replace variables</param>
+		/// <returns></returns>
+		public virtual PpsDataFilterExpression Reduce(IPropertyReadOnlyDictionary variables = null)
 			=> this;
 
 		/// <summary></summary>
 		/// <param name="sb"></param>
-		public abstract void ToString(StringBuilder sb);
+		/// <param name="formatProvider"></param>
+		public abstract void ToString(StringBuilder sb, IFormatProvider formatProvider);
+
+		/// <inherited />
+		public sealed override string ToString()
+			=> ToString(CultureInfo.CurrentUICulture);
 
 		/// <summary></summary>
-		public override string ToString()
+		/// <param name="formatProvider"></param>
+		public string ToString(IFormatProvider formatProvider)
 		{
 			var sb = new StringBuilder();
-			ToString(sb);
+			ToString(sb, formatProvider);
 			return sb.ToString();
 		} // func ToString
 
@@ -150,26 +157,26 @@ namespace TecWare.PPSn.Data
 				return false;
 		} // func EatExpressionCharacter
 
-		private static void SkipWhiteSpaces(string filterExpression, ref int offset)
+		private static void SkipWhiteSpaces(string expression, ref int offset)
 		{
-			while (offset < filterExpression.Length && Char.IsWhiteSpace(filterExpression[offset]))
+			while (offset < expression.Length && Char.IsWhiteSpace(expression[offset]))
 				offset++;
 		} // func SkipWhiteSpaces
 
-		private static void ParseIdentifier(string filterExpression, ref int offset)
+		private static void ParseIdentifier(string expression, ref int offset, int expressionLength)
 		{
-			while (offset < filterExpression.Length && IsLetterOrDigit(filterExpression[offset]))
+			while (offset < expressionLength && IsLetterOrDigit(expression[offset]))
 				offset++;
 		} // func ParseIdentifier
 
-		private static string ParseEscaped(string filterExpression, char quote, ref int offset)
+		private static string ParseEscapedText(string expression, char quote, ref int offset, int expressionLength)
 		{
 			var sb = new StringBuilder();
 			var escape = false;
 			offset++;
-			while (offset < filterExpression.Length)
+			while (offset < expressionLength)
 			{
-				var c = filterExpression[offset];
+				var c = expression[offset];
 				if (escape)
 				{
 					if (c == quote)
@@ -189,126 +196,139 @@ namespace TecWare.PPSn.Data
 			}
 
 			return sb.ToString();
-		} // func ParseEscaped
+		} // func ParseEscapedText
 
-		/// <summary></summary>
-		/// <param name="expression"></param>
-		/// <param name="allowFields"></param>
-		/// <param name="variables"></param>
-		/// <returns></returns>
-		public static PpsDataFilterCompareValue ParseCompareValue(string expression, bool allowFields = true, IPropertyReadOnlyDictionary variables = null)
+		private static bool IsIdentifier(string expression, int offset, int count)
 		{
-			var offset = 0;
-			if (EatExpressionCharacter(expression, ref offset, '('))
-				return new PpsDataFilterCompareArrayValue(ParseCompareValues(expression, allowFields, variables, ref offset));
-			else
-				return ParseCompareValue(expression, allowFields, variables, ref offset);
-		} // func ParseCompareValue
+			if (!Char.IsLetter(expression[offset]) && expression[offset] != '_')
+				return false;
 
-		private static PpsDataFilterCompareValue ParseCompareValue(string expression, bool allowFields, IPropertyReadOnlyDictionary variables, ref int offset)
-		{
-			PpsDataFilterCompareValue value;
-
-			if (offset >= expression.Length || Char.IsWhiteSpace(expression[offset]))
+			for (var i = 1; i < count; i++)
 			{
-				value = PpsDataFilterCompareNullValue.Default;
+				if (!IsLetterOrDigit(expression[i + offset]))
+					return false;
+			}
+
+			return true;
+		} // func IsIdentifier
+
+		private static PpsDataFilterValue ParseSingleValue(string expression, ref int offset, int expressionLength, IFormatProvider formatProvider, PpsDataFilterParseOption options)
+		{
+			PpsDataFilterValue value;
+
+			if (offset >= expressionLength || Char.IsWhiteSpace(expression[offset]))
+			{
+				value = PpsDataFilterNullValue.Default;
 			}
 			else if (expression[offset] == '"' || expression[offset] == '\'')
 			{
-				var text = ParseEscaped(expression, expression[offset], ref offset);
-				value = String.IsNullOrEmpty(text) ? PpsDataFilterCompareNullValue.Default : new PpsDataFilterCompareTextValue(text);
+				var text = ParseEscapedText(expression, expression[offset], ref offset, expressionLength);
+				value = String.IsNullOrEmpty(text) ? PpsDataFilterNullValue.Default : new PpsDataFilterTextValue(text);
 			}
 			else if (expression[offset] == '#')
 			{
 				offset++;
 				var startAt2 = offset;
-				while (offset < expression.Length && (!Char.IsWhiteSpace(expression[offset]) && expression[offset] != '#'))
+				while (offset < expressionLength && (!Char.IsWhiteSpace(expression[offset]) && expression[offset] != '#'))
 					offset++;
 
 				if (TestExpressionCharacter(expression, offset, '#')) // date filter
 				{
 					offset++;
-					value = PpsDataFilterCompareDateValue.Create(expression, startAt2, offset - startAt2 - 1);
+					value = PpsDataFilterDateTimeValue.ParseDateTime(expression, startAt2, offset - startAt2 - 1, formatProvider);
 				}
-				else if (startAt2 < offset) // Number filter
-					value = new PpsDataFilterCompareNumberValue(expression.Substring(startAt2, offset - startAt2));
+				else if (startAt2 < offset) // text key filter
+					value = new PpsDataFilterTextKeyValue(expression.Substring(startAt2, offset - startAt2));
 				else // null
-					value = PpsDataFilterCompareNullValue.Default;
+					value = PpsDataFilterNullValue.Default;
 			}
-			else if (variables != null && expression[offset] == '$')
+			else if (expression[offset] == '$' && (options & PpsDataFilterParseOption.AllowVariables) != 0)
 			{
 				offset++;
 				var startAt2 = offset;
-				while (offset < expression.Length && (Char.IsLetterOrDigit(expression[offset]) || expression[offset] == '_'))
-					offset++;
 
-				if (variables.TryGetProperty(expression.Substring(startAt2, offset - startAt2), out var tmp))
-				{
-					if (tmp == null)
-						value = PpsDataFilterCompareNullValue.Default;
-					else if (tmp is DateTime dt)
-						value = new PpsDataFilterCompareDateValue(dt.Date, dt.Date.AddDays(1));
-					else if (tmp is long i64)
-						value = new PpsDataFilterCompareIntegerValue(i64);
-					else if (tmp is int i32)
-						value = new PpsDataFilterCompareIntegerValue(i32);
-					else if (tmp is short i16)
-						value = new PpsDataFilterCompareIntegerValue(i16);
-					else if (tmp is sbyte i8)
-						value = new PpsDataFilterCompareIntegerValue(i8);
-					else if (tmp is uint ui32)
-						value = new PpsDataFilterCompareIntegerValue(ui32);
-					else if (tmp is ushort ui16)
-						value = new PpsDataFilterCompareIntegerValue(ui16);
-					else if (tmp is byte ui8)
-						value = new PpsDataFilterCompareIntegerValue(ui8);
-					else if (tmp is string str)
-						value = new PpsDataFilterCompareTextValue(str);
-					else
-					{
-						value = new PpsDataFilterCompareTextValue(tmp.ChangeType<string>());
-					}
-				}
-				else // generate error?
-					value = PpsDataFilterCompareNullValue.Default;
+				ParseIdentifier(expression, ref offset, expressionLength);
+
+				if (offset == startAt2)
+					value = PpsDataFilterNullValue.Default;
+				else
+					value = new PpsDataFilterVariableValue(expression.Substring(startAt2, offset - startAt2));
 			}
 			else
 			{
 				var startAt2 = offset;
-				while (offset < expression.Length && !(Char.IsWhiteSpace(expression[offset]) || expression[offset] == ')' || expression[offset] == '\'' || expression[offset] == '"'))
+				while (offset < expressionLength && !(Char.IsWhiteSpace(expression[offset]) || expression[offset] == ')' || expression[offset] == '\'' || expression[offset] == '"'))
 					offset++;
 
-				if (startAt2 < offset)
+				if (startAt2 < offset) // unknown block of text
 				{
-					var textValue = expression.Substring(startAt2, offset - startAt2);
-					var textValueLength = textValue.Length;
-					if (allowFields && textValueLength > 1 && textValue[0] == ':')
-						value = new PpsDataFilterCompareFieldValue(textValue.Substring(1));
+					if ((options & PpsDataFilterParseOption.AllowFields) != 0 && expression[startAt2] == ':') // parse a field
+						value = new PpsDataFilterFieldValue(expression.Substring(startAt2 + 1, offset - startAt2 - 1));
 					else
 					{
-						value = new PpsDataFilterCompareTextValue(textValue);
+						if ((options & (PpsDataFilterParseOption.FieldsFirst | PpsDataFilterParseOption.AllowFields)) == (PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.FieldsFirst)
+							&& IsIdentifier(expression, startAt2, offset - startAt2))
+						{
+							value = new PpsDataFilterFieldValue(expression.Substring(startAt2, offset - startAt2));
+						}
+						else
+						{
+							var textValue = expression.Substring(startAt2, offset - startAt2);
+
+							// test for numeric
+							if (Int64.TryParse(textValue, NumberStyles.None, formatProvider, out var i64))
+								value = new PpsDataFilterIntegerValue(i64);
+							else if (Decimal.TryParse(textValue, NumberStyles.None, formatProvider, out var d))
+								value = new PpsDataFilterDecimalValue(d);
+							else
+								value = new PpsDataFilterTextValue(textValue);
+						}
 					}
 				}
 				else
-					value = PpsDataFilterCompareNullValue.Default;
+					value = PpsDataFilterNullValue.Default;
 			}
 
 			return value;
-		} // func PareCompareValue
+		} // proc ParseSingleValue
 
-		private static PpsDataFilterCompareValue[] ParseCompareValues(string expression, bool allowFields, IPropertyReadOnlyDictionary variables, ref int offset)
+		private static PpsDataFilterValue[] ParseArrayValues(string expression, ref int offset, int expressionLength, IFormatProvider formatProvider, PpsDataFilterParseOption options)
 		{
-			var values = new List<PpsDataFilterCompareValue>();
+			var values = new List<PpsDataFilterValue>();
 
 			SkipWhiteSpaces(expression, ref offset);
 			while (!EatExpressionCharacter(expression, ref offset, ')'))
 			{
-				values.Add(ParseCompareValue(expression, allowFields, variables, ref offset));
+				values.Add(ParseSingleValue(expression, ref offset, expressionLength, formatProvider, options));
 				SkipWhiteSpaces(expression, ref offset);
 			}
 
 			return values.ToArray();
-		} // func ParseCompareValues
+		} // func ParseArrayValues
+
+		/// <summary>Parse a value.</summary>
+		/// <param name="expression"></param>
+		/// <param name="offset"></param>
+		/// <param name="count"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="options"></param>
+		/// <returns></returns>
+		public static PpsDataFilterValue ParseValue(string expression, int offset, int count, IFormatProvider formatProvider, PpsDataFilterParseOption options)
+		{
+			// " -> Text
+			// ## -> DateTime
+			// # -> Text that is classified as key
+			// 1 -> int
+			// 1.2 -> dec
+			// [:]t.Field -> field
+			// (1 3 4 5) -> array
+
+			var length = offset + count;
+			if (EatExpressionCharacter(expression, ref offset, '('))
+				return new PpsDataFilterArrayValue(ParseArrayValues(expression, ref offset, length, formatProvider, options));
+			else
+				return ParseSingleValue(expression, ref offset, length, formatProvider, options);
+		} // func ParseValue
 
 		private static PpsDataFilterCompareOperator ParseCompareOperator(string expression, ref int offset)
 		{
@@ -415,7 +435,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // func IsStartNativeReference
 
-		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, IPropertyReadOnlyDictionary variables, ref int offset)
+		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, ref int offset, int expressionLength, IFormatProvider formatProvider, PpsDataFilterParseOption options)
 		{
 			/*  expr ::=
 			 *		[ identifier ] ( ':' [ '<' | '>' | '<=' | '>=' | '!' | '!=' ) [ '(' ] value [ ')' ]
@@ -430,7 +450,7 @@ namespace TecWare.PPSn.Data
 
 			var returnLogic = inLogic == PpsDataFilterExpressionType.None ? PpsDataFilterExpressionType.And : inLogic;
 			var compareExpressions = new List<PpsDataFilterExpression>();
-			while (offset < expression.Length)
+			while (offset < expressionLength)
 			{
 				SkipWhiteSpaces(expression, ref offset);
 
@@ -449,11 +469,11 @@ namespace TecWare.PPSn.Data
 					offset++;
 
 				// check for an identifier
-				ParseIdentifier(expression, ref offset);
+				ParseIdentifier(expression, ref offset, expressionLength);
 				if (IsStartLogicOperation(expression, startAt, offset, out var newLogic))
 				{
 					offset++;
-					var expr = ParseExpression(expression, newLogic, variables, ref offset);
+					var expr = ParseExpression(expression, newLogic, ref offset, expressionLength, formatProvider, options);
 
 					// optimize: concat same sub expression
 					if (expr.Type == returnLogic)
@@ -466,35 +486,35 @@ namespace TecWare.PPSn.Data
 					offset++; // step over the colon
 
 					// check for operator, nothing means contains
-					if (offset < expression.Length && !Char.IsWhiteSpace(expression[offset]))
+					if (offset < expressionLength && !Char.IsWhiteSpace(expression[offset]))
 					{
 						var op = ParseCompareOperator(expression, ref offset); // parse the operator
 						if (EatExpressionCharacter(expression, ref offset, '(')) // parse array
 						{
-							var values = ParseCompareValues(expression, true, variables, ref offset);
+							var values = ParseArrayValues(expression, ref offset, expressionLength, formatProvider, options);
 							switch (op)
 							{
 								case PpsDataFilterCompareOperator.Contains:
 									if (values.Length > 0)
-										compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.Contains, new PpsDataFilterCompareArrayValue(values)));
+										compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.Contains, new PpsDataFilterArrayValue(values)));
 									else
 										compareExpressions.Add(False);
 									break;
 								case PpsDataFilterCompareOperator.NotContains:
 									if (values.Length > 0)
-										compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.NotContains, new PpsDataFilterCompareArrayValue(values)));
+										compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.NotContains, new PpsDataFilterArrayValue(values)));
 									break;
 							}
 						}
 						else // parse value
 						{
-							var value = ParseCompareValue(expression, true, variables, ref offset);
+							var value = ParseSingleValue(expression, ref offset, expressionLength, formatProvider, options);
 							// create expression
 							compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, op, value));
 						}
 					}
 					else // is nothing
-						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.Equal, PpsDataFilterCompareNullValue.Default));
+						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.Equal, PpsDataFilterNullValue.Default));
 				}
 				else if (nativeRef && IsStartNativeReference(expression, startAt, offset, out identifier)) // native reference
 				{
@@ -504,8 +524,8 @@ namespace TecWare.PPSn.Data
 				else
 				{
 					offset = startAt; // nothing special try compare expression
-					var value = ParseCompareValue(expression, false, variables, ref offset);
-					if (value != PpsDataFilterCompareNullValue.Default)
+					var value = ParseSingleValue(expression, ref offset, expressionLength, formatProvider, options);
+					if (value != PpsDataFilterNullValue.Default)
 						compareExpressions.Add(new PpsDataFilterCompareExpression(null, PpsDataFilterCompareOperator.Contains, value));
 				}
 			}
@@ -523,29 +543,43 @@ namespace TecWare.PPSn.Data
 				return new PpsDataFilterLogicExpression(returnLogic, compareExpressions.ToArray());
 		} // func ParseExpression
 
-		/// <summary></summary>
+		/// <summary>Parse a filter expression</summary>
 		/// <param name="filterExpression"></param>
-		/// <param name="variables"></param>
-		/// <param name="offset"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="options"></param>
 		/// <returns></returns>
-		public static PpsDataFilterExpression Parse(string filterExpression, IPropertyReadOnlyDictionary variables = null, int offset = 0)
-			=> ParseExpression(filterExpression, PpsDataFilterExpressionType.None, variables, ref offset);
+		public static PpsDataFilterExpression Parse(string filterExpression, IFormatProvider formatProvider = null, PpsDataFilterParseOption options = PpsDataFilterParseOption.AllowFields)
+			=> Parse(filterExpression, 0, filterExpression.Length, formatProvider, options);
 
-		/// <summary></summary>
+		/// <summary>Parse a filter expression</summary>
 		/// <param name="filterExpression"></param>
-		/// <param name="returnAtLeastTrueExpression"></param>
+		/// <param name="offset"></param>
+		/// <param name="count"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="options"></param>
+		/// <returns></returns>
+		public static PpsDataFilterExpression Parse(string filterExpression, int offset, int count, IFormatProvider formatProvider = null, PpsDataFilterParseOption options = PpsDataFilterParseOption.AllowFields)
+		{
+			var length = offset + count;
+			return ParseExpression(filterExpression, PpsDataFilterExpressionType.None, ref offset, length, formatProvider ?? CultureInfo.CurrentUICulture, options);
+		} // func Parse
+
+		/// <summary>Parse a expression.</summary>
+		/// <param name="filterExpression"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="options"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static PpsDataFilterExpression Parse(object filterExpression, bool returnAtLeastTrueExpression = true, bool throwException = true)
+		public static PpsDataFilterExpression Parse(object filterExpression, IFormatProvider formatProvider = null, PpsDataFilterParseOption options =  PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.ReturnTrue, bool throwException = true)
 		{
 			switch (filterExpression)
 			{
 				case null:
-					return returnAtLeastTrueExpression ? True : null;
+					return (options & PpsDataFilterParseOption.ReturnTrue) != 0 ? True : null;
 				case string stringExpr:
-					return Parse(stringExpr);
+					return Parse(stringExpr, formatProvider, options);
 				case LuaTable table:
-					return FromTable(table);
+					return FromTable(table, formatProvider, options);
 				default:
 					if (throwException)
 						throw new ArgumentException("Could not parse filter expression.");
@@ -558,59 +592,66 @@ namespace TecWare.PPSn.Data
 
 		#region -- Combine/Compare ----------------------------------------------------
 
-		private static PpsDataFilterCompareValue GetValueExpressionFromString(string s)
+		private static PpsDataFilterValue GetValueExpressionFromString(string s)
 		{
 			return s.Length > 1 && s[0] == ':'
-				? (PpsDataFilterCompareValue)new PpsDataFilterCompareFieldValue(s.Substring(1))
-				: (PpsDataFilterCompareValue)new PpsDataFilterCompareTextValue(s);
+				? (PpsDataFilterValue)new PpsDataFilterFieldValue(s.Substring(1))
+				: (PpsDataFilterValue)new PpsDataFilterTextValue(s);
 		} // func GetValueExpressionFromString
 
-		private static PpsDataFilterCompareValue GetValueExpressionFromLong(long i)
-			=> new PpsDataFilterCompareIntegerValue(i);
+		private static PpsDataFilterValue GetValueExpressionFromLong(long i)
+			=> new PpsDataFilterIntegerValue(i);
 
-		private static PpsDataFilterCompareValue GetValueExpressionFromDateTime(DateTime dt)
-			=> new PpsDataFilterCompareDateValue(dt.Date, dt.Date.AddDays(1));
+		private static PpsDataFilterValue GetValueExpressionFromDecimal(decimal d)
+			=> new PpsDataFilterDecimalValue(d);
 
-		private static PpsDataFilterCompareValue GetValueArrayExpression<T>(T[] values, Func<T, PpsDataFilterCompareValue> creator)
+		private static PpsDataFilterValue GetValueExpressionFromDateTime(DateTime dt)
+			=> PpsDataFilterDateTimeValue.Create(dt);
+
+		private static PpsDataFilterValue GetValueArrayExpression<T>(T[] values, Func<T, PpsDataFilterValue> creator)
 		{
-			var r = new PpsDataFilterCompareValue[values.Length];
+			var r = new PpsDataFilterValue[values.Length];
 
 			for (var i = 0; i < values.Length; i++)
 				r[i] = creator(values[i]);
 
-			return new PpsDataFilterCompareArrayValue(r);
+			return new PpsDataFilterArrayValue(r);
 		}  // func GetValueArrayExpression
 
-		private static PpsDataFilterCompareValue GetValueExpresion(PpsDataFilterCompareValueType type, object value)
+		private static PpsDataFilterValue GetValueExpresion(PpsDataFilterValueType type, object value)
 		{
 			switch (type)
 			{
-				case PpsDataFilterCompareValueType.Null:
-					return PpsDataFilterCompareNullValue.Default;
-				case PpsDataFilterCompareValueType.Field:
-					return new PpsDataFilterCompareFieldValue(value.ChangeType<string>());
-				case PpsDataFilterCompareValueType.Text:
-					return new PpsDataFilterCompareTextValue(value.ChangeType<string>());
-				case PpsDataFilterCompareValueType.Number:
-					return new PpsDataFilterCompareNumberValue(value.ChangeType<string>());
-				case PpsDataFilterCompareValueType.Integer:
+				case PpsDataFilterValueType.Null:
+					return PpsDataFilterNullValue.Default;
+				case PpsDataFilterValueType.Field:
+					return new PpsDataFilterFieldValue(value.ChangeType<string>());
+				case PpsDataFilterValueType.Text:
+					return new PpsDataFilterTextValue(value.ChangeType<string>());
+				case PpsDataFilterValueType.Number:
+					return new PpsDataFilterTextKeyValue(value.ChangeType<string>());
+				case PpsDataFilterValueType.Integer:
 					return GetValueExpressionFromLong(value.ChangeType<long>());
-				case PpsDataFilterCompareValueType.Date:
+				case PpsDataFilterValueType.Decimal:
+					return GetValueExpressionFromDecimal(value.ChangeType<decimal>());
+				case PpsDataFilterValueType.Date:
 					return GetValueExpressionFromDateTime(value.ChangeType<DateTime>());
 				default:
 					throw new ArgumentOutOfRangeException(nameof(type), type, "Out of range.");
 			}
 		} // func GetValueExpresion
 
-		private static PpsDataFilterCompareValue GetValueExpresion(object value)
+		private static PpsDataFilterValue GetValueExpresion(object value)
 		{
-			PpsDataFilterCompareValue GetValueExpressionFromInt(int i)
+			PpsDataFilterValue GetValueExpressionFromInt(int i)
 				=> GetValueExpressionFromLong(i);
 
 			switch (value)
 			{
 				case null:
-					return PpsDataFilterCompareNullValue.Default;
+					return PpsDataFilterNullValue.Default;
+				case PpsDataFilterValue raw:
+					return raw;
 				case string s:
 					return GetValueExpressionFromString(s);
 				case string[] sn:
@@ -628,7 +669,7 @@ namespace TecWare.PPSn.Data
 				case object[] on:
 					return GetValueArrayExpression(on, GetValueExpresion);
 				default:
-					return new PpsDataFilterCompareTextValue(value.ChangeType<string>());
+					return new PpsDataFilterTextValue(value.ChangeType<string>());
 			}
 		} // func GetValueExpresion
 
@@ -636,7 +677,14 @@ namespace TecWare.PPSn.Data
 		/// <param name="expr"></param>
 		/// <returns></returns>
 		public static PpsDataFilterExpression Combine(params PpsDataFilterExpression[] expr)
-			=> new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.And, expr).Reduce();
+			=> Combine(PpsDataFilterExpressionType.And, expr);
+
+		/// <summary>Compine multiple expresions to one expression.</summary>
+		/// <param name="logicMethod"></param>
+		/// <param name="expr"></param>
+		/// <returns></returns>
+		public static PpsDataFilterExpression Combine(PpsDataFilterExpressionType logicMethod, params PpsDataFilterExpression[] expr)
+			=> new PpsDataFilterLogicExpression(logicMethod, expr).Reduce();
 
 		/// <summary></summary>
 		/// <param name="operand"></param>
@@ -644,7 +692,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="type"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public static PpsDataFilterExpression Compare(string operand, PpsDataFilterCompareOperator op, PpsDataFilterCompareValueType type, object value)
+		public static PpsDataFilterExpression Compare(string operand, PpsDataFilterCompareOperator op, PpsDataFilterValueType type, object value)
 			=> new PpsDataFilterCompareExpression(operand, op, GetValueExpresion(type, value));
 
 		/// <summary></summary>
@@ -700,8 +748,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // func GetLogicExpression
 
-		private static PpsDataFilterExpression GetExpressionFromObject(object expr)
-			=> Parse(expr, false);
+		private static PpsDataFilterExpression GetExpressionFromObject(object expr, IFormatProvider formatProvider, PpsDataFilterParseOption options, bool throwException)
+			=> Parse(expr, formatProvider, options, throwException);
 
 		private static PpsDataFilterExpression GetExpressionFromKeyValue(KeyValuePair<string, object> expr)
 		{
@@ -716,10 +764,15 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Create a filter expression from a table.</summary>
 		/// <param name="expression"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="options"></param>
+		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static PpsDataFilterExpression FromTable(LuaTable expression)
+		public static PpsDataFilterExpression FromTable(LuaTable expression, IFormatProvider formatProvider = null, PpsDataFilterParseOption options = PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.ReturnTrue, bool throwException = true)
 		{
 			/* { [0] = "or",  COLUMN = VALUE, COLUMN = { VALUE, ... }, "Expr", {} } */
+
+			formatProvider = formatProvider ?? CultureInfo.CurrentCulture;
 
 			var method = GetLogicExpression(expression.GetArrayValue(0, rawGet: true));
 
@@ -730,7 +783,7 @@ namespace TecWare.PPSn.Data
 					select GetExpressionFromKeyValue(kv)
 				).Concat(
 					from v in expression.ArrayList
-					select GetExpressionFromObject(v)
+					select GetExpressionFromObject(v, formatProvider, options, throwException)
 				).Where(c => c != null).ToArray()
 			);
 
@@ -834,12 +887,11 @@ namespace TecWare.PPSn.Data
 		public PpsDataFilterNativeExpression(string key)
 			: base(PpsDataFilterExpressionType.Native)
 		{
-			this.key = key;
+			this.key = key ?? throw new ArgumentNullException(nameof(key));
 		} // ctor
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
 			=> sb.Append(':').Append(key).Append(':');
 
 		/// <summary></summary>
@@ -858,9 +910,8 @@ namespace TecWare.PPSn.Data
 		{
 		} // ctor
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb) { }
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider) { }
 
 		/// <summary>Returns a expression, that is true.</summary>
 		public static PpsDataFilterExpression Default { get; } = new PpsDataFilterTrueExpression();
@@ -868,10 +919,10 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- enum PpsDataFilterCompareValueType -------------------------------------
+	#region -- enum PpsDataFilterValueType --------------------------------------------
 
 	/// <summary></summary>
-	public enum PpsDataFilterCompareValueType
+	public enum PpsDataFilterValueType
 	{
 		/// <summary></summary>
 		Null,
@@ -883,18 +934,40 @@ namespace TecWare.PPSn.Data
 		Number,
 		/// <summary>A value which is presenting an amount or key.</summary>
 		Integer,
+		/// <summary>A value which is presenting a decimal value.</summary>
+		Decimal,
 		/// <summary>An other column.</summary>
 		Field,
+		/// <summary>A placeholder</summary>
+		Variable,
 		/// <summary>An array of values.</summary>
 		Array
-	} // enum PpsDataFilterCompareValueType
+	} // enum PpsDataFilterValueType
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareValue ----------------------------------------
+	#region -- enum PpsDataFilterValueParseOption -------------------------------------
+
+	/// <summary>Parse options for the value</summary>
+	[Flags]
+	public enum PpsDataFilterParseOption
+	{
+		/// <summary>Allow parse field names.</summary>
+		AllowFields = 1,
+		/// <summary>Allow variables in expression.</summary>
+		AllowVariables = 2,
+		/// <summary>A unescaped text, will be parsed as an field.</summary>
+		FieldsFirst = 4,
+		/// <summary>Returns at least a <c>true</c> instead of <c>null</c>.</summary>
+		ReturnTrue
+	} // enum PpsDataFilterValueParseOption
+
+	#endregion
+
+	#region -- class PpsDataFilterValue -----------------------------------------------
 
 	/// <summary></summary>
-	public abstract class PpsDataFilterCompareValue : IEquatable<PpsDataFilterCompareValue>
+	public abstract class PpsDataFilterValue : IEquatable<PpsDataFilterValue>
 	{
 		/// <summary></summary>
 		/// <returns></returns>
@@ -908,7 +981,7 @@ namespace TecWare.PPSn.Data
 		{
 			if (ReferenceEquals(this, obj))
 				return true;
-			else if (obj is PpsDataFilterCompareValue other)
+			else if (obj is PpsDataFilterValue other)
 				return Equals(other);
 			else
 				return false;
@@ -917,13 +990,13 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		public bool Equals(PpsDataFilterCompareValue other)
+		public bool Equals(PpsDataFilterValue other)
 			=> this.Type == other.Type && EqualsValue(other);
 
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		protected abstract bool EqualsValue(PpsDataFilterCompareValue other);
+		protected abstract bool EqualsValue(PpsDataFilterValue other);
 
 		/// <summary></summary>
 		/// <returns></returns>
@@ -931,65 +1004,71 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		/// <param name="sb"></param>
-		public abstract void ToString(StringBuilder sb);
+		/// <param name="formatProvider"></param>
+		public abstract void ToString(StringBuilder sb, IFormatProvider formatProvider);
 
 		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
+			=> ToString(CultureInfo.CurrentUICulture);
+
+		/// <summary></summary>
+		/// <param name="formatProvider"></param>
+		/// <returns></returns>
+		public string ToString(IFormatProvider formatProvider)
 		{
 			var sb = new StringBuilder();
-			ToString(sb);
+			ToString(sb, formatProvider);
 			return sb.ToString();
 		} // func ToString
 
 		/// <summary></summary>
-		public abstract PpsDataFilterCompareValueType Type { get; }
-	} // class PpsDataFilterCompareValue
+		public abstract PpsDataFilterValueType Type { get; }
+	} // class PpsDataFilterValue
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareNullValue ------------------------------------
+	#region -- class PpsDataFilterNullValue -------------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsDataFilterCompareNullValue : PpsDataFilterCompareValue
+	public sealed class PpsDataFilterNullValue : PpsDataFilterValue
 	{
-		private PpsDataFilterCompareNullValue()
+		private PpsDataFilterNullValue()
 		{
 		} // ctor
 
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		protected override bool EqualsValue(PpsDataFilterCompareValue other)
+		protected override bool EqualsValue(PpsDataFilterValue other)
 			=> true;
 
-		/// <summary></summary>
-		/// <returns></returns>
+		/// <inherited/>
 		protected override int GetValueHashCode()
 			=> 23.GetHashCode();
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb) { }
+		/// <inherited/>
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider) { }
 
 		/// <summary></summary>
-		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Null;
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Null;
 
 		/// <summary></summary>
-		public static PpsDataFilterCompareValue Default { get; } = new PpsDataFilterCompareNullValue();
-	} // class PpsDataFilterCompareNullValue
+		public static PpsDataFilterValue Default { get; } = new PpsDataFilterNullValue();
+	} // class PpsDataFilterNullValue
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareFieldValue -----------------------------------
+	#region -- class PpsDataFilterFieldValue ------------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsDataFilterCompareFieldValue : PpsDataFilterCompareValue
+	public sealed class PpsDataFilterFieldValue : PpsDataFilterValue
 	{
 		private readonly string fieldName;
 
 		/// <summary></summary>
 		/// <param name="fieldName"></param>
-		public PpsDataFilterCompareFieldValue(string fieldName)
+		public PpsDataFilterFieldValue(string fieldName)
 		{
 			this.fieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
 		} // ctor
@@ -997,37 +1076,118 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		protected override bool EqualsValue(PpsDataFilterCompareValue other)
-			=> Equals(fieldName, ((PpsDataFilterCompareFieldValue)other).fieldName);
+		protected override bool EqualsValue(PpsDataFilterValue other)
+			=> Equals(fieldName, ((PpsDataFilterFieldValue)other).fieldName);
 
-		/// <summary></summary>
-		/// <returns></returns>
+		/// <inherited/>
 		protected override int GetValueHashCode()
 			=> fieldName.GetHashCode();
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		/// <inherited/>
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
 			=> sb.Append(':').Append(fieldName);
 
 		/// <summary></summary>
 		public string FieldName => fieldName;
 		/// <summary></summary>
-		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Field;
-	} // class PpsDataFilterCompareFieldValue
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Field;
+	} // class PpsDataFilterFieldValue
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareTextValue ------------------------------------
+	#region -- class PpsDataFilterVariableValue ---------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsDataFilterCompareTextValue : PpsDataFilterCompareValue
+	public sealed class PpsDataFilterVariableValue : PpsDataFilterValue
+	{
+		private readonly string variableName;
+
+		/// <summary></summary>
+		/// <param name="variableName"></param>
+		public PpsDataFilterVariableValue(string variableName)
+		{
+			this.variableName = variableName ?? throw new ArgumentNullException(nameof(variableName));
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		protected override bool EqualsValue(PpsDataFilterValue other)
+			=> Equals(variableName, ((PpsDataFilterVariableValue)other).variableName);
+
+		/// <inherited/>
+		protected override int GetValueHashCode()
+			=> variableName.GetHashCode();
+
+		/// <inherited/>
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
+			=> sb.Append('$').Append(variableName);
+
+		/// <summary>Get the value for an variable</summary>
+		/// <param name="variables"></param>
+		/// <returns></returns>
+		public PpsDataFilterValue GetValue(IPropertyReadOnlyDictionary variables)
+		{
+			if (variables.TryGetProperty(variableName, out var tmp))
+			{
+				switch (tmp)
+				{
+					case null:
+						return PpsDataFilterNullValue.Default;
+					case DateTime dt:
+						return PpsDataFilterDateTimeValue.Create(dt.Date);
+
+					case long i64:
+						return new PpsDataFilterIntegerValue(i64);
+					case int i32:
+						return new PpsDataFilterIntegerValue(i32);
+					case short i16:
+						return new PpsDataFilterIntegerValue(i16);
+					case sbyte i8:
+						return new PpsDataFilterIntegerValue(i8);
+					case uint ui32:
+						return new PpsDataFilterIntegerValue(ui32);
+					case ushort ui16:
+						return new PpsDataFilterIntegerValue(ui16);
+					case byte ui8:
+						return new PpsDataFilterIntegerValue(ui8);
+
+					case string str:
+						return new PpsDataFilterTextValue(str);
+
+					case float f32:
+						return new PpsDataFilterDecimalValue(Convert.ToDecimal(f32));
+					case double f64:
+						return new PpsDataFilterDecimalValue(Convert.ToDecimal(f64));
+					case decimal dec:
+						return new PpsDataFilterDecimalValue(dec);
+
+					default:
+						return new PpsDataFilterTextValue(tmp.ChangeType<string>());
+				}
+			}
+			else
+				return PpsDataFilterNullValue.Default;
+		} // func GetValue
+
+		/// <summary></summary>
+		public string VariableName => variableName;
+		/// <summary></summary>
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Variable;
+	} // class PpsDataFilterVariableValue
+
+	#endregion
+
+	#region -- class PpsDataFilterTextValue -------------------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsDataFilterTextValue : PpsDataFilterValue
 	{
 		private readonly string text;
 
 		/// <summary></summary>
 		/// <param name="text"></param>
-		public PpsDataFilterCompareTextValue(string text)
+		public PpsDataFilterTextValue(string text)
 		{
 			this.text = text ?? throw new ArgumentNullException(nameof(text));
 		} // ctor
@@ -1035,17 +1195,16 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		protected override bool EqualsValue(PpsDataFilterCompareValue other)
-			=> Equals(text, ((PpsDataFilterCompareTextValue)other).text);
+		protected override bool EqualsValue(PpsDataFilterValue other)
+			=> Equals(text, ((PpsDataFilterTextValue)other).text);
 
 		/// <summary></summary>
 		/// <returns></returns>
 		protected override int GetValueHashCode()
 			=> text.GetHashCode();
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
 		{
 			var offset = 0;
 			while (offset < text.Length && (!Char.IsWhiteSpace(text[offset]) && text[offset] != '"'))
@@ -1066,24 +1225,24 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc ToString
 
-		/// <summary></summary>
+		/// <summary>Text content</summary>
 		public string Text => text;
 		/// <summary></summary>
-		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Text;
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Text;
 	} // class PpsDataFilterCompareTextValue
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareIntegerValue ---------------------------------
+	#region -- class PpsDataFilterIntegerValue ----------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsDataFilterCompareIntegerValue : PpsDataFilterCompareValue
+	public sealed class PpsDataFilterIntegerValue : PpsDataFilterValue
 	{
 		private readonly long value;
 
 		/// <summary></summary>
 		/// <param name="value"></param>
-		public PpsDataFilterCompareIntegerValue(long value)
+		public PpsDataFilterIntegerValue(long value)
 		{
 			this.value = value;
 		} // ctor
@@ -1091,39 +1250,83 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		protected override bool EqualsValue(PpsDataFilterCompareValue other)
-			=> Equals(value, ((PpsDataFilterCompareIntegerValue)other).value);
+		protected override bool EqualsValue(PpsDataFilterValue other)
+			=> Equals(value, ((PpsDataFilterIntegerValue)other).value);
 
 		/// <summary></summary>
 		/// <returns></returns>
 		protected override int GetValueHashCode()
 			=> value.GetHashCode();
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
 			=> sb.Append(value);
 
 		/// <summary></summary>
 		public long Value => value;
 		/// <summary></summary>
-		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Integer;
-	} // class PpsDataFilterCompareIntegerValue
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Integer;
+	} // class PpsDataFilterIntegerValue
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareDateValue ------------------------------------
+	#region -- class PpsDataFilterDecimalValue ----------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsDataFilterCompareDateValue : PpsDataFilterCompareValue
+	public sealed class PpsDataFilterDecimalValue : PpsDataFilterValue
+	{
+		private readonly decimal value;
+
+		/// <summary></summary>
+		/// <param name="value"></param>
+		public PpsDataFilterDecimalValue(decimal value)
+		{
+			this.value = value;
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		protected override bool EqualsValue(PpsDataFilterValue other)
+			=> Equals(value, ((PpsDataFilterDecimalValue)other).value);
+
+		/// <summary></summary>
+		/// <returns></returns>
+		protected override int GetValueHashCode()
+			=> value.GetHashCode();
+
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
+			=> sb.Append(value.ToString(formatProvider));
+
+		/// <summary></summary>
+		public decimal Value => value;
+		/// <summary></summary>
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Decimal;
+	} // class PpsDataFilterDecimalValue
+
+	#endregion
+
+	#region -- class PpsDataFilterDateTimeValue ---------------------------------------
+
+	/// <summary>Date value, that is always time range between the result should be.</summary>
+	/// <remarks>
+	/// The full format is #dd.MM.yyyyTHH:mm:ss~dd.MM.yyyyTHH:mm:ss#
+	/// The values can be shorten, e.g. to #yyyy#
+	/// 
+	/// The definition is <c>from</c>&gt;= v &lt; <c>to</c>.
+	/// </remarks>
+	public sealed class PpsDataFilterDateTimeValue : PpsDataFilterValue
 	{
 		private readonly DateTime from;
 		private readonly DateTime to;
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
 		/// <summary></summary>
 		/// <param name="from"></param>
 		/// <param name="to"></param>
-		public PpsDataFilterCompareDateValue(DateTime from, DateTime to)
+		public PpsDataFilterDateTimeValue(DateTime from, DateTime to)
 		{
 			this.from = from;
 			this.to = to;
@@ -1132,61 +1335,185 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		protected override bool EqualsValue(PpsDataFilterCompareValue other)
-			=> Equals(from, ((PpsDataFilterCompareDateValue)other).from) && Equals(to, ((PpsDataFilterCompareDateValue)other).to);
+		protected override bool EqualsValue(PpsDataFilterValue other)
+			=> Equals(from, ((PpsDataFilterDateTimeValue)other).from) && Equals(to, ((PpsDataFilterDateTimeValue)other).to);
 
 		/// <summary></summary>
 		/// <returns></returns>
 		protected override int GetValueHashCode()
 			=> from.GetHashCode() ^ to.GetHashCode();
 
-		private void AppendComponents(StringBuilder sb, string notAllowedPatterns)
-		{
-			var shortDatePattern = CultureInfo.CurrentUICulture.DateTimeFormat.ShortDatePattern;
-			var myDatePattern = new StringBuilder(shortDatePattern.Length);
+		#endregion
 
+		#region -- ToString -----------------------------------------------------------
+
+		private static string GetFormatPatternFiltered(DateTimeFormatInfo dtf, string allowedPatterns)
+		{
+			var shortDatePattern = dtf.ShortDatePattern;
+			var dateSeparator = String.IsNullOrEmpty(dtf.DateSeparator) ? '\0' : dtf.DateSeparator[0];
+
+			var myDatePattern = new StringBuilder(shortDatePattern.Length);
+			var isEmpty = true;
 			for (var i = 0; i < shortDatePattern.Length; i++)
 			{
-				if (notAllowedPatterns.IndexOf(shortDatePattern[i]) == -1)
-					myDatePattern.Append(shortDatePattern[i]);
+				var c = shortDatePattern[i];
+
+				if (c == dateSeparator)
+				{
+					if (!isEmpty)
+					{
+						myDatePattern.Append(c);
+						isEmpty = true;
+					}
+				}
+				else if (allowedPatterns.IndexOf(c) >= 0)
+				{
+					myDatePattern.Append(c);
+					isEmpty = false;
+				}
 			}
 
-			sb.Append(from.ToString(myDatePattern.ToString(), CultureInfo.CurrentUICulture.DateTimeFormat));
-		} // proc AppendComponents
+			// build pattern
+			return myDatePattern.ToString();
+		} // proc GetFormatPatternFiltered
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		private static string GetTimePattern(char timePattern)
 		{
-			sb.Append('#');
-			if (from.Day == 1 && from.Month == 1 && to.Day == 1 && to.Month == 1 && to.Year - from.Year == 1) // diff is a year
-				AppendComponents(sb, "Md");
-			else if (from.Day == 1 && to.Day == 1 && to.Month - from.Month == 1 && to.Year - from.Year == 0) // diff is a month
-				AppendComponents(sb, "d");
-			else if (to.Day - from.Day == 1 && to.Month - from.Month == 0 && to.Year - from.Year == 0) // diff is a day
-				AppendComponents(sb, "");
-			else if (IsValid)
+			switch (timePattern)
 			{
-				sb.Append(from.ToString("d", CultureInfo.CurrentUICulture.DateTimeFormat))
-					.Append("~")
-					.Append(to.ToString("d", CultureInfo.CurrentUICulture.DateTimeFormat));
+				case 'T':
+					return "HH:mm:ss";
+				case 't':
+					return "HH:mm";
+				default:
+					return String.Empty;
 			}
+		} // func GetTimePattern
+
+		private static string GetFormatPattern(DateTime dateTime, DateTime defaultDateTime, char timePattern, DateTimeFormatInfo dtf)
+		{
+			if (timePattern == 'T' || timePattern == 't')
+			{
+				if (dateTime == defaultDateTime)
+					return String.Empty;
+				else
+					return dtf.ShortDatePattern + "T" + GetTimePattern(timePattern);
+			}
+			else
+			{
+				if (defaultDateTime.Day == dateTime.Day)
+				{
+					if (defaultDateTime.Month == dateTime.Month)
+					{
+						if (defaultDateTime.Year == dateTime.Year)
+							return String.Empty;
+						else
+							return GetFormatPatternFiltered(dtf, "y");
+					}
+					else
+						return GetFormatPatternFiltered(dtf, "yM");
+				}
+				else
+					return dtf.ShortDatePattern;
+			}
+		} // func GetFormatDateTime
+
+		private static void AppendDateFormat(StringBuilder sb, DateTime dateTime, string pattern, DateTimeFormatInfo dtf)
+			=> sb.Append(dateTime.ToString(pattern, dtf));
+
+		private static void AppendDateTimeRange(StringBuilder sb, DateTime from, DateTime to, char timePattern, IFormatProvider formatProvider)
+		{
+			var dtf = GetDateTimeFormatInfo(formatProvider);
+
+			var fromPattern = GetFormatPattern(from, DateTime.MinValue, timePattern, dtf);
+			var toPattern = GetFormatPattern(to, DateTime.MaxValue, timePattern, dtf);
+
+			if (fromPattern.Length < toPattern.Length)
+				fromPattern = toPattern;
+
+			AppendDateFormat(sb, from, fromPattern, dtf);
+			if (from != to)
+			{
+				sb.Append("~");
+				AppendDateFormat(sb, to, fromPattern, dtf);
+			}
+		} // proc AppendDateTimeRange
+
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
+		{
+			if (formatProvider == null)
+				throw new ArgumentNullException(nameof(formatProvider));
 
 			sb.Append('#');
-		}
+			if (!IsValid)
+				sb.Append("0");
+			else if (IsAll)
+				sb.Append("~");
+			else if (IsTimePoint)
+			{
+				var dtf = GetDateTimeFormatInfo(formatProvider);
+				AppendDateFormat(sb, From, dtf.ShortDatePattern + "THH:mm:ss,fff", dtf);
+			}
+			else if (WithTime) // do we have a time component
+			{
+				var timePattern = from.Second != 0 || to.Second != 0 ? 'T' : 't';
+				var toNorm = timePattern == 'T' ? to.AddSeconds(-1) : to.AddMinutes(-1);
+
+				AppendDateTimeRange(sb, from, toNorm, timePattern, formatProvider);
+			}
+			else // only day based date
+			{
+				var dtf = GetDateTimeFormatInfo(formatProvider);
+
+				if (from.Day == 1 && from.Month == 1 && to.Day == 1 && to.Month == 1 && from.Year + 1 == to.Year) // diff is a year
+					AppendDateFormat(sb, from, GetFormatPatternFiltered(dtf, "y"), dtf);
+				else if (from.Day == 1 && to.Day == 1 && IsNextMonth(from.Year, from.Month, to.Year, to.Month)) // diff is a month
+					AppendDateFormat(sb, from, GetFormatPatternFiltered(dtf, "yM"), dtf);
+				else
+					AppendDateTimeRange(sb, from, to.AddDays(-1), 'D', formatProvider);
+			}
+			sb.Append('#');
+		} // func ToString
+
+		#endregion
 
 		/// <summary></summary>
 		public DateTime From => from;
 		/// <summary></summary>
 		public DateTime To => to;
 
-		/// <summary></summary>
-		public bool IsValid => from != DateTime.MinValue || to != DateTime.MaxValue;
+		/// <summary>Is this value a point.</summary>
+		public bool IsTimePoint => from == to;
+		/// <summary>Is this a valid time range.</summary>
+		public bool IsRange => from < to;
+		/// <summary>This range has the maximum.</summary>
+		public bool IsAll => from == DateTime.MinValue && to == DateTime.MaxValue;
+		/// <summary>Also compare time values.</summary>
+		public bool WithTime => HasTime(from) || HasTime(to);
+
+		/// <summary>Is this a valid time range.</summary>
+		public bool IsValid => from <= to;
 
 		/// <summary></summary>
-		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Date;
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Date;
 
-		// -- Static ----------------------------------------------------------------------
+		// -- Static ----------------------------------------------------------
+
+		#region -- Parse --------------------------------------------------------------
+
+		private static DateTimeFormatInfo GetDateTimeFormatInfo(IFormatProvider formatProvider) 
+			=> (DateTimeFormatInfo)formatProvider.GetFormat(typeof(DateTimeFormatInfo)) ?? throw new ArgumentNullException(nameof(DateTimeFormatInfo), "Format information is missing.");
+
+		private static bool HasTime(DateTime dt)
+			=> dt.Hour != 0 || dt.Minute != 0 || dt.Second != 0 || dt.Millisecond != 0;
+
+		private bool IsNextMonth(int yearFrom, int monthFrom, int yearTo, int monthTo)
+		{
+			return monthFrom == 12
+				? monthTo == 1 && yearTo == yearFrom + 1
+				: yearTo == yearFrom && monthTo == monthFrom + 1;
+		} // func IsNextMonth
 
 		private static char JumpPattern(char patternSymbol, string datePattern, ref int patterPos)
 		{
@@ -1199,7 +1526,7 @@ namespace TecWare.PPSn.Data
 				return '\0';
 		} // func JumpPattern
 
-		private static int ReadDigits(char splitSymbol, string inputDate, ref int inputPos)
+		private static int ReadDigits(char splitSymbol, string inputDate, IFormatProvider formatProvider, ref int inputPos)
 		{
 			string digits;
 
@@ -1208,81 +1535,112 @@ namespace TecWare.PPSn.Data
 			{
 				digits = inputDate.Substring(inputPos);
 				inputPos = inputDate.Length;
+
+				if (digits.Length == 0) // read after end
+					return -1;
 			}
-			else
+			else 
 			{
 				digits = inputDate.Substring(inputPos, symbolPos - inputPos);
 				inputPos = symbolPos + 1;
+
+				if (digits.Length == 0) // empty part
+					return 0;
 			}
 
-			return Int32.TryParse(digits, NumberStyles.None, CultureInfo.CurrentUICulture.NumberFormat, out var r)
-				? r
-				: -1;
+			return Int32.TryParse(digits, NumberStyles.None, formatProvider, out var r) ? r : -1;
 		} // func ReadDigits
 
-		private static PpsDataFilterCompareDateValue CreateValue(DateTime from, char addType)
-		{
-			switch (addType)
-			{
-				case 'y':
-					return new PpsDataFilterCompareDateValue(from, from.AddYears(1));
-				case 'M':
-					return new PpsDataFilterCompareDateValue(from, from.AddMonths(1));
-				default:
-					return new PpsDataFilterCompareDateValue(from, from.AddDays(1));
-			}
-		} // func CreateValue
+		private static int GetValidMonth(int month)
+			=> Math.Min(12, Math.Max(1, month));
 
-		/// <summary></summary>
-		/// <param name="expression"></param>
-		/// <param name="offset"></param>
-		/// <param name="count"></param>
-		/// <returns></returns>
-		public static PpsDataFilterCompareValue Create(string expression, int offset, int count)
+		private static int GetValidDay(int year, int month, int day)
 		{
-			var inputDate = expression.Substring(offset, count);
-			var dateSplit = inputDate.IndexOf('~');
-			if (dateSplit >= 0) // split date format
-			{
-				if (DateTime.TryParse(inputDate.Substring(0, dateSplit), out var from) && DateTime.TryParse(inputDate.Substring(dateSplit + 1), out var to))
-					return new PpsDataFilterCompareDateValue(from, to);
-			}
+			if (day < 1)
+				return 1;
+			else if (day < 28)
+				return day;
+			else
+				return Math.Min(day, DateTime.DaysInMonth(year, month));
+		} // func GetValidDay
 
+		private static int GetValidSecond(int second)
+			=> second < 0 ? 0 : second % 60;
+
+		private static int GetValidMinute(int minute)
+			=> minute < 0 ? 0 : minute % 60;
+
+		private static int GetValidHour(int hour)
+			=> hour < 0 ? 0 : hour % 24;
+
+		private static void GetValidDate(DateTime resultDateTime, ref int year, ref int month, ref int day)
+		{
+			if (year < 1)
+				year = resultDateTime.Year;
+
+			if (month < 1)
+				month = resultDateTime.Month;
+			else
+				month = GetValidMonth(month);
+
+			if (day < 1)
+				day = resultDateTime.Day;
+			else
+				day = GetValidDay(year, month, day);
+		} // func GetValidDate
+
+		private static char TryParseDateTime(string inputDate, IFormatProvider formatProvider, DateTimeFormatInfo dtf, ref DateTime resultDateTime)
+		{
 			// Guess a date combination
 			// range patterns:
 			//   yyyy
 			//   MM.yyyy
 			//   dd.MM.yyyy
+			//   dd.MM.yyyyTHH:mm
+			//   dd.MM.yyyyTHH:mm:ss
 			// fill up patterns:
 			//   dd.MM.
 			//   dd.
 			//   null
 
-			var datePattern = CultureInfo.CurrentUICulture.DateTimeFormat.ShortDatePattern;
+			if (String.IsNullOrEmpty(inputDate))
+				return '0';
+
+			var datePattern = dtf.ShortDatePattern + "T" + dtf.LongTimePattern;
 
 			var year = -1;
 			var month = -1;
 			var day = -1;
 
+			var hour = -1;
+			var minute = -1;
+			var second = -1;
+
 			var patterPos = 0;
 			var inputPos = 0;
 			var error = false;
+
 			while (patterPos < datePattern.Length && !error)
 			{
+				// read complete pattern
 				var patternSymbol = datePattern[patterPos];
-				var splitSymbol = JumpPattern(patternSymbol, datePattern, ref patterPos);
+				var splitSymbol = JumpPattern(patternSymbol, datePattern, ref patterPos); // returns the date part separator
+
+				// read digits until the symbol
 				var startAt = inputPos;
-				var t = ReadDigits(splitSymbol, inputDate, ref inputPos);
+				var t = ReadDigits(splitSymbol, inputDate, formatProvider, ref inputPos);
 				var readedNum = inputPos - startAt;
-				if (t > 0)
+
+				// set date part, by number
+				if (t >= 0)
 				{
-					if (readedNum == 4) // switch to date
+					if (readedNum == 4) // switch to year
 						patternSymbol = 'y';
 
 					switch (patternSymbol)
 					{
 						case 'y':
-							if (year == -1 || readedNum == 4)
+							if (year == -1)
 								year = t;
 							break;
 						case 'M':
@@ -1299,82 +1657,223 @@ namespace TecWare.PPSn.Data
 							if (day == -1)
 								day = t;
 							break;
+
+						case 'H':
+							if (hour == -1)
+								hour = t;
+							break;
+						case 'm':
+							if (minute == -1)
+								minute = t;
+							break;
+						case 's':
+							if (second == -1)
+								second = t;
+							break;
+
 						default:
 							error = true;
 							break;
 					}
 				}
 			}
-			if (error)
+
+			if (error) // error is set, parse the complete input date
 			{
-				if (DateTime.TryParse(expression.Substring(offset, count), out var dt)) // try parse full date
-					return CreateValue(dt.Date, 'd');
-				else // set a invalid date
-					return new PpsDataFilterCompareDateValue(DateTime.MinValue, DateTime.MaxValue);
+				if (DateTime.TryParseExact(inputDate, datePattern, dtf, DateTimeStyles.None, out var dt)
+					|| DateTime.TryParse(inputDate, dtf, DateTimeStyles.None, out dt)) // try parse full date
+				{
+					resultDateTime = dt;
+					return 'F';
+				}
+				else
+					return 'E';
 			}
 			else
 			{
-				var dtNow = DateTime.Now;
-				if (year == -1 && month == -1 && day == -1) // all components are missing
-					return CreateValue(dtNow.Date, 'd');
-				else if (year != -1 && month == -1 && day == -1) // only year is given
-					return CreateValue(new DateTime(year, 01, 01), 'y');
-				else if (year != -1 && month != -1 && day == -1) // year and month is given
-					return CreateValue(new DateTime(year, month, 01), 'M');
-				else if (year != -1 && month == -1 && day >= 1 && day <= 12) // year and month is given (day is detected)
-					return CreateValue(new DateTime(year, day, 01), 'M');
-				else // fill up with now
+				if (hour < 0 && minute < 0 && second < 0)
 				{
-					if (year == -1)
-						year = dtNow.Year;
-					if (month == -1)
-						month = dtNow.Month;
-					if (day == -1)
-						day = dtNow.Day;
-
-					try
+					if (year < 1 && month < 1 && day < 1) // all components are missing
+						return 'D';
+					else if (year > 0 && month < 1 && day < 1) // only year is given
 					{
-						return CreateValue(new DateTime(year, month, day), 'd');
+						resultDateTime = new DateTime(year, 01, 01);
+						return 'Y';
 					}
-					catch (ArgumentOutOfRangeException) // invalid date
+					else if (year > 0 && month > 0 && day < 1) // year and month is given
 					{
-						return new PpsDataFilterCompareDateValue(DateTime.MinValue, DateTime.MaxValue);
+						resultDateTime = new DateTime(year, GetValidMonth(month), 01);
+						return 'M';
+					}
+					else if (year > 0 && month < 1 && day >= 1 && day <= 12) // year and month is given (day is detected)
+					{
+						resultDateTime = new DateTime(year, day, 01);
+						return 'M';
+					}
+					else // fill up with now, or return values
+					{
+						GetValidDate(resultDateTime, ref year, ref month, ref day);
+
+						resultDateTime = new DateTime(year, month, day);
+						return 'D';
 					}
 				}
+				else
+				{
+					GetValidDate(resultDateTime, ref year, ref month, ref day);
+
+					resultDateTime = new DateTime(year, month, day, GetValidHour(hour), GetValidMinute(minute), GetValidSecond(second));
+					return second < 0 ? 't' : 'T';
+				}
 			}
+		} // func TryParseDateTime
+
+		internal static PpsDataFilterDateTimeValue ParseDateTime(string expression, int offset, int count, IFormatProvider formatProvider)
+		{
+			var dtf = GetDateTimeFormatInfo(formatProvider);
+
+			// remove fence
+			if (expression[offset] == '#')
+			{
+				offset++;
+				count--;
+			}
+			if (offset + count < expression.Length && expression[offset + count] == '#')
+				count--;
+
+			// parse date expression
+			var inputDate = expression.Substring(offset, count);
+			var dateSplit = inputDate.IndexOf('~');
+			if (dateSplit >= 0) // split date format
+			{
+				var from = DateTime.MinValue;
+				var to = DateTime.MaxValue;
+
+				var isFromValid = TryParseDateTime(inputDate.Substring(0, dateSplit), formatProvider, dtf, ref from);
+				var isToValid = TryParseDateTime(inputDate.Substring(dateSplit + 1), formatProvider, dtf, ref to);
+
+				switch (isToValid) // move over bound
+				{
+					case 'Y':
+						to = to.AddYears(1);
+						break;
+					case 'M':
+						to = to.AddMonths(1);
+						break;
+					case 'D':
+						to = to.AddDays(1);
+						break;
+					case 't':
+						to = to.AddMinutes(1);
+						break;
+					case 'T':
+						to = to.AddSeconds(1);
+						break;
+				}
+
+				if (isFromValid == 'E' || isToValid == 'E')
+					return NoneValid;
+				else if (isFromValid != '0' && isToValid != '0')
+					return new PpsDataFilterDateTimeValue(from, to);
+				else if (isFromValid != '0')
+					return new PpsDataFilterDateTimeValue(from, DateTime.MaxValue);
+				else if (isToValid != '0')
+					return new PpsDataFilterDateTimeValue(DateTime.MinValue, to);
+				else
+					return new PpsDataFilterDateTimeValue(DateTime.MinValue, DateTime.MaxValue);
+			}
+			else if (inputDate == "0")
+				return NoneValid;
+			else
+			{
+				var dt = DateTime.Now.Date;
+				switch (TryParseDateTime(inputDate, formatProvider, dtf, ref dt))
+				{
+					case 'Y':
+						return new PpsDataFilterDateTimeValue(dt, dt.AddYears(1));
+					case 'M':
+						return new PpsDataFilterDateTimeValue(dt, dt.AddMonths(1));
+					case 'D':
+						return new PpsDataFilterDateTimeValue(dt, dt.AddDays(1));
+					case 't':
+						return new PpsDataFilterDateTimeValue(dt, dt.AddMinutes(1));
+					case 'T':
+						return new PpsDataFilterDateTimeValue(dt, dt.AddSeconds(1));
+					case 'F':
+						return new PpsDataFilterDateTimeValue(dt, dt);
+					case '0':
+						return new PpsDataFilterDateTimeValue(dt, dt.AddDays(1));
+					default:
+						return NoneValid;
+				}
+			}
+		} // func ParseDateTime
+
+		#endregion
+
+		#region -- Create -------------------------------------------------------------
+
+		/// <summary>Create a datetime range.</summary>
+		/// <param name="dt"></param>
+		/// <returns></returns>
+		public static PpsDataFilterDateTimeValue Create(DateTime dt)
+		{
+			if (dt.Hour == 0)
+			{
+				if (dt.Minute == 0)
+				{
+					if (dt.Second == 0)
+					{
+						if (dt.Millisecond == 0)
+							return new PpsDataFilterDateTimeValue(dt, dt.AddDays(1));
+						else
+							return new PpsDataFilterDateTimeValue(dt, dt.AddSeconds(1));
+					}
+					else
+						return new PpsDataFilterDateTimeValue(dt, dt.AddMinutes(1));
+				}
+				else
+					return new PpsDataFilterDateTimeValue(dt, dt.AddHours(1));
+			}
+			else
+				return new PpsDataFilterDateTimeValue(dt, dt);
 		} // func Create
-	} // class PpsDataFilterCompareDateValue
+
+		#endregion
+
+		/// <summary>Stores none valid time range.</summary>
+		public static PpsDataFilterDateTimeValue NoneValid { get; } = new PpsDataFilterDateTimeValue(DateTime.MaxValue, DateTime.MinValue);
+	} // class PpsDataFilterDateTimeValue
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareNumberValue ----------------------------------
+	#region -- class PpsDataFilterTextKeyValue ----------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsDataFilterCompareNumberValue : PpsDataFilterCompareValue
+	public sealed class PpsDataFilterTextKeyValue : PpsDataFilterValue
 	{
 		private readonly string text;
 
 		/// <summary></summary>
 		/// <param name="text"></param>
-		public PpsDataFilterCompareNumberValue(string text)
+		public PpsDataFilterTextKeyValue(string text)
 		{
-			this.text = text;
+			this.text = text ?? throw new ArgumentNullException(nameof(text));
 		} // ctor
 
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		protected override bool EqualsValue(PpsDataFilterCompareValue other)
-			=> Equals(text, ((PpsDataFilterCompareNumberValue)other).text);
+		protected override bool EqualsValue(PpsDataFilterValue other)
+			=> Equals(text, ((PpsDataFilterTextKeyValue)other).text);
 
 		/// <summary></summary>
 		/// <returns></returns>
 		protected override int GetValueHashCode()
 			=> text.GetHashCode();
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
 		{
 			sb.Append('#')
 				.Append(text);
@@ -1383,37 +1882,37 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		public string Text => text;
 		/// <summary></summary>
-		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Number;
-	} // class PpsDataFilterCompareNumberValue
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Number;
+	} // class PpsDataFilterTextKeyValue
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareArrayValue -----------------------------------
+	#region -- class PpsDataFilterArrayValue ------------------------------------------
 
 	/// <summary>An array of values.</summary>
-	public sealed class PpsDataFilterCompareArrayValue : PpsDataFilterCompareValue
+	public sealed class PpsDataFilterArrayValue : PpsDataFilterValue
 	{
-		private readonly PpsDataFilterCompareValue[] values;
+		private readonly PpsDataFilterValue[] values;
 
 		/// <summary>Create a array value</summary>
 		/// <param name="values"></param>
-		public PpsDataFilterCompareArrayValue(PpsDataFilterCompareValue[] values)
+		public PpsDataFilterArrayValue(PpsDataFilterValue[] values)
 		{
 			if (values == null || values.Length == 0)
 				throw new ArgumentNullException(nameof(values));
 
-			var newValues = new List<PpsDataFilterCompareValue>(values.Length);
+			var newValues = new List<PpsDataFilterValue>(values.Length);
 			CopyValues(values, newValues);
 			this.values = newValues.ToArray();
 		} // ctor
 
-		private static void CopyValues(PpsDataFilterCompareValue[] values, List<PpsDataFilterCompareValue> newValues)
+		private static void CopyValues(PpsDataFilterValue[] values, List<PpsDataFilterValue> newValues)
 		{
 			newValues.Add(values[0]);
 
 			for (var i = 1; i < values.Length; i++)
 			{
-				if (values[i] is PpsDataFilterCompareArrayValue av)
+				if (values[i] is PpsDataFilterArrayValue av)
 					CopyValues(av.Values, newValues);
 				else
 				{
@@ -1429,9 +1928,9 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="other"></param>
 		/// <returns></returns>
-		protected override bool EqualsValue(PpsDataFilterCompareValue other)
+		protected override bool EqualsValue(PpsDataFilterValue other)
 		{
-			var otherArr = (PpsDataFilterCompareArrayValue)other;
+			var otherArr = (PpsDataFilterArrayValue)other;
 			if (values.Length == otherArr.values.Length)
 			{
 				for (var i = 0; i < values.Length; i++)
@@ -1455,42 +1954,41 @@ namespace TecWare.PPSn.Data
 			return r;
 		} // func GetValueHashCode
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
 		{
 			sb.Append("(");
 
-			values[0].ToString(sb);
+			values[0].ToString(sb, formatProvider);
 			for (var i = 1; i < values.Length; i++)
 			{
 				sb.Append(' ');
-				values[i].ToString(sb);
+				values[i].ToString(sb, formatProvider);
 			}
 
 			sb.Append(")");
 		} // func ToString
 
 		/// <summary>Values</summary>
-		public PpsDataFilterCompareValue[] Values => values;
+		public PpsDataFilterValue[] Values => values;
 		/// <summary>Return the item type</summary>
-		public PpsDataFilterCompareValueType ItemType => values[0].Type;
+		public PpsDataFilterValueType ItemType => values[0].Type;
 		/// <summary>Return Array</summary>
-		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Array;
+		public override PpsDataFilterValueType Type => PpsDataFilterValueType.Array;
 
-		internal static bool IsArrayCompatibleType(PpsDataFilterCompareValueType itemType)
+		internal static bool IsArrayCompatibleType(PpsDataFilterValueType itemType)
 		{
 			switch (itemType)
 			{
-				case PpsDataFilterCompareValueType.Field:
-				case PpsDataFilterCompareValueType.Integer:
-				case PpsDataFilterCompareValueType.Text:
+				case PpsDataFilterValueType.Field:
+				case PpsDataFilterValueType.Integer:
+				case PpsDataFilterValueType.Text:
 					return true;
 				default:
 					return false;
 			}
 		} // func IsArrayCompatibleType
-	} // class PpsDataFilterCompareArrayValue
+	} // class PpsDataFilterArrayValue
 
 	#endregion
 
@@ -1501,32 +1999,31 @@ namespace TecWare.PPSn.Data
 	{
 		private readonly string operand;
 		private readonly PpsDataFilterCompareOperator op;
-		private readonly PpsDataFilterCompareValue value;
+		private readonly PpsDataFilterValue value;
 
 		/// <summary></summary>
 		/// <param name="operand"></param>
 		/// <param name="op"></param>
 		/// <param name="value"></param>
-		public PpsDataFilterCompareExpression(string operand, PpsDataFilterCompareOperator op, PpsDataFilterCompareValue value)
+		public PpsDataFilterCompareExpression(string operand, PpsDataFilterCompareOperator op, PpsDataFilterValue value)
 			: base(PpsDataFilterExpressionType.Compare)
 		{
 			this.operand = operand;
 			this.op = op;
 			this.value = value ?? throw new ArgumentNullException(nameof(value));
 
-			if (value.Type == PpsDataFilterCompareValueType.Array)
+			if (value.Type == PpsDataFilterValueType.Array)
 			{
 				if (op != PpsDataFilterCompareOperator.Contains && op != PpsDataFilterCompareOperator.NotContains)
 					throw new ArgumentException($"Arrays are only allowed for {PpsDataFilterCompareOperator.Contains} or {PpsDataFilterCompareOperator.NotContains}.");
 			}
 		} // ctor
 
-		/// <summary></summary>
-		/// <returns></returns>
-		public override PpsDataFilterExpression Reduce()
+		/// <inherited />
+		public override PpsDataFilterExpression Reduce(IPropertyReadOnlyDictionary variables)
 		{
 			// combine single value arrays to equal expression
-			if (value is PpsDataFilterCompareArrayValue av && av.Values.Length == 1)
+			if (value is PpsDataFilterArrayValue av && av.Values.Length == 1)
 			{
 				switch (op)
 				{
@@ -1538,17 +2035,18 @@ namespace TecWare.PPSn.Data
 						return new PpsDataFilterCompareExpression(operand, op, av.Values[0]);
 				}
 			}
+			else if (variables != null && value is PpsDataFilterVariableValue var)
+				return new PpsDataFilterCompareExpression(operand, op, var.GetValue(variables));
 			else
 				return this;
 		} // func Reduce
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
 		{
 			if (String.IsNullOrEmpty(operand))
 			{
-				value.ToString(sb);
+				value.ToString(sb, formatProvider);
 			}
 			else
 			{
@@ -1582,7 +2080,7 @@ namespace TecWare.PPSn.Data
 					default:
 						throw new InvalidOperationException();
 				}
-				value.ToString(sb);
+				value.ToString(sb, formatProvider);
 			}
 		} // func ToString
 
@@ -1591,7 +2089,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		public PpsDataFilterCompareOperator Operator => op;
 		/// <summary></summary>
-		public PpsDataFilterCompareValue Value => value;
+		public PpsDataFilterValue Value => value;
 	} // class PpsDataFilterCompareExpression
 
 	#endregion
@@ -1618,12 +2116,14 @@ namespace TecWare.PPSn.Data
 		private sealed class ReduceHelper
 		{
 			private readonly PpsDataFilterLogicExpression target;
+			private readonly IPropertyReadOnlyDictionary variables;
 			private readonly List<PpsDataFilterExpression> args = new List<PpsDataFilterExpression>();
-			private readonly List<List<PpsDataFilterCompareValue>> combineValues = new List<List<PpsDataFilterCompareValue>>();
+			private readonly List<List<PpsDataFilterValue>> combineValues = new List<List<PpsDataFilterValue>>();
 
-			public ReduceHelper(PpsDataFilterLogicExpression target)
+			public ReduceHelper(PpsDataFilterLogicExpression target, IPropertyReadOnlyDictionary variables)
 			{
 				this.target = target;
+				this.variables = variables;
 
 				Append(target.Arguments);
 			} // ctor
@@ -1647,7 +2147,7 @@ namespace TecWare.PPSn.Data
 			} // func CompareExpression
 
 
-			private static void AddValueTo(List<PpsDataFilterCompareValue> values, PpsDataFilterCompareValue valueToAdd)
+			private static void AddValueTo(List<PpsDataFilterValue> values, PpsDataFilterValue valueToAdd)
 			{
 				foreach (var v in values)
 				{
@@ -1657,7 +2157,7 @@ namespace TecWare.PPSn.Data
 				values.Add(valueToAdd);
 			} // proc AddValueTo
 
-			private void AddValueTo(int i, PpsDataFilterCompareArrayValue currentArrayContent, PpsDataFilterCompareValue valueToAdd)
+			private void AddValueTo(int i, PpsDataFilterArrayValue currentArrayContent, PpsDataFilterValue valueToAdd)
 			{
 				// extent list
 				while (i >= combineValues.Count)
@@ -1667,7 +2167,7 @@ namespace TecWare.PPSn.Data
 				var values = combineValues[i];
 				if (values == null) // init list
 				{
-					values = combineValues[i] = new List<PpsDataFilterCompareValue>();
+					values = combineValues[i] = new List<PpsDataFilterValue>();
 					foreach (var c in currentArrayContent.Values)
 						AddValueTo(values, c);
 				}
@@ -1693,7 +2193,7 @@ namespace TecWare.PPSn.Data
 									case CompareExpressionResult.EqualOperand:
 										if (curCmp.Operator == PpsDataFilterCompareOperator.Contains
 											&& cmp.Operator == PpsDataFilterCompareOperator.Equal
-											&& curCmp.Value is PpsDataFilterCompareArrayValue arr && PpsDataFilterCompareArrayValue.IsArrayCompatibleType(cmp.Value.Type)) // add to array
+											&& curCmp.Value is PpsDataFilterArrayValue arr && PpsDataFilterArrayValue.IsArrayCompatibleType(cmp.Value.Type)) // add to array
 										{
 											AddValueTo(i, arr, cmp.Value);
 											return true;
@@ -1702,16 +2202,16 @@ namespace TecWare.PPSn.Data
 									case CompareExpressionResult.EqualOperation:
 										if (cmp.Operator == PpsDataFilterCompareOperator.Equal
 											&& curCmp.Value.Type == cmp.Value.Type
-											&& PpsDataFilterCompareArrayValue.IsArrayCompatibleType(curCmp.Value.Type)) // create a "contains" with array
+											&& PpsDataFilterArrayValue.IsArrayCompatibleType(curCmp.Value.Type)) // create a "contains" with array
 										{
-											var arr3 = new PpsDataFilterCompareArrayValue(new PpsDataFilterCompareValue[] { curCmp.Value });
+											var arr3 = new PpsDataFilterArrayValue(new PpsDataFilterValue[] { curCmp.Value });
 											args[i] = new PpsDataFilterCompareExpression(curCmp.Operand, PpsDataFilterCompareOperator.Contains, arr3);
 											AddValueTo(i, arr3, cmp.Value);
 											return true;
 										}
 										else if (cmp.Operator == PpsDataFilterCompareOperator.Contains
-											&& curCmp.Value is PpsDataFilterCompareArrayValue arr1
-											&& cmp.Value is PpsDataFilterCompareArrayValue arr2) // if array combine in array
+											&& curCmp.Value is PpsDataFilterArrayValue arr1
+											&& cmp.Value is PpsDataFilterArrayValue arr2) // if array combine in array
 										{
 											foreach (var val in arr2.Values)
 												AddValueTo(i, arr1, val);
@@ -1736,7 +2236,7 @@ namespace TecWare.PPSn.Data
 									case CompareExpressionResult.EqualOperand:
 										if (curCmp.Operator == PpsDataFilterCompareOperator.NotContains
 											&& cmp.Operator == PpsDataFilterCompareOperator.NotEqual
-											&& curCmp.Value is PpsDataFilterCompareArrayValue arr && PpsDataFilterCompareArrayValue.IsArrayCompatibleType(cmp.Value.Type)) // add to array
+											&& curCmp.Value is PpsDataFilterArrayValue arr && PpsDataFilterArrayValue.IsArrayCompatibleType(cmp.Value.Type)) // add to array
 										{
 											AddValueTo(i, arr, cmp.Value);
 											return true;
@@ -1752,16 +2252,16 @@ namespace TecWare.PPSn.Data
 										}
 										if (cmp.Operator == PpsDataFilterCompareOperator.NotEqual
 											&& curCmp.Value.Type == cmp.Value.Type
-											&& PpsDataFilterCompareArrayValue.IsArrayCompatibleType(curCmp.Value.Type)) // create a "not contains" with array
+											&& PpsDataFilterArrayValue.IsArrayCompatibleType(curCmp.Value.Type)) // create a "not contains" with array
 										{
-											var arr3 = new PpsDataFilterCompareArrayValue(new PpsDataFilterCompareValue[] { curCmp.Value });
+											var arr3 = new PpsDataFilterArrayValue(new PpsDataFilterValue[] { curCmp.Value });
 											args[i] = new PpsDataFilterCompareExpression(curCmp.Operand, PpsDataFilterCompareOperator.NotContains, arr3);
 											AddValueTo(i, arr3, cmp.Value);
 											return true;
 										}
 										else if (cmp.Operator == PpsDataFilterCompareOperator.NotContains
-											&& curCmp.Value is PpsDataFilterCompareArrayValue arr1
-											&& cmp.Value is PpsDataFilterCompareArrayValue arr2) // if array combine in array
+											&& curCmp.Value is PpsDataFilterArrayValue arr1
+											&& cmp.Value is PpsDataFilterArrayValue arr2) // if array combine in array
 										{
 											foreach (var val in arr2.Values)
 												AddValueTo(i, arr1, val);
@@ -1846,7 +2346,7 @@ namespace TecWare.PPSn.Data
 					if (cur == null)
 						continue;
 
-					var expr = cur.Reduce();
+					var expr = cur.Reduce(variables);
 					if (expr.Type == target.Type) // compine expresion of same type
 					{
 						foreach (var c in ((PpsDataFilterLogicExpression)expr).Arguments)
@@ -1869,7 +2369,7 @@ namespace TecWare.PPSn.Data
 					{
 						var cmp = (PpsDataFilterCompareExpression)args[i];
 						args[i] = new PpsDataFilterCompareExpression(cmp.Operand, cmp.Operator,
-							new PpsDataFilterCompareArrayValue(combineValues[i].ToArray())
+							new PpsDataFilterArrayValue(combineValues[i].ToArray())
 						);
 					}
 				}
@@ -1947,12 +2447,11 @@ namespace TecWare.PPSn.Data
 		} // ctor
 
 		/// <summary></summary>
-		public override PpsDataFilterExpression Reduce()
-			=> new ReduceHelper(this).Build();
+		public override PpsDataFilterExpression Reduce(IPropertyReadOnlyDictionary variables = null)
+			=> new ReduceHelper(this, variables).Build();
 
-		/// <summary></summary>
-		/// <param name="sb"></param>
-		public override void ToString(StringBuilder sb)
+		/// <inherited />
+		public override void ToString(StringBuilder sb, IFormatProvider formatProvider)
 		{
 			switch (Type)
 			{
@@ -1973,12 +2472,12 @@ namespace TecWare.PPSn.Data
 			}
 			sb.Append('(');
 
-			arguments[0].ToString(sb);
+			arguments[0].ToString(sb, formatProvider);
 
 			for (var i = 1; i < arguments.Length; i++)
 			{
 				sb.Append(' ');
-				arguments[i].ToString(sb);
+				arguments[i].ToString(sb, formatProvider);
 			}
 
 			sb.Append(')');
@@ -2015,13 +2514,13 @@ namespace TecWare.PPSn.Data
 		/// <param name="operand"></param>
 		/// <param name="values"></param>
 		/// <returns></returns>
-		public abstract T CreateCompareIn(string operand, PpsDataFilterCompareArrayValue values);
+		public abstract T CreateCompareIn(string operand, PpsDataFilterArrayValue values);
 
 		/// <summary></summary>
 		/// <param name="operand"></param>
 		/// <param name="values"></param>
 		/// <returns></returns>
-		public abstract T CreateCompareNotIn(string operand, PpsDataFilterCompareArrayValue values);
+		public abstract T CreateCompareNotIn(string operand, PpsDataFilterArrayValue values);
 
 		/// <summary></summary>
 		/// <param name="method"></param>
@@ -2040,7 +2539,7 @@ namespace TecWare.PPSn.Data
 				return CreateLogicFilter(expression.Type, from c in logicExpr.Arguments select CreateFilter(c));
 			else if (expression is PpsDataFilterCompareExpression compareExpr)
 			{
-				if (compareExpr.Value is PpsDataFilterCompareArrayValue arr)
+				if (compareExpr.Value is PpsDataFilterArrayValue arr)
 				{
 					switch (compareExpr.Operator)
 					{
@@ -2099,17 +2598,17 @@ namespace TecWare.PPSn.Data
 		{
 			switch (expression.Value.Type)
 			{
-				case PpsDataFilterCompareValueType.Field:
-					return CreateCompareFilterField(expression.Operand, expression.Operator, ((PpsDataFilterCompareFieldValue)expression.Value).FieldName);
-				case PpsDataFilterCompareValueType.Text:
-					return CreateCompareFilterText(expression.Operand, expression.Operator, ((PpsDataFilterCompareTextValue)expression.Value).Text);
-				case PpsDataFilterCompareValueType.Date:
-					return CreateCompareFilterDate(expression.Operand, expression.Operator, ((PpsDataFilterCompareDateValue)expression.Value).From, ((PpsDataFilterCompareDateValue)expression.Value).To);
-				case PpsDataFilterCompareValueType.Number:
-					return CreateCompareFilterNumber(expression.Operand, expression.Operator, ((PpsDataFilterCompareNumberValue)expression.Value).Text);
-				case PpsDataFilterCompareValueType.Integer:
-					return CreateCompareFilterInteger(expression.Operand, expression.Operator, ((PpsDataFilterCompareIntegerValue)expression.Value).Value);
-				case PpsDataFilterCompareValueType.Null:
+				case PpsDataFilterValueType.Field:
+					return CreateCompareFilterField(expression.Operand, expression.Operator, ((PpsDataFilterFieldValue)expression.Value).FieldName);
+				case PpsDataFilterValueType.Text:
+					return CreateCompareFilterText(expression.Operand, expression.Operator, ((PpsDataFilterTextValue)expression.Value).Text);
+				case PpsDataFilterValueType.Date:
+					return CreateCompareFilterDate(expression.Operand, expression.Operator, ((PpsDataFilterDateTimeValue)expression.Value).From, ((PpsDataFilterDateTimeValue)expression.Value).To);
+				case PpsDataFilterValueType.Number:
+					return CreateCompareFilterNumber(expression.Operand, expression.Operator, ((PpsDataFilterTextKeyValue)expression.Value).Text);
+				case PpsDataFilterValueType.Integer:
+					return CreateCompareFilterInteger(expression.Operand, expression.Operator, ((PpsDataFilterIntegerValue)expression.Value).Value);
+				case PpsDataFilterValueType.Null:
 					return CreateCompareFilterNull(expression.Operand, expression.Operator);
 				default:
 					throw new NotImplementedException();
@@ -2387,7 +2886,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="sb"></param>
 		/// <param name="itemType"></param>
 		/// <param name="values"></param>
-		protected void CreateCompareInValues(StringBuilder sb, Type itemType, PpsDataFilterCompareArrayValue values)
+		protected void CreateCompareInValues(StringBuilder sb, Type itemType, PpsDataFilterArrayValue values)
 		{
 			var first = true;
 			foreach (var cur in values.Values)
@@ -2397,14 +2896,14 @@ namespace TecWare.PPSn.Data
 				else
 					sb.Append(',');
 
-				if (cur is PpsDataFilterCompareFieldValue field)
+				if (cur is PpsDataFilterFieldValue field)
 				{
 					var col = LookupColumn(field.FieldName);
 					sb.Append(col.Item1);
 				}
-				else if (cur is PpsDataFilterCompareTextValue text)
+				else if (cur is PpsDataFilterTextValue text)
 					sb.Append(CreateParsableValue(text.Text, itemType));
-				else if (cur is PpsDataFilterCompareIntegerValue num)
+				else if (cur is PpsDataFilterIntegerValue num)
 					sb.Append(CreateParsableValue(num.Value.ChangeType<string>(), itemType));
 				else
 					throw new NotImplementedException($"{cur.Type} is not supported.");
@@ -2415,7 +2914,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="operand"></param>
 		/// <param name="values"></param>
 		/// <returns></returns>
-		public override string CreateCompareIn(string operand, PpsDataFilterCompareArrayValue values)
+		public override string CreateCompareIn(string operand, PpsDataFilterArrayValue values)
 		{
 			var sb = new StringBuilder();
 			var col = LookupNumberColumn(operand);
@@ -2430,7 +2929,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="operand"></param>
 		/// <param name="values"></param>
 		/// <returns></returns>
-		public override string CreateCompareNotIn(string operand, PpsDataFilterCompareArrayValue values)
+		public override string CreateCompareNotIn(string operand, PpsDataFilterArrayValue values)
 		{
 			var sb = new StringBuilder();
 			var col = LookupNumberColumn(operand);
@@ -2676,24 +3175,24 @@ namespace TecWare.PPSn.Data
 			// right site depends of the operator
 			switch (expression.Value.Type)
 			{
-				case PpsDataFilterCompareValueType.Field:
+				case PpsDataFilterValueType.Field:
 					{
-						var right = GetProperty(((PpsDataFilterCompareFieldValue)expression.Value).FieldName);
+						var right = GetProperty(((PpsDataFilterFieldValue)expression.Value).FieldName);
 						if (left.Type == typeof(string))
 							return CreateCompareFilterForTextProperty(expression, left, right);
 						else
 							return Expression.MakeBinary(GetBinaryExpressionType(expression), ConvertTo(left, typeof(long)), right);
 					}
-				case PpsDataFilterCompareValueType.Text:
-					return CreateCompareFilterForTextProperty(expression, left, Expression.Constant(((PpsDataFilterCompareTextValue)expression.Value).Text));
-				case PpsDataFilterCompareValueType.Integer:
+				case PpsDataFilterValueType.Text:
+					return CreateCompareFilterForTextProperty(expression, left, Expression.Constant(((PpsDataFilterTextValue)expression.Value).Text));
+				case PpsDataFilterValueType.Integer:
 					{
-						var right = Expression.Constant(((PpsDataFilterCompareIntegerValue)expression.Value).Value);
+						var right = Expression.Constant(((PpsDataFilterIntegerValue)expression.Value).Value);
 						return Expression.MakeBinary(GetBinaryExpressionType(expression), ConvertTo(left, typeof(long)), right);
 					}
-				case PpsDataFilterCompareValueType.Number:
+				case PpsDataFilterValueType.Number:
 					{
-						var right = Expression.Constant(((PpsDataFilterCompareNumberValue)expression.Value).Text);
+						var right = Expression.Constant(((PpsDataFilterTextKeyValue)expression.Value).Text);
 						switch (expression.Operator)
 						{
 							case PpsDataFilterCompareOperator.Contains:
@@ -2707,7 +3206,7 @@ namespace TecWare.PPSn.Data
 
 						throw new NotImplementedException();
 					}
-				case PpsDataFilterCompareValueType.Null:
+				case PpsDataFilterValueType.Null:
 					{
 						switch (expression.Operator)
 						{
@@ -2728,9 +3227,9 @@ namespace TecWare.PPSn.Data
 
 						throw new NotImplementedException();
 					}
-				case PpsDataFilterCompareValueType.Date:
+				case PpsDataFilterValueType.Date:
 					{
-						var a = (PpsDataFilterCompareDateValue)expression.Value;
+						var a = (PpsDataFilterDateTimeValue)expression.Value;
 						left = Expression.Convert(left, typeof(DateTime));
 						switch (expression.Operator)
 						{
@@ -2772,7 +3271,7 @@ namespace TecWare.PPSn.Data
 				var expr = (Expression)Expression.Call(
 					Expression.Convert(CurrentRowParameter, typeof(ICompareFulltext)), compareFullTextSearchTextMethodInfo,
 						Expression.Constant(expressionValue),
-						Expression.Constant(expression.Value.Type == PpsDataFilterCompareValueType.Number)
+						Expression.Constant(expression.Value.Type == PpsDataFilterValueType.Number)
 				);
 
 				if (expression.Operator == PpsDataFilterCompareOperator.NotContains
@@ -2802,8 +3301,8 @@ namespace TecWare.PPSn.Data
 			{
 				var expr = (Expression)Expression.Call(
 					Expression.Convert(CurrentRowParameter, typeof(ICompareDateTime)), compareDateTimeSearchDateMethodInfo,
-						Expression.Constant(((PpsDataFilterCompareDateValue)expression.Value).From),
-						Expression.Constant(((PpsDataFilterCompareDateValue)expression.Value).To)
+						Expression.Constant(((PpsDataFilterDateTimeValue)expression.Value).From),
+						Expression.Constant(((PpsDataFilterDateTimeValue)expression.Value).To)
 				);
 
 				if (expression.Operator == PpsDataFilterCompareOperator.NotContains
@@ -2831,12 +3330,12 @@ namespace TecWare.PPSn.Data
 			{
 				switch (expression.Value.Type)
 				{
-					case PpsDataFilterCompareValueType.Text:
-						return CreateCompareFilterFullText(expression, ((PpsDataFilterCompareTextValue)expression.Value).Text);
-					case PpsDataFilterCompareValueType.Number:
-						return CreateCompareFilterFullText(expression, ((PpsDataFilterCompareNumberValue)expression.Value).Text);
+					case PpsDataFilterValueType.Text:
+						return CreateCompareFilterFullText(expression, ((PpsDataFilterTextValue)expression.Value).Text);
+					case PpsDataFilterValueType.Number:
+						return CreateCompareFilterFullText(expression, ((PpsDataFilterTextKeyValue)expression.Value).Text);
 
-					case PpsDataFilterCompareValueType.Date:
+					case PpsDataFilterValueType.Date:
 						return CreateCompareFilterFullDate(expression);
 
 					default:
@@ -2873,20 +3372,20 @@ namespace TecWare.PPSn.Data
 		/// <param name="operand"></param>
 		/// <param name="values"></param>
 		/// <returns></returns>
-		public override Expression CreateCompareIn(string operand, PpsDataFilterCompareArrayValue values)
+		public override Expression CreateCompareIn(string operand, PpsDataFilterArrayValue values)
 		{
 			var prop = GetProperty(operand);
-			if (values.ItemType == PpsDataFilterCompareValueType.Integer)
+			if (values.ItemType == PpsDataFilterValueType.Integer)
 			{
 				var arrExpr = Expression.NewArrayInit(prop.Type,
-					values.Values.Select(c => Expression.Constant(Procs.ChangeType(((PpsDataFilterCompareIntegerValue)c).Value, prop.Type), prop.Type))
+					values.Values.Select(c => Expression.Constant(Procs.ChangeType(((PpsDataFilterIntegerValue)c).Value, prop.Type), prop.Type))
 				);
 				return CreateArrayFind(arrExpr, prop);
 			}
-			else if (values.ItemType == PpsDataFilterCompareValueType.Text)
+			else if (values.ItemType == PpsDataFilterValueType.Text)
 			{
 				var arrExpr = Expression.NewArrayInit(prop.Type,
-					values.Values.Select(c => Expression.Constant(Procs.ChangeType(((PpsDataFilterCompareTextValue)c).Text, prop.Type), prop.Type))
+					values.Values.Select(c => Expression.Constant(Procs.ChangeType(((PpsDataFilterTextValue)c).Text, prop.Type), prop.Type))
 				);
 				return CreateArrayFind(arrExpr, prop);
 			}
@@ -2906,7 +3405,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="operand"></param>
 		/// <param name="values"></param>
 		/// <returns></returns>
-		public sealed override Expression CreateCompareNotIn(string operand, PpsDataFilterCompareArrayValue values)
+		public sealed override Expression CreateCompareNotIn(string operand, PpsDataFilterArrayValue values)
 			=> Expression.Not(CreateCompareIn(operand, values));
 
 		/// <summary></summary>
@@ -3051,7 +3550,7 @@ namespace TecWare.PPSn.Data
 				Expression.Call(datarowSearchFullTextMethodInfo,
 					Expression.Convert(CurrentRowParameter, typeof(IDataRow)),
 					Expression.Constant(expressionValue),
-					Expression.Constant(expression.Value.Type == PpsDataFilterCompareValueType.Number)
+					Expression.Constant(expression.Value.Type == PpsDataFilterValueType.Number)
 				)
 			);
 
@@ -3062,8 +3561,8 @@ namespace TecWare.PPSn.Data
 			=> CreateCompareFilterFullOperator(expression,
 				Expression.Call(datarowSearchFullDateMethodInfo,
 					Expression.Convert(CurrentRowParameter, typeof(IDataRow)),
-					Expression.Constant(((PpsDataFilterCompareDateValue)expression.Value).From),
-					Expression.Constant(((PpsDataFilterCompareDateValue)expression.Value).To)
+					Expression.Constant(((PpsDataFilterDateTimeValue)expression.Value).From),
+					Expression.Constant(((PpsDataFilterDateTimeValue)expression.Value).To)
 				)
 			);
 
@@ -3365,7 +3864,7 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public sealed class PpsDataColumnExpression
 	{
-		private readonly string columnName;
+		private readonly PpsDataFilterFieldValue column;
 		private readonly string columnAlias;
 
 		/// <summary></summary>
@@ -3373,7 +3872,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="columnAlias"></param>
 		public PpsDataColumnExpression(string columnName, string columnAlias = null)
 		{
-			this.columnName = columnName ?? throw new ArgumentNullException(nameof(columnName));
+			this.column = new PpsDataFilterFieldValue(columnName ?? throw new ArgumentNullException(nameof(columnName)));
 			if (columnAlias == null)
 			{
 				ParseQualifiedName(columnName, out var tableAlias, out var name);
@@ -3387,13 +3886,13 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public override string ToString()
 			=> String.IsNullOrEmpty(columnAlias)
-				? columnName
-				: columnName + ":" + columnAlias;
+				? column.FieldName
+				: column.FieldName + ":" + columnAlias;
 
 		/// <summary></summary>
-		public string Name => columnName;
+		public string Name => column.FieldName;
 		/// <summary></summary>
-		public string Alias => columnAlias ?? columnName;
+		public string Alias => columnAlias ?? column.FieldName;
 
 		/// <summary></summary>
 		public bool HasAlias => !String.IsNullOrEmpty(columnAlias);

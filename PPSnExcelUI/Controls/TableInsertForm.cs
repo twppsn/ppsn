@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -510,7 +511,7 @@ namespace TecWare.PPSn.Controls
 				=> Source.GetColumnName(column);
 
 			IPpsFilterColumn IPpsFilterColumnFactory.CreateFilterColumn(IPpsFilterExpression filterExpression, IPpsFilterGroup group)
-				=> new FilterColumn((FilterExpression)filterExpression, (FilterGroup)group, this, PpsDataFilterCompareOperator.Contains, PpsDataFilterCompareNullValue.Default);
+				=> new FilterColumn((FilterExpression)filterExpression, (FilterGroup)group, this, PpsDataFilterCompareOperator.Contains, PpsDataFilterNullValue.Default);
 
 			public override PpsTableColumnType Type => PpsTableColumnType.Data;
 			public TreeNodeData Source => columnSource;
@@ -529,10 +530,10 @@ namespace TecWare.PPSn.Controls
 			private readonly SourceColumnData columnSource;
 			private FilterGroup group;
 			private PpsDataFilterCompareOperator op;
-			private PpsDataFilterCompareValue value;
+			private PpsDataFilterValue value;
 			private bool isVisible = true;
 
-			internal FilterColumn(FilterExpression filterExpression, FilterGroup group, SourceColumnData columnSource, PpsDataFilterCompareOperator op, PpsDataFilterCompareValue value)
+			internal FilterColumn(FilterExpression filterExpression, FilterGroup group, SourceColumnData columnSource, PpsDataFilterCompareOperator op, PpsDataFilterValue value)
 			{
 				this.filterExpression = filterExpression ?? throw new ArgumentNullException(nameof(filterExpression));
 				this.group = group ?? throw new ArgumentNullException(nameof(group));
@@ -548,7 +549,7 @@ namespace TecWare.PPSn.Controls
 				else
 				{
 					var sb = new StringBuilder();
-					value.ToString(sb);
+					value.ToString(sb, CultureInfo.CurrentUICulture);
 					return sb.ToString();
 				}
 			} // func GetFormattedValue
@@ -556,9 +557,9 @@ namespace TecWare.PPSn.Controls
 			bool IPpsFilterColumn.TrySetValue(string text)
 			{
 				if (String.IsNullOrEmpty(text))
-					value = PpsDataFilterCompareNullValue.Default;
+					value = PpsDataFilterNullValue.Default;
 				else
-					value = PpsDataFilterExpression.ParseCompareValue(text);
+					value = PpsDataFilterExpression.ParseValue(text, 0, text.Length, CultureInfo.CurrentUICulture, PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.AllowVariables);
 				return true;
 
 				//Source.Column.DataType

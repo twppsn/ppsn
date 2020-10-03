@@ -324,8 +324,8 @@ namespace TecWare.PPSn.Server.Data
 				var timeStampDateTime = DateTime.FromFileTimeUtc(lastSyncId);
 				selector = selector.ApplyFilter(
 					new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.Or,
-						new PpsDataFilterCompareExpression(viewSyncColumn, PpsDataFilterCompareOperator.LowerOrEqual, new PpsDataFilterCompareDateValue(DateTime.MinValue, DateTime.MinValue)),
-						new PpsDataFilterCompareExpression(viewSyncColumn, PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareDateValue(timeStampDateTime, timeStampDateTime))
+						new PpsDataFilterCompareExpression(viewSyncColumn, PpsDataFilterCompareOperator.LowerOrEqual, new PpsDataFilterDateTimeValue(DateTime.MinValue, DateTime.MinValue)),
+						new PpsDataFilterCompareExpression(viewSyncColumn, PpsDataFilterCompareOperator.Greater, new PpsDataFilterDateTimeValue(timeStampDateTime, timeStampDateTime))
 					)
 				);
 			}
