@@ -94,7 +94,7 @@ specific language governing permissions and limitations under the Licence.
 							   GeometrySize="24"
 							   Height="{Binding MinHeight,ElementName=PART_ItemsControl}"
 							   MinWidth="36"
-							   Focusable="True" />
+							   Focusable="{Binding Focusable}" />
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Mixed,{x:Type uiO:PpsUISplitCommandButton}}">
 				<pps:PpsSplitButton Command="{Binding Command}"

@@ -274,7 +274,11 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="helpPathGeometry" 
 				  Figures="M10,19H13V22H10V19M12,2C17.35,2.22 19.68,7.62 16.5,11.67C15.67,12.67 14.33,13.33 13.67,14.17C13,15 13,16 13,17H10C10,15.33 10,13.92 10.67,12.92C11.33,11.92 12.67,11.33 13.5,10.67C15.92,8.43 15.32,5.26 12,5A3,3 0 0,0 9,8H6A6,6 0 0,1 12,2Z" />
 
-	<!-- custom-->
+    <!-- email-outline, google -->
+    <PathGeometry x:Key="emailPathGeometry" 
+				  Figures="M22 6C22 4.9 21.1 4 20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6M20 6L12 11L4 6H20M20 18H4V8L12 13L20 8V18Z" />
+
+    <!-- custom-->
 	<PathGeometry x:Key="chevronDownThinPathGeometry" 
 				  Figures="M 4.75,7.75 L12,15 19.25,7.75 20,8.5 12,16.5 4,8.5 4.75,7.75 Z" />
 
