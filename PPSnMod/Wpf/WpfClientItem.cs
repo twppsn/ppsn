@@ -36,18 +36,6 @@ using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.Server.Wpf
 {
-	#region -- interface IWpfClientApplicationFileProvider ----------------------------
-
-	/// <summary>Interface to register client site files for synchronization.</summary>
-	public interface IWpfClientApplicationFileProvider
-	{
-		/// <summary>Get client site files, that should be synchronizated.</summary>
-		/// <returns></returns>
-		IEnumerable<PpsWpfApplicationFileItem> GetApplicationFiles();
-	} // IWpfClientApplicationFileProvider
-
-	#endregion
-
 	/// <summary></summary>
 	public class WpfClientItem : DEConfigItem
 	{
@@ -433,7 +421,6 @@ namespace TecWare.PPSn.Server.Wpf
 
 		private PpsDataSetServerDefinition masterDataSetDefinition;
 		private ParsedXamlFile defaultTheme = null;
-		private readonly List<PpsWpfApplicationFileItem> scriptAddedFiles = new List<PpsWpfApplicationFileItem>();
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -905,78 +892,6 @@ namespace TecWare.PPSn.Server.Wpf
 				xml.WriteEndElement();
 			}
 		} // func ParseNavigator
-
-		#endregion
-
-		#region -- Client synchronisation ---------------------------------------------
-
-		/// <summary>Add a new file, to synchronize to the client offline cache.</summary>
-		/// <param name="path">Path to the file.</param>
-		/// <param name="length">Length of the file.</param>
-		/// <param name="lastWriteTime">Timestamp of the file.</param>
-		public void AddApplicationFileItem(string path, long length, DateTime lastWriteTime)
-		{
-			lock (scriptAddedFiles)
-			{
-				var index = scriptAddedFiles.FindIndex(c => c.Path == path);
-				if (index == -1)
-					scriptAddedFiles.Add(new PpsWpfApplicationFileItem(path, length, lastWriteTime));
-				else
-					scriptAddedFiles[index] = new PpsWpfApplicationFileItem(path, length, lastWriteTime);
-			}
-		} // proc AddApplicationFileItem
-
-		private IEnumerable<PpsWpfApplicationFileItem> GetApplicationFileList()
-		{
-			var basePath = this.Name;
-
-			yield return new PpsWpfApplicationFileItem(basePath + "/styles.xaml", -1, Server.Configuration.ConfigurationStamp);
-
-			// navigator.xml
-			yield return new PpsWpfApplicationFileItem(basePath + "/environment.xml", -1, Server.Configuration.ConfigurationStamp);
-
-			// templates.xml
-			yield return new PpsWpfApplicationFileItem(basePath + "/templates.xaml", -1, Server.Configuration.ConfigurationStamp);
-
-			// schemas from application/documents
-			foreach (var c in application.CollectChildren<IWpfClientApplicationFileProvider>())
-			{
-				foreach (var f in c.GetApplicationFiles())
-					yield return f;
-			}
-
-			// add script files
-			lock (scriptAddedFiles)
-			{
-				foreach (var c in scriptAddedFiles)
-					yield return c;
-			}
-
-			// theme, wpfWpfSource
-			foreach (var x in Config.Elements())
-			{
-				if (x.Name == PpsStuff.xnWpfWpfSource)
-				{
-					var directoryPath = x.GetAttribute("directory", String.Empty);
-					var virtualPath = x.GetAttribute("virtualPath", String.Empty);
-
-					foreach (var fi in new DirectoryInfo(directoryPath).GetFiles("*", SearchOption.TopDirectoryOnly))
-						yield return new PpsWpfApplicationFileItem(basePath + "/" + virtualPath + "/" + fi.Name, fi.Length, fi.LastWriteTimeUtc);
-				}
-				else if (x.Name == PpsStuff.xnWpfTheme)
-				{
-					var id = x.GetAttribute("id", String.Empty);
-					if (String.Compare(id, "default", StringComparison.OrdinalIgnoreCase) != 0)
-						yield return new PpsWpfApplicationFileItem(basePath + "/styles.xaml?id=" + id, -1, Server.Configuration.ConfigurationStamp);
-				}
-			}
-		} // func GetApplicationFileList
-
-		/// <summary>Return a view to all files that will be offline available on the client.</summary>
-		/// <param name="dataSource"></param>
-		/// <returns></returns>
-		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsWpfApplicationFileItem>(dataSource.SystemConnection, "wpf.sync", offlineFileVersion, GetApplicationFileList());
 
 		#endregion
 

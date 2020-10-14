@@ -34,7 +34,7 @@ namespace TecWare.PPSn.Server
 	#region -- class PpsDocumentItem --------------------------------------------------
 
 	/// <summary>Document (DataSet) config item, for push and pull requests.</summary>
-	public sealed class PpsDocumentItem : PpsObjectItem<PpsDataSetServer>, IWpfClientApplicationFileProvider
+	public sealed class PpsDocumentItem : PpsObjectItem<PpsDataSetServer>
 	{
 #pragma warning disable IDE1006 // Naming Styles
 		private const string LuaOnBeforePush = "OnBeforePush";
@@ -245,22 +245,6 @@ namespace TecWare.PPSn.Server
 		} // proc HttpExecuteAction
 
 		#region -- Application Files --------------------------------------------------
-
-		IEnumerable<PpsWpfApplicationFileItem> IWpfClientApplicationFileProvider.GetApplicationFiles()
-		{
-			var baseUri = Name + '/';
-
-			// schema
-			yield return new PpsWpfApplicationFileItem(baseUri + "schema.xml", -1, DataSetDefinition.ConfigurationStamp);
-
-			// related client scripts
-			foreach (var c in DataSetDefinition.ClientScripts)
-			{
-				var fi = new FileInfo(c);
-				if (fi.Exists)
-					yield return new PpsWpfApplicationFileItem(baseUri + fi.Name, fi.Length, fi.LastWriteTimeUtc);
-			}
-		} // func GetApplicationFiles
 
 		private bool GetDatasetResourceFile(string relativeSubPath, out FileInfo fi)
 		{
