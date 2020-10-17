@@ -993,10 +993,13 @@
 					<xs:documentation>Device name. Dot based identification string with place holders. Is this value is missing it is a generic/abstract group.</xs:documentation>
 				</xs:annotation>
 			</xs:attribute>
-			<xs:attribute name="ref" type="pps:ClientOptionRefKeyType" use="optional">
+			<xs:attribute name="ref" use="optional">
 				<xs:annotation>
 					<xs:documentation>Option packaged id, that this configuration is based on.</xs:documentation>
 				</xs:annotation>
+				<xs:simpleType>
+					<xs:list itemType="pps:ClientOptionRefKeyType" />
+				</xs:simpleType>
 			</xs:attribute>
 		</xs:complexType>
 	</xs:element>

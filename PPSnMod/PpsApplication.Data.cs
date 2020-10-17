@@ -1515,6 +1515,8 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- ImportView, ExportView, viewget ------------------------------------
+
 		/// <summary>Import a data table.</summary>
 		/// <param name="src"></param>
 		[LuaMember]
@@ -1627,6 +1629,10 @@ namespace TecWare.PPSn.Server
 				ExportViewCore(viewWriter, selector, startAt, count, ctx, attributeSelector);
 			}
 		} // func HttpViewGetAction
+
+		#endregion
+
+		#region -- syncget ------------------------------------------------------------
 
 		private Dictionary<string, long> ParseSyncGetParameters(IDEWebRequestScope r, out bool enforceCDC)
 		{
@@ -1914,6 +1920,8 @@ namespace TecWare.PPSn.Server
 				}
 			}
 		} // proc HttpSyncGetAction
+
+		#endregion
 
 		/// <summary>Main data source, MS Sql Server</summary>
 		public PpsDataSource MainDataSource => mainDataSource;

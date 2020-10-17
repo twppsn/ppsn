@@ -82,6 +82,34 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class SqlConnectionLogger ------------------------------------------
+
+		private sealed class SqlConnectionLogger : IDisposable
+		{
+			private readonly SqlConnection connection;
+			private readonly LogMessageScopeProxy log;
+
+			public SqlConnectionLogger(SqlConnection connection, LogMessageScopeProxy log)
+			{
+				this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+				this.log = log ?? throw new ArgumentNullException(nameof(log));
+
+				connection.InfoMessage += Connection_InfoMessage;
+			} // ctor
+
+			public void Dispose()
+			{
+				connection.InfoMessage -= Connection_InfoMessage;
+			} // proc Dispose
+
+			private void Connection_InfoMessage(object sender, SqlInfoMessageEventArgs e)
+			{
+				log.WriteLine(e.Message);
+			} // event Connection_InfoMessage
+		} // class SqlConnectionLogger
+
+		#endregion
+
 		#region -- class PpsMsSqlDataTransaction --------------------------------------
 
 		/// <summary></summary>
@@ -674,14 +702,20 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
+			/// <summary>Intercepts messages from the connection.</summary>
+			/// <param name="log"></param>
+			/// <returns></returns>
+			public IDisposable LogMessages(LogMessageScopeProxy log)
+				=> new SqlConnectionLogger(SqlConnection, log);
+
 			/// <summary></summary>
 			public PpsCredentials Credentials { get; }
 			/// <summary></summary>
 			public PpsMsSqlDataSource SqlDataSource => (PpsMsSqlDataSource)DataSource;
 			/// <summary></summary>
-			public SqlConnection SqlConnection => (SqlConnection)DbConnection;
+			public SqlConnection SqlConnection => DbConnection;
 			/// <summary></summary>
-			public SqlTransaction SqlTransaction => (SqlTransaction)DbTransaction;
+			public SqlTransaction SqlTransaction => DbTransaction;
 		} // class PpsMsSqlDataTransaction
 
 		#endregion
