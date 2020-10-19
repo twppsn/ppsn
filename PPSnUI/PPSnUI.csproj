@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TecWare.DES.Core" Version="3.4.63-pre.466" />
+    <PackageReference Include="TecWare.DES.Core" Version="3.4.63" />
   </ItemGroup>
 
   <ItemGroup>
