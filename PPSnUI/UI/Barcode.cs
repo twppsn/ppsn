@@ -78,6 +78,7 @@ namespace TecWare.PPSn.UI
 		/// <returns><c>true</c>, if barcode is processed.</returns>
 		Task OnBarcodeAsync(IPpsBarcodeProvider provider, string code, string format);
 
+		/// <summary>Is the barcode receiver active.</summary>
 		bool IsActive { get; }
 	} // interface IPpsBarcodeReceiver
 
@@ -139,6 +140,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		/// <summary>Notify device changes</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly List<BarcodeToken<IPpsBarcodeProvider>> providers = new List<BarcodeToken<IPpsBarcodeProvider>>();
@@ -147,6 +149,7 @@ namespace TecWare.PPSn.UI
 
 		private readonly SynchronizationContext synchronizationContext;
 
+		/// <summary></summary>
 		public PpsBarcodeService()
 		{
 			synchronizationContext = SynchronizationContext.Current ?? throw new ArgumentNullException(nameof(SynchronizationContext));
@@ -183,6 +186,9 @@ namespace TecWare.PPSn.UI
 		public IDisposable RegisterReceiver(IPpsBarcodeReceiver receiver)
 			=> Register(receivers, receiver);
 
+		/// <summary>Register a new barcode provider.</summary>
+		/// <param name="provider"></param>
+		/// <returns></returns>
 		public IDisposable RegisterProvider(IPpsBarcodeProvider provider)
 			=> Register(providers, provider);
 
@@ -226,6 +232,8 @@ namespace TecWare.PPSn.UI
 			}, null);
 		} // proc DispatchBarcode
 
+		/// <summary>Enumerate all barcode provider.</summary>
+		/// <returns></returns>
 		public IEnumerator<IPpsBarcodeProvider> GetEnumerator()
 		{
 			lock (providers)

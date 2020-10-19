@@ -177,8 +177,8 @@ namespace TecWare.PPSn.UI
 			: base(paneHost.PaneManager._Shell)
 		{
 			PaneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
-			
-			PaneManager._Shell.AddIdleAction(this);
+
+			this.PaneHost.GetService<IPpsIdleService>(true).Add(this);
 		} // ctor
 
 		/// <summary></summary>
@@ -200,7 +200,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (disposing)
 			{
-				PaneManager._Shell.RemoveIdleAction(this);
+				PaneManager.GetService<IPpsIdleService>(true).Remove(this);
 				CallMemberDirect("Dispose", new object[0], rawGet: true, throwExceptions: false);
 			}
 		} // proc Dispose

@@ -14,15 +14,19 @@
 //
 #endregion
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Threading;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Bde;
 using TecWare.PPSn.Data;
@@ -52,12 +56,336 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- class AppStartArguments --------------------------------------------
+
+		private sealed class AppStartArguments
+		{
+			public int WaitProcessId { get; set; } = -1;
+			public IPpsShellInfo ShellInfo { get; set; } = null;
+			public ICredentials UserInfo { get; set; } = null;
+			public bool DoAutoLogin { get; set; } = false;
+			public bool AllowSync { get; set; } = true;
+		} // class AppStartArguments
+
+		#endregion
+
+		#region -- class RestartApplicationException ----------------------------------
+
+		private sealed class RestartApplicationException : Exception
+		{
+			private readonly IPpsShellInfo shellInfo;
+			private readonly ICredentials userInfo;
+
+			public RestartApplicationException(IPpsShellInfo shellInfo, ICredentials userInfo)
+				: base("Restart application")
+			{
+				this.shellInfo = shellInfo;
+				this.userInfo = userInfo;
+			} // ctor
+
+			public IPpsShellInfo ShellInfo => shellInfo;
+			public ICredentials UserInfo => userInfo;
+		} // class RestartApplicationException
+
+		#endregion
+
+		#region -- class ShellLoadNotify ----------------------------------------------
+
+		private sealed class ShellLoadNotify : IPpsShellLoadNotify
+		{
+			#region -- enum FileLoadFlag ----------------------------------------------
+
+			[Flags]
+			private enum FileLoadFlag
+			{
+				None = 0,
+				Net = 1,
+				Path = 2
+			} // enum FileLoadFlag
+
+			#endregion
+
+			#region -- class FileVerifyInfo -------------------------------------------
+
+			private sealed class FileVerifyInfo
+			{
+				private readonly string fileId;
+				private readonly Uri uri;
+				private readonly FileInfo fi;
+				private readonly long expectedLength;
+				private readonly DateTime expectedLastWriteTime;
+				private readonly FileLoadFlag loadFlags;
+
+				private FileVerifyInfo(string fileId, FileInfo fi, Uri uri, long expectedLength, DateTime expectedLastWriteTime, FileLoadFlag loadFlags)
+				{
+					this.fileId = fileId;
+					this.fi = fi;
+					this.uri = uri;
+					this.expectedLength = expectedLength;
+					this.expectedLastWriteTime = expectedLastWriteTime;
+					this.loadFlags = loadFlags;
+				} // ctor
+
+				public Process IsApplicationBlocked()
+				{
+					if (String.Compare(fi.Extension, ".exe", StringComparison.OrdinalIgnoreCase) != 0)
+						return null;
+
+					foreach (var p in Process.GetProcessesByName(fi.Name).Where(c => c.StartInfo != null))
+					{
+						if (String.Compare(p.StartInfo.FileName, fi.FullName, StringComparison.OrdinalIgnoreCase) == 0)
+							return p;
+					}
+
+					return null;
+				} // func IsApplicationBlocked
+
+				public string FileId => fileId;
+				public Uri Uri => uri;
+				public FileInfo FileInfo => fi;
+				public long Length => expectedLength;
+				public DateTime LastWriteTime => expectedLastWriteTime;
+				public FileLoadFlag Load => loadFlags;
+
+				public bool NeedsUpdate => !fi.Exists || fi.Length != expectedLength || expectedLastWriteTime > fi.LastWriteTime;
+
+				// -- Static --------------------------------------------------
+
+				public static FileVerifyInfo Create(string groupName, DirectoryInfo baseDirectory, string path, string source, long expectedLength, string expectedLastWriteTimeText, string loadFlags)
+				{
+					if (groupName == null)
+						throw new ArgumentNullException(nameof(groupName));
+					if (baseDirectory == null)
+						throw new ArgumentNullException(nameof(baseDirectory));
+
+					string GetPropertyName(string name)
+						=> "PPSn.Application.Files." + groupName + "." + name;
+
+					if (String.IsNullOrEmpty(source))
+						throw new ArgumentNullException(GetPropertyName("Uri"));
+					if (String.IsNullOrEmpty(path))
+						throw new ArgumentNullException(GetPropertyName("Path"));
+					if (path.Contains(".."))
+						throw new ArgumentOutOfRangeException(GetPropertyName("Path"), path, "Invalid relative path.");
+					if (expectedLength < 0)
+						throw new ArgumentNullException(GetPropertyName("Length"));
+					if (expectedLastWriteTimeText == null)
+						throw new ArgumentNullException(GetPropertyName("LastWriteTime"));
+
+					if (!Uri.TryCreate(source, UriKind.Absolute, out var uri))
+						throw new ArgumentOutOfRangeException(GetPropertyName("Uri"), source, "Invalid uri.");
+
+					if (!DateTime.TryParse(expectedLastWriteTimeText, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var expectedLastWriteTime))
+						throw new ArgumentOutOfRangeException(GetPropertyName("LastWriteTime"), expectedLastWriteTimeText, "Could not parse timestamp.");
+
+					var flags = FileLoadFlag.None;
+					if (loadFlags != null)
+					{
+						if (loadFlags.Contains("net"))
+							flags |= FileLoadFlag.Net;
+						if (loadFlags.Contains("path"))
+							flags |= FileLoadFlag.Path;
+					}
+
+					return new FileVerifyInfo(groupName, new FileInfo(Path.Combine(baseDirectory.FullName, path)), uri, expectedLength, expectedLastWriteTime, flags);
+				} // func Create
+			} // class FileVerifyInfo
+
+			#endregion
+
+			private readonly PpsSplashWindow splashWindow;
+			private readonly bool allowSync;
+
+			public ShellLoadNotify(PpsSplashWindow splashWindow, bool allowSync)
+			{
+				this.splashWindow = splashWindow;
+				this.allowSync = allowSync;
+			} // ctor
+
+			Task IPpsShellLoadNotify.OnAfterInitServicesAsync(IPpsShell shell)
+				=> Task.CompletedTask;
+
+			private static async Task<Stream> OpenFileSafe(PpsSplashWindow splashWindow, FileInfo fileInfo)
+			{
+				// create directory if not exists
+				if (!fileInfo.Directory.Exists)
+					fileInfo.Directory.Create();
+
+				if (!fileInfo.Exists)
+					return fileInfo.Create();
+				else
+				{
+					var count = 0;
+					while (true)
+					{
+						try
+						{
+							return fileInfo.Create();
+						}
+						catch (IOException)
+						{
+							splashWindow.SetProgressText(String.Format("Datei '{0}' ist blockiert (warte auf Freigabe, {1})...", fileInfo.Name, ++count));
+						}
+						await Task.Delay(1000);
+					}
+				}
+			} // func OpenFileSafe
+
+			private static async Task DownloadFileAsync(PpsSplashWindow splashWindow, DEHttpClient http, Uri uri, FileInfo fileInfo, long expectedLength, DateTime lastWriteTimeUtc, long progressMin, long progressCount)
+			{
+				using (var dst = await OpenFileSafe(splashWindow, fileInfo))
+				using (var src = await http.GetStreamAsync(uri))
+				{
+					var totalReaded = 0L;
+
+					while (true)
+					{
+						// update progress
+						var percent = (int)(progressMin + Math.Min(totalReaded, expectedLength) * progressCount / expectedLength);
+						splashWindow.StatusValue = percent;
+						splashWindow.SetProgressText(String.Format("Kopiere {0} ({1:N1}%)...", fileInfo.Name, percent / 10.0f));
+
+						// copy data
+						var buf = new byte[0x4000];
+						var readed = await src.ReadAsync(buf, 0, buf.Length);
+						if (readed <= 0)
+							break;
+
+						totalReaded += readed;
+						await dst.WriteAsync(buf, 0, readed);
+					}
+
+					// update length of file
+					dst.SetLength(dst.Position);
+				}
+
+				fileInfo.LastWriteTimeUtc = lastWriteTimeUtc;
+				fileInfo.Refresh();
+			} // proc DownloadFileAsync
+
+			async Task IPpsShellLoadNotify.OnAfterLoadSettingsAsync(IPpsShell shell)
+			{
+				var log = shell.GetLogger();
+
+				splashWindow.SetProgressText("Analysiere die lokalen Dateien...");
+
+				// prepare directory
+				var filesDirectoryInfo = shell.EnforceLocalPath("common$");
+
+				// check for extended files
+				var extendedFiles = shell.Settings.GetGroups("PPSn.Application.Files", true, "Uri", "Path", "Length", "LastWriteTime", "Load")
+					.Select(g => FileVerifyInfo.Create(
+						g.GroupName,
+						filesDirectoryInfo,
+						g.GetProperty("Path", null),
+						g.GetProperty("Uri", null),
+						g.GetProperty("Length", -1L),
+						g.GetProperty("LastWriteTime", null),
+						g.GetProperty("Load", null)
+					))
+					.ToArray();
+
+				// analyze file information
+				var pathAdditions = new List<string>();
+				var totalBytesToUpdate = 0L;
+				foreach (var cur in extendedFiles)
+				{
+					// check directory for path variable
+					if ((cur.Load & FileLoadFlag.Path) != 0)
+					{
+						log.Append(PpsLogType.Debug, $"Path {cur.FileId}: {cur.FileInfo.DirectoryName}");
+						AddToDirectoryList(-1, pathAdditions, cur.FileInfo.DirectoryName);
+					}
+
+					// check outdated file
+					if (cur.NeedsUpdate)
+					{
+						log.Append(PpsLogType.Debug, $"Schedule {cur.FileInfo} for update: {cur.Uri}");
+						totalBytesToUpdate += cur.Length;
+					}
+				}
+
+				// we need to sync
+				if (allowSync && totalBytesToUpdate > 0)
+				{
+					// check for running processes
+					foreach (var cur in extendedFiles)
+					{
+						while (true)
+						{
+							var process = cur.IsApplicationBlocked();
+							if (process == null)
+								break;
+							await WaitForProcessAsync(splashWindow, process);
+						}
+					}
+
+					// update new files
+					var totalCopiedFileLength = 0L;
+					foreach (var cur in extendedFiles.Where(c => c.NeedsUpdate))
+					{
+						// copy file
+						await DownloadFileAsync(splashWindow, shell.Http, cur.Uri, cur.FileInfo, cur.Length, cur.LastWriteTime,
+							totalCopiedFileLength * 1000 / totalBytesToUpdate,
+							cur.Length * 1000 / totalBytesToUpdate
+						);
+
+						totalCopiedFileLength += cur.Length;
+					}
+				}
+
+				// locate alternative paths
+				var i = 0;
+				foreach (var c in shell.Settings.GetProperties("PPSn.Application.Debug.Path.*"))
+				{
+					log.Append(PpsLogType.Debug, $"Path {c.Key}: {c.Value}");
+					AddToDirectoryList(i++, pathAdditions, c.Value);
+				}
+
+				// set environment to extended files
+				Environment.SetEnvironmentVariable("PATH",
+					Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) + ";" + String.Join(";", pathAdditions),
+					EnvironmentVariableTarget.Process
+				);
+
+				// load additional assemblies from extended files
+				foreach (var f in extendedFiles.Where(c => (c.Load & FileLoadFlag.Net) != 0))
+				{
+					// load assembly
+					var assemblyName = AssemblyName.GetAssemblyName(f.FileInfo.FullName);
+					AddAssemblyResolveDirectory(f.FileInfo.DirectoryName);
+
+					splashWindow.SetProgressText(String.Format("Lade Anwendungsmodul {0}...", assemblyName.Name));
+					var asm = Assembly.Load(assemblyName);
+					log.Append(PpsLogType.Debug, $"Assembly {f.FileId} loaded: {asm.Location}");
+
+					// add alias for type resolver
+					AddAssemblyAlias(f.FileId, asm);
+
+					// collect services
+					PpsShell.Collect(asm);
+				}
+
+				splashWindow.SetProgressText("Lade Anwendungsmodule...");
+			} // proc OnAfterLoadSettingsAsync
+
+			Task IPpsShellLoadNotify.OnBeforeLoadSettingsAsync(IPpsShell shell)
+				=> Task.CompletedTask;
+		} // class ShellLoadNotify
+
+		#endregion
+
 		private IPpsShell shell = null;
 
 		/// <summary>Start application</summary>
 		public App()
 		{
 			DispatcherUnhandledException += App_DispatcherUnhandledException;
+
+			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+			AppDomain.CurrentDomain.TypeResolve += CurrentDomain_TypeResolve;
+
+			AddAssemblyResolveDirectory(Path.GetDirectoryName(typeof(App).Assembly.Location));
 
 			PresentationTraceSources.DataBindingSource.Listeners.Add(new BindingErrorListener(this));
 		} // ctor
@@ -78,147 +406,224 @@ namespace TecWare.PPSn
 				throw new ArgumentOutOfRangeException(nameof(applicationMode), applicationMode, "Invalid application mode.");
 		} // func GetMainWindowManager
 
-		internal async Task<bool> StartApplicationAsync(string _deviceKey, IPpsShellInfo _shellInfo = null, ICredentials _userInfo = null)
+		private async Task<IPpsShell> StartApplicationShellAsync(PpsSplashWindow splashWindow, IPpsShellInfo shellInfo, bool allowSync)
 		{
-			var shellInfo = _shellInfo;
-			var userInfo = _userInfo;
-			var deviceKey = _deviceKey;
-
 			object errorInfo = null;
-			IPpsShell newShell = null; 
-			IPpsShell errorShell = null;
+			while (true)
+			{
+				// select a shell by user
+				if (shellInfo == null || errorInfo != null)
+				{
+					if (errorInfo != null)
+						await splashWindow.SetErrorAsync(errorInfo, null);
 
+					shellInfo = await splashWindow.ShowShellAsync(shellInfo);
+					if (shellInfo == null)
+						return null; // cancel pressed, exit application
+				}
+
+				// try start shell
+				if (errorInfo != null) // previous shell loaded with error -> restart to load
+					throw new RestartApplicationException(shellInfo, null);
+
+				try
+				{
+					// create the application shell
+					splashWindow.SetProgressText("Starte Anwendung...");
+					return await PpsShell.StartAsync(shellInfo, isDefault: true, notify: new ShellLoadNotify(splashWindow, allowSync));
+				}
+				catch (Exception e)
+				{
+					errorInfo = e;
+				}
+			}
+		} // func StartApplicationShellAsync
+
+		private async Task<ICredentials> StartApplicationLoginAsync(PpsSplashWindow splashWindow, bool autoLogin, ICredentials userInfo, IPpsShell newShell, object errorInfo)
+		{
+			if (!autoLogin || userInfo == null || errorInfo != null) // show login page
+			{
+				if (errorInfo != null)
+					await splashWindow.SetErrorAsync(errorInfo, newShell);
+
+				var (newLoginShellInfo, newUserInfo) = await splashWindow.ShowLoginAsync(newShell, userInfo);
+				if (newUserInfo == null)
+					return null;
+				else if (newLoginShellInfo != null && !newLoginShellInfo.Equals(newShell.Info))
+				{
+					await newShell.ShutdownAsync();  // shutdown partly loaded shell
+					throw new RestartApplicationException(newShell.Info, newUserInfo);
+				}
+
+				return newUserInfo;
+			}
+			else
+				return userInfo;
+		} // func StartApplicationLoginAsync
+
+		private bool TryGetProcessById(int processId, out Process process)
+		{
+			try
+			{
+				if (processId > 0)
+				{
+					process = Process.GetProcessById(processId);
+					return process != null;
+				}
+				else
+				{
+					process = null;
+					return false;
+				}
+			}
+			catch
+			{
+				process = null;
+				return false;
+			}
+		} // func GetProcessById
+
+		private static async Task WaitForProcessAsync(PpsSplashWindow splashWindow, Process process)
+		{
+			splashWindow.SetProgressText(String.Format("Warte auf Beenden von '{0}' ({1}, {2})...", process.MainWindowTitle, process.ProcessName, process.Id));
+			await Task.Run(new Action(process.WaitForExit));
+		} // func WaitForProcessAsync
+
+		private async Task<bool> StartApplicationAsync(AppStartArguments args)
+		{
 			// we will have no windows
 			ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
 			// show a login/splash
-			var splashWindow =  new PpsSplashWindow()
+			var splashWindow = new PpsSplashWindow()
 			{
 				Owner = Current.Windows.OfType<PpsMainWindow>().FirstOrDefault(),
 				StatusText = PPSn.Properties.Resources.AppStartApplicationAsyncInitApp
 			};
 			splashWindow.Show();
 
-			// todo: config
-			PpsShell.Collect(System.Reflection.Assembly.Load("PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"));
+			// wait for process id
+			if (TryGetProcessById(args.WaitProcessId, out var process))
+				await WaitForProcessAsync(splashWindow, process);
 
 			try
 			{
+				// first load a shell
+				// always restart to change shell, because a load libraries can only load once
+				var newShell = await StartApplicationShellAsync(splashWindow, args.ShellInfo, args.AllowSync);
+				if (newShell == null)
+					return false;
+
+				// init keyboard scanner
+				KeyboardScanner.Init();
+
+				// get login handler
+				var settings = newShell.GetSettings<PpsWpfShellSettings>();
+
+				// auto login for a user
+				var userInfo = args.UserInfo;
+				var autoLogin = args.DoAutoLogin;
+				if (userInfo == null) // try find auto login
+				{
+					// check shell settings for user information
+					userInfo = settings.GetAutoLogin();
+					autoLogin = true;
+				}
+
+				object errorInfo = null;
 				while (true)
 				{
 					try
 					{
-						// no arguments are given, show user interface to select a shell
-						if (newShell == null)
-						{
-							if (shellInfo == null || errorInfo != null)
-							{
-								if (errorInfo != null)
-									await splashWindow.SetErrorAsync(errorInfo, errorShell);
+						// request login information
+						userInfo = await StartApplicationLoginAsync(splashWindow, autoLogin, userInfo, newShell, errorInfo);
+						if (userInfo == null)
+							return false;
+						autoLogin = false;
+						await newShell.LoginAsync(userInfo);
 
-								var newShellInfo = await splashWindow.ShowShellAsync(shellInfo);
-								if (newShellInfo == null)
-									return false;
-								shellInfo = newShellInfo;
-								errorInfo = null;
-							}
+						// start up main window manager
+						var mw = GetMainWindowPaneManager(newShell, settings.ApplicationMode);
 
-							// close the current shell
-							if (shell != null && !await CloseApplicationAsync())
-								return false;
+						// open first window
+						var paneType = String.IsNullOrEmpty(settings.ApplicationModul) ? null : Type.GetType(settings.ApplicationModul, true);
+						await mw.OpenPaneAsync(paneType);
 
-							// create the application shell
-							splashWindow.SetProgressText("Starte Anwendung...");
-							newShell = await PpsShell.StartAsync(deviceKey, shellInfo, true);
-							errorShell = newShell;
-						}
+						// set active shell
+						shell = newShell;
 
-#if DEBUG
-						var genericSettings = newShell.GetSettings();
-						using (var settingsEdit = genericSettings.Edit())
-						{
-							settingsEdit.Set(PpsWpfShellSettings.ApplicationModeKey, "main");
-							settingsEdit.Set(PpsWpfShellSettings.ApplicationModulKey, "TecWare.PPSn.Pps2000.UI.PpsMenuPane,PPSn.Pps2000.VO, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-							//settingsEdit.Set(PpsWpfShellSettings.ApplicationModeKey, "bde");
-							//settingsEdit.Set(PpsWpfShellSettings.ApplicationModulKey, "TecWare.PPSn.Pps2000.Bde.Maschine.MaPanel,PPSn.Pps2000.Bde, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
-							await settingsEdit.CommitAsync();
-						}
-#endif
-
-						// login user
-						if (userInfo == null && errorInfo == null) // try find auto login
-						{
-							// check shell settings for user information
-							userInfo = newShell.GetSettings<PpsWpfShellSettings>().GetAutoLogin();
-						}
-
-						if (userInfo == null || errorInfo != null) // show login page
-						{
-							if (errorInfo != null)
-								await splashWindow.SetErrorAsync(errorInfo, errorShell);
-
-							try
-							{
-								var (newLoginShellInfo, newUserInfo) = await splashWindow.ShowLoginAsync(newShell, userInfo);
-								if (newUserInfo == null)
-									return false;
-								else if (newLoginShellInfo != null && !newLoginShellInfo.Equals(newShell.Info))
-								{
-									await newShell.ShutdownAsync(); // shutdown partly loaded shell
-
-									errorShell = null;
-									newShell = null;
-								}
-
-								userInfo = newUserInfo;
-							}
-							catch
-							{
-								newShell = null;
-								throw;
-							}
-						}
-
-						if (newShell != null)
-						{
-							// login user info
-							splashWindow.SetProgressText("Anmelden des Nutzers...");
-							await newShell.LoginAsync(userInfo);
-
-							// start up main window manager
-							var settings = newShell.GetSettings<PpsWpfShellSettings>(); // create a new one, with new cached settings
-							var mw = GetMainWindowPaneManager(newShell, settings.ApplicationMode);
-
-							// open first window
-							var paneType = String.IsNullOrEmpty(settings.ApplicationModul) ? null : Type.GetType(settings.ApplicationModul, true);
-							await mw.OpenPaneAsync(paneType);
-
-							// set active shell
-							errorShell = null;
-							shell = newShell;
-
-							// now, we have windows
-							ShutdownMode = ShutdownMode.OnLastWindowClose;
-
-							return true;
-						}
+						// now, we have windows
+						ShutdownMode = ShutdownMode.OnLastWindowClose;
+						return true;
+					}
+					catch (RestartApplicationException e)
+					{
+						throw;
+					}
+					catch (PpsApplicationRestartNeededException e)
+					{
+						throw new RestartApplicationException(newShell.Info, userInfo);
 					}
 					catch (Exception e)
 					{
-						newShell?.GetService<IPpsLogger>(false)?.Append(PpsLogType.Exception, e);
 						errorInfo = e;
 					}
 				}
 			}
+			catch (RestartApplicationException e)
+			{
+				InvokeRestartCore(e.ShellInfo, e.UserInfo);
+				return false;
+			}
+			catch (Exception e)
+			{
+				PpsShell.GetService<IPpsUIService>(true).ShowException(e);
+				return false;
+			}
 			finally
 			{
-				if (errorShell != null)
-					errorShell.ShutdownAsync().Await();
-
-				// close dialog
 				splashWindow.ForceClose();
 			}
 		} // proc StartApplicationAsync
+
+		private void InvokeRestartCore(IPpsShellInfo shellInfo, ICredentials userInfo)
+		{
+			var sb = new StringBuilder();
+
+			// wait info
+			sb.Append("-w").Append(Process.GetCurrentProcess().Id).Append(' ');
+
+			// shell info
+			if (shellInfo != null)
+				sb.Append("-a").Append(shellInfo.Name);
+
+			// user info
+			if (userInfo != null)
+			{
+				if (userInfo == CredentialCache.DefaultCredentials)
+					sb.Append("-u.");
+				else
+				{
+					string GetUserName(string domain, string userName)
+						=> String.IsNullOrEmpty(domain) ? userName : domain + "\\" + userName;
+
+					var networkCredentials = userInfo.GetCredential(null, "basic");
+					sb.Append("-u").Append(GetUserName(networkCredentials.Domain, networkCredentials.UserName)).Append(' ');
+
+					var pwd = networkCredentials.Password;
+					if (!String.IsNullOrEmpty(pwd))
+						sb.Append("-p").Append(pwd).Append(' ');
+				}
+			}
+
+			// start application
+			var fileName = typeof(App).Assembly.Location;
+			var arguments = sb.ToString();
+#if DEBUG
+			MessageBox.Show($"Restart:\n{fileName}\n{arguments}");
+#endif
+			Process.Start(fileName, arguments);
+		} // proc InvokeRestartCore
 
 		private async Task<bool> CloseApplicationAsync()
 		{
@@ -232,7 +637,7 @@ namespace TecWare.PPSn
 			}
 			else
 				return false;
-			
+
 		} // func CloseApplicationAsync
 
 		private static string GetNativeLibrariesPath()
@@ -259,14 +664,9 @@ namespace TecWare.PPSn
 			PpsShell.Collect(typeof(StuffUI).Assembly);
 			PpsShell.Collect(typeof(App).Assembly);
 
-			ParseArguments(e, out var deviceKey, out var shellInfo, out var userCred);
-
 			FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
-			// init keyboard scanner
-			KeyboardScanner.Init();
-
-			StartApplicationAsync(deviceKey, shellInfo, userCred)
+			StartApplicationAsync(ParseArguments(e))
 				.ContinueWith(t =>
 				{
 					if (!t.Result)
@@ -285,17 +685,15 @@ namespace TecWare.PPSn
 			CloseApplicationAsync().Await();
 		} // proc OnExit
 
-		private static void ParseArguments(StartupEventArgs e, out string deviceKey, out IPpsShellInfo shellInfo, out ICredentials userCred)
+		private static AppStartArguments ParseArguments(StartupEventArgs e)
 		{
 			var userName = (string)null;
 			var userPass = (string)null;
 
-			shellInfo = null;
-			userCred = null;
-			deviceKey = null;
+			var r = new AppStartArguments();
 
 			if (e.Args.Length == 0)
-				return;
+				return r;
 
 			var localShells = new Lazy<IPpsShellInfo[]>(PpsShell.GetShellInfo().ToArray);
 
@@ -307,41 +705,41 @@ namespace TecWare.PPSn
 					var cmd = arg[1];
 					switch (cmd)
 					{
-						case 'd':
-							deviceKey = arg.Substring(2);
-							break;
-						case 'u':
+						case 'u': // username
 							userName = arg.Substring(2);
 							break;
-						case 'p':
+						case 'p': // password
 							userPass = arg.Substring(2);
 							break;
-						case 'a':
+						case 'a': // shell id
 							var shellName = arg.Substring(2);
-							shellInfo = localShells.Value.FirstOrDefault(c => String.Compare(c.Name, shellName, StringComparison.OrdinalIgnoreCase) == 0);
+							r.ShellInfo = localShells.Value.FirstOrDefault(c => String.Compare(c.Name, shellName, StringComparison.OrdinalIgnoreCase) == 0);
 							break;
-						//case 'l': // enforce load of an remote assembly
-						//	var path = arg.Substring(2);
-						//	if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-						//		|| path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-						//		Task.Run(() => PpsEnvironment.LoadAssemblyFromLocalAsync(arg.Substring(2))).Wait();
-						//	else
-						//	{ }
-						//	break;
+						case 'w': // wait process id
+							if (Int32.TryParse(arg.Substring(2), out var pid))
+								r.WaitProcessId = pid;
+							break;
+						case '-':
+							if (arg == "--nosync")
+								r.AllowSync = false;
+							break;
 					}
 				}
 			}
 
-			// load user name from environment
-			if (shellInfo != null)
+			// set user credentials
+			if (userName != null)
 			{
-				using (var pcl = new PpsClientLogin("ppsn_env:" + shellInfo.Uri.ToString(), shellInfo.Name, false))
-					userCred = pcl.GetCredentials();
+				r.UserInfo = IsDefaultUser(userName) ? CredentialCache.DefaultCredentials : UserCredential.Create(userName, userPass);
+				r.DoAutoLogin = true;
+			}
+			else if (r.ShellInfo != null) // load user name from environment
+			{
+				using (var pcl = new PpsClientLogin("ppsn_env:" + r.ShellInfo.Uri.ToString(), r.ShellInfo.Name, false))
+					r.UserInfo = pcl.GetCredentials();
 			}
 
-			// set user credentials
-			if (userName != null && userCred == null)
-				userCred = new NetworkCredential(userName, userPass);
+			return r;
 		} // func ParseArguments
 
 		private static void CoreExceptionHandler(Exception ex)
@@ -362,6 +760,104 @@ namespace TecWare.PPSn
 			CoreExceptionHandler(e.Exception);
 			e.Handled = true;
 		} // event App_DispatcherUnhandledException
+
+		private static bool IsDefaultUser(string userName)
+			=> userName == "." || String.Compare(userName, Environment.UserDomainName + "\\" + Environment.UserName, StringComparison.OrdinalIgnoreCase) == 0;
+
+		#endregion
+
+		#region -- Assembly Loader ----------------------------------------------------
+
+		private readonly static Dictionary<string, Assembly> assemblyAlias = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
+		private readonly static List<string> assemblyResolvePaths = new List<string>();
+
+		private static void AddToDirectoryList(int index, List<string> directoryList, string directoryName)
+		{
+			var idx = directoryList.FindIndex(c => String.Compare(c, directoryName, StringComparison.OrdinalIgnoreCase) == 0);
+			if (idx != -1)
+				directoryList.RemoveAt(idx);
+
+			if (index == -1)
+				directoryList.Add(directoryName);
+			else
+				directoryList.Insert(index, directoryName);
+		} // proc AddToDirectoryList
+
+		private static void AddAssemblyAlias(string alias, Assembly assembly)
+			=> assemblyAlias[alias] = assembly;
+
+		private static void AddAssemblyResolveDirectory(string directoryName)
+		{
+			lock (assemblyResolvePaths)
+				AddToDirectoryList(-1, assemblyResolvePaths, directoryName);
+		} // proc AddAssemblyResolveDirectory
+
+		private static FileInfo LocateAssemblyFile(string directoryName, string name, string extension)
+		{
+			var fi = new FileInfo(Path.Combine(directoryName, name + extension));
+			return fi.Exists ? fi : null;
+		} // func LocateAssemblyFile
+
+		private static IEnumerable<FileInfo> LocateAssemblyFiles(string name)
+		{
+			foreach (var directoryName in assemblyResolvePaths)
+			{
+				var fi = LocateAssemblyFile(directoryName, name, ".dll") ?? LocateAssemblyFile(directoryName, name, ".exe");
+				if (fi != null)
+					yield return fi;
+			}
+		} // func LocateAssemblyFiles
+
+		private static FileInfo LocateAssemblyFile(string name)
+		{
+			FileInfo choosen = null;
+
+			foreach (var fi in LocateAssemblyFiles(name))
+			{
+				if (choosen == null || choosen.LastWriteTimeUtc < fi.LastWriteTimeUtc)
+					choosen = fi;
+			}
+
+			return choosen;
+		} // func LocateAssemblyFile
+
+		private static Assembly ResolveAssemblyCore(string name)
+		{
+			// check for assembly alias
+			if (assemblyAlias.TryGetValue(name, out var asm))
+				return asm;
+
+			var assemblyName = new AssemblyName(name);
+
+			// check if the file is loaded
+			foreach (var cur in AppDomain.CurrentDomain.GetAssemblies())
+			{
+				if (!cur.IsDynamic)
+				{
+					var curName = cur.GetName();
+					if (curName.Name == assemblyName.Name
+						&& curName.Version == assemblyName.Version)
+						return cur;
+				}
+			}
+
+			// load assembly
+			var fi = LocateAssemblyFile(assemblyName.Name);
+			return fi == null ? null : Assembly.LoadFile(fi.FullName);
+		} // func ResolveAssemblyCore
+
+		private static Assembly CurrentDomain_TypeResolve(object sender, ResolveEventArgs args)
+		{
+			var pos = args.Name.IndexOf(',');
+			if (pos == -1)
+				return null;
+
+			var assemblyName = args.Name.Substring(pos + 1);
+			return ResolveAssemblyCore(assemblyName);
+		} // event CurrentDomain_TypeResolve
+
+		private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+			=> ResolveAssemblyCore(args.Name);
 
 		#endregion
 

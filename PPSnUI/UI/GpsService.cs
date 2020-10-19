@@ -16,15 +16,21 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.PPSn.UI
 {
-	public interface IPpsApplicationService
-	{
-		Task SendLogAsync();
+	#region -- interface IPpsGpsService -----------------------------------------------
 
-		Version GetAssemblyVersion();
-		Version GetInstalledVersion();
-	} // interface IPpsApplicationService
+	/// <summary>Get the location of the current device.</summary>
+	public interface IPpsGpsService
+	{
+		/// <summary>Last known location of the device.</summary>
+		/// <param name="longitude"></param>
+		/// <param name="latitude"></param>
+		/// <param name="timestamp"></param>
+		/// <returns></returns>
+		bool TryGetGeoCoordinate(out double longitude, out double latitude, out long timestamp);
+	} // interface IPpsGpsService
+
+	#endregion
 }

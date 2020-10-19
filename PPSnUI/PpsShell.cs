@@ -26,8 +26,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Networking;
 using TecWare.PPSn.UI;
 
@@ -73,6 +75,7 @@ namespace TecWare.PPSn
 	/// <summary>Service that is hosted with a shell environment.</summary>
 	public interface IPpsShellService
 	{
+		/// <summary>Shell of the shell service.</summary>
 		IPpsShell Shell { get; }
 	} // interface IPpsShellService
 
@@ -80,7 +83,7 @@ namespace TecWare.PPSn
 
 	#region -- interface IPpsShellServiceInit -----------------------------------------
 
-	/// <summary>Service supports initialization.</summary>
+	/// <summary>Shell service supports initialization.</summary>
 	public interface IPpsShellServiceInit
 	{
 		/// <summary>Init shell service</summary>
@@ -152,7 +155,8 @@ namespace TecWare.PPSn
 
 	#region -- interface IPpsShellInfo ------------------------------------------------
 
-	public interface IPpsShellInfo : IEquatable<IPpsShellInfo>, INotifyPropertyChanged
+	/// <summary>Basic shell attributes.</summary>
+	public interface IPpsShellInfo : IEquatable<IPpsShellInfo>, IPropertyReadOnlyDictionary, INotifyPropertyChanged
 	{
 		/// <summary>Create the settings for this shell.</summary>
 		/// <returns></returns>
@@ -187,22 +191,53 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- interface IPpsShellLoadNotify ------------------------------------------
+
+	/// <summary>Interface that notifies states during shell initialization.</summary>
+	public interface IPpsShellLoadNotify
+	{
+		/// <summary>First notify during load, after the cache instance information are loaded.</summary>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		Task OnBeforeLoadSettingsAsync(IPpsShell shell);
+		
+		/// <summary>Notify basic settings are loaded from server</summary>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		Task OnAfterLoadSettingsAsync(IPpsShell shell);
+
+		/// <summary>Shell is finally initialized.</summary>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		Task OnAfterInitServicesAsync(IPpsShell shell);
+	} // interface IPpsShellLoadNotify
+
+	#endregion
+
 	#region -- class PpsShellSettings -------------------------------------------------
 
+	/// <summary>Basic shell settings</summary>
 	public sealed class PpsShellSettings : PpsSettingsInfoBase
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static string DpcUriKey { get; } = "DPC.Uri";
-		public static string DpcUserKey { get; } = "DPC.User";
-		public static string DpcPasswordKey { get; } = "DPC.Password";
-		public static string DpcPinKey { get; } = "DPC.Pin";
-		public static string DpcDebugModeKey { get; } = "DPC.Debug";
+		public const string DpcUriKey = "DPC.Uri";
+		public const string DpcUserKey = "DPC.User";
+		public const string DpcPasswordKey = "DPC.Password";
+		public const string DpcPinKey = "DPC.Pin";
+		public const string DpcDebugModeKey = "DPC.Debug";
 
-		public static string DpcDeviceIdKey { get; } = "DPC.DeviceId.Local";
+		public const string DpcDeviceIdKey = "DPC.DeviceId";
 
-		public const string ClockFormatKey = "PPSn.ClockFormat";
+		public const string PpsnUriKey = "PPSn.Uri";
+		public const string PpsnNameKey = "PPSn.Name";
+		public const string PpsnSecurtiyKey = "PPSn.Security";
+		public const string PpsnVersionKey = "PPSn.Version";
+
+		public const string ClockFormatKey = "PPSn.ClockFormat"; // todo: bde
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
+		/// <summary>Basic shell settings</summary>
+		/// <param name="settingsService"></param>
 		public PpsShellSettings(IPpsSettingsService settingsService) 
 			: base(settingsService)
 		{
@@ -230,6 +265,15 @@ namespace TecWare.PPSn
 		/// <summary>Id of the device.</summary>
 		public string DpcDeviceId => this.GetProperty(DpcDeviceIdKey, "(unknown)");
 
+		/// <summary>Target uri of the shell.</summary>
+		public string Uri => this.GetProperty<string>(PpsnUriKey, null);
+		/// <summary>Name of the server.</summary>
+		public string Name => this.GetProperty<string>(PpsnNameKey, null);
+		/// <summary>Supported authentification models</summary>
+		public string Security => this.GetProperty<string>(PpsnSecurtiyKey, null);
+		/// <summary>Server version of the application.</summary>
+		public string Version => this.GetProperty<string>(PpsnVersionKey, null);
+
 		/// <summary></summary>
 		public string ClockFormat => this.GetProperty(ClockFormatKey, "HH:mm\ndd.MM.yyyy");
 	} // class PpsShellSettings
@@ -238,12 +282,28 @@ namespace TecWare.PPSn
 
 	#region -- class PpsShellUserSettings ---------------------------------------------
 
+	/// <summary>Basic user settings.</summary>
 	public sealed class PpsShellUserSettings : PpsSettingsInfoBase
 	{
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public const string UserIdKey = "PPSn.User.Id";
+		public const string UserDisplayNameKey = "PPSn.User.Name";
+		public const string UserIdentiyKey = "PPSn.User.Identity";
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		/// <summary>Basic user settings.</summary>
+		/// <param name="settingsService"></param>
 		public PpsShellUserSettings(IPpsSettingsService settingsService)
 			: base(settingsService)
 		{
 		} // ctor
+
+		/// <summary>Name of the server.</summary>
+		public long UserId => this.GetProperty(UserIdKey, 0L);
+		/// <summary>Supported authentification models</summary>
+		public string UserName => this.GetProperty<string>(UserDisplayNameKey, null);
+		/// <summary>Server version of the application.</summary>
+		public string UserIdentity => this.GetProperty<string>(UserIdentiyKey, null);
 	} // class PpsShellSettings
 
 	#endregion
@@ -510,12 +570,11 @@ namespace TecWare.PPSn
 
 		#region -- class PpsShellImplementation ---------------------------------------
 
-		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, IDisposable
+		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, IPpsLogger, IDisposable
 		{
 			public event PropertyChangedEventHandler PropertyChanged;
 
 			private readonly IServiceProvider parentProvider;
-			private readonly string deviceId;
 			private readonly IPpsShellInfo info;
 			private readonly Dictionary<Type, object> services = new Dictionary<Type, object>(TypeComparer.Default);
 			private IPpsSettingsService settingsService = null;
@@ -530,14 +589,14 @@ namespace TecWare.PPSn
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
-			public PpsShellImplementation(IServiceProvider parentProvider, string deviceId, IPpsShellInfo info)
+			public PpsShellImplementation(IServiceProvider parentProvider, IPpsShellInfo info)
 			{
-				this.deviceId = deviceId ?? GetDefaultDeviceKey();
 				this.info = info ?? throw new ArgumentNullException(nameof(info));
 				this.parentProvider = parentProvider ?? throw new ArgumentNullException(nameof(parentProvider));
 
 				AddService(typeof(IPpsShell), this);
 				AddService(typeof(IPpsCommunicationService), this);
+				AddService(typeof(IPpsLogger), this);
 
 				backgroundWorker = new PpsBackgroundWorker(this);
 			} // ctor
@@ -565,31 +624,56 @@ namespace TecWare.PPSn
 				return ciShell?.Invoke(new object[] { this }) ?? ciNone.Invoke(Array.Empty<object>());
 			} // func CreateShellService
 
-			public async Task LoadAsync()
+			public async Task LoadAsync(IPpsShellLoadNotify notify)
 			{
 				// first create settings
 				settingsService = await info.LoadSettingsAsync();
 				AddService(typeof(IPpsSettingsService), this);
+				if (notify != null)
+					await notify.OnBeforeLoadSettingsAsync(this);
 
 				// start communication
 				instanceSettingsInfo = new PpsShellSettings(settingsService);
 				info.PropertyChanged += Info_PropertyChanged;
-				await InitAsync();
 
-				OnPropertyChanged(nameof(Settings));
-				
-				// init all shell services
-				foreach(var sv in shellServices)
+				try
 				{
-					if (sv.GetCustomAttribute<PpsLazyServiceAttribute>() != null)
-						AddServices(this, sv, new LazyShellServiceCreator(this, sv).CreateService);
-					else
-						AddServices(this, sv, CreateShellService(sv));
-				}
+					// create a none user context for the initialization
 
-				// load shell services
-				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
-					await init.InitAsync();
+					using (var dpcHttp = CreateHttpCore(info.Uri, Settings.GetDpcCredentials()))
+					{
+						http = dpcHttp;
+
+						// load settings from server
+						await LoadSettingsFromServerAsync(settingsService, dpcHttp, instanceSettingsInfo.DpcDeviceId, 0);
+
+
+						// notify settings loaded
+						OnPropertyChanged(nameof(Settings));
+						if (notify != null)
+							await notify.OnAfterLoadSettingsAsync(this);
+
+						// init all shell services
+						foreach (var sv in shellServices)
+						{
+							if (sv.GetCustomAttribute<PpsLazyServiceAttribute>() != null)
+								AddServices(this, sv, new LazyShellServiceCreator(this, sv).CreateService);
+							else
+								AddServices(this, sv, CreateShellService(sv));
+						}
+
+						// load shell services
+						foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+							await init.InitAsync();
+
+						if (notify != null)
+							await notify.OnAfterInitServicesAsync(this);
+					}
+				}
+				finally
+				{
+					http = null;
+				}
 
 				// notify 
 				IsInitialized = true;
@@ -751,16 +835,6 @@ namespace TecWare.PPSn
 				}
 			} // proc UpdateHttp
 
-			private async Task InitAsync()
-			{
-				// create a none user context for the initialization
-				using (var http = CreateHttpCore(info.Uri, Settings.GetDpcCredentials()))
-				{
-					// load settings from server
-					await LoadSettingsFromServerAsync(settingsService, http, deviceId, 0);
-				}
-			} // proc InitAsync
-
 			public async Task LoginAsync(ICredentials credentials)
 			{
 				var newHttp = CreateHttpCore(info.Uri, credentials);
@@ -779,6 +853,7 @@ namespace TecWare.PPSn
 
 					// login user and parse user specific settings
 					userSettingsService = userSettings;
+					userSettingsInfo = new PpsShellUserSettings(userSettingsService);
 					await LoadUserSettingsFromServerAsync(userSettingsService, newHttp);
 					
 					// update http
@@ -847,12 +922,23 @@ namespace TecWare.PPSn
 			Task<int> IPpsSettingsService.UpdateAsync(params KeyValuePair<string, string>[] values)
 				=> (userSettingsService ?? settingsService).UpdateAsync(values);
 
-			bool IPpsSettingsService.TryGetProperty(string name, out string value)
-				=> (userSettingsService != null && userSettingsService.TryGetProperty(name, out value)) || settingsService.TryGetProperty(name, out value);
+			#endregion
+
+			#region -- Logger ---------------------------------------------------------
+
+			void IPpsLogger.Append(PpsLogType type, string message)
+			{
+				DebugLogger.Append(type, message);
+			} // proc IPpsLogger.Append
+
+			void IPpsLogger.Append(PpsLogType type, Exception exception, string alternativeMessage)
+			{
+				DebugLogger.Append(type, exception, alternativeMessage);
+			} // proc IPpsLogger.Append
 
 			#endregion
 
-			public string DeviceId => deviceId;
+			public string DeviceId => GetDefaultDeviceKey();
 			public IPpsShellInfo Info => info;
 			
 			public DEHttpClient Http => http;
@@ -954,17 +1040,6 @@ namespace TecWare.PPSn
 
 			Task IPpsSettingsService.RefreshAsync(bool purge)
 				=> currentSettingsService?.RefreshAsync(purge) ?? Task.CompletedTask;
-
-			public bool TryGetProperty(string name, out string value)
-			{
-				if (currentSettingsService != null && currentSettingsService.TryGetProperty(name, out value))
-					return true;
-				else
-				{
-					value = null;
-					return false;
-				}
-			} // func TryGetProperty
 		} // class PpsSettingsProxy
 
 		#endregion
@@ -1064,8 +1139,8 @@ namespace TecWare.PPSn
 		public static event EventHandler CurrentChanged;
 
 		private static readonly ServiceContainer global = new ServiceContainer();
-		private static readonly Lazy<Version> appVersion;
-		private static readonly Lazy<IPpsAsyncHelper> asyncHelper;
+		private static readonly Lazy<Version> appVersion = new Lazy<Version>(GetAppVersion);
+		private static readonly Lazy<IPpsAsyncService> asyncHelper = new Lazy<IPpsAsyncService>(GetAsyncHelper);
 		private static readonly List<Type> shellServices = new List<Type>();
 		private static PpsShellImplementation currentShell = null;
 
@@ -1073,13 +1148,13 @@ namespace TecWare.PPSn
 
 		static PpsShell()
 		{
-			appVersion = new Lazy<Version>(GetAppVersion);
-			asyncHelper = new Lazy<IPpsAsyncHelper>(GetAsyncHelper);
-
 			global.AddService(typeof(IPpsSettingsService), CreateProxyService);
 			global.AddService(typeof(IPpsCommunicationService), CreateProxyService);
 
 			Collect(typeof(PpsShell).Assembly);
+
+			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
+			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 		} // sctor
 
 		private static object CreateProxyService(IServiceContainer container, Type serviceType)
@@ -1096,12 +1171,20 @@ namespace TecWare.PPSn
 
 		#region -- Collect, AddServices -----------------------------------------------
 
+		/// <summary>Add a defined services (<see cref="PpsServiceAttribute"/>) to the service container.</summary>
+		/// <param name="serviceContainer"></param>
+		/// <param name="serviceInstanceType"></param>
+		/// <param name="serviceInstance"></param>
 		public static void AddServices(this IServiceContainer serviceContainer, Type serviceInstanceType, object serviceInstance)
 		{
 			foreach (var attr in serviceInstanceType.GetCustomAttributes<PpsServiceAttribute>())
 				serviceContainer.AddService(attr.Type, serviceInstance);
 		} // proc AddServices
 
+		/// <summary>Add a defined services (<see cref="PpsServiceAttribute"/>) to the service container.</summary>
+		/// <param name="serviceContainer"></param>
+		/// <param name="serviceInstanceType"></param>
+		/// <param name="callback"></param>
 		public static void AddServices(this IServiceContainer serviceContainer, Type serviceInstanceType, ServiceCreatorCallback callback)
 		{
 			foreach (var attr in serviceInstanceType.GetCustomAttributes<PpsServiceAttribute>())
@@ -1145,13 +1228,14 @@ namespace TecWare.PPSn
 		/// <summary>Start a new shell.</summary>
 		/// <param name="shellInfo"></param>
 		/// <param name="isDefault"></param>
+		/// <param name="notify"></param>
 		/// <returns></returns>
-		public static async Task<IPpsShell> StartAsync(string deviceKey, IPpsShellInfo shellInfo, bool isDefault = false)
+		public static async Task<IPpsShell> StartAsync(IPpsShellInfo shellInfo, bool isDefault = false, IPpsShellLoadNotify notify = null)
 		{
-			var n = new PpsShellImplementation(global, deviceKey, shellInfo);
+			var n = new PpsShellImplementation(global, shellInfo);
 			try
 			{
-				await n.LoadAsync();
+				await n.LoadAsync(notify);
 				if (isDefault || currentShell == null)
 					SetCurrent(n);
 				return n;
@@ -1170,27 +1254,43 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		/// <param name="settingsService"></param>
-		/// <param name="client"></param>
+		/// <param name="http"></param>
+		/// <param name="clientId"></param>
+		/// <param name="lastRefreshTick"></param>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
-		public static async Task<int> LoadSettingsFromServerAsync(IPpsSettingsService settingsService, DEHttpClient http, string deviceId, int lastRefreshTick)
+		public static async Task<int> LoadSettingsFromServerAsync(IPpsSettingsService settingsService, DEHttpClient http, string clientId, int lastRefreshTick)
 		{
-			if (deviceId == null)
-				throw new ArgumentNullException(nameof(deviceId));
-
 			// refresh properties from server
 			var sb = new StringBuilder("info.xml");
 			HttpStuff.MakeUriArguments(sb, false,
 				new PropertyValue[]
 				{
 					new PropertyValue("app", "PPSnDesktop"),
-					new PropertyValue("id", deviceId),
+					new PropertyValue("id", clientId),
 					new PropertyValue("last", lastRefreshTick)
 				}
 			);
+			var request = new HttpRequestMessage(HttpMethod.Get, http.CreateFullUri(sb.ToString()));
+			request.Headers.Accept.TryParseAdd(MimeTypes.Text.Xml);
 
-			using (var r = await http.GetResponseAsync(sb.ToString(), MimeTypes.Text.Xml))
+			// add location info
+			request.Headers.Add("x-ppsn-version", AppVersion.ToString());
+			var gps = GetService<IPpsGpsService>(false);
+			if (gps != null && gps.TryGetGeoCoordinate(out var lng, out var lat, out var ltm))
 			{
+				request.Headers.Add("x-ppsn-lng", lng.ChangeType<string>());
+				request.Headers.Add("x-ppsn-lat", lat.ChangeType<string>());
+				request.Headers.Add("x-ppsn-ltm", ltm.ChangeType<string>());
+			}
+			request.Headers.Add("x-ppsn-wifi", Environment.MachineName + "/" + Environment.UserName);
+
+			// send request
+			using (var r = await http.SendAsync(request))
+			{
+				if (!r.IsSuccessStatusCode)
+					throw new HttpResponseException(r);
+
 				if (r.Headers.TryGetValue("x-ppsn-lastrefresh", out var lastRefreshTickValue) && Int32.TryParse(lastRefreshTickValue, out var tmp))
 					lastRefreshTick = tmp;
 
@@ -1205,8 +1305,12 @@ namespace TecWare.PPSn
 				}
 
 				// write server settings to file
-				using (var xml = xInfo.CreateReader())
-					await settingsService.UpdateAsync(FileSettingsInfo.ParseInstanceSettings(xml).ToArray());
+				var xOptions = xInfo.Element("options");
+				if (xOptions != null)
+				{
+					using (var xml = xOptions.CreateReader())
+						await settingsService.UpdateAsync(FileSettingsInfo.ParseInstanceSettings(xml).ToArray());
+				}
 			}
 
 			return lastRefreshTick;
@@ -1214,7 +1318,7 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		/// <param name="settingsService"></param>
-		/// <param name="client"></param>
+		/// <param name="http"></param>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		public static async Task LoadUserSettingsFromServerAsync(IPpsSettingsService settingsService, DEHttpClient http)

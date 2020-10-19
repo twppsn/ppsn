@@ -22,6 +22,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -37,7 +38,7 @@ using TecWare.PPSn.Properties;
 namespace TecWare.PPSn.UI
 {
 	/// <summary>Login and loading dialog.</summary>
-	internal partial class PpsSplashWindow : Window, IProgress<string>
+	internal partial class PpsSplashWindow : Window, IPpsProgress
 	{
 		#region -- enum StatePanes ----------------------------------------------------
 
@@ -204,7 +205,10 @@ namespace TecWare.PPSn.UI
 					if (Array.IndexOf(Path.GetInvalidFileNameChars(), c) >= 0)
 						continue;
 
-					sb.Append(c);
+					if (Char.IsWhiteSpace(c))
+						sb.Append('_');
+					else
+						sb.Append(c);
 				}
 				return sb.ToString();
 			} // func CleanName
@@ -236,11 +240,7 @@ namespace TecWare.PPSn.UI
 					return false;
 				}
 
-				// create uri
-				if (shellUri[shellUri.Length - 1] != '/')
-					shellUri += '/';
 				uri = new Uri(shellUri, UriKind.Absolute);
-
 				return true;
 			} // func TryGetParameter
 
@@ -250,7 +250,7 @@ namespace TecWare.PPSn.UI
 				if (TryGetParameter(shellFactory, out var instanceName, out var displayName, out var uri))
 				{
 					var shellInfo = shellFactory.CreateNew(instanceName, displayName, uri);
-
+					
 					if (splashWindow.ShellState != null)
 					{
 						splashWindow.ShellState.Refresh();
@@ -501,6 +501,8 @@ namespace TecWare.PPSn.UI
 
 			DataContext = this;
 		} // ctor
+		
+		void IDisposable.Dispose() { }
 
 		private async Task ShowTracePaneAsync()
 		{
@@ -610,12 +612,33 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- StatusText - property ----------------------------------------------
+		#region -- StatusText, StatusValue - property ---------------------------------
 
-		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnStatusTextChanged)));
+		public static readonly DependencyProperty StatusValueProperty = DependencyProperty.Register(nameof(StatusValue), typeof(int), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(-1, new PropertyChangedCallback(OnStatusValueChanged)));
+
+		private string statusText = null;
+		private int statusValue = -1;
+
+		private static void OnStatusTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsSplashWindow)d).statusText = (string)e.NewValue;
+
+		private static void OnStatusValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsSplashWindow)d).statusValue = (int)e.NewValue;
+
+		private void UpdateStatusText(string value)
+			=> Dispatcher.Invoke(new Action<string>(c => StatusText = c), value);
+
+		private void UpdateStatusValue(int value)
+			=> Dispatcher.Invoke(new Action<int>(c => StatusValue = c), value);
+
+		string IPpsProgress.Text { get => statusText; set => UpdateStatusText(value); }
+		int IPpsProgress.Value { get => statusValue; set => UpdateStatusValue(value); }
 
 		/// <summary>Set or get text</summary>
 		public string StatusText { get => (string)GetValue(StatusTextProperty); set => SetValue(StatusTextProperty, value); }
+		/// <summary>Set or get progress</summary>
+		public int StatusValue { get => (int)GetValue(StatusValueProperty); set => SetValue(StatusValueProperty, value); }
 
 		#endregion
 

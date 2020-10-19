@@ -512,6 +512,8 @@ namespace TecWare.PPSn
 		{
 			if (String.IsNullOrEmpty(AutoLoginUser))
 				return null;
+			else if (AutoLoginUser == ".")
+				return CredentialCache.DefaultCredentials;
 
 			return UserCredential.Create(AutoLoginUser, AutoLoginPassword);
 		} // func GetAutoLogin
@@ -529,23 +531,68 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsWpfIdleService ------------------------------------------------
 
-
-
-
-
-	#region -- interface IPpsIdleAction -----------------------------------------------
-
-	/// <summary>Implementation for a idle action.</summary>
-	public interface IPpsIdleAction
+	[PpsService(typeof(IPpsIdleService))]
+	internal sealed class PpsWpfIdleService : PpsIdleServiceBase, IDisposable
 	{
-		/// <summary>Gets called on application idle start.</summary>
-		/// <param name="elapsed">ms elapsed since the idle started</param>
-		/// <returns><c>false</c>, if there are more idles needed.</returns>
-		bool OnIdle(int elapsed);
-	} // interface IPpsIdleAction
+		private readonly Dispatcher dispatcher;
+		private readonly InputManager inputManager;
+		private readonly DispatcherTimer idleTimer;
+		private readonly PreProcessInputEventHandler preProcessInputEventHandler;
+
+		public PpsWpfIdleService()
+		{
+			dispatcher = Application.Current.Dispatcher;
+			inputManager = InputManager.Current;
+
+			// Start idle implementation
+			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), dispatcher);
+			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer(e);
+		} // ctor
+
+		public void Dispose()
+		{
+			inputManager.PreProcessInput -= preProcessInputEventHandler;
+		} // proc Dispose
+
+		protected override void VerifyAccess() 
+			=> dispatcher.VerifyAccess();
+
+		protected override void StartIdleCore()
+		{
+			idleTimer.Stop();
+			idleTimer.Start();
+		} // proc StartIdleCore
+
+		private void OnIdle()
+		{
+			DoIdle(out var stopIdle);
+
+			// increase the steps
+			if (stopIdle)
+				idleTimer.Stop();
+			else
+				idleTimer.Interval = TimeSpan.FromMilliseconds(100);
+		} // proc OnIdle
+
+		private void RestartIdleTimer(PreProcessInputEventArgs e)
+		{
+			var inputEvent = e.StagingItem.Input;
+			if (inputEvent is MouseEventArgs || inputEvent is KeyboardEventArgs)
+				RestartIdle();
+		} // proc RestartIdleTimer
+	} // class class PpsWpfIdleService
 
 	#endregion
+
+
+
+
+
+
+
+
 
 	#region -- class PpsShellWpf ------------------------------------------------------
 
@@ -643,10 +690,6 @@ namespace TecWare.PPSn
 			currentDispatcher = Dispatcher.CurrentDispatcher ?? throw new ArgumentNullException(nameof(Dispatcher.CurrentDispatcher));
 			synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
 
-			// Start idle implementation
-			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
-			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer(e);
-
 			DefaultDataTemplateSelector = new DefaultInstanceDataTemplateSelector(this);
 		} // ctor
 
@@ -657,113 +700,8 @@ namespace TecWare.PPSn
 			if (disposing)
 			{
 				mainResources.MergedDictionaries.Remove(defaultResources);
-				inputManager.PreProcessInput -= preProcessInputEventHandler;
 			}
 		} // proc Dispose
-
-		#endregion
-
-		#region -- Idle service -------------------------------------------------------
-
-		#region -- class FunctionIdleActionImplementation -----------------------------
-
-		private sealed class FunctionIdleActionImplementation : IPpsIdleAction
-		{
-			private readonly Func<int, bool> onIdle;
-
-			public FunctionIdleActionImplementation(Func<int, bool> onIdle)
-			{
-				this.onIdle = onIdle ?? throw new ArgumentNullException(nameof(onIdle));
-			} // ctor
-
-			public bool OnIdle(int elapsed)
-				=> onIdle(elapsed);
-		} // class FunctionIdleActionImplementation
-
-		#endregion
-
-		private int restartTime = 0;
-		private readonly DispatcherTimer idleTimer;
-		private readonly List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
-		private readonly PreProcessInputEventHandler preProcessInputEventHandler;
-
-		private int IndexOfIdleAction(IPpsIdleAction idleAction)
-		{
-			for (var i = 0; i < idleActions.Count; i++)
-			{
-				if (idleActions[i].TryGetTarget(out var t) && t == idleAction)
-					return i;
-			}
-			return -1;
-		} // func IndexOfIdleAction
-
-		/// <summary>Add a idle action.</summary>
-		/// <param name="onIdle"></param>
-		/// <returns></returns>
-		[LuaMember(nameof(AddIdleAction))]
-		public IPpsIdleAction AddIdleAction(Func<int, bool> onIdle)
-			=> AddIdleAction(new FunctionIdleActionImplementation(onIdle));
-
-		/// <summary>Add a idle action.</summary>
-		/// <param name="idleAction"></param>
-		/// <returns></returns>
-		public IPpsIdleAction AddIdleAction(IPpsIdleAction idleAction)
-		{
-			Dispatcher.VerifyAccess();
-
-			if (IndexOfIdleAction(idleAction) == -1)
-				idleActions.Add(new WeakReference<IPpsIdleAction>(idleAction));
-			return idleAction;
-		} // proc AddIdleAction
-
-		/// <summary>Remove a idle action.</summary>
-		/// <param name="idleAction"></param>
-		[LuaMember(nameof(RemoveIdleAction))]
-		public void RemoveIdleAction(IPpsIdleAction idleAction)
-		{
-			if (idleAction == null)
-				return;
-
-			Dispatcher.VerifyAccess();
-
-			var i = IndexOfIdleAction(idleAction);
-			if (i >= 0)
-				idleActions.RemoveAt(i);
-		} // proc RemoveIdleAction
-
-		private void OnIdle()
-		{
-			var stopIdle = true;
-			var timeSinceRestart = unchecked(Environment.TickCount - restartTime);
-			for (var i = idleActions.Count - 1; i >= 0; i--)
-			{
-				if (idleActions[i].TryGetTarget(out var t))
-					stopIdle = stopIdle && !t.OnIdle(timeSinceRestart);
-				else
-					idleActions.RemoveAt(i);
-			}
-
-			// increase the steps
-			if (stopIdle)
-				idleTimer.Stop();
-			else
-				idleTimer.Interval = TimeSpan.FromMilliseconds(100);
-		} // proc OnIdle
-
-		private void RestartIdleTimer(PreProcessInputEventArgs e)
-		{
-			if (idleActions.Count > 0)
-			{
-				var inputEvent = e.StagingItem.Input;
-				if (inputEvent is MouseEventArgs ||
-					inputEvent is KeyboardEventArgs)
-				{
-					restartTime = Environment.TickCount;
-					idleTimer.Stop();
-					idleTimer.Start();
-				}
-			}
-		} // proc RestartIdleTimer
 
 		#endregion
 

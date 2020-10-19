@@ -205,25 +205,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsDummyLogger -----------------------------------------------
-
-		private sealed class PpsDummyLogger : IPpsLogger
-		{
-			public void Append(PpsLogType type, string message)
-				=> Debug.WriteLine("[" + type.ToString() + "] " + message);
-
-			public void Append(PpsLogType type, Exception exception, string alternativeException)
-			{
-				Append(type,
-					String.IsNullOrEmpty(alternativeException)
-					? exception.UnpackException().ToString()
-					: alternativeException + Environment.NewLine + exception.UnpackException().ToString()
-				);
-			}
-		} // class PpsDummyLogger
-
-		#endregion
-
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Initialize shell.</summary>
@@ -496,8 +477,6 @@ namespace TecWare.PPSn
 
 		static _PpsShell()
 		{
-			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
-			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 #if WPF
 			Neo.IronLua.LuaType.RegisterTypeExtension(typeof(UI.PpsWindowPaneHelper));
 #endif
@@ -505,8 +484,6 @@ namespace TecWare.PPSn
 
 		/// <summary>Empty progress bar implementation</summary>
 		public static IPpsProgress EmptyProgress { get; } = new PpsDummyProgress();
-		/// <summary>Logger that prints to the debug output.</summary>
-		public static IPpsLogger DebugLogger { get; } = new PpsDummyLogger();
 	} // class PpsShell
 
 	#endregion

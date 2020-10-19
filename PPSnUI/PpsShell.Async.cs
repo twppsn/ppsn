@@ -22,21 +22,25 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-	#region -- interface IPpsAsyncHelper ----------------------------------------------
+	#region -- interface IPpsAsyncService ---------------------------------------------
 
-	public interface IPpsAsyncHelper
+	/// <summary>Service for async tasks.</summary>
+	public interface IPpsAsyncService
 	{
 		/// <summary>Await a task.</summary>
 		/// <param name="t"></param>
 		void Await(Task t);
-	} // interface IPpsAsyncHelper
+	} // interface IPpsAsyncService
 
 	#endregion
 
-	#region -- interface IPpsAsyncHelper ----------------------------------------------
+	#region -- interface IPpsProcessMessageLoop ------------------------------------------
 
+	/// <summary>Implemented by a <see cref="SynchronizationContext"/> for processing the message loop. Is used by <see cref="IPpsAsyncService"/>.</summary>
 	public interface IPpsProcessMessageLoop
 	{
+		/// <summary>Run message loop.</summary>
+		/// <param name="cancellationToken"></param>
 		void ProcessMessageLoop(CancellationToken cancellationToken);
 	} // interface IPpsProcessMessageLoop
 
@@ -46,8 +50,8 @@ namespace TecWare.PPSn
 	{
 		#region -- Await --------------------------------------------------------------
 
-		private static IPpsAsyncHelper GetAsyncHelper()
-			=> GetService<IPpsAsyncHelper>(false);
+		private static IPpsAsyncService GetAsyncHelper()
+			=> GetService<IPpsAsyncService>(false);
 
 		private static void AwaitCore(Task t)
 		{
@@ -57,15 +61,24 @@ namespace TecWare.PPSn
 				asyncHelper.Value.Await(t);
 		} // proc AwaitCore
 
+		/// <summary>Await for a task.</summary>
+		/// <param name="t"></param>
 		public static void Await(this Task t)
 			=> AwaitCore(t);
 
+		/// <summary>Await for a task.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="t"></param>
+		/// <returns></returns>
 		public static T Await<T>(this Task<T> t)
 		{
 			AwaitCore(t);
 			return t.Result;
 		} // func Await
 
+		/// <summary>Fork a task from the current execution thread. This will not change the <see cref="SynchronizationContext"/>.</summary>
+		/// <param name="task"></param>
+		/// <param name="serviceProvider"></param>
 		public static void Spawn(this Task task, IServiceProvider serviceProvider = null)
 			=> task.ContinueWith(t => GetService<IPpsUIService>(serviceProvider, true).ShowException(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
 

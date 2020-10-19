@@ -14,10 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
 using TecWare.DE.Stuff;
 
@@ -73,9 +69,8 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Display a simple messagebox</summary>
 		/// <param name="text"></param>
-		/// <param name="button"></param>
 		/// <param name="image"></param>
-		/// <param name="defaultResult"></param>
+		/// <param name="buttons"></param>
 		/// <returns></returns>
 		int MsgBox(string text, PpsImage image = PpsImage.Information, params string[] buttons);
 
@@ -101,18 +96,43 @@ namespace TecWare.PPSn.UI
 
 	public static partial class PpsUI
 	{
+		/// <summary>Show a exception.</summary>
+		/// <param name="ui"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
 		public static void ShowException(this IPpsUIService ui, Exception exception, string alternativeMessage = null)
 			=> ui.ShowException(PpsExceptionShowFlags.None, exception, alternativeMessage);
 
+		/// <summary>Show a exception.</summary>
+		/// <param name="sp"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
 		public static void ShowException(this IServiceProvider sp, Exception exception, string alternativeMessage = null)
 			=> ShowException(sp.GetService<IPpsUIService>(true), exception, alternativeMessage);
 
+		/// <summary>Show a exception.</summary>
+		/// <param name="ui"></param>
+		/// <param name="background"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		/// <returns></returns>
 		public static Task ShowExceptionAsync(this IPpsUIService ui, bool background, Exception exception, string alternativeMessage = null)
 			=> ui.RunUI(() => ui.ShowException(background ? PpsExceptionShowFlags.Background : PpsExceptionShowFlags.None, exception, alternativeMessage));
 
+		/// <summary>Show a exception.</summary>
+		/// <param name="sp"></param>
+		/// <param name="background"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		/// <returns></returns>
 		public static Task ShowExceptionAsync(this IServiceProvider sp, bool background, Exception exception, string alternativeMessage = null)
 			=> ShowExceptionAsync(sp.GetService<IPpsUIService>(true), background, exception, alternativeMessage);
 
+		/// <summary>Run a task with progress information.</summary>
+		/// <param name="sp"></param>
+		/// <param name="taskText"></param>
+		/// <param name="action"></param>
+		/// <returns></returns>
 		public static async Task RunTaskAsync(this IServiceProvider sp, string taskText, Func<IPpsProgress,Task> action)
 		{
 			using (var p = sp.CreateProgress(true, taskText))

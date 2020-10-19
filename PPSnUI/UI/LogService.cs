@@ -19,7 +19,7 @@ namespace TecWare.PPSn.UI
 {
 	#region -- enum PpsLogType --------------------------------------------------------
 
-	/// <summary>Log item classification, compatible to <see cref="LogMsgType"/></summary>
+	/// <summary>Log item classification, compatible to <c>LogMsgType</c></summary>
 	public enum PpsLogType
 	{
 		/// <summary>No information</summary>

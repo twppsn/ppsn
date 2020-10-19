@@ -17,9 +17,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Cache;
 using System.Threading.Tasks;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
@@ -43,12 +46,6 @@ namespace TecWare.PPSn.UI
 		/// <param name="values"></param>
 		/// <returns></returns>
 		Task<int> UpdateAsync(params KeyValuePair<string, string>[] values);
-
-		/// <summary>Return one property value.</summary>
-		/// <param name="name"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		bool TryGetProperty(string name, out string value);
 	} // interface IPpsSettingsService
 
 	#endregion
@@ -67,6 +64,82 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		Task<int> CommitAsync();
 	} // interface IPpsSettingsEdit
+
+	#endregion
+
+	#region -- class PpsSettingsGroup -------------------------------------------------
+
+	/// <summary>Setting group.</summary>
+	public sealed class PpsSettingsGroup : IPropertyEnumerableDictionary
+	{
+		private readonly PpsSettingsInfoBase settingsInfo;
+		private readonly string groupName;
+		private readonly string[] keys;
+
+		internal PpsSettingsGroup(PpsSettingsInfoBase settingsInfo, string groupName, string[] keys)
+		{
+			this.settingsInfo = settingsInfo ?? throw new ArgumentNullException(nameof(settingsInfo));
+			this.groupName = groupName ?? throw new ArgumentNullException(nameof(groupName));
+			this.keys = keys ?? throw new ArgumentNullException(nameof(keys));
+		} // ctor
+
+		/// <summary>Return all grouped properties.</summary>
+		/// <returns></returns>
+		public IEnumerator<PropertyValue> GetEnumerator()
+		{
+			foreach (var k in keys)
+			{
+				if (settingsInfo.TryGetProperty(k, out var s))
+					yield return new PropertyValue(k, s);
+			}
+		} // func GetEnumerator
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+
+		/// <summary>Get a grouped property.</summary>
+		/// <param name="index"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public bool TryGetProperty(int index, out string value)
+			=> settingsInfo.TryGetProperty(keys[index], out value);
+
+		/// <summary>Get a grouped property.</summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public bool TryGetProperty(string name, out string value)
+		{
+			foreach (var cur in keys)
+			{
+				if (cur.Length <= name.Length || cur[cur.Length - name.Length - 1] != '.')
+					continue;
+
+				if (cur.EndsWith(name, StringComparison.OrdinalIgnoreCase))
+					return settingsInfo.TryGetProperty(cur, out value);
+			}
+
+			value = null;
+			return false;
+		} // func TryGetProperty
+
+		bool IPropertyReadOnlyDictionary.TryGetProperty(string name, out object value)
+		{
+			if (TryGetProperty(name, out var t))
+			{
+				value = t;
+				return true;
+			}
+			else
+			{
+				value = null;
+				return false;
+			}
+		} // func IPropertyReadOnlyDictionary.TryGetProperty
+
+		/// <summary>Name of the group.</summary>
+		public string GroupName => groupName;
+	} // class PpsSettingsGroup
 
 	#endregion
 
@@ -118,6 +191,8 @@ namespace TecWare.PPSn.UI
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="settingsService"></param>
 		protected PpsSettingsInfoBase(IPpsSettingsService settingsService)
 		{
 			this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -125,12 +200,14 @@ namespace TecWare.PPSn.UI
 			settingsService.PropertyChanged += SettingsService_PropertyChanged;
 		} // ctor
 
-		/// <summary></summary>
+		/// <inherited/>
 		public void Dispose()
 		{
 			Dispose(true);
 		} // proc Dispose
 
+		/// <summary>Dipose the settings proxy.</summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -192,6 +269,56 @@ namespace TecWare.PPSn.UI
 		private PropertyValue CreatePropertValue(KeyValuePair<string, string> kv)
 			=> new PropertyValue(kv.Key, kv.Value);
 
+		/// <summary>Get/cache multiple properties</summary>
+		/// <param name="filter"></param>
+		/// <returns></returns>
+		public IEnumerable<KeyValuePair<string, string>> GetProperties(params string[] filter)
+		{
+			foreach (var kv in settingsService.Query(filter))
+			{
+				cachedSettings[kv.Key] = kv.Value;
+				yield return kv;
+			}
+		} // func GetProperties
+
+		/// <summary>Get grouped keys.</summary>
+		/// <param name="baseKey"></param>
+		/// <param name="requestAllSubKeys"></param>
+		/// <param name="subKeys"></param>
+		/// <returns></returns>
+		public IEnumerable<PpsSettingsGroup> GetGroups(string baseKey, bool requestAllSubKeys, params string[] subKeys)
+		{
+			if (subKeys.Length == 0)
+				yield break;
+
+			// create query keys
+			var queryKeys = new string[requestAllSubKeys ? subKeys.Length : 1];
+			for(var i=0;i< queryKeys.Length;i++)
+				queryKeys[i] = baseKey + ".*." + subKeys[i];
+
+			// query all values to fill cache
+			var ofsAt = baseKey.Length; // first dot
+			foreach (var kv in GetProperties(queryKeys))
+			{
+				var key = kv.Key;
+				if (!key.EndsWith(subKeys[0], StringComparison.OrdinalIgnoreCase))
+					continue;
+
+				var endAt = key.Length - subKeys[0].Length - 1; // second dot
+				if (ofsAt >= endAt || key[ofsAt] != '.' || key[endAt] != '.')
+					continue;
+
+				var groupName = key.Substring(ofsAt + 1, endAt - ofsAt - 1);
+
+				// create other key names from group
+				var fullKeys = new string[subKeys.Length];
+				for (var i = 0; i < fullKeys.Length; i++)
+					fullKeys[i] = baseKey + "." + groupName + "." + subKeys[i];
+
+				yield return new PpsSettingsGroup(this, groupName, fullKeys);
+			}
+		} // func GetGroups
+
 		/// <summary>Return one setting.</summary>
 		/// <param name="name"></param>
 		/// <param name="value"></param>
@@ -206,14 +333,15 @@ namespace TecWare.PPSn.UI
 					value = v;
 					return v != null;
 				}
-				else if (settingsService.TryGetProperty(name, out v))
-				{
-					cachedSettings[name] = v;
-					value = v;
-					return true;
-				}
 				else
 				{
+					foreach (var kv in settingsService.Query(name))
+					{
+						cachedSettings[name] = kv.Value;
+						value = kv.Value;
+						return true;
+					}
+
 					cachedSettings[name] = null;
 					value = null;
 					return false;
@@ -307,529 +435,131 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsSettingsInfo --------------------------------------------------
-
-	/// <summary>Settings info, that reads the settings service.</summary>
-	[Obsolete("use PpsSettingsInfoBase")]
-	public sealed class PpsSettingsInfo : DynamicObject, IPropertyEnumerableDictionary, INotifyPropertyChanged, IDisposable
-	{
-		/// <summary>All properties are changed.</summary>
-		public static string AllProperties = ".";
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static string DpcUriKey { get; } = "DPC.Uri";
-		public static string DpcUserKey { get; } = "DPC.User";
-		public static string DpcPasswordKey { get; } = "DPC.Password";
-		public static string DpcPinKey { get; } = "DPC.Pin";
-		public static string DpcDebugModeKey { get; } = "DPC.Debug";
-
-		public static string DpcDeviceIdKey { get; } = "DPC.DeviceId.Local";
-		public static string DpcSoftwareVersionKey { get; } = "DPC.SoftwareVersion.Local";
-		public static string DpcConnectionStateKey { get; } = "DPC.ConnectionStatus.Local";
-		public static string DpcNetworkStateKey { get; } = "DPC.NetworkStatus.Local";
-		public static string DpcLogStateKey { get; } = "DPC.LogState.Local";
-
-		public const string ClockFormatKey = "PPSn.ClockFormat";
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-
-		/// <summary>A setting is changed.</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-
-		#region -- class KnownSetting -------------------------------------------------
-
-		private sealed class KnownSetting
-		{
-			public KnownSetting(string key, string displayName)
-			{
-				Key = key ?? throw new ArgumentNullException(nameof(key));
-				DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
-			}
-
-			public string Key { get; }
-			public string DisplayName { get; }
-		} // class KnownSetting
-
-		#endregion
-
-		#region -- class SettingsEditor -----------------------------------------------
-
-		private sealed class SettingsEditor : IPpsSettingsEdit
-		{
-			private readonly IPpsSettingsService settingsService;
-
-			private readonly List<KeyValuePair<string, string>> pairs = new List<KeyValuePair<string, string>>();
-
-			public SettingsEditor(IPpsSettingsService settingsService)
-			{
-				this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-			} // ctor
-
-			public void Dispose()
-				=> pairs.Clear();
-
-			public IPpsSettingsEdit Set(string key, object value)
-			{
-				var idx = pairs.FindIndex(c => key == c.Key);
-				if (idx == -1)
-					pairs.Add(CreatePair(key, value));
-				else
-					pairs[idx] = CreatePair(key, value);
-				return this;
-			} // func Set
-
-			public Task<int> CommitAsync()
-				=> settingsService.UpdateAsync(pairs.ToArray());
-		} // class SettingsEditor
-
-		#endregion
-
-		private readonly IPpsSettingsService settingsService;
-		private readonly Dictionary<string, string> cachedSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-		#region -- Ctor/Dtor ----------------------------------------------------------
-
-		private PpsSettingsInfo(IPpsSettingsService settingsService)
-		{
-			this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-
-			settingsService.PropertyChanged += SettingsService_PropertyChanged;
-		} // ctor
-
-		/// <summary></summary>
-		public void Dispose()
-		{
-			settingsService.PropertyChanged -= SettingsService_PropertyChanged;
-		} // proc Dispose
-
-		private void SettingsService_PropertyChanged(object sender, PropertyChangedEventArgs e)
-			=> OnPropertyChanged(e.PropertyName);
-
-		private void OnPropertyChanged(string propertyName)
-		{
-			var dirtyProperties = new List<string>();
-
-			// mark property as dirty
-			lock (cachedSettings)
-			{
-				if (propertyName == AllProperties)
-				{
-					// update cache in a bulk operation
-					var cachedPropertyNames = cachedSettings.Keys.ToArray();
-					foreach (var kv in settingsService.Query(cachedPropertyNames))
-					{
-						if (cachedSettings[kv.Key] != kv.Value)
-						{
-							dirtyProperties.Add(kv.Key);
-							cachedSettings[kv.Key] = kv.Value;
-						}
-					}
-				}
-				else // update cache in a single operation
-				{
-					cachedSettings.Remove(propertyName);
-					dirtyProperties.Add(propertyName);
-				}
-			}
-
-			// invoke property changed
-			foreach (var cur in dirtyProperties)
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(cur));
-		} // proc OnPropertyChanged
-
-		#endregion
-
-		#region -- RefreshAsync -------------------------------------------------------
-
-		/// <summary>Refersh settings from service.</summary>
-		/// <param name="purge">Remove all locally saved settings.</param>
-		/// <returns></returns>
-		public Task RefreshAsync(bool purge)
-			=> settingsService.RefreshAsync(purge);
-
-		#endregion
-
-		#region -- TryGetProperty, GetEnumerator --------------------------------------
-
-		private static KeyValuePair<string, string> CreatePair(string key, object value)
-			=> new KeyValuePair<string, string>(key, value.ChangeType<string>());
-
-		private PropertyValue CreatePropertValue(KeyValuePair<string, string> kv)
-			=> new PropertyValue(kv.Key, kv.Value);
-
-		/// <summary>Return one setting.</summary>
-		/// <param name="name"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		public bool TryGetProperty(string name, out object value)
-		{
-			lock (cachedSettings)
-			{
-				// read property from cache
-				if (cachedSettings.TryGetValue(name, out var v))
-				{
-					value = v;
-					return v != null;
-				}
-				else if (settingsService.TryGetProperty(name, out v))
-				{
-					cachedSettings[name] = v;
-					value = v;
-					return true;
-				}
-				else
-				{
-					cachedSettings[name] = null;
-					value = null;
-					return false;
-				}
-			}
-		} // func TryGetProperty
-
-		/// <summary></summary>
-		/// <param name="binder"></param>
-		/// <param name="result"></param>
-		/// <returns></returns>
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public override bool TryGetMember(GetMemberBinder binder, out object result)
-		{
-			TryGetProperty(binder.Name, out result);
-			return true;
-		} // func TryGetMember
-
-		/// <summary></summary>
-		/// <param name="binder"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public override bool TrySetMember(SetMemberBinder binder, object value)
-			=> settingsService.UpdateAsync(CreatePair(binder.Name, value)).Await() > 0;
-
-		/// <summary></summary>
-		/// <param name="binder"></param>
-		/// <param name="indexes"></param>
-		/// <param name="result"></param>
-		/// <returns></returns>
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
-		{
-			if (indexes.Length == 1 && indexes[0] is string propertyName)
-			{
-				TryGetProperty(propertyName, out result);
-				return true;
-			}
-			else
-				return base.TryGetIndex(binder, indexes, out result);
-		} // func TryGetIndex
-
-		/// <summary></summary>
-		/// <param name="binder"></param>
-		/// <param name="indexes"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public override bool TrySetIndex(SetIndexBinder binder, object[] indexes, object value)
-		{
-			if (indexes.Length == 1 && indexes[0] is string propertyName)
-			{
-				settingsService.UpdateAsync(CreatePair(propertyName, value)).Await();
-				return true;
-			}
-			else
-				return base.TrySetIndex(binder, indexes, value);
-		} // func TrySetIndex
-
-		/// <summary>Return all settings.</summary>
-		/// <returns></returns>
-		public IEnumerator<PropertyValue> GetEnumerator()
-			=> settingsService.Query().Select(CreatePropertValue).GetEnumerator();
-
-		IEnumerator IEnumerable.GetEnumerator()
-			=> GetEnumerator();
-
-		/// <summary>Start edit settings.</summary>
-		/// <returns></returns>
-		public IPpsSettingsEdit Edit()
-			=> new SettingsEditor(settingsService);
-
-		#endregion
-
-		#region -- Known Properties ---------------------------------------------------
-
-		/// <summary>Return the dpc user and password.</summary>
-		/// <returns></returns>
-		public ICredentials GetDpcCredentials()
-		{
-			var userName = this.GetProperty(DpcUserKey, null);
-			var password = this.GetProperty(DpcPasswordKey, null);
-
-			if (String.IsNullOrEmpty(userName))
-				return null;
-
-			return UserCredential.Create(userName, password);
-		} // func GetDpcCredentials
-
-		public string GetClockFormat()
-			=> this.GetProperty(ClockFormatKey, "HH:mm\ndd.MM.yyyy");
-
-		/// <summary>Uri</summary>
-		public Uri DpcUri => PpsShell.GetUriFromString(this.GetProperty(DpcUriKey, null), UriKind.Absolute);
-		/// <summary>Pin to unprotect the application.</summary>
-		public string DpcPin => this.GetProperty(DpcPinKey, "2682");
-		/// <summary>Id of the device.</summary>
-		public string DpcDeviceId => this.GetProperty(DpcDeviceIdKey, "(unknown)");
-		/// <summary>Is the application in debug mode.</summary>
-		public bool IsDebugMode => this.GetProperty(DpcDebugModeKey, false);
-
-		#endregion
-
-		// -- Static ----------------------------------------------------------
-
-		private static readonly Lazy<PpsSettingsInfo> defaultLazy = new Lazy<PpsSettingsInfo>(() => new PpsSettingsInfo(PpsShell.GetService<IPpsSettingsService>(true)));
-		private static readonly List<KnownSetting> knownSettings = new List<KnownSetting>();
-
-		/// <summary>Register a known setting, that will be showed without entering the pin.</summary>
-		/// <param name="key"></param>
-		/// <param name="displayName"></param>
-		public static void RegisterKnownSetting(string key, string displayName)
-			=> knownSettings.Add(new KnownSetting(key, displayName));
-
-		/// <summary></summary>
-		/// <param name="key"></param>
-		/// <param name="displayName"></param>
-		/// <returns></returns>
-		public static bool TryGetKnownSetting(string key, out string displayName)
-		{
-			var s = knownSettings.FirstOrDefault(c => String.Compare(c.Key, key, StringComparison.OrdinalIgnoreCase) == 0);
-			if (s != null)
-			{
-				displayName = s.DisplayName;
-				return true;
-			}
-			else
-			{
-				displayName = key;
-				return false;
-			}
-		} // func TryGetKnownSetting
-
-		/// <summary></summary>
-		/// <param name="service"></param>
-		/// <returns></returns>
-		public static PpsSettingsInfo Create(IPpsSettingsService service)
-			=> new PpsSettingsInfo(service);
-
-		/// <summary>Settingsinfo</summary>
-		public static PpsSettingsInfo Default => defaultLazy.Value;
-	} // class PpsSettingsInfo
-
-	#endregion
-
 	#region -- class PpsBaseSettingsService -------------------------------------------
 
 	/// <summary>Basic implementation for a settings service.</summary>
+	/// <remarks>This class has a cache for requested values.</remarks>
 	public abstract class PpsBaseSettingsService : IPpsSettingsService, IDisposable
 	{
+		#region -- enum SettingMode ---------------------------------------------------
+
+		/// <summary>Setting get-mode</summary>
+		protected enum SettingMode
+		{
+			/// <summary>Setting is for read, can return a value.</summary>
+			Read,
+			/// <summary>Setting is for write, must return a value.</summary>
+			Write,
+			/// <summary>Setting will be clear, can return a value.</summary>
+			Clear
+		} // enum SettingMode
+
+		#endregion
+
+		#region -- interface IUpdateScope ---------------------------------------------
+		
+		/// <summary>Implement a update scope for the setting change</summary>
+		protected interface IUpdateScope : IDisposable
+		{
+			/// <summary>Commit all changes.</summary>
+			/// <returns></returns>
+			Task CommitAsync();
+		} // interface IUpdateScope
+
+		#endregion
+
 		#region -- class SettingBase --------------------------------------------------
 
-		private abstract class SettingBase
+		/// <summary>A single setting.</summary>
+		protected abstract class SettingBase
 		{
-			private readonly PpsBaseSettingsService service;
 			private readonly string key;
 
-			public SettingBase(PpsBaseSettingsService service, string key)
+			/// <summary>Create setting</summary>
+			/// <param name="key"></param>
+			protected SettingBase(string key)
 			{
-				this.service = service ?? throw new ArgumentNullException(nameof(service));
 				this.key = key ?? throw new ArgumentNullException(nameof(key));
 			} // ctor
 
-			public void FireValueChanged()
-				=> OnValueChanged();
-
-			protected virtual void OnValueChanged()
-				=> service.FireSettingChanged(key);
-
-			public void Clear()
+			/// <summary>Remove setting</summary>
+			public bool Clear()
 				=> ClearCore();
 
-			protected virtual void ClearCore()
+			/// <summary>Remove setting</summary>
+			/// <returns></returns>
+			protected virtual bool ClearCore()
 				=> SetValue(null);
 
-			protected virtual string GetValueCore()
-				=> null;
+			/// <summary>Get value of the setting</summary>
+			protected abstract string GetValueCore();
 
-			protected virtual bool SetValueCore(string value)
-				=> false;
+			/// <summary>Set value of the setting.</summary>
+			protected abstract bool SetValueCore(string value);
 
-			private void SetValue(string value)
-			{
-				if (SetValueCore(value))
-					OnValueChanged();
-			} // proc SetValue
+			/// <summary>Set the value of this property.</summary>
+			/// <param name="value"></param>
+			/// <returns></returns>
+			public bool SetValue(string value)
+				=> SetValueCore(value);
 
+			/// <summary>Key of the setting</summary>
 			public string Key => key;
-			public string Value { get => GetValueCore(); set => SetValue(value); }
+			/// <summary>Get the current value of the setting</summary>
+			public string Value => GetValueCore();
 
+			/// <summary>Is this setting invisible for the user.</summary>
 			public virtual bool IsHidden => false;
-
-			protected PpsBaseSettingsService Service => service;
 		} // class SettingBase
-
-		#endregion
-
-		#region -- class SettingValue -------------------------------------------------
-
-		private class SettingValue : SettingBase
-		{
-			public SettingValue(PpsBaseSettingsService service, string key)
-				: base(service, key)
-			{
-			} // ctor
-
-			protected override string GetValueCore()
-				=> Service.GetStoredValue(Key);
-
-			protected override bool SetValueCore(string value)
-				=> Service.SetStoredValue(Key, value);
-		} // class SettingValue
-
-		#endregion
-
-		#region -- class KnownSettingValue --------------------------------------------
-
-		private sealed class KnownSettingValue : SettingValue
-		{
-			private readonly bool isHidden;
-			private readonly bool clearAble;
-			private readonly string defaultValue;
-
-			private readonly Action<string> hook;
-
-			public KnownSettingValue(PpsBaseSettingsService service, string key, bool isHidden = false, string defaultValue = null, bool clearAble = true, Action<string> hook = null)
-				: base(service, key)
-			{
-				this.isHidden = isHidden;
-				this.clearAble = clearAble;
-				this.defaultValue = defaultValue;
-
-				this.hook = hook;
-			} // ctor
-
-			protected override void OnValueChanged()
-			{
-				base.OnValueChanged();
-				hook?.Invoke(Value);
-			} // proc OnPropertyChanged
-
-			protected override void ClearCore()
-			{
-				if (clearAble)
-					Value = defaultValue;
-			} // proc ClearCore
-
-			protected override string GetValueCore()
-				=> base.GetValueCore() ?? defaultValue;
-
-			protected override bool SetValueCore(string value)
-			{
-				return base.SetValueCore(
-					(defaultValue == null && value == null) || defaultValue == value
-						? null
-						: (value ?? String.Empty)
-				);
-			} // func SetValueCore
-
-			public sealed override bool IsHidden => isHidden;
-		} // class KnownSettingValue
 
 		#endregion
 
 		#region -- class KnownReadOnlySettingValue ------------------------------------
 
+		[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
 		private sealed class KnownReadOnlySettingValue : SettingBase
 		{
 			private readonly Func<string> getValue;
 
-			public KnownReadOnlySettingValue(PpsBaseSettingsService service, string key, Func<string> getValue)
-				: base(service, key)
+			public KnownReadOnlySettingValue(string key, Func<string> getValue)
+				: base(key)
 			{
 				this.getValue = getValue ?? throw new ArgumentNullException(nameof(getValue));
 			} // ctor
 
-			protected override void ClearCore() { }
 
+			private string GetDebuggerDisplay()
+				=> $"RO Setting: {Key}";
+
+			/// <inherited/>
+			protected override bool ClearCore()
+				=> false;
+
+			/// <inherited/>
 			protected override string GetValueCore()
 				=> getValue();
+
+			/// <inherited/>
+			protected override bool SetValueCore(string value) 
+				=> false;
 		} // class KnownReadOnlySettingValue
 
 		#endregion
 
-		#region -- enum SettingsCacheState --------------------------------------------
-
-		[Flags]
-		public enum SettingsCacheState
-		{
-			None = 0,
-			Readed = 1,
-			Changed = 2
-		} // enum SettingsCacheState
-
-		#endregion
-
-		#region -- class SettingsCacheValue -------------------------------------------
-
-		private sealed class SettingsCacheValue
-		{
-			private readonly string name;
-			private string value = null;
-			private bool isDirty = false;
-
-			public SettingsCacheValue(string name)
-				=> this.name = name ?? throw new ArgumentNullException(nameof(name));
-
-			public SettingsCacheState ReadCachedSetting(string newValue)
-			{
-				isDirty = false;
-				if (newValue != value)
-				{
-					value = newValue;
-					return SettingsCacheState.Changed | SettingsCacheState.Readed;
-				}
-				else
-					return SettingsCacheState.Readed;
-			} // func ReadValueCore
-
-			public string Name => name;
-
-			public string Value
-			{
-				get => value; 
-				set
-				{
-					if (this.value != value)
-					{
-						this.value = value;
-						isDirty = true;
-					}
-				}
-			} // prop Value
-
-			public bool IsDirty => isDirty;
-		} // class SettingsCacheValue
-
-		#endregion
-
+		/// <summary>Is a property changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly Dictionary<string, SettingBase> knownSettings = new Dictionary<string, SettingBase>(StringComparer.OrdinalIgnoreCase);
-		private readonly Dictionary<string, SettingsCacheValue> values = new Dictionary<string, SettingsCacheValue>(StringComparer.OrdinalIgnoreCase);
 		private bool isDisposed = false;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
 		protected PpsBaseSettingsService()
 		{
 		} // ctor
 
+		/// <summary></summary>
 		~PpsBaseSettingsService()
 		{
 			Dispose(false);
@@ -852,213 +582,194 @@ namespace TecWare.PPSn.UI
 			isDisposed = true;
 		} // proc Dispose
 
-		public void RegisterKnownSettingValue(string key, bool isHidden = false, string defaultValue = null, bool clearAble = true, Action<string> hook = null)
-			=> RegisterKnownSettingValue(new KnownSettingValue(this, key, isHidden, defaultValue, clearAble, hook));
-
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <param name="getValue"></param>
 		public void RegisterKnownReadOnlySettingValue(string key, Func<string> getValue)
-			=> RegisterKnownSettingValue(new KnownReadOnlySettingValue(this, key, getValue));
+			=> RegisterKnownSettingValue(new KnownReadOnlySettingValue(key, getValue));
 
-		private void RegisterKnownSettingValue(SettingBase setting)
+		/// <summary>Register a known setting.</summary>
+		/// <param name="setting"></param>
+		protected void RegisterKnownSettingValue(SettingBase setting)
 			=> knownSettings.Add(setting.Key, setting);
 
 		#endregion
 
-		#region -- Read/Write ---------------------------------------------------------
+		#region -- GetSettings --------------------------------------------------------
 
-		#region -- interface IPpsSettingsWriter ---------------------------------------
+		/// <summary>Get all settings.</summary>
+		/// <returns></returns>
+		protected abstract IEnumerable<SettingBase> GetSettingsCore();
 
-		protected interface IPpsSettingsWriter
+		/// <summary>Returns all settings</summary>
+		/// <returns></returns>
+		protected IEnumerable<SettingBase> GetSettings()
 		{
-			bool? WritePair(string name, string value, bool isDirty);
+			foreach (var setting in knownSettings.Values)
+				yield return setting;
 
-			Task FlushAsync();
-		} // interface IPpsSettingsWriter
+			// clear other settings
+			foreach (var setting in GetSettingsCore())
+			{
+				if (!knownSettings.ContainsKey(setting.Key))
+					yield return setting;
+			}
+		} // func GetSettings
+
+		/// <summary>Get a single setting.</summary>
+		/// <param name="key">key of the setting.</param>
+		/// <param name="forWrite">mode to open the setting.</param>
+		/// <returns></returns>
+		protected abstract SettingBase GetSettingCore(string key, SettingMode forWrite);
+
+		private SettingBase GetSetting(string key, SettingMode mode)
+			=> knownSettings.TryGetValue(key, out var setting) ? setting : GetSettingCore(key, mode);
+
+		private bool TryGetSetting(string key, out SettingBase setting)
+		{
+			setting = GetSetting(key, SettingMode.Read);
+			return setting != null;
+		} // TryGetSetting
 
 		#endregion
 
+		#region -- Refresh ------------------------------------------------------------
+
+		/// <summary>Load settings from server.</summary>
+		/// <returns></returns>
 		protected abstract Task LoadSettingsFromServerAsync();
 
-		protected abstract IEnumerable<KeyValuePair<string, string>> ParseSettings();
-
-		protected abstract IPpsSettingsWriter CreateSettingsWriter();
-
-		protected async Task ReadSettingsAsync()
-		{
-			var removeNames = new List<string>(values.Keys);
-
-			// read values from registry
-			var e = await Task.Run(() => ParseSettings().GetEnumerator());
-			try
-			{
-				while (await Task.Run(() => e.MoveNext()))
-				{
-					var kv = e.Current;
-
-					if (!values.TryGetValue(kv.Key, out var cur))
-					{
-						cur = new SettingsCacheValue(kv.Key);
-						values[kv.Key] = cur;
-					}
-					var f = cur.ReadCachedSetting(kv.Value);
-					if (f != SettingsCacheState.None)
-						removeNames.Remove(cur.Name);
-					if ((f & SettingsCacheState.Changed) != 0)
-						GetSetting(cur.Name).FireValueChanged();
-				}
-			}
-			finally
-			{
-				await Task.Run(() => e.Dispose());
-			}
-
-			// remove clear
-			foreach (var c in removeNames)
-			{
-				values.Remove(c);
-				FireSettingChanged(c);
-			}
-		} // proc ReadSettingsAsync
-
-		protected async Task<int> WriteSettingsAsync()
-		{
-			var removeNames = new List<string>();
-			var i = 0;
-
-			// write keys
-			var w = CreateSettingsWriter();
-			try
-			{
-				foreach (var cur in values.Values)
-				{
-					var l = w.WritePair(cur.Name, cur.Value, cur.IsDirty);
-					if (!l.HasValue)
-						removeNames.Add(cur.Name);
-					else if (l.Value)
-						i++;
-				}
-
-				if (i > 0)
-				{
-					await w.FlushAsync();
-
-					// remove clear
-					foreach (var c in removeNames)
-						values.Remove(c);
-				}
-			}
-			finally
-			{
-				if (w is IDisposable d)
-					d.Dispose();
-			}
-
-			return i;
-		} // func WriteSettings
-
-		#endregion
-
-		#region -- GetStoredValue, SetStoredValue -------------------------------------
-
-		private void FireSettingChanged(string key)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(key));
-
-		private SettingBase GetSetting(string key)
-			=> knownSettings.TryGetValue(key, out var s) ? s : new SettingValue(this, key);
-
-		private string GetStoredValue(string key)
-			=> values.TryGetValue(key, out var cur) ? cur.Value : null;
-
-		private bool SetStoredValue(string key, string value)
-		{
-			if (!values.TryGetValue(key, out var cur))
-			{
-				cur = new SettingsCacheValue(key);
-				values[cur.Name] = cur;
-			}
-
-			cur.Value = value;
-			return cur.IsDirty;
-		} // func SetStoredValue
-
-		#endregion
-
-		#region -- Refresh, Query, Update ---------------------------------------------
-
-		public async Task RefreshAsync(bool purge)
+		/// <summary>Refresh properties from server.</summary>
+		/// <param name="purge"></param>
+		/// <returns></returns>
+		public virtual async Task RefreshAsync(bool purge)
 		{
 			// clear values
 			if (purge)
-			{
-				foreach (var k in values.Keys.ToArray())
-				{
-					if (knownSettings.TryGetValue(k, out var s))
-						s.Clear();
-					else
-						values.Remove(k);
-				}
-
-				// clear settings on disk
-				await WriteSettingsAsync();
-			}
+				await ClearSettingsAsync();
+			
 
 			// refresh properties from server
 			await LoadSettingsFromServerAsync();
 		} // func RefreshAsync
 
-		public IEnumerable<KeyValuePair<string, string>> Query(params string[] filter)
+		#endregion
+
+		#region -- Query --------------------------------------------------------------
+
+		private KeyValuePair<string, string> ToKeyValuePair(SettingBase setting)
+			=> new KeyValuePair<string, string>(setting.Key, setting.Value);
+
+		private IEnumerable<SettingBase> QueryFiltered(string[] filter)
+		{
+			var filterFuncs = new List<Func<string, bool>>();
+
+			foreach (var k in filter)
+			{
+				if (k.IndexOf('*') >= 0)
+					filterFuncs.Add(Procs.GetFilerFunction(k));
+				else if (TryGetSetting(k, out var setting))
+					yield return setting;
+			}
+
+			if (filterFuncs.Count > 0)
+			{
+				foreach (var kv in GetSettings())
+				{
+					if (filterFuncs.Any(c => c(kv.Key)))
+						yield return kv;
+				}
+			}
+		} // func QueryFiltered
+
+		/// <summary>Get properties.</summary>
+		/// <param name="filter"></param>
+		/// <returns></returns>
+		public virtual IEnumerable<KeyValuePair<string, string>> Query(params string[] filter)
 		{
 			if (filter == null || filter.Length == 0) // return all
-			{
-				// return known settings
-				foreach (var cur in knownSettings.Values)
-				{
-					if (!cur.IsHidden)
-						yield return new KeyValuePair<string, string>(cur.Key, cur.Value);
-				}
-
-				// return other settings
-				foreach (var cur in values.Values)
-				{
-					if (!knownSettings.ContainsKey(cur.Name))
-						yield return new KeyValuePair<string, string>(cur.Name, cur.Value);
-				}
-			}
+				return GetSettings().Where(c => !c.IsHidden).Select(ToKeyValuePair);
 			else
-			{
-				foreach (var k in filter)
-				{
-					if (TryGetProperty(k, out var v))
-						yield return new KeyValuePair<string, string>(k, v);
-				}
-			}
+				return QueryFiltered(filter).Select(ToKeyValuePair);
 		} // func Query
 
-		public Task<int> UpdateAsync(params KeyValuePair<string, string>[] values)
+		#endregion
+
+		#region -- Update -------------------------------------------------------------
+
+		/// <summary>Notify a property is changed.</summary>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		protected virtual void OnSettingChanged(string key, string value)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(key));
+
+		/// <summary>Override to support a update scope.</summary>
+		/// <returns></returns>
+		protected virtual IUpdateScope BeginUpdate()
+			=> null;
+
+		/// <summary>Clear all settings to default.</summary>
+		/// <returns></returns>
+		protected virtual async Task ClearSettingsAsync()
 		{
+			using (var scope = BeginUpdate())
+			{
+				foreach (var setting in GetSettings())
+				{
+					if (setting.Clear())
+						OnSettingChanged(setting.Key, null);
+				}
+			
+				await scope.CommitAsync();
+			}
+		} // proc ClearSettings
+
+		/// <summary>Updates settings</summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
+		protected int LoadSettings(IEnumerable<KeyValuePair<string, string>> values)
+		{
+			var changed = 0;
+
 			foreach (var kv in values)
-				GetSetting(kv.Key).Value = kv.Value;
+			{
+				if (kv.Value != null) // set setting value
+				{
+					if (GetSetting(kv.Key, SettingMode.Write).SetValue(kv.Value))
+					{
+						OnSettingChanged(kv.Key, kv.Value);
+						changed++;
+					}
+				}
+				else // value is set to null, check to remove whole tree!
+				{
+					var s = GetSetting(kv.Key, SettingMode.Clear);
+					if (s != null && s.Clear())
+					{
+						OnSettingChanged(kv.Key, null);
+						changed++;
+					}
+				}
+			}
 
-			return WriteSettingsAsync();
-		} // func UpdateAsync
+			return changed;
+		} // proc LoadSettings
 
-		public bool TryGetProperty(string name, out string value)
+		/// <summary>Updates settings</summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
+		public async Task<int> UpdateAsync(params KeyValuePair<string, string>[] values)
 		{
-			if (knownSettings.TryGetValue(name, out var s))
+			using (var scope = BeginUpdate())
 			{
-				value = s.Value;
-				return true;
+				var changed = LoadSettings(values);
+
+				if (scope != null)
+					await scope.CommitAsync();
+
+				return changed;
 			}
-			else if (values.TryGetValue(name, out var c))
-			{
-				value = c.Value;
-				return true;
-			}
-			else
-			{
-				value = null;
-				return false;
-			}
-		} // TryGetProperty
+		} // func UpdateAsync
 
 		#endregion
 	} // class PpsBaseSettingsService

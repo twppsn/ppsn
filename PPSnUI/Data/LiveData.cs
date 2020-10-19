@@ -1118,9 +1118,17 @@ namespace TecWare.PPSn.Data
 		internal PpsLiveDataRow CreateEmptyRow(PpsLiveData data)
 			=> (PpsLiveDataRow)Activator.CreateInstance(rowType, data);
 
+		/// <summary>Create a live data row for a primary key.</summary>
+		/// <param name="data">LiveData service.</param>
+		/// <param name="primaryKey">Primary key to select the row.</param>
+		/// <returns></returns>
 		public IPpsLiveRowView CreateRow(PpsLiveData data, object primaryKey)
 			=> CreateRow(data, new object[] { primaryKey });
 
+		/// <summary>Create a live data row for a primary key.</summary>
+		/// <param name="data">LiveData service.</param>
+		/// <param name="primaryKey">Primary key to select the row.</param>
+		/// <returns></returns>
 		public IPpsLiveRowView CreateRow(PpsLiveData data, params object[] primaryKey)
 		{
 			var row = (IPpsLiveRowView)Activator.CreateInstance(rowViewType.Value, this, data);
@@ -1128,6 +1136,12 @@ namespace TecWare.PPSn.Data
 			return row;
 		} // func CreateRow
 
+		/// <summary>Create a live data row for a primary key.</summary>
+		/// <param name="data">LiveData service.</param>
+		/// <param name="primaryKey">Primary key to select the row.</param>
+		/// <returns></returns>
+		/// <typeparam name="T"></typeparam>
+		/// <typeparam name="TKEY"></typeparam>
 		public IPpsLiveRowView<T, TKEY> CreateRow<T, TKEY>(PpsLiveData data, TKEY primaryKey)
 			where T : PpsLiveDataRow
 			=> new PpsLiveDataRowViewImpl<T, TKEY>(this, data, primaryKey);
@@ -1691,19 +1705,37 @@ namespace TecWare.PPSn.Data
 		} // func CreateOrderArray
 
 		/// <summary>Creates view with example rows. The rows on this view are not refreshed.</summary>
+		/// <param name="data"></param>
 		/// <param name="rowSource"></param>
 		/// <param name="orderExpressions"></param>
 		/// <returns></returns>
 		public IPpsLiveTableView CreateView(PpsLiveData data, IEnumerable<IDataRow> rowSource, params PpsDataOrderExpression[] orderExpressions)
 			=> throw new NotImplementedException();
 
+		/// <summary>Create view.</summary>
+		/// <param name="data"></param>
+		/// <param name="filterExpression"></param>
+		/// <param name="orderExpressions"></param>
+		/// <returns></returns>
 		public IPpsLiveTableView CreateView(PpsLiveData data, PpsDataFilterExpression filterExpression, params PpsDataOrderExpression[] orderExpressions)
 			=> (IPpsLiveTableView)Activator.CreateInstance(tableViewType.Value, this, data, filterExpression, CreateOrderArray(orderExpressions));
 
+		/// <summary>Creates view with example rows. The rows on this view are not refreshed.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="data"></param>
+		/// <param name="rows"></param>
+		/// <param name="orderExpressions"></param>
+		/// <returns></returns>
 		public IPpsLiveTableFilterView<T> CreateView<T>(PpsLiveData data, IEnumerable<IDataRow> rows, params PpsDataOrderExpression[] orderExpressions)
 			where T : PpsLiveDataRow
 			=> throw new NotImplementedException();
 
+		/// <summary>Create view.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="data"></param>
+		/// <param name="filterExpression"></param>
+		/// <param name="orderExpressions"></param>
+		/// <returns></returns>
 		public IPpsLiveTableView<T> CreateView<T>(PpsLiveData data, PpsDataFilterExpression filterExpression, params PpsDataOrderExpression[] orderExpressions)
 			where T : PpsLiveDataRow
 			=> new PpsLiveTableViewImpl<T>(this, data, filterExpression, CreateOrderArray(orderExpressions));
@@ -1735,6 +1767,7 @@ namespace TecWare.PPSn.Data
 		public string Name => rowType.Name;
 
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columns;
+		/// <summary>Live columns of this row type.</summary>
 		public IReadOnlyList<PpsLiveDataColumn> Columns => columns;
 
 		// -- Static ----------------------------------------------------------
@@ -1895,6 +1928,10 @@ namespace TecWare.PPSn.Data
 
 		#region -- Get Property -------------------------------------------------------
 
+		/// <summary>Get a related parent row to the property.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="propertyName"></param>
+		/// <returns></returns>
 		public T GetRelatedRow<T>(string propertyName)
 			where T : PpsLiveDataRow
 		{
@@ -1916,6 +1953,10 @@ namespace TecWare.PPSn.Data
 			}
 		} // func GetRelatedRow
 
+		/// <summary>Get a child row view to the property.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="propertyName"></param>
+		/// <returns></returns>
 		public IPpsLiveTableView<T> GetChildRows<T>(string propertyName)
 			where T : PpsLiveDataRow
 		{
@@ -2148,19 +2189,37 @@ namespace TecWare.PPSn.Data
 	/// <summary>Logging interface for live data.</summary>
 	public interface IPpsLiveDataLog
 	{
+		/// <summary>Log information, when a table is created.</summary>
+		/// <param name="tableName"></param>
 		void TableCreated(string tableName);
+		/// <summary>Log information, when a view is created.</summary>
+		/// <param name="tableName"></param>
+		/// <param name="typeName"></param>
+		/// <param name="filter"></param>
 		void ViewCreated(string tableName, string typeName, string filter);
+		/// <summary>Log information, when a view is removed from memory.</summary>
+		/// <param name="tableName"></param>
 		void ViewRemoved(string tableName);
 
+		/// <summary>Log information, when the refresh thread is started.</summary>
 		void StartRefreshThread();
+		/// <summary>Log information, when the refrehs thread is stopped.</summary>
 		void StopRefreshThread();
 
+		/// <summary>Log information for incoming arguments.</summary>
+		/// <param name="argumentInfo"></param>
 		void ReportRefreshArgs(string argumentInfo);
+		/// <summary>Log information after a data refresh.</summary>
+		/// <param name="resultInfo"></param>
 		void ReportRefreshResult(string resultInfo);
 
+		/// <summary>Wait for sync is started.</summary>
 		void WaitForSyncStart();
+		/// <summary>Wait for sync is finished.</summary>
 		void WaitForSyncStop();
 
+		/// <summary>Unexpected exception.</summary>
+		/// <param name="e"></param>
 		void UnexpectedBackgroundFailure(Exception e);
 	} // interface IPpsLiveDataLog
 
@@ -2168,6 +2227,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsLiveData ------------------------------------------------------
 
+	/// <summary>Live data service.</summary>
 	[PpsService(typeof(PpsLiveData)), PpsLazyService]
 	public sealed class PpsLiveData : IPpsShellService, IDisposable
 	{
@@ -3154,6 +3214,7 @@ namespace TecWare.PPSn.Data
 				SetDebugLiveDataLog();
 		} // ctor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			tables.Clear();
@@ -3204,6 +3265,8 @@ namespace TecWare.PPSn.Data
 		public IPpsLiveDataTableInfo[] GetTableInfo()
 			=> TableSnapShot();
 
+		/// <summary>Dump content of <see cref="PpsLiveData"/>.</summary>
+		/// <param name="tr"></param>
 		public void Dump(TextWriter tr)
 		{
 			lock (tables)
@@ -3222,17 +3285,27 @@ namespace TecWare.PPSn.Data
 			where T : PpsLiveDataRow
 			=> PpsLiveDataRowType.Get<T>().CreateRow<T, TKEY>(this, primaryKey);
 
-		/// <summary></summary>
+		/// <summary>Create view.</summary>
 		/// <typeparam name="T"></typeparam>
 		/// <returns></returns>
 		public IPpsLiveTableView<T> NewTable<T>()
 			where T : PpsLiveDataRow
 			=> NewTable<T>(PpsDataFilterExpression.True);
 
+		/// <summary>Create view.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="filterExpression"></param>
+		/// <param name="orderExpressions"></param>
+		/// <returns></returns>
 		public IPpsLiveTableView<T> NewTable<T>(PpsDataFilterExpression filterExpression, params PpsDataOrderExpression[] orderExpressions)
 			where T : PpsLiveDataRow
 			=> PpsLiveDataRowType.Get<T>().CreateView<T>(this, filterExpression, orderExpressions);
 
+		/// <summary>Create view.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="rows"></param>
+		/// <param name="orderExpressions"></param>
+		/// <returns></returns>
 		public IPpsLiveTableView<T> NewTable<T>(IEnumerable<IDataRow> rows, params PpsDataOrderExpression[] orderExpressions)
 			where T : PpsLiveDataRow
 			=> PpsLiveDataRowType.Get<T>().CreateView<T>(this, rows, orderExpressions);
@@ -3367,6 +3440,7 @@ namespace TecWare.PPSn.Data
 		public void SetDebugLiveDataLog()
 			=> Notify = DebugLiveDataLog.Instance;
 
+		/// <summary>Connected shell.</summary>
 		public IPpsShell Shell => shell;
 		/// <summary></summary>
 		public IPpsLiveDataLog Notify { get; set; } = null;

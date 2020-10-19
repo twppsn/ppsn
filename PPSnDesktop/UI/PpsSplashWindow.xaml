@@ -262,8 +262,8 @@
 									<RowDefinition />
 								</Grid.RowDefinitions>
 								<TextBlock Grid.Row="0" Foreground="DarkGray" >
-									<Run Text="{Binding DisplayName,Mode=OneTime}" Foreground="Black" />
-									<Run Text="(" /><Run Text="{Binding Name,Mode=OneTime}" /><Run Text=")" />
+									<Run Text="{Binding Name,Mode=OneTime}" Foreground="Black" />
+									<Run Text="(" /><Run Text="{Binding DisplayName,Mode=OneTime}" /><Run Text=")" />
 								</TextBlock>
 								<TextBlock Grid.Row="1" Text="{Binding Uri,Mode=OneTime}" />
 							</Grid>
@@ -309,7 +309,7 @@
 				
 				<StackPanel Grid.Row="6" Orientation="Horizontal" Height="31" HorizontalAlignment="Right" TextElement.FontSize="14">
 					<ui:PpsButton Content="Anlegen"
-								   Command="{x:Static ApplicationCommands.Save}"
+								   Command="{x:Static ApplicationCommands.Open}"
 								   Width="110" />
 					<ui:PpsButton Content="Abbrechen"
 								   Command="{x:Static ApplicationCommands.Close}"

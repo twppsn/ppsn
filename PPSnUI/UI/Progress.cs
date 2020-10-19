@@ -46,6 +46,7 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsUI ------------------------------------------------------------
 
+	/// <summary>Helper for PpsUI interfaces.</summary>
 	public static partial class PpsUI
 	{
 		#region -- class PpsDummyProgress ---------------------------------------------

@@ -21,7 +21,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Shell.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Shell.Lua.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Threading.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)UI\Application.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)UI\Logging.cs" />
   </ItemGroup>
 </Project>

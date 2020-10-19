@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Xml;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
@@ -45,7 +46,7 @@ namespace TecWare.PPSn.UI
 		public PpsGenericMaskWindowPane(IPpsWindowPaneHost paneHost)
 			: base(paneHost)
 		{
-			idleActionToken = Shell.AddIdleAction(
+			idleActionToken = paneHost.GetService<IPpsIdleService>(true).AddIdleFunction(
 				elapsed =>
 				{
 					if (elapsed > 3000)
@@ -65,7 +66,7 @@ namespace TecWare.PPSn.UI
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
-				Shell.RemoveIdleAction(idleActionToken);
+				PaneHost.GetService<IPpsIdleService>(true).Remove(idleActionToken);
 			base.Dispose(disposing);
 		} // proc Dispose
 

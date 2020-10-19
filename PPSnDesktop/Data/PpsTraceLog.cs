@@ -314,7 +314,7 @@ namespace TecWare.PPSn.Data
 
 			Trace.Listeners.Add(listener = new PpsTraceListener(this));
 
-			environment.AddIdleAction(this);
+			// environment.AddIdleAction(this);
 		} // ctor
 
 		/// <summary></summary>
@@ -335,7 +335,7 @@ namespace TecWare.PPSn.Data
 			Trace.Listeners.Remove(listener);
 			if (disposing)
 			{
-				environment.RemoveIdleAction(this);
+				// environment.RemoveIdleAction(this);
 				Clear();
 			}
 		} // proc Dispose
