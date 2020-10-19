@@ -98,7 +98,7 @@
 											 SnapsToDevicePixels="True"
 											 Foreground="{DynamicResource PPSnImageBrush}"
 											 Opacity=".75"/>
-						<TextBlock Text="{Binding SubTitle,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
+						<TextBlock Text="{Binding Title,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
 								   MaxWidth="164" VerticalAlignment="Center" Margin="32,0,6,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
 					</Grid>
 				</DataTemplate>
