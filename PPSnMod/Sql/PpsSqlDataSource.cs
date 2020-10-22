@@ -628,7 +628,9 @@ namespace TecWare.PPSn.Server.Sql
 				private static readonly string[,] translateTable = new string[,]
 				{
 					{ "MaxLength", "ColumnSize" },
-					{ "Nullable", "AllowDBNull" }
+					{ "Nullable", "AllowDBNull" },
+					{ "Precision", "NumericPrecision" },
+					{ "Scale", "NumericScale" }
 				};
 
 				private readonly SqlDataResultColumnDescription column;

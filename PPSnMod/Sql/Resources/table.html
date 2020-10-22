@@ -13,8 +13,8 @@ local tableInfo = GetTableDescription(table, true);
         <thead>
             <tr>
                 <th>Name</th>
-                <th>p</th>
                 <th>Type</th>
+                <th>p</th>
                 <th>Beschreibung</th>
             </tr>
         </thead>
@@ -22,8 +22,8 @@ local tableInfo = GetTableDescription(table, true);
             <%foreach c in tableInfo.Columns do%>
             <tr>
                 <td><%=c.Name%></td>
+                <td><%=GetColumnDataTypeName(c)%></td>
                 <td><%=c.IsPrimaryKey%></td>
-                <td><%=c.DataType%></td>
                 <td><%=c.Description%></td>
             </tr>
             <%end;%>

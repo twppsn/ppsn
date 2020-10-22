@@ -647,6 +647,8 @@ namespace TecWare.PPSn.Server
 			PublishItem(clientApplicationTypes = new DEList<PpsClientApplicationType>(this, "tw_ppsn_client_types", "Client types"));
 			PublishItem(clientApplicationInfos =  DEDictionary<string, PpsClientApplicationFile>.CreateSortedList(this, "tw_ppsn_client_infos", "Client applications", CreateListDescriptorFromType(typeof(PpsClientApplicationFile))));
 
+			PublishItem(new DEConfigItemPublicAction(refreshAppsAction) { DisplayName = "Refresh application sources." });
+
 			RegisterApplicationType("msi", TryGetMsiApplicationInfo);
 
 			InitUser();

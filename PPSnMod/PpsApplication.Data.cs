@@ -1745,7 +1745,7 @@ namespace TecWare.PPSn.Server
 
 		private void ExecuteSyncAction(IDEWebRequestScope r, LogMessageScopeProxy log, ref int openElements, XmlWriter xml, long globalLastSyncId, bool enforceCDC, Dictionary<PpsDataSource, PpsDataSynchronization> sessions, string tableExpression, long lastSyncId)
 		{
-			log.Write($"{tableExpression} last={lastSyncId}");
+			log.WriteLine($"{tableExpression} last={lastSyncId}");
 			using (log.Indent())
 			{
 				if (TryParseSyncInfo(tableExpression, out var dataSource, out var tableName, out var rowIdColumn))
