@@ -513,11 +513,20 @@ namespace TecWare.PPSn.UI
 				window.WindowState = WindowState.Maximized;
 		} // proc SetFullscreen
 
-		private static Window GetWindowFromOwner(DependencyObject owner)
+		/// <summary>Get the window from an DependencyObject</summary>
+		/// <param name="paneHost"></param>
+		/// <returns></returns>
+		public static Window GetWindowFromOwner(this IPpsWindowPaneHost paneHost)
+			=> GetWindowFromOwner(paneHost as DependencyObject);
+
+		/// <summary>Get the window from an DependencyObject</summary>
+		/// <param name="dependencyObject"></param>
+		/// <returns></returns>
+		public static Window GetWindowFromOwner(this DependencyObject dependencyObject)
 		{
-			return owner == null
+			return dependencyObject == null
 				? Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-				: Window.GetWindow(owner);
+				: Window.GetWindow(dependencyObject);
 		} // func GetWindowFromOwner
 
 		/// <summary>Helper to show a system dialog static.</summary>
