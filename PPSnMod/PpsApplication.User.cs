@@ -156,7 +156,9 @@ namespace TecWare.PPSn.Server
 							{
 								cur.Clear();
 								pooledConnections.RemoveAt(i);
-								Log.Info(msg);
+
+								if (application.IsDebug)
+									Log.Info(msg);
 							}
 							catch (Exception e)
 							{
@@ -181,7 +183,8 @@ namespace TecWare.PPSn.Server
 
 						pooledConnections.Add(new PooledConnection(handle));
 
-						Log.Info("New pooled connection: {0}", dataSource.Name);
+						if (application.IsDebug)
+							Log.Info("New pooled connection: {0}", dataSource.Name);
 						return handle;
 					}
 					else
