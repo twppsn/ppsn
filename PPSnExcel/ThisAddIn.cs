@@ -81,6 +81,9 @@ namespace PPSnExcel
 
 		private PpsEnvironment FindOrCreateEnvironment(PpsEnvironmentInfo info)
 		{
+			if (info == null)
+				throw new ArgumentNullException(nameof(info));
+
 			var env = GetEnvironmentFromInfo(info);
 			if (env == null)
 			{
@@ -112,42 +115,44 @@ namespace PPSnExcel
 			}
 		} // func AuthentificateEnvironment
 
-		public PpsEnvironment FindEnvironment(string name, Uri uri)
+		private PpsEnvironment FindEnvironmentIntern(string name, Uri uri)
 		{
-			return (PpsEnvironment)waitForm.Invoke(new Func<PpsEnvironment>(() =>
-		   {
-			   PpsEnvironment envByName = null;
-			   PpsEnvironmentInfo infoByName = null;
-			   PpsEnvironmentInfo infoByUri = null;
+			PpsEnvironment envByName = null;
+			PpsEnvironmentInfo infoByName = null;
+			PpsEnvironmentInfo infoByUri = null;
 
-			   foreach (var oe in openEnvironments)
-			   {
-				   if (oe.Info.Name == name)
-				   {
-					   envByName = oe;
-					   break;
-				   }
-			   }
+			foreach (var oe in openEnvironments)
+			{
+				if (oe.Info.Name == name)
+				{
+					envByName = oe;
+					break;
+				}
+			}
 
-			   if (envByName != null)
-				   return AuthentificateEnvironment(envByName);
+			if (envByName != null)
+				return AuthentificateEnvironment(envByName);
 
-			   foreach (var info in PpsEnvironmentInfo.GetLocalEnvironments())
-			   {
-				   if (info.Name == name)
-				   {
-					   infoByName = info;
-					   break;
-				   }
-				   else if (info.Uri == uri)
-				   {
-					   infoByUri = info;
-				   }
-			   }
+			foreach (var info in PpsEnvironmentInfo.GetLocalEnvironments())
+			{
+				if (info.Name == name)
+				{
+					infoByName = info;
+					break;
+				}
+				else if (info.Uri == uri)
+				{
+					infoByUri = info;
+				}
+			}
 
-			   return AuthentificateEnvironment(FindOrCreateEnvironment(infoByName ?? infoByUri)) ?? CurrentEnvironment;
-		   }));
-		} // func FindEnvironment
+			// check for unloaded environment
+			var envInfo = infoByName ?? infoByUri;
+			return AuthentificateEnvironment(envInfo != null ? FindOrCreateEnvironment(envInfo) :  CurrentEnvironment);
+		} // func FindEnvironmentIntern
+
+		public PpsEnvironment FindEnvironment(string name, Uri uri)
+			=> (PpsEnvironment)waitForm.Invoke(new Func<PpsEnvironment>(() => FindEnvironmentIntern(name, uri)));
 
 		public void ActivateEnvironment(PpsEnvironmentInfo info)
 		{

@@ -662,20 +662,6 @@ namespace PPSnExcel
 			return null;
 		} // func GetColumnExpressionFromXPath
 
-		public string GetXPathFromColumnExpression(string expression)
-		{
-			if (columns == null)
-			{
-				for (var i = 0; i < columns.Length; i++)
-				{
-					var col = columns[i];
-					if (String.Compare(col.SelectColumnExpression, expression, StringComparison.OrdinalIgnoreCase) == 0)
-						return col.ResultColumnName ?? throw new ArgumentNullException(nameof(PpsListColumnInfo.ResultColumnName), "Result is not set.");
-				}
-			}
-			return null;
-		} // func GetXPathFromColumnExpression
-
 		private PpsListColumnInfo GetColumnFromExpression(string expression)
 		{
 			if (columns != null)
@@ -1256,16 +1242,15 @@ namespace PPSnExcel
 
 			using (var result = await Task.Run(() => map.GetViewData(order, worksheet, syncContext)))
 			{
+				// create a default layout from the current layout
+				// this must be created add this place, because the change of the mapping will destroy all xpath-relations
+				var isColumnSetChanged = columns != null;
+				if (columns == null)
+					columns = GetListColumnInfo().ToArray();
+
 				// prepare data mapping
 				var isChanged = result.PrepareMapping(xlList.InnerObject);
-
-				// update layout
-				if (columns == null)
-				{
-					if ((refreshLayout & PpsXlRefreshList.Style) != PpsXlRefreshList.None)
-						RefreshLayoutOnly(result, currentColumns, ref showTotals);
-				}
-				else
+				if (isChanged || isColumnSetChanged)
 				{
 					var xlSort = xlList.Sort;
 
@@ -1277,6 +1262,11 @@ namespace PPSnExcel
 					}
 
 					RefreshLayout(result, columns, currentColumns, refreshLayout, xlSort, out showTotals);
+				}
+				else
+				{
+					if ((refreshLayout & PpsXlRefreshList.Style) != PpsXlRefreshList.None)
+						RefreshLayoutOnly(result, currentColumns, ref showTotals);
 				}
 
 				// import data

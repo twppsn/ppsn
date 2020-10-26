@@ -1201,6 +1201,12 @@ namespace TecWare.PPSn.Server
 			var productName = key;
 			var productVersion = new Version(0, 0, 0, 0);
 
+			// remove version add on
+			var p = key.LastIndexOf('.');
+			if (p > 0 && p < key.Length - 2 && Char.ToUpper(key[p + 1]) == 'V' && Int32.TryParse(key.Substring(p + 2), out _))
+				key = key.Substring(0, p);
+
+			// get extented attribtutes
 			using (var msi = new Database(fi.FullName, DatabaseOpenMode.ReadOnly))
 			{
 				using (var view = msi.OpenView("SELECT `Property`, `Value` FROM `Property` " +

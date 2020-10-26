@@ -38,10 +38,11 @@ namespace PPSnExcel
 			cmdExtended.Visible = Globals.ThisAddIn.Application.ShowDevTools;
 
 			// connection to the excel application
-			application.WorkbookActivate += wb => WorkbookStateChanged(wb, true);
-			application.WorkbookDeactivate += wb => WorkbookStateChanged(wb, false);
-			
-			application.SheetSelectionChange += (sh, target) => Refresh();
+			application.WorkbookActivate += wb => SelectionChanged(wb, true);
+			application.WorkbookDeactivate += wb => SelectionChanged(wb, false);
+			application.SheetActivate += sh=> SelectionChanged(sh, true);
+			application.SheetDeactivate += sh => SelectionChanged(sh, false);
+			application.SheetSelectionChange += (sh, target) => SelectionChanged(target, true);
 
 			Globals.ThisAddIn.CurrentEnvironmentChanged += (s, _e) => { RefreshUsername(); Refresh(); };
 
@@ -52,6 +53,8 @@ namespace PPSnExcel
 
 			isMenuLoaded = true;
 		} // event PpsMenu_Load
+
+		private void Application_SheetActivate(object Sh) => throw new NotImplementedException();
 
 		#endregion
 
@@ -178,10 +181,10 @@ namespace PPSnExcel
 			}
 		} // proc InsertTableCore
 
-		private void WorkbookStateChanged(Excel._Workbook wb, bool activate)
+		private void SelectionChanged(object sender, bool activate)
 		{
 			Refresh();
-		} // proc WorkbookStateChanged
+		} // proc SelectionChanged
 
 		private void cmdReport_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(InsertReport);
