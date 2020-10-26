@@ -410,6 +410,11 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		bool TryDemandToken(string securityToken);
 
+		/// <summary>Persists a property in the user table.</summary>
+		/// <param name="properties"></param>
+		/// <returns></returns>
+		Task UpdatePropertiesAsync(LuaTable properties);
+
 		/// <summary>UserId of the user in the main database.</summary>
 		long UserId { get; }
 		/// <summary>Name (display info) of the current user.</summary>

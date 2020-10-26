@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server
 {
@@ -30,7 +31,7 @@ namespace TecWare.PPSn.Server
 		public static IDataRow GetFirstRow(IEnumerable<IDataRow> rows)
 			=> rows.Select(c => c.ToMyData()).FirstOrDefault();
 
-		private LuaTable GetTableCore(IDataRow row)
+		private static LuaTable GetTableCore(IDataRow row)
 		{
 			var t = new LuaTable();
 			for (var i = 0; i < row.Columns.Count; i++)
@@ -43,20 +44,98 @@ namespace TecWare.PPSn.Server
 			return t;
 		} // func GetTableCore
 
+		private static LuaTable GetTableFromPathCore(LuaTable table, string tablePath, int offset, int count, bool writable)
+		{
+			var cur = table;
+			
+			var lastDot = offset - 1;
+			var endAt = offset + count  - 1;
+			while (offset <= endAt)
+			{
+				if (tablePath[offset] == '.')
+				{
+					var k = tablePath.Substring(lastDot + 1, offset - lastDot + 1);
+					if (cur[k] is LuaTable t)
+						cur = t;
+					else if (writable)
+						cur[k] = cur = new LuaTable();
+					else
+						return null;
+
+					lastDot = offset;
+				}
+
+				offset++;
+			}
+
+			return cur;
+		} // func GetTableFromPathCore
+
+		private static LuaTable GetTableFromPathCore(LuaTable table, string tablePath, bool writable)
+			=> String.IsNullOrEmpty(tablePath) ? table : GetTableFromPathCore(table, tablePath, 0, tablePath.Length, writable);
+
 		/// <summary>Copy the data row this data row to a lua-table</summary>
 		/// <param name="value"></param>
+		/// <param name="tablePath"></param>
+		/// <param name="writable"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public LuaTable GetTable(object value)
+		public static LuaTable GetTable(object value, string tablePath = null, bool writable = false)
 		{
-			if (value is IDataRow row)
-				return GetTableCore(row);
+			if (value is LuaTable t)
+				return GetTableFromPathCore(t, tablePath, writable);
+			else if (value is IDataRow row)
+				return GetTableFromPathCore(GetTableCore(row), tablePath, writable);
 			else if (value is IEnumerable<IDataRow> rows)
-				return GetTableCore(GetFirstRow(rows));
-			else if (value is LuaTable t)
-				return t;
+				return GetTableFromPathCore(GetTableCore(GetFirstRow(rows)), tablePath, writable);
 			else
 				throw new ArgumentException($"First argument must be a {nameof(IDataRow)} or {nameof(IEnumerable<IDataRow>)}", nameof(value));
 		} // func GetTable
+
+		/// <summary>Get a structured property.</summary>
+		/// <param name="table"></param>
+		/// <param name="propertyPath"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public static object GetTableProperty(LuaTable table, string propertyPath)
+		{
+			TryGetTableProperty(table, propertyPath, out var v);
+			return v;
+		} // func GetTableProperty
+
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <param name="propertyPath"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static bool TryGetTableProperty(LuaTable table, string propertyPath,out object value)
+		{
+			if (table == null)
+			{
+				value = null;
+				return false;
+			}
+
+			var p = propertyPath.LastIndexOf('.');
+			if (p == -1)
+			{
+				value = table.GetMemberValue(propertyPath);
+				return value != null;
+			}
+			else
+			{
+				var t = GetTableFromPathCore(table, propertyPath, 0, p, false);
+				if (t == null)
+				{
+					value = null;
+					return false;
+				}
+				else
+				{
+					value = t.GetMemberValue(propertyPath.Substring(p + 1));
+					return value != null;
+				}
+			}
+		} // func GetTableProperty
 	} // class PpsApplication
 }

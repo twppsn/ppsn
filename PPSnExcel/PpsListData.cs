@@ -1015,14 +1015,14 @@ namespace PPSnExcel
 				showTotals = true;
 		} // proc RefreshColumnStyleLayout
 
-		private void RefreshColumnDataLayout(IPpsViewResult result, string columnExpression, Excel.ListColumn targetColumn, bool styleUpdate, ref bool showTotals)
+		private bool RefreshColumnDataLayout(IPpsViewResult result, string columnExpression, Excel.ListColumn targetColumn, bool styleUpdate, ref bool showTotals)
 		{
 			var dataColumn = result.FindColumnFromExpression(columnExpression);
 			if (dataColumn == null)
 			{
 				if (targetColumn.XPath != null)
 					targetColumn.XPath.Clear(); // remove current binding
-				return;
+				return false;
 			}
 
 			var isXPathChanged = false;
@@ -1057,16 +1057,21 @@ namespace PPSnExcel
 			}
 			catch (COMException e) when (e.HResult == unchecked((int)0x800A03EC))
 			{
-				Mapping.Environment.Await(Mapping.Environment.ShowMessageAsync(String.Format("Spaltenzuordnung von '{0}' ist fehlgeschlagen.", dataColumn.Name)));
+				return false;
 			}
 
 			if (styleUpdate || isXPathChanged)
 				RefreshColumnStyleLayout(targetColumn, dataColumn, ref showTotals);
+
+			return true;
 		} // proc RefreshColumnDataLayout
 
 		// rewrite layout
 		private void RefreshLayout(IPpsViewResult result, IPpsTableColumn[] sourceColumns, PpsListColumnInfo[] currentColumns, PpsXlRefreshList refreshLayout, Excel.Sort xlSort, out bool showTotals)
 		{
+			var bindError = new StringBuilder("Spalten Zuordnung ist fehlgeschlagen:");
+			var xPathError = 0;
+			var xPathSet = 0;
 			var styleUpdate = (refreshLayout & PpsXlRefreshList.Style) != 0;
 
 			// import layout
@@ -1095,7 +1100,15 @@ namespace PPSnExcel
 
 				// check column content
 				if (sourceColumn.Type == PpsTableColumnType.Data)
-					RefreshColumnDataLayout(result, sourceColumn.Expression, targetColumn, styleUpdate, ref showTotals);
+				{
+					if (RefreshColumnDataLayout(result, sourceColumn.Expression, targetColumn, styleUpdate, ref showTotals))
+						xPathSet++;
+					else
+					{
+						bindError.AppendLine().Append($"- {sourceColumn.Expression} => {targetColumn.Name}");
+						xPathError++;
+					}
+				}
 
 				// update sort field
 				if (xlSort != null && sourceColumn.Ascending.HasValue)
@@ -1117,6 +1130,11 @@ namespace PPSnExcel
 					lastColumnIndex++;
 				}
 			}
+
+			if (xPathError > 0)
+				throw new ExcelException(bindError.ToString());
+			else if (xPathSet == 0)
+				throw new ExcelException("Es wurde keine Zuordnung getroffen.");
 		} // func RefreshLayout
 
 		private static void RefreshLayoutOnly(IPpsViewResult result, PpsListColumnInfo[] currentColumns, ref bool showTotals)

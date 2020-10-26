@@ -17,14 +17,12 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
-using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {

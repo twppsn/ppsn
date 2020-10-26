@@ -137,12 +137,14 @@ namespace TecWare.PPSn.Server
 	{
 		private readonly FileInfo fi;
 		private readonly Uri relativeUri;
+		private readonly string mimeType;
 		private DateTime lastWrite;
 
-		internal PpsClientApplicationSource(FileInfo fi, Uri relativeUri)
+		internal PpsClientApplicationSource(FileInfo fi, Uri relativeUri, string mimeType = null)
 		{
 			this.fi = fi ?? throw new ArgumentNullException(nameof(fi));
 			this.relativeUri = relativeUri ?? throw new ArgumentNullException(nameof(relativeUri));
+			this.mimeType = mimeType;
 
 			lastWrite = fi.LastWriteTime;
 		} // ctor
@@ -167,6 +169,8 @@ namespace TecWare.PPSn.Server
 		public FileInfo Info => fi;
 		/// <summary>Uri relative to the ppsn-node</summary>
 		public Uri Uri => relativeUri;
+		/// <summary>Get defined mime type or <c>null</c>.</summary>
+		public string MimeType => mimeType;
 
 		string IPpsClientApplicationInfo.Name => relativeUri.ToString();
 		long IPpsClientApplicationInfo.VersionCode => 0;
@@ -231,6 +235,7 @@ namespace TecWare.PPSn.Server
 				return info != null;
 			} // func TryGet
 
+			[DEListTypeProperty("@type")]
 			public string Type => type;
 		} // class PpsClientApplicationType
 
@@ -645,7 +650,7 @@ namespace TecWare.PPSn.Server
 
 			PublishItem(seenClients = new DEList<PpsSeenClient>(this, "tw_ppsn_clients", "Last seen clients"));
 			PublishItem(clientApplicationTypes = new DEList<PpsClientApplicationType>(this, "tw_ppsn_client_types", "Client types"));
-			PublishItem(clientApplicationInfos =  DEDictionary<string, PpsClientApplicationFile>.CreateSortedList(this, "tw_ppsn_client_infos", "Client applications", CreateListDescriptorFromType(typeof(PpsClientApplicationFile))));
+			PublishItem(clientApplicationInfos =  DEDictionary<string, PpsClientApplicationFile>.CreateSortedList(this, "tw_ppsn_client_infos", "Client applications"));
 
 			PublishItem(new DEConfigItemPublicAction(refreshAppsAction) { DisplayName = "Refresh application sources." });
 
@@ -714,7 +719,9 @@ namespace TecWare.PPSn.Server
 
 			// start application info
 			ReadSeenClients();
-			StartRefreshApplications(false);
+
+			// wait for configuration
+			Server.Queue.RegisterCommand(() => StartRefreshApplications(false), 4000);
 		} // proc OnEndReadConfiguration
 
 		/// <summary></summary>
@@ -740,6 +747,10 @@ namespace TecWare.PPSn.Server
 				base.Dispose(disposing);
 			}
 		} // proc Dispose
+
+		/// <inherited />
+		protected override bool IsMemberTableMethod(string key)
+			=> key == ExtendLoginMethods || base.IsMemberTableMethod(key);
 
 		#endregion
 
@@ -1438,7 +1449,13 @@ namespace TecWare.PPSn.Server
 										foreach (var fiLink in ParseExternalLinks(fi))
 										{
 											if (fiLink.Exists)
-												AddApplicationInfoFromSource(log, new PpsClientApplicationSource(fiLink, CreateRelativePath(relativeUriPath, path.FullName, fi, fiLink.Name)));
+											{
+												AddApplicationInfoFromSource(log, new PpsClientApplicationSource(
+													fiLink,
+													CreateRelativePath(relativeUriPath, path.FullName, fi, fiLink.Name),
+													mimeType: fileWorker.GetFileContentType(fiLink.Name)
+												));
+											}
 											else
 												log.SetType(LogMsgType.Warning).WriteLine("{0}: could not found.", fiLink.FullName);
 										}
@@ -2008,7 +2025,7 @@ namespace TecWare.PPSn.Server
 			return x;
 		} // func GetMimeTypesInfo
 
-		private bool WriteApplicationOption(XmlWriter xml, string n, object value, bool writeEmptyValue)
+		private static bool WriteTableOption(XmlWriter xml, string n, object value, bool writeEmptyValue)
 		{
 			int GetStringType(string v)
 			{
@@ -2039,7 +2056,7 @@ namespace TecWare.PPSn.Server
 				if (t.Members.Count > 0 || t.ArrayList.Count > 0)
 				{
 					xml.WriteStartElement(n);
-					WriteApplicationOptions(xml, t);
+					WriteTableOptions(xml, t);
 					xml.WriteEndElement();
 				}
 			}
@@ -2075,23 +2092,23 @@ namespace TecWare.PPSn.Server
 			}
 
 			return true;
-		} // proc WriteApplicationOption
+		} // proc WriteTableOption
 
-		private void WriteApplicationOptions(XmlWriter xml, LuaTable options)
+		private static void WriteTableOptions(XmlWriter xml, LuaTable options)
 		{
 			// write key/value pairs
 			foreach (var kv in options.Members)
-				WriteApplicationOption(xml, kv.Key, kv.Value, true);
+				WriteTableOption(xml, kv.Key, kv.Value, true);
 
 			// index value 0-10, will be all checked
 			var i = 0;
 			while (true)
 			{
-				if (!WriteApplicationOption(xml, "i" + i.ToString(), options[i], false) && i > 10)
+				if (!WriteTableOption(xml, "i" + i.ToString(), options[i], false) && i > 10)
 					break;
 				i++;
 			}
-		} // proc WriteApplicationOptions
+		} // proc WriteTableOptions
 
 		private void WriteApplicationInfo(IDEWebRequestScope r, string applicationName, bool returnAll)
 		{
@@ -2139,13 +2156,41 @@ namespace TecWare.PPSn.Server
 
 					// add options
 					xml.WriteStartElement("options");
-					WriteApplicationOptions(xml, options);
+					WriteTableOptions(xml, options);
 					xml.WriteEndElement();
 
 					xml.WriteEndElement();
 				}
 			}
 		} // func WriteApplicationInfo
+
+		private void WriteUserInfo(IDEWebRequestScope r, LuaTable userOptions)
+		{
+			using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Http.DefaultEncoding, -1L), Procs.XmlWriterSettings))
+			{
+				xml.WriteStartElement("user");
+
+				// header information
+				foreach(var key in PrivateUserData.WellKnownUserOptionKeys)
+				{
+					var v = userOptions.GetMemberValue(key, rawGet: false);
+					if (v != null)
+						xml.WriteAttributeString(key, v.ChangeType<string>());
+				}
+
+				// write additional attribues, ignore single value items, only tables are emitted
+				foreach (var kv in userOptions.Members)
+				{
+					if (kv.Value is LuaTable t)
+					{
+						xml.WriteStartElement(kv.Key);
+						WriteTableOptions(xml, t);
+						xml.WriteEndElement();
+					}
+				}
+				xml.WriteEndElement();
+			}
+		} // proc WriteUserInfo
 
 		private async Task WriteInfoPageAsync(IDEWebRequestScope r)
 		{
@@ -2169,7 +2214,7 @@ namespace TecWare.PPSn.Server
 
 					// ignore cache!
 					using (var src = await Task.Run(() => fi.OpenRead()))
-						await r.WriteStreamAsync(src, r.Http.GetContentType(fi.Extension));
+						await r.WriteStreamAsync(src,  source.MimeType ?? r.Http.GetContentType(fi.Extension) ?? MimeTypes.Application.OctetStream);
 					return true;
 				}
 
@@ -2197,7 +2242,7 @@ namespace TecWare.PPSn.Server
 					r.DemandToken(SecurityUser);
 					
 					var ctx = r.GetUser<IPpsPrivateDataContext>();
-					await Task.Run(() => r.WriteObject(GetLoginData(ctx)));
+					await Task.Run(() => WriteUserInfo(r, GetLoginData(ctx)));
 					return true;
 				case "geometries.xml":
 					await WriteXmlGeometriesAsync(r);

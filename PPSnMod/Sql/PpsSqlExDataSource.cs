@@ -41,7 +41,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary></summary>
 		private sealed class SqlDataTransaction : PpsMsSqlDataTransaction
 		{
-			#region -- Ctor/Dtor --------------------------------------------------------
+			#region -- Ctor/Dtor ------------------------------------------------------
 
 			public SqlDataTransaction(PpsSqlDataSource dataSource, IPpsConnectionHandle connectionHandle)
 				: base(dataSource, connectionHandle)
@@ -357,6 +357,33 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
+			#region -- UpdateUserCfg --------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> UpdateUserCfg(object _args, PpsDataTransactionExecuteBehavior behavior)
+			{
+				// function to update user configuration
+				// UpdateUserCfg(long Id oder long Cfg)
+
+				var args = (LuaTable)_args;
+				var userId = args.GetOptionalValue("Id", -1L);
+				var cfgTable = args.GetOptionalValue("Cfg", new LuaTable());
+
+				if (userId < 0)
+					throw new ArgumentException("Invalid arguments.", "userId");
+
+				using (var cmd = CreateCommand(CommandType.Text, false))
+				{
+					cmd.CommandText = "UPDATE dbo.[User] SET [Cfg] = @Cfg WHERE Id = @Id";
+					cmd.Parameters.Add("@Id", SqlDbType.BigInt).Value = userId;
+					cmd.Parameters.Add("@Cfg", SqlDbType.NVarChar).Value = LuaTable.ToLson(cfgTable, prettyFormatting: false);
+					cmd.ExecuteNonQuery();
+				}
+
+				yield break;
+			} // func UpdateUserCfg
+
+			#endregion
+
 			#region -- PrepareCore ----------------------------------------------------
 
 			protected override PpsDataCommand PrepareCore(LuaTable parameter, LuaTable firstArgs)
@@ -364,10 +391,15 @@ namespace TecWare.PPSn.Server.Sql
 				string name;
 				if ((name = (string)(parameter["execute"] ?? parameter["exec"])) != null)
 				{
-					if (name == "sys.UpdateRevisionData")
-						return new PpsInvokeDataCommand(UpdateRevisionData);
-					else if (name == "sys.GetRevisionData")
-						return new PpsInvokeDataCommand(GetRevisionData);
+					switch (name)
+					{
+						case "sys.UpdateRevisionData":
+							return new PpsInvokeDataCommand(UpdateRevisionData);
+						case "sys.GetRevisionData":
+							return new PpsInvokeDataCommand(GetRevisionData);
+						case "sys.UpdateUserCfg":
+							return new PpsInvokeDataCommand(UpdateUserCfg);
+					}
 				}
 				return base.PrepareCore(parameter, firstArgs);
 			} // func PrepareCore

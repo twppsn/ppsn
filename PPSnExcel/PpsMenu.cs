@@ -40,7 +40,7 @@ namespace PPSnExcel
 			// connection to the excel application
 			application.WorkbookActivate += wb => WorkbookStateChanged(wb, true);
 			application.WorkbookDeactivate += wb => WorkbookStateChanged(wb, false);
-
+			
 			application.SheetSelectionChange += (sh, target) => Refresh();
 
 			Globals.ThisAddIn.CurrentEnvironmentChanged += (s, _e) => { RefreshUsername(); Refresh(); };
@@ -63,6 +63,10 @@ namespace PPSnExcel
 			try
 			{
 				action();
+			}
+			catch(ExcelException e)
+			{
+				Globals.ThisAddIn.ShowMessage(e.Message, MessageBoxIcon.Information, MessageBoxButtons.OK);
 			}
 			catch (Exception e)
 			{

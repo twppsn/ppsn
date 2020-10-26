@@ -1265,7 +1265,7 @@ namespace TecWare.PPSn.Server
 		{
 			if (viewAliases.TryGetValue(aliasName, out var desc))
 			{
-				if (desc.Name != view.Name)
+				if (desc != null && desc.Name != view.Name)
 					viewAliases[aliasName] = null; // multiple views!
 			}
 			else

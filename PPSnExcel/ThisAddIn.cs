@@ -61,7 +61,7 @@ namespace PPSnExcel
 		private void ThisAddIn_Startup(object sender, EventArgs e)
 		{
 			// create wait form
-			this.waitForm = new WaitForm(Application);
+			waitForm = new WaitForm(Application);
 			mainThreadId = Thread.CurrentThread.ManagedThreadId;
 			//Globals.Ribbons.PpsMenu.
 		} // ctor
@@ -214,17 +214,19 @@ namespace PPSnExcel
 			{
 				progress.Report("Aktualisiere Tabellen...");
 
+				// refresh list elements
 				switch (context)
 				{
 					case RefreshContext.ActiveWorkBook:
 						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook, replaceEnvironment);
 					case RefreshContext.ActiveWorkSheet:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet, replaceEnvironment);
+						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet, replaceEnvironment, Globals.ThisAddIn.Application.ActiveWorkbook);
 					default:
 						if (Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null))
 							return RefreshTableAsync(r.ListObject, replaceEnvironment, context == RefreshContext.ActiveListObjectLayout);
 						return Task.CompletedTask;
 				}
+
 			}
 		} // func RefreshTableAsync
 
@@ -233,14 +235,19 @@ namespace PPSnExcel
 			for (var i = 1; i <= workbook.Sheets.Count; i++)
 			{
 				if (workbook.Sheets[i] is Excel.Worksheet worksheet)
-					await RefreshTableAsync(worksheet, replaceEnvironment);
+					await RefreshTableAsync(worksheet, replaceEnvironment, null);
 			}
+
+			RefreshPivotCaches(workbook);
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Worksheet worksheet, PpsEnvironment replaceEnvironment)
+		private async Task RefreshTableAsync(Excel.Worksheet worksheet, PpsEnvironment replaceEnvironment, Excel.Workbook pivotCachesWorkbook)
 		{
 			for (var i = 1; i <= worksheet.ListObjects.Count; i++)
 				await RefreshTableAsync(worksheet.ListObjects[i], replaceEnvironment, false);
+
+			if (pivotCachesWorkbook != null)
+				RefreshPivotCaches(pivotCachesWorkbook);
 		} // func RefreshTableAsync
 
 		internal async Task RefreshTableAsync(Excel.ListObject _xlList, PpsEnvironment replaceEnvironment, bool refreshLayout)
@@ -259,9 +266,6 @@ namespace PPSnExcel
 					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
 				else
 				{
-					//if (refreshColumnLayout)
-					//	;
-
 					switch (xlList.SourceType)
 					{
 						case Excel.XlListObjectSourceType.xlSrcQuery:
@@ -278,11 +282,24 @@ namespace PPSnExcel
 			}
 		} // func RefreshTableAsync
 
+		private void RefreshPivotCaches(Excel.Workbook workbook)
+		{
+			var pivotCaches = workbook.PivotCaches();
+			for (var i = 1; i <= pivotCaches.Count; i++)
+			{
+				try
+				{
+					pivotCaches[i].Refresh();
+				}
+				catch (COMException) { }
+			}
+		} // proc RefreshPivotCaches
+
 		private static readonly DEAction xlsxTemplateAction = DEAction.Create("xlsxtmpl", "bi/", new DEActionParam("id", typeof(string)));
 
 		private static async Task<string> DownloadXlsxReportAsync(DEHttpClient http, string reportId)
 		{
-			// erzeuge temp datei
+			// create temp file
 			var fiTemp = new FileInfo(Path.Combine(Path.GetTempPath(), "ppsn", reportId));
 			if (!fiTemp.Directory.Exists)
 				fiTemp.Directory.Create();
