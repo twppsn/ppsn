@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -354,7 +355,14 @@ namespace TecWare.PPSn.Main
 		#region -- OpenPaneAsync ------------------------------------------------------
 
 		private PpsWindowPaneHostState GetDefaultPaneState(Type paneType)
-			=> paneType == typeof(PpsNavigatorPane) ? PpsWindowPaneHostState.Fixed : PpsWindowPaneHostState.Root;
+		{
+			// check for static IsFixed-Property
+			var pi = paneType.GetProperty("IsFixed", BindingFlags.Static | BindingFlags.GetProperty | BindingFlags.Public, null, typeof(bool), Array.Empty<Type>(), null);
+			if (pi != null && (bool)pi.GetValue(pi))
+				return PpsWindowPaneHostState.Fixed;
+
+			return PpsWindowPaneHostState.Root;
+		} // func GetDefaultPaneState
 
 		private async Task<IPpsWindowPane> LoadPaneInternAsync(Type paneType, LuaTable arguments)
 		{

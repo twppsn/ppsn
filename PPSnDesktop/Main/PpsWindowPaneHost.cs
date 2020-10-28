@@ -91,6 +91,7 @@ namespace TecWare.PPSn.Main
 		protected override async Task OnLoadPaneAsync(IPpsWindowPane pane, LuaTable arguments)
 		{
 			await base.OnLoadPaneAsync(pane, arguments);
+
 			// update focus, if it takes to long to load the pane
 			UpdateFocus(false);
 		} // proc OnLoadPaneAsync
