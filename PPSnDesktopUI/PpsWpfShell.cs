@@ -1030,26 +1030,6 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public abstract DataTemplate GetDataTemplate(object data, DependencyObject container);
 
-		/// <summary>Return the pane type from an pane type identifier.</summary>
-		/// <param name="paneType"></param>
-		/// <returns></returns>
-		public virtual Type GetPaneTypeFromString(string paneType)
-		{
-			switch (paneType)
-			{
-				case "generic":
-					return typeof(PpsGenericWpfWindowPane);
-				case "pdf":
-					return typeof(PpsPdfViewerPane);
-				case "picture":
-					return typeof(PpsPicturePane);
-				//case "markdown":
-				//	return typeof(PpsMarkdownPane);
-				default:
-					return Neo.IronLua.LuaType.GetType(paneType, lateAllowed: false).Type;
-			}
-		} // func GetPaneTypeFromString
-
 		#endregion
 
 		#region -- Lua-Helper ---------------------------------------------------------

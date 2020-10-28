@@ -196,7 +196,7 @@ namespace TecWare.PPSn.UI
 
 			if (ofd.ShowDialog() ?? false)
 			{
-				using (var bar = CurrentPane?.DisableUI()) // disable pane ui
+				using (var bar = this.CreateProgress()) // disable pane ui
 				{
 					foreach (var fileName in ofd.FileNames)
 					{
@@ -205,11 +205,11 @@ namespace TecWare.PPSn.UI
 							if (bar != null)
 								bar.Text = String.Format("Füge hinzu {0}...", Path.GetFileName(fileName));
 
-							await AttachmentsSource.AppendAsync(Environment, fileName);
+							//await AttachmentsSource.AppendAsync(Environment, fileName);
 						}
 						catch (Exception ex)
 						{
-							Environment.ShowException(ex, String.Format("Datei konnte nicht importiert werden.\n" + fileName));
+							//Environment.ShowException(ex, String.Format("Datei konnte nicht importiert werden.\n" + fileName));
 						}
 					}
 				}
@@ -218,15 +218,15 @@ namespace TecWare.PPSn.UI
 
 		private async Task AddFromClipboardAsync()
 		{
-			if (Environment.MsgBox("Bild aus Zwischenanlage anfügen?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes) != MessageBoxResult.Yes)
-				return;
+			//if (Environment.MsgBox("Bild aus Zwischenanlage anfügen?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes) != MessageBoxResult.Yes)
+			//	return;
 
 			// convert bitmap to png
 			var bmp = Clipboard.GetImage();
 			bmp.Freeze();
-
-			using (var bar = CurrentPane?.DisableUI("Füge Bild aus Zwischenablage ein..."))
-				await AddFromBitmapSourceAsync(bmp);
+			
+			//using (var bar = this.CreateProgress("Füge Bild aus Zwischenablage ein..."))
+			//	await AddFromBitmapSourceAsync(bmp);
 		} // proc AddFromClipboardAsync
 
 		private async Task AddFromCameraAsync()
@@ -234,7 +234,7 @@ namespace TecWare.PPSn.UI
 			var bitmap = StuffUI.TakePicture(this);
 			if (bitmap != null)
 			{
-				using (var bar = CurrentPane?.DisableUI("Füge Bild von Kamera..."))
+				using (var bar = this.CreateProgress(progressText: "Füge Bild von Kamera..."))
 					await AddFromBitmapSourceAsync((BitmapSource)bitmap);
 			}
 		} // proc AddFromCameraAsync
@@ -252,22 +252,19 @@ namespace TecWare.PPSn.UI
 				});
 
 				dst.Position = 0;
-				await AttachmentsSource.AppendAsync(Environment, dst, DateTime.Now.ToString("yyyy-MM-dd_HH:mm") + ".jpg", MimeTypes.Image.Jpeg);
+				//await AttachmentsSource.AppendAsync(Environment, dst, DateTime.Now.ToString("yyyy-MM-dd_HH:mm") + ".jpg", MimeTypes.Image.Jpeg);
 			}
 		} // proc AddFromBitmapSourceAsync
 
 		private async Task OpenAttachmentAsync(IPpsAttachmentItem item)
 		{
-			if (item.LinkedObject is PpsObject obj)
-				await obj.OpenPaneAsync(CurrentPane.PaneHost.PaneManager);
+			//if (item.LinkedObject is PpsObject obj)
+			//	await obj.OpenPaneAsync(CurrentPane.PaneHost.PaneManager);
 		} // func OpenAttachmentAsync
 
 		private void RemoveAttachment(IPpsAttachmentItem item) 
 			=> item.Remove();
-
-		private IPpsWindowPane CurrentPane => getCurrentPane.Value;
-		private PpsEnvironment Environment => (PpsEnvironment)CurrentPane?.PaneHost.PaneManager._Shell;
-
+				
 		private bool isReadOnly = false;
 
 		bool IPpsReadOnlyControl.IsReadOnly

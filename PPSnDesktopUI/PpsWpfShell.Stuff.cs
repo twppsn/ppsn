@@ -13,7 +13,6 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-
 using System;
 using System.ComponentModel;
 using System.Diagnostics;

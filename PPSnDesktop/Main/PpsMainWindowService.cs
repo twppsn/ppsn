@@ -129,8 +129,6 @@ namespace TecWare.PPSn.Main
 		private IEnumerable<IPpsWindowPane> GetAllWindowPanes()
 			=> from pm in PaneManagers from p in pm.Panes select p;
 
-		PpsShellWpf IPpsWindowPaneManager._Shell => null;
-
 		public bool ActivatePane(IPpsWindowPane pane)
 			=> pane?.PaneHost.PaneManager.ActivatePane(pane) ?? false;
 

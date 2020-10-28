@@ -162,8 +162,6 @@ namespace TecWare.PPSn.Controls
 		public IServiceContainer Services => this;
 		/// <summary>Current environment of the window.</summary>
 		public IPpsShell Shell => shell; 
-
-		public PpsShellWpf _Shell => null;
 	} // class PpsWindow
 
 	#endregion

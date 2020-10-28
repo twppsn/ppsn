@@ -203,7 +203,15 @@ namespace TecWare.PPSn
 			} // ctor
 
 			Task IPpsShellLoadNotify.OnAfterInitServicesAsync(IPpsShell shell)
-				=> Task.CompletedTask;
+			{
+				var paneRegister = shell.GetService<IPpsKnownWindowPanes>(true);
+
+				paneRegister.RegisterPaneType(typeof(PpsPicturePane), "picture", MimeTypes.Image.Png, MimeTypes.Image.Bmp, MimeTypes.Image.Jpeg);
+				paneRegister.RegisterPaneType(typeof(PpsPdfViewerPane), "pdf", MimeTypes.Application.Pdf);
+				paneRegister.RegisterPaneType(typeof(PpsMarkdownPane), "markdown", MimeTypes.Text.Markdown);
+
+				return Task.CompletedTask;
+			} // func OnAfterInitServicesAsync
 
 			private static async Task<Stream> OpenFileSafe(PpsSplashWindow splashWindow, FileInfo fileInfo)
 			{

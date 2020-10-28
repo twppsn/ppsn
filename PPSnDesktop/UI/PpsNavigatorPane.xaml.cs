@@ -158,353 +158,353 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsNavigatorDataModel --------------------------------------------
 
-	internal sealed class PpsNavigatorDataModel : LuaShellTable
-	{
-		private const int actionCommandGroup = 450;
-		private const int actionItemCommandGroup = 451;
+	//internal sealed class PpsNavigatorDataModel : LuaShellTable
+	//{
+	//	private const int actionCommandGroup = 450;
+	//	private const int actionItemCommandGroup = 451;
 
-		#region -- class CommandScope -------------------------------------------------
+	//	#region -- class CommandScope -------------------------------------------------
 
-		private sealed class CommandScope
-		{
-			private CommandScope() { }
+	//	private sealed class CommandScope
+	//	{
+	//		private CommandScope() { }
 
-			public static object List { get; } = new CommandScope();
-			public static object Item { get; } = new CommandScope();
-		} // class CommandScope
+	//		public static object List { get; } = new CommandScope();
+	//		public static object Item { get; } = new CommandScope();
+	//	} // class CommandScope
 
-		#endregion
+	//	#endregion
 
-		#region -- class RunActionCommand ---------------------------------------------
+	//	#region -- class RunActionCommand ---------------------------------------------
 
-		private class RunActionCommand : ICommand
-		{
-			event EventHandler ICommand.CanExecuteChanged { add { } remove { } }
+	//	private class RunActionCommand : ICommand
+	//	{
+	//		event EventHandler ICommand.CanExecuteChanged { add { } remove { } }
 
-			private readonly PpsActionDefinition action;
-			private readonly PpsNavigatorDataModel model;
+	//		private readonly PpsActionDefinition action;
+	//		private readonly PpsNavigatorDataModel model;
 
-			public RunActionCommand(PpsNavigatorDataModel model, PpsActionDefinition action)
-			{
-				this.model = model ?? throw new ArgumentNullException(nameof(model));
-				this.action = action ?? throw new ArgumentNullException(nameof(action));
-			} // ctor
+	//		public RunActionCommand(PpsNavigatorDataModel model, PpsActionDefinition action)
+	//		{
+	//			this.model = model ?? throw new ArgumentNullException(nameof(model));
+	//			this.action = action ?? throw new ArgumentNullException(nameof(action));
+	//		} // ctor
 
-			public void Execute(object parameter)
-				=> action.Execute(model);
+	//		public void Execute(object parameter)
+	//			=> action.Execute(model);
 
-			bool ICommand.CanExecute(object parameter)
-				=> IsTrue(action.CheckCondition(model));
+	//		bool ICommand.CanExecute(object parameter)
+	//			=> IsTrue(action.CheckCondition(model));
 
-			public PpsActionDefinition Action => action;
+	//		public PpsActionDefinition Action => action;
 
-			public static bool IsTrue(object result)
-				=> result is bool l ? l : true;
-		} // class RunActionCommand
+	//		public static bool IsTrue(object result)
+	//			=> result is bool l ? l : true;
+	//	} // class RunActionCommand
 
-		#endregion
+	//	#endregion
 
-		private readonly PpsNavigatorPane pane;
+	//	private readonly PpsNavigatorPane pane;
 
-		private readonly PpsUICommandCollection globalCommands;
-		private readonly PpsUICommandCollection listCommands;
-		private readonly PpsUICommandCollection itemCommands;
+	//	private readonly PpsUICommandCollection globalCommands;
+	//	private readonly PpsUICommandCollection listCommands;
+	//	private readonly PpsUICommandCollection itemCommands;
 
-		private readonly CollectionViewSource viewSource;
+	//	private readonly CollectionViewSource viewSource;
 
-		private CollectionViewSource itemsSource;
-		private PpsViewDefinition currentView = null;
+	//	private CollectionViewSource itemsSource;
+	//	private PpsViewDefinition currentView = null;
 
-		#region -- Ctor/Dtor ----------------------------------------------------------
+	//	#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsNavigatorDataModel(PpsNavigatorPane pane, PpsUICommandCollection globalCommands, PpsUICommandCollection listCommands, PpsUICommandCollection itemCommands)
-			: base(pane.PaneHost.PaneManager._Shell)
-		{
-			this.pane = pane ?? throw new ArgumentNullException(nameof(pane));
+	//	public PpsNavigatorDataModel(PpsNavigatorPane pane, PpsUICommandCollection globalCommands, PpsUICommandCollection listCommands, PpsUICommandCollection itemCommands)
+	//		: base(pane.PaneHost.PaneManager._Shell)
+	//	{
+	//		this.pane = pane ?? throw new ArgumentNullException(nameof(pane));
 
-			this.globalCommands = globalCommands ?? throw new ArgumentNullException(nameof(globalCommands));
-			this.listCommands = listCommands ?? throw new ArgumentNullException(nameof(listCommands));
-			this.itemCommands = itemCommands ?? throw new ArgumentNullException(nameof(itemCommands));
+	//		this.globalCommands = globalCommands ?? throw new ArgumentNullException(nameof(globalCommands));
+	//		this.listCommands = listCommands ?? throw new ArgumentNullException(nameof(listCommands));
+	//		this.itemCommands = itemCommands ?? throw new ArgumentNullException(nameof(itemCommands));
 
-			// view source
-			viewSource = new CollectionViewSource { Source = Environment.Views };
-			viewSource.Filter += FilterView;
-			viewSource.SortDescriptions.Add(new SortDescription(nameof(PpsViewDefinition.DisplayName), ListSortDirection.Ascending));
-			viewSource.View.MoveCurrentTo(null);
+	//		// view source
+	//		viewSource = new CollectionViewSource { Source = Environment.Views };
+	//		viewSource.Filter += FilterView;
+	//		viewSource.SortDescriptions.Add(new SortDescription(nameof(PpsViewDefinition.DisplayName), ListSortDirection.Ascending));
+	//		viewSource.View.MoveCurrentTo(null);
 
-			// actions
-			Environment.Actions.CollectionChanged += Actions_CollectionChanged;
-			RefreshItems();
-			RefreshActions();
-		} // ctor
+	//		// actions
+	//		Environment.Actions.CollectionChanged += Actions_CollectionChanged;
+	//		RefreshItems();
+	//		RefreshActions();
+	//	} // ctor
 
-		private void FilterView(object sender, FilterEventArgs e)
-			=> e.Accepted = e.Item is PpsViewDefinition view ? view.IsVisible : false;
+	//	private void FilterView(object sender, FilterEventArgs e)
+	//		=> e.Accepted = e.Item is PpsViewDefinition view ? view.IsVisible : false;
 
-		#endregion
+	//	#endregion
 
-		#region -- Actions ------------------------------------------------------------
+	//	#region -- Actions ------------------------------------------------------------
 
-		private void Actions_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-		{
-			switch (e.Action)
-			{
-				case NotifyCollectionChangedAction.Reset:
-				case NotifyCollectionChangedAction.Add:
-				case NotifyCollectionChangedAction.Remove:
-					RefreshActions();
-					break;
-			}
-		} // event Actions_CollectionChanged
+	//	private void Actions_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+	//	{
+	//		switch (e.Action)
+	//		{
+	//			case NotifyCollectionChangedAction.Reset:
+	//			case NotifyCollectionChangedAction.Add:
+	//			case NotifyCollectionChangedAction.Remove:
+	//				RefreshActions();
+	//				break;
+	//		}
+	//	} // event Actions_CollectionChanged
 
-		private static bool IsActionGroup(PpsUICommandButton cmd)
-			=> cmd.Order.Group == actionCommandGroup || cmd.Order.Group == actionItemCommandGroup;
+	//	private static bool IsActionGroup(PpsUICommandButton cmd)
+	//		=> cmd.Order.Group == actionCommandGroup || cmd.Order.Group == actionItemCommandGroup;
 
-		private static IEnumerable<PpsUICommandButton> GetActionCommands(IEnumerable<PpsUICommand> commands)
-			=> commands.OfType<PpsUICommandButton>().Where(IsActionGroup);
+	//	private static IEnumerable<PpsUICommandButton> GetActionCommands(IEnumerable<PpsUICommand> commands)
+	//		=> commands.OfType<PpsUICommandButton>().Where(IsActionGroup);
 
-		private void AppendCommand(PpsActionDefinition actionDefinition, PpsUICommandCollection commands, List<PpsUICommandButton> removeCommands, int commandGroup)
-		{
-			var idx = removeCommands.FindIndex(c => c.Command is RunActionCommand r ? r.Action == actionDefinition : false);
-			if (idx == -1)
-			{
-				var btn = commands.AddButton(
-					$"{commandGroup};{actionDefinition.Priority}",
-					actionDefinition.DisplayImage,
-					new RunActionCommand(this, actionDefinition),
-					actionDefinition.DisplayName,
-					actionDefinition.Description
-				);
-			}
-			else
-			{
-				var btn = removeCommands[idx];
+	//	private void AppendCommand(PpsActionDefinition actionDefinition, PpsUICommandCollection commands, List<PpsUICommandButton> removeCommands, int commandGroup)
+	//	{
+	//		var idx = removeCommands.FindIndex(c => c.Command is RunActionCommand r ? r.Action == actionDefinition : false);
+	//		if (idx == -1)
+	//		{
+	//			var btn = commands.AddButton(
+	//				$"{commandGroup};{actionDefinition.Priority}",
+	//				actionDefinition.DisplayImage,
+	//				new RunActionCommand(this, actionDefinition),
+	//				actionDefinition.DisplayName,
+	//				actionDefinition.Description
+	//			);
+	//		}
+	//		else
+	//		{
+	//			var btn = removeCommands[idx];
 
-				btn.Image = actionDefinition.DisplayImage;
-				btn.DisplayText = actionDefinition.DisplayName;
-				btn.Description = actionDefinition.Description;
+	//			btn.Image = actionDefinition.DisplayImage;
+	//			btn.DisplayText = actionDefinition.DisplayName;
+	//			btn.Description = actionDefinition.Description;
 
-				removeCommands.RemoveAt(idx);
-			}
-		} // proc AppendCommand
+	//			removeCommands.RemoveAt(idx);
+	//		}
+	//	} // proc AppendCommand
 
-		private static void RemoveCommands(PpsUICommandCollection commands, List<PpsUICommandButton> removeCommands)
-		{
-			foreach (var c in removeCommands)
-				commands.Remove(c);
-		} // proc RemoveCommands
+	//	private static void RemoveCommands(PpsUICommandCollection commands, List<PpsUICommandButton> removeCommands)
+	//	{
+	//		foreach (var c in removeCommands)
+	//			commands.Remove(c);
+	//	} // proc RemoveCommands
 
-		private void RefreshActions()
-		{
-			using (CollectionViewSource.GetDefaultView(globalCommands).DeferRefresh())
-			using (CollectionViewSource.GetDefaultView(listCommands).DeferRefresh())
-			using (CollectionViewSource.GetDefaultView(itemCommands).DeferRefresh())
-			{
-				// collect all currently attached commands
-				var removeGlobalCommands = new List<PpsUICommandButton>(GetActionCommands(globalCommands));
-				var removeListCommands = new List<PpsUICommandButton>(GetActionCommands(listCommands));
-				var removeItemCommands = new List<PpsUICommandButton>(GetActionCommands(itemCommands));
+	//	private void RefreshActions()
+	//	{
+	//		using (CollectionViewSource.GetDefaultView(globalCommands).DeferRefresh())
+	//		using (CollectionViewSource.GetDefaultView(listCommands).DeferRefresh())
+	//		using (CollectionViewSource.GetDefaultView(itemCommands).DeferRefresh())
+	//		{
+	//			// collect all currently attached commands
+	//			var removeGlobalCommands = new List<PpsUICommandButton>(GetActionCommands(globalCommands));
+	//			var removeListCommands = new List<PpsUICommandButton>(GetActionCommands(listCommands));
+	//			var removeItemCommands = new List<PpsUICommandButton>(GetActionCommands(itemCommands));
 
-				// enumerate all loaded actions
-				foreach (var a in Environment.Actions.OfType<PpsActionDefinition>().Where(c => !c.IsHidden))
-				{
-					var scope = a.CheckCondition(this); // check the current scope
-					if (scope is true) // global command
-						AppendCommand(a, globalCommands, removeGlobalCommands, actionCommandGroup);
-					else if (scope == CommandScope.List) // list command
-						AppendCommand(a, listCommands, removeListCommands, actionCommandGroup);
-					else if (scope == CommandScope.Item) // item command
-						AppendCommand(a, itemCommands, removeItemCommands, actionItemCommandGroup);
-				}
+	//			// enumerate all loaded actions
+	//			foreach (var a in Environment.Actions.OfType<PpsActionDefinition>().Where(c => !c.IsHidden))
+	//			{
+	//				var scope = a.CheckCondition(this); // check the current scope
+	//				if (scope is true) // global command
+	//					AppendCommand(a, globalCommands, removeGlobalCommands, actionCommandGroup);
+	//				else if (scope == CommandScope.List) // list command
+	//					AppendCommand(a, listCommands, removeListCommands, actionCommandGroup);
+	//				else if (scope == CommandScope.Item) // item command
+	//					AppendCommand(a, itemCommands, removeItemCommands, actionItemCommandGroup);
+	//			}
 
-				RemoveCommands(globalCommands, removeGlobalCommands);
-				RemoveCommands(listCommands, removeListCommands);
-				RemoveCommands(itemCommands, removeItemCommands);
-			}
-		} // proc RefreshActions
+	//			RemoveCommands(globalCommands, removeGlobalCommands);
+	//			RemoveCommands(listCommands, removeListCommands);
+	//			RemoveCommands(itemCommands, removeItemCommands);
+	//		}
+	//	} // proc RefreshActions
 
-		#endregion
+	//	#endregion
 
-		private void RefreshItems()
-		{
-			var viewId = CurrentView?.ViewId ?? "local.objects";
-			var baseFilterExpr = CurrentView?.ViewFilterExpression ?? PpsDataFilterExpression.True;
+	//	private void RefreshItems()
+	//	{
+	//		var viewId = CurrentView?.ViewId ?? "local.objects";
+	//		var baseFilterExpr = CurrentView?.ViewFilterExpression ?? PpsDataFilterExpression.True;
 
-			if (itemsSource?.View != null)
-				itemsSource.View.CurrentChanged -= CurrentItemChanged;
+	//		if (itemsSource?.View != null)
+	//			itemsSource.View.CurrentChanged -= CurrentItemChanged;
 
-			itemsSource = new CollectionViewSource
-			{
-				// Source = Environment.MasterData.GetTable("Objects") 
-				Source = Environment.GetViewData(new PpsDataQuery(viewId) { Filter = baseFilterExpr })
-			};
+	//		itemsSource = new CollectionViewSource
+	//		{
+	//			// Source = Environment.MasterData.GetTable("Objects") 
+	//			Source = Environment.GetViewData(new PpsDataQuery(viewId) { Filter = baseFilterExpr })
+	//		};
 
-			itemsSource.View.CurrentChanged += CurrentItemChanged;
+	//		itemsSource.View.CurrentChanged += CurrentItemChanged;
 
-			OnPropertyChanged(nameof(ItemsView));
-		} // proc RefreshItems
+	//		OnPropertyChanged(nameof(ItemsView));
+	//	} // proc RefreshItems
 
-		[
-		LuaMember(nameof(ExecuteAction)),
-		Description("Executes the action by name.")
-		]
-		public LuaResult ExecuteAction(string actionName)
-		{
-			var (isExecuted, result) = ExecuteMarcoAsync(actionName).AwaitTask();
-			return new LuaResult(isExecuted, new LuaResult(result));
-		} // func ExecuteAction
+	//	[
+	//	LuaMember(nameof(ExecuteAction)),
+	//	Description("Executes the action by name.")
+	//	]
+	//	public LuaResult ExecuteAction(string actionName)
+	//	{
+	//		var (isExecuted, result) = ExecuteMarcoAsync(actionName).AwaitTask();
+	//		return new LuaResult(isExecuted, new LuaResult(result));
+	//	} // func ExecuteAction
 
-		public Task<(bool, object)> ExecuteMarcoAsync(string actionName)
-		{
-			var actionDefinition = Environment.Actions[actionName, false];
-			if (actionDefinition == null)
-				return Task.FromResult((false, (object)String.Format("Befehl {0} nicht gefunden.", actionName)));
+	//	public Task<(bool, object)> ExecuteMarcoAsync(string actionName)
+	//	{
+	//		var actionDefinition = Environment.Actions[actionName, false];
+	//		if (actionDefinition == null)
+	//			return Task.FromResult((false, (object)String.Format("Befehl {0} nicht gefunden.", actionName)));
 
-			if (!RunActionCommand.IsTrue(actionDefinition.CheckCondition(this)))
-				return Task.FromResult((false, (object)String.Format("Befehl {0} ist nicht aktiv.", actionDefinition.DisplayName)));
+	//		if (!RunActionCommand.IsTrue(actionDefinition.CheckCondition(this)))
+	//			return Task.FromResult((false, (object)String.Format("Befehl {0} ist nicht aktiv.", actionDefinition.DisplayName)));
 
-			return Task.FromResult((true, (object)actionDefinition.Execute(this)));
-		} // func ExecuteMarcoAsync
+	//		return Task.FromResult((true, (object)actionDefinition.Execute(this)));
+	//	} // func ExecuteMarcoAsync
 
-		public async Task<LuaResult> ExecuteCodeAsync(string code)
-		{
-			// replace equal with message box
-			if (code.StartsWith("="))
-				code = "return " + code.Substring(1);
+	//	public async Task<LuaResult> ExecuteCodeAsync(string code)
+	//	{
+	//		// replace equal with message box
+	//		if (code.StartsWith("="))
+	//			code = "return " + code.Substring(1);
 
-			// compile code
-			var chunk = await Environment.CompileAsync(code, "searchbox.lua", true);
-			return chunk.Run(this);
-		} // proc ExecuteCode
+	//		// compile code
+	//		var chunk = await Environment.CompileAsync(code, "searchbox.lua", true);
+	//		return chunk.Run(this);
+	//	} // proc ExecuteCode
 
-		private void CurrentItemChanged(object sender, EventArgs e)
-		{
-			RefreshActions();
-			OnPropertyChanged(nameof(CurrentItem));
-		} // proc CurrentItemChanged
+	//	private void CurrentItemChanged(object sender, EventArgs e)
+	//	{
+	//		RefreshActions();
+	//		OnPropertyChanged(nameof(CurrentItem));
+	//	} // proc CurrentItemChanged
 
-		[LuaMember]
-		public object ListCommand
-			=> CommandScope.List;
+	//	[LuaMember]
+	//	public object ListCommand
+	//		=> CommandScope.List;
 
-		[LuaMember]
-		public object ItemCommand
-			=> CommandScope.Item;
+	//	[LuaMember]
+	//	public object ItemCommand
+	//		=> CommandScope.Item;
 
-		/// <summary>Access current views.</summary>
-		[LuaMember]
-		public ICollectionView ViewsView { get => viewSource.View; set { } }
-		/// <summary>Access current items.</summary>
-		[LuaMember]
-		public ICollectionView ItemsView { get => itemsSource?.View; set { } }
-		/// <summary>Access environment</summary>
-		[LuaMember]
-		public PpsEnvironment Environment => (PpsEnvironment)base.Shell;
-		/// <summary>Access parent-window</summary>
-		[LuaMember]
-		internal PpsMainWindow Window => (PpsMainWindow)pane.PaneHost.PaneManager;
-		/// <summary>Selected item</summary>
-		[LuaMember]
-		public object CurrentItem
-		{
-			get => itemsSource?.View?.CurrentItem;
-			set { }
-		} // func CurrentItem
+	//	/// <summary>Access current views.</summary>
+	//	[LuaMember]
+	//	public ICollectionView ViewsView { get => viewSource.View; set { } }
+	//	/// <summary>Access current items.</summary>
+	//	[LuaMember]
+	//	public ICollectionView ItemsView { get => itemsSource?.View; set { } }
+	//	/// <summary>Access environment</summary>
+	//	[LuaMember]
+	//	public PpsEnvironment Environment => (PpsEnvironment)base.Shell;
+	//	/// <summary>Access parent-window</summary>
+	//	[LuaMember]
+	//	internal PpsMainWindow Window => (PpsMainWindow)pane.PaneHost.PaneManager;
+	//	/// <summary>Selected item</summary>
+	//	[LuaMember]
+	//	public object CurrentItem
+	//	{
+	//		get => itemsSource?.View?.CurrentItem;
+	//		set { }
+	//	} // func CurrentItem
 
-		/// <summary>Points to the current special view, that is selected.</summary>
-		[LuaMember]
-		public PpsViewDefinition CurrentView
-		{
-			get => currentView;
-			set
-			{
-				if (currentView != value)
-				{
-					currentView = value;
-					RefreshActions();
-					RefreshItems();
-				}
-			}
-		} // prop CurrentView
-		  /// <summary>Current SearchText</summary>
-		[LuaMember(nameof(CurrentSearchText))]
-		public string CurrentSearchText
-		{
-			get => pane.itemList?.UserFilterText;
-			set
-			{
-				if (pane.itemList != null)
-					pane.itemList.UserFilterText = value;
-			}
-		} // func CurrentSearchText
+	//	/// <summary>Points to the current special view, that is selected.</summary>
+	//	[LuaMember]
+	//	public PpsViewDefinition CurrentView
+	//	{
+	//		get => currentView;
+	//		set
+	//		{
+	//			if (currentView != value)
+	//			{
+	//				currentView = value;
+	//				RefreshActions();
+	//				RefreshItems();
+	//			}
+	//		}
+	//	} // prop CurrentView
+	//	  /// <summary>Current SearchText</summary>
+	//	[LuaMember(nameof(CurrentSearchText))]
+	//	public string CurrentSearchText
+	//	{
+	//		get => pane.itemList?.UserFilterText;
+	//		set
+	//		{
+	//			if (pane.itemList != null)
+	//				pane.itemList.UserFilterText = value;
+	//		}
+	//	} // func CurrentSearchText
 
-	} // class PpsNavigatorDataModel
+	//} // class PpsNavigatorDataModel
 
-	#endregion
+	//#endregion
 
-	#region -- class PpsNavigatorPane -------------------------------------------------
+	//#region -- class PpsNavigatorPane -------------------------------------------------
 
 	internal partial class PpsNavigatorPane : PpsWindowPaneControl
 	{
-		public PpsNavigatorPane(IPpsWindowPaneHost paneHost)
-			: base(paneHost)
-		{
-			InitializeComponent();
+	//	public PpsNavigatorPane(IPpsWindowPaneHost paneHost)
+	//		: base(paneHost)
+	//	{
+	//		InitializeComponent();
 
-			AddHandler(PpsNavigationListBox.ExecuteMacroEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
-			AddHandler(PpsNavigationListBox.ExecuteLuaEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
-		} // ctor
+	//		AddHandler(PpsNavigationListBox.ExecuteMacroEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
+	//		AddHandler(PpsNavigationListBox.ExecuteLuaEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
+	//	} // ctor
 
-		private void ShowResult(LuaResult result)
-		{
-			if (result.Count > 0)
-			{
-				var msg = String.Format("Ergebnis:\n{0}", result);
-				Model.Environment.ShowMessage(msg);
-			}
-		} // proc ShowResult
+	//	private void ShowResult(LuaResult result)
+	//	{
+	//		if (result.Count > 0)
+	//		{
+	//			var msg = String.Format("Ergebnis:\n{0}", result);
+	//			Model.Environment.ShowMessage(msg);
+	//		}
+	//	} // proc ShowResult
 
-		private void OnExecuteEvent(object sender, PpsNavigationExecuteEventArgs e)
-		{
-			try
-			{
-				if (e.RoutedEvent == PpsNavigationListBox.ExecuteMacroEvent)
-				{
-					var (executed, res) = Model.ExecuteMarcoAsync(e.Command).AwaitTask();
-					if (executed)
-						ShowResult(new LuaResult(res));
-					else
-					{
-						Model.Environment.ShowMessage(res is string msg ? msg : String.Format("Befehl '{0}' nicht ausgeführt.", e.Command));
-						e.IsFailed = true;
-					}
-				}
-				else if (e.RoutedEvent == PpsNavigationListBox.ExecuteLuaEvent)
-					ShowResult(Model.ExecuteCodeAsync(e.Command).AwaitTask());
-			}
-			catch (LuaParseException ex)
-			{
-				e.IsFailed = true;
-				Model.Environment.ShowMessage(String.Format("Syntax: {0} at {1}", ex.Message, ex.Index + 2));
-			}
-			catch (Exception ex)
-			{
-				e.IsFailed = true;
-				Model.Environment.ShowException(PpsExceptionShowFlags.None, ex, "Execution failed.\n" + ex.GetBaseException().Message);
-			}
-		} // proc OnExecuteEvent
+	//	private void OnExecuteEvent(object sender, PpsNavigationExecuteEventArgs e)
+	//	{
+	//		try
+	//		{
+	//			if (e.RoutedEvent == PpsNavigationListBox.ExecuteMacroEvent)
+	//			{
+	//				var (executed, res) = Model.ExecuteMarcoAsync(e.Command).AwaitTask();
+	//				if (executed)
+	//					ShowResult(new LuaResult(res));
+	//				else
+	//				{
+	//					Model.Environment.ShowMessage(res is string msg ? msg : String.Format("Befehl '{0}' nicht ausgeführt.", e.Command));
+	//					e.IsFailed = true;
+	//				}
+	//			}
+	//			else if (e.RoutedEvent == PpsNavigationListBox.ExecuteLuaEvent)
+	//				ShowResult(Model.ExecuteCodeAsync(e.Command).AwaitTask());
+	//		}
+	//		catch (LuaParseException ex)
+	//		{
+	//			e.IsFailed = true;
+	//			Model.Environment.ShowMessage(String.Format("Syntax: {0} at {1}", ex.Message, ex.Index + 2));
+	//		}
+	//		catch (Exception ex)
+	//		{
+	//			e.IsFailed = true;
+	//			Model.Environment.ShowException(PpsExceptionShowFlags.None, ex, "Execution failed.\n" + ex.GetBaseException().Message);
+	//		}
+	//	} // proc OnExecuteEvent
 
-		protected override async Task OnLoadAsync(LuaTable args)
-		{
-			await base.OnLoadAsync(args);
+	//	protected override async Task OnLoadAsync(LuaTable args)
+	//	{
+	//		await base.OnLoadAsync(args);
 
-			DataContext = new PpsNavigatorDataModel(this, Commands, itemList.ListCommands, itemList.ItemCommands);
-		} // func OnLoadAsync
+	//		DataContext = new PpsNavigatorDataModel(this, Commands, itemList.ListCommands, itemList.ItemCommands);
+	//	} // func OnLoadAsync
 
-		private void SideBarFilterChanged(object sender, PpsSideBarFilterChangedEventArgs e)
-			=> Model.CurrentView = e.NewFilter as PpsViewDefinition;
+		private void SideBarFilterChanged(object sender, PpsSideBarFilterChangedEventArgs e) { }
+	//		=> Model.CurrentView = e.NewFilter as PpsViewDefinition;
 
-		public PpsNavigatorDataModel Model => (PpsNavigatorDataModel)DataContext;
+	//	public PpsNavigatorDataModel Model => (PpsNavigatorDataModel)DataContext;
 	} // class PpsNavigatorPane
 
 	#endregion

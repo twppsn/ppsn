@@ -57,16 +57,16 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public async Task LoadAsync(IPpsWindowPane windowPane)
 		{
-			using (var bar = windowPane.DisableUI(String.Format("Lade Dokument ({0})...", dataInfo.Name)))
-			{
-				// create access
-				dataAccess = await dataInfo.LoadAsync();
+			//using (var bar = this.Crea(String.Format("Lade Dokument ({0})...", dataInfo.Name)))
+			//{
+			//	// create access
+			//	dataAccess = await dataInfo.LoadAsync();
 
-				dataAccess.DisableUI = () => windowPane.DisableUI("Pdf-Dokument wird bearbeitet...");
-				dataAccess.DataChanged += async (sender, e) => await LoadFromObjectAsync();
+			//	dataAccess.DisableUI = () => windowPane.DisableUI("Pdf-Dokument wird bearbeitet...");
+			//	dataAccess.DataChanged += async (sender, e) => await LoadFromObjectAsync();
 
-				await LoadFromObjectAsync();
-			}
+			//	await LoadFromObjectAsync();
+			//}
 		} // func LoadAsync
 
 		private async Task LoadFromObjectAsync()

@@ -203,7 +203,7 @@ namespace TecWare.PPSn.UI
 			// load image
 			currentPictureInfo = open;
 			currentPicture = await open.LoadAsync();
-			currentPicture.DisableUI = () => PaneHost.DisableUI("Bild wird bearbeitet...");
+			currentPicture.DisableUI = () => this.CreateProgress(progressText: "Bild wird bearbeitet...");
 			currentPicture.DataChanged += CurrentImage_DataChanged;
 
 			// update subtitle to image

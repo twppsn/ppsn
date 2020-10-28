@@ -115,6 +115,7 @@
     <Compile Include="Controls\PpsPanel.cs" />
     <Compile Include="Controls\PpsProgressOverlay.cs" />
     <Compile Include="Controls\PpsShapeCanvas.cs" />
+    <Compile Include="PpsWpfShell.Panes.cs" />
     <Compile Include="PpsWpfShell.Stuff.cs" />
     <Compile Include="UI\KeyboardScanner.cs" />
     <Compile Include="Interop\Win32Window.cs" />

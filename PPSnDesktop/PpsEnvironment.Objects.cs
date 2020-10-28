@@ -3547,19 +3547,21 @@ namespace TecWare.PPSn
 		{
 			if (Typ == PpsEnvironment.AttachmentObjectTyp) // select editor for the attachment
 			{
-				if (MimeType.StartsWith("image/"))
-					return Environment.GetPaneTypeFromString("picture");
-				else if (MimeType == MimeTypes.Application.Pdf)
-					return Environment.GetPaneTypeFromString("pdf");
-				else if (MimeType.StartsWith("text/markdown"))
-					return Environment.GetPaneTypeFromString("markdown");
-				else
-					return null;
+				//if (MimeType.StartsWith("image/"))
+				//	return Environment.GetPaneTypeFromString("picture");
+				//else if (MimeType == MimeTypes.Application.Pdf)
+				//	return Environment.GetPaneTypeFromString("pdf");
+				//else if (MimeType.StartsWith("text/markdown"))
+				//	return Environment.GetPaneTypeFromString("markdown");
+				//else
+				return null;
 			}
 			else if (Typ == PpsEnvironment.HelpKeyTyp)
 				return typeof(PpsHelpPagePane);
-			else // default is mask
-				return Environment.GetPaneTypeFromString("mask");
+			//else // default is mask
+			//	return Environment.GetPaneTypeFromString("mask");
+			else
+				return null;
 		} // func GetPaneTypeFromObject
 
 		private async Task OpenWithShellAsync()

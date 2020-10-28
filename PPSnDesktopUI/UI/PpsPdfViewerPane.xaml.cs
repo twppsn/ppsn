@@ -52,18 +52,18 @@ namespace TecWare.PPSn.UI
 			switch (data)
 			{
 				case string fileName: // open a file from disk
-					using (var bar = this.DisableUI(String.Format("Lade Pdf-Datei ({0})...", fileName)))
+					using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Datei ({0})...", fileName)))
 						SetLoadedDocument(await LoadDocumentFromFileNameAsync(fileName)); // parse pdf in background
 					break;
 				case IPpsDataInfo info: // open a internal object
-					using (var bar = this.DisableUI(String.Format("Lade Pdf-Dokument ({0})...", info.Name)))
+					using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Dokument ({0})...", info.Name)))
 					{
 						dataInfo = info;
 
 						// create access
 						dataAccess = await info.LoadAsync();
 						
-						dataAccess.DisableUI = () => this.DisableUI("Pdf-Dokument wird bearbeitet...");
+						dataAccess.DisableUI = () => this.CreateProgress(progressText: "Pdf-Dokument wird bearbeitet...");
 						dataAccess.DataChanged += async (sender, e) => await LoadDocumentFromObjectAsync();
 
 						await LoadDocumentFromObjectAsync();
@@ -154,7 +154,7 @@ namespace TecWare.PPSn.UI
 					UserPageRangeEnabled = true
 				};
 
-				using (var bar = this.DisableUI("Drucken..."))
+				using (var bar = this.CreateProgress(progressText: "Drucken..."))
 				{
 					if (this.ShowModalDialog(printDialog.ShowDialog))
 					{

@@ -223,12 +223,12 @@ namespace TecWare.PPSn
 			}
 		} // func GetLogicalParent
 
-		/// <summary>Create a DataTemplateSelector</summary>
-		/// <param name="func"></param>
-		/// <returns></returns>
-		[LuaMember("templateSelector")]
-		private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
-			=> new LuaDataTemplateSelector(func);
+		///// <summary>Create a DataTemplateSelector</summary>
+		///// <param name="func"></param>
+		///// <returns></returns>
+		//[LuaMember("templateSelector")]
+		//private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
+		//	=> new LuaDataTemplateSelector(func);
 
 		/// <summary>Create a local tempfile name for this objekt</summary>
 		/// <param name="obj"></param>

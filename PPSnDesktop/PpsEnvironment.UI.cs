@@ -470,20 +470,6 @@ namespace TecWare.PPSn
 			}
 		} // func ShowExceptionDialog
 
-		/// <summary></summary>
-		/// <param name="paneType"></param>
-		/// <returns></returns>
-		public override Type GetPaneTypeFromString(string paneType)
-		{
-			switch (paneType)
-			{
-				case "mask":
-					return typeof(PpsGenericMaskWindowPane);
-				default:
-					return base.GetPaneTypeFromString(paneType);
-			}
-		} // func GetPaneTypeFromString
-
 		#endregion
 
 		#region -- GetDataTemplate ----------------------------------------------------

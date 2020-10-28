@@ -55,30 +55,30 @@ namespace TecWare.PPSn.UI
 
 			#region -- remove --
 
-			[LuaMember]
-			public void LoadPdf(string guid)
-			{
-				var obj = Environment.GetObject(new Guid(guid ?? "F83EA1D1-0248-4880-8FB9-6121960B3FF5"));
-				obj.OpenPaneAsync(paneHost.PaneManager).AwaitTask();
-			}
+			//[LuaMember]
+			//public void LoadPdf(string guid)
+			//{
+			//	var obj = Environment.GetObject(new Guid(guid ?? "F83EA1D1-0248-4880-8FB9-6121960B3FF5"));
+			//	obj.OpenPaneAsync(paneHost.PaneManager).AwaitTask();
+			//}
 
-			[LuaMember]
-			public void StartStat()
-			{
-				Environment["collectStatistics"] = true;
-			} // proc StartState
+			//[LuaMember]
+			//public void StartStat()
+			//{
+			//	Environment["collectStatistics"] = true;
+			//} // proc StartState
 
 			#endregion
 			
-			protected override object OnIndex(object key)
-				=> base.OnIndex(key) ?? Context?.GetValue(key) ?? paneHost.PaneManager._Shell.GetValue(key);
+			//protected override object OnIndex(object key)
+			//	=> base.OnIndex(key) ?? Context?.GetValue(key) ?? paneHost.PaneManager._Shell.GetValue(key);
 
 			public LuaTable Context { get; set; } = null;
 
 			[LuaMember]
 			public IPpsWindowPaneManager Window => paneHost.PaneManager;
-			[LuaMember]
-			public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager._Shell;
+			//[LuaMember]
+			//public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager._Shell;
 		} // class PpsTraceEnvironment
 
 		#endregion
@@ -138,7 +138,7 @@ namespace TecWare.PPSn.UI
 
 		protected override Task OnLoadAsync(LuaTable args)
 		{
-			DataContext = Environment; // set environment to DataContext
+			//DataContext = Environment; // set environment to DataContext
 			return Task.CompletedTask;
 		} // proc OnLoadAsync
 
@@ -150,12 +150,12 @@ namespace TecWare.PPSn.UI
 		{
 			try
 			{
-				var chunk = await Environment.CompileAsync(command, "command.lua", true);
+				//var chunk = await Environment.CompileAsync(command, "command.lua", true);
 
-				var r = chunk.Run(traceEnvironment);
+				//var r = chunk.Run(traceEnvironment);
 
-				// print result
-				var i = 0;
+				//// print result
+				//var i = 0;
 				//foreach (var c in r)
 				//	Environment.Log.Append(PpsLogType.Debug, $"${i++}: {c}");
 			}
@@ -217,20 +217,20 @@ namespace TecWare.PPSn.UI
 				//else
 					sw.WriteLine("Log is not a trace log?");
 
-				// write statistics
-				foreach (var statistic in Environment.Statistics)
-				{
-					if (!statistic.HasData)
-						continue;
-					var en = statistic.History.GetEnumerator();
-					var historic = 0;
-					en.Reset();
-					while (en.MoveNext())
-					{
-						sw.WriteLine($"{statistic.Name};{DateTime.Now.AddSeconds(historic)};{en.Current}");
-						historic--;
-					}
-				}
+				//// write statistics
+				//foreach (var statistic in Environment.Statistics)
+				//{
+				//	if (!statistic.HasData)
+				//		continue;
+				//	var en = statistic.History.GetEnumerator();
+				//	var historic = 0;
+				//	en.Reset();
+				//	while (en.MoveNext())
+				//	{
+				//		sw.WriteLine($"{statistic.Name};{DateTime.Now.AddSeconds(historic)};{en.Current}");
+				//		historic--;
+				//	}
+				//}
 			}
 		} // proc SaveTrace
 
@@ -300,14 +300,14 @@ namespace TecWare.PPSn.UI
 				return;
 
 			var newFileName = clear ? null : GetDebugTargetFileName(path, row.GetProperty("DebugPath", null));
-			try
-			{
-				await Environment.MasterData.UpdateDebugPathAsync(row.RowId, path, newFileName);
-			}
-			catch (Exception e)
-			{
-				Environment.ShowException(e);
-			}
+			//try
+			//{
+			//	await Environment.MasterData.UpdateDebugPathAsync(row.RowId, path, newFileName);
+			//}
+			//catch (Exception e)
+			//{
+			//	Environment.ShowException(e);
+			//}
 		} // proc UpdateDebugTargetAsync
 
 		#endregion
@@ -315,8 +315,8 @@ namespace TecWare.PPSn.UI
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
 
-		/// <summary>Access the environment</summary>
-		public PpsEnvironment Environment => (PpsEnvironment)PaneHost.PaneManager._Shell;
+		///// <summary>Access the environment</summary>
+		//public PpsEnvironment Environment => (PpsEnvironment)PaneHost.PaneManager._Shell;
 	} // class PpsTracePane
 
 	#endregion

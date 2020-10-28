@@ -469,13 +469,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		static _PpsShell()
-		{
-#if WPF
-			Neo.IronLua.LuaType.RegisterTypeExtension(typeof(UI.PpsWindowPaneHelper));
-#endif
-		} // ctor
-
 		/// <summary>Empty progress bar implementation</summary>
 		public static IPpsProgress EmptyProgress { get; } = new PpsDummyProgress();
 	} // class PpsShell

@@ -138,7 +138,7 @@ namespace TecWare.PPSn.UI
 			using (var p = this.CreateProgress(progressText: "Lade..."))
 			{
 				// create the pane
-				var pane = CreatePaneBindings(PpsWindowPaneHelper.CreateEmptyPane(paneManager, this, paneType));
+				var pane = CreatePaneBindings(PpsWpfShell.CreateEmptyPane(paneManager, this, paneType));
 
 				// load content
 				await OnLoadPaneAsync(pane, arguments);

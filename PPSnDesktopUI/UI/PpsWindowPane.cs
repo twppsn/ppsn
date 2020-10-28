@@ -16,17 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Channels;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Threading;
-using System.Xml;
-using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
@@ -198,8 +190,6 @@ namespace TecWare.PPSn.UI
 		/// <summary>Pane enumeration of this pane manager and child pane manager.</summary>
 		IEnumerable<IPpsWindowPane> Panes { get; }
 
-		/// <summary>Access the environment.</summary>
-		PpsShellWpf _Shell { get; }
 		/// <summary>Access the assigned shell.</summary>
 		IPpsShell Shell { get; }
 
@@ -211,8 +201,8 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsWindowPaneSettings --------------------------------------------
 
-	/// <summary></summary>
-	public sealed class PpsWindowPaneSettings :PpsSettingsInfoBase
+	/// <summary>Pane specific settings.</summary>
+	public sealed class PpsWindowPaneSettings : PpsSettingsInfoBase
 	{
 		/// <summary></summary>
 		/// <param name="settingsService"></param>
@@ -227,342 +217,105 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsWindowPaneHelper ----------------------------------------------
+	#region -- class PpsKnownWindowPanes ----------------------------------------------
 
-	/// <summary>Extensions for the Pane, or PaneControl</summary>
-	public static class PpsWindowPaneHelper
+	/// <summary>Registrar for pane types.</summary>
+	public interface IPpsKnownWindowPanes
 	{
-		#region -- Open Pane helper ---------------------------------------------------
+		/// <summary></summary>
+		/// <param name="paneName"></param>
+		/// <param name="paneType"></param>
+		/// <param name="mimeType"></param>
+		void RegisterPaneType(Type paneType, string paneName, params string[] mimeType);
 
-		/// <summary>Initializes a empty pane, it can only be used by a pane manager.</summary>
-		/// <param name="paneManager">Pane manager to use.</param>
-		/// <param name="paneHost">Pane host, that will be owner of this pane.</param>
-		/// <param name="paneType">Type the fill be initialized.</param>
+		/// <summary></summary>
+		/// <param name="pane"></param>
+		/// <param name="throwException"></param>
 		/// <returns></returns>
-		[EditorBrowsable(EditorBrowsableState.Advanced)]
-		public static IPpsWindowPane CreateEmptyPane(this IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost, Type paneType)
+		Type GetPaneType(string pane, bool throwException = false);
+		/// <summary></summary>
+		/// <param name="paneName"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		Type GetPaneTypeFromName(string paneName, bool throwException = false);
+		/// <summary></summary>
+		/// <param name="mimeType"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		Type GetPaneTypeMimeType(string mimeType, bool throwException = false);
+	} // interface IPpsKnownWindowPanes
+
+	#endregion
+
+	#region -- class PpsKnownWindowPanes ----------------------------------------------
+
+	[PpsService(typeof(IPpsKnownWindowPanes))]
+	internal class PpsKnownWindowPanes : IPpsKnownWindowPanes, IPpsShellService
+	{
+		private readonly IPpsShell shell;
+
+		private readonly List<Type> paneTypes = new List<Type>();
+		private readonly Dictionary<string, int> namePaneTypes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, int> mimePaneTypes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+		public PpsKnownWindowPanes(IPpsShell shell)
+			=> this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+
+		private int RegisterPaneType(Type paneType)
 		{
-			var ti = paneType.GetTypeInfo();
-			var ctorBest = (ConstructorInfo)null;
-			var ctoreBestParamLength = -1;
-
-			if (!typeof(IPpsWindowPane).IsAssignableFrom(paneType))
-				throw new ArgumentException($"{paneType.Name} does not implement {nameof(IPpsWindowPane)}.");
-
-			// search for the longest constructor
-			foreach (var ci in ti.GetConstructors())
+			lock (paneTypes)
 			{
-				var pi = ci.GetParameters();
-				if (ctoreBestParamLength < pi.Length)
+				var idx = paneTypes.IndexOf(paneType);
+				if (idx == -1)
 				{
-					ctorBest = ci;
-					ctoreBestParamLength = pi.Length;
+					idx = paneTypes.Count;
+					paneTypes.Add(paneType);
+					return idx;
 				}
-			}
-			if (ctorBest == null)
-				throw new ArgumentException($"'{ti.Name}' has no constructor.");
-
-			// create the argument set
-			var parameterInfo = ctorBest.GetParameters();
-			var paneArguments = new object[parameterInfo.Length];
-
-			for (var i = 0; i < paneArguments.Length; i++)
-			{
-				var pi = parameterInfo[i];
-				var tiParam = pi.ParameterType.GetTypeInfo();
-				if (tiParam.IsAssignableFrom(typeof(IServiceProvider)))
-					paneArguments[i] = paneManager;
-				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneManager)))
-					paneArguments[i] = paneManager;
-				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneHost)))
-					paneArguments[i] = paneHost;
-				else if (pi.HasDefaultValue)
-					paneArguments[i] = pi.DefaultValue;
 				else
-					throw new ArgumentException($"Unsupported argument '{pi.Name}' for type '{ti.Name}'.");
+					return idx;
 			}
+		} // func RegisterPaneType
 
-			// activate the pane
-			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
-		} // func CreateEmptyPane
-
-		private static Type GetPaneType(IPpsWindowPaneManager paneManager, dynamic arguments)
+		private static Type ThrowPaneTypeException(string pane, bool throwException)
 		{
-			var paneTypeValue = (object)arguments?.PaneType;
+			if (throwException)
+				throw new ArgumentOutOfRangeException(String.Format("Could not resolve pane '{0}'.", pane), pane, nameof(pane));
+			return null;
+		} // func ThrowPaneTypeException
 
-			switch (paneTypeValue)
+		void IPpsKnownWindowPanes.RegisterPaneType(Type paneType, string paneName, params string[] mimeTypes)
+		{
+			var idx = RegisterPaneType(paneType);
+
+			if (!String.IsNullOrEmpty(paneName))
+				namePaneTypes[paneName] = idx;
+
+			foreach (var mimeType in mimeTypes)
 			{
-				case Type type:
-					return type;
-				case LuaType luaType:
-					return luaType.Type;
-				case string typeString:
-					return paneManager._Shell.GetPaneTypeFromString(typeString);
-				case null:
-					throw new ArgumentNullException("paneType");
-				default:
-					throw new ArgumentException("Could not parse pane type.", "paneType");
+				if (!String.IsNullOrEmpty(mimeType))
+					namePaneTypes[mimeType] = idx;
 			}
-		} // func GetPaneType
+		} // proc RegisterPaneType
 
-		/// <summary>Get default open pane mode</summary>
-		/// <param name="paneManager">Pane manager to use.</param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
-		public static PpsOpenPaneMode GetDefaultPaneMode(this IPpsWindowPaneManager paneManager, dynamic arguments)
+		Type IPpsKnownWindowPanes.GetPaneType(string pane, bool throwException)
 		{
-			if (arguments != null && arguments.Mode != null)
-				return Procs.ChangeType<PpsOpenPaneMode>(arguments.Mode);
-
-			return paneManager.Shell.GetSettings<PpsWindowPaneSettings>().NewPaneMode ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
-		} // func GetDefaultPaneMode
-
-		/// <summary>Loads a generic wpf window pane <see cref="PpsGenericWpfWindowPane"/>.</summary>
-		/// <param name="paneManager">Pane manager to use.</param>
-		/// <param name="arguments">Argument for the pane load function. This is pane specific.</param>
-		/// <returns>A full inialized pane.</returns>
-		/// <remarks>This function uses <c>AwaitTask</c>
-		/// 
-		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
-		/// </remarks>
-		public static IPpsWindowPane LoadGenericPane(this IPpsWindowPaneManager paneManager, LuaTable arguments = null)
-			=> paneManager.OpenPaneAsync(typeof(PpsGenericWpfWindowPane), PpsOpenPaneMode.Default, arguments).AwaitTask();
-
-		/// <summary>Loads a pane of specific type with the givven arguments.</summary>
-		/// <param name="paneManager">Pane manager to use.</param>
-		/// <param name="arguments">Argument for the pane load function. This is pane specific.</param>
-		/// <returns>A full inialized pane.</returns>
-		/// <remarks>This function uses <c>AwaitTask</c>
-		/// 
-		/// - <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)
-		/// - <c>arguments.paneType</c>: is the type as string or type, of the pane. (required)
-		///   Well known Pane types are:
-		///   - mask
-		///   - generic
-		///   - picture
-		///   - pdf
-		/// </remarks>
-		public static IPpsWindowPane LoadPane(this IPpsWindowPaneManager paneManager, LuaTable arguments = null)
-		{
-			var paneType = GetPaneType(paneManager, arguments);
-			if (paneType == null)
-				throw new ArgumentException("Pane type is missing.");
-
-			return paneManager.OpenPaneAsync(paneType, GetDefaultPaneMode(paneManager, arguments), arguments).AwaitTask();
-		} // func OpenPane
-
-		/// <summary></summary>
-		/// <param name="request"></param>
-		/// <param name="arguments"></param>
-		/// <param name="paneUri"></param>
-		/// <returns></returns>
-		public static async Task<object> LoadPaneDataAsync(this IPpsRequest request, LuaTable arguments, Uri paneUri)
-		{
-			try
-			{
-				using (var r = await request.Request.GetResponseAsync(paneUri.ToString(), String.Join(";", MimeTypes.Application.Xaml, MimeTypes.Text.Lua, MimeTypes.Text.Plain)))
-				{
-					// read the file name
-					arguments["_filename"] = r.GetContentDisposition().FileName.Trim('"');
-
-					// check content
-					var contentType = r.Content.Headers.ContentType;
-					if (contentType.MediaType == MimeTypes.Application.Xaml) // load a xaml file
-					{
-						XDocument xamlContent;
-
-						// parse the xaml as xml document
-						using (var sr = await r.GetTextReaderAsync(MimeTypes.Application.Xaml))
-						{
-							using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, paneUri.ToString()))
-								xamlContent = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
-						}
-
-						return xamlContent;
-					}
-					else if (contentType.MediaType == MimeTypes.Text.Lua
-						|| contentType.MediaType == MimeTypes.Text.Plain) // load a code file
-					{
-						// load an compile the chunk
-						using (var sr = await r.GetTextReaderAsync(null))
-							return await request.Shell.CompileAsync(sr, paneUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-					}
-					else
-						throw new ArgumentException($"Expected: xaml/lua; received: {contentType.MediaType}");
-				}
-			}
-			catch (Exception e)
-			{
-				throw new ArgumentException("Can not load pane definition.\n" + paneUri.ToString(), e);
-			}
-		} // func LoadPaneDataAsync
-
-		#endregion
-
-		#region -- ShowModalPane ------------------------------------------------------
-
-		/// <summary></summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="paneManager"></param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
-		public static async Task<T> ShowModalPaneAsync<T>(this IPpsWindowPaneManager paneManager, LuaTable arguments = null)
-			where T : class, IPpsWindowPane
-		{
-			// open new pane
-			var pane = (T)await paneManager.OpenPaneAsync(typeof(T), PpsOpenPaneMode.NewPane, arguments);
-
-			// wait for unload
-			var paneClosedTask = new TaskCompletionSource<T>();
-			pane.PaneHost.PaneUnloaded += (sender, e) => paneClosedTask.SetResult(pane);
-			return await paneClosedTask.Task;
-		} // func ShowModalPaneAsync
-
-		#endregion
-
-		#region -- EqualPane ----------------------------------------------------------
-
-		/// <summary>Are the pane equal to the pane arguments.</summary>
-		/// <param name="pane">Pane to compare with.</param>
-		/// <param name="paneType">Type of the other pane.</param>
-		/// <param name="arguments">Arguments of the other pane.</param>
-		/// <returns><c>true</c>, if the pane arguments are the same.</returns>
-		public static bool EqualPane(this IPpsWindowPane pane, Type paneType, LuaTable arguments)
-			=> pane != null && paneType == pane.GetType() && pane.CompareArguments(arguments ?? new LuaTable()) == PpsWindowPaneCompareResult.Same;
-
-		#endregion
-
-		/// <summary></summary>
-		/// <param name="pane"></param>
-		/// <param name="text"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		[Obsolete]
-		public static IPpsProgress DisableUI(this IPpsWindowPane pane, string text = null, int value = -1)
-			=> DisableUI(pane.PaneHost, text, value);
-
-		/// <summary></summary>
-		/// <param name="pane"></param>
-		/// <param name="text"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		[Obsolete]
-		public static IPpsProgress DisableUI(this IPpsWindowPaneHost pane, string text = null, int value = -1)
-		{
-			var progress = pane.Progress.CreateProgress() ?? _PpsShell.EmptyProgress;
-			if (text != null)
-				progress.Text = text;
-			progress.Value = value;
-			return progress;
-		} // func DisableUI
-
-		/// <summary></summary>
-		/// <param name="window"></param>
-		/// <param name="relativeTo"></param>
-		public static void SetFullscreen(this Window window, DependencyObject relativeTo)
-		{
-			var parentWindow = relativeTo == null ? Application.Current.MainWindow : Window.GetWindow(relativeTo);
-			IntPtr hMonitor;
-			if (parentWindow != null)
-			{
-				var ps = PresentationSource.FromVisual(parentWindow);
-				var windowPoints = new Point[]
-				{
-					new Point(parentWindow.Left, parentWindow.Top),
-					new Point(parentWindow.Left + parentWindow.Width, parentWindow.Top + parentWindow.Height)
-				};
-
-				ps.CompositionTarget.TransformToDevice.Transform(windowPoints);
-
-				var rc = new RECT(
-					(int)windowPoints[0].X,
-					(int)windowPoints[0].Y,
-					(int)windowPoints[1].X,
-					(int)windowPoints[1].Y
-				);
-				hMonitor = NativeMethods.MonitorFromRect(ref rc, MonitorOptions.MONITOR_DEFAULTTONEAREST);
-			}
+			if (namePaneTypes.TryGetValue(pane, out var idx))
+				return paneTypes[idx];
+			else if (mimePaneTypes.TryGetValue(pane, out idx))
+				return paneTypes[idx];
 			else
-			{
-				var pt = default(POINT);
-				NativeMethods.GetCursorPos(ref pt);
-				hMonitor = NativeMethods.MonitorFromPoint(pt, MonitorOptions.MONITOR_DEFAULTTONEAREST);
-			}
+				return LuaType.GetType(pane).Type ?? ThrowPaneTypeException(pane, throwException);
+		} // func IPpsKnownWindowPanes.GetPaneType
 
-			var monitorInfo = new MONITORINFO
-			{
-				cbSize = Marshal.SizeOf(typeof(MONITORINFO))
-			};
-			if (NativeMethods.GetMonitorInfo(hMonitor, ref monitorInfo) && parentWindow != null)
-			{
-				var ps = PresentationSource.FromVisual(parentWindow);
-				var windowPoints = new Point[]
-				{
-					new Point(monitorInfo.rcMonitor.Left, monitorInfo.rcMonitor.Top),
-					new Point(monitorInfo.rcMonitor.Right, monitorInfo.rcMonitor.Bottom)
-				};
+		Type IPpsKnownWindowPanes.GetPaneTypeFromName(string paneName, bool throwException)
+			=> namePaneTypes.TryGetValue(paneName, out var idx) ? paneTypes[idx] : ThrowPaneTypeException(paneName, throwException);
 
-				ps.CompositionTarget.TransformFromDevice.Transform(windowPoints);
+		Type IPpsKnownWindowPanes.GetPaneTypeMimeType(string mimeType, bool throwException)
+			=> mimePaneTypes.TryGetValue(mimeType, out var idx) ? paneTypes[idx] : ThrowPaneTypeException(mimeType, throwException);
 
-				window.Left = windowPoints[0].X;
-				window.Top = windowPoints[0].Y;
-				window.Width = windowPoints[1].X - windowPoints[0].X;
-				window.Height = windowPoints[1].Y - windowPoints[0].Y;
-			}
-			else
-				window.WindowState = WindowState.Maximized;
-		} // proc SetFullscreen
-
-		/// <summary>Get the window from an DependencyObject</summary>
-		/// <param name="paneHost"></param>
-		/// <returns></returns>
-		public static Window GetWindowFromOwner(this IPpsWindowPaneHost paneHost)
-			=> GetWindowFromOwner(paneHost as DependencyObject);
-
-		/// <summary>Get the window from an DependencyObject</summary>
-		/// <param name="dependencyObject"></param>
-		/// <returns></returns>
-		public static Window GetWindowFromOwner(this DependencyObject dependencyObject)
-		{
-			return dependencyObject == null
-				? Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
-				: Window.GetWindow(dependencyObject);
-		} // func GetWindowFromOwner
-
-		/// <summary>Helper to show a system dialog static.</summary>
-		/// <param name="owner"></param>
-		/// <param name="window"></param>
-		/// <returns></returns>
-		public static bool ShowModalDialog(this DependencyObject owner, Window window)
-		{
-			var ownerWindow = GetWindowFromOwner(owner);
-			window.Owner = ownerWindow;
-			return ShowModalDialog(ownerWindow, window.ShowDialog);
-		} // proc ShowModalDialog
-
-		/// <summary>Helper to show a system dialog static.</summary>
-		/// <param name="owner"></param>
-		/// <param name="showDialog"></param>
-		/// <returns></returns>
-		public static bool ShowModalDialog(this DependencyObject owner, Func<bool?> showDialog)
-			=> ShowModalDialog(GetWindowFromOwner(owner), showDialog);
-
-		private static bool ShowModalDialog(Window ownerWindow, Func<bool?> showDialog)
-		{
-			var oldWindow = Application.Current.MainWindow;
-			Application.Current.MainWindow = ownerWindow;
-			try
-			{
-				return showDialog() ?? false;
-			}
-			finally
-			{
-				if (Application.Current.MainWindow != ownerWindow)
-					throw new InvalidOperationException();
-				Application.Current.MainWindow = oldWindow;
-			}
-		} // proc ShowModalDialog
-	} // class PpsWindowPaneHelper
+		public IPpsShell Shell => shell;
+	} // class PpsKnownWindowPanes
 
 	#endregion
 }

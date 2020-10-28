@@ -34,6 +34,8 @@ namespace TecWare.PPSn.Bde
 		private static readonly DependencyPropertyKey topPaneHostPropertyKey = DependencyProperty.RegisterReadOnly(nameof(TopPaneHost), typeof(PpsBdePaneHost), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty TopPaneHostProperty = topPaneHostPropertyKey.DependencyProperty;
 
+		private readonly PpsWindowApplicationSettings settings;
+
 		private readonly PpsBarcodeService barcodeService;
 		private readonly IDisposable barcodeReceiverToken;
 		private string currentDateTimeFormat;
@@ -53,7 +55,9 @@ namespace TecWare.PPSn.Bde
 
 			this.AddCommandBinding(Shell, BackCommand, new PpsCommand(BackCommandExecuted, CanBackCommandExecute));
 			this.AddCommandBinding(Shell, TraceLogCommand, new PpsAsyncCommand(AppInfoCommandExecutedAsync, CanAppInfoCommandExecute));
-			
+
+			settings = new PpsWindowApplicationSettings(this, "bde");
+
 			UpdateDateTimeFormat();
 		} // ctor
 
@@ -161,7 +165,7 @@ namespace TecWare.PPSn.Bde
 		/// <param name="arguments"></param>
 		/// <returns></returns>
 		public IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments = null)
-			=> panes.FirstOrDefault(p => PpsWindowPaneHelper.EqualPane(p.Pane, paneType, arguments))?.Pane;
+			=> panes.FirstOrDefault(p => PpsWpfShell.EqualPane(p.Pane, paneType, arguments))?.Pane;
 
 		/// <summary>Return complete pane stack</summary>
 		public IEnumerable<IPpsWindowPane> Panes => panes.Select(p => p.Pane);
@@ -192,6 +196,9 @@ namespace TecWare.PPSn.Bde
 		bool IPpsBarcodeReceiver.IsActive => IsActive;
 
 		public string CurrentTimeString => currentDateTimeFormat;
+
+		/// <summary>Settings of the current window.</summary>
+		public PpsWindowApplicationSettings Settings => settings;
 
 		public bool IsLocked => false;
 	} // class PpsBdeWindow
