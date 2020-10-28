@@ -64,7 +64,7 @@ namespace TecWare.PPSn.Data
 			=> minDate <= Stamp && Stamp <= maxDate;
 
 		/// <summary>Classification of the log item.</summary>
-		public abstract PpsLogType Type { get; }
+		public abstract LogMsgType Type { get; }
 		/// <summary>Timestamp of occur.</summary>
 		public DateTime Stamp { get; } = DateTime.Now;
 		/// <summary>Text of the log item.</summary>
@@ -80,13 +80,13 @@ namespace TecWare.PPSn.Data
 	{
 		private readonly string message;
 		private readonly Exception exception;
-		private readonly PpsLogType type;
+		private readonly LogMsgType type;
 
 		/// <summary></summary>
 		/// <param name="alternativeMessage"></param>
 		/// <param name="exception"></param>
 		/// <param name="type"></param>
-		public PpsExceptionItem(string alternativeMessage, Exception exception, PpsLogType type = PpsLogType.Exception)
+		public PpsExceptionItem(string alternativeMessage, Exception exception, LogMsgType type = LogMsgType.Error)
 		{
 			message = String.IsNullOrEmpty(alternativeMessage) ? exception.Message : alternativeMessage;
 
@@ -95,7 +95,7 @@ namespace TecWare.PPSn.Data
 		} // ctor
 
 		/// <summary>Type of the exception</summary>
-		public override PpsLogType Type => type;
+		public override LogMsgType Type => type;
 		/// <summary>Message text.</summary>
 		public override string Message => message;
 
@@ -150,7 +150,7 @@ namespace TecWare.PPSn.Data
 		public override string Message => message; 
 
 		/// <summary>Type mapping</summary>
-		public override PpsLogType Type
+		public override LogMsgType Type
 		{
 			get
 			{
@@ -158,20 +158,20 @@ namespace TecWare.PPSn.Data
 				{
 					case TraceEventType.Critical:
 					case TraceEventType.Error:
-						return PpsLogType.Exception;
+						return LogMsgType.Error;
 					case TraceEventType.Warning:
-						return PpsLogType.Warning;
+						return LogMsgType.Warning;
 					case TraceEventType.Information:
 					case TraceEventType.Resume:
 					case TraceEventType.Start:
 					case TraceEventType.Stop:
 					case TraceEventType.Suspend:
-						return PpsLogType.Information;
+						return LogMsgType.Information;
 					case TraceEventType.Transfer:
 					case TraceEventType.Verbose:
-						return PpsLogType.Debug;
+						return LogMsgType.Debug;
 					default:
-						return PpsLogType.Debug;
+						return LogMsgType.Debug;
 				}
 			} // prop type
 		} // prop Type
@@ -184,10 +184,10 @@ namespace TecWare.PPSn.Data
 	/// <summary>Simple text, that was pushed to the log.</summary>
 	public sealed class PpsTextItem : PpsTraceItemBase
 	{
-		private readonly PpsLogType type;
+		private readonly LogMsgType type;
 		private readonly string message;
 
-		internal PpsTextItem(PpsLogType type, string message)
+		internal PpsTextItem(LogMsgType type, string message)
 		{
 			this.type = type;
 			this.message = message;
@@ -196,7 +196,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Message text</summary>
 		public override string Message => message;
 		/// <summary>Message type.</summary>
-		public override PpsLogType Type => type;
+		public override LogMsgType Type => type;
 	} // class PpsTextItem
 
 	#endregion
@@ -205,7 +205,7 @@ namespace TecWare.PPSn.Data
 
 	/// <summary>Collection for all collected events in the application. It connects 
 	/// to the trace listener and catches exceptions.</summary>
-	public sealed class PpsTraceLog : IList, INotifyCollectionChanged, INotifyPropertyChanged, IPpsLogger, ILogger, IPpsIdleAction, ICollectionViewFactory, IDisposable
+	public sealed class PpsTraceLog : IList, INotifyCollectionChanged, INotifyPropertyChanged, ILogger, IPpsIdleAction, ICollectionViewFactory, IDisposable
 	{
 		/// <summary>Maximal number of trace items</summary>
 		public const int MaxTraceItems = 1 << 19;
@@ -233,7 +233,7 @@ namespace TecWare.PPSn.Data
 				if (detailMessage != null)
 					message = message + Environment.NewLine + detailMessage;
 
-				owner.AppendItem(new PpsTextItem(PpsLogType.Exception, message));
+				owner.AppendItem(new PpsTextItem(LogMsgType.Error, message));
 			} // proc Fail
 
 			private static string FormatData(object data)
@@ -289,7 +289,7 @@ namespace TecWare.PPSn.Data
 			} // proc Write
 
 			public override void WriteLine(string message)
-				=> owner.AppendItem(new PpsTextItem(PpsLogType.Debug, message));
+				=> owner.AppendItem(new PpsTextItem(LogMsgType.Debug, message));
 		} // class PpsTraceListener
 
 		#endregion
@@ -369,7 +369,7 @@ namespace TecWare.PPSn.Data
 				items.Add(item);
 				index = items.Count - 1;
 
-				if (item.Type == PpsLogType.Exception || item.Type == PpsLogType.Fail || item.Type == PpsLogType.Warning)
+				if (item.Type == LogMsgType.Error || item.Type == LogMsgType.Warning)
 					lastTraceChanged = SetLastTrace(item);
 				else
 					lastTraceChanged = UpdateLastTrace();
@@ -405,14 +405,14 @@ namespace TecWare.PPSn.Data
 			OnPropertyChanged(nameof(LastTrace));
 		} // proc Clear
 
-		void IPpsLogger.Append(PpsLogType type, string message)
-			=> AppendItem(new PpsTextItem(type, message));
+		//void IPpsLogger.Append(PpsLogType type, string message)
+		//	=> AppendItem(new PpsTextItem(type, message));
 
-		void IPpsLogger.Append(PpsLogType type, Exception exception, string alternativeMessage)
-			=> AppendItem(new PpsExceptionItem(alternativeMessage, exception, type));
+		//void IPpsLogger.Append(PpsLogType type, Exception exception, string alternativeMessage)
+		//	=> AppendItem(new PpsExceptionItem(alternativeMessage, exception, type));
 
 		void ILogger.LogMsg(LogMsgType type, string message)
-			=> AppendItem(new PpsTextItem((PpsLogType)type, message));
+			=> AppendItem(new PpsTextItem(type, message));
 
 		#endregion
 

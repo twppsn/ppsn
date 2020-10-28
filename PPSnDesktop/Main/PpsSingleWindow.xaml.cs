@@ -41,8 +41,6 @@ namespace TecWare.PPSn.Main
 
 			InitializeComponent();
 
-			paneHost.PaneManager = this;
-
 			if (dialogMode)
 			{
 				if (Owner != null)
@@ -114,7 +112,7 @@ namespace TecWare.PPSn.Main
 			}
 		} // prop Panes
 
-		private IPpsWindowPane CurrentPane => paneHost.CurrentPane;
+		private IPpsWindowPane CurrentPane => paneHost.Pane;
 
 		/// <summary>Is the the single window in dialog mode?</summary>
 		public bool IsDialogMode { get => (bool)GetValue(IsDialogModeProperty); private set => SetValue(isDialogModePropertyKey, value); }

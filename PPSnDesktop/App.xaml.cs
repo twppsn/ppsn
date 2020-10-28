@@ -51,7 +51,7 @@ namespace TecWare.PPSn
 			public override void Write(string message) { }
 
 			public override void WriteLine(string message)
-				=> app.LogException(PpsLogType.Warning, message.Replace(";", ";\n"));
+				=> app.LogException(LogMsgType.Warning, message.Replace(";", ";\n"));
 		} // class BindingErrorListener
 
 		#endregion
@@ -265,7 +265,7 @@ namespace TecWare.PPSn
 
 			async Task IPpsShellLoadNotify.OnAfterLoadSettingsAsync(IPpsShell shell)
 			{
-				var log = shell.GetLogger();
+				var log = shell.LogProxy();
 
 				splashWindow.SetProgressText("Analysiere die lokalen Dateien...");
 
@@ -293,14 +293,14 @@ namespace TecWare.PPSn
 					// check directory for path variable
 					if ((cur.Load & FileLoadFlag.Path) != 0)
 					{
-						log.Append(PpsLogType.Debug, $"Path {cur.FileId}: {cur.FileInfo.DirectoryName}");
+						log.Debug($"Path {cur.FileId}: {cur.FileInfo.DirectoryName}");
 						AddToDirectoryList(-1, pathAdditions, cur.FileInfo.DirectoryName);
 					}
 
 					// check outdated file
 					if (cur.NeedsUpdate)
 					{
-						log.Append(PpsLogType.Debug, $"Schedule {cur.FileInfo} for update: {cur.Uri}");
+						log.Debug($"Schedule {cur.FileInfo} for update: {cur.Uri}");
 						totalBytesToUpdate += cur.Length;
 					}
 				}
@@ -338,7 +338,7 @@ namespace TecWare.PPSn
 				var i = 0;
 				foreach (var c in shell.Settings.GetProperties("PPSn.Application.Debug.Path.*"))
 				{
-					log.Append(PpsLogType.Debug, $"Path {c.Key}: {c.Value}");
+					log.Debug($"Path {c.Key}: {c.Value}");
 					AddToDirectoryList(i++, pathAdditions, c.Value);
 				}
 
@@ -357,7 +357,7 @@ namespace TecWare.PPSn
 
 					splashWindow.SetProgressText(String.Format("Lade Anwendungsmodul {0}...", assemblyName.Name));
 					var asm = Assembly.Load(assemblyName);
-					log.Append(PpsLogType.Debug, $"Assembly {f.FileId} loaded: {asm.Location}");
+					log.Debug($"Assembly {f.FileId} loaded: {asm.Location}");
 
 					// add alias for type resolver
 					AddAssemblyAlias(f.FileId, asm);
@@ -523,10 +523,12 @@ namespace TecWare.PPSn
 				// auto login for a user
 				var userInfo = args.UserInfo;
 				var autoLogin = args.DoAutoLogin;
-				if (userInfo == null) // try find auto login
+
+				// try find auto login
+				var autoUserInfo = settings.GetAutoLogin();
+				if (autoUserInfo != null)
 				{
-					// check shell settings for user information
-					userInfo = settings.GetAutoLogin();
+					userInfo = autoUserInfo;
 					autoLogin = true;
 				}
 
@@ -539,6 +541,7 @@ namespace TecWare.PPSn
 						userInfo = await StartApplicationLoginAsync(splashWindow, autoLogin, userInfo, newShell, errorInfo);
 						if (userInfo == null)
 							return false;
+
 						autoLogin = false;
 						await newShell.LoginAsync(userInfo);
 
@@ -556,11 +559,11 @@ namespace TecWare.PPSn
 						ShutdownMode = ShutdownMode.OnLastWindowClose;
 						return true;
 					}
-					catch (RestartApplicationException e)
+					catch (RestartApplicationException)
 					{
 						throw;
 					}
-					catch (PpsApplicationRestartNeededException e)
+					catch (PpsApplicationRestartNeededException)
 					{
 						throw new RestartApplicationException(newShell.Info, userInfo);
 					}
@@ -748,11 +751,11 @@ namespace TecWare.PPSn
 				Clipboard.SetText(ex.GetMessageString());
 		} // proc CoreExceptionHandler
 
-		private void LogException(PpsLogType type, string message)
-			=> (shell ?? PpsShell.Global).GetService<IPpsLogger>(false)?.Append(type, message);
+		private void LogException(LogMsgType type, string message)
+			=> (shell ?? PpsShell.Global).GetService<ILogger>(false)?.LogMsg(type, message);
 
 		private void LogException(Exception e)
-			=> (shell ?? PpsShell.Global).GetService<IPpsLogger>(false)?.Append(PpsLogType.Exception, e);
+			=> (shell ?? PpsShell.Global).GetService<ILogger>(false)?.LogMsg(LogMsgType.Error, e);
 
 		private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
 		{

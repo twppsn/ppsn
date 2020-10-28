@@ -19,6 +19,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Networking
@@ -43,30 +44,30 @@ namespace TecWare.PPSn.Networking
 	/// <summary>Helper for <see cref="IPpsCommunicationService"/>.</summary>
 	public static class PpsCommunicationHelper
 	{
-		private static bool TryGetSeverity(string severity, out PpsLogType severityCode)
+		private static bool TryGetSeverity(string severity, out LogMsgType severityCode)
 		{
 			switch (severity)
 			{
 				case "low":
 				case "info":
-					severityCode = PpsLogType.Information;
+					severityCode = LogMsgType.Information;
 					return true;
 				case "medium":
 				case "warn":
-					severityCode = PpsLogType.Warning;
+					severityCode = LogMsgType.Warning;
 					return true;
 				case "error":
-					severityCode = PpsLogType.Fail;
+					severityCode = LogMsgType.Error;
 					return true;
 				default:
-					severityCode = PpsLogType.None;
+					severityCode = (LogMsgType)(-1);
 					return false;
 			}
 		} // func TryGetSeverity
 
 		/// <summary>todo: move to des.core?</summary>
 		/// <param name="httpResponse"></param>
-		public static (PpsLogType? severity, string reasonPhrase) DecodeReasonPhrase(this HttpResponseMessage httpResponse)
+		public static (LogMsgType? severity, string reasonPhrase) DecodeReasonPhrase(this HttpResponseMessage httpResponse)
 		{
 			var text = httpResponse.ReasonPhrase;
 

@@ -2631,7 +2631,7 @@ namespace TecWare.PPSn
 				}
 				catch (Exception e)
 				{
-					environment.Log.Append(PpsLogType.Exception, e);
+					//environment.Log.Append(LogMsgType.Exception, e);
 					throw;
 				}
 			}
@@ -3082,7 +3082,7 @@ namespace TecWare.PPSn
 			} // try
 			catch (Exception e)
 			{
-				environment.Log.Append(PpsLogType.Exception, e, String.Format("Failed to resolve offline item with path \"{0}\".", requestUri.ToString()));
+				//environment.Log.Append(PpsLogType.Exception, e, String.Format("Failed to resolve offline item with path \"{0}\".", requestUri.ToString()));
 			} // catch e
 
 			NoResult:

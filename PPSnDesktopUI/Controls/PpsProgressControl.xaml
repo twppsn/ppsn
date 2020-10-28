@@ -166,10 +166,8 @@ specific language governing permissions and limitations under the Licence.
 							</Trigger.ExitActions>
 						</Trigger>
 					</ControlTemplate.Triggers>
-
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
 	</Style>
-
 </ResourceDictionary>

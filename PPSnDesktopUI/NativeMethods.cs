@@ -301,6 +301,28 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- enum SetWindowPosFlag --------------------------------------------------
+
+	[Flags]
+	internal enum SetWindowPosFlag : uint
+	{
+		NoSize = 0x0001,
+		NoMove = 0x0002,
+		NoZOrder = 0x0004,
+		NoRedraw = 0x0008,
+		NoActivate = 0x0010,
+		FrameChanged = 0x0020,
+		DrawFrame = 0x0020,
+		ShowWindow = 0x0040,
+		HideWindow = 0x0080,
+		NoCopyBits = 0x0100,
+		NoOwnerZOrder = 0x0200,
+		NoReposition = 0x0200,
+		ASyncWindowPos = 0x0200,
+	} // enum SetWindowPosFlag
+
+	#endregion
+
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 	internal struct WNDCLASS
 	{
@@ -406,7 +428,7 @@ namespace TecWare.PPSn
 		public int y;
 		public int cx;
 		public int cy;
-		public uint flags;
+		public SetWindowPosFlag flags;
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -541,14 +563,6 @@ namespace TecWare.PPSn
 		public const int WS_EX_TOOLWINDOW = 0x00000080;
 		public const int WS_EX_LAYERED = 0x00080000;
 
-		public const uint SWP_NOSIZE = 0x0001;
-		public const uint SWP_NOMOVE = 0x0002;
-		public const uint SWP_NOZORDER = 0x0004;
-		public const uint SWP_NOACTIVATE = 0x0010;
-		public const uint SWP_SHOWWINDOW = 0x0040;
-		public const int SWP_HIDEWINDOW = 0x0080;
-		public const uint SWP_NOOWNERZORDER = 0x0200;
-
 		public const int SW_SHOWMAXIMIZED = 3;
 		public const int WA_CLICKACTIVE = 2;
 		public const int GW_HWNDPREV = 3;
@@ -617,7 +631,7 @@ namespace TecWare.PPSn
 
 		[DllImport(user32, CharSet = CharSet.Auto, ExactSpelling = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
+		public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, SetWindowPosFlag flags);
 
 		[DllImport(user32)]
 		[return: MarshalAs(UnmanagedType.Bool)]
@@ -682,6 +696,10 @@ namespace TecWare.PPSn
 		public static extern IntPtr GlobalLock(IntPtr hMem);
 		[DllImport(kernel32)]
 		public static extern IntPtr GlobalSize(IntPtr hMem);
+
+		[DllImport(kernel32, SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool IsWow64Process([In] IntPtr hProcess, [Out] out bool lpSystemInfo);
 
 		[DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
 		public static extern int DocumentProperties(IntPtr hwnd, IntPtr hPrinter, string pDeviceName, IntPtr pDevModeOutput, IntPtr pDevModeInput, int mode);

@@ -68,7 +68,7 @@ namespace TecWare.PPSn.UI
 
 		public PpsHelpPageViewer()
 		{
-			SetValue(progressStackPropertyKey, new PpsProgressStack(Dispatcher));
+			SetValue(progressStackPropertyKey, Dispatcher.CreateProgressStack());
 			ClearHelpPage();
 
 			CommandBindings.Add(

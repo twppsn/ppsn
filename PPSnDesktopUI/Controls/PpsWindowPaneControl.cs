@@ -141,8 +141,12 @@ namespace TecWare.PPSn.Controls
 		{
 		} // proc Dispose
 
-		void IDisposable.Dispose()
-			=> Dispose(true);
+		/// <inherited />
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		} // proc Dispose
 
 		#endregion
 

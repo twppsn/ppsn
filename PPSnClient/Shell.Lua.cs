@@ -54,8 +54,6 @@ namespace TecWare.PPSn
 
 		/// <summary>Returns the synchronization for the UI thread</summary>
 		SynchronizationContext Context { get; }
-		/// <summary>Returns the trace sink.</summary>
-		IPpsLogger Log { get; }
 	} // interface IPpsLuaTaskParent
 
 	#endregion
@@ -205,7 +203,7 @@ namespace TecWare.PPSn
 			}
 
 			currentException = e ?? throw new ArgumentNullException(nameof(e));
-			parent.Log.Append(PpsLogType.Exception, e);
+			//parent.Log.Append(PpsLogType.Exception, e);
 		} // proc SetException
 
 		private void ExecuteTask(object continueWith)
@@ -687,26 +685,26 @@ namespace TecWare.PPSn
 			ShowException(PpsExceptionShowFlags.None, e, alternativeMessage);
 		} // proc HandleDataRemoveException
 
-		/// <summary>Write in the trace log.</summary>
-		/// <param name="type"></param>
-		/// <param name="args"></param>
-		[LuaMember("trace")]
-		public void LuaTrace(PpsLogType type, params object[] args)
-		{
-			if (args == null || args.Length == 0)
-				return;
+		///// <summary>Write in the trace log.</summary>
+		///// <param name="type"></param>
+		///// <param name="args"></param>
+		//[LuaMember("trace")]
+		//public void LuaTrace(PpsLogType type, params object[] args)
+		//{
+		//	if (args == null || args.Length == 0)
+		//		return;
 
-			if (args[0] is string)
-				Log.Append(type, String.Format((string)args[0], args.Skip(1).ToArray()));
-			else
-				Log.Append(type, String.Join(", ", args));
-		} // proc LuaTrace
+		//	if (args[0] is string)
+		//		Log.Append(type, String.Format((string)args[0], args.Skip(1).ToArray()));
+		//	else
+		//		Log.Append(type, String.Join(", ", args));
+		//} // proc LuaTrace
 
-		/// <summary>Send a simple notification to the internal log</summary>
-		/// <param name="args"></param>
-		[LuaMember("print")]
-		public void LuaPrint(params object[] args)
-			=> LuaTrace(PpsLogType.Information, args);
+		///// <summary>Send a simple notification to the internal log</summary>
+		///// <param name="args"></param>
+		//[LuaMember("print")]
+		//public void LuaPrint(params object[] args)
+		//	=> LuaTrace(PpsLogType.Information, args);
 
 		/// <summary>Creates a table from the data object.</summary>
 		/// <param name="table"></param>

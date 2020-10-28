@@ -570,7 +570,7 @@ namespace TecWare.PPSn
 
 		#region -- class PpsShellImplementation ---------------------------------------
 
-		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, IPpsLogger, IDisposable
+		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, ILogger, IDisposable
 		{
 			public event PropertyChangedEventHandler PropertyChanged;
 
@@ -596,7 +596,7 @@ namespace TecWare.PPSn
 
 				AddService(typeof(IPpsShell), this);
 				AddService(typeof(IPpsCommunicationService), this);
-				AddService(typeof(IPpsLogger), this);
+				AddService(typeof(ILogger), this);
 
 				backgroundWorker = new PpsBackgroundWorker(this);
 			} // ctor
@@ -926,15 +926,8 @@ namespace TecWare.PPSn
 
 			#region -- Logger ---------------------------------------------------------
 
-			void IPpsLogger.Append(PpsLogType type, string message)
-			{
-				DebugLogger.Append(type, message);
-			} // proc IPpsLogger.Append
-
-			void IPpsLogger.Append(PpsLogType type, Exception exception, string alternativeMessage)
-			{
-				DebugLogger.Append(type, exception, alternativeMessage);
-			} // proc IPpsLogger.Append
+			void ILogger.LogMsg(LogMsgType type, string message)
+				=> DebugLogger.LogMsg(type, message);
 
 			#endregion
 
@@ -1150,6 +1143,7 @@ namespace TecWare.PPSn
 		{
 			global.AddService(typeof(IPpsSettingsService), CreateProxyService);
 			global.AddService(typeof(IPpsCommunicationService), CreateProxyService);
+			global.AddService(typeof(ILogger), DebugLogger);
 
 			Collect(typeof(PpsShell).Assembly);
 

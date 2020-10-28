@@ -41,7 +41,7 @@ namespace TecWare.PPSn
 	#region -- class PpsWpfShell ------------------------------------------------------
 
 	/// <summary>Shell extensions für Wpf-applications</summary>
-	public static class PpsWpfShell
+	public static partial class PpsWpfShell
 	{
 		#region -- class InstanceKey --------------------------------------------------
 
@@ -152,7 +152,12 @@ namespace TecWare.PPSn
 			if (current == null)
 				return null;
 			else if (current is IServiceProvider sp)
-				r = sp.GetService(serviceType);
+			{
+				if (serviceType == typeof(IServiceProvider))
+					r = current;
+				else
+					r = sp.GetService(serviceType);
+			}
 			else if (serviceType.IsAssignableFrom(current.GetType()))
 				r = current;
 
@@ -1006,7 +1011,7 @@ namespace TecWare.PPSn
 		/// <param name="alternativeMessage"></param>
 		public override void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
-			Log.Append(PpsLogType.Exception, exception, alternativeMessage);
+			//Log.Append(PpsLogType.Exception, exception, alternativeMessage);
 
 			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
 			{

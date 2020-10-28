@@ -572,8 +572,8 @@ namespace TecWare.PPSn
 
 			InitializeStatistics();
 
-			backgroundProgress = new PpsProgressStack(app.Dispatcher);
-			forgroundProgress = new PpsProgressStack(app.Dispatcher);
+			backgroundProgress = PpsWpfShell.CreateProgressStack(app.Dispatcher);
+			forgroundProgress = PpsWpfShell.CreateProgressStack(app.Dispatcher);
 		} // ctor
 
 		/// <summary>Initialize environmnet.</summary>
@@ -1072,7 +1072,7 @@ namespace TecWare.PPSn
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.ServerConnectFailure);
 									break;
 								case WebExceptionStatus.ProtocolError:
-									Log.Append(PpsLogType.Exception, webEx);
+									//Log.Append(PpsLogType.Exception, webEx);
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
 									break;
 								default:
@@ -1090,8 +1090,8 @@ namespace TecWare.PPSn
 					{
 						if (ex is WebException webEx && webEx.Status == WebExceptionStatus.ConnectFailure)
 							state = PpsEnvironmentState.Offline;
-						else
-							Log.Append(PpsLogType.Warning, ex);
+						//else
+						//	Log.Append(PpsLogType.Warning, ex);
 						await Task.Delay(500);
 					}
 				}
@@ -1368,10 +1368,6 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public bool IsOnline => CurrentState == PpsEnvironmentState.Online;
 
-		/// <summary>Access trace log</summary>
-		[LuaMember]
-		public override IPpsLogger Log => traceLog;
-		
 		/// <summary>Test if Network is present.</summary>
 		[LuaMember]
 		public bool IsNetworkPresent

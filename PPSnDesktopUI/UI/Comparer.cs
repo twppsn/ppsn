@@ -18,12 +18,8 @@
 // under the License.
 //
 #endregion
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Media;
 
 namespace TecWare.PPSn.UI
@@ -41,7 +37,7 @@ namespace TecWare.PPSn.UI
 				=> Compare((Color)x, (Color)y);
 
 			public int Compare(Color x, Color y)
-				=> HsvColor.FromColor(x).CompareTo(HsvColor.FromColor(y));
+				=> x.ToHsvColor().CompareTo(y.ToHsvColor());
 		} // class ColorComparer
 
 		#endregion

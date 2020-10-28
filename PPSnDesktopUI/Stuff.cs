@@ -16,13 +16,10 @@
 using System;
 using System.Collections;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -32,7 +29,6 @@ using System.Web;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Media3D;
 using System.Xml.Linq;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
@@ -199,7 +195,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class StuffUI -----------------------------------------------------------
+	#region -- class StuffUI ----------------------------------------------------------
 
 	/// <summary></summary>
 	public static class StuffUI
@@ -219,115 +215,10 @@ namespace TecWare.PPSn
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary></summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		public static T ChangeTypeWithConverter<T>(this object value)
-			=> (T)ChangeTypeWithConverter(value, typeof(T));
-
-		/// <summary></summary>
-		/// <param name="value"></param>
-		/// <param name="typeTo"></param>
-		/// <returns></returns>
-		public static object ChangeTypeWithConverter(this object value, Type typeTo)
-		{
-			if (value == null)
-				return Procs.ChangeType(null, typeTo);
-			else if (typeTo.IsAssignableFrom(value.GetType()))
-				return value;
-			else
-			{
-				var convTo = TypeDescriptor.GetConverter(value.GetType());
-				if (convTo.CanConvertTo(typeTo))
-					return convTo.ConvertTo(null, CultureInfo.InvariantCulture, value, typeTo);
-				else
-				{
-					var convFrom = TypeDescriptor.GetConverter(typeTo);
-					if (convFrom.CanConvertFrom(value.GetType()))
-						return convFrom.ConvertFrom(null, CultureInfo.InvariantCulture, value);
-					else
-						return Procs.ChangeType(value, typeTo);
-				}
-			}
-		} // func ChangeTypeWithConverter
-
-		#region -- Commands -----------------------------------------------------------
-
-		/// <summary></summary>
-		/// <param name="ui"></param>
-		/// <param name="shell"></param>
-		/// <param name="target"></param>
-		/// <param name="command"></param>
-		public static void AddCommandBinding(this UIElement ui, IPpsShell shell, object target, PpsCommandBase command)
-			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, target, command));
-
-		/// <summary></summary>
-		/// <param name="ui"></param>
-		/// <param name="shell"></param>
-		/// <param name="command"></param>
-		/// <param name="commandImpl"></param>
-		public static void AddCommandBinding(this UIElement ui, IPpsShell shell, RoutedCommand command, PpsCommandBase commandImpl)
-			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, command, commandImpl));
-
-		/// <summary>Executes a command</summary>
-		/// <param name="commandSource"></param>
-		/// <param name="inputElement"></param>
-		/// <returns></returns>
-		public static bool Execute(this ICommandSource commandSource, IInputElement inputElement)
-		{
-			var command = commandSource.Command;
-			if (command != null)
-			{
-				var commandParameter = commandSource.CommandParameter;
-				var commandTarget = commandSource.CommandTarget ?? inputElement;
-
-				if (command is RoutedCommand rc)
-				{
-					if (rc.CanExecute(commandParameter, commandTarget))
-					{
-						rc.Execute(commandParameter, commandTarget);
-						return true;
-					}
-				}
-				else
-				{
-					if (command.CanExecute(commandParameter))
-					{
-						command.Execute(commandParameter);
-						return true;
-					}
-				}
-			}
-			return false;
-		} // func Execute
-
-		#endregion
-
-		/// <summary></summary>
 		/// <param name="owner"></param>
 		/// <returns></returns>
 		public static ImageSource TakePicture(DependencyObject owner)
 			=> PpsCameraDialog.TakePicture(owner);
-
-		#region -- PpsUI - Extensions -------------------------------------------------
-
-		/// <summary>Return a dummy progress.</summary>
-		/// <param name="sender"></param>
-		/// <param name="blockUI"></param>
-		/// <param name="progressText"></param>
-		/// <returns></returns>
-		public static IPpsProgress CreateProgress(this DependencyObject sender, bool blockUI = true, string progressText = null)
-			=> PpsUI.CreateProgress(PpsWpfShell.GetControlService<IServiceProvider>(sender, true), blockUI, progressText);
-
-		/// <summary></summary>
-		/// <param name="sender"></param>
-		/// <param name="taskText"></param>
-		/// <param name="action"></param>
-		/// <returns></returns>
-		public static Task RunTaskAsync(this DependencyObject sender, string taskText, Func<IPpsProgress, Task> action)
-			=> PpsUI.RunTaskAsync(PpsWpfShell.GetControlService<IServiceProvider>(sender, true), taskText, action);
-
-		#endregion
 
 		#region -- remove after update DES --
 
@@ -910,185 +801,6 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public object CurrentItem => this[currentMitte];
 	} // class PpsCircularView
-
-	#endregion
-
-	#region -- class HsvColor ---------------------------------------------------------
-
-	/// <summary>Hue, Saturation, Light</summary>
-	public struct HsvColor : IComparable, IComparable<HsvColor>
-	{
-		private byte a;
-		private short h;
-		private byte s;
-		private byte v;
-
-		/// <summary></summary>
-		/// <returns></returns>
-		public override string ToString()
-			=> $"a={a};h={h};s={s};v={v}";
-
-		/// <summary></summary>
-		/// <returns></returns>
-		public override int GetHashCode()
-			=> ToInt32().GetHashCode();
-
-		/// <summary></summary>
-		/// <param name="obj"></param>
-		/// <returns></returns>
-		public override bool Equals(object obj)
-			=> obj is HsvColor hsl ? CompareTo(hsl) == 0 : false;
-
-		/// <summary></summary>
-		/// <param name="obj"></param>
-		/// <returns></returns>
-		public int CompareTo(object obj)
-			=> obj is HsvColor hsl ? CompareTo(hsl) : -1;
-
-		/// <summary></summary>
-		/// <param name="other"></param>
-		/// <returns></returns>
-		public int CompareTo(HsvColor other)
-		{
-			var r = h.CompareTo(other.h);
-			if (r == 0)
-				r = s.CompareTo(other.s);
-			if (r == 0)
-				r = v.CompareTo(other.v);
-			return r;
-		} // func CompareTo
-
-		/// <summary>Create a 32bit value for the hsv.</summary>
-		/// <returns></returns>
-		public int ToInt32()
-			=> unchecked((int)((uint)a << 24 | (uint)h << 15 | (uint)(s & 0x7F) << 8 | (uint)v));
-
-		/// <summary>Convert to color</summary>
-		/// <returns></returns>
-		public Color ToColor()
-		{
-			byte r;
-			byte g;
-			byte b;
-
-			if (s == 0)
-			{
-				r = g = b = v;
-			}
-			else
-			{
-				var i = Math.DivRem(h, 60, out var fraction);
-				var p = Convert.ToByte(v * (100 - s) / 100);
-				var q = Convert.ToByte(v * (6000 - s * fraction) / 6000);
-				var t = Convert.ToByte(v * (6000 - s * (60 - fraction)) / 6000);
-
-				switch (i)
-				{
-					case 1:
-						r = q;
-						g = v;
-						b = p;
-						break;
-					case 2:
-						r = p;
-						g = v;
-						b = t;
-						break;
-					case 3:
-						r = p;
-						g = q;
-						b = v;
-						break;
-					case 4:
-						r = t;
-						g = p;
-						b = v;
-						break;
-					case 5:
-						r = v;
-						g = p;
-						b = q;
-						break;
-					default: // 0
-						r = v;
-						g = t;
-						b = p;
-						break;
-				}
-			}
-
-			return Color.FromArgb(a, r, g, b);
-		} // func ToColor
-
-		/// <summary>Alpha value 0..255</summary>
-		public byte Alpha => a;
-		/// <summary>Color 0..360</summary>
-		public short Hue => h;
-		/// <summary>Saturation 0..100</summary>
-		public byte Saturation => s;
-		/// <summary>Light/Brightness (0 is dark, 255 is light)</summary>
-		public byte Light => v;
-
-		/// <summary></summary>
-		/// <param name="h">Color 0..360</param>
-		/// <param name="s">Saturation 0..100</param>
-		/// <param name="v">Light/Brightness (0 is dark, 255 is light)</param>
-		/// <returns>Hsv color</returns>
-		public static HsvColor FromHsv(short h, byte s, byte v)
-			=> FromAhsv(Byte.MaxValue, h, s, v);
-
-		/// <summary></summary>
-		/// <param name="a">Alpha value 0..255</param>
-		/// <param name="h">Color 0..360</param>
-		/// <param name="s">Saturation 0..100</param>
-		/// <param name="v">Light/Brightness (0 is dark, 255 is light)</param>
-		/// <returns>Hsv color</returns>
-		public static HsvColor FromAhsv(byte a, short h, byte s, byte v)
-			=> new HsvColor() { a = a, h = h > 360 ? (short)360 : h, s = s > 100 ? (byte)100 : s, v = v };
-
-		/// <summary>Convert from color</summary>
-		/// <param name="color"></param>
-		/// <returns></returns>
-		public static HsvColor FromColor(Color color)
-		{
-			var a = color.A;
-			var r = color.R;
-			var g = color.G;
-			var b = color.B;
-
-			int h;
-			int s;
-			int v;
-
-			var max = Math.Max(Math.Max(r, g), b);
-			var min = Math.Min(Math.Min(r, g), b);
-
-			if (max == min)
-				h = 0;
-			else
-			{
-				var diff = max - min;
-
-				if (max == r)
-					h = 0 + (g - b) * 60 / diff;
-				else if (max == g)
-					h = 120 + (b - r) * 60 / diff;
-				else
-					h = 240 + (r - g) * 60 / diff;
-
-				if (h < 0)
-					h += 360;
-				if (h > 360)
-					h -= 360;
-			}
-
-			s = max == 0 ? 0 : (max - min) * 100 / max;
-
-			v = max;
-
-			return FromAhsv(a, (short)h, (byte)s, (byte)v);
-		} // func ToHsv
-	} // struct HsvColor
 
 	#endregion
 }

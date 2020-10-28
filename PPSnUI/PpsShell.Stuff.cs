@@ -121,31 +121,23 @@ namespace TecWare.PPSn
 
 		#region -- class PpsDummyLogger -----------------------------------------------
 
-		private sealed class PpsDummyLogger : IPpsLogger
+		private sealed class PpsDummyLogger : ILogger
 		{
-			public void Append(PpsLogType type, string message)
+			public void LogMsg(LogMsgType type, string message)
 				=> Debug.WriteLine("[" + type.ToString() + "] " + message);
-
-			public void Append(PpsLogType type, Exception exception, string alternativeException)
-			{
-				Append(type,
-					String.IsNullOrEmpty(alternativeException)
-					? exception.GetInnerException().ToString()
-					: alternativeException + Environment.NewLine + exception.GetInnerException().ToString()
-				);
-			} // proc Append
 		} // class PpsDummyLogger
 
 		#endregion
 
-		/// <summary>Get the log-interface.</summary>
-		/// <param name="sp"></param>
-		/// <returns></returns>
-		public static IPpsLogger GetLogger(this IServiceProvider sp)
-			=> sp.GetService<IPpsLogger>(false) ?? DebugLogger;
+		/// <summary>Exception to log.</summary>
+		/// <param name="log"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		public static void Except(this ILogger log, Exception exception, string alternativeMessage)
+			=> log.LogMsg(LogMsgType.Error, alternativeMessage + Environment.NewLine + exception.GetMessageString());
 
 		/// <summary>Logger that prints to the debug output.</summary>
-		public static IPpsLogger DebugLogger { get; } = new PpsDummyLogger();
+		public static ILogger DebugLogger { get; } = new PpsDummyLogger();
 
 		#endregion
 
@@ -191,6 +183,9 @@ namespace TecWare.PPSn
 		public static Version AppVersion => appVersion.Value;
 
 		#endregion
+
+		/// <summary>Is this process a 64bit process</summary>
+		public static bool Is64BitProcess => IntPtr.Size == 8;
 	} // class PpsShell
 
 	#endregion

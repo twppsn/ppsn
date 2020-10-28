@@ -27,7 +27,7 @@ using TecWare.PPSn.UI;
 namespace TecWare.PPSn.Bde
 {
 	/// <summary>Touch first window</summary>
-	internal partial class PpsBdeWindow : PpsWindow, IPpsWindowPaneManager, IPpsProgressFactory, IPpsBarcodeReceiver
+	internal partial class PpsBdeWindow : PpsWindow, IPpsWindowPaneManager, IPpsBarcodeReceiver
 	{
 		public static readonly RoutedCommand BackCommand = new RoutedCommand();
 
@@ -47,7 +47,6 @@ namespace TecWare.PPSn.Bde
 
 			// register base service
 			Services.AddService(typeof(IPpsWindowPaneManager), this);
-			Services.AddService(typeof(IPpsProgressFactory), this);
 
 			barcodeService = services.GetService<PpsBarcodeService>(true);
 			barcodeReceiverToken = barcodeService.RegisterReceiver(this);
@@ -96,14 +95,14 @@ namespace TecWare.PPSn.Bde
 		private async Task<IPpsWindowPane> PushPaneAsync(Type paneType, LuaTable arguments)
 		{
 			// create the pane 
-			var host = new PpsBdePaneHost(this, paneType);
+			var host = new PpsBdePaneHost();
 
-			// add pane and activate it
+			// add host and activate it
 			panes.Add(host);
 			SetValue(topPaneHostPropertyKey, panes.LastOrDefault());
 
 			// load content
-			await host.LoadPaneAsync(arguments);
+			await host.LoadAsync(this, paneType, arguments);
 
 			return host.Pane;
 		} // func PushNewPaneAsync
@@ -111,7 +110,7 @@ namespace TecWare.PPSn.Bde
 		private async Task<bool> PopPaneAsync()
 		{
 			var topPane = TopPaneHost;
-			if (topPane != null && await topPane.UnloadPaneAsync(null))
+			if (topPane != null && await topPane.UnloadAsync(null))
 			{
 				panes.Remove(topPane);
 				SetValue(topPaneHostPropertyKey, panes.LastOrDefault());
@@ -170,9 +169,6 @@ namespace TecWare.PPSn.Bde
 		public PpsBdePaneHost TopPaneHost => (PpsBdePaneHost)GetValue(TopPaneHostProperty);
 
 		#endregion
-
-		public IPpsProgress CreateProgress(bool blockUI = true)
-			=> null;
 
 		#region -- Back button --------------------------------------------------------
 

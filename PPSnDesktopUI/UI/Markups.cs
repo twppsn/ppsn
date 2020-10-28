@@ -100,7 +100,7 @@ namespace TecWare.PPSn.UI
 				else
 					type = LuaType.GetType(TypeName);
 			}
-			return type == null ? Value : StuffUI.ChangeTypeWithConverter(Value, type);
+			return type == null ? Value : PpsWpfShell.ChangeTypeWithConverter(Value, type);
 		} // func ProvideValue
 
 		/// <summary></summary>

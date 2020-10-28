@@ -156,16 +156,16 @@ namespace TecWare.PPSn.UI
 
 				// print result
 				var i = 0;
-				foreach (var c in r)
-					Environment.Log.Append(PpsLogType.Debug, $"${i++}: {c}");
+				//foreach (var c in r)
+				//	Environment.Log.Append(PpsLogType.Debug, $"${i++}: {c}");
 			}
 			catch (LuaParseException ex)
 			{
-				Environment.Log.Append(PpsLogType.Fail, String.Format("Could not parse command: {0}", ex.Message));
+				//Environment.Log.Append(PpsLogType.Fail, String.Format("Could not parse command: {0}", ex.Message));
 			}
 			catch (Exception ex)
 			{
-				Environment.Log.Append(PpsLogType.Fail, ex, String.Format("Command \"{0}\" threw an Exception: {1}", command, ex.Message));
+				//Environment.Log.Append(PpsLogType.Fail, ex, String.Format("Command \"{0}\" threw an Exception: {1}", command, ex.Message));
 			}
 		} // proc ExecuteCommandAsync
 
@@ -194,27 +194,27 @@ namespace TecWare.PPSn.UI
 			using (var sw = new StreamWriter(openFileDialog.FileName))
 			{
 				// write log content
-				if (Environment.Log is PpsTraceLog log)
-				{
-					foreach (var c in log.OfType<PpsTraceItemBase>())
-					{
-						sw.Write(c.Type);
-						sw.Write(';');
-						sw.Write(c.Stamp.ToString("G"));
-						sw.Write(';');
+				//if (Environment.Log is PpsTraceLog log)
+				//{
+				//	foreach (var c in log.OfType<PpsTraceItemBase>())
+				//	{
+				//		sw.Write(c.Type);
+				//		sw.Write(';');
+				//		sw.Write(c.Stamp.ToString("G"));
+				//		sw.Write(';');
 
-						if (c is PpsExceptionItem exi)
-						{
-							sw.Write('"');
-							sw.Write(ExceptionFormatter.FormatPlainText(exi.Exception).Replace("\"", "\"\""));
-							sw.Write('"');
-						}
-						else
-							sw.Write(c.Message.Replace("\"", "\"\""));
-						sw.WriteLine();
-					}
-				}
-				else
+				//		if (c is PpsExceptionItem exi)
+				//		{
+				//			sw.Write('"');
+				//			sw.Write(ExceptionFormatter.FormatPlainText(exi.Exception).Replace("\"", "\"\""));
+				//			sw.Write('"');
+				//		}
+				//		else
+				//			sw.Write(c.Message.Replace("\"", "\"\""));
+				//		sw.WriteLine();
+				//	}
+				//}
+				//else
 					sw.WriteLine("Log is not a trace log?");
 
 				// write statistics

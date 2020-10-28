@@ -113,20 +113,19 @@ namespace TecWare.PPSn.Main
 
 			foreach (var p in panes)
 			{
-				// todo: fix cap between create and loading...
-				if (p.CurrentPane?.GetType() == paneType)
+				if (p.Pane?.GetType() == paneType)
 				{
-					var r = p.CurrentPane.CompareArguments(arguments);
+					var r = p.Pane.CompareArguments(arguments);
 					if (r == PpsWindowPaneCompareResult.Same)
-						return new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(r, p.CurrentPane);
+						return new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(r, p.Pane);
 					else if (r == PpsWindowPaneCompareResult.Reload && compatiblePane == null)
-						compatiblePane = p.CurrentPane;
+						compatiblePane = p.Pane;
 				}
 			}
 
-			return compatiblePane == null ?
-				new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(PpsWindowPaneCompareResult.Incompatible, null) :
-				new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(PpsWindowPaneCompareResult.Reload, compatiblePane);
+			return compatiblePane == null 
+				? new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(PpsWindowPaneCompareResult.Incompatible, null) 
+				: new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(PpsWindowPaneCompareResult.Reload, compatiblePane);
 		} // func FindPaneByArguments
 
 		public int Count => panes.Count;
@@ -377,7 +376,7 @@ namespace TecWare.PPSn.Main
 				// load the pane
 				await newPaneHost.LoadAsync(this, paneType, arguments);
 
-				return newPaneHost.CurrentPane;
+				return newPaneHost.Pane;
 			}
 			catch
 			{
@@ -443,7 +442,7 @@ namespace TecWare.PPSn.Main
 			return UnloadPaneHostAsync(FindPaneHost(pane, true), null);
 		} // func UnloadPaneAsync
 
-		private async Task<bool> UnloadPaneHostAsync(PpsWindowPaneHost paneHost, bool? commit)
+		internal async Task<bool> UnloadPaneHostAsync(PpsWindowPaneHost paneHost, bool? commit)
 		{
 			if (paneHost == null)
 				throw new ArgumentNullException(nameof(paneHost));
@@ -488,7 +487,7 @@ namespace TecWare.PPSn.Main
 			=> parameter is PpsWindowPaneHost paneHost ? paneHost : CurrentPaneHost;
 
 		private bool CanUnloadPane(PpsWindowPaneHost paneHost)
-			=> !(paneHost is null || paneHost.PaneProgress.IsActive || paneHost.IsFixed);
+			=> !(paneHost is null || paneHost.ProgressStack.IsActive || paneHost.IsFixed);
 
 		#endregion
 
@@ -500,7 +499,7 @@ namespace TecWare.PPSn.Main
 			{
 				foreach (var p in paneHosts)
 				{
-					if (p.CurrentPane == pane)
+					if (p.Pane == pane)
 						return p;
 				}
 			}
@@ -592,7 +591,7 @@ namespace TecWare.PPSn.Main
 		internal IReadOnlyList<PpsWindowPaneHost> SelectionOrder => (IReadOnlyList<PpsWindowPaneHost>)GetValue(SelectionOrderProperty);
 
 		IEnumerable<IPpsWindowPane> IPpsWindowPaneManager.Panes
-			=> paneHosts.Select(c => c.CurrentPane);
+			=> paneHosts.Select(c => c.Pane);
 
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, paneHosts.GetEnumerator());

@@ -14,19 +14,15 @@
 //
 #endregion
 using System;
-using System.Drawing.Imaging;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using Neo.IronLua;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Bde
 {
 	internal sealed class PpsBdePaneHost : PpsPaneHost
 	{
-		public PpsBdePaneHost(PpsBdeWindow paneManager, Type paneType)
-			:base(paneManager, paneType)
+		public PpsBdePaneHost()
 		{
 		} // ctor
 
@@ -35,10 +31,8 @@ namespace TecWare.PPSn.Bde
 		public override Task<bool> ClosePaneAsync()
 			=> Window.PopPaneAsync(this);
 
+		/// <summary>Access main window</summary>
 		private PpsBdeWindow Window => (PpsBdeWindow)PaneManager;
-
-		/// <summary>Access progress provider creation</summary>
-		public override IPpsProgressFactory Progress => (IPpsProgressFactory)PaneManager;
 
 		static PpsBdePaneHost()
 		{

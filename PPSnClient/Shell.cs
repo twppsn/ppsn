@@ -428,15 +428,9 @@ namespace TecWare.PPSn
 
 			if (serviceType.IsAssignableFrom(GetType()))
 				return this;
-			else if (serviceType == typeof(ILogger)
-				|| serviceType == typeof(IPpsLogger))
-				return Log;
 
 			return null;
 		} // func GetService
-
-		/// <summary>Access a log interface.</summary>
-		public abstract IPpsLogger Log { get; }
 
 		#endregion
 

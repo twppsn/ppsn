@@ -408,7 +408,7 @@ namespace TecWare.PPSn.Controls
 						return IntPtr.Zero;
 					case WinMsg.WM_WINDOWPOSCHANGING:
 						var windowpos = (WINDOWPOS)Marshal.PtrToStructure(lParam, typeof(WINDOWPOS));
-						windowpos.flags |= NativeMethods.SWP_NOACTIVATE;
+						windowpos.flags |= SetWindowPosFlag.NoActivate;
 						Marshal.StructureToPtr(windowpos, lParam, true);
 						break;
 					case WinMsg.WM_NCHITTEST:
@@ -576,21 +576,21 @@ namespace TecWare.PPSn.Controls
 			{
 				if (changedPropertys.HasFlag(PropertyType.Location) || changedPropertys.HasFlag(PropertyType.Size) || changedPropertys.HasFlag(PropertyType.Visibility))
 				{
-					var flags = NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_NOOWNERZORDER;
+					var flags = SetWindowPosFlag.NoZOrder | SetWindowPosFlag.NoActivate | SetWindowPosFlag.NoOwnerZOrder;
 					if (changedPropertys.HasFlag(PropertyType.Visibility))
 					{
 						if (IsVisible)
-							flags |= NativeMethods.SWP_SHOWWINDOW;
+							flags |= SetWindowPosFlag.ShowWindow;
 						else
-							flags |= (NativeMethods.SWP_HIDEWINDOW | NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
+							flags |= (SetWindowPosFlag.HideWindow | SetWindowPosFlag.NoMove | SetWindowPosFlag.NoSize);
 					}
 					if (!changedPropertys.HasFlag(PropertyType.Location))
 					{
-						flags |= NativeMethods.SWP_NOMOVE;
+						flags |= SetWindowPosFlag.NoMove;
 					}
 					if (!changedPropertys.HasFlag(PropertyType.Size))
 					{
-						flags |= NativeMethods.SWP_NOSIZE;
+						flags |= SetWindowPosFlag.NoSize;
 					}
 					NativeMethods.SetWindowPos(Handle, IntPtr.Zero, Left, Top, Width, Height, flags);
 				}
@@ -817,7 +817,12 @@ namespace TecWare.PPSn.Controls
 				{
 					var prevHandle = NativeMethods.GetWindow(cur.Handle, NativeMethods.GW_HWNDPREV);
 					if (prevHandle != handle)
-						NativeMethods.SetWindowPos(cur.Handle, handle, 0, 0, 0, 0, NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOACTIVATE);
+					{
+						NativeMethods.SetWindowPos(cur.Handle, handle,
+							0, 0, 0, 0,
+							SetWindowPosFlag.NoSize | SetWindowPosFlag.NoMove | SetWindowPosFlag.NoActivate
+						);
+					}
 					handle = cur.Handle;
 				}
 			}

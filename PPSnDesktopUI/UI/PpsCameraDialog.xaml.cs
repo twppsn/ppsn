@@ -242,7 +242,7 @@ namespace TecWare.PPSn.UI
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private readonly IPpsLogger log;
+		private readonly ILogger log;
 		private readonly string deviceName;
 		private readonly VideoCaptureDevice device;
 		private readonly PpsCameraDeviceProperty[] properties;
@@ -262,7 +262,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		private PpsCameraDevice(IPpsLogger log, string deviceName, VideoCaptureDevice device)
+		private PpsCameraDevice(ILogger log, string deviceName, VideoCaptureDevice device)
 		{
 			this.log = log ?? throw new ArgumentNullException(nameof(log));
 			this.deviceName = deviceName ?? "Unknown";
@@ -296,7 +296,7 @@ namespace TecWare.PPSn.UI
 				default:
 					if (!isDisposed)
 					{
-						LogMsg(PpsLogType.Warning, reason.ToString());
+						LogMsg(LogMsgType.Warning, reason.ToString());
 						IsCameraLost = true;
 					}
 					break;
@@ -306,7 +306,7 @@ namespace TecWare.PPSn.UI
 		private void Device_VideoSourceError(object sender, VideoSourceErrorEventArgs eventArgs)
 		{
 			if (!isDisposed)
-				LogMsg(PpsLogType.Fail, eventArgs.Description ?? "Video source error");
+				LogMsg(LogMsgType.Error, eventArgs.Description ?? "Video source error");
 		} // event Device_VideoSourceError
 
 		private void Property_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -364,8 +364,8 @@ namespace TecWare.PPSn.UI
 
 		#region -- Helper -------------------------------------------------------------
 
-		private void LogMsg(PpsLogType type, string message)
-			=> log.Append(type, String.Format("Camera[{0}]: {1}", deviceName, message));
+		private void LogMsg(LogMsgType type, string message)
+			=> log?.LogMsg(type, String.Format("Camera[{0}]: {1}", deviceName, message));
 
 		private static IEnumerable<VideoCapabilities> FindMaxResolution(IEnumerable<VideoCapabilities> capabilities)
 			=> capabilities.OrderByDescending(v => v.FrameSize.Width * v.FrameSize.Height);
@@ -466,7 +466,7 @@ namespace TecWare.PPSn.UI
 				{
 					device.SnapshotFrame += Device_SnapshotFrame;
 					snapShotsAttached = true;
-					LogMsg(PpsLogType.Information, String.Format("Snapshot initialized with {0},{1}", snapshotCapability.FrameSize.Width, snapshotCapability.FrameSize.Height));
+					LogMsg(LogMsgType.Information, String.Format("Snapshot initialized with {0},{1}", snapshotCapability.FrameSize.Width, snapshotCapability.FrameSize.Height));
 				}
 				return true;
 			}
@@ -479,7 +479,7 @@ namespace TecWare.PPSn.UI
 			if (!snapShotsAttached)
 				return;
 
-			log.Append(PpsLogType.Information, "Close snapshot mode.");
+			LogMsg(LogMsgType.Information, "Close snapshot mode.");
 
 			snapShotsAttached = false;
 			device.ProvideSnapshots = false;
@@ -534,7 +534,7 @@ namespace TecWare.PPSn.UI
 					device.Start();
 				}
 
-				LogMsg(PpsLogType.Information, String.Format("Video initialized with {0},{1}", videoCapability.FrameSize.Width, videoCapability.FrameSize.Height));
+				LogMsg(LogMsgType.Information, String.Format("Video initialized with {0},{1}", videoCapability.FrameSize.Width, videoCapability.FrameSize.Height));
 
 				return true;
 			}
@@ -554,7 +554,7 @@ namespace TecWare.PPSn.UI
 				device.NewFrame -= Device_NewFrame;
 			}
 
-			log.Append(PpsLogType.Information, "Stop video mode.");
+			LogMsg(LogMsgType.Information, "Stop video mode.");
 
 			return Task.Run(() =>
 			{
@@ -600,7 +600,7 @@ namespace TecWare.PPSn.UI
 			if (canUpdatePreviewImage)
 			{
 				UpdatePreviewImageAsync(eventArgs.Frame)
-					.ContinueWith(t => log.Append(PpsLogType.Exception, t.Exception),TaskContinuationOptions.OnlyOnFaulted);
+					.ContinueWith(t => log?.LogMsg(LogMsgType.Error, t.Exception),TaskContinuationOptions.OnlyOnFaulted);
 			}
 			else
 			{
@@ -746,7 +746,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>bitmaps of the preview stream</summary>
 		public ImageSource PreviewImage => currentPreviewImage;
 
-		public static Task<PpsCameraDevice> TryCreateAsync(IPpsLogger log, FilterInfo deviceFilter, Size previewSize)
+		public static Task<PpsCameraDevice> TryCreateAsync(ILogger log, FilterInfo deviceFilter, Size previewSize)
 		{
 			PpsCameraDevice device = null;
 			try
@@ -756,7 +756,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception e)
 			{
-				log.Append(PpsLogType.Exception, e, String.Format("Device initialization failed for {0}", deviceFilter.Name));
+				log?.Except(e, String.Format("Device initialization failed for {0}", deviceFilter.Name));
 
 				try { device?.Dispose(); }
 				catch { }
@@ -963,7 +963,7 @@ namespace TecWare.PPSn.UI
 			var deviceFilterCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
 
 			// check for new camera
-			var log = shell.GetService<IPpsLogger>(false);
+			var log = shell.GetService<ILogger>(false);
 			var newCameras = new List<PpsCameraDevice>();
 			foreach (var deviceFilter in deviceFilterCollection.OfType<FilterInfo>())
 			{
@@ -982,7 +982,7 @@ namespace TecWare.PPSn.UI
 				}
 				catch (Exception e)
 				{
-					log.Append(PpsLogType.Exception, e);
+					log?.LogMsg(LogMsgType.Error, e);
 				}
 			}
 

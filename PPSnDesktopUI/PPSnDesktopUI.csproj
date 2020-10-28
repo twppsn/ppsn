@@ -113,7 +113,9 @@
     <Compile Include="Controls\PpsListbox.cs" />
     <Compile Include="Controls\PpsDataListBox.cs" />
     <Compile Include="Controls\PpsPanel.cs" />
+    <Compile Include="Controls\PpsProgressOverlay.cs" />
     <Compile Include="Controls\PpsShapeCanvas.cs" />
+    <Compile Include="PpsWpfShell.Stuff.cs" />
     <Compile Include="UI\KeyboardScanner.cs" />
     <Compile Include="Interop\Win32Window.cs" />
     <Compile Include="NativeMethods.RawInput.cs" />
@@ -181,7 +183,6 @@
     <Compile Include="UI\PpsPicturePane.xaml.cs">
       <DependentUpon>PpsPicturePane.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UI\PpsProgressStack.cs" />
     <Compile Include="Controls\PpsWindow.Chrome.cs" />
     <Compile Include="Controls\PpsWindow.cs" />
     <Compile Include="UI\PpsWindowPane.cs" />
