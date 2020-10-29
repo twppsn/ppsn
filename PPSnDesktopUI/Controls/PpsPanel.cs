@@ -19,10 +19,48 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsPanelSelector -------------------------------------------------
+
+	/// <summary></summary>
+	public class PpsPanelSelector : Selector
+	{
+		/// <summary></summary>
+		public PpsPanelSelector()
+		{
+			CommandBindings.Add(new CommandBinding(SelectDefaultCommand, SelectDefaultExecuted, SelectDefaultCanExecute));
+		} // ctor
+
+		private object GetDefaultItem()
+			=> Items.Count > 0 ? Items[0] : null;
+
+		private void SelectDefaultCanExecute(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.CanExecute = !Equals(SelectedItem, GetDefaultItem());
+			e.Handled = true;
+		} // proc SelectDefaultCanExecute
+
+		private void SelectDefaultExecuted(object sender, ExecutedRoutedEventArgs e)
+		{
+			SelectedItem = GetDefaultItem();
+			e.Handled = true;
+		} // proc SelectDefaultExecuted
+
+		/// <summary>Select default item</summary>
+		public static readonly RoutedCommand SelectDefaultCommand = new RoutedCommand();
+
+		static PpsPanelSelector()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsPanelSelector), new FrameworkPropertyMetadata(typeof(PpsPanelSelector)));
+		} // sctor
+	} // class PpsPanelSelector
+
+	#endregion
+
 	#region -- class PpsFixedStackPanel -----------------------------------------------
 
 	/// <summary></summary>

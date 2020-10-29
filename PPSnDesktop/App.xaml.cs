@@ -24,6 +24,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
 using TecWare.DE.Networking;
@@ -204,11 +205,16 @@ namespace TecWare.PPSn
 
 			Task IPpsShellLoadNotify.OnAfterInitServicesAsync(IPpsShell shell)
 			{
+				// register pane types
 				var paneRegister = shell.GetService<IPpsKnownWindowPanes>(true);
-
 				paneRegister.RegisterPaneType(typeof(PpsPicturePane), "picture", MimeTypes.Image.Png, MimeTypes.Image.Bmp, MimeTypes.Image.Jpeg);
 				paneRegister.RegisterPaneType(typeof(PpsPdfViewerPane), "pdf", MimeTypes.Application.Pdf);
 				paneRegister.RegisterPaneType(typeof(PpsMarkdownPane), "markdown", MimeTypes.Text.Markdown);
+
+				// change PpsLiveData
+				var liveData = shell.GetService<PpsLiveData>(true);
+				liveData.SetDebugLog(shell.GetService<ILogger>(true));
+				liveData.DataChanged += (sender, e) => CommandManager.InvalidateRequerySuggested();
 
 				return Task.CompletedTask;
 			} // func OnAfterInitServicesAsync

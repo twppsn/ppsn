@@ -2657,7 +2657,7 @@ namespace TecWare.PPSn
 		internal async Task<bool> SynchronizationAsync(bool enforce, IProgress<string> progress)
 		{
 			// check for single thread sync context, to get the monitor work
-			StuffThreading.VerifySynchronizationContext();
+			PpsWpfShell.VerifySynchronizationContext();
 
 			if (isSynchronizationRunning.Value)
 				throw new InvalidOperationException("Recursion detected.");
@@ -2812,7 +2812,7 @@ namespace TecWare.PPSn
 					{
 						var path = r.GetString(0);
 						var request = environment.GetProxyRequest(new Uri(path, UriKind.Relative), path);
-						request.SetUpdateOfflineCache(c => UpdateOfflineDataAsync(path, c).AwaitTask());
+						request.SetUpdateOfflineCache(c => UpdateOfflineDataAsync(path, c).Await());
 						request.Enqueue(PpsLoadPriority.Background, true);
 					}
 				}
@@ -3562,7 +3562,7 @@ namespace TecWare.PPSn
 				} // func GetRootTransaction
 
 				// check for single thread sync context
-				StuffThreading.VerifySynchronizationContext();
+				PpsWpfShell.VerifySynchronizationContext();
 
 				var threadRootTransaction = GetRootTransaction();
 				return threadRootTransaction.CheckAccess()
@@ -3572,7 +3572,7 @@ namespace TecWare.PPSn
 			else // ReadCommit is thread as write for sqlite
 			{
 				// check for single thread sync context
-				StuffThreading.VerifySynchronizationContext();
+				PpsWpfShell.VerifySynchronizationContext();
 
 				// try get the context
 				while (true)

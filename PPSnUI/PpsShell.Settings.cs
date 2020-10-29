@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn
 {
 	#region -- interface IPpsSettingsService ------------------------------------------
 
@@ -293,7 +293,7 @@ namespace TecWare.PPSn.UI
 
 			// create query keys
 			var queryKeys = new string[requestAllSubKeys ? subKeys.Length : 1];
-			for(var i=0;i< queryKeys.Length;i++)
+			for (var i = 0; i < queryKeys.Length; i++)
 				queryKeys[i] = baseKey + ".*." + subKeys[i];
 
 			// query all values to fill cache
@@ -421,7 +421,7 @@ namespace TecWare.PPSn.UI
 
 		private sealed class PpsGenericSettingsInfo : PpsSettingsInfoBase
 		{
-			public PpsGenericSettingsInfo(IPpsSettingsService settingsService) 
+			public PpsGenericSettingsInfo(IPpsSettingsService settingsService)
 				: base(settingsService)
 			{
 			}
@@ -457,7 +457,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#region -- interface IUpdateScope ---------------------------------------------
-		
+
 		/// <summary>Implement a update scope for the setting change</summary>
 		protected interface IUpdateScope : IDisposable
 		{
@@ -540,7 +540,7 @@ namespace TecWare.PPSn.UI
 				=> getValue();
 
 			/// <inherited/>
-			protected override bool SetValueCore(string value) 
+			protected override bool SetValueCore(string value)
 				=> false;
 		} // class KnownReadOnlySettingValue
 
@@ -647,7 +647,7 @@ namespace TecWare.PPSn.UI
 			// clear values
 			if (purge)
 				await ClearSettingsAsync();
-			
+
 
 			// refresh properties from server
 			await LoadSettingsFromServerAsync();
@@ -719,7 +719,7 @@ namespace TecWare.PPSn.UI
 					if (setting.Clear())
 						OnSettingChanged(setting.Key, null);
 				}
-			
+
 				await scope.CommitAsync();
 			}
 		} // proc ClearSettings

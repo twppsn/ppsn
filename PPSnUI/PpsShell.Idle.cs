@@ -15,9 +15,8 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Text;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn
 {
 	#region -- interface IPpsIdleAction -----------------------------------------------
 

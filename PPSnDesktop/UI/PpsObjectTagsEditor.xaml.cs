@@ -261,7 +261,7 @@ namespace TecWare.PPSn.UI
 			isModified = false;
 
 			if (ppsObject.IsChanged)
-				ppsObject.UpdateLocalAsync().AwaitTask();
+				ppsObject.UpdateLocalAsync().Await();
 		} // proc EndEdit
 
 		public void CancelEdit()
@@ -275,7 +275,7 @@ namespace TecWare.PPSn.UI
 		public void Remove()
 		{
 			((PpsObjectUserTag)tag).Remove();
-			ppsObject.UpdateLocalAsync().AwaitTask();
+			ppsObject.UpdateLocalAsync().Await();
 		} // proc Remove
 
 		private void CheckTagName()

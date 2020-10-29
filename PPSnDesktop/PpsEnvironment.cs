@@ -677,12 +677,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		/// <summary>Create progessbar for background tasks.</summary>
-		/// <param name="blockUI"></param>
-		/// <returns></returns>
-		protected override IPpsProgress CreateProgressCore(bool blockUI)
-			=> BackgroundProgressState.CreateProgress(false); 
-
 		#region -- Online/Offline -----------------------------------------------------
 
 		/// <summary>Is called when the system changes the state to online.</summary>
@@ -865,7 +859,7 @@ namespace TecWare.PPSn
 		} // proc InitBackgroundNotifier
 
 		private void SetNewMode(PpsEnvironmentMode newMode)
-			=> WaitForEnvironmentMode(newMode).AwaitTask(); // stops here if pending operations are not finished
+			=> WaitForEnvironmentMode(newMode).Await(); // stops here if pending operations are not finished
 
 		private Task<PpsEnvironmentModeResult> WaitForEnvironmentMode(PpsEnvironmentMode desiredMode)
 		{
@@ -922,7 +916,7 @@ namespace TecWare.PPSn
 			{
 				if (!masterData.IsInSynchronization)
 				{
-					using (var log = CreateProgress(false))
+					using (var log = this.CreateProgress(false))
 						await masterData.SynchronizationAsync(false, log);
 				}
 			}
@@ -959,7 +953,7 @@ namespace TecWare.PPSn
 							if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Offline))
 							{
 								if (changedTo)
-									await Dispatcher.InvokeAsync(() => OnSystemOfflineAsync().AwaitTask());
+									await Dispatcher.InvokeAsync(() => OnSystemOfflineAsync().Await());
 							}
 
 							if (!await backgroundNotifierModeTransmission.WaitAsync(30000) && IsNetworkPresent)
@@ -1020,18 +1014,18 @@ namespace TecWare.PPSn
 								masterData.SetUpdateUserInfo();
 
 								// start synchronization
-								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().AwaitTask())
+								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().Await())
 								{
 									if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization))
 									{
 										await RunSyncAsync();
-										await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().AwaitTask());
+										await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().Await());
 									}
 								}
 								else // mark the system online
 								{
 									if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online))
-										await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().AwaitTask());
+										await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().Await());
 								}
 							}
 							state = PpsEnvironmentState.Online;
@@ -1499,7 +1493,7 @@ namespace TecWare.PPSn
 					if (ra.Loaded != null)
 						asm = ra.Loaded;
 					else
-						asm = LoadAssemblyFromUriAsync(ra.Uri).AwaitTask();
+						asm = LoadAssemblyFromUriAsync(ra.Uri).Await();
 				}
 			}
 

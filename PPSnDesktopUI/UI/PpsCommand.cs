@@ -707,7 +707,7 @@ namespace TecWare.PPSn.UI
 	public abstract class PpsUICommand : FrameworkContentElement
 	{
 		/// <summary>Is this ui-command visible</summary>
-		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register(nameof(IsVisible), typeof(bool), typeof(PpsUICommand));
+		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register(nameof(IsVisible), typeof(bool), typeof(PpsUICommand), new FrameworkPropertyMetadata(BooleanBox.True));
 		/// <summary></summary>
 		public event EventHandler OrderChanged;
 

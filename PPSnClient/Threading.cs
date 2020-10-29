@@ -25,7 +25,7 @@ namespace TecWare.PPSn
 
 	/// <summary>Synchronization context, that implements message queue behaviour 
 	/// in a thread. Tasks </summary>
-	public abstract class PpsSynchronizationContext : SynchronizationContext
+	public abstract class PpsSynchronizationContext : SynchronizationContext, IPpsProcessMessageLoop
 	{
 		#region -- struct CurrentTask -------------------------------------------------
 
@@ -136,28 +136,6 @@ namespace TecWare.PPSn
 				// wait for event
 				tasksFilled.Wait();
 			}
-		} // proc ProcessMessageLoop
-
-		/// <summary>Run the message loop in the current context/thread.</summary>
-		/// <param name="onCompletion"></param>
-		public void ProcessMessageLoop(INotifyCompletion onCompletion)
-		{
-			using (var cancellationTokenSource = new CancellationTokenSource())
-			{
-				onCompletion.OnCompleted(cancellationTokenSource.Cancel);
-				ProcessMessageLoop(cancellationTokenSource.Token);
-			}
-		} // proc ProcessMessageLoop
-
-		/// <summary>Run the message loop in the current content/thread.</summary>
-		/// <param name="task"></param>
-		public void ProcessMessageLoop(Task task)
-		{
-			ProcessMessageLoop(task.GetAwaiter());
-
-			// thread is cancelled, do not wait for finish
-			if (!task.IsCompleted)
-				throw new OperationCanceledException();
 		} // proc ProcessMessageLoop
 
 		/// <summary>Run the message loop in the current context/thread.</summary>

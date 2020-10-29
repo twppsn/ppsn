@@ -2591,7 +2591,7 @@ namespace TecWare.PPSn
 		public bool IsReadOnly => true;
 
 		/// <summary>Get preview image synchron.</summary>
-		public object PreviewImage => previewImage.GetValueAsync().AwaitTask();
+		public object PreviewImage => previewImage.GetValueAsync().Await();
 		/// <summary>Get preview image asyncron</summary>
 		public object PreviewImageLazy => previewImage.GetValue();
 
@@ -2914,7 +2914,7 @@ namespace TecWare.PPSn
 					if (e is PpsDataRowOperationEventArgs e2 && e2.Arguments != null)
 					{
 						if (e2.RowId != e2.OldRowId)
-							ReplaceObjectIdAsync((long)e2.RowId).AwaitTask(); // invoke id replace
+							ReplaceObjectIdAsync((long)e2.RowId).Await(); // invoke id replace
 
 						ReadObjectInfo(e2.Arguments);
 						ResetDirty(null);
@@ -3108,7 +3108,7 @@ namespace TecWare.PPSn
 					}
 
 					// update data block
-					using (var trans = Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write, CancellationToken.None, foregroundTransaction).AwaitTask())
+					using (var trans = Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write, CancellationToken.None, foregroundTransaction).Await())
 					{
 						// download content
 						using (var dst = new PpsObjectWriteStream(this, c.ContentLength - headerLength))
@@ -3116,22 +3116,22 @@ namespace TecWare.PPSn
 							if (isContentTransferDeflated)
 							{
 								using (var src = new GZipStream(c.Content, CompressionMode.Decompress, true))
-									src.CopyToAsync(dst).AwaitTask();
+									src.CopyToAsync(dst).Await();
 							}
 							else
-								c.Content.CopyToAsync(dst).AwaitTask();
+								c.Content.CopyToAsync(dst).Await();
 
-							SaveObjectDataInformationAsync(dst.Result, MimeType, false).AwaitTask();
+							SaveObjectDataInformationAsync(dst.Result, MimeType, false).Await();
 						}
 
 						// update pulled id
 						SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
 
 						// persist current object state
-						UpdateLocalAsync().AwaitTask();
+						UpdateLocalAsync().Await();
 
 						Environment.Dispatcher.InvokeAsync(
-							() => data.GetValue()?.ReloadAsync().AwaitTask()
+							() => data.GetValue()?.ReloadAsync().Await()
 						).Wait();
 
 						if (foregroundTransaction == null)
@@ -3891,7 +3891,7 @@ namespace TecWare.PPSn
 		} // prop IsDocumentChanged
 		
 		/// <summary></summary>
-		public IPpsObjectData Data => data.GetValueAsync().AwaitTask();
+		public IPpsObjectData Data => data.GetValueAsync().Await();
 		/// <summary></summary>
 		public IPpsObjectData DataLazy => data.GetValue();
 		/// <summary>Has this object local data available.</summary>
@@ -5144,7 +5144,7 @@ order by t_liefnr.value desc
 		#region -- Object Info --------------------------------------------------------
 
 		PpsDataSetDefinition IPpsDataSetProvider.TryGetDataSetDefinition(string datasetName, bool throwException)
-			=> ObjectInfos[datasetName, throwException]?.GetDocumentDefinitionAsync().AwaitTask();
+			=> ObjectInfos[datasetName, throwException]?.GetDocumentDefinitionAsync().Await();
 
 		/// <summary>Active objects data.</summary>
 		[LuaMember]

@@ -139,7 +139,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Invoke the back button.</summary>
 		void InvokeBackButton();
 
-		/// <summary>Is back button active.</summary>
+		/// <summary>Is back button active. <c>null</c> for default.</summary>
 		bool? CanBackButton { get; }
 	} // interface IPpsWindowPaneBack
 

@@ -421,7 +421,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	public partial class _PpsShell : IPpsLuaTaskParent
+	public partial class _PpsShell
 	{
 		#region -- Lua Compiler -------------------------------------------------------
 
@@ -540,7 +540,7 @@ namespace TecWare.PPSn
 			if (xCode == null)
 				return null;
 
-			return Await(RunAsync(() => CompileAsync(xCode, throwException, arguments), "Worker", CancellationToken.None));
+			return RunAsync(() => CompileAsync(xCode, throwException, arguments), "Worker", CancellationToken.None).Await();
 		} // func CreateChunk
 
 		/// <summary>Executes the script (the script is always execute in the UI thread).</summary>
@@ -787,7 +787,7 @@ namespace TecWare.PPSn
 				case PpsLuaTask lt:
 					return lt.Await();
 				case Task t:
-					Await(t);
+					t.Await();
 					switch (GetTaskType())
 					{
 						case 0:
@@ -835,13 +835,14 @@ namespace TecWare.PPSn
 				}
 			}
 
+			throw new NotImplementedException();
 			// create execution thread
-			var t = cancellationSource != null
-				? new PpsLuaTask(this, context, cancellationSource, new LuaResult(args))
-				: new PpsLuaTask(this, context, cancellationToken, new LuaResult(args));
+			//var t = cancellationSource != null
+			//	? new PpsLuaTask(this, context, cancellationSource, new LuaResult(args))
+			//	: new PpsLuaTask(this, context, cancellationToken, new LuaResult(args));
 
-			// start with the first function
-			return t.Continue(func);
+			//// start with the first function
+			//return t.Continue(func);
 		} // func CreateLuaTask
 
 		/// <summary>Executes the function or task in an background thread.</summary>

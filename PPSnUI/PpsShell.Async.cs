@@ -15,9 +15,9 @@
 #endregion
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -28,8 +28,9 @@ namespace TecWare.PPSn
 	public interface IPpsAsyncService
 	{
 		/// <summary>Await a task.</summary>
+		/// <param name="sp"></param>
 		/// <param name="t"></param>
-		void Await(Task t);
+		void Await(IServiceProvider sp, Task t);
 	} // interface IPpsAsyncService
 
 	#endregion
@@ -48,31 +49,36 @@ namespace TecWare.PPSn
 
 	public static partial class PpsShell
 	{
+		private static readonly Lazy<IPpsAsyncService> asyncHelper = new Lazy<IPpsAsyncService>(GetAsyncHelper);
+
 		#region -- Await --------------------------------------------------------------
 
 		private static IPpsAsyncService GetAsyncHelper()
 			=> GetService<IPpsAsyncService>(false);
 
-		private static void AwaitCore(Task t)
+		private static void AwaitCore(Task t, IServiceProvider sp)
 		{
-			if (asyncHelper.Value == null)
-				t.Wait();
-			else
-				asyncHelper.Value.Await(t);
+			if (asyncHelper.Value != null)
+				asyncHelper.Value.Await(sp, t);
 		} // proc AwaitCore
 
-		/// <summary>Await for a task.</summary>
+		/// <summary>Runs the async task in the ui thread (it simulates the async/await pattern for scripts).</summary>
+		/// <param name="sp"></param>
 		/// <param name="t"></param>
-		public static void Await(this Task t)
-			=> AwaitCore(t);
+		public static void Await(this Task t, IServiceProvider sp = null)
+		{
+			AwaitCore(t, sp ?? Current);
+			t.Wait();
+		} // proc Await
 
-		/// <summary>Await for a task.</summary>
+		/// <summary>Runs the async task in the ui thread (it simulates the async/await pattern for scripts).</summary>
 		/// <typeparam name="T"></typeparam>
+		/// <param name="sp"></param>
 		/// <param name="t"></param>
 		/// <returns></returns>
-		public static T Await<T>(this Task<T> t)
+		public static T Await<T>(this Task<T> t, IServiceProvider sp = null)
 		{
-			AwaitCore(t);
+			AwaitCore(t, sp ?? Current);
 			return t.Result;
 		} // func Await
 
@@ -151,5 +157,34 @@ namespace TecWare.PPSn
 		} // func WaitTimeout
 
 		#endregion
+
+		#region -- ProcessMessageLoop -------------------------------------------------
+
+		/// <summary>Run the message loop in the current context/thread.</summary>
+		/// <param name="context"></param>
+		/// <param name="onCompletion"></param>
+		public static void ProcessMessageLoop(this IPpsProcessMessageLoop context, INotifyCompletion onCompletion)
+		{
+			using (var cancellationTokenSource = new CancellationTokenSource())
+			{
+				onCompletion.OnCompleted(cancellationTokenSource.Cancel);
+				context.ProcessMessageLoop(cancellationTokenSource.Token);
+			}
+		} // proc ProcessMessageLoop
+
+		/// <summary>Run the message loop in the current content/thread.</summary>
+		/// <param name="context"></param>
+		/// <param name="task"></param>
+		public static void ProcessMessageLoop(this IPpsProcessMessageLoop context, Task task)
+		{
+			ProcessMessageLoop(context, task.GetAwaiter());
+
+			// thread is cancelled, do not wait for finish
+			if (!task.IsCompleted)
+				throw new OperationCanceledException();
+		} // proc ProcessMessageLoop
+
+		#endregion
+
 	} // class PpsShell
 }

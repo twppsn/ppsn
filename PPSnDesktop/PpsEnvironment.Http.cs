@@ -214,7 +214,7 @@ namespace TecWare.PPSn
 			if (UseOnlineRequest) // we have request data, execute always online
 				return InternalGetResponse();
 			else if (environment.TryGetOfflineObject(this, out var task)) // check if the object is local available, cached
-				return task.ForegroundAsync().AwaitTask(); // block thread
+				return task.ForegroundAsync().Await(); // block thread
 			else
 				return InternalGetResponse();
 		} // func GetResponse

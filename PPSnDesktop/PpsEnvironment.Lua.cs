@@ -120,12 +120,12 @@ namespace TecWare.PPSn
 
 			if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) // load assembly
 			{
-				return new LuaResult(LoadAssemblyFromUriAsync(webRequest.Request.CreateFullUri(path)).AwaitTask());
+				return new LuaResult(LoadAssemblyFromUriAsync(webRequest.Request.CreateFullUri(path)).Await());
 			}
 			else // load lua script
 			{
 				// compile code, synchonize the code to this thread
-				var chunk = webRequest.CompileAsync(new Uri(path, UriKind.Relative), true, new KeyValuePair<string, Type>("self", typeof(LuaTable))).AwaitTask();
+				var chunk = webRequest.CompileAsync(new Uri(path, UriKind.Relative), true, new KeyValuePair<string, Type>("self", typeof(LuaTable))).Await();
 				return RunScript(chunk, self, true, self);
 			}
 		} // proc LuaRequire
@@ -141,7 +141,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		[LuaMember("createTransaction")]
 		public PpsMasterDataTransaction CreateTransaction()
-			=> MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited).AwaitTask();
+			=> MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited).Await();
 
 		/// <summary></summary>
 		/// <param name="v"></param>

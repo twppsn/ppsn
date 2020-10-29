@@ -515,6 +515,7 @@ namespace TecWare.PPSn.Controls
 		public object DropDownSource { get => GetValue(DropDownSourceProperty); set => SetValue(DropDownSourceProperty, value); }
 
 		#endregion
+	
 		/// <summary>Get internal overwrite</summary>
 		public bool IsOverwriteMode => BooleanBox.GetBool(overwriteModePropertyInfo.GetValue(textEditor, null));
 

@@ -144,7 +144,7 @@ namespace TecWare.PPSn
 		/// <param name="progressText"></param>
 		/// <returns></returns>
 		public static IPpsProgress CreateProgress(this DependencyObject sender, bool blockUI = true, string progressText = null)
-			=> PpsUI.CreateProgress(GetControlService<IPpsProgressFactory>(sender, false), blockUI, progressText);
+			=> PpsShell.CreateProgress(GetControlService<IPpsProgressFactory>(sender, true), blockUI, progressText);
 
 		/// <summary></summary>
 		/// <param name="sender"></param>
@@ -152,7 +152,7 @@ namespace TecWare.PPSn
 		/// <param name="action"></param>
 		/// <returns></returns>
 		public static Task RunTaskAsync(this DependencyObject sender, string taskText, Func<IPpsProgress, Task> action)
-			=> PpsUI.RunTaskAsync(GetControlService<IServiceProvider>(sender, true), taskText, action);
+			=> PpsShell.RunTaskAsync(GetControlService<IServiceProvider>(sender, true), taskText, action);
 
 		/// <summary>Create a progress stack.</summary>
 		/// <param name="dispatcher"></param>

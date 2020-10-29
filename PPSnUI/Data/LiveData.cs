@@ -576,6 +576,7 @@ namespace TecWare.PPSn.Data
 	#region -- class PpsLiveDataRowType -----------------------------------------------
 
 	/// <summary>DataRow description.</summary>
+	[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
 	public sealed class PpsLiveDataRowType : IDataColumns
 	{
 		private readonly Type rowType;
@@ -678,6 +679,9 @@ namespace TecWare.PPSn.Data
 				relations.Add(pi.Name, PpsLiveDataRelation.Get(this, parentColumns, childType, childColumns));
 			}
 		} // ctor
+
+		private string GetDebuggerDisplay()
+			=> $"LiveDataRowType: {rowType.Name}";
 
 		private int[] GetPrimaryKeyFields()
 		{
@@ -1290,8 +1294,8 @@ namespace TecWare.PPSn.Data
 					idx++;
 
 				// update list and index
-				rowKeys.Add(rowKey.Row.Key, idx);
 				rows.Insert(idx, rowKey);
+				UpdateIndex(idx);
 
 				return idx;
 			} // proc OnRowAddedCore
@@ -1301,8 +1305,15 @@ namespace TecWare.PPSn.Data
 				rowKeys.Remove(key);
 				var r = (RowKey)rows[idx];
 				rows.RemoveAt(idx);
+				UpdateIndex(idx);
 				return r;
 			} // proc OnRowRemovedCore
+
+			private void UpdateIndex(int idx)
+			{
+				for (var i = idx; i < rows.Count; i++)
+					rowKeys[((RowKey)rows[i]).Row.Key] = i;
+			} // proc UpdateIndex
 
 			private void OnRowRemovedCoreWithEvent(IPpsLiveDataRowSource source, int idx)
 			{
@@ -1471,7 +1482,7 @@ namespace TecWare.PPSn.Data
 			/// <param name="row"></param>
 			/// <returns></returns>
 			public bool Contains(T row)
-				=> row == null ? false : FindRowIndex(new RowKey(this, row)) >= 0;
+				=> row != null && FindRowIndex(new RowKey(this, row)) >= 0;
 
 			/// <summary>Is the row member of this view.</summary>
 			/// <param name="row"></param>
@@ -2310,6 +2321,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- class RowView ------------------------------------------------------
 
+		[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
 		private sealed class RowView : IPpsLiveDataRowSource
 		{
 			private readonly object key;
@@ -2323,6 +2335,9 @@ namespace TecWare.PPSn.Data
 				this.mapping = mapping ?? throw new ArgumentNullException(nameof(mapping));
 			} // ctor
 
+			private string GetDebuggerDisplay()
+				=> $"row: {key}";
+
 			public bool IsModified(int index)
 				=> rowData.IsModified(mapping[index]);
 
@@ -2335,6 +2350,7 @@ namespace TecWare.PPSn.Data
 		#region -- class TableColumn --------------------------------------------------
 
 		/// <summary>Column definition for the raw data.</summary>
+		[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
 		private sealed class TableColumn
 		{
 			private readonly string fieldName;
@@ -2342,6 +2358,9 @@ namespace TecWare.PPSn.Data
 
 			public TableColumn(string fieldName)
 				=> this.fieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
+
+			private string GetDebuggerDisplay()
+				=> $"field: {fieldName} (ref={refCount})";
 
 			public void AddRef()
 				=> refCount++;
@@ -2357,6 +2376,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- class ViewMapping --------------------------------------------------
 
+		[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
 		private sealed class ViewMapping
 		{
 			private readonly WeakReference<IPpsLiveDataViewEvents> view;
@@ -2367,6 +2387,13 @@ namespace TecWare.PPSn.Data
 				this.view = new WeakReference<IPpsLiveDataViewEvents>(view);
 				this.fieldMapping = fieldMapping ?? throw new ArgumentNullException(nameof(fieldMapping));
 			} // ctor
+
+			private string GetDebuggerDisplay()
+			{
+				return view.TryGetTarget(out var v)
+					? $"view: {v.Type.Name} / {v.Filter.ToString()}"
+					: "<dead>";
+			} // func GetDebuggerDisplay
 
 			public static void NotifyRowChanged(ViewMapping v, object k, RowData r)
 			{
@@ -2395,6 +2422,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- class Table --------------------------------------------------------
 
+		[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
 		private sealed class Table : IPpsLiveDataTable, IPpsLiveDataTableInfo
 		{
 			#region -- class RowDataKey -----------------------------------------------
@@ -2464,6 +2492,9 @@ namespace TecWare.PPSn.Data
 				this.data = data ?? throw new ArgumentNullException(nameof(data));
 				this.name = name ?? throw new ArgumentNullException(nameof(name));
 			} // ctor
+
+			private string GetDebuggerDisplay()
+				=> $"table: {name}";
 
 			public void Dump(TextWriter tr)
 			{
@@ -2620,10 +2651,12 @@ namespace TecWare.PPSn.Data
 						filterList.Add(v.Filter);
 				}
 
-				return new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.Or, filterList.ToArray()).Reduce();
+				return filterList.Count == 0
+					? PpsDataFilterExpression.False
+					: new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.Or, filterList.ToArray()).Reduce();
 			} // func GetCurrentViewFilter
 
-			public async Task RefreshRowsAsync(DEHttpClient client, bool touchRow, PpsDataFilterExpression filter)
+			public async Task<bool> RefreshRowsAsync(DEHttpClient client, bool touchRow, PpsDataFilterExpression filter)
 			{
 				// create local field mapping
 				var fieldMapping = new List<int>(fields.Capacity);
@@ -2647,6 +2680,7 @@ namespace TecWare.PPSn.Data
 				};
 
 				// execute query for full refresh
+				var isModified = false;
 				int[] resultMapping = null;
 				using (var e = CreateViewDataReader(client, query).GetEnumerator())
 				{
@@ -2668,7 +2702,10 @@ namespace TecWare.PPSn.Data
 						{
 							var r = (RowDataKey)rows[idx];
 							if (UpdateRow(resultMapping, e.Current, r.Row, touchRow))
+							{
 								NotifyRowEvent(r, ViewMapping.NotifyRowChanged);
+								isModified = true;
+							}
 						}
 						else
 						{
@@ -2677,9 +2714,11 @@ namespace TecWare.PPSn.Data
 							UpdateRow(resultMapping, e.Current, r, touchRow);
 							rows.Insert(~idx, rk);
 							NotifyRowEvent(rk, ViewMapping.NotifyRowChanged);
+							isModified = true;
 						}
 					}
 				}
+				return isModified;
 			} // proc RefreshRowsAsync
 
 			public void DeleteRow(long primaryKey)
@@ -2697,14 +2736,13 @@ namespace TecWare.PPSn.Data
 			/// <summary>Execute in background refresh Task only.</summary>
 			/// <param name="client"></param>
 			/// <returns></returns>
-			public async Task RefreshCoreAsync(DEHttpClient client)
+			public async Task<bool> RefreshCoreAsync(DEHttpClient client)
 			{
 				if (views.Count == 0)
-					return;
+					return false;
 
 				// refresh rows
-				await RefreshRowsAsync(client, true, GetCurrentViewFilter());
-
+				var isModified = await RefreshRowsAsync(client, true, GetCurrentViewFilter());
 
 				// refresh notify un touched rows as deleted
 				for (var i = rows.Count - 1; i >= 0; i--)
@@ -2714,8 +2752,11 @@ namespace TecWare.PPSn.Data
 					{
 						NotifyRowEvent(r, ViewMapping.NotifyRowRemoved);
 						rows.RemoveAt(i);
+						isModified = true;
 					}
 				}
+
+				return isModified;
 			} // proc RefreshCoreAsync
 
 			private void NotifyRowEvent(RowDataKey r, Action<ViewMapping, object, RowData> rowEvent)
@@ -2803,54 +2844,69 @@ namespace TecWare.PPSn.Data
 		private sealed class DebugLiveDataLog : IPpsLiveDataLog
 		{
 			private int startNotifyRefresh = 0;
+			private readonly ILogger log;
 
-			private DebugLiveDataLog()
+			public DebugLiveDataLog(ILogger log)
 			{
+				this.log = log;
 			} // ctor
 
+			private void WriteLine(string message)
+			{
+				if (log == null)
+					Debug.WriteLine("[" + nameof(PpsLiveData) + "] " + message);
+				else
+					log.LogMsg(LogMsgType.Debug, message);
+			} // proc WriteLine
+
 			public void StartRefreshThread()
-				=> Debug.WriteLine("[PpsLiveData] Start refresh thread.");
+				=> WriteLine("Start refresh thread.");
 
 			public void StopRefreshThread()
-				=> Debug.WriteLine("[PpsLiveData] Stop refresh thread.");
+				=> WriteLine("Stop refresh thread.");
 
 			public void TableCreated(string tableName)
-				=> Debug.WriteLine("[PpsLiveData] Create table: " + tableName);
+				=> WriteLine("Create table: " + tableName);
 
 			public void ViewCreated(string tableName, string typeName, string filter)
-				=> Debug.WriteLine($"[PpsLiveData] Create view: {tableName} [{typeName}] > {filter}");
+				=> WriteLine($"Create view: {tableName} [{typeName}] > {filter}");
 
 			public void ViewRemoved(string tableName)
-				=> Debug.WriteLine("[PpsLiveData] Remove view: " + tableName);
+				=> WriteLine("Remove view: " + tableName);
 
 			public void ReportRefreshArgs(string argumentInfo)
 			{
 				if (startNotifyRefresh > 0)
-					Debug.WriteLine("[PpsLiveData] Refresh start: " + argumentInfo);
+					WriteLine("Refresh start: " + argumentInfo);
 			} // proc ReportRefreshArgs
 
 			public void ReportRefreshResult(string resultInfo)
 			{
 				if (startNotifyRefresh > 0)
-					Debug.WriteLine("[PpsLiveData] Refresh stop: " + resultInfo);
+					WriteLine("Refresh stop: " + resultInfo);
 			} // proc ReportRefreshResult
 
 			public void UnexpectedBackgroundFailure(Exception e)
-				=> Debug.WriteLine(e.GetMessageString());
+			{
+				if (log == null)
+					WriteLine(e.GetMessageString());
+				else
+					log.Except(e, "[" + nameof(PpsLiveData) + "] " + e.Message);
+			} // proc UnexpectedBackgroundFailure
 
 			public void WaitForSyncStart()
 			{
-				Debug.WriteLine($"[PpsLiveData] Start WaitForSync {Thread.CurrentThread.ManagedThreadId}");
+				WriteLine($"Start WaitForSync {Thread.CurrentThread.ManagedThreadId}");
 				startNotifyRefresh++;
 			}  // proc WaitForSyncStart
 
 			public void WaitForSyncStop()
 			{
 				startNotifyRefresh--;
-				Debug.WriteLine($"[PpsLiveData] Stop WaitForSync {Thread.CurrentThread.ManagedThreadId}");
+				WriteLine($"Stop WaitForSync {Thread.CurrentThread.ManagedThreadId}");
 			} // proc WaitForSyncStop
 
-			public static DebugLiveDataLog Instance { get; } = new DebugLiveDataLog();
+			public static DebugLiveDataLog Instance { get; } = new DebugLiveDataLog(null);
 		} // class DebugLiveDataLog
 
 		#endregion
@@ -2961,13 +3017,14 @@ namespace TecWare.PPSn.Data
 					}
 				} // proc ParseMerge
 
-				public async Task<Exception> ApplyMergeAsync(DEHttpClient client)
+				public async Task<(Exception ex, bool isModified)> ApplyMergeAsync(DEHttpClient client)
 				{
+					var isModified = false;
 					try
 					{
 						if (refreshAll)
 						{
-							await table.RefreshCoreAsync(client);
+							isModified = await table.RefreshCoreAsync(client);
 						}
 						else
 						{
@@ -2989,15 +3046,15 @@ namespace TecWare.PPSn.Data
 								// create row filter
 								var rowFilter = PpsDataFilterExpression.Combine(viewFilter, refreshFilter);
 								// fetch rows from server
-								await table.RefreshRowsAsync(client, false, rowFilter);
+								isModified = await table.RefreshRowsAsync(client, false, rowFilter);
 							}
 						}
 
-						return null;
+						return (null, isModified);
 					}
 					catch (Exception e)
 					{
-						return e;
+						return (e, isModified);
 					}
 					finally
 					{
@@ -3058,12 +3115,12 @@ namespace TecWare.PPSn.Data
 				{
 					enforceCDC = scheduledEnforce;
 					scheduledEnforce = false;
-
-					isFilled.Wait(timeout);
-					isFilled.Reset();
-
-					return isRunning;
 				}
+
+				isFilled.Wait(timeout);
+				isFilled.Reset();
+
+				return isRunning;
 			} // func WaitCycle
 
 			private static bool TryFindMergeItem(List<MergeItem> mergeList, XElement xTable, out MergeItem mergeItem)
@@ -3079,15 +3136,22 @@ namespace TecWare.PPSn.Data
 				return mergeItem != null;
 			} // func TryFindMergeItem
 
-			private static async Task<Exception[]> ApplyMergeAsync(List<MergeItem> mergeList, DEHttpClient client)
+			private async Task<Exception[]> ApplyMergeAsync(List<MergeItem> mergeList, DEHttpClient client)
 			{
+				var isModified = false;
 				var exceptions = new List<Exception>();
 				foreach (var m in mergeList)
 				{
-					var ex = await m.ApplyMergeAsync(client);
-					if (ex != null)
-						exceptions.Add(ex.GetInnerException());
+					var r = await m.ApplyMergeAsync(client);
+					if (r.ex != null)
+						exceptions.Add(r.ex.GetInnerException());
+					
+					isModified |= r.isModified;
 				}
+
+				if (isModified)
+					data.FireDataChanged();
+
 				return exceptions.ToArray();
 			} // func ApplyMergeAsync
 
@@ -3193,6 +3257,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary>Some data changed.</summary>
+		public event EventHandler DataChanged;
+
 		private readonly IPpsShell shell;
 		private readonly List<Table> tables = new List<Table>();
 		private readonly List<EnforceRefreshTableTask> refreshTasks = new List<EnforceRefreshTableTask>();
@@ -3211,7 +3278,7 @@ namespace TecWare.PPSn.Data
 
 			// init logging with debug mode
 			if (shell.Settings.IsDebugMode)
-				SetDebugLiveDataLog();
+				SetDebugLog();
 		} // ctor
 
 		/// <summary></summary>
@@ -3436,9 +3503,13 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		private void FireDataChanged()
+			=> DataChanged?.Invoke(this, EventArgs.Empty);
+
 		/// <summary>Setup Notify with default logger.</summary>
-		public void SetDebugLiveDataLog()
-			=> Notify = DebugLiveDataLog.Instance;
+		/// <param name="log"></param>
+		public void SetDebugLog(ILogger log = null)
+			=> Notify = log == null ? DebugLiveDataLog.Instance : new DebugLiveDataLog(log);
 
 		/// <summary>Connected shell.</summary>
 		public IPpsShell Shell => shell;

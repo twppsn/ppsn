@@ -1133,7 +1133,6 @@ namespace TecWare.PPSn
 
 		private static readonly ServiceContainer global = new ServiceContainer();
 		private static readonly Lazy<Version> appVersion = new Lazy<Version>(GetAppVersion);
-		private static readonly Lazy<IPpsAsyncService> asyncHelper = new Lazy<IPpsAsyncService>(GetAsyncHelper);
 		private static readonly List<Type> shellServices = new List<Type>();
 		private static PpsShellImplementation currentShell = null;
 

@@ -135,7 +135,7 @@ namespace TecWare.PPSn.UI
 		{
 			this.paneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
 
-			using (var p = this.CreateProgress(progressText: "Lade..."))
+			using (var p = PpsShell.CreateProgress(this, progressText: "Lade..."))
 			{
 				// create the pane
 				var pane = CreatePaneBindings(PpsWpfShell.CreateEmptyPane(paneManager, this, paneType));

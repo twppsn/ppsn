@@ -28,7 +28,6 @@ using System.Xml;
 using System.Xml.Linq;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {

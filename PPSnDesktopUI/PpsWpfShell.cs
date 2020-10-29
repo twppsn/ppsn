@@ -391,6 +391,34 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- Await --------------------------------------------------------------
+
+		/// <summary>Check if the current synchronization context has a message loop.</summary>
+		/// <returns></returns>
+		public static SynchronizationContext VerifySynchronizationContext()
+		{
+			var ctx = SynchronizationContext.Current;
+			if (ctx is DispatcherSynchronizationContext || ctx is IPpsProcessMessageLoop)
+				return ctx;
+			else
+				throw new InvalidOperationException($"The synchronization context must be in the single-threaded.");
+		} // func VerifySynchronizationContext
+
+		/// <summary></summary>
+		/// <param name="task"></param>
+		/// <param name="dp"></param>
+		public static void AwaitUI(this Task task, DependencyObject dp = null)
+			=> PpsShell.Await(task, GetControlService<IServiceProvider>(dp));
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="task"></param>
+		/// <param name="dp"></param>
+		public static T AwaitUI<T>(this Task<T> task, DependencyObject dp = null)
+			=> PpsShell.Await(task, GetControlService<IServiceProvider>(dp));
+
+		#endregion
+
 		/// <summary>Resource key for the environment.</summary>
 		public static ResourceKey DefaultEnvironmentKey { get; } = new InstanceKey<PpsShellWpf>();
 		/// <summary>Resource key for the current pane.</summary>
@@ -586,11 +614,48 @@ namespace TecWare.PPSn
 			var inputEvent = e.StagingItem.Input;
 			if (inputEvent is MouseEventArgs || inputEvent is KeyboardEventArgs)
 				RestartIdle();
+
+			CommandManager.InvalidateRequerySuggested();
 		} // proc RestartIdleTimer
 	} // class class PpsWpfIdleService
 
 	#endregion
 
+	#region -- class PpsWpfAsyncService -----------------------------------------------
+
+	[PpsService(typeof(IPpsAsyncService))]
+	internal sealed class PpsWpfAsyncService : IPpsAsyncService
+	{
+		void IPpsAsyncService.Await(IServiceProvider sp, Task task)
+		{
+			if (task.IsCompleted)
+				return;
+
+			if (SynchronizationContext.Current is DispatcherSynchronizationContext)
+			{
+				var frame = new DispatcherFrame();
+
+				// get the awaiter
+				task.GetAwaiter().OnCompleted(() => frame.Continue = false);
+
+				// block ui for the task
+				Thread.Sleep(1); // force context change
+				if (frame.Continue)
+				{
+					using (sp?.CreateProgress())
+						Dispatcher.PushFrame(frame);
+				}
+
+				// thread is cancelled, do not wait for finish
+				if (!task.IsCompleted)
+					throw new OperationCanceledException();
+			}
+			else if (SynchronizationContext.Current is IPpsProcessMessageLoop ctx)
+				ctx.ProcessMessageLoop(task);
+		} // func AwaitCore
+	} // class PpsWpfAsyncService
+
+	#endregion
 
 
 
@@ -912,7 +977,7 @@ namespace TecWare.PPSn
 				code != null
 				? CompileAsync(code, uri?.OriginalString ?? "dummy.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
 				: request.CompileAsync(uri, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-			compileTask.AwaitTask().Run(self, request);
+			compileTask.Await().Run(self, request);
 		} // proc CompileCode
 
 		#endregion
@@ -936,18 +1001,6 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public sealed override async Task<T> InvokeAsync<T>(Func<T> func)
 			=> await Dispatcher.InvokeAsync(func);
-
-		/// <summary>Await Task.</summary>
-		/// <param name="task"></param>
-		public sealed override void Await(Task task)
-			=> task.AwaitTask();
-
-		/// <summary>Await Task.</summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="task"></param>
-		/// <returns></returns>
-		public sealed override T Await<T>(Task<T> task)
-			=> task.AwaitTask();
 
 		/// <summary>Return context</summary>
 		public sealed override SynchronizationContext Context => synchronizationContext;

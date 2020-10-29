@@ -147,6 +147,7 @@
 				</Viewbox>
 			</ui:PpsButton.Content>
 		</ui:PpsButton>
+		<ui:PpsCommandBar Grid.Row="2" ExternalCommands="{Binding TopPaneHost.Commands}" Mode="Mixed" Margin="64,8,8,8" HorizontalAlignment="Right" VerticalAlignment="Center" />
 
 		<!-- Notification 
 		<Border DataContext="{Binding CurrentNotification,RelativeSource={RelativeSource AncestorType={x:Type local:PpsBdeWindow}}}" 

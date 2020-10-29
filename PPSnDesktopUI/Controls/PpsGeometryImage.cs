@@ -30,7 +30,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty HasGeometryProperty = hasGeometryPropertyKey.DependencyProperty;
 
 		public static readonly DependencyProperty GeometryNameProperty = DependencyProperty.Register(nameof(GeometryName), typeof(string), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnGeometryNameChanged)));
-		public static readonly DependencyProperty GeometryCircledProperty = DependencyProperty.Register(nameof(GeometryCircled), typeof(bool), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.AffectsMeasure));
+		public static readonly DependencyProperty GeometryCircledProperty = DependencyProperty.Register(nameof(GeometryCircled), typeof(bool), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.AffectsMeasure));
 
 		public static readonly DependencyProperty FillProperty = Shape.FillProperty.AddOwner(typeof(PpsGeometryImage), new FrameworkPropertyMetadata(Brushes.Transparent));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member

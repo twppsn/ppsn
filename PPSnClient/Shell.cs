@@ -183,28 +183,8 @@ namespace TecWare.PPSn
 	/// - Implements a basic Lua execution environment
 	/// - Server access model
 	/// - Basic code execution paths</summary>
-	public abstract partial class _PpsShell : LuaGlobal, IPpsRequest, IPpsProgressFactory, IServiceProvider, IDisposable
+	public abstract partial class _PpsShell : LuaGlobal, IPpsRequest, IServiceProvider, IDisposable
 	{
-		#region -- class PpsDummyProgress ---------------------------------------------
-
-		private sealed class PpsDummyProgress : IPpsProgress
-		{
-			public PpsDummyProgress()
-			{
-			} // ctor
-
-			public void Dispose()
-			{
-			} // proc Dispose
-
-			public void Report(string text) { }
-
-			public int Value { get; set; }
-			public string Text { get; set; }
-		} // class PpsDummyProgress
-
-		#endregion
-
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Initialize shell.</summary>
@@ -299,35 +279,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Await --------------------------------------------------------------
-
-		/// <summary>Await for a task</summary>
-		/// <param name="task"></param>
-		public abstract void Await(Task task);
-
-		/// <summary>Await for a task</summary>
-		/// <param name="task"></param>
-		/// <returns></returns>
-		public virtual T Await<T>(Task<T> task)
-		{
-			Await((Task)task);
-			return task.Result;
-		} // func Await
-
-		#endregion
-
 		#region -- ShowException, ShowMessage -----------------------------------------
-
-		/// <summary>Return a dummy progress.</summary>
-		/// <param name="blockUI"></param>
-		/// <returns></returns>
-		public IPpsProgress CreateProgress(bool blockUI = true)
-			=> CreateProgressCore(blockUI) ?? EmptyProgress;
-
-		/// <summary>Return a dummy progress.</summary>
-		/// <param name="blockUI"></param>
-		/// <returns></returns>
-		protected abstract IPpsProgress CreateProgressCore(bool blockUI);
 
 		/// <summary>Display the exception dialog.</summary>
 		/// <param name="exception"></param>
@@ -468,9 +420,6 @@ namespace TecWare.PPSn
 		public static _PpsShell Current => TryGetShell(out var shell) ? shell : null;
 
 		#endregion
-
-		/// <summary>Empty progress bar implementation</summary>
-		public static IPpsProgress EmptyProgress { get; } = new PpsDummyProgress();
 	} // class PpsShell
 
 	#endregion
