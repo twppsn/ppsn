@@ -178,8 +178,11 @@ namespace TecWare.PPSn.Bde
 
 		private void BackCommandExecuted(PpsCommandContext obj)
 		{
-			if (TopPaneHost?.Pane is IPpsWindowPaneBack backButton)
-				backButton.InvokeBackButton();
+			if (TopPaneHost?.Pane is IPpsWindowPaneBack backButton && backButton.CanBackButton.HasValue)
+			{
+				if (backButton.CanBackButton.Value)
+					backButton.InvokeBackButton();
+			}
 			else
 				PopPaneAsync().Spawn(this);
 		} // proc BackCommandExecuted

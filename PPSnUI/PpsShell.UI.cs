@@ -554,6 +554,11 @@ namespace TecWare.PPSn
 		/// <param name="alternativeMessage"></param>
 		void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
 
+		/// <summary>Show a short notification message</summary>
+		/// <param name="message"></param>
+		/// <param name="image"></param>
+		void ShowNotification(string message, PpsImage image = PpsImage.None); 
+
 		/// <summary>Display a simple messagebox</summary>
 		/// <param name="text"></param>
 		/// <param name="image"></param>
@@ -694,6 +699,29 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static Color ToDrawingColor(this HsvColor color)
 			=> Color.FromArgb(color.ToArgb());
+
+		#endregion
+
+		#region -- PpsImage - converter -----------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="logType"></param>
+		/// <returns></returns>
+		public static PpsImage ToPpsImage(this LogMsgType logType)
+		{
+			switch (logType)
+			{
+				case LogMsgType.Debug:
+				case LogMsgType.Information:
+					return PpsImage.Information;
+				case LogMsgType.Warning:
+					return PpsImage.Warning;
+				case LogMsgType.Error:
+					return PpsImage.Error;
+				default:
+					return PpsImage.None;
+			}
+		} // func ToPpsImage
 
 		#endregion
 

@@ -459,6 +459,10 @@ namespace TecWare.PPSn
 			}
 		} // proc ShowException
 
+		public void ShowNotification(string message, PpsImage image)
+		{
+		} // proc ShowNotification
+
 		public int MsgBox(string text, PpsImage image = PpsImage.Information, params string[] buttons)
 		{
 			MessageBox.Show(text);
