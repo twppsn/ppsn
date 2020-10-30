@@ -1116,6 +1116,10 @@ namespace TecWare.PPSn.UI
 			// sort commands in the corrent order
 			index = FindCommandInsertIndex(item.Order, this);
 
+			// update command target
+			if (item is PpsUICommandButton cmdSource && cmdSource.CommandTarget == null)
+				cmdSource.CommandTarget = DefaultCommandTarget;
+
 			// insert the item
 			base.InsertItem(index, item);
 			AddLogicalChildHandler?.Invoke(this[index]);
@@ -1228,6 +1232,40 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
 	} // interface IPpsCommandManager
+
+	#endregion
+
+	#region -- class PpsRoutedCommand -------------------------------------------------
+
+	/// <summary>Define a routed command</summary>
+	public sealed class PpsRoutedCommand : RoutedCommand
+	{
+		private readonly Type declaredType;
+		private readonly string id;
+
+		private PpsRoutedCommand( Type declaredType, string id)
+		{
+			this.declaredType = declaredType ?? throw new ArgumentNullException(nameof(declaredType));
+			this.id = id ?? throw new ArgumentNullException(nameof(id));
+		} // ctor
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> $"RoutedCommand: {declaredType.FullName}.{id}";
+
+		/// <summary></summary>
+		public Type Type => declaredType;
+		/// <summary>Id of the command.</summary>
+		public string Id => id;
+
+		/// <summary></summary>
+		/// <param name="declaredType"></param>
+		/// <param name="id"></param>
+		/// <returns></returns>
+		public static RoutedCommand Create(Type declaredType, string id)
+			=> new PpsRoutedCommand(declaredType, id);
+	} // class PpsRoutedCommand
 
 	#endregion
 }

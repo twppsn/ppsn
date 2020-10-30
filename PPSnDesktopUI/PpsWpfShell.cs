@@ -429,8 +429,11 @@ namespace TecWare.PPSn
 
 	#region -- class PpsWpfSerivce ----------------------------------------------------
 
-	[PpsService(typeof(IPpsUIService))]
-	internal class PpsWpfSerivce : IPpsUIService
+	[
+	PpsService(typeof(IPpsUIService)),
+	PpsService(typeof(IPpsAsyncService))
+	]
+	internal class PpsWpfSerivce : IPpsUIService, IPpsAsyncService
 	{
 		private readonly Dispatcher dispatcher;
 
@@ -438,6 +441,8 @@ namespace TecWare.PPSn
 		{
 			dispatcher = Application.Current.Dispatcher;
 		} // ctor
+
+		#region -- UI Service ---------------------------------------------------------
 
 		public void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
@@ -473,13 +478,49 @@ namespace TecWare.PPSn
 		public string[] Ok { get; } = new string[] { "Ok" };
 		public string[] YesNo { get; } = new string[] { "Ja", "Nein" };
 		public string[] OkCancel { get; } = new string[] { "Ok", "Abbrechen" };
+
+		#endregion
+
+		#region -- Async Service ------------------------------------------------------
+
+		void IPpsAsyncService.Await(IServiceProvider sp, Task task)
+		{
+			if (task.IsCompleted)
+				return;
+
+			if (SynchronizationContext.Current is DispatcherSynchronizationContext)
+			{
+				var frame = new DispatcherFrame();
+
+				// get the awaiter
+				task.GetAwaiter().OnCompleted(() => frame.Continue = false);
+
+				// block ui for the task
+				Thread.Sleep(1); // force context change
+				if (frame.Continue)
+				{
+					using (sp?.CreateProgress())
+						Dispatcher.PushFrame(frame);
+				}
+
+				// thread is cancelled, do not wait for finish
+				if (!task.IsCompleted)
+					throw new OperationCanceledException();
+			}
+			else if (SynchronizationContext.Current is IPpsProcessMessageLoop ctx)
+				ctx.ProcessMessageLoop(task);
+		} // func AwaitCore
+
+		#endregion
 	} // class PpsWpfSerivce
 
 	#endregion
 
 	#region -- class PpsWpfShellService -----------------------------------------------
 
-	[PpsService(typeof(IPpsCommandManager))]
+	[
+	PpsService(typeof(IPpsCommandManager)),
+	]
 	internal sealed class PpsWpfShellService : IPpsCommandManager
 	{
 		private readonly IPpsShell shell;
@@ -496,6 +537,12 @@ namespace TecWare.PPSn
 
 		private static void CanExecuteCommandHandlerImpl(object _, IPpsShell shell, CanExecuteRoutedEventArgs e)
 		{
+			if (e.Command is PpsRoutedCommand)
+			{
+				var f = Keyboard.FocusedElement;
+				Debug.Print($"CanExecute: {e.Command} on {(f == null ? "<null>" : f.GetType().Name)}");
+			}
+
 			if (!e.Handled && e.Command is PpsCommandBase c)
 			{
 				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(shell, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
@@ -517,7 +564,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public IPpsShell Shell { get => shell; set { } }
+		public IPpsShell Shell => shell;
 	} // class PpsWpfShellService
 
 	#endregion
@@ -618,42 +665,6 @@ namespace TecWare.PPSn
 			CommandManager.InvalidateRequerySuggested();
 		} // proc RestartIdleTimer
 	} // class class PpsWpfIdleService
-
-	#endregion
-
-	#region -- class PpsWpfAsyncService -----------------------------------------------
-
-	[PpsService(typeof(IPpsAsyncService))]
-	internal sealed class PpsWpfAsyncService : IPpsAsyncService
-	{
-		void IPpsAsyncService.Await(IServiceProvider sp, Task task)
-		{
-			if (task.IsCompleted)
-				return;
-
-			if (SynchronizationContext.Current is DispatcherSynchronizationContext)
-			{
-				var frame = new DispatcherFrame();
-
-				// get the awaiter
-				task.GetAwaiter().OnCompleted(() => frame.Continue = false);
-
-				// block ui for the task
-				Thread.Sleep(1); // force context change
-				if (frame.Continue)
-				{
-					using (sp?.CreateProgress())
-						Dispatcher.PushFrame(frame);
-				}
-
-				// thread is cancelled, do not wait for finish
-				if (!task.IsCompleted)
-					throw new OperationCanceledException();
-			}
-			else if (SynchronizationContext.Current is IPpsProcessMessageLoop ctx)
-				ctx.ProcessMessageLoop(task);
-		} // func AwaitCore
-	} // class PpsWpfAsyncService
 
 	#endregion
 

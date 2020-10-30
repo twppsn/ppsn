@@ -38,7 +38,7 @@ using TecWare.PPSn.Properties;
 namespace TecWare.PPSn.UI
 {
 	/// <summary>Login and loading dialog.</summary>
-	internal partial class PpsSplashWindow : Window, IPpsProgress
+	internal partial class PpsSplashWindow : Window, IPpsProgressFactory
 	{
 		#region -- enum StatePanes ----------------------------------------------------
 
@@ -461,6 +461,7 @@ namespace TecWare.PPSn.UI
 		public static readonly RoutedUICommand ShowErrorDetailsCommand = new RoutedUICommand("ShowErrorDetails", "ShowErrorDetails", typeof(PpsSplashWindow));
 
 		private readonly Stack<IReturnState> dialogStates = new Stack<IReturnState>();
+		private readonly PpsProgressStack progressStack;
 		private bool allowClose = false;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -468,6 +469,9 @@ namespace TecWare.PPSn.UI
 		public PpsSplashWindow()
 		{
 			InitializeComponent();
+
+			progressStack = PpsWpfShell.CreateProgressStack(Dispatcher);
+			progressStack.PropertyChanged += ProgressStack_PropertyChanged;
 
 			CommandBindings.AddRange(
 				new CommandBinding[]
@@ -501,8 +505,6 @@ namespace TecWare.PPSn.UI
 
 			DataContext = this;
 		} // ctor
-		
-		void IDisposable.Dispose() { }
 
 		private async Task ShowTracePaneAsync()
 		{
@@ -626,14 +628,13 @@ namespace TecWare.PPSn.UI
 		private static void OnStatusValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsSplashWindow)d).statusValue = (int)e.NewValue;
 
-		private void UpdateStatusText(string value)
-			=> Dispatcher.Invoke(new Action<string>(c => StatusText = c), value);
-
-		private void UpdateStatusValue(int value)
-			=> Dispatcher.Invoke(new Action<int>(c => StatusValue = c), value);
-
-		string IPpsProgress.Text { get => statusText; set => UpdateStatusText(value); }
-		int IPpsProgress.Value { get => statusValue; set => UpdateStatusValue(value); }
+		private void ProgressStack_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == nameof(PpsProgressStack.CurrentProgress))
+				StatusValue = progressStack.CurrentProgress;
+			else if (e.PropertyName == nameof(PpsProgressStack.CurrentText))
+				StatusText = progressStack.CurrentText;
+		} // event ProgressStack_PropertyChanged
 
 		/// <summary>Set or get text</summary>
 		public string StatusText { get => (string)GetValue(StatusTextProperty); set => SetValue(StatusTextProperty, value); }
@@ -737,8 +738,8 @@ namespace TecWare.PPSn.UI
 		public void SetProgressText(string text)
 			=> Dispatcher.BeginInvoke(new Action<string>(t => StatusText = t), DispatcherPriority.Normal, text);
 
-		void IProgress<string>.Report(string text)
-			=> SetProgressText(text);
+		public IPpsProgress CreateProgress(bool blockUI)
+			=> progressStack.CreateProgress(blockUI);
 
 		#endregion
 

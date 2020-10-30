@@ -224,7 +224,7 @@ namespace TecWare.PPSn.Data
 		IPpsLiveTableView<T> CreateView(PpsDataFilterExpression filter, params PpsDataOrderExpression[] order);
 
 		/// <summary>Find rows by index.</summary>
-		/// <param name="values">Indexed values.</param>
+		/// <param name="values">Indexed values (the sort key).</param>
 		/// <returns></returns>
 		IEnumerable<T> FindRows(params object[] values);
 
@@ -1708,7 +1708,8 @@ namespace TecWare.PPSn.Data
 		{
 			return orderExpressions.Select(o =>
 			{
-				var idx = Array.FindIndex(columns, c => String.Compare(c.Name, o.Identifier, StringComparison.OrdinalIgnoreCase) == 0);
+				var idx = Array.FindIndex(columns, c => String.Compare(c.Name, o.Identifier, StringComparison.OrdinalIgnoreCase) == 0
+					|| c.HasProperty && String.Compare(c.PropertyName, o.Identifier, StringComparison.Ordinal) == 0);
 				if (idx < 0)
 					throw new ArgumentOutOfRangeException($"Order column '{o.Identifier}' not found.");
 				return o.Negate ? ~idx : idx;

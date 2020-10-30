@@ -219,7 +219,7 @@ namespace TecWare.PPSn
 				return Task.CompletedTask;
 			} // func OnAfterInitServicesAsync
 
-			private static async Task<Stream> OpenFileSafe(PpsSplashWindow splashWindow, FileInfo fileInfo)
+			private static async Task<Stream> OpenFileSafe(IPpsProgress progress, FileInfo fileInfo)
 			{
 				// create directory if not exists
 				if (!fileInfo.Directory.Exists)
@@ -238,16 +238,16 @@ namespace TecWare.PPSn
 						}
 						catch (IOException)
 						{
-							splashWindow.SetProgressText(String.Format("Datei '{0}' ist blockiert (warte auf Freigabe, {1})...", fileInfo.Name, ++count));
+							progress.Text = String.Format("Datei '{0}' ist blockiert (warte auf Freigabe, {1})...", fileInfo.Name, ++count);
 						}
 						await Task.Delay(1000);
 					}
 				}
 			} // func OpenFileSafe
 
-			private static async Task DownloadFileAsync(PpsSplashWindow splashWindow, DEHttpClient http, Uri uri, FileInfo fileInfo, long expectedLength, DateTime lastWriteTimeUtc, long progressMin, long progressCount)
+			private static async Task DownloadFileAsync(IPpsProgress progress, DEHttpClient http, Uri uri, FileInfo fileInfo, long expectedLength, DateTime lastWriteTimeUtc, long progressMin, long progressCount)
 			{
-				using (var dst = await OpenFileSafe(splashWindow, fileInfo))
+				using (var dst = await OpenFileSafe(progress, fileInfo))
 				using (var src = await http.GetStreamAsync(uri))
 				{
 					var totalReaded = 0L;
@@ -256,8 +256,8 @@ namespace TecWare.PPSn
 					{
 						// update progress
 						var percent = (int)(progressMin + Math.Min(totalReaded, expectedLength) * progressCount / expectedLength);
-						splashWindow.StatusValue = percent;
-						splashWindow.SetProgressText(String.Format("Kopiere {0} ({1:N1}%)...", fileInfo.Name, percent / 10.0f));
+						progress.Value = percent;
+						progress.Text = String.Format("Kopiere {0} ({1:N1}%)...", fileInfo.Name, percent / 10.0f);
 
 						// copy data
 						var buf = new byte[0x4000];
@@ -281,105 +281,107 @@ namespace TecWare.PPSn
 			{
 				var log = shell.LogProxy();
 
-				splashWindow.SetProgressText("Analysiere die lokalen Dateien...");
-
-				// prepare directory
-				var filesDirectoryInfo = shell.EnforceLocalPath("common$");
-
-				// check for extended files
-				var extendedFiles = shell.Settings.GetGroups("PPSn.Application.Files", true, "Uri", "Path", "Length", "LastWriteTime", "Load")
-					.Select(g => FileVerifyInfo.Create(
-						g.GroupName,
-						filesDirectoryInfo,
-						g.GetProperty("Path", null),
-						g.GetProperty("Uri", null),
-						g.GetProperty("Length", -1L),
-						g.GetProperty("LastWriteTime", null),
-						g.GetProperty("Load", null)
-					))
-					.ToArray();
-
-				// analyze file information
-				var pathAdditions = new List<string>();
-				var totalBytesToUpdate = 0L;
-				foreach (var cur in extendedFiles)
+				using (var progress = splashWindow.CreateProgress(false))
 				{
-					// check directory for path variable
-					if ((cur.Load & FileLoadFlag.Path) != 0)
-					{
-						log.Debug($"Path {cur.FileId}: {cur.FileInfo.DirectoryName}");
-						AddToDirectoryList(-1, pathAdditions, cur.FileInfo.DirectoryName);
-					}
+					progress.Text = "Analysiere die lokalen Dateien...";
 
-					// check outdated file
-					if (cur.NeedsUpdate)
-					{
-						log.Debug($"Schedule {cur.FileInfo} for update: {cur.Uri}");
-						totalBytesToUpdate += cur.Length;
-					}
-				}
+					// prepare directory
+					var filesDirectoryInfo = shell.EnforceLocalPath("common$");
 
-				// we need to sync
-				if (allowSync && totalBytesToUpdate > 0)
-				{
-					// check for running processes
+					// check for extended files
+					var extendedFiles = shell.Settings.GetGroups("PPSn.Application.Files", true, "Uri", "Path", "Length", "LastWriteTime", "Load")
+						.Select(g => FileVerifyInfo.Create(
+							g.GroupName,
+							filesDirectoryInfo,
+							g.GetProperty("Path", null),
+							g.GetProperty("Uri", null),
+							g.GetProperty("Length", -1L),
+							g.GetProperty("LastWriteTime", null),
+							g.GetProperty("Load", null)
+						))
+						.ToArray();
+
+					// analyze file information
+					var pathAdditions = new List<string>();
+					var totalBytesToUpdate = 0L;
 					foreach (var cur in extendedFiles)
 					{
-						while (true)
+						// check directory for path variable
+						if ((cur.Load & FileLoadFlag.Path) != 0)
 						{
-							var process = cur.IsApplicationBlocked();
-							if (process == null)
-								break;
-							await WaitForProcessAsync(splashWindow, process);
+							log.Debug($"Path {cur.FileId}: {cur.FileInfo.DirectoryName}");
+							AddToDirectoryList(-1, pathAdditions, cur.FileInfo.DirectoryName);
+						}
+
+						// check outdated file
+						if (cur.NeedsUpdate)
+						{
+							log.Debug($"Schedule {cur.FileInfo} for update: {cur.Uri}");
+							totalBytesToUpdate += cur.Length;
 						}
 					}
 
-					// update new files
-					var totalCopiedFileLength = 0L;
-					foreach (var cur in extendedFiles.Where(c => c.NeedsUpdate))
+					// we need to sync
+					if (allowSync && totalBytesToUpdate > 0)
 					{
-						// copy file
-						await DownloadFileAsync(splashWindow, shell.Http, cur.Uri, cur.FileInfo, cur.Length, cur.LastWriteTime,
-							totalCopiedFileLength * 1000 / totalBytesToUpdate,
-							cur.Length * 1000 / totalBytesToUpdate
-						);
+						// check for running processes
+						foreach (var cur in extendedFiles)
+						{
+							while (true)
+							{
+								var process = cur.IsApplicationBlocked();
+								if (process == null)
+									break;
+								await WaitForProcessAsync(progress, process);
+							}
+						}
 
-						totalCopiedFileLength += cur.Length;
+						// update new files
+						var totalCopiedFileLength = 0L;
+						foreach (var cur in extendedFiles.Where(c => c.NeedsUpdate))
+						{
+							// copy file
+							await DownloadFileAsync(progress, shell.Http, cur.Uri, cur.FileInfo, cur.Length, cur.LastWriteTime,
+								totalCopiedFileLength * 1000 / totalBytesToUpdate,
+								cur.Length * 1000 / totalBytesToUpdate
+							);
+
+							totalCopiedFileLength += cur.Length;
+						}
+					}
+
+					// locate alternative paths
+					var i = 0;
+					foreach (var c in shell.Settings.GetProperties("PPSn.Application.Debug.Path.*"))
+					{
+						log.Debug($"Path {c.Key}: {c.Value}");
+						AddToDirectoryList(i++, pathAdditions, c.Value);
+					}
+
+					// set environment to extended files
+					Environment.SetEnvironmentVariable("PATH",
+						Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) + ";" + String.Join(";", pathAdditions),
+						EnvironmentVariableTarget.Process
+					);
+
+					// load additional assemblies from extended files
+					foreach (var f in extendedFiles.Where(c => (c.Load & FileLoadFlag.Net) != 0))
+					{
+						// load assembly
+						var assemblyName = AssemblyName.GetAssemblyName(f.FileInfo.FullName);
+						AddAssemblyResolveDirectory(f.FileInfo.DirectoryName);
+
+						progress.Text = String.Format("Lade Anwendungsmodul {0}...", assemblyName.Name);
+						var asm = Assembly.Load(assemblyName);
+						log.Debug($"Assembly {f.FileId} loaded: {asm.Location}");
+
+						// add alias for type resolver
+						AddAssemblyAlias(f.FileId, asm);
+
+						// collect services
+						PpsShell.Collect(asm);
 					}
 				}
-
-				// locate alternative paths
-				var i = 0;
-				foreach (var c in shell.Settings.GetProperties("PPSn.Application.Debug.Path.*"))
-				{
-					log.Debug($"Path {c.Key}: {c.Value}");
-					AddToDirectoryList(i++, pathAdditions, c.Value);
-				}
-
-				// set environment to extended files
-				Environment.SetEnvironmentVariable("PATH",
-					Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) + ";" + String.Join(";", pathAdditions),
-					EnvironmentVariableTarget.Process
-				);
-
-				// load additional assemblies from extended files
-				foreach (var f in extendedFiles.Where(c => (c.Load & FileLoadFlag.Net) != 0))
-				{
-					// load assembly
-					var assemblyName = AssemblyName.GetAssemblyName(f.FileInfo.FullName);
-					AddAssemblyResolveDirectory(f.FileInfo.DirectoryName);
-
-					splashWindow.SetProgressText(String.Format("Lade Anwendungsmodul {0}...", assemblyName.Name));
-					var asm = Assembly.Load(assemblyName);
-					log.Debug($"Assembly {f.FileId} loaded: {asm.Location}");
-
-					// add alias for type resolver
-					AddAssemblyAlias(f.FileId, asm);
-
-					// collect services
-					PpsShell.Collect(asm);
-				}
-
 				splashWindow.SetProgressText("Lade Anwendungsmodule...");
 			} // proc OnAfterLoadSettingsAsync
 
@@ -497,9 +499,9 @@ namespace TecWare.PPSn
 			}
 		} // func GetProcessById
 
-		private static async Task WaitForProcessAsync(PpsSplashWindow splashWindow, Process process)
+		private static async Task WaitForProcessAsync(IPpsProgress progress, Process process)
 		{
-			splashWindow.SetProgressText(String.Format("Warte auf Beenden von '{0}' ({1}, {2})...", process.MainWindowTitle, process.ProcessName, process.Id));
+			progress.Text = String.Format("Warte auf Beenden von '{0}' ({1}, {2})...", process.MainWindowTitle, process.ProcessName, process.Id);
 			await Task.Run(new Action(process.WaitForExit));
 		} // func WaitForProcessAsync
 
@@ -518,7 +520,10 @@ namespace TecWare.PPSn
 
 			// wait for process id
 			if (TryGetProcessById(args.WaitProcessId, out var process))
-				await WaitForProcessAsync(splashWindow, process);
+			{
+				using (var progress = splashWindow.CreateProgress(false))
+					await WaitForProcessAsync(progress, process);
+			}
 
 			try
 			{
