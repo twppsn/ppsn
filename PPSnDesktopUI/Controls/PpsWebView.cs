@@ -46,7 +46,7 @@ namespace TecWare.PPSn.Controls
 		} // ctor
 
 		private IPpsShell GetShell()
-			=> this.GetControlService<IPpsShell>(true);
+			=> PpsShell.Current; // this.GetControlService<IPpsShell>(true);
 
 		#region -- Redirect Core Web View features ------------------------------------
 
@@ -197,34 +197,36 @@ namespace TecWare.PPSn.Controls
 
 		private void SetResponse(CoreWebView2WebResourceRequestedEventArgs e, string responseHeader, int responseCode, string responseMessage, Stream responseStream)
 		{
-			#region var nativeArgs = e._nativeCoreWebView2PermissionRequestedEventArgs
-			var eventType = e.GetType();
-			var field = eventType.GetField("_nativeCoreWebView2WebResourceRequestedEventArgs", BindingFlags.NonPublic | BindingFlags.Instance);
-			var nativeArgs = field.GetValue(e);
-			#endregion
-			#region var nativeEnvironment = Control.Environment._nativeCoreWebView2Environment
-			var environment = (CoreWebView2Environment)GetType().GetProperty("Environment", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
-			field = environment.GetType().GetField("_nativeCoreWebView2Environment", BindingFlags.NonPublic | BindingFlags.Instance);
-			var nativeEnvironment = field.GetValue(environment);
-			#endregion
+			e.Response = CoreWebView2.Environment.CreateWebResourceResponse(responseStream, responseCode, responseMessage, responseHeader);
+			
+			//#region var nativeArgs = e._nativeCoreWebView2PermissionRequestedEventArgs
+			//var eventType = e.GetType();
+			//var field = eventType.GetField("_nativeCoreWebView2WebResourceRequestedEventArgs", BindingFlags.NonPublic | BindingFlags.Instance);
+			//var nativeArgs = field.GetValue(e);
+			//#endregion
+			//#region var nativeEnvironment = Control.Environment._nativeCoreWebView2Environment
+			//var environment = (CoreWebView2Environment)GetType().GetProperty("Environment", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
+			//field = environment.GetType().GetField("_nativeCoreWebView2Environment", BindingFlags.NonPublic | BindingFlags.Instance);
+			//var nativeEnvironment = field.GetValue(environment);
+			//#endregion
 
-			#region var managedStream = new ManagedIStream(responseStream)
-			var managedStream = Activator.CreateInstance(eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.ManagedIStream"),
-				BindingFlags.NonPublic | BindingFlags.Instance,
-				null,
-				new object[] { responseStream },
-				null
-			);
-			#endregion
-			#region var response = CreateWebResourceResponse(managedStream, responseCode, responseMessage, responseHeader)
-			var method = eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.Raw.ICoreWebView2Environment").GetMethod("CreateWebResourceResponse");
-			var response = method.Invoke(nativeEnvironment, new object[] { managedStream, responseCode, responseMessage, responseHeader });
-			#endregion
+			//#region var managedStream = new ManagedIStream(responseStream)
+			//var managedStream = Activator.CreateInstance(eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.ManagedIStream"),
+			//	BindingFlags.NonPublic | BindingFlags.Instance,
+			//	null,
+			//	new object[] { responseStream },
+			//	null
+			//);
+			//#endregion
+			//#region var response = CreateWebResourceResponse(managedStream, responseCode, responseMessage, responseHeader)
+			//var method = eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.Raw.ICoreWebView2Environment").GetMethod("CreateWebResourceResponse");
+			//var response = method.Invoke(nativeEnvironment, new object[] { managedStream, responseCode, responseMessage, responseHeader });
+			//#endregion
 
-			#region e.Response = response
-			var property = eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.Raw.ICoreWebView2WebResourceRequestedEventArgs").GetProperty("Response");
-			property.SetValue(nativeArgs, response);
-			#endregion
+			//#region e.Response = response
+			//var property = eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.Raw.ICoreWebView2WebResourceRequestedEventArgs").GetProperty("Response");
+			//property.SetValue(nativeArgs, response);
+			//#endregion
 		} // proc SetResponse
 
 		private void SetEmptyResponse(CoreWebView2WebResourceRequestedEventArgs e)
@@ -336,6 +338,20 @@ namespace TecWare.PPSn.Controls
 		} // event WebView_WebResourceRequested
 
 		#endregion
+
+		/// <summary>Set relative or absolute uri</summary>
+		/// <param name="newUri"></param>
+		public void SetUri(string newUri)
+		{
+			var uri = new Uri(newUri, UriKind.RelativeOrAbsolute);
+			if (!uri.IsAbsoluteUri)
+			{
+				var http = shell.Value.Http;
+				Source = http.CreateFullUri(newUri);
+			}
+			else
+				Source = uri;
+		} // proc SetUri
 
 	} // class PpsWebView
 }
