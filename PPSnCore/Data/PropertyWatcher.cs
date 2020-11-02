@@ -243,14 +243,14 @@ namespace TecWare.PPSn.Core.Data
 			firstElement = Parse(propertyPath, 0);
 			lastElement = firstElement;
 
-			if (firstElement != null)
-				firstElement.OnParentValueChanged(root);
-
 			if (lastElement != null)
 			{
 				while (lastElement.Child != null)
 					lastElement = lastElement.Child;
 			}
+
+			if (firstElement != null)
+				firstElement.OnParentValueChanged(root);
 		} // ctor
 
 		private PathElement Parse(string path, int offset)

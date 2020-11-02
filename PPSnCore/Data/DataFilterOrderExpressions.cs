@@ -1780,6 +1780,7 @@ namespace TecWare.PPSn.Data
 						case PpsDataFilterExpressionType.And:
 							if (expr == False) // false in "and" is always false)
 							{
+								combineValues.Clear();
 								args.Clear();
 								args.Add(False);
 								return false;
@@ -1793,6 +1794,7 @@ namespace TecWare.PPSn.Data
 						case PpsDataFilterExpressionType.NAnd:
 							if (expr == False) // false in "not and" is always true
 							{
+								combineValues.Clear();
 								args.Clear();
 								args.Add(True);
 								return false;
@@ -1806,6 +1808,7 @@ namespace TecWare.PPSn.Data
 						case PpsDataFilterExpressionType.Or:
 							if (expr == True) // true in "or" is always true
 							{
+								combineValues.Clear();
 								args.Clear();
 								args.Add(True);
 								return false;
@@ -1819,6 +1822,7 @@ namespace TecWare.PPSn.Data
 						case PpsDataFilterExpressionType.NOr:  // true in "or" is always false
 							if (expr == True)
 							{
+								combineValues.Clear();
 								args.Clear();
 								args.Add(False);
 								return false;
@@ -1865,13 +1869,13 @@ namespace TecWare.PPSn.Data
 				// combine values
 				for (var i = 0; i < combineValues.Count; i++)
 				{
-					if (combineValues[i] != null)
-					{
-						var cmp = (PpsDataFilterCompareExpression)args[i];
-						args[i] = new PpsDataFilterCompareExpression(cmp.Operand, cmp.Operator,
-							new PpsDataFilterCompareArrayValue(combineValues[i].ToArray())
-						);
-					}
+					if (combineValues[i] == null)
+						continue;
+
+					var cmp = (PpsDataFilterCompareExpression)args[i];
+					args[i] = new PpsDataFilterCompareExpression(cmp.Operand, cmp.Operator,
+						new PpsDataFilterCompareArrayValue(combineValues[i].ToArray())
+					);
 				}
 
 				// optimize 0 or 1 results
