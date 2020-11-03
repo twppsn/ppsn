@@ -304,16 +304,16 @@ namespace PPSnExcel
 		private const string filterTag = "filter";
 		private const string viewTag = "view";
 
-		private readonly PpsEnvironment environment;    // attached environment
+		private readonly IPpsShell shell;    // attached environment
 		private readonly string viewId;                 // view or views
 		private readonly string filterExpr;             // uses placeholder for cells
 		private PpsListColumnInfo[] columns;			// columns information
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		private PpsListMapping(PpsEnvironment environment, string select, PpsListColumnInfo[] columns, string filterExpr)
+		private PpsListMapping(IPpsShell shell, string select, PpsListColumnInfo[] columns, string filterExpr)
 		{
-			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 			this.viewId = select ?? throw new ArgumentNullException(nameof(select));
 			this.filterExpr = filterExpr ?? String.Empty;
 			this.columns = columns ?? Array.Empty<PpsListColumnInfo>();
@@ -449,7 +449,7 @@ namespace PPSnExcel
 				AttributeSelector = "*,V.*,Xl.*"
 			};
 
-			return new PpsViewResult(this, environment.GetViewData(request));
+			return new PpsViewResult(this, shell.GetViewData(request));
 		} // func GetViewData
 
 		#endregion
@@ -469,9 +469,9 @@ namespace PPSnExcel
 			if (columnInfo.Columns.Count == 0)
 				throw new ExcelException("Ergebnismenge hat keine Spalten.");
 
-			var annotation = XlProcs.UpdateProperties(String.Empty,
-				new KeyValuePair<string, string>(environmentNameTag, environment.Info.Name),
-				new KeyValuePair<string, string>(environmentUriTag, environment.Info.Uri.ToString()),
+			var annotation = PpsWinShell.UpdateProperties(String.Empty,
+				new KeyValuePair<string, string>(environmentNameTag, shell.Info.Name),
+				new KeyValuePair<string, string>(environmentUriTag, shell.Info.Uri.ToString()),
 				new KeyValuePair<string, string>(viewTag, viewId),
 				new KeyValuePair<string, string>(filterTag, filterExpr)
 			);
@@ -543,10 +543,10 @@ namespace PPSnExcel
 				=> typeToXsdType.TryGetValue(netType, out var tmp) && tmp == xsdType;
 
 			// test base params
-			if (!TryParse(map, out _, out var environmentUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
+			if (!TryParse(map, out _, out var shelltUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
 				return (false, null);
 
-			if (Uri.Compare(environmentUri, environment.Request.BaseAddress, UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) != 0)
+			if (Uri.Compare(shelltUri, shell.Http.BaseAddress, UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) != 0)
 				return (true, null);
 
 			if (viewId != currentViewId)
@@ -676,7 +676,7 @@ namespace PPSnExcel
 			return null;
 		} // func GetColumnFromExpression
 
-		public PpsEnvironment Environment => environment;
+		public IPpsShell Shell => shell;
 		public string Select => viewId;
 		public string Filter => filterExpr;
 
@@ -684,9 +684,9 @@ namespace PPSnExcel
 
 		#region -- TryParse -----------------------------------------------------------
 
-		public static PpsListMapping Create(PpsEnvironment environment, string views, string filter, IEnumerable<IPpsTableColumn> columns, PpsListMapping currentMapping)
+		public static PpsListMapping Create(IPpsShell shell, string views, string filter, IEnumerable<IPpsTableColumn> columns, PpsListMapping currentMapping)
 		{
-			return new PpsListMapping(environment, views,
+			return new PpsListMapping(shell, views,
 				columns == null
 					? Array.Empty<PpsListColumnInfo>()
 					: (
@@ -713,15 +713,15 @@ namespace PPSnExcel
 			}
 		} // func TryParseSchema
 
-		public static bool TryParse(Func<string, Uri, PpsEnvironment> findEnvironment, ListObject xlList, out PpsListMapping ppsMap)
-			=> TryParse(findEnvironment, xlList?.XmlMap, out ppsMap);
+		public static bool TryParse(Func<string, Uri, IPpsShell> findShell, ListObject xlList, out PpsListMapping ppsMap)
+			=> TryParse(findShell, xlList?.XmlMap, out ppsMap);
 
-		public static bool TryParse(Func<string, Uri, PpsEnvironment> findEnvironment, Excel.XmlMap xlMap, out PpsListMapping ppsMap)
+		public static bool TryParse(Func<string, Uri, IPpsShell> findShell, Excel.XmlMap xlMap, out PpsListMapping ppsMap)
 		{
-			if (TryParse(xlMap, out var environmentName, out var environmentUri, out var viewId, out var filterExpr, out var columns))
+			if (TryParse(xlMap, out var shellName, out var shellUri, out var viewId, out var filterExpr, out var columns))
 			{
 				// find environment
-				var env = findEnvironment(environmentName, environmentUri);
+				var env = findShell(shellName, shellUri);
 				if (env == null)
 				{
 					ppsMap = null;
@@ -739,10 +739,10 @@ namespace PPSnExcel
 			}
 		} // func TryParse
 
-		public static bool TryParseComment(XElement xSchema, out string environmentName, out Uri environmentUri, out string viewId, out string filterExpr)
+		public static bool TryParseComment(XElement xSchema, out string shellName, out Uri shellUri, out string viewId, out string filterExpr)
 		{
-			environmentName = null;
-			environmentUri = null;
+			shellName = null;
+			shellUri = null;
 			viewId = null;
 			filterExpr = null;
 
@@ -752,15 +752,15 @@ namespace PPSnExcel
 				return false;
 
 			// parse content
-			foreach (var kv in XlProcs.GetLineProperties(comment))
+			foreach (var kv in PpsWinShell.GetLineProperties(comment))
 			{
 				switch (kv.Key)
 				{
 					case environmentNameTag:
-						environmentName = kv.Value;
+						shellName = kv.Value;
 						break;
 					case environmentUriTag:
-						environmentUri = new Uri(kv.Value, UriKind.Absolute);
+						shellUri = new Uri(kv.Value, UriKind.Absolute);
 						break;
 					case filterTag:
 						filterExpr = kv.Value;
@@ -844,7 +844,7 @@ namespace PPSnExcel
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && !(range.ListObject is null))
 			{
 				var xlList = Globals.Factory.GetVstoObject(range.ListObject);
-				return TryParse(Globals.ThisAddIn.FindEnvironment, xlList.XmlMap, out ppsMap);
+				return TryParse(Globals.ThisAddIn.FindShell, xlList.XmlMap, out ppsMap);
 			}
 			else
 			{
@@ -1326,15 +1326,15 @@ namespace PPSnExcel
 		#region -- Editor -------------------------------------------------------------
 
 		public void Edit(bool extended)
-			=> map.Environment.EditTable(this, extended);
+			=> map.Shell.EditTable(this, extended);
 
 		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
 		{
 			var columnArray = columns.ToArray();
 
 			// create new mapping
-			map = PpsListMapping.Create(map.Environment, views, filter, columnArray, map);
-			using (var progress = Globals.ThisAddIn.CreateProgress())
+			map = PpsListMapping.Create(map.Shell, views, filter, columnArray, map);
+			using (var progress = PpsShell.Global.CreateProgress())
 				return RefreshAsync(PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columnArray);
 		} // proc UpdateAsync
 
@@ -1354,12 +1354,12 @@ namespace PPSnExcel
 
 		private sealed class NewModel : IPpsTableData
 		{
-			private readonly PpsEnvironment environment;
+			private readonly IPpsShell shell;
 			private readonly Excel.Range topLeftCell;
 
-			public NewModel(PpsEnvironment environment, Excel.Range topLeftCell)
+			public NewModel(IPpsShell shell, Excel.Range topLeftCell)
 			{
-				this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
+				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 				this.topLeftCell = topLeftCell ?? throw new ArgumentNullException(nameof(topLeftCell));
 			} // ctor
 
@@ -1368,7 +1368,7 @@ namespace PPSnExcel
 				var columnArray = columns.ToArray();
 
 				// create a new mapping
-				var newMapping = PpsListMapping.Create(environment, views, filter, columnArray, null);
+				var newMapping = PpsListMapping.Create(shell, views, filter, columnArray, null);
 
 				// Initialize ListObject
 				var xlList = Globals.Factory.GetVstoObject(topLeftCell.ListObject ?? topLeftCell.Worksheet.ListObjects.Add());
@@ -1386,17 +1386,17 @@ namespace PPSnExcel
 			public bool IsEmpty => true;
 		} // class NewModel 
 
-		public static void New(PpsEnvironment env, Excel.Range topLeftCell, string views)
-			=> env.EditTable(new NewModel(env, topLeftCell) { Views = views }, false);
+		public static void New(IPpsShell shell, Excel.Range topLeftCell, string views)
+			=> shell.EditTable(new NewModel(shell, topLeftCell) { Views = views }, false);
 
-		public static void New(PpsEnvironment env, Excel.Range topLeftCell)
-			=> env.EditTable(new NewModel(env, topLeftCell), false);
+		public static void New(IPpsShell shell, Excel.Range topLeftCell)
+			=> shell.EditTable(new NewModel(shell, topLeftCell), false);
 
 		#endregion
 
 		#region -- TryGet -------------------------------------------------------------
 
-		public static bool TryGet(Func<string, Uri, PpsEnvironment> findEnvironment, ListObject xlList, out PpsListObject ppsList)
+		public static bool TryGet(Func<string, Uri, IPpsShell> findEnvironment, ListObject xlList, out PpsListObject ppsList)
 		{
 			if (PpsListMapping.TryParse(findEnvironment, xlList, out var info))
 			{
@@ -1420,7 +1420,7 @@ namespace PPSnExcel
 			else
 			{
 				var xlList = Globals.Factory.GetVstoObject(xlListObject);
-				return TryGet(Globals.ThisAddIn.FindEnvironment, xlList, out ppsList);
+				return TryGet(Globals.ThisAddIn.FindShell, xlList, out ppsList);
 			}
 		} // func TryGetFromListObject
 

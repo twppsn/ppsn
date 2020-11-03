@@ -15,14 +15,15 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
+using System.Threading.Tasks;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Controls;
+using TecWare.PPSn.Core.Data;
 
 namespace TecWare.PPSn
 {
@@ -41,8 +42,70 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	public static class XlProcs
+	#region -- class PpsWinShell ------------------------------------------------------
+
+	public static partial class PpsWinShell
 	{
+		#region -- GetViewData --------------------------------------------------------
+
+		/// <summary>Return a complete DataTable asyncron</summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public static async Task<DataTable> GetViewDataAsync(this IPpsShell shell, PpsDataQuery arguments)
+		{
+			var dt = new DataTable();
+			using (var e = (await Task.Run(() => shell.GetViewData(arguments))).GetEnumerator())
+			{
+				while (await Task.Run(new Func<bool>(e.MoveNext)))
+				{
+					if (dt.Columns.Count == 0)
+					{
+
+						for (var i = 0; i < e.Current.Columns.Count; i++)
+						{
+							var col = e.Current.Columns[i];
+							dt.Columns.Add(new DataColumn(col.Name, col.DataType));
+						}
+					}
+
+					var r = dt.NewRow();
+					for (var i = 0; i < dt.Columns.Count; i++)
+						r[i] = e.Current[i] ?? DBNull.Value;
+
+					dt.Rows.Add(r);
+				}
+			}
+			return dt.Columns.Count == 0 ? null : dt;
+		} // func GetViewDataAsync
+
+		#endregion
+
+		#region -- Transform - dpi ----------------------------------------------------
+
+		public static int TransformX(this Matrix matrix, int x)
+			=> TransformPoint(matrix, new Point(x, 0)).X;
+
+		public static int TransformY(this Matrix matrix, int y)
+			=> TransformPoint(matrix, new Point(0, y)).Y;
+
+		public static Point TransformPoint(this Matrix matrix, Point pt)
+		{
+			var pts = new Point[] { pt };
+			matrix.TransformPoints(pts);
+			return pts[0];
+		} // proc TransformPoint
+
+		public static Rectangle TransformRect(this Matrix matrix, Rectangle rc)
+		{
+			var pts = new Point[] { rc.Location, new Point(rc.Right, rc.Bottom) };
+			matrix.TransformPoints(pts);
+			return new Rectangle(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
+		} // proc TransformPoint
+
+		#endregion
+
+		#region -- UpdateProperties ---------------------------------------------------
+
 		private static readonly Regex lineProperties = new Regex(@"^\s*@@(?<k>\w+)\s*\=\s*(?<v>.*)\s*$", RegexOptions.Compiled);
 		private static readonly Regex lineSplitter = new Regex(@"\r\n|\r|\n", RegexOptions.Compiled);
 
@@ -98,73 +161,15 @@ namespace TecWare.PPSn
 			}
 		} // func GetLineProperties
 
-		#region -- Transform - dpi ----------------------------------------------------
-
-		public static int TransformX(this Matrix matrix, int x)
-			=> TransformPoint(matrix, new Point(x, 0)).X;
-
-		public static int TransformY(this Matrix matrix, int y)
-			=> TransformPoint(matrix, new Point(0, y)).Y;
-
-		public static Point TransformPoint(this Matrix matrix, Point pt)
-		{
-			var pts = new Point[] { pt };
-			matrix.TransformPoints(pts);
-			return pts[0];
-		} // proc TransformPoint
-
-		public static Rectangle TransformRect(this Matrix matrix, Rectangle rc)
-		{
-			var pts = new Point[] { rc.Location, new Point(rc.Right, rc.Bottom) };
-			matrix.TransformPoints(pts);
-			return new Rectangle(pts[0].X, pts[0].Y, pts[1].X - pts[0].X, pts[1].Y - pts[0].Y);
-		} // proc TransformPoint
-
 		#endregion
 
-		#region -- Dialogs ------------------------------------------------------------
-
-		public static void ShowException(this IWin32Window owner, ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-		{
-			var unpackedException = exception.UnpackException();
-
-			if ((flags & ExceptionShowFlags.Warning) != 0)
-				MessageBox.Show(owner, alternativeMessage ?? unpackedException.Message, "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-			else if (unpackedException is ExcelException excelException)
-				MessageBox.Show(owner, alternativeMessage ?? excelException.Message, "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			else
-			{
-				using (var exceptionDialog = new ExceptionDialog())
-				{
-					exceptionDialog.SetData(alternativeMessage, unpackedException, false);
-					exceptionDialog.ShowDialog(owner);
-				}
-			}
-		} // proc ShowException
-
-		private static string GetMessageTitle(MessageBoxIcon icon)
-		{
-			switch (icon)
-			{
-				case MessageBoxIcon.Information:
-					return "Information";
-				case MessageBoxIcon.Warning:
-					return "Warnung";
-				case MessageBoxIcon.Question:
-					return "Frage";
-				case MessageBoxIcon.Error:
-					return "Fehler";
-				default:
-					return icon.ToString();
-			}
-		} // func GetMessageTitle
-
-		public static DialogResult ShowMessage(this IWin32Window owner, string message, MessageBoxIcon icon = MessageBoxIcon.Information, MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxDefaultButton defaultButton = MessageBoxDefaultButton.Button1)
-			=> MessageBox.Show(owner, message, GetMessageTitle(icon), buttons, icon, defaultButton);
-
-		#endregion
+		#region -- GetIsNullable ------------------------------------------------------
 
 		public static bool GetIsNullable(this IDataColumn col)
 			=> col.Attributes.TryGetProperty<bool>("nullable", out var tmp) && tmp;
-	} // class XlProcs
+
+		#endregion
+	} // class PpsWinShell
+
+	#endregion
 }

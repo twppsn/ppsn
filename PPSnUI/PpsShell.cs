@@ -117,7 +117,7 @@ namespace TecWare.PPSn
 	#region -- interface IPpsShell ----------------------------------------------------
 
 	/// <summary>Active shell for services.</summary>
-	public interface IPpsShell : IServiceContainer, IPpsCommunicationService, IServiceProvider, INotifyPropertyChanged
+	public interface IPpsShell : IServiceContainer, IPpsCommunicationService, IServiceProvider, INotifyPropertyChanged, IDisposable
 	{
 		/// <summary>Create a new http request for the uri.</summary>
 		/// <param name="uri"></param>
@@ -603,6 +603,9 @@ namespace TecWare.PPSn
 
 			public void Dispose()
 			{
+				if (currentShell == this)
+					SetCurrent(null);
+
 				// stop background worker
 				backgroundWorker.Dispose();
 
@@ -1166,6 +1169,12 @@ namespace TecWare.PPSn
 
 		/// <summary>Add a defined services (<see cref="PpsServiceAttribute"/>) to the service container.</summary>
 		/// <param name="serviceContainer"></param>
+		/// <param name="serviceInstance"></param>
+		public static void AddServices(this IServiceContainer serviceContainer, object serviceInstance)
+			=> AddServices(serviceContainer, serviceInstance.GetType(), serviceInstance);
+
+		/// <summary>Add a defined services (<see cref="PpsServiceAttribute"/>) to the service container.</summary>
+		/// <param name="serviceContainer"></param>
 		/// <param name="serviceInstanceType"></param>
 		/// <param name="serviceInstance"></param>
 		public static void AddServices(this IServiceContainer serviceContainer, Type serviceInstanceType, object serviceInstance)
@@ -1210,9 +1219,6 @@ namespace TecWare.PPSn
 		{
 			if (currentShell != value)
 			{
-				if (currentShell != null)
-					currentShell.Dispose();
-
 				currentShell = value;
 				CurrentChanged?.Invoke(null, EventArgs.Empty);
 			}

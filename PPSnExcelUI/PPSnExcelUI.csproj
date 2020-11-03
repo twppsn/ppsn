@@ -82,19 +82,24 @@
     <Compile Include="Data\PpsTableTextData.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.cs" />
+    <Compile Include="PpsWinShell.cs" />
+    <Compile Include="PpsWinShell.UI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Stuff.cs" />
     <Compile Include="Data\PpsViewDictionary.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">
       <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
       <Name>PPSnCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PPSnUI\PPSnUI.csproj">
+      <Project>{967f6b8b-fe55-48a6-ae38-7f2598c9eec6}</Project>
+      <Name>PPSnUI</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -122,6 +127,5 @@
     <Content Include="Resources\r16x16\sort_ascending.png" />
     <Content Include="Resources\r16x16\sort_descending.png" />
   </ItemGroup>
-  <Import Project="..\PPSnClient\PPSnClient.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

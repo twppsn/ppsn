@@ -406,7 +406,7 @@ namespace TecWare.PPSn
 			PresentationTraceSources.DataBindingSource.Listeners.Add(new BindingErrorListener(this));
 		} // ctor
 
-		#region -- OnStartup, OnExit ------------------------------------------------------
+		#region -- OnStartup, OnExit --------------------------------------------------
 
 		private static IPpsWindowPaneManager GetMainWindowPaneManager(IPpsShell shell, string applicationMode)
 		{

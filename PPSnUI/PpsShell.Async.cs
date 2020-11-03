@@ -35,7 +35,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsProcessMessageLoop ------------------------------------------
+	#region -- interface IPpsProcessMessageLoop ---------------------------------------
 
 	/// <summary>Implemented by a <see cref="SynchronizationContext"/> for processing the message loop. Is used by <see cref="IPpsAsyncService"/>.</summary>
 	public interface IPpsProcessMessageLoop

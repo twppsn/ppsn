@@ -31,7 +31,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PPSnUI", "PPSnUI\PPSnUI.csp
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		PPSnClient\PPSnClient.projitems*{48f78cbb-b08c-42bb-83af-d02de9d16010}*SharedItemsImports = 4
 		PPSnClient\PPSnClient.projitems*{f2dbcbc9-91be-4964-ad72-d51d2d9f73c0}*SharedItemsImports = 13
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -125,7 +124,7 @@ Global
 		{967F6B8B-FE55-48A6-AE38-7F2598C9EEC6} = {3AFE3696-3A14-45A8-A079-333850913BFA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		RESX_NeutralResourcesLanguage = de-DE
 		SolutionGuid = {F0AFC2F2-0A01-4CAB-8B21-44C224AFF0A0}
+		RESX_NeutralResourcesLanguage = de-DE
 	EndGlobalSection
 EndGlobal

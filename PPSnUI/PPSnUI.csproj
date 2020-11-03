@@ -4,6 +4,13 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>TecWare.PPSn</RootNamespace>
     <PackageId>TecWare.PPSn.PPSnUI</PackageId>
+    <Description>Basic contracts and functionality for the ppsn, they are only for client applications.</Description>
+    <PackageProjectUrl>https://github.com/twppsn/ppsn/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/twppsn/ppsn.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Company>TecWare Gesellschaft für Softwareentwicklung mbH</Company>
+    <Authors>TecWare</Authors>
+    <Product>PPSn</Product>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

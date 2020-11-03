@@ -23,7 +23,6 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.WebSockets;
 using System.Windows.Forms;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
@@ -878,7 +877,7 @@ namespace TecWare.PPSn.Controls
 		private const string dataObjectFormat = "PpsnColumnSource[]";
 		private const string dataSourceFormat = "PpsnColumnSource";
 
-		private readonly PpsEnvironment env;
+		private readonly IPpsShell shell;
 		private readonly PpsViewDictionary availableViews; // list of all server tables
 		private readonly List<ViewTreeNodeData> createdTreeNodeViews = new List<ViewTreeNodeData>();
 
@@ -892,15 +891,15 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public TableInsertForm(PpsEnvironment env)
+		public TableInsertForm(IPpsShell shell)
 		{
-			this.env = env ?? throw new ArgumentNullException(nameof(env));
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 
 			InitializeComponent();
 
 			filterGrid.AddColumns(); // the designer will generate code, if this is done before initialize component
 			filterGrid.SetFilter(resultFilter);
-			availableViews = new PpsViewDictionary(env);
+			availableViews = new PpsViewDictionary(shell);
 
 			currentColumnsListView.ListViewItemSorter = new CurrentColumnsSortComparer(this);
 
@@ -970,7 +969,7 @@ namespace TecWare.PPSn.Controls
 
 			// update view
 			currentData = tableData;
-			env.ContinueCatch(RefreshAllAsync(currentData));
+			RefreshAllAsync(currentData).OnException(false);
 		} // proc LoadData
 
 		private void UpdateLayout()
@@ -1704,7 +1703,7 @@ namespace TecWare.PPSn.Controls
 			}
 			catch (Exception ex)
 			{
-				env.ShowException(ex);
+				shell.ShowException(ex);
 			}
 			finally
 			{

@@ -18,6 +18,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
+using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
 
@@ -44,7 +45,7 @@ namespace PPSnExcel
 			application.SheetDeactivate += sh => SelectionChanged(sh, false);
 			application.SheetSelectionChange += (sh, target) => SelectionChanged(target, true);
 
-			Globals.ThisAddIn.CurrentEnvironmentChanged += (s, _e) => { RefreshUsername(); Refresh(); };
+			PpsShell.CurrentChanged += (s, _e) => { RefreshUsername(); Refresh(); };
 
 			// init environment
 			RefreshEnvironments();
@@ -62,7 +63,7 @@ namespace PPSnExcel
 
 		private void RunActionSafe(Action action)
 		{
-			ThisAddIn.CheckSynchronizationContext();
+			WaitForm.CheckSynchronizationContext();
 			try
 			{
 				action();
@@ -73,7 +74,7 @@ namespace PPSnExcel
 			}
 			catch (Exception e)
 			{
-				Globals.ThisAddIn.ShowException(ExceptionShowFlags.None, e);
+				Globals.ThisAddIn.ShowException(PpsExceptionShowFlags.None, e);
 			}
 		} // proc RunActionSafe
 
@@ -81,11 +82,11 @@ namespace PPSnExcel
 
 		public void Refresh()
 		{
-			var currentEnvironment = Globals.ThisAddIn.CurrentEnvironment;
-			var hasEnvironment = currentEnvironment != null;
+			var currentShell = PpsShell.Current;
+			var hasShell = currentShell != null;
 			var hasListObjectInfo = PpsListMapping.TryParseFromSelection();
-			cmdReport.Enabled = hasEnvironment;
-			cmdTable.Enabled = hasEnvironment || hasListObjectInfo;
+			cmdReport.Enabled = hasShell;
+			cmdTable.Enabled = hasShell || hasListObjectInfo;
 
 			editTableExCommand.Enabled = hasListObjectInfo;
 			cmdListObjectInfo.Enabled = hasListObjectInfo;
@@ -97,30 +98,31 @@ namespace PPSnExcel
 
 		private void RefreshUsername()
 		{
-			var currentEnvironment = Globals.ThisAddIn.CurrentEnvironment;
-			loginMenu.Label = currentEnvironment is null ? "Keine Umgebung" : $"{currentEnvironment.Name} ({currentEnvironment.UserName})";
-			loginGalery.Label = currentEnvironment is null ? "Keine Umgebung" : $"{currentEnvironment.Info.Name} ({currentEnvironment.Info.DisplayName})";
-			logoutButton.Enabled = !(currentEnvironment is null);
+			var currentShell = PpsShell.Current;
+			loginMenu.Label = currentShell is null ? "Keine Umgebung" : $"{currentShell.Info.Name} ({"currentShell.UserName"})";
+			loginGalery.Label = currentShell is null ? "Keine Umgebung" : $"{currentShell.Info.Name} ({currentShell.Info.DisplayName})";
+			logoutButton.Enabled = !(currentShell is null);
 		} // proc RefreshUsername
 
 		private void RefreshEnvironments()
 		{
 			// remove all instances
 			loginGalery.Items.Clear();
-
+			
 			// readd them
-			foreach (var cur in PpsEnvironmentInfo.GetLocalEnvironments().OrderBy(c => c.DisplayName))
+			var shellFactory = PpsShell.Global.GetService<IPpsShellFactory>(true);
+			foreach (var cur in shellFactory.OrderBy(c => c.DisplayName))
 			{
-				var env = Globals.ThisAddIn.GetEnvironmentFromInfo(cur);
+				var shell = Globals.ThisAddIn.GetShellFromInfo(cur);
 				var ribbonButton = Factory.CreateRibbonDropDownItem();
 				ribbonButton.Label = cur.Name ?? cur.DisplayName;
 				ribbonButton.ScreenTip = $"{ cur.Name} ({cur.DisplayName})";
 				ribbonButton.SuperTip =
-					env == null
-						? String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString())
-						: String.Format("Angemeldet: {2}\nVersion {0}\nUri: {1}", cur.Version, cur.Uri.ToString(), env.UserName);
+					shell == null
+						? String.Format("Version {0}\nUri: {1}", "cur.Version", cur.Uri.ToString())
+						: String.Format("Angemeldet: {2}\nVersion {0}\nUri: {1}", "cur.Version", cur.Uri.ToString(), "shell.UserName");
 				ribbonButton.Tag = cur;
-				ribbonButton.Image = env != null && env.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
+				ribbonButton.Image = shell != null && shell.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
 				loginGalery.Items.Add(ribbonButton);
 			}
 		} // proc RefreshEnvironments
@@ -133,17 +135,17 @@ namespace PPSnExcel
 
 		private static void InsertReport()
 		{
-			var env = Globals.ThisAddIn.CurrentEnvironment;
-			if (env != null)
+			var shell = PpsShell.Current;
+			if (shell != null)
 			{
-				using (var frm = new ReportInsertForm(env))
+				using (var frm = new ReportInsertForm(shell))
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
 					{
 						if (frm.ReportType == "table")
-							Globals.ThisAddIn.NewTable(env, GetTopLeftCell(), frm.ReportId);
+							Globals.ThisAddIn.NewTable(shell, GetTopLeftCell(), frm.ReportId);
 						else if (frm.ReportType == "xlsx")
-							Globals.ThisAddIn.LoadXlsxReport(env, frm.ReportId, frm.ReportName);
+							Globals.ThisAddIn.LoadXlsxReport(shell, frm.ReportId, frm.ReportName);
 						else
 							MessageBox.Show("Unbekannter ReportType.");
 					}
@@ -175,9 +177,9 @@ namespace PPSnExcel
 				ppsList.Edit(extendedEdit);
 			else if (!extendedEdit) // create a fresh table
 			{
-				var env = Globals.ThisAddIn.CurrentEnvironment; // get environment
-				if (env != null)
-					PpsListObject.New(env, GetTopLeftCell());
+				var shell = PpsShell.Current; // get shell
+				if (shell != null)
+					PpsListObject.New(shell, GetTopLeftCell());
 			}
 		} // proc InsertTableCore
 
@@ -206,7 +208,7 @@ namespace PPSnExcel
 		}
 
 		private void RunRefreshTableCommand(ThisAddIn.RefreshContext refreshContext)
-			=> RunActionSafe(() => Globals.ThisAddIn.Run(() => Globals.ThisAddIn.RefreshTableAsync(refreshContext)));
+			=> RunActionSafe(() => Globals.ThisAddIn.RefreshTableAsync(refreshContext).Await());
 
 		private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)
 			=> RunRefreshTableCommand(ThisAddIn.RefreshContext.ActiveListObject);
@@ -221,10 +223,10 @@ namespace PPSnExcel
 			=> RunActionSafe(RefreshEnvironments);
 
 		private void loginGalery_Click(object sender, RibbonControlEventArgs e)
-			=> RunActionSafe(() => Globals.ThisAddIn.ActivateEnvironment(loginGalery.SelectedItem?.Tag as PpsEnvironmentInfo));
+			=> RunActionSafe(() => Globals.ThisAddIn.ActivateEnvironment(loginGalery.SelectedItem?.Tag as IPpsShellInfo));
 
 		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
-			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateEnvironment());
+			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateShell());
 
 		/// <summary>Was Loaded called.</summary>
 		public bool IsMenuLoaded => isMenuLoaded;

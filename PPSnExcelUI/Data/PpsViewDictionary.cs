@@ -205,14 +205,14 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public sealed class PpsViewDictionary : IReadOnlyDictionary<string, PpsViewDefinition>
 	{
-		private readonly PpsEnvironment environment;
+		private readonly IPpsShell shell;
 		private readonly Dictionary<string, PpsViewDefinition> views = new Dictionary<string, PpsViewDefinition>(StringComparer.OrdinalIgnoreCase);
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsViewDictionary(PpsEnvironment environment)
+		public PpsViewDictionary(IPpsShell shell)
 		{
-			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 		} // ctor
 
 		#endregion
@@ -233,7 +233,7 @@ namespace TecWare.PPSn.Data
 				Filter = PpsDataFilterExpression.Compare("Type", PpsDataFilterCompareOperator.Equal, "table")
 			};
 
-			using (var r = environment.GetViewData(list).GetEnumerator())
+			using (var r = shell.GetViewData(list).GetEnumerator())
 			{
 				var columns = await Task.Run(() => new SimpleDataColumns(((IDataColumns)r).Columns.ToArray()));
 				
@@ -265,7 +265,7 @@ namespace TecWare.PPSn.Data
 				return;
 
 			// fetch info
-			var xResult = await environment.GetXmlData("bi/?action=tableinfo&v=" + viewList+ "&a=*,doc.description");
+			var xResult = await shell.GetXmlDataAsync("bi/?action=tableinfo&v=" + viewList+ "&a=*,doc.description");
 
 			// update views
 			foreach (var x in xResult.Elements("table"))

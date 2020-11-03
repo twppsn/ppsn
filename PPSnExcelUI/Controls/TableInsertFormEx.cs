@@ -21,13 +21,13 @@ namespace TecWare.PPSn.Controls
 {
 	internal partial class TableInsertFormEx : Form
 	{
-		private readonly PpsEnvironment env;
+		private readonly IPpsShell shell;
 		private IPpsTableData currentData = null;
 		private readonly PpsTableTextData tableTextData;
 
-		public TableInsertFormEx(PpsEnvironment env)
+		public TableInsertFormEx(IPpsShell shell)
 		{
-			this.env = env ?? throw new ArgumentNullException(nameof(env));
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 
 			InitializeComponent();
 
@@ -74,7 +74,7 @@ namespace TecWare.PPSn.Controls
 			}
 			catch (Exception ex)
 			{
-				env.ShowException(ex);
+				shell.ShowException(ex);
 			}
 			finally
 			{

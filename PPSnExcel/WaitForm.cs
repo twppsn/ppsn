@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -24,7 +25,7 @@ using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
-	public partial class WaitForm : Form
+	public partial class WaitForm : Form, IPpsUIService, IPpsAsyncService, IPpsProgressFactory
 	{
 		#region -- class ProgressBar --------------------------------------------------
 
@@ -101,6 +102,8 @@ namespace PPSnExcel
 		#endregion
 
 		private readonly Excel.Application application;
+		private readonly int mainThreadId = 0;
+
 		private readonly SynchronizationContext synchronizationContext;
 		private readonly List<ProgressBar> progressStack = new List<ProgressBar>();
 		private bool inMessageLoop = false;
@@ -109,10 +112,14 @@ namespace PPSnExcel
 		private string currentProgressText = null;
 		private int currentProgressValue = -1;
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
 		public WaitForm(Excel.Application application)
 		{
 			this.application = application;
-			this.synchronizationContext = new WaitSynchronizationContext(this);
+			
+			synchronizationContext = new WaitSynchronizationContext(this);
+			mainThreadId = Thread.CurrentThread.ManagedThreadId;
 
 			InitializeComponent();
 
@@ -123,13 +130,15 @@ namespace PPSnExcel
 		{
 			base.OnHandleCreated(e);
 			Debug.Print("[Thread {0}] OnHandleCreated", Thread.CurrentThread.ManagedThreadId);
-		}
+		} // proc OnHandleCreated
 
 		protected override void OnHandleDestroyed(EventArgs e)
 		{
 			Debug.Print("[Thread {0}] OnHandleDestroyed", Thread.CurrentThread.ManagedThreadId);
 			base.OnHandleDestroyed(e);
-		}
+		} // proc OnHandleDestroyed
+
+		#endregion
 
 		#region -- ShowWait/CloseWait -------------------------------------------------
 
@@ -230,15 +239,60 @@ namespace PPSnExcel
 
 		#endregion
 
-		public void Await(Task task)
+		#region -- UI-Service - members -----------------------------------------------
+
+		int IPpsUIService.MsgBox(string text, PpsImage image, params string[] buttons)
+			=> PpsWinShell.ShowMessage(Globals.ThisAddIn, text, image, buttons);
+
+		private Task<T> RunUICore<T>(Delegate func)
+		{
+			if (InvokeRequired)
+			{
+				var ar = BeginInvoke(func);
+
+				return Task.Factory.FromAsync(ar, EndInvoke).ContinueWith(t => (T)t.Result);
+			}
+			else
+				return Task.FromResult((T)func.DynamicInvoke());
+		} // func RunCore
+
+		Task IPpsUIService.RunUI(Action action)
+			=> RunUICore<VoidResult>(action);
+
+		Task<T> IPpsUIService.RunUI<T>(Func<T> action)
+			=> RunUICore<T>(action);
+
+		void IPpsUIService.ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage)
+			=> PpsWinShell.ShowException(Globals.ThisAddIn, flags, exception, alternativeMessage);
+
+		void IPpsUIService.ShowNotification(string message, PpsImage image) 
+			=> throw new NotImplementedException();
+
+		string[] IPpsUIService.Ok => new string[] { "Ok" };
+		string[] IPpsUIService.YesNo => new string[] { "Yes", "No" };
+		string[] IPpsUIService.OkCancel => new string[] { "Ok", "Cancel" };
+
+		#endregion
+
+		#region -- Async-Serivce - members --------------------------------------------
+
+		private struct VoidResult { }
+
+		public static void CheckSynchronizationContext()
+		{
+			if (!(SynchronizationContext.Current is WindowsFormsSynchronizationContext))
+				SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
+		} // proc CheckSynchronizationContext
+
+		void IPpsAsyncService.Await(IServiceProvider sp, Task task)
 		{
 			if (task.IsCompleted)
 				return;
 
 			if (InvokeRequired)
 			{
-				if (SynchronizationContext.Current is PpsSynchronizationContext sync)
-					sync.ProcessMessageLoop(task);
+				if (SynchronizationContext.Current is IPpsProcessMessageLoop loop)
+					loop.ProcessMessageLoop(task);
 				else
 					task.Wait();
 			}
@@ -255,9 +309,11 @@ namespace PPSnExcel
 				task.GetAwaiter().OnCompleted(() => Invoke(new Action(CloseWait)));
 				ShowWait();
 			}
-		} // proc Await
+		} // proc IPpsAsyncService.Await
 
-		public IPpsProgress CreateProgress()
+		#endregion
+
+		IPpsProgress IPpsProgressFactory.CreateProgress(bool blockUI) 
 			=> new ProgressBar(this);
 
 		public SynchronizationContext SynchronizationContext => synchronizationContext;

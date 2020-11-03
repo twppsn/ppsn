@@ -29,17 +29,17 @@ namespace PPSnExcel
 {
 	internal partial class ReportInsertForm : Form
 	{
-		private readonly PpsEnvironment env;
+		private readonly IPpsShell shell;
 		private Matrix scaleMatrix = new Matrix(1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
 
-		public ReportInsertForm(PpsEnvironment env)
+		public ReportInsertForm(IPpsShell shell)
 		{
-			this.env = env;
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 
 			InitializeComponent();
 
 			// run in background
-			env.Spawn(RefreshViewAsync);
+			shell.Spawn(RefreshViewAsync);
 		} // ctor
 
 		protected override void ScaleControl(SizeF factor, BoundsSpecified specified)
@@ -59,7 +59,7 @@ namespace PPSnExcel
 
 		private async Task RefreshViewAsync()
 		{
-			var dt = await env.GetViewDataAsync(
+			var dt = await shell.GetViewDataAsync(
 				new PpsDataQuery("bi.reports")
 				{
 					Columns = new PpsDataColumnExpression[]
@@ -72,7 +72,7 @@ namespace PPSnExcel
 				}
 			);
 
-			await env.InvokeAsync(() => RefreshViewUI(dt));
+			await shell.InvokeAsync(() => RefreshViewUI(dt));
 		} // proc RefreshViewAsync
 
 		private void RefreshViewUI(DataTable dt)

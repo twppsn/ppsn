@@ -571,8 +571,8 @@ namespace TecWare.PPSn
 		Task RunUI(Action action);
 
 		/// <summary>Run this action in ui-thread.</summary>
-		/// <param name="action"></param>
-		Task<T> RunUI<T>(Func<T> action);
+		/// <param name="func"></param>
+		Task<T> RunUI<T>(Func<T> func);
 
 		/// <summary>Predefined buttons</summary>
 		string[] Ok { get; }

@@ -275,6 +275,10 @@
       <Project>{48f78cbb-b08c-42bb-83af-d02de9d16010}</Project>
       <Name>PPSnExcelUI</Name>
     </ProjectReference>
+    <ProjectReference Include="..\PPSnUI\PPSnUI.csproj">
+      <Project>{967f6b8b-fe55-48a6-ae38-7f2598c9eec6}</Project>
+      <Name>PPSnUI</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\r16x16\server.png" />

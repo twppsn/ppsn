@@ -6,7 +6,7 @@
 		<TargetFrameworks>net47;netstandard2.0</TargetFrameworks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<PackageId>TecWare.PPSn.Core</PackageId>
-		<Description>Helper for the ppsn-module client/server.</Description>
+		<Description>Basic contracts and functionality for the ppsn, they are shared between client and server.</Description>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

@@ -15,24 +15,25 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Office.Tools.Excel;
+using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
 using TecWare.PPSn;
-using TecWare.PPSn.Data;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
-	public partial class ThisAddIn : IPpsFormsApplication
+	public partial class ThisAddIn : IWin32Window
 	{
 		#region -- enum RefreshContext ------------------------------------------------
 
@@ -46,23 +47,21 @@ namespace PPSnExcel
 
 		#endregion
 
-		/// <summary>Current environment has changed.</summary>
-		public event EventHandler CurrentEnvironmentChanged;
+		private readonly List<IPpsShell> activatedShells = new List<IPpsShell>();
 
-		private readonly List<PpsEnvironment> openEnvironments = new List<PpsEnvironment>();
-		private readonly Lua lua = new Lua();
-		private PpsEnvironment currentEnvironment = null;
-
-		private WaitForm waitForm;
-		private int mainThreadId = 0;
+		private WaitForm uiService;
 
 		private IPpsnFunctions modul = null;
 
 		private void ThisAddIn_Startup(object sender, EventArgs e)
 		{
-			// create wait form
-			waitForm = new WaitForm(Application);
-			mainThreadId = Thread.CurrentThread.ManagedThreadId;
+			// create ui-service
+			uiService = new WaitForm(Application);
+			PpsShell.Global.AddService(typeof(IPpsUIService), uiService);
+			PpsShell.Global.AddService(typeof(IPpsAsyncService), uiService);
+			PpsShell.Global.AddService(typeof(IPpsProgressFactory), uiService);
+			PpsShell.Global.AddService(typeof(IWin32Window), this);
+
 			//Globals.Ribbons.PpsMenu.
 		} // ctor
 
@@ -77,113 +76,279 @@ namespace PPSnExcel
 			return modul;
 		} // func RequestComAddInAutomationService
 
-		#region -- Environment Handling -----------------------------------------------
+		#region -- Shell Handling -----------------------------------------------------
 
-		private PpsEnvironment FindOrCreateEnvironment(PpsEnvironmentInfo info)
+		//		#region -- enum PpsLoginResult ------------------------------------------------
+
+		//		public enum PpsLoginResult
+		//		{
+		//			Canceled,
+		//			Sucess,
+		//			Restart
+		//		} // enum PpsLoginResult
+
+		//		#endregion
+
+		//		#region -- Login --------------------------------------------------------------
+
+		//		private static Version GetExcelAssemblyVersion()
+		//		{
+		//			var fileVersion = typeof(ThisAddIn).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
+		//			return fileVersion == null ? new Version(1, 0, 0, 0) : new Version(fileVersion.Version);
+		//		} // func GetExcelAssemblyVersion
+
+		//		private static Version GetExcelAddinVersion()
+		//		{
+		//			using (var reg = Registry.CurrentUser.OpenSubKey(@"Software\TecWare\PPSnExcel\Components", false))
+		//			{
+		//				return reg?.GetValue(null) is string v
+		//					? new Version(v)
+		//					: new Version(1, 0, 0, 0);
+		//			}
+		//		} // func GetExcelAddinVersion
+
+		//		private async Task<PpsLoginResult> LoginAsync(IPpsShell shell, IPpsShellInfo info)
+		//		{
+
+
+		//			shell.LoginAsync();
+
+
+		////			var newRequest = DEHttpClient.Create(info.Uri, null, Encoding.UTF8);
+		////			try
+		////			{
+		////				// get app-info
+		////				var xInfo = await newRequest.GetXmlAsync("info.xml?app=PPSnExcel");
+
+		////				// check version
+		////				var clientVersion = GetExcelAddinVersion();
+		////				var assemblyVesion = GetExcelAssemblyVersion();
+		////				var serverVersion = new Version(xInfo.GetAttribute("version", "1.0.0.0"));
+
+		////#if DEBUG
+		////				assemblyVesion = serverVersion = clientVersion;
+		////#endif
+
+		////				if (clientVersion < serverVersion) // new version is provided
+		////				{
+		////					return await UpdateApplicationAsync(newRequest, xInfo.GetAttribute("src", null))
+		////						? PpsLoginResult.Restart
+		////						: PpsLoginResult.Canceled;
+		////				}
+		////				else if (assemblyVesion < clientVersion) // new version is installed, but not active
+		////				{
+		////					return AskForRestart()
+		////						? PpsLoginResult.Restart
+		////						: PpsLoginResult.Canceled;
+		////				}
+
+		////				// update mime type mappings
+		////				PpsShellExtensions.UpdateMimeTypesFromInfo(xInfo);
+
+		////				// open trust stroe
+		////				using (var login = new PpsClientLogin("ppsn_env:" + info.Uri.ToString(), info.Name, false))
+		////				{
+		////					var loginCounter = 0; // first time, do not show login dialog
+		////					while (true)
+		////					{
+		////						// show login dialog
+		////						if (loginCounter > 0)
+		////						{
+		////							if (!await InvokeAsync(() => login.ShowWindowsLogin(parent.Handle)))
+		////								return PpsLoginResult.Canceled;
+		////						}
+
+		////						// create new client request
+		////						loginCounter++;
+		////						newRequest?.Dispose();
+		////						newRequest = DEHttpClient.Create(info.Uri, login.GetCredentials(true), Encoding);
+
+		////						// try login with user
+		////						try
+		////						{
+		////							// execute login
+		////							var xLogin = await newRequest.GetXmlAsync("login.xml");
+		////							request = newRequest;
+		////							IsAuthentificatedChanged?.Invoke(this, EventArgs.Empty);
+		////							fullName = xLogin.GetAttribute("FullName", (string)null);
+
+		////							login.Commit();
+		////							return PpsLoginResult.Sucess;
+		////						}
+		////						catch (HttpResponseException e)
+		////						{
+		////							switch (e.StatusCode)
+		////							{
+		////								case HttpStatusCode.Unauthorized:
+		////									if (loginCounter > 1)
+		////										ShowMessage("Passwort oder Nutzername falsch.");
+		////									break;
+		////								default:
+		////									formsApplication.ShowMessage(String.Format("Verbindung mit fehlgeschlagen.\n{0} ({2} {1})", e.Message, e.StatusCode, (int)e.StatusCode), MessageBoxIcon.Error);
+		////									return PpsLoginResult.Canceled;
+		////							}
+		////						}
+		////					}
+		////				}
+		////			}
+		////			catch (HttpRequestException e)
+		////			{
+		////				newRequest?.Dispose();
+		////				if (e.InnerException is WebException we)
+		////				{
+		////					switch (we.Status)
+		////					{
+		////						case WebExceptionStatus.Timeout:
+		////						case WebExceptionStatus.ConnectFailure:
+		////							ShowMessage("Server nicht erreichbar.");
+		////							return PpsLoginResult.Canceled;
+		////					}
+		////				}
+		////				else
+		////					ShowException(ExceptionShowFlags.None, e, "Verbindung fehlgeschlagen.");
+		////				return PpsLoginResult.Canceled;
+		////			}
+		////			catch
+		////			{
+		////				newRequest?.Dispose();
+		////				throw;
+		////			}
+		//		} // func LoginAsync
+
+		//	#endregion
+
+		//private IPpsShell FindOrCreateShell(IPpsShellInfo info)
+		//{
+		//	if (info == null)
+		//		throw new ArgumentNullException(nameof(info));
+
+		//	var env = GetShellFromInfo(info);
+		//	if (env == null)
+		//	{
+		//		env = PpsShell.StartAsync(info).Await();
+		//		activatedShells.Add(env);
+		//	}
+		//	return env;
+		//} // func FindOrCreateShell
+
+		//public IPpsShell AuthentificateShell(IPpsShell shell)
+		//{
+		//	if (shell == null)
+		//		return null;
+
+		//	if (shell.IsAuthentificated) // is authentificated
+		//		return shell;
+		//	else
+		//	{
+		//		switch (LoginUser(shell))// try to authentificate the environment
+		//		{
+		//			case PpsLoginResult.Sucess:
+		//				return shell;
+		//			case PpsLoginResult.Restart:
+		//				Application.Quit();
+		//				return null;
+		//			default:
+		//				return null;
+		//		}
+		//	}
+		//} // func AuthentificateShell
+
+		//private IPpsShell FindShellIntern(string name, Uri uri)
+		//{
+		//	IPpsShell shellByName = null;
+		//	IPpsShellInfo infoByName = null;
+		//	IPpsShellInfo infoByUri = null;
+
+		//	foreach (var oe in activatedShells)
+		//	{
+		//		if (oe.Info.Name == name)
+		//		{
+		//			shellByName = oe;
+		//			break;
+		//		}
+		//	}
+
+		//	if (shellByName != null)
+		//		return AuthentificateShell(shellByName);
+
+		//	var shellFactory = PpsShell.Global.GetService<IPpsShellFactory>(true);
+		//	foreach (var info in shellFactory)
+		//	{
+		//		if (info.Name == name)
+		//		{
+		//			infoByName = info;
+		//			break;
+		//		}
+		//		else if (info.Uri == uri)
+		//		{
+		//			infoByUri = info;
+		//		}
+		//	}
+
+		//	// check for unloaded environment
+		//	var shellInfo = infoByName ?? infoByUri;
+		//	return AuthentificateShell(shellInfo != null ? FindOrCreateShell(shellInfo) :  CurrentShell);
+		//} // func FindShellIntern
+
+		//		private bool AskForRestart()
+		//			=> formsApplication.ShowMessage(String.Format("Die Anwendung muss für eine Aktivierung neugestartet werden.\nNeustart von {0} sofort einleiten?", formsApplication.Title), MessageBoxIcon.Question, MessageBoxButtons.YesNo) == DialogResult.Yes;
+
+		//		private async Task<bool> UpdateApplicationAsync(DEHttpClient client, string src)
+		//		{
+		//			if (formsApplication.ShowMessage(String.Format("Eine neue Anwendung steht bereit.\nInstallieren und {0} neustarten?", formsApplication.Title), MessageBoxIcon.Question, MessageBoxButtons.YesNo) != DialogResult.Yes)
+		//				return false;
+
+		//			var sourceUri = client.CreateFullUri(src);
+		//			var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
+		//			var psi = new ProcessStartInfo(msiExe, "/i " + sourceUri.ToString() + " /q");
+		//			using (var bar = CreateProgress(true))
+		//			using (var ps = Process.Start(psi))
+		//			{
+		//				bar.Text = "Installation wird ausgeführt...";
+		//				await Task.Run(new Action(ps.WaitForExit));
+		//				// ps.ExitCode
+		//			}
+
+		//			return true;
+		//		} // proc UpdateApplicationAsync
+
+		//		#endregion
+
+		//		/// <summary>Name of the environment.</summary>
+		//		public string Name => info.Name;
+		//		/// <summary>Authentificated user.</summary>
+		//		public string UserName => Credentials is null ? null : fullName ?? PpsEnvironmentInfo.GetUserNameFromCredentials(request.Credentials);
+
+		private IPpsShell FindOrCreateShell(IPpsShellInfo info, bool isDefault)
 		{
-			if (info == null)
-				throw new ArgumentNullException(nameof(info));
+			// todo: applicationId needs to be changable
+			//       xml needs FileSystemWatcher for changes and strong locking for read and write
+			//       exchange for notifications?
 
-			var env = GetEnvironmentFromInfo(info);
-			if (env == null)
-			{
-				env = new PpsEnvironment(lua, this, info);
-				openEnvironments.Add(env);
-			}
-			return env;
-		} // func FindOrCreateEnvironment
+			// PpsShell.StartAsync(info, isDefault)
+			throw new NotImplementedException();
+		} // proc FindOrCreateShell
 
-		public PpsEnvironment AuthentificateEnvironment(PpsEnvironment environment)
+		public IPpsShell FindShell(string name, Uri uri)
 		{
-			if (environment == null)
-				return null;
+			throw new NotImplementedException();
 
-			if (environment.IsAuthentificated) // is authentificated
-				return environment;
-			else
-			{
-				switch (environment.Await(environment.LoginAsync(this)))// try to authentificate the environment
-				{
-					case PpsLoginResult.Sucess:
-						return environment;
-					case PpsLoginResult.Restart:
-						Application.Quit();
-						return null;
-					default:
-						return null;
-				}
-			}
-		} // func AuthentificateEnvironment
+			//(IPpsShell)waitForm.Invoke(new Func<IPpsShell>(() => FindShellIntern(name, uri)));
+		} // func FindShell
 
-		private PpsEnvironment FindEnvironmentIntern(string name, Uri uri)
-		{
-			PpsEnvironment envByName = null;
-			PpsEnvironmentInfo infoByName = null;
-			PpsEnvironmentInfo infoByUri = null;
+		public IPpsShell GetShellFromInfo(IPpsShellInfo info)
+			=> activatedShells.Find(c => c.Info == info);
 
-			foreach (var oe in openEnvironments)
-			{
-				if (oe.Info.Name == name)
-				{
-					envByName = oe;
-					break;
-				}
-			}
-
-			if (envByName != null)
-				return AuthentificateEnvironment(envByName);
-
-			foreach (var info in PpsEnvironmentInfo.GetLocalEnvironments())
-			{
-				if (info.Name == name)
-				{
-					infoByName = info;
-					break;
-				}
-				else if (info.Uri == uri)
-				{
-					infoByUri = info;
-				}
-			}
-
-			// check for unloaded environment
-			var envInfo = infoByName ?? infoByUri;
-			return AuthentificateEnvironment(envInfo != null ? FindOrCreateEnvironment(envInfo) :  CurrentEnvironment);
-		} // func FindEnvironmentIntern
-
-		public PpsEnvironment FindEnvironment(string name, Uri uri)
-			=> (PpsEnvironment)waitForm.Invoke(new Func<PpsEnvironment>(() => FindEnvironmentIntern(name, uri)));
-
-		public void ActivateEnvironment(PpsEnvironmentInfo info)
+		public void ActivateEnvironment(IPpsShellInfo info)
 		{
 			if (info is null)
 				return;
 
-			var env = FindOrCreateEnvironment(info);
-			if (AuthentificateEnvironment(env) != null)
-				SetCurrentEnvironment(env);
+			FindOrCreateShell(info, true);
 		} // proc ActivateEnvironment
 
-		public void DeactivateEnvironment(PpsEnvironment environment = null)
-		{
-			environment = environment ?? currentEnvironment;
-			if (environment != null)
-			{
-				environment.ClearCredentials();
-
-				if (currentEnvironment == environment)
-					SetCurrentEnvironment(null);
-			}
-		} // proc DeactivateCurrentEnvironment
-
-		private void SetCurrentEnvironment(PpsEnvironment env)
-		{
-			currentEnvironment = env;
-			CurrentEnvironmentChanged?.Invoke(this, EventArgs.Empty);
-		} // proc SetCurrentEnvironment
-
-		public PpsEnvironment GetEnvironmentFromInfo(PpsEnvironmentInfo info)
-			=> openEnvironments.Find(c => c.Info == info);
+		public void DeactivateShell(IPpsShell shell = null)
+			=> (shell ?? PpsShell.Current)?.Dispose();
 
 		#endregion
 
@@ -197,10 +362,10 @@ namespace PPSnExcel
 		} // func GetActiveXlObjects
 
 		/// <summary>Create Table</summary>
-		/// <param name="environment"></param>
+		/// <param name="shell"></param>
 		/// <param name="range"></param>
 		/// <param name="reportId"></param>
-		internal void NewTable(PpsEnvironment environment, Excel.Range range, string reportId)
+		internal void NewTable(IPpsShell shell, Excel.Range range, string reportId)
 		{
 			// prepare target
 			if (range == null)
@@ -210,12 +375,12 @@ namespace PPSnExcel
 			if (range.ListObject != null)
 				throw new ExcelException("Tabelle darf nicht innerhalb einer anderen Tabelle eingefügt werden.");
 			
-			PpsListObject.New(environment, range, reportId);
+			PpsListObject.New(shell, range, reportId);
 		} // func NewTable
 
-		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, PpsEnvironment replaceEnvironment = null)
+		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, IPpsShell replaceShell = null)
 		{
-			using (var progress = CreateProgress())
+			using (var progress = PpsShell.Global.CreateProgress())
 			{
 				progress.Report("Aktualisiere Tabellen...");
 
@@ -223,49 +388,49 @@ namespace PPSnExcel
 				switch (context)
 				{
 					case RefreshContext.ActiveWorkBook:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook, replaceEnvironment);
+						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook, replaceShell);
 					case RefreshContext.ActiveWorkSheet:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet, replaceEnvironment, Globals.ThisAddIn.Application.ActiveWorkbook);
+						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet, replaceShell, Globals.ThisAddIn.Application.ActiveWorkbook);
 					default:
 						if (Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null))
-							return RefreshTableAsync(r.ListObject, replaceEnvironment, context == RefreshContext.ActiveListObjectLayout);
+							return RefreshTableAsync(r.ListObject, replaceShell, context == RefreshContext.ActiveListObjectLayout);
 						return Task.CompletedTask;
 				}
 
 			}
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Workbook workbook, PpsEnvironment replaceEnvironment)
+		private async Task RefreshTableAsync(Excel.Workbook workbook, IPpsShell replaceShell)
 		{
 			for (var i = 1; i <= workbook.Sheets.Count; i++)
 			{
 				if (workbook.Sheets[i] is Excel.Worksheet worksheet)
-					await RefreshTableAsync(worksheet, replaceEnvironment, null);
+					await RefreshTableAsync(worksheet, replaceShell, null);
 			}
 
 			RefreshPivotCaches(workbook);
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Worksheet worksheet, PpsEnvironment replaceEnvironment, Excel.Workbook pivotCachesWorkbook)
+		private async Task RefreshTableAsync(Excel.Worksheet worksheet, IPpsShell replaceShell, Excel.Workbook pivotCachesWorkbook)
 		{
 			for (var i = 1; i <= worksheet.ListObjects.Count; i++)
-				await RefreshTableAsync(worksheet.ListObjects[i], replaceEnvironment, false);
+				await RefreshTableAsync(worksheet.ListObjects[i], replaceShell, false);
 
 			if (pivotCachesWorkbook != null)
 				RefreshPivotCaches(pivotCachesWorkbook);
 		} // func RefreshTableAsync
 
-		internal async Task RefreshTableAsync(Excel.ListObject _xlList, PpsEnvironment replaceEnvironment, bool refreshLayout)
+		internal async Task RefreshTableAsync(Excel.ListObject _xlList, IPpsShell replaceShell, bool refreshLayout)
 		{
-			using (var progress = CreateProgress())
+			using (var progress = PpsShell.Global.CreateProgress())
 			{
 				var xlList = Globals.Factory.GetVstoObject(_xlList);
 
 				progress.Report(String.Format("Aktualisiere {0}...", xlList.Name ?? "Tabelle"));
 
-				var f = replaceEnvironment == null
-					? new Func<string, Uri, PpsEnvironment>(FindEnvironment)
-					: new Func<string, Uri, PpsEnvironment>((n, u) => replaceEnvironment);
+				var f = replaceShell == null
+					? new Func<string, Uri, IPpsShell>(FindShell)
+					: new Func<string, Uri, IPpsShell>((n, u) => replaceShell);
 
 				if (PpsListObject.TryGet(f, xlList, out var ppsList))
 					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
@@ -319,14 +484,14 @@ namespace PPSnExcel
 			return fiTemp.FullName;
 		} // proc DownloadXlsxReportAsync
 
-		internal void LoadXlsxReport(PpsEnvironment environment, string reportId, string reportName)
+		internal void LoadXlsxReport(IPpsShell shell, string reportId, string reportName)
 		{
-			var http = environment.Request;
+			var http = shell.Http;
 
-			using (var p = CreateProgress())
+			using (var p = PpsShell.Global.CreateProgress())
 			{
 				p.Text = String.Format("Lade Auswertung {0}...", reportName);
-				var documentTemplate = Run(() => DownloadXlsxReportAsync(http, reportId));
+				var documentTemplate = DownloadXlsxReportAsync(http, reportId).Await(shell);
 
 				// open and activate workbook
 				p.Text = String.Format("Öffne Auswertung {0}...", reportName);
@@ -335,7 +500,7 @@ namespace PPSnExcel
 
 				// refresh tables
 				p.Text = String.Format("Aktualisiere Auswertung {0}...", reportName);
-				Run(() => RefreshTableAsync(RefreshContext.ActiveWorkBook, environment));
+				RefreshTableAsync(RefreshContext.ActiveWorkBook, shell).Await(shell);
 			}
 		} // LoadXlsxReport
 
@@ -381,61 +546,6 @@ namespace PPSnExcel
 		}
 
 		#endregion
-
-		#region -- IPpsFormsApplication -----------------------------------------------
-
-		public void Await(Task t)
-			=> waitForm.Await(t);
-
-		public IAsyncResult BeginInvoke(Delegate method, object[] args)
-			=> waitForm.BeginInvoke(method, args);
-
-		public object EndInvoke(IAsyncResult result)
-			=> waitForm.EndInvoke(result);
-
-		public object Invoke(Delegate method, object[] args)
-			=> waitForm.Invoke(method, args);
-
-		public IPpsProgress CreateProgress(bool blockUI = true)
-			=> waitForm.CreateProgress();
-
-		public SynchronizationContext SynchronizationContext
-			=> waitForm.SynchronizationContext;
-
-		public static void CheckSynchronizationContext()
-		{
-			if (!(SynchronizationContext.Current is WindowsFormsSynchronizationContext))
-				SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
-		} // proc CheckSynchronizationContext
-
-		private T RunCore<T>(Func<T> func)
-			where T : Task
-		{
-			CheckSynchronizationContext();
-
-			var t = func();
-			Await(t);
-			t.Wait();
-			return t;
-		} // func RunCore
-
-		public Task Run(Func<Task> func)
-			=> RunCore(func);
-
-		public T Run<T>(Func<Task<T>> t)
-			=> RunCore(t).Result;
-
-		public bool InvokeRequired => waitForm.InvokeRequired;
-
-		#endregion
-
-		string IPpsFormsApplication.ApplicationId => "PPSnExcel";
-		string IPpsFormsApplication.Title => "Excel";
-
-		/// <summary>Current active, authentificated environment.</summary>
-		public PpsEnvironment CurrentEnvironment => currentEnvironment;
-		/// <summary>Lua environment.</summary>
-		public Lua Lua => lua;
 
 		IntPtr IWin32Window.Handle => new IntPtr(Application.Hwnd);
 		
