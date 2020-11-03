@@ -70,19 +70,23 @@
       <HintPath>..\packages\DynamicLanguageRuntime.1.2.3\lib\net45\Microsoft.Scripting.Metadata.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Web.WebView2.Core, Version=1.0.674.0, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.Core.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.Core.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Web.WebView2.WinForms, Version=1.0.674.0, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.WinForms.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.WinForms.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Web.WebView2.Wpf, Version=1.0.674.0, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.Wpf.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.Wpf.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
       <HintPath>..\packages\NeoLua.1.3.11\lib\net47\Neo.Lua.dll</HintPath>
     </Reference>
-    <Reference Include="Neo.Markdig.Xaml, Version=1.0.8.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Neo.Markdig.Xaml.1.0.8\lib\net47\Neo.Markdig.Xaml.dll</HintPath>
+    <Reference Include="Neo.Markdig.Xaml, Version=1.0.9.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Neo.Markdig.Xaml.1.0.9\lib\net47\Neo.Markdig.Xaml.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="PresentationFramework.Aero2" />
     <Reference Include="ReachFramework" />
@@ -393,10 +397,10 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\jnm2.ReferenceAssemblies.net35.1.0.1\build\jnm2.ReferenceAssemblies.net35.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\jnm2.ReferenceAssemblies.net35.1.0.1\build\jnm2.ReferenceAssemblies.net35.targets'))" />
     <Error Condition="!Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net47.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net47.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.NETFramework.ReferenceAssemblies.net47.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net47.targets'))" />
-    <Error Condition="!Exists('..\..\..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets'))" />
   </Target>
   <Import Project="..\packages\Microsoft.NETFramework.ReferenceAssemblies.net47.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net47.targets" Condition="Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net47.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net47.targets')" />
-  <Import Project="..\..\..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets" Condition="Exists('..\..\..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets')" />
+  <Import Project="..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets" Condition="Exists('..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
