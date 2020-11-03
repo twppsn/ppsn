@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html>
+<%
+local viewInfo = GetViewDefinition(view);
+%>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>View <%=view%></title>
+</head>
+<body>
+
+    <a href="./?action=viewget&v=<%=view%>&c=10">Raw</a>
+
+    <h2>Attribute</h2>
+    <% WriteAttributes(out, viewInfo.Attributes); %>
+
+    <h2>Spalten</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Datentype</th>
+                <th>Nullable</th>
+                <th>DisplayName</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <%foreach col in viewInfo.SelectorToken.Columns do
+
+            local t, isNullable, displayName, description;
+            t, isNullable = col.Attributes.TryGetProperty("Nullable");
+            isNullable = t and isNullable;
+            t, displayName = col.Attributes.TryGetProperty("displayName");
+            t, description = col.Attributes.TryGetProperty("Doc.Description");
+            %>
+            <tr>
+                <td>
+                    <a href="#<%=col.Name%>"><%=col.Name%></a>
+                    <% if IsKeyColumn(col) then %>
+                    <img src="key.png" width="16" height="16" alt="key" />
+                    <%end;%>
+                </td>
+                <td><%=GetColumnDataTypeName(col)%></td>
+                <td><%=isNullable%></td>
+                <td><%=displayName%></td>
+                <td><%=description%></td>
+            </tr>
+            <%end;%>
+        </tbody>
+    </table>
+
+    <% if #viewInfo.Joins > 0 then %>
+    <h2>Joins</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ViewName</th>
+                <th>DisplayName</th>
+                <th>Type</th>
+                <th>Expression</th>
+            </tr>
+        </thead>
+        <tbody>
+            <%foreach join in viewInfo.Joins do%>
+            <tr>
+                <td>
+                    <a href="info.html?view=<%=join.ViewName%>"><%=join.ViewName%></a>
+                    <% if #join.AliasName > 0 then %>
+                    as <%=join.AliasName%>
+                    <%end;%>
+                </td>
+                <td><%=join.DisplayName%></td>
+                <td><%=join.Type%></td>
+                <td>
+                    <%
+                    foreach s in join.Statement do
+                    %>
+                    <%=s.Right%>=<%=s.Left%>
+                    <%
+                    end;
+                    %>
+                </td>
+            </tr>
+            <%end;%>
+        </tbody>
+    </table>
+    <%end;%>
+
+    <h2>Spalten</h2>
+    <% foreach col in viewInfo.SelectorToken.Columns do %>
+        <h3 id="<%=col.Name%>"><%=col.Name%></h3>
+        <% WriteAttributes(out, col.Attributes); %>
+    <%end;%>
+</body>
+</html>

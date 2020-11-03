@@ -13,9 +13,11 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using ICSharpCode.SharpZipLib.Zip;
 using Neo.IronLua;
 using System;
 using System.Collections.Generic;
+using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -29,6 +31,9 @@ namespace TecWare.PPSn.Server
 {
 	public partial class PpsApplication
 	{
+		/// <summary>Extension for the login command</summary>
+		public const string ExtendLoginMethods = "ExtendLogin";
+
 		/// <summary>User context optional wellknown property: Contact id.</summary>
 		public const string UserContextKtKtId = "KtKtId";
 		/// <summary>User context optional wellknown property: Personal id.</summary>
@@ -89,12 +94,50 @@ namespace TecWare.PPSn.Server
 
 			#endregion
 
+			#region -- class LuaConfigTable -------------------------------------------
+
+			private sealed class LuaConfigTable : LuaTable
+			{
+				private readonly PrivateUserData user;
+
+				public LuaConfigTable(PrivateUserData user)
+				{
+					this.user = user ?? throw new ArgumentNullException(nameof(user));
+				} // ctor
+				
+				protected override object OnIndex(object key)
+				{
+					if (key is string k)
+					{
+						var idx = Array.FindIndex(WellKnownUserOptionKeys, c => String.Compare(c, k, StringComparison.OrdinalIgnoreCase) == 0);
+						if (idx >= 0)
+						{
+							switch (idx)
+							{
+								case 0:
+									return user.userId;
+								case 1:
+									return user.userIdentity.Name;
+								default:
+									return user.wellKnownUserOptionValues[idx - 2];
+							}
+						}
+					}
+					return base.OnIndex(key);
+				} // func OnIndex
+			} // class LuaConfigTable
+
+			#endregion
+
 			private readonly PpsApplication application;
 
 			private readonly long userId;           // unique id of the user
 			private readonly LoggerProxy log;       // current log interface for the user
 			private int currentVersion = -1;        // version of the user data
 			private string[] securityTokens = null; // access rights
+
+			private readonly LuaTable userConfig;
+			private readonly object[] wellKnownUserOptionValues = new object[WellKnownUserOptionKeys.Length - 2];
 
 			private readonly PpsUserIdentity userIdentity = null;   // user identity for the authentification
 			private PpsUserIdentity localIdentity = null;           // user identity to access resources on the server
@@ -121,6 +164,7 @@ namespace TecWare.PPSn.Server
 				this.userIdentity = userIdentity;
 
 				log = LoggerProxy.Create(application, userIdentity.Name);
+				userConfig = new LuaConfigTable(this);
 
 				application.Server.RegisterUser(this); // register the user in http-server
 			} // ctor
@@ -156,7 +200,9 @@ namespace TecWare.PPSn.Server
 							{
 								cur.Clear();
 								pooledConnections.RemoveAt(i);
-								Log.Info(msg);
+
+								if (application.IsDebug)
+									Log.Info(msg);
 							}
 							catch (Exception e)
 							{
@@ -181,7 +227,8 @@ namespace TecWare.PPSn.Server
 
 						pooledConnections.Add(new PooledConnection(handle));
 
-						Log.Info("New pooled connection: {0}", dataSource.Name);
+						if (application.IsDebug)
+							Log.Info("New pooled connection: {0}", dataSource.Name);
 						return handle;
 					}
 					else
@@ -274,6 +321,25 @@ namespace TecWare.PPSn.Server
 
 			#region -- UpdateData -----------------------------------------------------
 
+			private static void UpdateMemberValues(LuaTable targetTable, LuaTable fromTable)
+			{
+				foreach (var kv in fromTable.Members)
+				{
+					if (kv.Value is LuaTable fromChildTable)
+					{
+						var targetValue = targetTable.GetMemberValue(kv.Key, rawGet: true);
+						if (!(targetValue is LuaTable targetChildTable))
+						{
+							targetChildTable = new LuaTable();
+							targetTable[kv.Key] = targetChildTable;
+						}
+						UpdateMemberValues(targetChildTable, fromChildTable);
+					}
+					else
+						targetTable.SetMemberValue(kv.Key, kv.Value == DBNull.Value ? null : kv.Value, rawSet: true);
+				}
+			} // proc UpdateMemberValues
+
 			internal void UpdateData(IDataRow r, bool force)
 			{
 				// check if we need a reload
@@ -286,19 +352,12 @@ namespace TecWare.PPSn.Server
 				currentVersion = loginVersion;
 
 				// update optional values
-				SetMemberValue(UserContextFullName, r.GetProperty("Name", userIdentity.Name));
-				if (r.TryGetProperty<long>(UserContextKtKtId, out var ktktId))
-					SetMemberValue(UserContextKtKtId, ktktId);
-				if (r.TryGetProperty<long>(UserContextPersId, out var persId))
-					SetMemberValue(UserContextPersId, persId);
-				if (r.TryGetProperty<string>(UserContextInitials, out var initials))
-					SetMemberValue(UserContextInitials, initials);
-				if (r.TryGetProperty<int>(UserContextIdenticon, out var identicon))
-					SetMemberValue(UserContextIdenticon, identicon);
-
-				// update parameter set from database, use only members
-				foreach (var kv in FromLson(r.GetProperty("Cfg", "{}")).Members)
-					SetMemberValue(kv.Key, kv.Value);
+				wellKnownUserOptionValues[0] = r.GetProperty("Name", userIdentity.Name);
+				for (var i = 3; i < WellKnownUserOptionKeys.Length; i++)
+					wellKnownUserOptionValues[i - 2] = r.TryGetProperty(WellKnownUserOptionKeys[i], out var value) ? value : null;
+				
+				// update parameter-set from database, use only members
+				UpdateUserConfigCore(FromLson(r.GetProperty("Cfg", "{}")));
 
 				securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", String.Empty), SecurityUser);
 			} // proc UpdateData
@@ -325,8 +384,46 @@ namespace TecWare.PPSn.Server
 
 			#endregion
 
+			#region -- GetProperty, UpdateProperties ----------------------------------
+
 			bool IPropertyReadOnlyDictionary.TryGetProperty(string name, out object value)
-				=> Members.TryGetValue(name, out value);
+			{
+				value = GetMemberValue(name);
+				return value != null;
+			} // func TryGetProperty
+
+			private void UpdateUserConfigCore(LuaTable properties)
+				=> UpdateMemberValues(userConfig, properties);
+
+			public async Task UpdatePropertiesAsync(LuaTable propertiesToUpdate)
+			{
+				using (var sysContext = await application.CreateSystemContextAsync())
+				using (var mainCon = application.MainDataSource.CreateConnection(sysContext.GetUser<IPpsPrivateDataContext>(), true))
+				using(var trans = application.MainDataSource.CreateTransaction(mainCon))
+				{
+					var row = GetFirstRow(trans.CreateSelector("dbo.serverLogins")
+						.ApplyFilter(PpsDataFilterExpression.Compare("Id", PpsDataFilterCompareOperator.Equal, userId))
+						.ApplyColumns(new PpsDataColumnExpression("Cfg"))
+					);
+
+					// get fresh user config from database
+					UpdateUserConfigCore(FromLson(row.GetProperty("Cfg", "{}")));
+					// update configuration from argument
+					UpdateUserConfigCore(propertiesToUpdate);
+
+					// update database
+					trans.ExecuteNoneResult(new LuaTable
+					{
+						["exec"] = "sys.UpdateUserCfg",
+						[1] = new LuaTable { ["Id"] = userId, ["Cfg"] = userConfig }
+					});
+
+					// commit changes
+					await sysContext.CommitAsync();
+				}
+			} // proc UpdateProperty
+
+			#endregion
 
 			/// <summary>Access application.</summary>
 			[LuaMember("App")]
@@ -338,6 +435,10 @@ namespace TecWare.PPSn.Server
 			/// <summary>Name of the user</summary>
 			[LuaMember("UserName"), DEListTypeProperty("@name")]
 			public string Name => userIdentity.Name;
+
+			/// <summary>Configuration of the user.</summary>
+			[LuaMember("Config")]
+			public LuaTable Config { get => userConfig; set { } }
 
 			string IDEUser.DisplayName => userIdentity.Name;
 			IIdentity IDEUser.Identity => userIdentity;
@@ -355,6 +456,16 @@ namespace TecWare.PPSn.Server
 			public PpsUserIdentity User => userIdentity;
 			/// <summary>Return the user's local identity.</summary>
 			public PpsUserIdentity LocalIdentity => localIdentity;
+
+			public static readonly string[] WellKnownUserOptionKeys = new string[] {
+				"userId",
+				"displayName",
+				UserContextFullName,
+				UserContextKtKtId,
+				UserContextPersId,
+				UserContextInitials,
+				UserContextIdenticon
+			};
 		} // class PrivateUserData
 
 		#endregion
@@ -478,10 +589,10 @@ namespace TecWare.PPSn.Server
 						throw new InvalidOperationException("Expression is not valid.");
 					return Task.Run(() => new PpsViewJoinVisitor(this).Visit(this));
 				} // func CreateSelectorAsync
-			} // class PpsStringJoinExpression
+			} // class PpsViewJoinExpression
 
 			#endregion
-			
+
 			public async Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException)
 			{
 				var c = privateUser.GetOrCreatePooledConnection(source, this, throwException);
@@ -586,10 +697,14 @@ namespace TecWare.PPSn.Server
 				=> privateUser.DemandToken(securityToken);
 
 			public bool TryGetProperty(string name, out object value)
-			{
-				value = privateUser.GetMemberValue(name);
-				return value != null;
-			} // func TryGetProperty
+				=> TryGetTableProperty(privateUser, name, out value);
+
+			Task IPpsPrivateDataContext.UpdatePropertiesAsync(LuaTable properties)
+				=> privateUser.UpdatePropertiesAsync(properties);
+
+			[LuaMember]
+			public void UpdateProperties(LuaTable properties)
+				=> privateUser.UpdatePropertiesAsync(properties).AwaitTask();
 
 			public object GetService(Type serviceType)
 			{
@@ -606,6 +721,8 @@ namespace TecWare.PPSn.Server
 
 			/// <summary>Return user properties</summary>
 			public LuaTable Properties => privateUser;
+			/// <summary>Configuration of the current user.</summary>
+			public LuaTable Config => privateUser.Config;
 
 			public bool IsDisposed => isDisposed;
 
@@ -664,13 +781,15 @@ namespace TecWare.PPSn.Server
 			using (var ctx = await CreateSystemContextAsync())
 			{
 				var userData = ctx.GetService<IPpsPrivateDataContext>();
+
+				// dbo.serverLogins will be defined by the main database
 				var users = await userData?.CreateSelectorAsync("dbo.serverLogins", throwException: false);
 				if (users != null)
 				{
 					// fetch user list
-					foreach (var u in users)
+					using (userList.EnterWriteLock())
 					{
-						lock (userList)
+						foreach (var u in users)
 						{
 							var userId = u.GetProperty("ID", 0L);
 							if (userId > 0)
@@ -690,8 +809,9 @@ namespace TecWare.PPSn.Server
 							}
 							else
 								Log.Warn("User ignored (id={userId}).");
-						}
-					} // foreach
+
+						} // foreach
+					} // using
 				} // users != null
 
 				await ctx.RollbackAsync();
@@ -734,36 +854,17 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Returns the login data for the given context.</summary>
 		/// <param name="ctx"></param>
-		/// <returns></returns>
+		/// <returns>The return is a pointer to user properties</returns>
 		[LuaMember]
-		public XElement GetLoginData(IPpsPrivateDataContext ctx = null)
+		public LuaTable GetLoginData(IPpsPrivateDataContext ctx = null)
 		{
 			if (ctx == null)
 				ctx = DEScope.GetScopeService<IPpsPrivateDataContext>(true);
 
-			// basic login data
-			var xLoginData = new XElement("user",
-				new XAttribute("userId", ctx.UserId),
-				new XAttribute("displayName", ctx.UserName)
-			);
-
-			// update optional values
-			if (ctx.TryGetProperty<long>(UserContextKtKtId, out var ktktId))
-				xLoginData.SetAttributeValue(UserContextKtKtId, ktktId.ChangeType<string>());
-			if (ctx.TryGetProperty<long>(UserContextPersId, out var persId))
-				xLoginData.SetAttributeValue(UserContextPersId, persId.ChangeType<string>());
-			if (ctx.TryGetProperty(UserContextFullName, out var fullName))
-				xLoginData.SetAttributeValue(UserContextFullName, fullName);
-			if (ctx.TryGetProperty(UserContextInitials, out var initials))
-				xLoginData.SetAttributeValue(UserContextInitials, initials);
-
 			// execute script based extensions
-			var t = new LuaTable();
-			CallMemberDirect("OnExtentLogin", new object[] { ctx, t }, ignoreNilFunction: true);
-			foreach (var kv in t.Members)
-				xLoginData.SetAttributeValue(kv.Key, kv.Value);
-
-			return xLoginData;
+			var options = ((PrivateUserDataContext)ctx).Config;
+			CallTableMethods(ExtendLoginMethods, new object[] { ctx, options });
+			return options;
 		} // func GetLoginData
 
 		/// <summary>Time in ms after a good connection is recreated in the pool.</summary>

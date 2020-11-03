@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -617,7 +618,7 @@ namespace TecWare.PPSn.Reporting
 				var rowInfo = PpsEmitRow.Parse(xInfo, false);
 
 				// parse filter and order
-				var filter = PpsDataFilterExpression.Parse(xInfo.GetNode(ListFilterElement, null), variables: arguments);
+				var filter = PpsDataFilterExpression.Parse(xInfo.GetNode(ListFilterElement, null), CultureInfo.InvariantCulture, PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.AllowVariables).Reduce(arguments);
 				var parsedOrder = PpsDataOrderExpression.Parse(xInfo.GetNode(ListOrderElement, null));
 
 				// combine with group order

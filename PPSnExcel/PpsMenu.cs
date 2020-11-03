@@ -16,6 +16,7 @@
 using System;
 using System.Linq;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
 using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
@@ -37,10 +38,11 @@ namespace PPSnExcel
 			cmdExtended.Visible = Globals.ThisAddIn.Application.ShowDevTools;
 
 			// connection to the excel application
-			application.WorkbookActivate += wb => WorkbookStateChanged(wb, true);
-			application.WorkbookDeactivate += wb => WorkbookStateChanged(wb, false);
-
-			application.SheetSelectionChange += (sh, target) => Refresh();
+			application.WorkbookActivate += wb => SelectionChanged(wb, true);
+			application.WorkbookDeactivate += wb => SelectionChanged(wb, false);
+			application.SheetActivate += sh=> SelectionChanged(sh, true);
+			application.SheetDeactivate += sh => SelectionChanged(sh, false);
+			application.SheetSelectionChange += (sh, target) => SelectionChanged(target, true);
 
 			Globals.ThisAddIn.CurrentEnvironmentChanged += (s, _e) => { RefreshUsername(); Refresh(); };
 
@@ -52,6 +54,8 @@ namespace PPSnExcel
 			isMenuLoaded = true;
 		} // event PpsMenu_Load
 
+		private void Application_SheetActivate(object Sh) => throw new NotImplementedException();
+
 		#endregion
 
 		#region -- RunActionSafe ------------------------------------------------------
@@ -62,6 +66,10 @@ namespace PPSnExcel
 			try
 			{
 				action();
+			}
+			catch(ExcelException e)
+			{
+				Globals.ThisAddIn.ShowMessage(e.Message, MessageBoxIcon.Information, MessageBoxButtons.OK);
 			}
 			catch (Exception e)
 			{
@@ -78,7 +86,10 @@ namespace PPSnExcel
 			var hasListObjectInfo = PpsListMapping.TryParseFromSelection();
 			cmdReport.Enabled = hasEnvironment;
 			cmdTable.Enabled = hasEnvironment || hasListObjectInfo;
+
+			editTableExCommand.Enabled = hasListObjectInfo;
 			cmdListObjectInfo.Enabled = hasListObjectInfo;
+			removeTableSourceData.Enabled = hasListObjectInfo;
 
 			cmdRefresh.Enabled =
 				cmdRefreshLayout.Enabled = Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null);
@@ -116,9 +127,6 @@ namespace PPSnExcel
 
 		private static Excel.Range GetTopLeftCell() 
 			=> Globals.ThisAddIn.Application.Selection as Excel.Range;
-
-		private static void ImportTableCommand(PpsEnvironment environment, string reportName, string reportId)
-			=> Globals.ThisAddIn.Run(() => Globals.ThisAddIn.ImportTableAsync(environment, GetTopLeftCell(), reportId, reportName));
 		
 		public static bool IsSingleLineModeToggle()
 			=> (Control.ModifierKeys & (Keys.Control | Keys.Alt)) == (Keys.Control | Keys.Alt);
@@ -132,32 +140,51 @@ namespace PPSnExcel
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
 					{
-						var singleLineMode = IsSingleLineModeToggle();
 						if (frm.ReportType == "table")
-							ImportTableCommand(env, frm.ReportName, frm.ReportId);
+							Globals.ThisAddIn.NewTable(env, GetTopLeftCell(), frm.ReportId);
+						else if (frm.ReportType == "xlsx")
+							Globals.ThisAddIn.LoadXlsxReport(env, frm.ReportId, frm.ReportName);
 						else
-							MessageBox.Show("todo");
+							MessageBox.Show("Unbekannter ReportType.");
 					}
 				}
 			}
 		} // proc InsertReport
 
 		private static void InsertTable()
+			=> InsertTableCore(false);
+
+		private static void InsertTableEx()
+			=> InsertTableCore(true);
+
+		private static void RemoveTableData()
+		{
+			if (!PpsListObject.TryGetFromSelection(out var list))
+				return;
+
+			if (MessageBox.Show(String.Format("Remove Xml-Data of {0} ({1})?", list.List.DisplayName, list.List.XmlMap.Name), "Question", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				var x = new XElement(list.List.XmlMap.RootElementName).ToString();
+				list.List.XmlMap.ImportXml(x.ToString(), true);
+			}
+		} // proc RemoveTableData
+
+		private static void InsertTableCore(bool extendedEdit)
 		{
 			if (PpsListObject.TryGetFromSelection(out var ppsList)) // edit the current selected table
-				ppsList.Edit();
-			else // create a fresh table
+				ppsList.Edit(extendedEdit);
+			else if (!extendedEdit) // create a fresh table
 			{
 				var env = Globals.ThisAddIn.CurrentEnvironment; // get environment
 				if (env != null)
 					PpsListObject.New(env, GetTopLeftCell());
 			}
-		} // proc InsertTable
+		} // proc InsertTableCore
 
-		private void WorkbookStateChanged(Excel._Workbook wb, bool activate)
+		private void SelectionChanged(object sender, bool activate)
 		{
 			Refresh();
-		} // proc WorkbookStateChanged
+		} // proc SelectionChanged
 
 		private void cmdReport_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(InsertReport);
@@ -165,12 +192,18 @@ namespace PPSnExcel
 		private void cmdTable_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(InsertTable);
 
-		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
-		{
-		}
+		private void editTableExCommand_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(InsertTableEx);
+
+		private void removeTableSourceData_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(RemoveTableData);
 
 		private void cmdListObjectInfo_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(Globals.ThisAddIn.ShowTableInfo);
+
+		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
+		{
+		}
 
 		private void RunRefreshTableCommand(ThisAddIn.RefreshContext refreshContext)
 			=> RunActionSafe(() => Globals.ThisAddIn.Run(() => Globals.ThisAddIn.RefreshTableAsync(refreshContext)));

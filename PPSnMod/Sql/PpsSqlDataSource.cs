@@ -23,6 +23,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -30,7 +31,9 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
+using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
@@ -135,11 +138,16 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		protected virtual IEnumerator<PropertyValue> GetProperties()
 		{
-			yield return new PropertyValue(nameof(MaxLength), MaxLength);
-			yield return new PropertyValue(nameof(Precision), Precision);
-			yield return new PropertyValue(nameof(Scale), Scale);
-			yield return new PropertyValue(nameof(Nullable), Nullable);
-			yield return new PropertyValue(nameof(IsIdentity), IsIdentity);
+			if (maxLength > 0 && maxLength < Int32.MaxValue)
+				yield return new PropertyValue(nameof(MaxLength), maxLength);
+			if (precision > 0)
+				yield return new PropertyValue(nameof(Precision), precision);
+			if (scale > 0)
+				yield return new PropertyValue(nameof(Scale), scale);
+			if (isNullable)
+				yield return new PropertyValue(nameof(Nullable), isNullable);
+			if (IsIdentity)
+				yield return new PropertyValue(nameof(IsIdentity), isIdentity);
 		} // func GetProperties
 
 		/// <summary>Return default properties.</summary>
@@ -413,34 +421,70 @@ namespace TecWare.PPSn.Server.Sql
 
 	#region -- class PpsSqlRelationInfo -----------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Descripes a relation between two tables.</summary>
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
 	public abstract class PpsSqlRelationInfo
 	{
 		private readonly string name;
-		private readonly PpsSqlColumnInfo parentColumn;
-		private readonly PpsSqlColumnInfo referencedColumn;
+		private readonly PpsSqlColumnInfo[] parentColumns;
+		private readonly PpsSqlColumnInfo[] referencedColumns;
 
 		/// <summary></summary>
 		/// <param name="name"></param>
 		/// <param name="parentColumn"></param>
 		/// <param name="referencedColumn"></param>
 		protected PpsSqlRelationInfo(string name, PpsSqlColumnInfo parentColumn, PpsSqlColumnInfo referencedColumn)
+			: this(name, new PpsSqlColumnInfo[] { parentColumn }, new PpsSqlColumnInfo[] { referencedColumn }, false)
+		{
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="parentColumns"></param>
+		/// <param name="referencedColumns"></param>
+		protected PpsSqlRelationInfo(string name, PpsSqlColumnInfo[] parentColumns, PpsSqlColumnInfo[] referencedColumns)
+			: this(name, parentColumns, referencedColumns, true)
+		{
+		} // ctor
+
+		private PpsSqlRelationInfo(string name, PpsSqlColumnInfo[] parentColumns, PpsSqlColumnInfo[] referencedColumns, bool validateColumns)
 		{
 			this.name = name;
-			this.parentColumn = parentColumn;
-			this.referencedColumn = referencedColumn;
+			this.parentColumns = parentColumns;
+			this.referencedColumns = referencedColumns;
+
+			if (validateColumns)
+			{
+				if (parentColumns == null || parentColumns.Any(c => c == null))
+					throw new ArgumentNullException(nameof(parentColumns));
+
+				if (referencedColumns == null || referencedColumns.Any(c => c == null))
+					throw new ArgumentNullException(nameof(referencedColumns));
+
+				if (parentColumns.Length != referencedColumns.Length)
+					throw new ArgumentException("Invalid length.");
+			}
 		} // ctor
 
 		private string DebuggerDisplay
-			=> $"RelationInfo: {name} [parent: {parentColumn?.Name ?? "null"}; child: {referencedColumn?.Name ?? "null"}]";
+			=> $"RelationInfo: {name} [parent: {parentColumns[0].Name ?? "null"}; child: {referencedColumns[0].Name ?? "null"}]";
 
-		/// <summary></summary>
+		private PpsSqlColumnInfo GetSingleColumn(PpsSqlColumnInfo[] columns)
+			=> columns.Length == 1 ? columns[0] : throw new InvalidOperationException($"Relation '{name}' has multiple columns.");
+
+		/// <summary>Name of the relation.</summary>
 		public string Name => name;
-		/// <summary></summary>
-		public PpsSqlColumnInfo ParentColumn => parentColumn;
-		/// <summary></summary>
-		public PpsSqlColumnInfo ReferencedColumn => referencedColumn;
+		/// <summary>Is this a single column relation.</summary>
+		public bool IsSingleColumnRelation => parentColumns.Length == 1;
+		/// <summary>Parent relation column</summary>
+		public PpsSqlColumnInfo ParentColumn => GetSingleColumn(parentColumns);
+		/// <summary>Child relation column</summary>
+		public PpsSqlColumnInfo ReferencedColumn => GetSingleColumn(referencedColumns);
+
+		/// <summary>Parent relation columns</summary>
+		public IReadOnlyList<PpsSqlColumnInfo> ParentColumns => parentColumns;
+		/// <summary>Child relation columns</summary>
+		public IReadOnlyList<PpsSqlColumnInfo> ReferencedColumns => referencedColumns;
 	} // class PpsSqlTableInfo
 
 	#endregion
@@ -584,7 +628,9 @@ namespace TecWare.PPSn.Server.Sql
 				private static readonly string[,] translateTable = new string[,]
 				{
 					{ "MaxLength", "ColumnSize" },
-					{ "Nullable", "AllowDBNull" }
+					{ "Nullable", "AllowDBNull" },
+					{ "Precision", "NumericPrecision" },
+					{ "Scale", "NumericScale" }
 				};
 
 				private readonly SqlDataResultColumnDescription column;
@@ -610,10 +656,33 @@ namespace TecWare.PPSn.Server.Sql
 				} // func TryTranslateAttribute
 
 				private bool TryTranslateFromAttribute(string attributeName, out string rowName)
-					=> TryTranslateAttribute(attributeName, 0, 1, out rowName);
+				{
+					if (TryTranslateAttribute(attributeName, 0, 1, out rowName))
+						return true;
+					else if (rowName.StartsWith("Dt.", StringComparison.OrdinalIgnoreCase))
+					{
+						// remove prefix
+						rowName = rowName.Substring(3);
+						return false;
+					}
+					else
+					{
+						rowName = null;
+						return false;
+					}
+				} // func TryTranslateFromAttribute
 
 				private bool TryTranslateToAttribute(string rowName, out string attributeName)
-					=> TryTranslateAttribute(rowName, 1, 0, out attributeName);
+				{
+					if (TryTranslateAttribute(rowName, 1, 0, out attributeName))
+						return true;
+					else
+					{
+						// add prefix
+						attributeName = "Dt." + attributeName;
+						return false;
+					}
+				} // func TryTranslateToAttribute
 
 				public bool TryGetProperty(string name, out object value)
 				{
@@ -623,11 +692,11 @@ namespace TecWare.PPSn.Server.Sql
 						value = column.row[rowName];
 						return value != DBNull.Value;
 					}
-					else
+					else if (rowName != null)
 					{
 						foreach (var c in column.row.Table.Columns.Cast<DataColumn>())
 						{
-							if (String.Compare(c.ColumnName, name, StringComparison.OrdinalIgnoreCase) == 0)
+							if (String.Compare(c.ColumnName, rowName, StringComparison.OrdinalIgnoreCase) == 0)
 							{
 								value = column.row[c];
 								return value != DBNull.Value;
@@ -3184,6 +3253,30 @@ namespace TecWare.PPSn.Server.Sql
 			}
 		} // proc RefreshSchema
 
+		/// <summary>Returns all tables as.</summary>
+		/// <returns></returns>
+		[LuaMember]
+		public IEnumerable<PpsSqlTableInfo> GetTableInfo()
+		{
+			using (tablesListController.EnterReadLock())
+			{
+				foreach (var t in tables.Values)
+					yield return t;
+			}
+		} // func GetTableInfo
+
+		/// <summary>Returns all procedures</summary>
+		/// <returns></returns>
+		[LuaMember]
+		public IEnumerable<PpsSqlProcedureInfo> GetProcedureInfo()
+		{
+			using (proceduresListController.EnterReadLock())
+			{
+				foreach (var p in procedures.Values)
+					yield return p;
+			}
+		} // func GetProcedureInfo
+
 		/// <summary>Is schema readed.</summary>
 		[
 		PropertyName("tw_ppsn_init"),
@@ -3733,6 +3826,30 @@ namespace TecWare.PPSn.Server.Sql
 		} // func GetDataRowValue
 
 		#endregion
+
+		private async Task<bool> WriteDatabaseInfoAsync(IDEWebRequestScope r)
+		{
+			r.DemandToken(SecuritySys);
+			if (r.TryGetProperty("table", out var _))
+				await Task.Run(() => r.WriteResource(typeof(PpsSqlDataSource), "Resources.table.html", MimeTypes.Text.Html));
+			else
+				await Task.Run(() => r.WriteResource(typeof(PpsSqlDataSource), "Resources.info.html", MimeTypes.Text.Html));
+			return true;
+		} // func WriteDatabaseInfoAsync
+
+		/// <summary>Add info.html to the results</summary>
+		/// <param name="r"></param>
+		/// <returns></returns>
+		protected override Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
+		{
+			switch (r.RelativeSubPath)
+			{
+				case "info.html":
+					return WriteDatabaseInfoAsync(r);
+				default:
+					return base.OnProcessRequestAsync(r);
+			}
+		} // func OnProcessRequestAsync
 	} // class PpsSqlDataSource
 
 	#endregion

@@ -35,18 +35,18 @@
 			this.filterTextBox = new System.Windows.Forms.TextBox();
 			this.uriText = new System.Windows.Forms.TextBox();
 			this.splitSelectPanel = new System.Windows.Forms.SplitContainer();
+			this.splitContainer1 = new System.Windows.Forms.SplitContainer();
 			this.panUri = new System.Windows.Forms.Panel();
 			this.columnAliasCheck = new System.Windows.Forms.CheckBox();
-			this.splitContainer1 = new System.Windows.Forms.SplitContainer();
 			((System.ComponentModel.ISupportInitialize)(this.splitSelectPanel)).BeginInit();
 			this.splitSelectPanel.Panel1.SuspendLayout();
 			this.splitSelectPanel.Panel2.SuspendLayout();
 			this.splitSelectPanel.SuspendLayout();
-			this.panUri.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
 			this.splitContainer1.Panel1.SuspendLayout();
 			this.splitContainer1.Panel2.SuspendLayout();
 			this.splitContainer1.SuspendLayout();
+			this.panUri.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// joinTextBox
@@ -56,13 +56,13 @@
 			this.joinTextBox.Location = new System.Drawing.Point(0, 0);
 			this.joinTextBox.Multiline = true;
 			this.joinTextBox.Name = "joinTextBox";
-			this.joinTextBox.Size = new System.Drawing.Size(390, 272);
+			this.joinTextBox.Size = new System.Drawing.Size(470, 286);
 			this.joinTextBox.TabIndex = 0;
 			// 
 			// cmdEdit
 			// 
 			this.cmdEdit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.cmdEdit.Location = new System.Drawing.Point(586, 14);
+			this.cmdEdit.Location = new System.Drawing.Point(723, 14);
 			this.cmdEdit.Name = "cmdEdit";
 			this.cmdEdit.Size = new System.Drawing.Size(75, 23);
 			this.cmdEdit.TabIndex = 1;
@@ -86,7 +86,7 @@
 			this.columnsTextBox.Location = new System.Drawing.Point(0, 0);
 			this.columnsTextBox.Multiline = true;
 			this.columnsTextBox.Name = "columnsTextBox";
-			this.columnsTextBox.Size = new System.Drawing.Size(267, 372);
+			this.columnsTextBox.Size = new System.Drawing.Size(324, 392);
 			this.columnsTextBox.TabIndex = 0;
 			// 
 			// filterTextBox
@@ -96,7 +96,7 @@
 			this.filterTextBox.Location = new System.Drawing.Point(0, 0);
 			this.filterTextBox.Multiline = true;
 			this.filterTextBox.Name = "filterTextBox";
-			this.filterTextBox.Size = new System.Drawing.Size(390, 96);
+			this.filterTextBox.Size = new System.Drawing.Size(470, 102);
 			this.filterTextBox.TabIndex = 0;
 			// 
 			// uriText
@@ -107,7 +107,7 @@
 			this.uriText.Location = new System.Drawing.Point(32, 16);
 			this.uriText.Name = "uriText";
 			this.uriText.ReadOnly = true;
-			this.uriText.Size = new System.Drawing.Size(548, 22);
+			this.uriText.Size = new System.Drawing.Size(685, 22);
 			this.uriText.TabIndex = 4;
 			// 
 			// splitSelectPanel
@@ -123,34 +123,9 @@
 			// splitSelectPanel.Panel2
 			// 
 			this.splitSelectPanel.Panel2.Controls.Add(this.columnsTextBox);
-			this.splitSelectPanel.Size = new System.Drawing.Size(661, 372);
-			this.splitSelectPanel.SplitterDistance = 390;
+			this.splitSelectPanel.Size = new System.Drawing.Size(798, 392);
+			this.splitSelectPanel.SplitterDistance = 470;
 			this.splitSelectPanel.TabIndex = 5;
-			// 
-			// panUri
-			// 
-			this.panUri.Controls.Add(this.columnAliasCheck);
-			this.panUri.Controls.Add(this.uriText);
-			this.panUri.Controls.Add(this.cmdEdit);
-			this.panUri.Controls.Add(this.uriLabel);
-			this.panUri.Dock = System.Windows.Forms.DockStyle.Bottom;
-			this.panUri.Location = new System.Drawing.Point(16, 388);
-			this.panUri.Name = "panUri";
-			this.panUri.Size = new System.Drawing.Size(661, 63);
-			this.panUri.TabIndex = 7;
-			// 
-			// columnAliasCheck
-			// 
-			this.columnAliasCheck.AutoSize = true;
-			this.columnAliasCheck.Checked = true;
-			this.columnAliasCheck.CheckState = System.Windows.Forms.CheckState.Checked;
-			this.columnAliasCheck.Location = new System.Drawing.Point(32, 44);
-			this.columnAliasCheck.Name = "columnAliasCheck";
-			this.columnAliasCheck.Size = new System.Drawing.Size(80, 17);
-			this.columnAliasCheck.TabIndex = 5;
-			this.columnAliasCheck.Text = "Export alias";
-			this.columnAliasCheck.UseVisualStyleBackColor = true;
-			this.columnAliasCheck.CheckedChanged += new System.EventHandler(this.columnAliasCheck_CheckedChanged);
 			// 
 			// splitContainer1
 			// 
@@ -166,15 +141,40 @@
 			// splitContainer1.Panel2
 			// 
 			this.splitContainer1.Panel2.Controls.Add(this.filterTextBox);
-			this.splitContainer1.Size = new System.Drawing.Size(390, 372);
-			this.splitContainer1.SplitterDistance = 272;
+			this.splitContainer1.Size = new System.Drawing.Size(470, 392);
+			this.splitContainer1.SplitterDistance = 286;
 			this.splitContainer1.TabIndex = 1;
+			// 
+			// panUri
+			// 
+			this.panUri.Controls.Add(this.columnAliasCheck);
+			this.panUri.Controls.Add(this.uriText);
+			this.panUri.Controls.Add(this.cmdEdit);
+			this.panUri.Controls.Add(this.uriLabel);
+			this.panUri.Dock = System.Windows.Forms.DockStyle.Bottom;
+			this.panUri.Location = new System.Drawing.Point(16, 408);
+			this.panUri.Name = "panUri";
+			this.panUri.Size = new System.Drawing.Size(798, 63);
+			this.panUri.TabIndex = 7;
+			// 
+			// columnAliasCheck
+			// 
+			this.columnAliasCheck.AutoSize = true;
+			this.columnAliasCheck.Checked = true;
+			this.columnAliasCheck.CheckState = System.Windows.Forms.CheckState.Checked;
+			this.columnAliasCheck.Location = new System.Drawing.Point(32, 44);
+			this.columnAliasCheck.Name = "columnAliasCheck";
+			this.columnAliasCheck.Size = new System.Drawing.Size(80, 17);
+			this.columnAliasCheck.TabIndex = 5;
+			this.columnAliasCheck.Text = "Export alias";
+			this.columnAliasCheck.UseVisualStyleBackColor = true;
+			this.columnAliasCheck.CheckedChanged += new System.EventHandler(this.columnAliasCheck_CheckedChanged);
 			// 
 			// MainWindow
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(693, 467);
+			this.ClientSize = new System.Drawing.Size(830, 487);
 			this.Controls.Add(this.splitSelectPanel);
 			this.Controls.Add(this.panUri);
 			this.Name = "MainWindow";
@@ -186,14 +186,14 @@
 			this.splitSelectPanel.Panel2.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.splitSelectPanel)).EndInit();
 			this.splitSelectPanel.ResumeLayout(false);
-			this.panUri.ResumeLayout(false);
-			this.panUri.PerformLayout();
 			this.splitContainer1.Panel1.ResumeLayout(false);
 			this.splitContainer1.Panel1.PerformLayout();
 			this.splitContainer1.Panel2.ResumeLayout(false);
 			this.splitContainer1.Panel2.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
 			this.splitContainer1.ResumeLayout(false);
+			this.panUri.ResumeLayout(false);
+			this.panUri.PerformLayout();
 			this.ResumeLayout(false);
 
 		}

@@ -33,7 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DES.Core, Version=3.4.0.0, Culture=neutral, PublicKeyToken=65aa0de0ef4a3cd4, processorArchitecture=MSIL">
-      <HintPath>..\packages\TecWare.DES.Core.3.4.57\lib\net47\DES.Core.dll</HintPath>
+      <HintPath>..\packages\TecWare.DES.Core.3.4.64\lib\net47\DES.Core.dll</HintPath>
     </Reference>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
       <HintPath>..\packages\NeoLua.1.3.11\lib\net47\Neo.Lua.dll</HintPath>
@@ -72,7 +72,14 @@
     <Compile Include="Controls\TableInsertForm.Designer.cs">
       <DependentUpon>TableInsertForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Controls\TableInsertFormEx.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\TableInsertFormEx.Designer.cs">
+      <DependentUpon>TableInsertFormEx.cs</DependentUpon>
+    </Compile>
     <Compile Include="Data\PpsTableData.cs" />
+    <Compile Include="Data\PpsTableTextData.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -102,6 +109,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Controls\TableInsertForm.resx">
       <DependentUpon>TableInsertForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Controls\TableInsertFormEx.resx">
+      <DependentUpon>TableInsertFormEx.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

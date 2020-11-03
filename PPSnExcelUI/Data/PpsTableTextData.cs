@@ -16,17 +16,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Core.Data;
-using TecWare.PPSn.Data;
 
-namespace TecWare.PPSn.Export
+namespace TecWare.PPSn.Data
 {
-	internal sealed class PpsTableData : ObservableObject, IPpsTableData
+	public sealed class PpsTableTextData : ObservableObject, IPpsTableData
 	{
 		#region -- class PpsColumnInfo ------------------------------------------------
 
@@ -71,7 +68,7 @@ namespace TecWare.PPSn.Export
 			{
 				if (Ascending.HasValue)
 					sb.Append(Ascending.Value ? '+' : '-');
-				
+
 				sb.Append(Expression);
 
 				if (!String.IsNullOrEmpty(Name))
@@ -82,7 +79,7 @@ namespace TecWare.PPSn.Export
 
 			public override string ToString()
 				=> ToString(new StringBuilder()).ToString();
-	
+
 			public bool Equals(PpsColumnInfo other)
 				=> Ascending == other.Ascending && Expression != other.Expression;
 
@@ -104,33 +101,23 @@ namespace TecWare.PPSn.Export
 		private string views = null;
 		private string filter = null;
 		private PpsColumnInfo[] columnInfos = Array.Empty<PpsColumnInfo>();
-		
-		public PpsDataQuery GetShellList(bool includeColumnAlias)
+
+		private void LoadCore(string displayName, string views, string filter, IEnumerable<IPpsTableColumn> columns)
 		{
-			if (IsEmpty)
-				return null;
-			else
-			{
-				return new PpsDataQuery(Views)
-				{
-					Filter = PpsDataFilterExpression.Parse(Filter),
-					Columns = columnInfos.Select(c => c.ToColumn(includeColumnAlias)).ToArray(),
-					Order = (
-						from col in columnInfos 
-						let o = col.ToOrder()
-						where o != null
-						select o
-					).ToArray()
-				};
-			}
-		} // func GetShellList
+			DisplayName = displayName;
+			Views = views;
+			Filter = filter;
+
+			// todo: accept all types of columns
+			SetColumnCore(columns.Where(c => c.Type == PpsTableColumnType.Data).Select(c => new PpsColumnInfo(c)));
+		} // proc Load
+
+		public void Load(IPpsTableData tableData)
+			=> LoadCore(tableData.DisplayName, tableData.Views, tableData.Filter, tableData.Columns);
 
 		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
 		{
-			Views = views;
-			Filter = filter;
-			SetColumnCore(columns.Where(c => c.Type == PpsTableColumnType.Data).Select(c => new PpsColumnInfo(c)));
-
+			LoadCore(null, views, filter, columns);
 			return Task.CompletedTask;
 		} // func UpdateAsync
 
@@ -220,8 +207,19 @@ namespace TecWare.PPSn.Export
 			set => SetColumnCore(ParseColumnInfo(value));
 		} // prop Columns
 
+		public IEnumerable<PpsDataColumnExpression> GetColumnExpressions(bool includeColumnAlias)
+			=> columnInfos.Select(c => c.ToColumn(includeColumnAlias));
+
+		public IEnumerable<PpsDataOrderExpression> GetOrderExpression()
+		{
+			return from col in columnInfos
+				   let o = col.ToOrder()
+				   where o != null
+				   select o;
+		} // func GetOrderExpression
+
 		IEnumerable<IPpsTableColumn> IPpsTableData.Columns => columnInfos;
 
 		public bool IsEmpty => String.IsNullOrEmpty(views);
-	} // class PpsTableData
+	} // class PpsTableTextData
 }

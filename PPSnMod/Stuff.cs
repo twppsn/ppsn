@@ -22,6 +22,7 @@ using System.Reflection;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using Microsoft.Deployment.WindowsInstaller;
 using Neo.IronLua;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
@@ -70,9 +71,12 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnStyleColor = PpsNamespace + "color";
 
 		public readonly static XName xnReports = PpsNamespace + "reports";
+
+		public readonly static XName xnClientOptions = PpsNamespace + "clientOptions";
+		public readonly static XName xnClientOptionValue = PpsNamespace + "value";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		#region -- WriteProperty --------------------------------------------------------
+		#region -- WriteProperty ------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="xml"></param>
@@ -363,7 +367,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- Common Scope ---------------------------------------------------------
+		#region -- Common Scope -------------------------------------------------------
 
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
@@ -381,10 +385,30 @@ namespace TecWare.PPSn.Server
 			}
 			else
 			{
-				value = default(T);
+				value = default;
 				return false;
 			}
 		} // func TryGetGlobal
+
+		#endregion
+
+		#region -- GetVersionCode -----------------------------------------------------
+
+		private static long GetPart(int value, int pos)
+		{
+			if (value < 0)
+				value = 0;
+			else if (value > 0xFFFF)
+				throw new ArgumentOutOfRangeException(nameof(value), value, "Version is invalid.");
+
+			return ((long)value) << pos;
+		} // func GetPart
+
+		/// <summary>Create a version code, from a version</summary>
+		/// <param name="version"></param>
+		/// <returns></returns>
+		public static long GetVersionCode(this Version version)
+			=> GetPart(version.Major, 48) | GetPart(version.Minor, 32) | GetPart(version.Build, 16) | GetPart(version.Revision, 0);
 
 		#endregion
 	} // class PpsStuff

@@ -245,10 +245,12 @@
             this.columnListHeader,
             this.columnListTechHeader});
 			this.currentColumnsListView.ContextMenuStrip = this.currentContextMenuStrip;
+			this.currentColumnsListView.FullRowSelect = true;
 			this.currentColumnsListView.HideSelection = false;
 			this.currentColumnsListView.Location = new System.Drawing.Point(16, 191);
 			this.currentColumnsListView.Name = "currentColumnsListView";
 			this.currentColumnsListView.ShowGroups = false;
+			this.currentColumnsListView.ShowItemToolTips = true;
 			this.currentColumnsListView.Size = new System.Drawing.Size(269, 343);
 			this.currentColumnsListView.TabIndex = 1;
 			this.currentColumnsListView.UseCompatibleStateImageBehavior = false;

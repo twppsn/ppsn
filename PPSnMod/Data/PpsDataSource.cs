@@ -18,7 +18,6 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Server.Sql;
 
 namespace TecWare.PPSn.Server.Data
 {
@@ -30,7 +29,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		/// <param name="sp"></param>
 		/// <param name="name"></param>
-		public PpsDataSource(IServiceProvider sp, string name)
+		protected PpsDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
 			Application = sp.GetService<PpsApplication>(true);

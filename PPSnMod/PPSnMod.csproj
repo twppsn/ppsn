@@ -16,11 +16,19 @@
 	</PropertyGroup>
 	<Import Project="..\Common\AssemblyInfo.targets" />
 	<ItemGroup>
+	  <None Remove="Resources\info.html" />
+	  <None Remove="Resources\key.png" />
+	  <None Remove="Resources\view.html" />
+	  <None Remove="Sql\Resources\info.html" />
+	  <None Remove="Sql\Resources\table.html" />
 	  <None Remove="Sql\tsql\ConnectionInitScript.sql" />
 	  <None Remove="Sql\tsql\ServerLogins.sql" />
 	  <None Remove="Xsd\PPSn.xsd" />
 	</ItemGroup>
 	<ItemGroup>
+	  <EmbeddedResource Include="Resources\key.png" />
+	  <EmbeddedResource Include="Sql\Resources\info.html" />
+	  <EmbeddedResource Include="Sql\Resources\table.html" />
 	  <EmbeddedResource Include="Sql\tsql\ConnectionInitScript.sql" />
 	  <EmbeddedResource Include="Sql\tsql\ServerLogins.sql" />
 	  <EmbeddedResource Include="Xsd\PPSn.xsd" />
@@ -36,8 +44,9 @@
 	  <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 	  <PackageReference Include="Microsoft.SqlServer.Types" Version="14.0.1016.290" />
 	  <PackageReference Include="NeoLua" Version="1.3.11" />
-	  <PackageReference Include="TecWare.DES.Core" Version="3.4.57" />
-	  <PackageReference Include="TecWare.DES.ServerLib" Version="3.4.57" />
+	  <PackageReference Include="SharpZipLib" Version="1.3.0" />
+	  <PackageReference Include="TecWare.DES.Core" Version="3.4.64" />
+	  <PackageReference Include="TecWare.DES.ServerLib" Version="3.4.64" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\PPSnCore\PPSnCore.csproj" />
@@ -47,6 +56,10 @@
 	  <Reference Include="Microsoft.Deployment.WindowsInstaller">
 	    <HintPath>..\Common\DTF\Microsoft.Deployment.WindowsInstaller.dll</HintPath>
 	  </Reference>
+	</ItemGroup>
+	<ItemGroup>
+	  <EmbeddedResource Include="Resources\view.html" />
+	  <EmbeddedResource Include="Resources\info.html" />
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 	  <Exec Command="copy.cmd" />

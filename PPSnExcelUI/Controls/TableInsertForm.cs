@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -510,7 +511,7 @@ namespace TecWare.PPSn.Controls
 				=> Source.GetColumnName(column);
 
 			IPpsFilterColumn IPpsFilterColumnFactory.CreateFilterColumn(IPpsFilterExpression filterExpression, IPpsFilterGroup group)
-				=> new FilterColumn((FilterExpression)filterExpression, (FilterGroup)group, this, PpsDataFilterCompareOperator.Contains, PpsDataFilterCompareNullValue.Default);
+				=> new FilterColumn((FilterExpression)filterExpression, (FilterGroup)group, this, PpsDataFilterCompareOperator.Contains, PpsDataFilterNullValue.Default);
 
 			public override PpsTableColumnType Type => PpsTableColumnType.Data;
 			public TreeNodeData Source => columnSource;
@@ -529,10 +530,10 @@ namespace TecWare.PPSn.Controls
 			private readonly SourceColumnData columnSource;
 			private FilterGroup group;
 			private PpsDataFilterCompareOperator op;
-			private PpsDataFilterCompareValue value;
+			private PpsDataFilterValue value;
 			private bool isVisible = true;
 
-			internal FilterColumn(FilterExpression filterExpression, FilterGroup group, SourceColumnData columnSource, PpsDataFilterCompareOperator op, PpsDataFilterCompareValue value)
+			internal FilterColumn(FilterExpression filterExpression, FilterGroup group, SourceColumnData columnSource, PpsDataFilterCompareOperator op, PpsDataFilterValue value)
 			{
 				this.filterExpression = filterExpression ?? throw new ArgumentNullException(nameof(filterExpression));
 				this.group = group ?? throw new ArgumentNullException(nameof(group));
@@ -548,7 +549,7 @@ namespace TecWare.PPSn.Controls
 				else
 				{
 					var sb = new StringBuilder();
-					value.ToString(sb);
+					value.ToString(sb, CultureInfo.CurrentUICulture);
 					return sb.ToString();
 				}
 			} // func GetFormattedValue
@@ -556,9 +557,9 @@ namespace TecWare.PPSn.Controls
 			bool IPpsFilterColumn.TrySetValue(string text)
 			{
 				if (String.IsNullOrEmpty(text))
-					value = PpsDataFilterCompareNullValue.Default;
+					value = PpsDataFilterNullValue.Default;
 				else
-					value = PpsDataFilterExpression.ParseCompareValue(text);
+					value = PpsDataFilterExpression.ParseValue(text, 0, text.Length, CultureInfo.CurrentUICulture, PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.AllowVariables);
 				return true;
 
 				//Source.Column.DataType
@@ -912,7 +913,7 @@ namespace TecWare.PPSn.Controls
 			await availableViews.RefreshAsync();
 
 			// check current view
-			var hasData = data != null && !data.IsEmpty;
+			var hasData = data != null && (!data.IsEmpty || data.Views != null);
 			if (hasData)
 			{
 				// joins
@@ -955,14 +956,17 @@ namespace TecWare.PPSn.Controls
 				tableTree.SelectedNode = tableTree.Nodes[0];
 		} // func RefreshAllAsync
 
+		internal static string GetEditTitle(IPpsTableData tableData)
+			=> tableData.IsEmpty ? "Neue Tabelle einfügen" : String.Format("{0} bearbeiten", tableData.DisplayName);
+
+		internal static string GetOkTitle(IPpsTableData tableData)
+			=> tableData.IsEmpty ? "Einfügen" : "Aktualisieren";
+
 		public void LoadData(IPpsTableData tableData)
 		{
-			Text = tableData.IsEmpty
-				? "Neue Tabelle einfügen"
-				: String.Format("{0} bearbeiten", tableData.DisplayName);
-			cmdRefresh.Text = tableData.IsEmpty
-				? "Einfügen"
-				: "Aktualisieren";
+			Text = GetEditTitle(tableData);
+
+			cmdRefresh.Text = GetOkTitle(tableData);
 
 			// update view
 			currentData = tableData;
@@ -1148,9 +1152,6 @@ namespace TecWare.PPSn.Controls
 				RefreshAvailableColumns(nodeData);
 		} // event tableTree_AfterSelect
 
-		private void RefreshAvailableColumns()
-			=> RefreshAvailableColumns(tableTree.SelectedNode?.Tag is TreeNodeData nodeData ? nodeData : null);
-
 		private void ToggleCurrentColumnsListViewSort(int sortColumnIndex)
 		{
 			if (currentColumnsSortOrder == sortColumnIndex)
@@ -1209,6 +1210,8 @@ namespace TecWare.PPSn.Controls
 
 						lvi.Text = newCol.DisplayName;
 						lvi.SubItems[1].Text = newCol.Column.Name;
+						if (newCol.Column.Attributes.TryGetProperty<string>("doc.description", out var description))
+							lvi.ToolTipText = description;
 					}
 
 					currentColumnsListView.Sort();
@@ -1344,9 +1347,12 @@ namespace TecWare.PPSn.Controls
 		private static void UpdateResultColumnListViewItem(ColumnData currentColumn, ListViewItem currentLvi)
 		{
 			var columnSourcePath = currentColumn.SourcePath;
+			var toolTip = currentColumn.SourceName + "\n" + columnSourcePath;
+			if (currentColumn is SourceColumnData sourceColumnData && sourceColumnData.Column.Attributes.TryGetProperty("doc.description", out var description))
+				toolTip += "\n" + description;
 
 			currentLvi.Text = currentColumn.DisplayName;
-			currentLvi.ToolTipText = currentColumn.SourceName + "\n" + columnSourcePath;
+			currentLvi.ToolTipText = toolTip;
 
 			if (currentLvi.SubItems.Count == 1)
 				currentLvi.SubItems.Add(String.Empty);

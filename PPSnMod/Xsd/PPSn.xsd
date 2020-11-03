@@ -217,6 +217,14 @@
 		</xs:restriction>
 	</xs:simpleType>
 
+	<xs:simpleType name="dataJoinType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Inner" />
+			<xs:enumeration value="Left" />
+			<xs:enumeration value="Right" />
+		</xs:restriction>
+	</xs:simpleType>
+
 	<xs:element name="register">
 		<xs:annotation>
 			<xs:appinfo>
@@ -324,9 +332,19 @@
 												<xs:documentation>Optional alias, if the view is used more than once.</xs:documentation>
 											</xs:annotation>
 										</xs:attribute>
+										<xs:attribute name="type" type="pps:dataJoinType" use="optional" default="Inner">
+											<xs:annotation>
+												<xs:documentation>Define the join type.</xs:documentation>
+											</xs:annotation>
+										</xs:attribute>
 										<xs:attribute name="on" type="xs:string" use="required">
 											<xs:annotation>
 												<xs:documentation>Join statement for the view.</xs:documentation>
+											</xs:annotation>
+										</xs:attribute>
+										<xs:attribute name="displayName" type="xs:string" use="optional">
+											<xs:annotation>
+												<xs:documentation>Displayname for the join expression.</xs:documentation>
 											</xs:annotation>
 										</xs:attribute>
 									</xs:complexType>
@@ -829,6 +847,11 @@
 				<xs:extension base="ConfigItemType">
 					<xs:sequence minOccurs="0" maxOccurs="unbounded">
 					</xs:sequence>
+					<xs:attribute name="xlsxTemplates" type="PathType" use="optional">
+						<xs:annotation>
+							<xs:documentation>Directory for xlsx templates.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
 				</xs:extension>
 			</xs:complexContent>
 		</xs:complexType>
@@ -926,7 +949,61 @@
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
-	
+
+	<xs:simpleType name="ClientOptionKeyType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="(\w+\.?)+" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="ClientOptionRefKeyType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[\w+\._]+" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:element name="clientOptions">
+		<xs:annotation>
+			<xs:documentation>Define options (key/value pairs) for an client.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="value" minOccurs="0" maxOccurs="unbounded">
+					<xs:complexType>
+						<xs:simpleContent>
+							<xs:extension base="xs:string">
+								<xs:attribute name="key" type="pps:ClientOptionKeyType" use="required">
+									<xs:annotation>
+										<xs:documentation>Option key.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:extension>
+						</xs:simpleContent>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+			
+			<xs:attribute name="id" type="KeyType" use="required">
+				<xs:annotation>
+					<xs:documentation>Simple name to identify the option package.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="clientId" type="xs:string" use="optional">
+				<xs:annotation>
+					<xs:documentation>Device name. Dot based identification string with place holders. Is this value is missing it is a generic/abstract group.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="ref" use="optional">
+				<xs:annotation>
+					<xs:documentation>Option packaged id, that this configuration is based on.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:list itemType="pps:ClientOptionRefKeyType" />
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+
 	<xs:element name="ppsn" substitutionGroup="configItem">
 		<xs:annotation>
 			<xs:documentation>Basic environment for the ERP services.</xs:documentation>
@@ -946,6 +1023,7 @@
 						<xs:element ref="pps:objectItem" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:package" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:style" minOccurs="0" maxOccurs="1" />
+						<xs:element ref="pps:clientOptions" minOccurs="0" maxOccurs="unbounded" />
 					</xs:sequence>
 					<xs:attribute name="mainDataSource" type="xs:string" use="optional">
 						<xs:annotation>

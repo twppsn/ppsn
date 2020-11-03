@@ -14,12 +14,9 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TecWare.PPSn.Data;
 
@@ -50,6 +47,16 @@ namespace TecWare.PPSn
 			Assert.AreEqual(expected, result);
 		}
 
+		private void TestDateFilter(string expectedText, DateTime from, DateTime to, string valueExpression, CultureInfo cultureInfo, CultureInfo cultureInfo2 = null)
+		{
+			var r = PpsDataFilterDateTimeValue.ParseDateTime(valueExpression, 0, valueExpression.Length, cultureInfo);
+
+			Assert.AreEqual(from, r.From);
+			Assert.AreEqual(to, r.To);
+
+			Assert.AreEqual(expectedText, r.ToString(cultureInfo2 ?? cultureInfo));
+		} //proc TestDateFilter
+
 		[TestMethod]
 		public void TestFilter01()
 			=> TestFilter("text", "text");
@@ -65,81 +72,88 @@ namespace TecWare.PPSn
 		[TestMethod]
 		public void TestFilter04()
 		{
-			// test: ToString
-			TestFilter("#..2010#", "#01.01.2010~01.01.2011#");
-			TestFilter("#.01.2010#", "#01.01.2010~01.02.2010#");
-			TestFilter("#01.01.2010#", "#01.01.2010~02.01.2010#");
-			TestFilter("#01.01.2010~31.12.2010#", "#01.01.2010~31.12.2010#");
+			var cultureInfo = CultureInfo.GetCultureInfo("de-DE");
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "2010", cultureInfo);
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "..2010", cultureInfo);
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "01.01.2010~31.12.2010", cultureInfo);
+			TestDateFilter("#01.10.2010#", new DateTime(2010, 10, 1), new DateTime(2010, 10, 2), "01.10.2010", cultureInfo);
+
+			TestDateFilter("#01.2010#", new DateTime(2010, 1, 1), new DateTime(2010, 2, 1), "01.2010", cultureInfo);
+			TestDateFilter("#30.04.2010#", new DateTime(2010, 4, 30), new DateTime(2010, 5, 1), "31.04.2010", cultureInfo);
+			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "2010~2012", cultureInfo);
+			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "01.01.2010~31.12.2012", cultureInfo);
+			
+			TestDateFilter("#02.2010~12.2012#", new DateTime(2010, 2, 1), new DateTime(2013, 1, 1), "02.2010~12.2012", cultureInfo);
+			TestDateFilter("#01.01.2010~30.11.2010#", new DateTime(2010, 1, 1), new DateTime(2010, 12, 1), "01.01.2010~31.11.2010", cultureInfo);
+
+			TestDateFilter("#01.01.2010T10:22~30.11.2010T20:15#", new DateTime(2010, 1, 1, 10, 22, 0), new DateTime(2010, 11, 30, 20, 16, 0), "01.01.2010T10:22~31.11.2010T20:15", cultureInfo);
+			TestDateFilter("#01.01.2010T10:22:12~30.11.2010T20:15:30#", new DateTime(2010, 1, 1, 10, 22, 12), new DateTime(2010, 11, 30, 20, 15, 31), "01.01.2010T10:22:12~31.11.2010T20:15:30", cultureInfo);
+			TestDateFilter("#01.01.2010T10:22#", new DateTime(2010, 1, 1, 10, 22, 0), new DateTime(2010, 1, 1, 10, 23, 0), "01.01.2010T10:22", cultureInfo);
+			TestDateFilter("#01.01.2010T10:22:00#", new DateTime(2010, 1, 1, 10, 22, 0), new DateTime(2010, 1, 1, 10, 22, 1), "01.01.2010T10:22:00", cultureInfo);
+			TestDateFilter("#01.01.2010T10:22:12#", new DateTime(2010, 1, 1, 10, 22, 12), new DateTime(2010, 1, 1, 10, 22, 13), "01.01.2010T10:22:12", cultureInfo);
+
+			TestDateFilter("#~#", DateTime.MinValue, DateTime.MaxValue, "~", cultureInfo);
+			TestDateFilter("#0#", DateTime.MaxValue, DateTime.MinValue, "0", cultureInfo);
+			//TestDateFilter(String.Format(cultureInfo, "#{0:d}#", DateTime.Now), DateTime.Now.Date, DateTime.Now.Date.AddDays(1), "", cultureInfo);
 		}
 
 		[TestMethod]
-		public void TestFilter05de()
+		public void TestFilter05inv()
 		{
-			var cultureInfo = Thread.CurrentThread.CurrentUICulture;
-			try
-			{
-				Thread.CurrentThread.CurrentUICulture = new System.Globalization.CultureInfo("de-DE");
-				TestFilter("#..2010#", "#2010#");
-				TestFilter("#.09.2010#", "#.09.2010#");
-				TestFilter($"#.09.2010#", "#09.2010#");
-				TestFilter("#20.09.2010#", "#20.09.2010#");
-				TestFilter($"#20.09.{DateTime.Now.Year}#", "#20.09.#");
-				TestFilter($"#20.{DateTime.Now.Month:00}.{DateTime.Now.Year}#", "#20.#");
-				TestFilter($"#{DateTime.Now.Day:00}.{DateTime.Now.Month:00}.{DateTime.Now.Year}#", "##");
+			var cultureInfo = CultureInfo.InvariantCulture;
 
-				TestFilter($"##", "#31.02.2010#");
-			}
-			finally
-			{
-				Thread.CurrentThread.CurrentUICulture = cultureInfo;
-			}
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "2010", cultureInfo);
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "//2010", cultureInfo);
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "01/01/2010~12/31/2010", cultureInfo);
+			TestDateFilter("#10/01/2010#", new DateTime(2010, 10, 1), new DateTime(2010, 10, 2), "10/01/2010", cultureInfo);
+
+			TestDateFilter("#01/2010#", new DateTime(2010, 1, 1), new DateTime(2010, 2, 1), "01/2010", cultureInfo);
+			TestDateFilter("#04/30/2010#", new DateTime(2010, 4, 30), new DateTime(2010, 5, 1), "04/31/2010", cultureInfo);
+			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "2010~2012", cultureInfo);
+			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "01/01/2010~12/31/2012", cultureInfo);
+
+			TestDateFilter("#02/2010~12/2012#", new DateTime(2010, 2, 1), new DateTime(2013, 1, 1), "02/2010~12/2012", cultureInfo);
+			TestDateFilter("#01/01/2010~11/30/2010#", new DateTime(2010, 1, 1), new DateTime(2010, 12, 1), "01/01/2010~11/31/2010", cultureInfo);
 		}
 
 		[TestMethod]
-		public void TestFilter05es()
+		public void TestFilter05deTOinv()
 		{
-			var cultureInfo = Thread.CurrentThread.CurrentUICulture;
-			try
-			{
-				Thread.CurrentThread.CurrentUICulture = new System.Globalization.CultureInfo("es-ES");
-				TestFilter("#//2010#", "#2010#");
-				TestFilter("#/09/2010#", "#/09/2010#");
-				TestFilter($"#/09/2010#", "#09/2010#");
-				TestFilter("#20/09/2010#", "#20/09/2010#");
-				TestFilter($"#20/09/{DateTime.Now.Year}#", "#20/09/#");
-				TestFilter($"#20/{DateTime.Now.Month:00}/{DateTime.Now.Year}#", "#20/#");
-				TestFilter($"#{DateTime.Now.Day:00}/{DateTime.Now.Month:00}/{DateTime.Now.Year}#", "##");
+			var cultureInfo = CultureInfo.GetCultureInfo("de-DE");
+			var cultureInfo2 = CultureInfo.InvariantCulture;
 
-				TestFilter($"##", "#31/02/2010#");
-			}
-			finally
-			{
-				Thread.CurrentThread.CurrentUICulture = cultureInfo;
-			}
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "..2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "01./01.2010~31.12.2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#10/01/2010#", new DateTime(2010, 10, 1), new DateTime(2010, 10, 2), "01.10.2010", cultureInfo, cultureInfo2);
+
+			TestDateFilter("#01/2010#", new DateTime(2010, 1, 1), new DateTime(2010, 2, 1), "01.2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#04/30/2010#", new DateTime(2010, 4, 30), new DateTime(2010, 5, 1), "31.04.2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "2010~2012", cultureInfo, cultureInfo2);
+			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "01.01.2010~31.12.2012", cultureInfo, cultureInfo2);
+
+			TestDateFilter("#02/2010~12/2012#", new DateTime(2010, 2, 1), new DateTime(2013, 1, 1), "02.2010~12.2012", cultureInfo, cultureInfo2);
+			TestDateFilter("#01/01/2010~11/30/2010#", new DateTime(2010, 1, 1), new DateTime(2010, 12, 1), "01.01.2010~31.11.2010", cultureInfo, cultureInfo2);
 		}
 
 		[TestMethod]
-		public void TestFilter05us()
+		public void TestFilter05invTOde()
 		{
-			var cultureInfo = Thread.CurrentThread.CurrentUICulture;
-			try
-			{
-				Thread.CurrentThread.CurrentUICulture = new System.Globalization.CultureInfo("en-US");
-				TestFilter("#//2010#", "#2010#");
-				TestFilter("#9//2010#", "#9//2010#");
-				TestFilter($"#9//2010#", "#9/2010#");
-				TestFilter("#9/20/2010#", "#09/20/2010#");
-				TestFilter($"#9/20/{DateTime.Now.Year}#", "#9/20/#");
-				TestFilter($"#{DateTime.Now.Month}/20/{DateTime.Now.Year}#", "#20/#");
-				TestFilter($"#9/{DateTime.Now.Day}/{DateTime.Now.Year}#", "#9/#");
-				TestFilter($"#{DateTime.Now.Month}/{DateTime.Now.Day}/{DateTime.Now.Year}#", "##");
+			var cultureInfo = CultureInfo.InvariantCulture;
+			var cultureInfo2 = CultureInfo.GetCultureInfo("de-DE");
 
-				TestFilter($"##", "#02/31/2010#");
-			}
-			finally
-			{
-				Thread.CurrentThread.CurrentUICulture = cultureInfo;
-			}
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "//2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#2010#", new DateTime(2010, 1, 1), new DateTime(2011, 1, 1), "01/01/2010~12/31/2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#01.10.2010#", new DateTime(2010, 10, 1), new DateTime(2010, 10, 2), "10/01/2010", cultureInfo, cultureInfo2);
+
+			TestDateFilter("#01.2010#", new DateTime(2010, 1, 1), new DateTime(2010, 2, 1), "01/2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#30.04.2010#", new DateTime(2010, 4, 30), new DateTime(2010, 5, 1), "04/31/2010", cultureInfo, cultureInfo2);
+			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "2010~2012", cultureInfo, cultureInfo2);
+			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "01/01/2010~12/31/2012", cultureInfo, cultureInfo2);
+
+			TestDateFilter("#02.2010~12.2012#", new DateTime(2010, 2, 1), new DateTime(2013, 1, 1), "02/2010~12/2012", cultureInfo, cultureInfo2);
+			TestDateFilter("#01.01.2010~30.11.2010#", new DateTime(2010, 1, 1), new DateTime(2010, 12, 1), "01/01/2010~11/31/2010", cultureInfo, cultureInfo2);
 		}
 
 		[TestMethod]
@@ -204,6 +218,34 @@ namespace TecWare.PPSn
 			var f = PpsDataFilterExpression.Parse("Int64:(1 2 3 4 5)");
 			var p = PpsDataFilterVisitorLambda.CompileTypedFilter<Props>(f);
 			var f2 = PpsDataFilterExpression.Parse("or(or(Int64:=1 Int64:=2 Int64:=3 Int64:=4 Int64:=2) Int64:=5)").Reduce();
+		}
+
+		private sealed class TextSqlVisitor : PpsDataFilterVisitorSql
+		{
+			private readonly Tuple<string, Type>[] columns;
+
+			public TextSqlVisitor(params Tuple<string, Type>[] columns)
+			{
+				this.columns = columns;
+			} // ctor
+
+			protected override Tuple<string, Type> LookupColumn(string columnToken)
+				=> columns.FirstOrDefault(c => String.Compare(c.Item1, columnToken, StringComparison.OrdinalIgnoreCase) == 0);
+
+			protected override string LookupNativeExpression(string key)
+				=> null;
+		}
+
+		[TestMethod]
+		public void TestSqlVisitor()
+		{
+			var t = new TextSqlVisitor(
+				new Tuple<string, Type>("DD", typeof(DateTime))
+			).CreateFilter(PpsDataFilterExpression.Combine(
+				PpsDataFilterExpression.Compare("DD", PpsDataFilterCompareOperator.Equal, new DateTime(2010, 5, 26))
+			));
+
+			Assert.AreEqual("DD BETWEEN '26.05.2010 00:00:00' AND '26.05.2010 23:59:59'", t);
 		}
 	}
 }

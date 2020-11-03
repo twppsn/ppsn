@@ -255,9 +255,9 @@ namespace TecWare.PPSn.Controls
 
 		private PdfReader pdf = null;
 
-		private Size virtualSize = default(Size); // in 1/72inch, page units
-		private Point viewOffset = default(Point); // in 1/72inch, page units
-		private Size viewSize = default(Size); // total view size in page units
+		private Size virtualSize = default; // in 1/72inch, page units
+		private Point viewOffset = default; // in 1/72inch, page units
+		private Size viewSize = default; // total view size in page units
 		private readonly double gapInInch; // gap in inch, between the pages
 		private PageLayout[] pageSizes = null; // page layout in the virtual area, page units
 		private Point scaleFactor; // scale factor to screen to wpf screen coordinates (not true pixel)

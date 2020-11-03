@@ -44,25 +44,29 @@
 			this.separator3 = this.Factory.CreateRibbonSeparator();
 			this.cmdRefresh = this.Factory.CreateRibbonButton();
 			this.button1 = this.Factory.CreateRibbonButton();
-			this.group1 = this.Factory.CreateRibbonGroup();
+			this.groupConnection = this.Factory.CreateRibbonGroup();
 			this.loginMenu = this.Factory.CreateRibbonMenu();
 			this.loginGalery = this.Factory.CreateRibbonGallery();
 			this.separator2 = this.Factory.CreateRibbonSeparator();
 			this.logoutButton = this.Factory.CreateRibbonButton();
 			this.cmdExtended = this.Factory.CreateRibbonMenu();
+			this.editTableExCommand = this.Factory.CreateRibbonButton();
 			this.cmdStyles = this.Factory.CreateRibbonButton();
 			this.cmdListObjectInfo = this.Factory.CreateRibbonButton();
-			this.cmdOptions = this.Factory.CreateRibbonButton();
+			this.groupCommands = this.Factory.CreateRibbonGroup();
+			this.separator4 = this.Factory.CreateRibbonSeparator();
+			this.removeTableSourceData = this.Factory.CreateRibbonButton();
 			this.tabPPSn.SuspendLayout();
 			this.groupData.SuspendLayout();
-			this.group1.SuspendLayout();
+			this.groupConnection.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// tabPPSn
 			// 
 			this.tabPPSn.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
 			this.tabPPSn.Groups.Add(this.groupData);
-			this.tabPPSn.Groups.Add(this.group1);
+			this.tabPPSn.Groups.Add(this.groupConnection);
+			this.tabPPSn.Groups.Add(this.groupCommands);
 			this.tabPPSn.KeyTip = "N";
 			this.tabPPSn.Label = "PPSn";
 			this.tabPPSn.Name = "tabPPSn";
@@ -149,12 +153,12 @@
 			this.button1.ShowImage = true;
 			this.button1.Visible = false;
 			// 
-			// group1
+			// groupConnection
 			// 
-			this.group1.Items.Add(this.loginMenu);
-			this.group1.Items.Add(this.cmdExtended);
-			this.group1.Label = "Verbindung";
-			this.group1.Name = "group1";
+			this.groupConnection.Items.Add(this.loginMenu);
+			this.groupConnection.Items.Add(this.cmdExtended);
+			this.groupConnection.Label = "Verbindung";
+			this.groupConnection.Name = "groupConnection";
 			// 
 			// loginMenu
 			// 
@@ -187,14 +191,23 @@
 			// 
 			// cmdExtended
 			// 
-			this.cmdExtended.Items.Add(this.cmdStyles);
+			this.cmdExtended.Items.Add(this.editTableExCommand);
+			this.cmdExtended.Items.Add(this.removeTableSourceData);
 			this.cmdExtended.Items.Add(this.cmdListObjectInfo);
-			this.cmdExtended.Items.Add(this.cmdOptions);
+			this.cmdExtended.Items.Add(this.separator4);
+			this.cmdExtended.Items.Add(this.cmdStyles);
 			this.cmdExtended.Label = "Erweitert";
 			this.cmdExtended.Name = "cmdExtended";
 			this.cmdExtended.OfficeImageId = "PropertySheet";
 			this.cmdExtended.ShowImage = true;
 			this.cmdExtended.SuperTip = "Erweiterte Menüpunkte";
+			// 
+			// editTableExCommand
+			// 
+			this.editTableExCommand.Label = "Tabelle bearbeiten...";
+			this.editTableExCommand.Name = "editTableExCommand";
+			this.editTableExCommand.ShowImage = true;
+			this.editTableExCommand.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.editTableExCommand_Click);
 			// 
 			// cmdStyles
 			// 
@@ -208,17 +221,27 @@
 			// 
 			// cmdListObjectInfo
 			// 
-			this.cmdListObjectInfo.Label = "Xml-Quell-Daten anzeigen";
+			this.cmdListObjectInfo.Label = "Query anzeigen...";
 			this.cmdListObjectInfo.Name = "cmdListObjectInfo";
 			this.cmdListObjectInfo.ShowImage = true;
 			this.cmdListObjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdListObjectInfo_Click);
 			// 
-			// cmdOptions
+			// groupCommands
 			// 
-			this.cmdOptions.Label = "Optionen";
-			this.cmdOptions.Name = "cmdOptions";
-			this.cmdOptions.ShowImage = true;
-			this.cmdOptions.Visible = false;
+			this.groupCommands.Label = "Befehle";
+			this.groupCommands.Name = "groupCommands";
+			this.groupCommands.Visible = false;
+			// 
+			// separator4
+			// 
+			this.separator4.Name = "separator4";
+			// 
+			// removeTableSourceData
+			// 
+			this.removeTableSourceData.Label = "Tabellendaten löschen";
+			this.removeTableSourceData.Name = "removeTableSourceData";
+			this.removeTableSourceData.ShowImage = true;
+			this.removeTableSourceData.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.removeTableSourceData_Click);
 			// 
 			// PpsMenu
 			// 
@@ -230,8 +253,8 @@
 			this.tabPPSn.PerformLayout();
 			this.groupData.ResumeLayout(false);
 			this.groupData.PerformLayout();
-			this.group1.ResumeLayout(false);
-			this.group1.PerformLayout();
+			this.groupConnection.ResumeLayout(false);
+			this.groupConnection.PerformLayout();
 			this.ResumeLayout(false);
 
 		}
@@ -240,8 +263,7 @@
 		private Microsoft.Office.Tools.Ribbon.RibbonTab tabPPSn;
 		private Microsoft.Office.Tools.Ribbon.RibbonGroup groupData;
 		private Microsoft.Office.Tools.Ribbon.RibbonButton cmdReport;
-		internal Microsoft.Office.Tools.Ribbon.RibbonGroup group1;
-		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdOptions;
+		internal Microsoft.Office.Tools.Ribbon.RibbonGroup groupConnection;
 		internal Microsoft.Office.Tools.Ribbon.RibbonMenu cmdExtended;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdStyles;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdTable;
@@ -256,6 +278,10 @@
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdRefresh;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdListObjectInfo;
 		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator1;
+		internal Microsoft.Office.Tools.Ribbon.RibbonGroup groupCommands;
+		internal Microsoft.Office.Tools.Ribbon.RibbonButton editTableExCommand;
+		internal Microsoft.Office.Tools.Ribbon.RibbonButton removeTableSourceData;
+		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator4;
 	}
 
 	partial class ThisRibbonCollection

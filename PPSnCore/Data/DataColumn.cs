@@ -469,7 +469,7 @@ namespace TecWare.PPSn.Data
 			public int Count
 				=> staticProperties.Count;
 
-			private static Dictionary<string, Func<PpsDataColumnDefinition, object>> staticProperties = new Dictionary<string, Func<PpsDataColumnDefinition, object>>(StringComparer.OrdinalIgnoreCase)
+			private static readonly Dictionary<string, Func<PpsDataColumnDefinition, object>> staticProperties = new Dictionary<string, Func<PpsDataColumnDefinition, object>>(StringComparer.OrdinalIgnoreCase)
 			{
 				["IsIdentity"] = new Func<PpsDataColumnDefinition, object>(c => c.IsIdentity),
 				["IsPrimary"] = new Func<PpsDataColumnDefinition, object>(c => c.IsPrimaryKey)

@@ -16,17 +16,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Caching;
 using System.Xml;
 using System.Xml.Linq;
-using Markdig.Extensions.Tables;
-using Microsoft.Deployment.WindowsInstaller;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -392,20 +388,6 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- IEnumerable --------------------------------------------------------
-
-		/// <summary>Get attributes of this field.</summary>
-		/// <param name="attributeSelector">String selector for attribute names.</param>
-		/// <returns></returns>
-		public IEnumerable<PropertyValue> GetAttributes(string attributeSelector)
-		{
-			return attributeSelector == null || attributeSelector.Length == 0 || attributeSelector == "*"
-				? Attributes
-				: Attributes.Where(c => c.Name.StartsWith(attributeSelector)); // todo: convert standard attribute
-		} // func GetAttributes
-
-		#endregion
-
 		/// <summary>Gets the specific column description.</summary>
 		/// <typeparam name="T">Specific type for the description.</typeparam>
 		/// <returns></returns>
@@ -509,12 +491,14 @@ namespace TecWare.PPSn.Server
 		/// <summary></summary>
 		/// <param name="viewName"></param>
 		/// <param name="aliasName"></param>
+		/// <param name="displayName">Display name for the user.</param>
 		/// <param name="type"></param>
 		/// <param name="statement"></param>
-		public PpsViewJoinDefinition(string viewName, string aliasName, PpsDataJoinType type, PpsDataJoinStatement[] statement)
+		public PpsViewJoinDefinition(string viewName, string aliasName, string displayName, PpsDataJoinType type, PpsDataJoinStatement[] statement)
 		{
 			ViewName = viewName;
 			AliasName = aliasName;
+			DisplayName = displayName;
 			Statement = statement;
 			Type = type;
 		} // ctor
@@ -523,6 +507,8 @@ namespace TecWare.PPSn.Server
 		public string ViewName { get; }
 		/// <summary>Alias to intendify joins to the same view</summary>
 		public string AliasName { get; }
+		/// <summary>Display name for the user.</summary>
+		public string DisplayName { get; }
 		/// <summary>Join type</summary>
 		public PpsDataJoinType Type { get; }
 		/// <summary>On statement for the view.</summary>
@@ -655,7 +641,7 @@ namespace TecWare.PPSn.Server
 				var aliasName = xJoin.GetAttribute("alias", null); // optional
 				var type = xJoin.GetAttribute("type", PpsDataJoinType.Inner);
 
-				return new PpsViewJoinDefinition(viewName, aliasName, type, statement);
+				return new PpsViewJoinDefinition(viewName, aliasName, xJoin.GetAttribute("displayName", null), type, statement);
 			} // func CreateJoinDefinition
 
 			private static PpsDataJoinStatement[] ParseOnStatement(XElement xJoin)
@@ -778,7 +764,7 @@ namespace TecWare.PPSn.Server
 				=> rowAllowed[columnIndex];
 
 			protected bool IsColumnAllowed(int columnIndex)
-				=> rowAllowed == null || columnIndex < 0 || columnIndex >= rowAllowed.Length ? false : rowAllowed[columnIndex];
+				=> rowAllowed != null && columnIndex >= 0 && columnIndex < rowAllowed.Length && rowAllowed[columnIndex];
 
 			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
 			{
@@ -879,13 +865,12 @@ namespace TecWare.PPSn.Server
 
 					columnNames[i] = nativeColumnName;
 
-					var fieldDescription = fieldDefinition?.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
 					var fieldType = fieldDefinition?.DataType ?? columns.Columns[i].DataType;
 
-					if (fieldDescription == null)
+					if (fieldDefinition == null)
 					{
 						xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
-						xml.WriteAttributeString("field", fieldDefinition?.Name ?? nativeColumnName);
+						xml.WriteAttributeString("field", nativeColumnName);
 
 						WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
 						isNullable = true;
@@ -894,7 +879,7 @@ namespace TecWare.PPSn.Server
 					{
 						xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
 
-						foreach (var c in fieldDescription.GetAttributes(attributeSelector))
+						foreach (var c in fieldDefinition.GetAttributes(attributeSelector))
 						{
 							if (String.Compare(c.Name, "Nullable", true) == 0)
 							{
@@ -1280,7 +1265,7 @@ namespace TecWare.PPSn.Server
 		{
 			if (viewAliases.TryGetValue(aliasName, out var desc))
 			{
-				if (desc.Name != view.Name)
+				if (desc != null && desc.Name != view.Name)
 					viewAliases[aliasName] = null; // multiple views!
 			}
 			else
@@ -1530,6 +1515,8 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- ImportView, ExportView, viewget ------------------------------------
+
 		/// <summary>Import a data table.</summary>
 		/// <param name="src"></param>
 		[LuaMember]
@@ -1631,7 +1618,7 @@ namespace TecWare.PPSn.Server
 				true
 			).AwaitTask();
 
-			var attributeSelector = r.GetProperty("a", String.Empty);
+			var attributeSelector = r.GetProperty("a", "*");
 
 			// emit the selector
 			using (var viewWriter = ViewGetCreateWriter(r))
@@ -1643,7 +1630,11 @@ namespace TecWare.PPSn.Server
 			}
 		} // func HttpViewGetAction
 
-		private Dictionary<string, long> ParseSyncGetParameters(IDEWebRequestScope r)
+		#endregion
+
+		#region -- syncget ------------------------------------------------------------
+
+		private Dictionary<string, long> ParseSyncGetParameters(IDEWebRequestScope r, out bool enforceCDC)
 		{
 			var syncIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 		
@@ -1658,6 +1649,9 @@ namespace TecWare.PPSn.Server
 					var lastSyncTimeStamp = xml.GetAttribute("lastSyncTimeStamp", -1L); // utc time stamp
 					if (lastSyncTimeStamp > 0)
 						syncIds[String.Empty] = lastSyncTimeStamp;
+
+					// is enforce read data capture set
+					enforceCDC = xml.GetAttribute("enforceCDC", false);
 
 					// collect table based sync states
 					if (!xml.IsEmptyElement)
@@ -1689,6 +1683,8 @@ namespace TecWare.PPSn.Server
 				var lastSyncTimeStamp = r.GetProperty("_ls", -1L);
 				if(lastSyncTimeStamp > 0)
 					syncIds[String.Empty] = lastSyncTimeStamp;
+
+				enforceCDC = false;
 
 				foreach (var p in r.ParameterNames)
 				{
@@ -1747,9 +1743,9 @@ namespace TecWare.PPSn.Server
 			}
 		} // func TryParseSyncInfo
 
-		private void ExecuteSyncAction(IDEWebRequestScope r, LogMessageScopeProxy log, ref int openElements, XmlWriter xml, long globalLastSyncId, Dictionary<PpsDataSource, PpsDataSynchronization> sessions, string tableExpression, long lastSyncId)
+		private void ExecuteSyncAction(IDEWebRequestScope r, LogMessageScopeProxy log, ref int openElements, XmlWriter xml, long globalLastSyncId, bool enforceCDC, Dictionary<PpsDataSource, PpsDataSynchronization> sessions, string tableExpression, long lastSyncId)
 		{
-			log.Write($"{tableExpression} last={lastSyncId}");
+			log.WriteLine($"{tableExpression} last={lastSyncId}");
 			using (log.Indent())
 			{
 				if (TryParseSyncInfo(tableExpression, out var dataSource, out var tableName, out var rowIdColumn))
@@ -1759,6 +1755,8 @@ namespace TecWare.PPSn.Server
 					{
 						var connection = dataSource.CreateConnection(r.GetUser<IPpsPrivateDataContext>());
 						syncSession = dataSource.CreateSynchronizationSession(connection, globalLastSyncId, false);
+						if (enforceCDC)
+							syncSession.RefreshChanges();
 						sessions.Add(dataSource, syncSession);
 					}
 
@@ -1852,7 +1850,7 @@ namespace TecWare.PPSn.Server
 					log.WriteLine("Synchronization requested: {0}", r.RemoteEndPoint.Address);
 
 					// get sync ids
-					var syncIds = ParseSyncGetParameters(r);
+					var syncIds = ParseSyncGetParameters(r, out var enforceCDC);
 					// generate timestamp for the next request
 					var nextSyncStamp = DateTime.Now.ToFileTimeUtc();
 
@@ -1875,7 +1873,7 @@ namespace TecWare.PPSn.Server
 
 							// write sync state for the tables
 							foreach (var kv in syncIds)
-								ExecuteSyncAction(r, log, ref openElements, xml, globalLastSyncId, sessions, kv.Key, kv.Value);
+								ExecuteSyncAction(r, log, ref openElements, xml, globalLastSyncId, enforceCDC, sessions, kv.Key, kv.Value);
 							
 							// finish with sync stamp
 							xml.WriteStartElement("syncStamp");
@@ -1922,6 +1920,8 @@ namespace TecWare.PPSn.Server
 				}
 			}
 		} // proc HttpSyncGetAction
+
+		#endregion
 
 		/// <summary>Main data source, MS Sql Server</summary>
 		public PpsDataSource MainDataSource => mainDataSource;

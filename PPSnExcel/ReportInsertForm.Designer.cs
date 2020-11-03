@@ -117,6 +117,7 @@
 			// bsReports
 			// 
 			this.bsReports.AllowNew = false;
+			this.bsReports.Sort = "DisplayName";
 			// 
 			// ReportInsertForm
 			// 

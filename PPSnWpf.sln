@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30413.136
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{3AFE3696-3A14-45A8-A079-333850913BFA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Wpf", "Wpf", "{050DF902-A07C-4FDB-9242-E93841CA4036}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnCore", "PPSnCore\PPSnCore.csproj", "{F4609545-6D91-4B2D-A811-3201F4934505}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PPSnCore", "PPSnCore\PPSnCore.csproj", "{F4609545-6D91-4B2D-A811-3201F4934505}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PPSnClient", "PPSnClient\PPSnClient.shproj", "{F2DBCBC9-91BE-4964-AD72-D51D2D9F73C0}"
 EndProject
@@ -16,6 +16,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnDesktop", "PPSnDesktop\PPSnDesktop.csproj", "{399842B7-9C2D-4C1F-8B39-5D479D9C66A7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnReport", "PPSnReport\PPSnReport.csproj", "{BD5FAF7D-B1DD-4A54-A481-C46179FCC087}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{2B37BEA2-FB5B-4F83-A6C4-667AA57951C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnPdfTest", "PPSnPdfTest\PPSnPdfTest.csproj", "{7CF7962C-4A8E-4D49-AC76-65FB75CDDDC1}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -43,6 +47,10 @@ Global
 		{BD5FAF7D-B1DD-4A54-A481-C46179FCC087}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD5FAF7D-B1DD-4A54-A481-C46179FCC087}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD5FAF7D-B1DD-4A54-A481-C46179FCC087}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CF7962C-4A8E-4D49-AC76-65FB75CDDDC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CF7962C-4A8E-4D49-AC76-65FB75CDDDC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CF7962C-4A8E-4D49-AC76-65FB75CDDDC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CF7962C-4A8E-4D49-AC76-65FB75CDDDC1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -53,9 +61,10 @@ Global
 		{C7D09A93-DA78-4B81-8D3C-260442C61C5F} = {050DF902-A07C-4FDB-9242-E93841CA4036}
 		{399842B7-9C2D-4C1F-8B39-5D479D9C66A7} = {050DF902-A07C-4FDB-9242-E93841CA4036}
 		{BD5FAF7D-B1DD-4A54-A481-C46179FCC087} = {3AFE3696-3A14-45A8-A079-333850913BFA}
+		{7CF7962C-4A8E-4D49-AC76-65FB75CDDDC1} = {2B37BEA2-FB5B-4F83-A6C4-667AA57951C3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		RESX_NeutralResourcesLanguage = de-DE
 		SolutionGuid = {F0AFC2F2-0A01-4CAB-8B21-44C224AFF0A0}
+		RESX_NeutralResourcesLanguage = de-DE
 	EndGlobalSection
 EndGlobal

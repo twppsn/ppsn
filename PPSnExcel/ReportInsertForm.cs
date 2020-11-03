@@ -128,6 +128,7 @@ namespace PPSnExcel
 			{
 				case "table":
 					return Properties.Resources.TableTypeImage;
+				case "xlsx":
 				default:
 					return Properties.Resources.ReportTypeImage;
 			}

@@ -385,15 +385,27 @@ namespace TecWare.PPSn
 
 		/// <summary>Edit the current table</summary>
 		/// <param name="table"></param>
-		public void EditTable(IPpsTableData table)
+		/// <param name="extended"></param>
+		public void EditTable(IPpsTableData table, bool extended)
 		{
 			if (table == null)
 				throw new ArgumentNullException(nameof(table));
 
-			using (var frm = new TableInsertForm(this))
+			if (extended)
 			{
-				frm.LoadData(table);
-				frm.ShowDialog(formsApplication);
+				using(var frm = new TableInsertFormEx(this))
+				{
+					frm.LoadData(table);
+					frm.ShowDialog(formsApplication);
+				}
+			}
+			else
+			{
+				using (var frm = new TableInsertForm(this))
+				{
+					frm.LoadData(table);
+					frm.ShowDialog(formsApplication);
+				}
 			}
 		} // void EditTable
 

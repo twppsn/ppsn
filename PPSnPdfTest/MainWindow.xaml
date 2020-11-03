@@ -1,0 +1,15 @@
+﻿<Window x:Class="PPSnPdfTest.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PPSnPdfTest"
+		xmlns:pps="http://tecware-gmbh.de/ppsn/wpf/2015"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+		<pps:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" MinScaleFactor="0.1" MaxScaleFactor="20.0" CanContentScroll="True" IsManipulationEnabled="True">
+			<pps:PpsPdfViewer x:Name="pdfViewer" Zoom="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=TwoWay}" />
+		</pps:PpsScrollViewer>
+	</Grid>
+</Window>

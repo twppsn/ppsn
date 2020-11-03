@@ -1141,7 +1141,7 @@ namespace TecWare.PPSn
 		} // func CreateRow
 
 		internal PpsMasterDataSelector CreateRelation(PpsDataTableRelationDefinition relation, object key)
-			=> new PpsMasterDataTableResult(MasterData.GetTable(relation.ChildColumn.Table), PpsDataFilterExpression.Compare(relation.ChildColumn.Name, PpsDataFilterCompareOperator.Equal, PpsDataFilterCompareValueType.Integer, key), null);
+			=> new PpsMasterDataTableResult(MasterData.GetTable(relation.ChildColumn.Table), PpsDataFilterExpression.Compare(relation.ChildColumn.Name, PpsDataFilterCompareOperator.Equal, PpsDataFilterValueType.Integer, key), null);
 
 		/// <summary></summary>
 		/// <param name="expression"></param>
