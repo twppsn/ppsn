@@ -355,3 +355,11 @@ namespace TecWare.PPSn.Controls
 
 	} // class PpsWebView
 }
+/*
+string r3 = await webBrowser1.CoreWebView2.CallDevToolsProtocolMethodAsync("Page.captureScreenshot", "{}");
+JObject o3 = JObject.Parse(r3);
+JToken data = o3["data"];
+string data_str = data.ToString();
+
+Image image = Base64ToImage(data_str);
+*/
