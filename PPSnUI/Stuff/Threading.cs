@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace TecWare.PPSn
+namespace TecWare.PPSn.Stuff
 {
 	#region -- class PpsSynchronizationContext ----------------------------------------
 
@@ -43,7 +43,7 @@ namespace TecWare.PPSn
 		private volatile bool doContinue = true;
 
 		/// <summary></summary>
-		public PpsSynchronizationContext()
+		protected PpsSynchronizationContext()
 		{
 		} // ctor
 
@@ -181,18 +181,18 @@ namespace TecWare.PPSn
 		private struct NoneResult { }
 
 		private readonly Thread thread;
-		
+
 		private readonly TaskCompletionSource<NoneResult> taskCompletion = new TaskCompletionSource<NoneResult>();
 
 		/// <summary></summary>
 		/// <param name="name"></param>
 		/// <param name="cancellationToken"></param>
 		/// <param name="mainProc"></param>
-		public PpsSingleThreadSynchronizationContext(string name, CancellationToken cancellationToken, Func<Task> mainProc)
+		public PpsSingleThreadSynchronizationContext(string name, Func<Task> mainProc, CancellationToken cancellationToken)
 		{
 			cancellationToken.Register(Finish);
 
-			this.thread = new Thread(ExecuteMessageLoop)
+			thread = new Thread(ExecuteMessageLoop)
 			{
 				Name = name,
 				IsBackground = false,
@@ -239,4 +239,57 @@ namespace TecWare.PPSn
 	} // class PpsSingleThreadSynchronizationContext
 
 	#endregion
+
+	#region -- class PpsThreadSafeMonitor ---------------------------------------------
+
+	/// <summary>Build a monitor, that raises an exception, if the exit gets called in the wrong thread.</summary>
+	public sealed class PpsThreadSafeMonitor : IDisposable
+	{
+		private readonly object threadLock;
+		private readonly int threadId;
+
+		private bool isDisposed = false;
+
+		/// <summary>Enter lock</summary>
+		/// <param name="threadLock"></param>
+		public PpsThreadSafeMonitor(object threadLock)
+		{
+			this.threadLock = threadLock;
+			this.threadId = Thread.CurrentThread.ManagedThreadId;
+
+			Monitor.Enter(threadLock);
+		} // ctor
+
+		/// <summary></summary>
+		~PpsThreadSafeMonitor()
+		{
+			Dispose(false);
+		} // dtor
+
+		/// <summary>Exit lock</summary>
+		public void Dispose()
+		{
+			GC.SuppressFinalize(this);
+			Dispose(true);
+		} // proc Dispose
+
+		private void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				if (isDisposed)
+					throw new ObjectDisposedException(nameof(PpsThreadSafeMonitor));
+				if (threadId != Thread.CurrentThread.ManagedThreadId)
+					throw new ArgumentException();
+
+				Monitor.Exit(threadLock);
+				isDisposed = true;
+			}
+			else if (!isDisposed)
+				throw new ArgumentException();
+		} // proc Dispose
+	} // class PpsThreadSafeMonitor
+
+	#endregion
+
 }

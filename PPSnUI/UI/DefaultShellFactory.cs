@@ -127,9 +127,9 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		public async Task<IPpsSettingsService> LoadSettingsAsync()
+		public async Task<IPpsSettingsService> LoadSettingsAsync(IPpsShell shell)
 		{
-			var settings = FileSettingsInfo.CreateInstanceSettings(this);
+			var settings = FileSettingsInfo.CreateInstanceSettings(shell, this);
 			await settings.LoadAsync();
 			return settings;
 		} // proc LoadSettingsAsync
@@ -289,8 +289,8 @@ namespace TecWare.PPSn.UI
 			private readonly FileShellInfo info;
 			private readonly Lazy<string> deviceId;
 
-			public InstanceSettingsInfo(FileShellInfo info)
-				: base(info.SettingsInfo)
+			public InstanceSettingsInfo(IPpsShell shell, FileShellInfo info)
+				: base(shell, info.SettingsInfo)
 			{
 				this.info = info ?? throw new ArgumentNullException(nameof(info));
 
@@ -331,10 +331,10 @@ namespace TecWare.PPSn.UI
 
 			protected override Task LoadSettingsFromServerAsync()
 			{
-				if (Shell == null || Shell.Http == null)
+				if (shell == null || shell.Http == null)
 					throw new InvalidOperationException();
 
-				return PpsShell.LoadSettingsFromServerAsync(this, Shell.Http, deviceId.Value, 0);
+				return PpsShell.LoadSettingsFromServerAsync(this, shell.Http, deviceId.Value, 0);
 			} // proc LoadSettingsFromServerAsync
 
 			protected override IReadOnlyList<Tuple<XName, string>> TranslateProperties => translateInstanceProperties;
@@ -346,18 +346,18 @@ namespace TecWare.PPSn.UI
 
 		private sealed class UserSettingsInfo : FileSettingsInfo
 		{
-			public UserSettingsInfo(FileInfo fileInfo, string userName)
-				: base(fileInfo)
+			public UserSettingsInfo(IPpsShell shell, FileInfo fileInfo, string userName)
+				: base(shell, fileInfo)
 			{
 				RegisterKnownSettingValue(new KnownSettingValue(PpsShellUserSettings.UserIdentiyKey, userName, clearAble: false));
 			} // ctor
 
 			protected override Task LoadSettingsFromServerAsync()
 			{
-				if (Shell == null || Shell.Http == null)
+				if (Shell == null || shell.Http == null)
 					throw new InvalidOperationException();
 
-				return PpsShell.LoadUserSettingsFromServerAsync(this, Shell.Http);
+				return PpsShell.LoadUserSettingsFromServerAsync(this, shell.Http);
 			} // proc LoadSettingsFromServerAsync
 
 			protected override IReadOnlyList<Tuple<XName, string>> TranslateProperties => translateUserProperties;
@@ -384,6 +384,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		private readonly IPpsShell shell;
 		private readonly FileInfo fileInfo;
 		private DateTime lastReaded = DateTime.MinValue;
 
@@ -392,8 +393,9 @@ namespace TecWare.PPSn.UI
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		protected FileSettingsInfo(FileInfo fileInfo)
+		protected FileSettingsInfo(IPpsShell shell, FileInfo fileInfo)
 		{
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 			// todo: FileSystemWatcher
 			this.fileInfo = fileInfo ?? throw new ArgumentNullException(nameof(fileInfo));
 		} // ctor
@@ -617,7 +619,7 @@ namespace TecWare.PPSn.UI
 
 		protected abstract IReadOnlyList<Tuple<XName, string>> TranslateProperties { get; }
 
-		public IPpsShell Shell { get; set; } = null;
+		public IPpsShell Shell => shell;
 		public DateTime LastReaded => lastReaded;
 
 		#region -- ParseSettings ------------------------------------------------------
@@ -738,15 +740,17 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		/// <summary>Opens a local environment information.</summary>
+		/// <param name="shell"></param>
 		/// <param name="info"></param>
-		public static FileSettingsInfo CreateInstanceSettings(FileShellInfo info)
-			=> new InstanceSettingsInfo(info);
+		public static FileSettingsInfo CreateInstanceSettings(IPpsShell shell, FileShellInfo info)
+			=> new InstanceSettingsInfo(shell, info);
 
 		/// <summary>Opens a local user information.</summary>
+		/// <param name="shell"></param>
 		/// <param name="userName"></param>
 		/// <param name="userSettingInfo"></param>
-		public static FileSettingsInfo CreateUserSettings(FileInfo userSettingInfo, string userName)
-			=> new UserSettingsInfo(userSettingInfo, userName);
+		public static FileSettingsInfo CreateUserSettings(IPpsShell shell, FileInfo userSettingInfo, string userName)
+			=> new UserSettingsInfo(shell, userSettingInfo, userName);
 	} // class FileSettingsInfo
 
 	#endregion

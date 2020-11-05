@@ -13,20 +13,16 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using System.Reflection;
-using System.Resources;
-using System.Runtime.CompilerServices;
+using System;
 using System.Runtime.InteropServices;
-using System.Windows;
-using System.Windows.Markup;
 
-[assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]
-[assembly: InternalsVisibleTo("PPSnTests")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
-
-[assembly: ComVisible(false)]
-
-[assembly: XmlnsDefinition("http://tecware-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.Controls")]
-//[assembly: XmlnsDefinition("http://tecware-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.Design")]
-[assembly: XmlnsDefinition("http://tecware-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.UI")]
+namespace TecWare.PPSn
+{
+	internal class UnsafeNativeMethods
+	{
+		[DllImport("Kernel32.dll", EntryPoint = "RtlZeroMemory", SetLastError = false)]
+		public static extern void ZeroMemory(IntPtr dest, int size);
+		[DllImport("kernel32.dll", SetLastError = false)]
+		public static extern void CopyMemory(IntPtr dest, IntPtr src, int count);
+	} // class UnsafeNativeMethods
+}

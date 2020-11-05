@@ -534,14 +534,6 @@ namespace TecWare.PPSn
 			progress.Value = newValue;
 		} // proc UpdateProgress
 
-		/// <summary>Unpack exceptions</summary>
-		/// <param name="exception"></param>
-		/// <returns></returns>
-		public static Exception UnpackException(this Exception exception)
-			=> exception is AggregateException agg
-				? UnpackException(agg.InnerException)
-				: exception;
-
 		#region -- CompileAsync -------------------------------------------------------
 
 		/// <summary>Load an compile the file from a remote source.</summary>

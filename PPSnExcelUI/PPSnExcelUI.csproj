@@ -81,7 +81,6 @@
     <Compile Include="Data\PpsTableData.cs" />
     <Compile Include="Data\PpsTableTextData.cs" />
     <Compile Include="NativeMethods.cs" />
-    <Compile Include="PpsEnvironment.cs" />
     <Compile Include="PpsWinShell.cs" />
     <Compile Include="PpsWinShell.UI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

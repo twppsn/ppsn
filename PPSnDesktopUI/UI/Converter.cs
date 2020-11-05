@@ -102,89 +102,89 @@ namespace TecWare.PPSn.UI
 
 	#region -- class LuaValueConverter ------------------------------------------------
 
-	/// <summary>Generic value converter</summary>
-	[ContentProperty("ConvertExpression")]
-	public class LuaValueConverter : IValueConverter, IMultiValueConverter
-	{
-		private delegate object ConvertDelegate(object value, object targetType, object parameter, _PpsShell shell, CultureInfo culture);
-		private static readonly Lua lua = new Lua(); // lua engine for the value converters
+	///// <summary>Generic value converter</summary>
+	//[ContentProperty("ConvertExpression")]
+	//public class LuaValueConverter : IValueConverter, IMultiValueConverter
+	//{
+	//	private delegate object ConvertDelegate(object value, object targetType, object parameter, _PpsShell shell, CultureInfo culture);
+	//	private static readonly Lua lua = new Lua(); // lua engine for the value converters
 
-		private string convert;
-		private ConvertDelegate convertDelegate;
-		private string convertBack;
-		private ConvertDelegate convertBackDelegate;
-		private Lazy<_PpsShell> getShell = null;
+	//	private string convert;
+	//	private ConvertDelegate convertDelegate;
+	//	private string convertBack;
+	//	private ConvertDelegate convertBackDelegate;
+	//	private Lazy<_PpsShell> getShell = null;
 
-		private object ConvertIntern(string script, ref ConvertDelegate dlg, object value, object targetType, object parameter, CultureInfo culture)
-		{
-			if (String.IsNullOrEmpty(script))
-				throw new NotImplementedException();
+	//	private object ConvertIntern(string script, ref ConvertDelegate dlg, object value, object targetType, object parameter, CultureInfo culture)
+	//	{
+	//		if (String.IsNullOrEmpty(script))
+	//			throw new NotImplementedException();
 
-			if (dlg == null) // compile function
-			{
-				var localLua = getShell != null ? getShell.Value.Lua : lua;
-				dlg = localLua.CreateLambda<ConvertDelegate>("convert.lua", script);
-			}
+	//		if (dlg == null) // compile function
+	//		{
+	//			var localLua = getShell != null ? getShell.Value.Lua : lua;
+	//			dlg = localLua.CreateLambda<ConvertDelegate>("convert.lua", script);
+	//		}
 
-			return dlg.DynamicInvoke(value, targetType, parameter, getShell?.Value, culture);
-		} // func ConvertIntern
+	//		return dlg.DynamicInvoke(value, targetType, parameter, getShell?.Value, culture);
+	//	} // func ConvertIntern
 
-		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-			=> ConvertIntern(convert, ref convertDelegate, values, targetType, parameter, culture);
+	//	object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+	//		=> ConvertIntern(convert, ref convertDelegate, values, targetType, parameter, culture);
 
-		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-			=> new LuaResult(ConvertIntern(convertBack, ref convertBackDelegate, value, targetTypes, parameter, culture)).Values;
+	//	object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+	//		=> new LuaResult(ConvertIntern(convertBack, ref convertBackDelegate, value, targetTypes, parameter, culture)).Values;
 
-		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
-			=> ConvertIntern(convert, ref convertDelegate, value, targetType, parameter, culture);
+	//	object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+	//		=> ConvertIntern(convert, ref convertDelegate, value, targetType, parameter, culture);
 
-		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			try
-			{
-				return ConvertIntern(convertBack, ref convertBackDelegate, value, targetType, parameter, culture);
-			}
-			catch (Exception e)
-			{
-				return new ValidationResult(false, e);
-			}
-		} // func IValueConverter.Convert
+	//	object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+	//	{
+	//		try
+	//		{
+	//			return ConvertIntern(convertBack, ref convertBackDelegate, value, targetType, parameter, culture);
+	//		}
+	//		catch (Exception e)
+	//		{
+	//			return new ValidationResult(false, e);
+	//		}
+	//	} // func IValueConverter.Convert
 
-		/// <summary>Convert implementation, the arguments a equal to the IValueConverter-interface.</summary>
-		public string ConvertExpression
-		{
-			get { return convert; }
-			set
-			{
-				if (convert != value)
-				{
-					convert = value;
-					convertDelegate = null;
-				}
-			}
-		} // prop ConvertExpression
+	//	/// <summary>Convert implementation, the arguments a equal to the IValueConverter-interface.</summary>
+	//	public string ConvertExpression
+	//	{
+	//		get { return convert; }
+	//		set
+	//		{
+	//			if (convert != value)
+	//			{
+	//				convert = value;
+	//				convertDelegate = null;
+	//			}
+	//		}
+	//	} // prop ConvertExpression
 
-		/// <summary>ConvertBack implementation, the arguments a equal to the IValueConverter-interface.</summary>
-		public string ConvertBackExpression
-		{
-			get => convertBack;
-			set
-			{
-				if (convertBack != value)
-				{
-					convertBack = value;
-					convertBackDelegate = null;
-				}
-			}
-		} // prop ConvertBackExpression
+	//	/// <summary>ConvertBack implementation, the arguments a equal to the IValueConverter-interface.</summary>
+	//	public string ConvertBackExpression
+	//	{
+	//		get => convertBack;
+	//		set
+	//		{
+	//			if (convertBack != value)
+	//			{
+	//				convertBack = value;
+	//				convertBackDelegate = null;
+	//			}
+	//		}
+	//	} // prop ConvertBackExpression
 
-		/// <summary>Does the converter needs an environment</summary>
-		public bool UseEnvironment
-		{
-			get => getShell != null;
-			set => getShell = new Lazy<_PpsShell>(_PpsShell.GetShell);
-		} // prop UseEnvironment
-	} // class LuaValueConverter
+	//	/// <summary>Does the converter needs an environment</summary>
+	//	public bool UseEnvironment
+	//	{
+	//		get => getShell != null;
+	//		set => getShell = new Lazy<_PpsShell>(_PpsShell.GetShell);
+	//	} // prop UseEnvironment
+	//} // class LuaValueConverter
 
 	#endregion
 

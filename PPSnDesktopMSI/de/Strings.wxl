@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="de-DE" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+	<String Id="ProductName">PPSnDesktop</String>
+	<String Id="ProductLanguage">1033</String>
+	<String Id="ProductCompany">TecWare Gesellschaft für Softwareentwicklung mbH</String>
+	<String Id="ArpHelpLink">https://tecware-gmbh.de/</String>
+	<String Id="ArpUrlInfoAbout">https://tecware-gmbh.de/</String>
+
+	<String Id="PackageComments">Installiert den Basis-Client für ppsn.</String>
+
+	<String Id="ConditionEarlierVersion">Eine ältere Version von [ProductName] ist schon installiert. Setup wird beendet.</String>
+	<String Id="ConditionLaterVersion">Eine neuerer Version wurde schon installiert.</String>
+	<String Id="ConditionAllUsers">Setup darf nur als Nutzer ausgeführt werden.</String>
+
+	<String Id="RunApplication">Anwendung starten</String>
+</WixLocalization>

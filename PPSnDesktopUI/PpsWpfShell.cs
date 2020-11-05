@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -24,14 +23,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
-using System.Xaml;
-using System.Xml;
-using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
@@ -74,7 +69,7 @@ namespace TecWare.PPSn
 			{
 				this.shell = shell;
 
-				Add(DefaultEnvironmentKey, shell); // register environment
+				Add(DefaultShellKey, shell); // register environment
 			} // ctor
 		} // class DefaultResourceProvider
 
@@ -122,11 +117,11 @@ namespace TecWare.PPSn
 				case null:
 					goto default;
 				case FrameworkElement fe:
-					return (T)fe.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
+					return (T)fe.TryFindResource(DefaultShellKey) ?? GetShell<T>(null);
 				case FrameworkContentElement fce:
-					return (T)fce.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
+					return (T)fce.TryFindResource(DefaultShellKey) ?? GetShell<T>(null);
 				default:
-					return (T)Application.Current.TryFindResource(DefaultEnvironmentKey);
+					return (T)Application.Current.TryFindResource(DefaultShellKey);
 			}
 		} // func GetShell	
 
@@ -420,7 +415,7 @@ namespace TecWare.PPSn
 		#endregion
 
 		/// <summary>Resource key for the environment.</summary>
-		public static ResourceKey DefaultEnvironmentKey { get; } = new InstanceKey<PpsShellWpf>();
+		public static ResourceKey DefaultShellKey { get; } = new InstanceKey<IPpsShell>();
 		/// <summary>Resource key for the current pane.</summary>
 		public static ResourceKey CurrentWindowPaneKey { get; } = new InstanceKey<IPpsWindowPane>();
 	} // class PpsWpfShell
@@ -451,7 +446,7 @@ namespace TecWare.PPSn
 			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
 			{
 				// show message simple
-				MsgBox(alternativeMessage ?? exception.UnpackException().ToString(), PpsImage.Error, Ok);
+				MsgBox(alternativeMessage ?? exception.GetInnerException().ToString(), PpsImage.Error, Ok);
 
 				// shutdown application
 				if ((flags & PpsExceptionShowFlags.Shutown) == PpsExceptionShowFlags.Shutown)
@@ -525,9 +520,29 @@ namespace TecWare.PPSn
 	[
 	PpsService(typeof(IPpsCommandManager)),
 	]
-	internal sealed class PpsWpfShellService : IPpsCommandManager
+	internal sealed class PpsWpfShellService : IPpsCommandManager, IPpsWpfResources, IPpsShellService, IPpsShellServiceInit
 	{
+		#region -- class DefaultResourceProvider --------------------------------------
+
+		private sealed class DefaultResourceProvider : ResourceDictionary
+		{
+			public DefaultResourceProvider(IPpsShell shell)
+			{
+				if (shell == null)
+					throw new ArgumentNullException(nameof(shell));
+
+				Add(PpsWpfShell.DefaultShellKey, shell); // register environment
+			} // ctor
+		} // class DefaultResourceProvider
+
+		#endregion
+
 		private readonly IPpsShell shell;
+
+		private readonly ResourceDictionary mainResources;	  // Application resources
+		private readonly ResourceDictionary defaultResources; // default resource, loaded from the server
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsWpfShellService(IPpsShell shell)
 		{
@@ -535,7 +550,30 @@ namespace TecWare.PPSn
 
 			DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, shell, e));
 			DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, shell, e));
+
+			mainResources = Application.Current.Resources;
+			defaultResources = new DefaultResourceProvider(shell);
 		} // ctor
+
+		Task IPpsShellServiceInit.InitAsync()
+		{
+			mainResources.MergedDictionaries.Add(defaultResources);
+			return Task.CompletedTask;
+		} // proc IPpsShellServiceInit.InitAsync
+
+		Task IPpsShellServiceInit.InitUserAsync()
+			=> Task.CompletedTask;
+
+		Task IPpsShellServiceInit.DoneUserAsync()
+			=> Task.CompletedTask;
+
+		Task IPpsShellServiceInit.DoneAsync()
+		{
+			mainResources.MergedDictionaries.Remove(defaultResources);
+			return Task.CompletedTask;
+		} // proc IPpsShellServiceInit.DoneAsync
+
+		#endregion
 
 		#region -- Command Service ----------------------------------------------------
 
@@ -565,6 +603,16 @@ namespace TecWare.PPSn
 
 		public ExecutedRoutedEventHandler DefaultExecutedHandler { get; }
 		public CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
+
+		#endregion
+
+		#region -- IPpsWpfResources - members -----------------------------------------
+
+		IEnumerable<T> IPpsWpfResources.FindResourceByKey<TKEY, T>(Predicate<TKEY> predicate)
+			=> mainResources.FindResourceByKey<TKEY, T>(predicate);
+
+		T IPpsWpfResources.FindResource<T>(object resourceKey)
+			=> defaultResources[resourceKey] as T;
 
 		#endregion
 
@@ -681,580 +729,466 @@ namespace TecWare.PPSn
 
 	#region -- class PpsShellWpf ------------------------------------------------------
 
-	/// <summary></summary>
-	public abstract class PpsShellWpf : _PpsShell, IPpsXamlCode
-	{
-		#region -- class InstanceKey --------------------------------------------------
-
-		/// <summary>Special key to select templates.</summary>
-		private sealed class InstanceKey<T> : ResourceKey
-			where T : class
-		{
-			public InstanceKey()
-			{
-			} // ctor
-
-			public override int GetHashCode()
-				=> typeof(T).GetHashCode();
-
-			public override bool Equals(object obj)
-				=> obj is T;
-
-			public override Assembly Assembly => null;
-		} // class DefaultEnvironmentKeyImpl
-
-		#endregion
-
-		#region -- class DefaultResourceProvider --------------------------------------
-
-		private sealed class DefaultResourceProvider : ResourceDictionary
-		{
-			private readonly PpsShellWpf shell;
-
-			public DefaultResourceProvider(PpsShellWpf shell)
-			{
-				this.shell = shell;
-
-				Add(DefaultEnvironmentKey, shell); // register environment
-			} // ctor
-		} // class DefaultResourceProvider
-
-		#endregion
-
-		#region -- class DefaultStaticDataTemplateSelector ----------------------------
-
-		private sealed class DefaultStaticDataTemplateSelector : DataTemplateSelector
-		{
-			public DefaultStaticDataTemplateSelector()
-			{
-			} // ctor
-
-			public override DataTemplate SelectTemplate(object item, DependencyObject container)
-				=> GetShell<PpsShellWpf>(container)?.GetDataTemplate(item, container);
-		} // class DefaultStaticDataTemplateSelector
-
-		#endregion
-
-		#region -- class DefaultInstanceDataTemplateSelector --------------------------
-
-		private sealed class DefaultInstanceDataTemplateSelector : DataTemplateSelector
-		{
-			private readonly PpsShellWpf shell;
-
-			public DefaultInstanceDataTemplateSelector(PpsShellWpf shell)
-			{
-				this.shell = shell;
-			} // ctor
-
-			public override DataTemplate SelectTemplate(object item, DependencyObject container)
-				=> shell.GetDataTemplate(item, container);
-		} // class DefaultInstanceDataTemplateSelector
-
-		#endregion
-
-		private readonly Dispatcher currentDispatcher;
-		private readonly ResourceDictionary mainResources;
-		private readonly ResourceDictionary defaultResources;
-		private readonly InputManager inputManager;
-		private readonly SynchronizationContext synchronizationContext;
-
-		#region -- Ctor/Dtor ----------------------------------------------------------
-
-		/// <summary></summary>
-		/// <param name="lua"></param>
-		/// <param name="mainResources"></param>
-		protected PpsShellWpf(Lua lua, ResourceDictionary mainResources)
-			: base(lua)
-		{
-			this.mainResources = mainResources ?? throw new ArgumentNullException(nameof(mainResources));
-
-			defaultResources = new DefaultResourceProvider(this);
-			mainResources.MergedDictionaries.Add(defaultResources);
-
-			inputManager = InputManager.Current;
-			currentDispatcher = Dispatcher.CurrentDispatcher ?? throw new ArgumentNullException(nameof(Dispatcher.CurrentDispatcher));
-			synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
-
-			DefaultDataTemplateSelector = new DefaultInstanceDataTemplateSelector(this);
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="disposing"></param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing)
-			{
-				mainResources.MergedDictionaries.Remove(defaultResources);
-			}
-		} // proc Dispose
-
-		#endregion
-
-		#region -- Wpf Resource Management --------------------------------------------
-
-		private class FindResourceStackItem
-		{
-			private int mergedIndex;
-
-			public FindResourceStackItem(ResourceDictionary resourceDictionary)
-			{
-				Resources = resourceDictionary;
-
-				mergedIndex = resourceDictionary.MergedDictionaries.Count - 1;
-			} // ctor
-
-			public bool TryGetNextDictionary(out FindResourceStackItem stackItem)
-			{
-				if (mergedIndex >= 0)
-				{
-					stackItem = new FindResourceStackItem(Resources.MergedDictionaries[mergedIndex--]);
-					return true;
-				}
-				else
-				{
-					stackItem = null;
-					return false;
-				}
-			} // func TryGetNextDictionary
-
-			public ResourceDictionary Resources { get; }
-		} // class FindResourceStackItem
-
-		/// <summary>Find a global resource.</summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="resourceKey"></param>
-		/// <returns></returns>
-		public T FindResource<T>(object resourceKey)
-			where T : class
-			=> defaultResources[resourceKey] as T;
-
-		/// <summary></summary>
-		/// <typeparam name="TKEY"></typeparam>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="resourceDictionary"></param>
-		/// <param name="predicate"></param>
-		/// <returns></returns>
-		public static IEnumerable<T> FindResourceByKeyCore<TKEY, T>(ResourceDictionary resourceDictionary, Predicate<TKEY> predicate = null)
-			where TKEY : ResourceKey
-		{
-			var dictionaryStack = new Stack<FindResourceStackItem>();
-			var current = new FindResourceStackItem(resourceDictionary);
-
-			var returnedKeys = new List<TKEY>();
-
-			while (current != null)
-			{
-				// enumerate merged resources
-				while (current.TryGetNextDictionary(out var stackItem))
-				{
-					dictionaryStack.Push(current);
-					current = stackItem;
-				}
-
-				// enumerate resource keys
-				foreach (var key in current.Resources.Keys.OfType<TKEY>())
-				{
-					if (!returnedKeys.Contains(key) && (predicate == null || predicate(key)) && current.Resources[key] is T v)
-					{
-						returnedKeys.Add(key);
-						yield return v;
-					}
-				}
-				
-				current = dictionaryStack.Count > 0 ? dictionaryStack.Pop() : null;
-			}
-		} // func FindResourceByKeyCore
-
-		/// <summary>Find resource by key in the main resource dictionary</summary>
-		/// <typeparam name="TKEY"></typeparam>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="predicate"></param>
-		/// <returns></returns>
-		public IEnumerable<T> FindResourceByKey<TKEY,T>(Predicate<TKEY> predicate = null)
-			where TKEY : ResourceKey
-			=> FindResourceByKeyCore<TKEY,T>(mainResources, predicate);
-
-		/// <summary>Update a resource from a xml-source.</summary>
-		/// <param name="xamlSource"></param>
-		/// <returns></returns>
-		protected async Task<object> UpdateResourceAsync(XmlReader xamlSource)
-		{
-			var resourceKey = (object)null;
-			object resource;
-
-			try
-			{
-				// create the resource
-				using (var elementReader = await xamlSource.ReadElementAsSubTreeAsync(XmlNamespaceScope.ExcludeXml))
-				{
-					var startObjectCounter = 0;
-
-					resource = await PpsXamlParser.LoadAsync<object>(elementReader,
-						new PpsXamlReaderSettings()
-						{
-							FilterNode = (reader) =>
-							{
-								switch (reader.NodeType)
-								{
-									case XamlNodeType.GetObject:
-									case XamlNodeType.StartObject:
-										startObjectCounter++;
-										goto default;
-									case XamlNodeType.EndObject:
-										startObjectCounter--;
-										goto default;
-									case XamlNodeType.StartMember:
-										if (startObjectCounter == 1 && reader.Member == XamlLanguage.Key && resourceKey == null)
-										{
-											resourceKey = reader.ReadMemberValue();
-											return reader.Read();
-										}
-										goto default;
-									default:
-										return true;
-								}
-							},
-							CloseInput = false,
-							Code = this,
-							ServiceProvider = this
-						}
-					);
-				}
-
-				if (resource == null)
-					throw Procs.CreateXmlException(xamlSource, "Resource load failed.");
-
-				// check the key
-				if (resourceKey == null)
-				{
-					var style = resource as Style;
-					if (style == null)
-						throw Procs.CreateXmlException(xamlSource, "x:Key is missing on resource.");
-
-					resourceKey = style.TargetType;
-				}
-			}
-			catch (XmlException) // no recovery, xml is invalid
-			{
-				throw;
-			}
-			catch (Exception e) // xaml parser error
-			{
-				// check resource key
-				if (resourceKey == null // no resource key to check, do not load
-					|| defaultResources[resourceKey] == null) // no resource, might be imported
-					throw;
-				else
-				{
-					var message = $"Could not load resource '{resourceKey}'.";
-					if (e is XamlParseException)
-						AppendException(e, message);
-					else
-						AppendException(Procs.CreateXmlException(xamlSource, message, e));
-
-					return null;
-				}
-			}
-
-			// update resource
-			//Debug.Print("UpdateResouce: ({1}){0}", resourceKey, resourceKey.GetType().Name);
-			defaultResources[resourceKey] = resource;
-			return resourceKey;
-		} // func UpdateResource
-
-		/// <summary>Find the resource.</summary>
-		/// <param name="key"></param>
-		/// <param name="dependencyObject"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public object GetResource(object key, DependencyObject dependencyObject)
-		{
-			if (dependencyObject is FrameworkElement fe)
-				return fe.TryFindResource(key);
-			else if (dependencyObject is FrameworkContentElement fce)
-				return fce.TryFindResource(key);
-			else
-				return defaultResources[key] ?? Application.Current.TryFindResource(key);
-		} // func GetResource
-
-		void IPpsXamlCode.CompileCode(Uri uri, string code)
-			=> CompileCodeForXaml(this, uri, code);
-
-		/// <summary></summary>
-		/// <param name="self"></param>
-		/// <param name="uri"></param>
-		/// <param name="code"></param>
-		public void CompileCodeForXaml(LuaTable self, Uri uri, string code)
-		{
-			var request = self as IPpsRequest ?? this;
-
-			var compileTask =
-				code != null
-				? CompileAsync(code, uri?.OriginalString ?? "dummy.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
-				: request.CompileAsync(uri, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-			compileTask.Await().Run(self, request);
-		} // proc CompileCode
-
-		#endregion
-
-		#region -- Synchronization ----------------------------------------------------
-
-		/// <summary></summary>
-		/// <param name="action"></param>
-		public sealed override void BeginInvoke(Action action)
-			=> Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle); // must be idle, that method is invoked after the current changes
-
-		/// <summary></summary>
-		/// <param name="action"></param>
-		/// <returns></returns>
-		public sealed override async Task InvokeAsync(Action action)
-			=> await Dispatcher.InvokeAsync(action);
-
-		/// <summary></summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="func"></param>
-		/// <returns></returns>
-		public sealed override async Task<T> InvokeAsync<T>(Func<T> func)
-			=> await Dispatcher.InvokeAsync(func);
-
-		/// <summary>Return context</summary>
-		public sealed override SynchronizationContext Context => synchronizationContext;
-
-		/// <summary>Wpf main thread dispatcher.</summary>
-		[LuaMember]
-		public Dispatcher Dispatcher => currentDispatcher;
-
-		#endregion
-
-		#region -- UI-Helper ----------------------------------------------------------
-
-		/// <summary>Append a exception to the log.</summary>
-		/// <param name="exception"></param>
-		/// <param name="alternativeMessage"></param>
-		[LuaMember(nameof(AppendException))]
-		public void AppendException(Exception exception, string alternativeMessage = null)
-			=> ShowException(PpsExceptionShowFlags.Background, exception, alternativeMessage);
-
-		private static string GetMessageCaptionFromImage(MessageBoxImage image)
-		{
-			switch (image)
-			{
-				case MessageBoxImage.Error:
-					return "Fehler";
-				case MessageBoxImage.Warning:
-					return "Warnung";
-				case MessageBoxImage.Question:
-					return "Frage";
-				default:
-					return "Information";
-			}
-		} // func GetMessageCaptionFromImage
-
-		/// <summary>Display a simple messagebox</summary>
-		/// <param name="text"></param>
-		/// <param name="button"></param>
-		/// <param name="image"></param>
-		/// <param name="defaultResult"></param>
-		/// <returns></returns>
-		public virtual MessageBoxResult MsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
-			=> MessageBox.Show(text, GetMessageCaptionFromImage(image), button, image, defaultResult);
-
-		/// <summary>Display a simple messagebox in the main ui-thread.</summary>
-		/// <param name="text"></param>
-		/// <param name="button"></param>
-		/// <param name="image"></param>
-		/// <param name="defaultResult"></param>
-		/// <returns></returns>
-		public async Task<MessageBoxResult> MsgBoxAsync(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
-			=> await Dispatcher.InvokeAsync(() => MsgBox(text, button, image, defaultResult));
-
-		/// <summary></summary>
-		/// <param name="message"></param>
-		public sealed override void ShowMessage(string message)
-			=> MsgBox(message);
-
-		/// <summary></summary>
-		/// <param name="flags"></param>
-		/// <param name="exception"></param>
-		/// <param name="alternativeMessage"></param>
-		public override void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-		{
-			//Log.Append(PpsLogType.Exception, exception, alternativeMessage);
-
-			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
-			{
-				// show message simple
-				MsgBox(alternativeMessage ?? exception.UnpackException().ToString(), MessageBoxButton.OK, MessageBoxImage.Error);
-
-				// shutdown application
-				if ((flags & PpsExceptionShowFlags.Shutown) == PpsExceptionShowFlags.Shutown)
-					Application.Current.Shutdown(1);
-			}
-		} // proc ShowException
+	///// <summary></summary>
+	//public abstract class PpsShellWpf : _PpsShell, IPpsXamlCode
+	//{
+	//	#region -- class InstanceKey --------------------------------------------------
+
+	//	/// <summary>Special key to select templates.</summary>
+	//	private sealed class InstanceKey<T> : ResourceKey
+	//		where T : class
+	//	{
+	//		public InstanceKey()
+	//		{
+	//		} // ctor
+
+	//		public override int GetHashCode()
+	//			=> typeof(T).GetHashCode();
+
+	//		public override bool Equals(object obj)
+	//			=> obj is T;
+
+	//		public override Assembly Assembly => null;
+	//	} // class DefaultEnvironmentKeyImpl
+
+	//	#endregion
+
+	//	#region -- class DefaultStaticDataTemplateSelector ----------------------------
+
+	//	private sealed class DefaultStaticDataTemplateSelector : DataTemplateSelector
+	//	{
+	//		public DefaultStaticDataTemplateSelector()
+	//		{
+	//		} // ctor
+
+	//		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+	//			=> GetShell<PpsShellWpf>(container)?.GetDataTemplate(item, container);
+	//	} // class DefaultStaticDataTemplateSelector
+
+	//	#endregion
+
+	//	#region -- class DefaultInstanceDataTemplateSelector --------------------------
+
+	//	private sealed class DefaultInstanceDataTemplateSelector : DataTemplateSelector
+	//	{
+	//		private readonly PpsShellWpf shell;
+
+	//		public DefaultInstanceDataTemplateSelector(PpsShellWpf shell)
+	//		{
+	//			this.shell = shell;
+	//		} // ctor
+
+	//		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+	//			=> shell.GetDataTemplate(item, container);
+	//	} // class DefaultInstanceDataTemplateSelector
+
+	//	#endregion
+
+	//	private readonly Dispatcher currentDispatcher;
+	//	private readonly InputManager inputManager;
+	//	private readonly SynchronizationContext synchronizationContext;
+
+	//	#region -- Ctor/Dtor ----------------------------------------------------------
+
+	//	/// <summary></summary>
+	//	/// <param name="lua"></param>
+	//	/// <param name="mainResources"></param>
+	//	protected PpsShellWpf(Lua lua, ResourceDictionary mainResources)
+	//		: base(lua)
+	//	{
+
+	//		inputManager = InputManager.Current;
+	//		currentDispatcher = Dispatcher.CurrentDispatcher ?? throw new ArgumentNullException(nameof(Dispatcher.CurrentDispatcher));
+	//		synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
+
+	//		DefaultDataTemplateSelector = new DefaultInstanceDataTemplateSelector(this);
+	//	} // ctor
+
+	//	#endregion
+
+	//	#region -- Wpf Resource Management --------------------------------------------
+
+	//	/// <summary>Update a resource from a xml-source.</summary>
+	//	/// <param name="xamlSource"></param>
+	//	/// <returns></returns>
+	//	protected async Task<object> UpdateResourceAsync(XmlReader xamlSource)
+	//	{
+	//		var resourceKey = (object)null;
+	//		object resource;
+
+	//		try
+	//		{
+	//			// create the resource
+	//			using (var elementReader = await xamlSource.ReadElementAsSubTreeAsync(XmlNamespaceScope.ExcludeXml))
+	//			{
+	//				var startObjectCounter = 0;
+
+	//				resource = await PpsXamlParser.LoadAsync<object>(elementReader,
+	//					new PpsXamlReaderSettings()
+	//					{
+	//						FilterNode = (reader) =>
+	//						{
+	//							switch (reader.NodeType)
+	//							{
+	//								case XamlNodeType.GetObject:
+	//								case XamlNodeType.StartObject:
+	//									startObjectCounter++;
+	//									goto default;
+	//								case XamlNodeType.EndObject:
+	//									startObjectCounter--;
+	//									goto default;
+	//								case XamlNodeType.StartMember:
+	//									if (startObjectCounter == 1 && reader.Member == XamlLanguage.Key && resourceKey == null)
+	//									{
+	//										resourceKey = reader.ReadMemberValue();
+	//										return reader.Read();
+	//									}
+	//									goto default;
+	//								default:
+	//									return true;
+	//							}
+	//						},
+	//						CloseInput = false,
+	//						Code = this,
+	//						ServiceProvider = this
+	//					}
+	//				);
+	//			}
+
+	//			if (resource == null)
+	//				throw Procs.CreateXmlException(xamlSource, "Resource load failed.");
+
+	//			// check the key
+	//			if (resourceKey == null)
+	//			{
+	//				var style = resource as Style;
+	//				if (style == null)
+	//					throw Procs.CreateXmlException(xamlSource, "x:Key is missing on resource.");
+
+	//				resourceKey = style.TargetType;
+	//			}
+	//		}
+	//		catch (XmlException) // no recovery, xml is invalid
+	//		{
+	//			throw;
+	//		}
+	//		catch (Exception e) // xaml parser error
+	//		{
+	//			// check resource key
+	//			if (resourceKey == null // no resource key to check, do not load
+	//				|| defaultResources[resourceKey] == null) // no resource, might be imported
+	//				throw;
+	//			else
+	//			{
+	//				var message = $"Could not load resource '{resourceKey}'.";
+	//				if (e is XamlParseException)
+	//					AppendException(e, message);
+	//				else
+	//					AppendException(Procs.CreateXmlException(xamlSource, message, e));
+
+	//				return null;
+	//			}
+	//		}
+
+	//		// update resource
+	//		//Debug.Print("UpdateResouce: ({1}){0}", resourceKey, resourceKey.GetType().Name);
+	//		defaultResources[resourceKey] = resource;
+	//		return resourceKey;
+	//	} // func UpdateResource
+
+	//	/// <summary>Find the resource.</summary>
+	//	/// <param name="key"></param>
+	//	/// <param name="dependencyObject"></param>
+	//	/// <returns></returns>
+	//	[LuaMember]
+	//	public object GetResource(object key, DependencyObject dependencyObject)
+	//	{
+	//		if (dependencyObject is FrameworkElement fe)
+	//			return fe.TryFindResource(key);
+	//		else if (dependencyObject is FrameworkContentElement fce)
+	//			return fce.TryFindResource(key);
+	//		else
+	//			return defaultResources[key] ?? Application.Current.TryFindResource(key);
+	//	} // func GetResource
+
+	//	void IPpsXamlCode.CompileCode(Uri uri, string code)
+	//		=> CompileCodeForXaml(this, uri, code);
+
+	//	/// <summary></summary>
+	//	/// <param name="self"></param>
+	//	/// <param name="uri"></param>
+	//	/// <param name="code"></param>
+	//	public void CompileCodeForXaml(LuaTable self, Uri uri, string code)
+	//	{
+	//		var request = self as IPpsRequest ?? this;
+
+	//		var compileTask =
+	//			code != null
+	//			? CompileAsync(code, uri?.OriginalString ?? "dummy.lua", true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
+	//			: request.CompileAsync(uri, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+	//		compileTask.Await().Run(self, request);
+	//	} // proc CompileCode
+
+	//	#endregion
+
+	//	#region -- Synchronization ----------------------------------------------------
+
+	//	/// <summary></summary>
+	//	/// <param name="action"></param>
+	//	public sealed override void BeginInvoke(Action action)
+	//		=> Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle); // must be idle, that method is invoked after the current changes
+
+	//	/// <summary></summary>
+	//	/// <param name="action"></param>
+	//	/// <returns></returns>
+	//	public sealed override async Task InvokeAsync(Action action)
+	//		=> await Dispatcher.InvokeAsync(action);
+
+	//	/// <summary></summary>
+	//	/// <typeparam name="T"></typeparam>
+	//	/// <param name="func"></param>
+	//	/// <returns></returns>
+	//	public sealed override async Task<T> InvokeAsync<T>(Func<T> func)
+	//		=> await Dispatcher.InvokeAsync(func);
+
+	//	/// <summary>Return context</summary>
+	//	public sealed override SynchronizationContext Context => synchronizationContext;
+
+	//	/// <summary>Wpf main thread dispatcher.</summary>
+	//	[LuaMember]
+	//	public Dispatcher Dispatcher => currentDispatcher;
+
+	//	#endregion
+
+	//	#region -- UI-Helper ----------------------------------------------------------
+
+	//	/// <summary>Append a exception to the log.</summary>
+	//	/// <param name="exception"></param>
+	//	/// <param name="alternativeMessage"></param>
+	//	[LuaMember(nameof(AppendException))]
+	//	public void AppendException(Exception exception, string alternativeMessage = null)
+	//		=> ShowException(PpsExceptionShowFlags.Background, exception, alternativeMessage);
+
+	//	private static string GetMessageCaptionFromImage(MessageBoxImage image)
+	//	{
+	//		switch (image)
+	//		{
+	//			case MessageBoxImage.Error:
+	//				return "Fehler";
+	//			case MessageBoxImage.Warning:
+	//				return "Warnung";
+	//			case MessageBoxImage.Question:
+	//				return "Frage";
+	//			default:
+	//				return "Information";
+	//		}
+	//	} // func GetMessageCaptionFromImage
+
+	//	/// <summary>Display a simple messagebox</summary>
+	//	/// <param name="text"></param>
+	//	/// <param name="button"></param>
+	//	/// <param name="image"></param>
+	//	/// <param name="defaultResult"></param>
+	//	/// <returns></returns>
+	//	public virtual MessageBoxResult MsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
+	//		=> MessageBox.Show(text, GetMessageCaptionFromImage(image), button, image, defaultResult);
+
+	//	/// <summary>Display a simple messagebox in the main ui-thread.</summary>
+	//	/// <param name="text"></param>
+	//	/// <param name="button"></param>
+	//	/// <param name="image"></param>
+	//	/// <param name="defaultResult"></param>
+	//	/// <returns></returns>
+	//	public async Task<MessageBoxResult> MsgBoxAsync(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
+	//		=> await Dispatcher.InvokeAsync(() => MsgBox(text, button, image, defaultResult));
+
+	//	/// <summary></summary>
+	//	/// <param name="message"></param>
+	//	public sealed override void ShowMessage(string message)
+	//		=> MsgBox(message);
+
+	//	/// <summary></summary>
+	//	/// <param name="flags"></param>
+	//	/// <param name="exception"></param>
+	//	/// <param name="alternativeMessage"></param>
+	//	public override void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+	//	{
+	//		//Log.Append(PpsLogType.Exception, exception, alternativeMessage);
+
+	//		if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
+	//		{
+	//			// show message simple
+	//			MsgBox(alternativeMessage ?? exception.UnpackException().ToString(), MessageBoxButton.OK, MessageBoxImage.Error);
+
+	//			// shutdown application
+	//			if ((flags & PpsExceptionShowFlags.Shutown) == PpsExceptionShowFlags.Shutown)
+	//				Application.Current.Shutdown(1);
+	//		}
+	//	} // proc ShowException
 		
-		/// <summary>Return a data template for the object.</summary>
-		/// <param name="data"></param>
-		/// <param name="container"></param>
-		/// <returns></returns>
-		public abstract DataTemplate GetDataTemplate(object data, DependencyObject container);
+	//	/// <summary>Return a data template for the object.</summary>
+	//	/// <param name="data"></param>
+	//	/// <param name="container"></param>
+	//	/// <returns></returns>
+	//	public abstract DataTemplate GetDataTemplate(object data, DependencyObject container);
 
-		#endregion
+	//	#endregion
 
-		#region -- Lua-Helper ---------------------------------------------------------
+	//	#region -- Lua-Helper ---------------------------------------------------------
 
-		/// <summary>Show a simple message box.</summary>
-		/// <param name="text"></param>
-		/// <param name="button"></param>
-		/// <param name="image"></param>
-		/// <param name="defaultResult"></param>
-		/// <returns></returns>
-		[LuaMember("msgbox")]
-		private MessageBoxResult LuaMsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
-			=> MsgBox(text, button, image, defaultResult);
+	//	/// <summary>Show a simple message box.</summary>
+	//	/// <param name="text"></param>
+	//	/// <param name="button"></param>
+	//	/// <param name="image"></param>
+	//	/// <param name="defaultResult"></param>
+	//	/// <returns></returns>
+	//	[LuaMember("msgbox")]
+	//	private MessageBoxResult LuaMsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
+	//		=> MsgBox(text, button, image, defaultResult);
 
-		/// <summary></summary>
-		/// <param name="value"></param>
-		/// <param name="targetType"></param>
-		/// <returns></returns>
-		[LuaMember("ToNumberUI")]
-		public object LuaToNumber(object value, Type targetType)
-		{
-			if (targetType == null)
-				throw new ArgumentNullException(nameof(targetType));
+	//	/// <summary></summary>
+	//	/// <param name="value"></param>
+	//	/// <param name="targetType"></param>
+	//	/// <returns></returns>
+	//	[LuaMember("ToNumberUI")]
+	//	public object LuaToNumber(object value, Type targetType)
+	//	{
+	//		if (targetType == null)
+	//			throw new ArgumentNullException(nameof(targetType));
 
-			var r = PpsConverter.NumericValue.ConvertBack(value, targetType, null, CultureInfo.CurrentUICulture);
-			if (r is ValidationResult
-				|| r == DependencyProperty.UnsetValue)
-				return null;
-			return r;
-		} // func LuaToNumber
+	//		var r = PpsConverter.NumericValue.ConvertBack(value, targetType, null, CultureInfo.CurrentUICulture);
+	//		if (r is ValidationResult
+	//			|| r == DependencyProperty.UnsetValue)
+	//			return null;
+	//		return r;
+	//	} // func LuaToNumber
 
-		/// <summary></summary>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		[LuaMember("ToStringUI")]
-		public new object LuaToString(object value)
-		{
-			var r = PpsConverter.NumericValue.Convert(value, typeof(string), null, CultureInfo.CurrentUICulture);
-			if (r is ValidationResult
-				|| r == DependencyProperty.UnsetValue)
-				return null;
-			return r;
-		} // func LuaToString
+	//	/// <summary></summary>
+	//	/// <param name="value"></param>
+	//	/// <returns></returns>
+	//	[LuaMember("ToStringUI")]
+	//	public new object LuaToString(object value)
+	//	{
+	//		var r = PpsConverter.NumericValue.Convert(value, typeof(string), null, CultureInfo.CurrentUICulture);
+	//		if (r is ValidationResult
+	//			|| r == DependencyProperty.UnsetValue)
+	//			return null;
+	//		return r;
+	//	} // func LuaToString
 
-		/// <summary>Helper to await a async process.</summary>
-		/// <param name="func"></param>
-		/// <returns></returns>
-		protected sealed override LuaResult LuaAwaitFunc(object func)
-		{
-			if (func is DispatcherOperation o)
-			{
-				LuaAwait(o.Task);
-				return LuaResult.Empty;
-			}
-			return base.LuaAwaitFunc(func);
-		} // func LuaAwaitFunc
+	//	/// <summary>Helper to await a async process.</summary>
+	//	/// <param name="func"></param>
+	//	/// <returns></returns>
+	//	protected sealed override LuaResult LuaAwaitFunc(object func)
+	//	{
+	//		if (func is DispatcherOperation o)
+	//		{
+	//			LuaAwait(o.Task);
+	//			return LuaResult.Empty;
+	//		}
+	//		return base.LuaAwaitFunc(func);
+	//	} // func LuaAwaitFunc
 
-		#endregion
+	//	#endregion
 
-		/// <summary>Default is utf-8</summary>
-		public sealed override Encoding Encoding => Encoding.UTF8;
+	//	/// <summary>Default is utf-8</summary>
+	//	public sealed override Encoding Encoding => Encoding.UTF8;
 
-		/// <summary>Lua ui-wpf framwework.</summary>
-		[LuaMember("UI")]
-		public LuaUI LuaUI { get; } = new LuaUI();
+	//	/// <summary>Lua ui-wpf framwework.</summary>
+	//	[LuaMember("UI")]
+	//	public LuaUI LuaUI { get; } = new LuaUI();
 
-		// -- Static ----------------------------------------------------------
+	//	// -- Static ----------------------------------------------------------
 
-		private readonly static ResourceDictionary staticDefaultResources;
+	//	private readonly static ResourceDictionary staticDefaultResources;
 
-		static PpsShellWpf()
-		{
-			staticDefaultResources = new ResourceDictionary() { Source = new Uri("/PPSn.Desktop.UI;component/UI/UI.xaml", UriKind.Relative) };
-		} // ctor
+	//	static PpsShellWpf()
+	//	{
+	//		staticDefaultResources = new ResourceDictionary() { Source = new Uri("/PPSn.Desktop.UI;component/UI/UI.xaml", UriKind.Relative) };
+	//	} // ctor
 
-		#region -- GetShell, GetCurrentPane -------------------------------------------
+	//	#region -- GetShell, GetCurrentPane -------------------------------------------
 
-		/// <summary>Get the environment, that is attached to the current element.</summary>
-		/// <param name="dependencyObject"></param>
-		/// <returns></returns>
-		public static PpsShellWpf GetShell(DependencyObject dependencyObject = null)
-			=> GetShell<PpsShellWpf>(dependencyObject);
+	//	/// <summary>Get the environment, that is attached to the current element.</summary>
+	//	/// <param name="dependencyObject"></param>
+	//	/// <returns></returns>
+	//	public static PpsShellWpf GetShell(DependencyObject dependencyObject = null)
+	//		=> GetShell<PpsShellWpf>(dependencyObject);
 
-		/// <summary>Get the environment, that is attached to the current element.</summary>
-		/// <param name="dependencyObject"></param>
-		/// <returns></returns>
-		/// <typeparam name="T"></typeparam>
-		public static T GetShell<T>(DependencyObject dependencyObject = null)
-			where T : PpsShellWpf
-		{
-			switch (dependencyObject)
-			{
-				case null:
-					goto default;
-				case FrameworkElement fe:
-					return (T)fe.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
-				case FrameworkContentElement fce:
-					return (T)fce.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
-				default:
-					return (T)Application.Current.TryFindResource(DefaultEnvironmentKey);
-			}
-		} // func GetShell
+	//	/// <summary>Get the environment, that is attached to the current element.</summary>
+	//	/// <param name="dependencyObject"></param>
+	//	/// <returns></returns>
+	//	/// <typeparam name="T"></typeparam>
+	//	public static T GetShell<T>(DependencyObject dependencyObject = null)
+	//		where T : PpsShellWpf
+	//	{
+	//		switch (dependencyObject)
+	//		{
+	//			case null:
+	//				goto default;
+	//			case FrameworkElement fe:
+	//				return (T)fe.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
+	//			case FrameworkContentElement fce:
+	//				return (T)fce.TryFindResource(DefaultEnvironmentKey) ?? GetShell<T>(null);
+	//			default:
+	//				return (T)Application.Current.TryFindResource(DefaultEnvironmentKey);
+	//		}
+	//	} // func GetShell
 
-		private static T GetCurrentPaneCore<T>(DependencyObject dependencyObject)
-			where T : class, IPpsWindowPane
-		{
-			switch (dependencyObject)
-			{
-				case null:
-					return default(T);
-				case FrameworkElement fe:
-					return (T)fe.TryFindResource(CurrentWindowPaneKey);
-				case FrameworkContentElement fce:
-					return (T)fce.TryFindResource(CurrentWindowPaneKey);
-				default:
-					return default(T);
-			}
-		} // func GetCurrentPaneCore
+	//	private static T GetCurrentPaneCore<T>(DependencyObject dependencyObject)
+	//		where T : class, IPpsWindowPane
+	//	{
+	//		switch (dependencyObject)
+	//		{
+	//			case null:
+	//				return default(T);
+	//			case FrameworkElement fe:
+	//				return (T)fe.TryFindResource(CurrentWindowPaneKey);
+	//			case FrameworkContentElement fce:
+	//				return (T)fce.TryFindResource(CurrentWindowPaneKey);
+	//			default:
+	//				return default(T);
+	//		}
+	//	} // func GetCurrentPaneCore
 
-		/// <summary>Get the current pane from the focused element.</summary>
-		/// <returns></returns>
-		public static IPpsWindowPane GetCurrentPane()
-			=> GetCurrentPane<IPpsWindowPane>();
+	//	/// <summary>Get the current pane from the focused element.</summary>
+	//	/// <returns></returns>
+	//	public static IPpsWindowPane GetCurrentPane()
+	//		=> GetCurrentPane<IPpsWindowPane>();
 
-		/// <summary>Get the current pane from the focused element.</summary>
-		/// <returns></returns>
-		/// <typeparam name="T"></typeparam>
-		public static T GetCurrentPane<T>()
-			where T : class, IPpsWindowPane
-			=> GetCurrentPaneCore<T>(Keyboard.FocusedElement as DependencyObject);
+	//	/// <summary>Get the current pane from the focused element.</summary>
+	//	/// <returns></returns>
+	//	/// <typeparam name="T"></typeparam>
+	//	public static T GetCurrentPane<T>()
+	//		where T : class, IPpsWindowPane
+	//		=> GetCurrentPaneCore<T>(Keyboard.FocusedElement as DependencyObject);
 
-		/// <summary>Get the environment, that is attached to the current element.</summary>
-		/// <param name="dependencyObject"></param>
-		/// <returns></returns>
-		public static IPpsWindowPane GetCurrentPane(DependencyObject dependencyObject)
-			=> GetCurrentPane<IPpsWindowPane>(dependencyObject);
+	//	/// <summary>Get the environment, that is attached to the current element.</summary>
+	//	/// <param name="dependencyObject"></param>
+	//	/// <returns></returns>
+	//	public static IPpsWindowPane GetCurrentPane(DependencyObject dependencyObject)
+	//		=> GetCurrentPane<IPpsWindowPane>(dependencyObject);
 
-		/// <summary>Get the environment, that is attached to the current element.</summary>
-		/// <param name="dependencyObject"></param>
-		/// <returns></returns>
-		/// <typeparam name="T"></typeparam>
-		public static T GetCurrentPane<T>(DependencyObject dependencyObject)
-			where T : class, IPpsWindowPane
-			=> GetCurrentPaneCore<T>(dependencyObject) ?? GetCurrentPane<T>();
+	//	/// <summary>Get the environment, that is attached to the current element.</summary>
+	//	/// <param name="dependencyObject"></param>
+	//	/// <returns></returns>
+	//	/// <typeparam name="T"></typeparam>
+	//	public static T GetCurrentPane<T>(DependencyObject dependencyObject)
+	//		where T : class, IPpsWindowPane
+	//		=> GetCurrentPaneCore<T>(dependencyObject) ?? GetCurrentPane<T>();
 
-		/// <summary>Resource key for the environment.</summary>
-		public static ResourceKey DefaultEnvironmentKey { get; } = new InstanceKey<PpsShellWpf>();
-		/// <summary>Resource key for the current pane.</summary>
-		public static ResourceKey CurrentWindowPaneKey { get; } = new InstanceKey<IPpsWindowPane>();
-		/// <summary>Template selection, that redirects to the GetDataTemplate function.</summary>
-		public static DataTemplateSelector StaticDataTemplateSelector => new DefaultStaticDataTemplateSelector();
+	//	/// <summary>Resource key for the environment.</summary>
+	//	public static ResourceKey DefaultEnvironmentKey { get; } = new InstanceKey<PpsShellWpf>();
+	//	/// <summary>Resource key for the current pane.</summary>
+	//	public static ResourceKey CurrentWindowPaneKey { get; } = new InstanceKey<IPpsWindowPane>();
+	//	/// <summary>Template selection, that redirects to the GetDataTemplate function.</summary>
+	//	public static DataTemplateSelector StaticDataTemplateSelector => new DefaultStaticDataTemplateSelector();
 
-		/// <summary></summary>
-		public DataTemplateSelector DefaultDataTemplateSelector { get; }
+	//	/// <summary></summary>
+	//	public DataTemplateSelector DefaultDataTemplateSelector { get; }
 
-		#endregion
-	} // class PpsShellWpf
+	//	#endregion
+	//} // class PpsShellWpf
 
 	#endregion
 }

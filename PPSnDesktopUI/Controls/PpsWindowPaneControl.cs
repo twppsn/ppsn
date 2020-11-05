@@ -122,7 +122,7 @@ namespace TecWare.PPSn.Controls
 
 			SetValue(commandsPropertyKey, CreateCommandBar());
 
-			Resources[PpsShellWpf.CurrentWindowPaneKey] = this;
+			Resources[PpsWpfShell.CurrentWindowPaneKey] = this;
 		} // ctor
 
 		private PpsUICommandCollection CreateCommandBar()

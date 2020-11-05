@@ -27,19 +27,19 @@ namespace TecWare.PPSn.UI
 				"Veröffentlichen", "Änderungen für alle freigeben"
 			);
 
-			this.AddCommandBinding(Shell, PublishCommand,
-				new PpsAsyncCommand(
-					ctx => PublishHelpPageAsync(),
-					ctx => IsLocalChanged
-				)
-			);
+			//this.AddCommandBinding(Shell, PublishCommand,
+			//	new PpsAsyncCommand(
+			//		ctx => PublishHelpPageAsync(),
+			//		ctx => IsLocalChanged
+			//	)
+			//);
 
 		} // ctor
 
-		private Task PublishHelpPageAsync()
-			=> CurrentObject?.PushAsync();
+		//private Task PublishHelpPageAsync()
+		//	=> CurrentObject?.PushAsync();
 
-		private bool IsLocalChanged => CurrentObject?.IsDocumentChanged ?? false;
-		private PpsObject CurrentObject => (PpsObject)CurrentData;
+		//private bool IsLocalChanged => CurrentObject?.IsDocumentChanged ?? false;
+		//private PpsObject CurrentObject => (PpsObject)CurrentData;
 	} // class PpsHelpPagePane
 }

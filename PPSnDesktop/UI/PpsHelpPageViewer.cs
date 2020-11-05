@@ -28,7 +28,7 @@ namespace TecWare.PPSn.UI
 {
 	internal class PpsHelpPageViewer : Control
 	{
-		private PpsEnvironment environment;
+		//private PpsEnvironment environment;
 		private IPpsObjectDataAccess currentHelpPage = null;
 
 		#region -- HelpKey - Property -------------------------------------------------
@@ -40,8 +40,8 @@ namespace TecWare.PPSn.UI
 
 		private void OnHelpKeyChanged(string newValue)
 		{
-			if (environment != null)
-				BeginUpdateHelpPage();
+			//if (environment != null)
+			//	BeginUpdateHelpPage();
 		} // proc OnHelpKeyChanged
 
 		public string HelpKey { get => (string)GetValue(HelpKeyProperty); set => SetValue(HelpKeyProperty, value); }
@@ -71,34 +71,34 @@ namespace TecWare.PPSn.UI
 			SetValue(progressStackPropertyKey, Dispatcher.CreateProgressStack());
 			ClearHelpPage();
 
-			CommandBindings.Add(
-				new CommandBinding(ApplicationCommands.Open,
-					(sender, e) =>
-					{
-						EditHelpPageAsync().SpawnTask(environment);
-						e.Handled = true;
-					},
-					(sender, e) => e.CanExecute = HelpKey != null
-				)
-			);
+			//CommandBindings.Add(
+			//	new CommandBinding(ApplicationCommands.Open,
+			//		(sender, e) =>
+			//		{
+			//			EditHelpPageAsync().SpawnTask(environment);
+			//			e.Handled = true;
+			//		},
+			//		(sender, e) => e.CanExecute = HelpKey != null
+			//	)
+			//);
 		} // ctor
 
-		public override void OnApplyTemplate()
-		{
-			base.OnApplyTemplate();
+		//public override void OnApplyTemplate()
+		//{
+		//	base.OnApplyTemplate();
 
-			environment = PpsEnvironment.GetEnvironment(this);
-			if (HelpKey != null)
-				BeginUpdateHelpPage();
-		} // proc OnApplyTemplate
+		//	environment = PpsEnvironment.GetEnvironment(this);
+		//	if (HelpKey != null)
+		//		BeginUpdateHelpPage();
+		//} // proc OnApplyTemplate
 
-		private void BeginUpdateHelpPage()
-		{
-			if (HelpKey == null)
-				ClearHelpPage();
-			else
-				RefreshHelpPageAsync().SpawnTask(environment);
-		} // proc BeginUpdateHelpPage
+		//private void BeginUpdateHelpPage()
+		//{
+		//	if (HelpKey == null)
+		//		ClearHelpPage();
+		//	else
+		//		RefreshHelpPageAsync().SpawnTask(environment);
+		//} // proc BeginUpdateHelpPage
 
 		private void ClearHelpPage()
 		{
@@ -110,57 +110,57 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc ClearHelpPage
 
-		private async Task EditHelpPageAsync()
-		{
-			var helpObj = await GetCurrentHelpPageObjectAsync();
-			if (helpObj == null)
-			{
-				// create a new page
-				using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
-				{
-					helpObj = await environment.CreateNewObjectAsync(Guid.NewGuid(), PpsEnvironment.HelpKeyTyp, HelpKey, true, "text/markdown");
-					trans.Commit();
-				}
-			}
+		//private async Task EditHelpPageAsync()
+		//{
+		//	var helpObj = await GetCurrentHelpPageObjectAsync();
+		//	if (helpObj == null)
+		//	{
+		//		// create a new page
+		//		using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+		//		{
+		//			helpObj = await environment.CreateNewObjectAsync(Guid.NewGuid(), PpsEnvironment.HelpKeyTyp, HelpKey, true, "text/markdown");
+		//			trans.Commit();
+		//		}
+		//	}
 
-			//if (helpObj != null)
-			//	await helpObj.OpenPaneAsync(environment.GetDefaultPaneManager(), PpsOpenPaneMode.NewPane, new LuaTable { ["Object"] = helpObj });
-		} // proc EditHelpPageAsync
+		//	//if (helpObj != null)
+		//	//	await helpObj.OpenPaneAsync(environment.GetDefaultPaneManager(), PpsOpenPaneMode.NewPane, new LuaTable { ["Object"] = helpObj });
+		//} // proc EditHelpPageAsync
 
-		private async Task RefreshHelpPageAsync()
-		{
-			var helpObj = await GetCurrentHelpPageObjectAsync();
+		//private async Task RefreshHelpPageAsync()
+		//{
+		//	var helpObj = await GetCurrentHelpPageObjectAsync();
 
-			ClearHelpPage();
-			if (helpObj == null) // load empty help page
-			{
-				SetValue(documentPropertyKey, CreateNoHelpDocument());
-			}
-			else // parse help content
-			{
-				using (var bar = ProgressStack.CreateProgress(true))
-				{
-					bar.Text = "Lade Hilfeseite...";
+		//	ClearHelpPage();
+		//	if (helpObj == null) // load empty help page
+		//	{
+		//		SetValue(documentPropertyKey, CreateNoHelpDocument());
+		//	}
+		//	else // parse help content
+		//	{
+		//		using (var bar = ProgressStack.CreateProgress(true))
+		//		{
+		//			bar.Text = "Lade Hilfeseite...";
 
-					// reload
-					var blob = await helpObj.GetDataAsync<IPpsBlobObjectData>();
-					currentHelpPage = await blob.AccessAsync();
-					currentHelpPage.DisableUI = () => ProgressStack.CreateProgress(true);
-					currentHelpPage.DataChanged += (sender, e) => RenderPageContentAsync().SpawnTask(environment);
+		//			// reload
+		//			var blob = await helpObj.GetDataAsync<IPpsBlobObjectData>();
+		//			currentHelpPage = await blob.AccessAsync();
+		//			currentHelpPage.DisableUI = () => ProgressStack.CreateProgress(true);
+		//			currentHelpPage.DataChanged += (sender, e) => RenderPageContentAsync().Spawn(environment);
 
-					// render page
-					await RenderPageContentAsync();
-				}
-			}
-		} // proc RefreshHelpPageAsync
+		//			// render page
+		//			await RenderPageContentAsync();
+		//		}
+		//	}
+		//} // proc RefreshHelpPageAsync
 
-		private Task<PpsObject> GetCurrentHelpPageObjectAsync()
-		{
-			return environment.GetObjectAsync(PpsDataFilterExpression.Combine(
-				PpsDataFilterExpression.Compare("TYP", PpsDataFilterCompareOperator.Equal, PpsEnvironment.HelpKeyTyp),
-				PpsDataFilterExpression.Compare("NR", PpsDataFilterCompareOperator.Equal, HelpKey)
-			));
-		} // func GetCurrentHelpPageObjectAsync
+		//private Task<PpsObject> GetCurrentHelpPageObjectAsync()
+		//{
+		//	return environment.GetObjectAsync(PpsDataFilterExpression.Combine(
+		//		PpsDataFilterExpression.Compare("TYP", PpsDataFilterCompareOperator.Equal, PpsEnvironment.HelpKeyTyp),
+		//		PpsDataFilterExpression.Compare("NR", PpsDataFilterCompareOperator.Equal, HelpKey)
+		//	));
+		//} // func GetCurrentHelpPageObjectAsync
 
 		private async Task RenderPageContentAsync()
 		{

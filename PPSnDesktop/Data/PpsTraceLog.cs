@@ -203,341 +203,341 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsTraceLog ------------------------------------------------------
 
-	/// <summary>Collection for all collected events in the application. It connects 
-	/// to the trace listener and catches exceptions.</summary>
-	public sealed class PpsTraceLog : IList, INotifyCollectionChanged, INotifyPropertyChanged, ILogger, IPpsIdleAction, ICollectionViewFactory, IDisposable
-	{
-		/// <summary>Maximal number of trace items</summary>
-		public const int MaxTraceItems = 1 << 19;
+	///// <summary>Collection for all collected events in the application. It connects 
+	///// to the trace listener and catches exceptions.</summary>
+	//public sealed class PpsTraceLog : IList, INotifyCollectionChanged, INotifyPropertyChanged, ILogger, IPpsIdleAction, ICollectionViewFactory, IDisposable
+	//{
+	//	/// <summary>Maximal number of trace items</summary>
+	//	public const int MaxTraceItems = 1 << 19;
 
-		#region -- class PpsTraceListener ---------------------------------------------
+	//	#region -- class PpsTraceListener ---------------------------------------------
 
-		/// <summary></summary>
-		private class PpsTraceListener : TraceListener
-		{
-			private readonly PpsTraceLog owner;
-			private readonly Dictionary<int, StringBuilder> currentLines = new Dictionary<int, StringBuilder>();
+	//	/// <summary></summary>
+	//	private class PpsTraceListener : TraceListener
+	//	{
+	//		private readonly PpsTraceLog owner;
+	//		private readonly Dictionary<int, StringBuilder> currentLines = new Dictionary<int, StringBuilder>();
 
-			public PpsTraceListener(PpsTraceLog owner)
-			{
-				this.owner = owner;
-			} // ctor
+	//		public PpsTraceListener(PpsTraceLog owner)
+	//		{
+	//			this.owner = owner;
+	//		} // ctor
 
-			public override void Fail(string message, string detailMessage)
-			{
-				if (message == null)
-				{
-					message = detailMessage;
-					detailMessage = null;
-				}
-				if (detailMessage != null)
-					message = message + Environment.NewLine + detailMessage;
+	//		public override void Fail(string message, string detailMessage)
+	//		{
+	//			if (message == null)
+	//			{
+	//				message = detailMessage;
+	//				detailMessage = null;
+	//			}
+	//			if (detailMessage != null)
+	//				message = message + Environment.NewLine + detailMessage;
 
-				owner.AppendItem(new PpsTextItem(LogMsgType.Error, message));
-			} // proc Fail
+	//			owner.AppendItem(new PpsTextItem(LogMsgType.Error, message));
+	//		} // proc Fail
 
-			private static string FormatData(object data)
-				=> Convert.ToString(data, CultureInfo.InvariantCulture);
+	//		private static string FormatData(object data)
+	//			=> Convert.ToString(data, CultureInfo.InvariantCulture);
 
-			public override void TraceData(TraceEventCache eventCache, string source, TraceEventType eventType, int id, object data)
-				=> TraceEvent(eventCache, source, eventType, id, data == null ? String.Empty : FormatData(data));
+	//		public override void TraceData(TraceEventCache eventCache, string source, TraceEventType eventType, int id, object data)
+	//			=> TraceEvent(eventCache, source, eventType, id, data == null ? String.Empty : FormatData(data));
 
-			public override void TraceData(TraceEventCache eventCache, string source, TraceEventType eventType, int id, params object[] data)
-			{
-				var message = new StringBuilder();
-				if (data != null)
-				{
-					for (var i = 0; i < data.Length; i++)
-						message.Append('[').Append(i).Append("] ").AppendLine(FormatData(data[i]));
-				}
+	//		public override void TraceData(TraceEventCache eventCache, string source, TraceEventType eventType, int id, params object[] data)
+	//		{
+	//			var message = new StringBuilder();
+	//			if (data != null)
+	//			{
+	//				for (var i = 0; i < data.Length; i++)
+	//					message.Append('[').Append(i).Append("] ").AppendLine(FormatData(data[i]));
+	//			}
 
-				TraceEvent(eventCache, source, eventType, id, message.ToString());
-			} // proc TraceData
+	//			TraceEvent(eventCache, source, eventType, id, message.ToString());
+	//		} // proc TraceData
 
-			public override void TraceEvent(TraceEventCache eventCache, string source, TraceEventType eventType, int id, string message)
-				=> owner.AppendItem(new PpsTraceItem(eventType, eventCache, source, id, message));
+	//		public override void TraceEvent(TraceEventCache eventCache, string source, TraceEventType eventType, int id, string message)
+	//			=> owner.AppendItem(new PpsTraceItem(eventType, eventCache, source, id, message));
 
-			public override void TraceEvent(TraceEventCache eventCache, string source, TraceEventType eventType, int id, string format, params object[] args)
-			{
-				if (args != null && args.Length > 0)
-					format = String.Format(format, args);
+	//		public override void TraceEvent(TraceEventCache eventCache, string source, TraceEventType eventType, int id, string format, params object[] args)
+	//		{
+	//			if (args != null && args.Length > 0)
+	//				format = String.Format(format, args);
 
-				TraceEvent(eventCache, source, eventType, id, format);
-			} // proc TraceEvent
+	//			TraceEvent(eventCache, source, eventType, id, format);
+	//		} // proc TraceEvent
 
-			public override void Write(string message)
-			{
-				if (String.IsNullOrEmpty(message))
-					return;
+	//		public override void Write(string message)
+	//		{
+	//			if (String.IsNullOrEmpty(message))
+	//				return;
 
-				var threadId = Thread.CurrentThread.ManagedThreadId;
-				StringBuilder currentLine;
-				lock (currentLines)
-				{
-					if (!currentLines.TryGetValue(threadId, out currentLine))
-						currentLines[threadId] = currentLine = new StringBuilder();
-				}
+	//			var threadId = Thread.CurrentThread.ManagedThreadId;
+	//			StringBuilder currentLine;
+	//			lock (currentLines)
+	//			{
+	//				if (!currentLines.TryGetValue(threadId, out currentLine))
+	//					currentLines[threadId] = currentLine = new StringBuilder();
+	//			}
 
 
-				currentLine.Append(message);
-				if (message.Length > 1 && message[message.Length - 1] == '\r' || message[message.Length - 1] == '\n')
-				{
-					WriteLine(currentLine.ToString().TrimEnd('\n', '\r'));
-					lock (currentLines)
-						currentLines.Remove(threadId);
-				}
-			} // proc Write
+	//			currentLine.Append(message);
+	//			if (message.Length > 1 && message[message.Length - 1] == '\r' || message[message.Length - 1] == '\n')
+	//			{
+	//				WriteLine(currentLine.ToString().TrimEnd('\n', '\r'));
+	//				lock (currentLines)
+	//					currentLines.Remove(threadId);
+	//			}
+	//		} // proc Write
 
-			public override void WriteLine(string message)
-				=> owner.AppendItem(new PpsTextItem(LogMsgType.Debug, message));
-		} // class PpsTraceListener
+	//		public override void WriteLine(string message)
+	//			=> owner.AppendItem(new PpsTextItem(LogMsgType.Debug, message));
+	//	} // class PpsTraceListener
 
-		#endregion
+	//	#endregion
 		
-		/// <summary>Notification for new log events.</summary>
-		public event NotifyCollectionChangedEventHandler CollectionChanged;
-		/// <summary>Notification for property changes.</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+	//	/// <summary>Notification for new log events.</summary>
+	//	public event NotifyCollectionChangedEventHandler CollectionChanged;
+	//	/// <summary>Notification for property changes.</summary>
+	//	public event PropertyChangedEventHandler PropertyChanged;
 
-		private readonly PpsEnvironment environment;
-		private readonly PpsTraceListener listener;
-		private readonly List<PpsTraceItemBase> items = new List<PpsTraceItemBase>();
-		private PpsTraceItemBase lastTrace = null;
+	//	private readonly PpsEnvironment environment;
+	//	private readonly PpsTraceListener listener;
+	//	private readonly List<PpsTraceItemBase> items = new List<PpsTraceItemBase>();
+	//	private PpsTraceItemBase lastTrace = null;
 
-		#region -- Ctor/Dtor ----------------------------------------------------------
+	//	#region -- Ctor/Dtor ----------------------------------------------------------
 
-		/// <summary></summary>
-		/// <param name="environment"></param>
-		public PpsTraceLog(PpsEnvironment environment)
-		{
-			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
+	//	/// <summary></summary>
+	//	/// <param name="environment"></param>
+	//	public PpsTraceLog(PpsEnvironment environment)
+	//	{
+	//		this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
 
-			Trace.Listeners.Add(listener = new PpsTraceListener(this));
+	//		Trace.Listeners.Add(listener = new PpsTraceListener(this));
 
-			// environment.AddIdleAction(this);
-		} // ctor
+	//		// environment.AddIdleAction(this);
+	//	} // ctor
 
-		/// <summary></summary>
-		~PpsTraceLog()
-		{
-			Dispose(false);
-		} // dtor
+	//	/// <summary></summary>
+	//	~PpsTraceLog()
+	//	{
+	//		Dispose(false);
+	//	} // dtor
 
-		/// <summary></summary>
-		public void Dispose()
-		{
-			GC.SuppressFinalize(this);
-			Dispose(true);
-		} // proc Dispose
+	//	/// <summary></summary>
+	//	public void Dispose()
+	//	{
+	//		GC.SuppressFinalize(this);
+	//		Dispose(true);
+	//	} // proc Dispose
 
-		private void Dispose(bool disposing)
-		{
-			Trace.Listeners.Remove(listener);
-			if (disposing)
-			{
-				// environment.RemoveIdleAction(this);
-				Clear();
-			}
-		} // proc Dispose
+	//	private void Dispose(bool disposing)
+	//	{
+	//		Trace.Listeners.Remove(listener);
+	//		if (disposing)
+	//		{
+	//			// environment.RemoveIdleAction(this);
+	//			Clear();
+	//		}
+	//	} // proc Dispose
 
-		bool IPpsIdleAction.OnIdle(int elapsed)
-			=> !UpdateLastTrace();
+	//	bool IPpsIdleAction.OnIdle(int elapsed)
+	//		=> !UpdateLastTrace();
 
-		#endregion
+	//	#endregion
 
-		#region -- AppendItem ---------------------------------------------------------
+	//	#region -- AppendItem ---------------------------------------------------------
 
-		private int AppendItem(PpsTraceItemBase item)
-		{
-			var index = -1;
-			var resetList = false;
-			var lastTraceChanged = false;
-			object itemRemoved = null;
+	//	private int AppendItem(PpsTraceItemBase item)
+	//	{
+	//		var index = -1;
+	//		var resetList = false;
+	//		var lastTraceChanged = false;
+	//		object itemRemoved = null;
 
-			// change list
-			lock (items)
-			{
-				while (items.Count > MaxTraceItems)
-				{
-					if (itemRemoved == null)
-						itemRemoved = items[0];
-					else
-						resetList = true;
-					items.RemoveAt(0);
-				}
+	//		// change list
+	//		lock (items)
+	//		{
+	//			while (items.Count > MaxTraceItems)
+	//			{
+	//				if (itemRemoved == null)
+	//					itemRemoved = items[0];
+	//				else
+	//					resetList = true;
+	//				items.RemoveAt(0);
+	//			}
 
-				items.Add(item);
-				index = items.Count - 1;
+	//			items.Add(item);
+	//			index = items.Count - 1;
 
-				if (item.Type == LogMsgType.Error || item.Type == LogMsgType.Warning)
-					lastTraceChanged = SetLastTrace(item);
-				else
-					lastTraceChanged = UpdateLastTrace();
-			}
+	//			if (item.Type == LogMsgType.Error || item.Type == LogMsgType.Warning)
+	//				lastTraceChanged = SetLastTrace(item);
+	//			else
+	//				lastTraceChanged = UpdateLastTrace();
+	//		}
 
-			// update view
-			if (resetList)
-				OnCollectionReset();
-			else
-			{
-				if (itemRemoved != null)
-					OnCollectionRemoved(itemRemoved, 0);
-				OnCollectionAdded(item, items.Count - 1);
-			}
-			OnPropertyChanged(nameof(Count));
-			if (lastTraceChanged)
-				OnPropertyChanged(nameof(LastTrace));
+	//		// update view
+	//		if (resetList)
+	//			OnCollectionReset();
+	//		else
+	//		{
+	//			if (itemRemoved != null)
+	//				OnCollectionRemoved(itemRemoved, 0);
+	//			OnCollectionAdded(item, items.Count - 1);
+	//		}
+	//		OnPropertyChanged(nameof(Count));
+	//		if (lastTraceChanged)
+	//			OnPropertyChanged(nameof(LastTrace));
 
-			return index;
-		} // proc AppendItem
+	//		return index;
+	//	} // proc AppendItem
 
-		/// <summary>Clear all trace items.</summary>
-		public void Clear()
-		{
-			lock (items)
-			{
-				lastTrace = null;
-				items.Clear();
-			}
+	//	/// <summary>Clear all trace items.</summary>
+	//	public void Clear()
+	//	{
+	//		lock (items)
+	//		{
+	//			lastTrace = null;
+	//			items.Clear();
+	//		}
 
-			OnCollectionReset();
-			OnPropertyChanged(nameof(Count));
-			OnPropertyChanged(nameof(LastTrace));
-		} // proc Clear
+	//		OnCollectionReset();
+	//		OnPropertyChanged(nameof(Count));
+	//		OnPropertyChanged(nameof(LastTrace));
+	//	} // proc Clear
 
-		//void IPpsLogger.Append(PpsLogType type, string message)
-		//	=> AppendItem(new PpsTextItem(type, message));
+	//	//void IPpsLogger.Append(PpsLogType type, string message)
+	//	//	=> AppendItem(new PpsTextItem(type, message));
 
-		//void IPpsLogger.Append(PpsLogType type, Exception exception, string alternativeMessage)
-		//	=> AppendItem(new PpsExceptionItem(alternativeMessage, exception, type));
+	//	//void IPpsLogger.Append(PpsLogType type, Exception exception, string alternativeMessage)
+	//	//	=> AppendItem(new PpsExceptionItem(alternativeMessage, exception, type));
 
-		void ILogger.LogMsg(LogMsgType type, string message)
-			=> AppendItem(new PpsTextItem(type, message));
+	//	void ILogger.LogMsg(LogMsgType type, string message)
+	//		=> AppendItem(new PpsTextItem(type, message));
 
-		#endregion
+	//	#endregion
 
-		#region -- Last Trace Item ----------------------------------------------------
+	//	#region -- Last Trace Item ----------------------------------------------------
 
-		/// <summary>Clear last trace item.</summary>
-		public void ClearLastTrace()
-		{
-			LastTrace = null;
-		} // proc ClearLastTrace
+	//	/// <summary>Clear last trace item.</summary>
+	//	public void ClearLastTrace()
+	//	{
+	//		LastTrace = null;
+	//	} // proc ClearLastTrace
 
-		private bool IsLastTraceNear()
-			=> lastTrace != null && (DateTime.Now - lastTrace.Stamp).TotalMilliseconds < 5000;
+	//	private bool IsLastTraceNear()
+	//		=> lastTrace != null && (DateTime.Now - lastTrace.Stamp).TotalMilliseconds < 5000;
 
-		private bool SetLastTrace(PpsTraceItemBase item)
-		{
-			if (IsLastTraceNear() // the current trace event is pretty new
-				&& item.Type < lastTrace.Type) // and more important
-				return false;
+	//	private bool SetLastTrace(PpsTraceItemBase item)
+	//	{
+	//		if (IsLastTraceNear() // the current trace event is pretty new
+	//			&& item.Type < lastTrace.Type) // and more important
+	//			return false;
 			
-			lastTrace = item;
-			return true;
-		} // proc SetLastTrace
+	//		lastTrace = item;
+	//		return true;
+	//	} // proc SetLastTrace
 
-		private bool UpdateLastTrace()
-		{
-			if (!IsLastTraceNear())
-			{
-				ClearLastTrace();
-				return true;
-			}
-			else
-				return false;
-		} // proc UpdateLastTrace
+	//	private bool UpdateLastTrace()
+	//	{
+	//		if (!IsLastTraceNear())
+	//		{
+	//			ClearLastTrace();
+	//			return true;
+	//		}
+	//		else
+	//			return false;
+	//	} // proc UpdateLastTrace
 
-		#endregion
+	//	#endregion
 
-		#region -- Event Handling -----------------------------------------------------
+	//	#region -- Event Handling -----------------------------------------------------
 
-		private void OnPropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+	//	private void OnPropertyChanged(string propertyName)
+	//		=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		private void OnCollectionAdded(object item, int index)
-			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
+	//	private void OnCollectionAdded(object item, int index)
+	//		=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
 
-		private void OnCollectionRemoved(object item, int index)
-			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index));
+	//	private void OnCollectionRemoved(object item, int index)
+	//		=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index));
 
-		private void OnCollectionReset()
-			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+	//	private void OnCollectionReset()
+	//		=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
-		#endregion
+	//	#endregion
 
-		#region -- IList Member -------------------------------------------------------
+	//	#region -- IList Member -------------------------------------------------------
 
-		int IList.Add(object value)
-			=> AppendItem((PpsTraceItemBase)value);
+	//	int IList.Add(object value)
+	//		=> AppendItem((PpsTraceItemBase)value);
 
-		void IList.Insert(int index, object value) 
-			=> throw new NotSupportedException();
-		void IList.Remove(object value) 
-			=> throw new NotSupportedException();
-		void IList.RemoveAt(int index) 
-			=>throw new NotSupportedException();
-		bool IList.Contains(object value)
-		{
-			lock (items)
-				return items.Contains((PpsTraceItemBase)value);
-		} // func IList.Contains
+	//	void IList.Insert(int index, object value) 
+	//		=> throw new NotSupportedException();
+	//	void IList.Remove(object value) 
+	//		=> throw new NotSupportedException();
+	//	void IList.RemoveAt(int index) 
+	//		=>throw new NotSupportedException();
+	//	bool IList.Contains(object value)
+	//	{
+	//		lock (items)
+	//			return items.Contains((PpsTraceItemBase)value);
+	//	} // func IList.Contains
 
-		int IList.IndexOf(object value)
-		{
-			lock (items)
-				return items.IndexOf((PpsTraceItemBase)value);
-		} // func IList.IndexOf
+	//	int IList.IndexOf(object value)
+	//	{
+	//		lock (items)
+	//			return items.IndexOf((PpsTraceItemBase)value);
+	//	} // func IList.IndexOf
 
-		bool IList.IsFixedSize => false;
-		bool IList.IsReadOnly => true;
+	//	bool IList.IsFixedSize => false;
+	//	bool IList.IsReadOnly => true;
 
-		object IList.this[int index] { get => items[index]; set => throw new NotSupportedException(); }
+	//	object IList.this[int index] { get => items[index]; set => throw new NotSupportedException(); }
 
-		#endregion
+	//	#endregion
 
-		#region -- ICollection Member -------------------------------------------------
+	//	#region -- ICollection Member -------------------------------------------------
 
-		void ICollection.CopyTo(Array array, int index)
-		{
-			lock (items)
-				((ICollection)items).CopyTo(array, index);
-		} // proc ICollection.CopyTo
+	//	void ICollection.CopyTo(Array array, int index)
+	//	{
+	//		lock (items)
+	//			((ICollection)items).CopyTo(array, index);
+	//	} // proc ICollection.CopyTo
 
-		bool ICollection.IsSynchronized => true;
-		/// <summary></summary>
-		public object SyncRoot => items;
+	//	bool ICollection.IsSynchronized => true;
+	//	/// <summary></summary>
+	//	public object SyncRoot => items;
 
-		#endregion
+	//	#endregion
 
-		#region -- IEnumerable Member -------------------------------------------------
+	//	#region -- IEnumerable Member -------------------------------------------------
 
-		IEnumerator IEnumerable.GetEnumerator()
-			=> items.GetEnumerator();
+	//	IEnumerator IEnumerable.GetEnumerator()
+	//		=> items.GetEnumerator();
 
-		ICollectionView ICollectionViewFactory.CreateView()
-			=> new PpsTypedListCollectionView<PpsTraceItemBase>(this);
+	//	ICollectionView ICollectionViewFactory.CreateView()
+	//		=> new PpsTypedListCollectionView<PpsTraceItemBase>(this);
 
-		#endregion
+	//	#endregion
 
-		/// <summary>Currently, catched events.</summary>
-		public int Count { get { lock (items) return items.Count; } }
-		/// <summary>The last catched trace event.</summary>
-		public PpsTraceItemBase LastTrace
-		{
-			get => lastTrace;
-			private set
-			{
-				if (lastTrace != value)
-				{
-					lock (items)
-						lastTrace = value;
+	//	/// <summary>Currently, catched events.</summary>
+	//	public int Count { get { lock (items) return items.Count; } }
+	//	/// <summary>The last catched trace event.</summary>
+	//	public PpsTraceItemBase LastTrace
+	//	{
+	//		get => lastTrace;
+	//		private set
+	//		{
+	//			if (lastTrace != value)
+	//			{
+	//				lock (items)
+	//					lastTrace = value;
 
-					OnPropertyChanged(nameof(LastTrace));
-				}
-			}
-		} // prop LastTrace
-	} // class PpsTraceLog
+	//				OnPropertyChanged(nameof(LastTrace));
+	//			}
+	//		}
+	//	} // prop LastTrace
+	//} // class PpsTraceLog
 
 	#endregion
 }

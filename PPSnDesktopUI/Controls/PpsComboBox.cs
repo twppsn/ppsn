@@ -26,6 +26,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -407,7 +408,7 @@ namespace TecWare.PPSn.Controls
 					&& container.ContentTemplateSelector == null
 					&& container.ContentStringFormat == null)
 				{
-					container.ContentTemplateSelector = PpsShellWpf.GetShell(this).DefaultDataTemplateSelector;
+					container.ContentTemplateSelector = null; // todo: PpsShellWpf.GetShell(this).DefaultDataTemplateSelector;
 				}
 			}
 		} // proc PrepareContainerForItemOverride

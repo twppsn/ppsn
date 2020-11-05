@@ -285,15 +285,13 @@ namespace TecWare.PPSn.UI
 		} // proc OnRenderSizeChanged
 
 		private void CurrentImage_DataChanged(object sender, EventArgs e)
-			=> RefreshCurrentImageAsync().SpawnTask(Shell);
+			=> RefreshCurrentImageAsync().Spawn(Shell);
 
 		#endregion
 
 		/// <summary>Return current image object data.</summary>
 		protected override IPpsDataInfo CurrentData => currentPictureInfo;
-		/// <summary>Access the shell</summary>
-		public IPpsShell Shell => PaneHost.PaneManager.Shell;
-
+		
 
 
 

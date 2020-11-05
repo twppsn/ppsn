@@ -1,36 +1,92 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?include Version.wxi ?>
+<?define ProductUpgradeCode = "0d3f4ec0-fc60-463b-9873-07a409090616" ?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Id="*" 
-					 Name="PPSnDesktopMSI"
-					 Language="1033"
-					 Version="1.0.0.0"
-					 Manufacturer=""
-					 UpgradeCode="63258a8c-7ac5-44c8-9d00-746b6affba73">
+	<Product Id="$(var.ProductCode)"
+					 UpgradeCode="$(var.ProductUpgradeCode)"
+					 Name="!(loc.ProductName)"
+					 Language="!(loc.ProductLanguage)"
+					 Version="$(var.ProductVersion)"
+					 Manufacturer="!(loc.ProductCompany)" >
+
+		<Package Description="!(loc.ProductName)"
+						 Comments="!(loc.PackageComments)"
+						 InstallerVersion="200"
+						 Compressed="yes"
+						 InstallScope="perUser"
+						 InstallPrivileges="limited"
+		/>
+
+		<WixVariable Id="WixUILicenseRtf" Value="de\License.rtf" />
+
+		<Property Id="ARPHELPLINK" Value="!(loc.ArpHelpLink)" />
+		<Property Id="ARPURLINFOABOUT" Value="!(loc.ArpUrlInfoAbout)" />
+		<Property Id="ALLUSERS" Secure="yes"/>
+
+		<Media Id="1" Cabinet="data.cab" EmbedCab="yes" />
+
+		<!-- Upgrade rules -->
+		<Upgrade Id="$(var.ProductUpgradeCode)">
+			<UpgradeVersion Minimum="$(var.ProductVersion)" OnlyDetect="yes" Property="NEWERVERSIONDETECTED" />
+			<UpgradeVersion Minimum="1.0.0.0" IncludeMinimum="yes" Maximum="$(var.ProductVersion)" IncludeMaximum="no" Property="OLDERVERSIONBEINGUPGRADED" />
+		</Upgrade>
+		<MajorUpgrade DowngradeErrorMessage="!(loc.ConditionEarlierVersion)" />
+
+		<CustomAction Id="CA_BlockOlderVersionInstall" Error="!(loc.ConditionLaterVersion)" />
 		
-		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+		<!-- CustomAction to start application 
+		SHELLURI: uri to shell
+		SHELLNAME: name for shell
+		-->
+		<Binary Id="PPSnCA" SourceFile="..\PPSnDesktopMsiExtension\bin\Release\PPSnDesktopMsiExtension.CA.dll" />
+		<Property Id="WixShellExecTarget" Value="[#PPSnDesktopExe]" />
+		<CustomAction Id="LaunchApplication" BinaryKey="PPSnCA" DllEntry="RunApp" Impersonate="no" Return="check" />
+		<!--<CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="no" />-->
 
-		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
-		<MediaTemplate />
+		<!-- Enforce users -->
+		<Condition Message="!(loc.ConditionAllUsers)">NOT ALLUSERS</Condition>
 
-		<Feature Id="ProductFeature" Title="PPSnDesktopMSI" Level="1">
-			<ComponentGroupRef Id="ProductComponents" />
-		</Feature>
-	</Product>
-
-	<Fragment>
 		<Directory Id="TARGETDIR" Name="SourceDir">
-			<Directory Id="ProgramFilesFolder">
-				<Directory Id="INSTALLFOLDER" Name="PPSnDesktopMSI" />
+			<Directory Id="LocalAppDataFolder" Name="AppData">
+				<Directory Id="ppsn" Name="ppsn">
+					<Directory Id="INSTALLFOLDER" Name="PPSnDesktop">
+						<Directory Id="BinDe" Name="de" />
+						<Directory Id="BinX86" Name="x86" />
+						<Directory Id="BinX64" Name="x64" />
+					</Directory>
+				</Directory>
 			</Directory>
 		</Directory>
-	</Fragment>
 
-	<Fragment>
-		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
-			<!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
-			<!-- <Component Id="ProductComponent"> -->
-				<!-- TODO: Insert files, registry keys, and other resources here. -->
-			<!-- </Component> -->
-		</ComponentGroup>
-	</Fragment>
+		<Feature Id="PPSnDesktop" Title="!(loc.ProductName)" Level="1">
+			<ComponentGroupRef Id="PPSnDesktop" />
+			<ComponentGroupRef Id="Pdfium" />
+			<ComponentGroupRef Id="AForge" />
+			<ComponentGroupRef Id="WebView2" />
+			<ComponentGroupRef Id="NeoLua" />
+			<ComponentGroupRef Id="Markdig" />
+			<ComponentGroupRef Id="NetCore" />
+		</Feature>
+
+		<InstallExecuteSequence>
+			<Custom Action="CA_BlockOlderVersionInstall" After="FindRelatedProducts">
+				<![CDATA[NEWERVERSIONDETECTED]]>
+			</Custom>
+			<LaunchConditions After="AppSearch"/>
+
+			<Custom Action="LaunchApplication" After="InstallFinalize"><![CDATA[UILevel < 5 and (&PPSnDesktop = 3 or !PPSnDesktop = 3) and SHELLNAME]]></Custom>
+		</InstallExecuteSequence>
+
+		<InstallUISequence>
+			<Custom Action="CA_BlockOlderVersionInstall" After="FindRelatedProducts">
+				<![CDATA[NEWERVERSIONDETECTED]]>
+			</Custom>
+		</InstallUISequence>
+
+		<UI>
+      <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.RunApplication)" />
+			<Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication" Order="1">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+		</UI>
+		<UIRef Id="WixUI_Minimal"/>
+	</Product>
 </Wix>

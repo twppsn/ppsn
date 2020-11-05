@@ -161,7 +161,7 @@ namespace TecWare.PPSn
 		/// <summary>Create the settings for this shell.</summary>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
-		Task<IPpsSettingsService> LoadSettingsAsync();
+		Task<IPpsSettingsService> LoadSettingsAsync(IPpsShell shell);
 
 		/// <summary>Name of the instance.</summary>
 		string Name { get; }
@@ -630,7 +630,7 @@ namespace TecWare.PPSn
 			public async Task LoadAsync(IPpsShellLoadNotify notify)
 			{
 				// first create settings
-				settingsService = await info.LoadSettingsAsync();
+				settingsService = await info.LoadSettingsAsync(this);
 				AddService(typeof(IPpsSettingsService), this);
 				if (notify != null)
 					await notify.OnBeforeLoadSettingsAsync(this);
@@ -851,7 +851,7 @@ namespace TecWare.PPSn
 						localUserPath.Create();
 
 					// load user settings
-					var userSettings = FileSettingsInfo.CreateUserSettings(new FileInfo(Path.Combine(LocalUserPath.FullName, "info.xml")), userName);
+					var userSettings = FileSettingsInfo.CreateUserSettings(this, new FileInfo(Path.Combine(LocalUserPath.FullName, "info.xml")), userName);
 					await userSettings.LoadAsync();
 
 					// login user and parse user specific settings

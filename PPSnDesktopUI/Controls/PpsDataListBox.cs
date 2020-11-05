@@ -392,7 +392,7 @@ namespace TecWare.PPSn.Controls
 					&& container.ContentTemplateSelector == null
 					&& container.ContentStringFormat == null)
 				{
-					container.ContentTemplateSelector = PpsShellWpf.GetShell(this).DefaultDataTemplateSelector;
+					container.ContentTemplateSelector = null; // todo: PpsShellWpf.GetShell(this).DefaultDataTemplateSelector;
 				}
 
 				container.Commands = GetItemCommands(element, item);

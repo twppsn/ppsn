@@ -99,7 +99,7 @@ namespace TecWare.PPSn.UI
 		{
 			InitializeComponent();
 
-			getCurrentPane = new Lazy<IPpsWindowPane>(() => PpsShellWpf.GetCurrentPane(this));
+			//getCurrentPane = new Lazy<IPpsWindowPane>(() => PpsShellWpf.GetCurrentPane(this));
 
 			CommandBindings.Add(
 				new CommandBinding(AddFromFileCommand,
@@ -292,39 +292,39 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsAttachmentsHelper ---------------------------------------------
 
-	/// <summary></summary>
-	public static class PpsAttachmentsHelper
-	{
-		private static async Task<PpsObject> AppendAsync(IPpsAttachments attachments, PpsEnvironment environment, Func<Task<PpsObject>> createObject)
-		{
-			// every file one transaction, and exception handling
-			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
-			{
-				var obj = await createObject();
-				attachments.Append(obj);
-				trans.Commit();
-				return obj;
-			}
-		} // func AppendAsync
+	///// <summary></summary>
+	//public static class PpsAttachmentsHelper
+	//{
+	//	private static async Task<PpsObject> AppendAsync(IPpsAttachments attachments, PpsEnvironment environment, Func<Task<PpsObject>> createObject)
+	//	{
+	//		// every file one transaction, and exception handling
+	//		using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+	//		{
+	//			var obj = await createObject();
+	//			attachments.Append(obj);
+	//			trans.Commit();
+	//			return obj;
+	//		}
+	//	} // func AppendAsync
 
-		/// <summary>Append a file to the attachments list.</summary>
-		/// <param name="attachments"></param>
-		/// <param name="environment"></param>
-		/// <param name="fileName"></param>
-		/// <returns></returns>
-		public static Task<PpsObject> AppendAsync(this IPpsAttachments attachments, PpsEnvironment environment, string fileName)
-			=> AppendAsync(attachments, environment, () => environment.CreateNewObjectFromFileAsync(fileName));
+	//	/// <summary>Append a file to the attachments list.</summary>
+	//	/// <param name="attachments"></param>
+	//	/// <param name="environment"></param>
+	//	/// <param name="fileName"></param>
+	//	/// <returns></returns>
+	//	public static Task<PpsObject> AppendAsync(this IPpsAttachments attachments, PpsEnvironment environment, string fileName)
+	//		=> AppendAsync(attachments, environment, () => environment.CreateNewObjectFromFileAsync(fileName));
 
-		/// <summary>Append a stream to the attachemnts list</summary>
-		/// <param name="attachments"></param>
-		/// <param name="environment"></param>
-		/// <param name="source"></param>
-		/// <param name="name"></param>
-		/// <param name="mimeType"></param>
-		/// <returns></returns>
-		public static Task<PpsObject> AppendAsync(this IPpsAttachments attachments, PpsEnvironment environment, Stream source, string name, string mimeType)
-			=> AppendAsync(attachments, environment, () => environment.CreateNewObjectFromStreamAsync(source, name, mimeType));
-	} // class PpsAttachmentsHelper
+	//	/// <summary>Append a stream to the attachemnts list</summary>
+	//	/// <param name="attachments"></param>
+	//	/// <param name="environment"></param>
+	//	/// <param name="source"></param>
+	//	/// <param name="name"></param>
+	//	/// <param name="mimeType"></param>
+	//	/// <returns></returns>
+	//	public static Task<PpsObject> AppendAsync(this IPpsAttachments attachments, PpsEnvironment environment, Stream source, string name, string mimeType)
+	//		=> AppendAsync(attachments, environment, () => environment.CreateNewObjectFromStreamAsync(source, name, mimeType));
+	//} // class PpsAttachmentsHelper
 
 	#endregion
 }

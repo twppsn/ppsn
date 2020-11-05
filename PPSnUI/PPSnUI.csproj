@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>TecWare.PPSn</RootNamespace>
-    <PackageId>TecWare.PPSn.PPSnUI</PackageId>
+    <PackageId>TecWare.PPSn.UI</PackageId>
     <Description>Basic contracts and functionality for the ppsn, they are only for client applications.</Description>
     <PackageProjectUrl>https://github.com/twppsn/ppsn/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/twppsn/ppsn.git</RepositoryUrl>
@@ -15,10 +15,12 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>C:\Projects\PPSnOS\twppsn\Extern\ppsn\PPSnUI\bin\Debug\PPSnUI.xml</DocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DocumentationFile>C:\Projects\PPSnOS\twppsn\Extern\ppsn\PPSnUI\bin\Release\PPSnUI.xml</DocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

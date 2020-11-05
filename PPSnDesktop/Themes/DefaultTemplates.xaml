@@ -4,7 +4,7 @@
 					xmlns:a="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Core"
 					xmlns:des="clr-namespace:TecWare.DE.Data;assembly=DES.Core">
 	
-	<!-- Fallback template for PpsObject's -->
+	<!-- Fallback template for PpsObject's
 	<DataTemplate x:Key="{DataTemplateKey {x:Type local:PpsObject}}">
 		<Grid>
 			<Grid.RowDefinitions>
@@ -22,7 +22,7 @@
 			<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Typ}" />
 			<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Guid, StringFormat='B'}" />
 		</Grid>
-	</DataTemplate>
+	</DataTemplate> -->
 
 	<!-- Fallback template for PpsMasterDataRow's with an name property -->
 	<DataTemplate x:Key="{DataTemplateKey {x:Type des:DynamicDataRow}}">

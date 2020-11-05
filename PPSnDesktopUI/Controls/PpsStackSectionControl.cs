@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {

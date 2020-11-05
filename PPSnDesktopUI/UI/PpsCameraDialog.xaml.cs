@@ -783,10 +783,10 @@ namespace TecWare.PPSn.UI
 		private void OnCurrentDeviceChanged(PpsCameraDevice newValue, PpsCameraDevice oldValue)
 		{
 			if (oldValue != null)
-				oldValue.InitAsync(initialPreviewSize).SpawnTask(shell);
+				oldValue.InitAsync(initialPreviewSize).Spawn(shell);
 
 			if (newValue != null)
-				newValue.InitAsync(fullPreviewSize, forTakePicture: true).SpawnTask(shell);
+				newValue.InitAsync(fullPreviewSize, forTakePicture: true).Spawn(shell);
 		} // proc OnCurrentDeviceChanged
 
 		public PpsCameraDevice CurrentDevice => (PpsCameraDevice)GetValue(CurrentDeviceProperty);

@@ -8,7 +8,7 @@
         mc:Ignorable="d"
 		Height="200" Width="500" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
 	<Window.Resources>
-		<ui:LuaValueConverter x:Key="CloseTextConverter">
+		<!--<ui:LuaValueConverter x:Key="CloseTextConverter">
 			<![CDATA[
 			if cast(int, value) == cast(int, clr.TecWare.PPSn.PpsTraceItemType.Fail) then
 				return 'Beenden';
@@ -16,7 +16,7 @@
 				return 'Schließen';
 			end;
 			]]>
-		</ui:LuaValueConverter>
+		</ui:LuaValueConverter>-->
 	</Window.Resources>
 
 	<Grid>
@@ -50,11 +50,12 @@
 					   Margin="0,0,134,0" />
 		<pps:PpsButton Grid.Column="1" 
 					   Grid.Row="1"
-					   Content="{Binding MessageType, Converter={StaticResource CloseTextConverter}}"
+					   Content="Schließen"
 					   Command="{x:Static ApplicationCommands.Close}" 
 					   Width="110"
 					   Height="23"
 					   HorizontalAlignment="Right"
 					   Margin="0,0,12,0" />
+		<!-- Content="{Binding MessageType, Converter={StaticResource CloseTextConverter}}"-->
 	</Grid>
 </Window>

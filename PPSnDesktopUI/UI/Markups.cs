@@ -31,36 +31,36 @@ namespace TecWare.PPSn.UI
 {
 	#region -- class LuaConvertExtension ----------------------------------------------
 
-	/// <summary>Create a value LuaValueConverter with a ConvertExpression.</summary>
-	public class LuaConvertExtension : MarkupExtension
-	{
-		/// <summary></summary>
-		/// <param name="code"></param>
-		public LuaConvertExtension(string code)
-		{
-			this.Code = code;
-		} // ctor
+	///// <summary>Create a value LuaValueConverter with a ConvertExpression.</summary>
+	//public class LuaConvertExtension : MarkupExtension
+	//{
+	//	/// <summary></summary>
+	//	/// <param name="code"></param>
+	//	public LuaConvertExtension(string code)
+	//	{
+	//		this.Code = code;
+	//	} // ctor
 
-		/// <summary></summary>
-		/// <param name="serviceProvider"></param>
-		/// <returns></returns>
-		public override object ProvideValue(IServiceProvider serviceProvider)
-		{
-			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
-			var property = target.TargetProperty as PropertyInfo;
-			if (property == null)
-				throw new ArgumentException("This markup is only allowed on properties.");
+	//	/// <summary></summary>
+	//	/// <param name="serviceProvider"></param>
+	//	/// <returns></returns>
+	//	public override object ProvideValue(IServiceProvider serviceProvider)
+	//	{
+	//		var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
+	//		var property = target.TargetProperty as PropertyInfo;
+	//		if (property == null)
+	//			throw new ArgumentException("This markup is only allowed on properties.");
 
-			if (!property.PropertyType.IsAssignableFrom(typeof(IValueConverter)))
-				throw new ArgumentException("The property must except IValueConverter's.");
+	//		if (!property.PropertyType.IsAssignableFrom(typeof(IValueConverter)))
+	//			throw new ArgumentException("The property must except IValueConverter's.");
 
-			return new LuaValueConverter() { ConvertExpression = Code };
-		} // func ProvideValue
+	//		return new LuaValueConverter() { ConvertExpression = Code };
+	//	} // func ProvideValue
 
-		/// <summary>ConvertExpression</summary>
-		[ConstructorArgument("code")]
-		public string Code { get; set; }
-	} // class LuaConvertExtension
+	//	/// <summary>ConvertExpression</summary>
+	//	[ConstructorArgument("code")]
+	//	public string Code { get; set; }
+	//} // class LuaConvertExtension
 
 	#endregion
 
@@ -171,13 +171,13 @@ namespace TecWare.PPSn.UI
 		/// <param name="shell"></param>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		public object GetResult<TKEY, T>(PpsShellWpf shell)
+		public object GetResult<TKEY, T>(IPpsShell shell)
 			where TKEY : ResourceKey
 		{
 			var result = shell.FindResourceByKey<TKEY, T>();
 
 			// order result
-			if(Order || Comparer != null)
+			if (Order || Comparer != null)
 			{
 				if (Comparer != null)
 				{
@@ -204,7 +204,7 @@ namespace TecWare.PPSn.UI
 		{
 			// find shell
 			var rootObject = serviceProvider.GetService<IRootObjectProvider>(true);
-			var shell = PpsShellWpf.GetShell((DependencyObject)rootObject.RootObject);
+			var shell = ((DependencyObject)rootObject.RootObject).GetControlService<IPpsShell>(true);
 
 			// make select method
 			var m = findResourceKeyMethodInfo.MakeGenericMethod(ResourceKeyType, ResourceType ?? typeof(object));
@@ -228,7 +228,7 @@ namespace TecWare.PPSn.UI
 
 		static PpsCollectTypedResources()
 		{
-			findResourceKeyMethodInfo = typeof(PpsCollectTypedResources).GetMethod(nameof(GetResult)) ?? throw new ArgumentNullException(nameof(PpsShellWpf.FindResourceByKey));
+			findResourceKeyMethodInfo = typeof(PpsCollectTypedResources).GetMethod(nameof(GetResult)) ?? throw new ArgumentNullException(nameof(PpsCollectTypedResources.GetResult));
 		}
 	} // class PpsCollectTypedResources
 

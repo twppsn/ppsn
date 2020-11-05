@@ -226,3 +226,4 @@ FakesAssemblies/
 /Common/DTF/Microsoft.Deployment.WindowsInstaller.dll
 /Common/AssemblyInfoXl..cs
 /PPSnModCfg/Properties/AssemblyInfo.cs
+/PPSnDesktopMSI/Version.wxi

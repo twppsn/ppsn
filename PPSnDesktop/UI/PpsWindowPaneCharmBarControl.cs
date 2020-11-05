@@ -203,10 +203,10 @@ namespace TecWare.PPSn.UI
 
 			ppsTagsEditors = new PpsObjectTagsEditor[]
 			{
-				new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Note },
-				new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Tag },
-				new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Text },
-				new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Date },
+				//new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Note },
+				//new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Tag },
+				//new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Text },
+				//new PpsObjectTagsEditor() { TagClass = PpsObjectTagClass.Date },
 			};
 			ppsObjectPanes = new PpsWindowPaneObjectInfo[]
 			{
@@ -246,8 +246,8 @@ namespace TecWare.PPSn.UI
 
 		private void ClearObject(object data)
 		{
-			foreach (var t in ppsTagsEditors)
-				t.Object = null;
+			//foreach (var t in ppsTagsEditors)
+			//	t.Object = null;
 			objectLinkEditor.DataContext = null;
 
 			SetValue(objectNamePropertyKey, null); // hide object name
@@ -258,15 +258,15 @@ namespace TecWare.PPSn.UI
 		{
 			SetValue(objectNamePropertyKey, (data as IPpsDataInfo)?.Name);
 
-			if (data is PpsObject obj) // object info
-			{
-				foreach (var t in ppsTagsEditors)
-					t.Object = obj;
-				objectLinkEditor.DataContext = obj;
+			//if (data is PpsObject obj) // object info
+			//{
+			//	foreach (var t in ppsTagsEditors)
+			//		t.Object = obj;
+			//	objectLinkEditor.DataContext = obj;
 
-				SetViews(ppsObjectPanes);
-			}
-			else
+			//	SetViews(ppsObjectPanes);
+			//}
+			//else
 				SetViews(null);
 		} // proc SetObject
 

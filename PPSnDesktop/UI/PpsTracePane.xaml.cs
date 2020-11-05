@@ -117,20 +117,20 @@ namespace TecWare.PPSn.UI
 				)
 			);
 
-			this.AddCommandBinding(Shell, AssignDebugTarget,
-				new PpsAsyncCommand(
-					ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, false),
-					ctx => ctx.Parameter is PpsMasterDataRow
-				)
-			);
+			//this.AddCommandBinding(Shell, AssignDebugTarget,
+			//	new PpsAsyncCommand(
+			//		ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, false),
+			//		ctx => ctx.Parameter is PpsMasterDataRow
+			//	)
+			//);
 
 
-			this.AddCommandBinding(Shell, ClearDebugTarget,
-				new PpsAsyncCommand(
-					ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, true),
-					ctx => ctx.Parameter is PpsMasterDataRow row && row.GetProperty("DebugPath", null) != null
-				)
-			);
+			//this.AddCommandBinding(Shell, ClearDebugTarget,
+			//	new PpsAsyncCommand(
+			//		ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, true),
+			//		ctx => ctx.Parameter is PpsMasterDataRow row && row.GetProperty("DebugPath", null) != null
+			//	)
+			//);
 
 			//var collectionView = CollectionViewSource.GetDefaultView(Environment?.Log);
 			//collectionView.SortDescriptions.Add(new SortDescription(nameof(PpsTraceItemBase.Stamp), ListSortDirection.Descending));
@@ -293,22 +293,22 @@ namespace TecWare.PPSn.UI
 			return openDialog.FileName;
 		} // func GetDebugTargetFileName
 
-		private async Task UpdateDebugTargetAsync(PpsMasterDataRow row, bool clear)
-		{
-			var path = row.GetProperty("Path", String.Empty);
-			if (String.IsNullOrEmpty(path))
-				return;
+		//private async Task UpdateDebugTargetAsync(PpsMasterDataRow row, bool clear)
+		//{
+		//	var path = row.GetProperty("Path", String.Empty);
+		//	if (String.IsNullOrEmpty(path))
+		//		return;
 
-			var newFileName = clear ? null : GetDebugTargetFileName(path, row.GetProperty("DebugPath", null));
-			//try
-			//{
-			//	await Environment.MasterData.UpdateDebugPathAsync(row.RowId, path, newFileName);
-			//}
-			//catch (Exception e)
-			//{
-			//	Environment.ShowException(e);
-			//}
-		} // proc UpdateDebugTargetAsync
+		//	var newFileName = clear ? null : GetDebugTargetFileName(path, row.GetProperty("DebugPath", null));
+		//	//try
+		//	//{
+		//	//	await Environment.MasterData.UpdateDebugPathAsync(row.RowId, path, newFileName);
+		//	//}
+		//	//catch (Exception e)
+		//	//{
+		//	//	Environment.ShowException(e);
+		//	//}
+		//} // proc UpdateDebugTargetAsync
 
 		#endregion
 

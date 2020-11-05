@@ -14,13 +14,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)Data\DataSet.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Data\DataTable.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Data\DataUndoManager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Data\PpsClientLogin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)NativeMethods.Credential.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)NativeMethods.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Networking\Http.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Shell.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Shell.Lua.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Threading.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)UI\Logging.cs" />
   </ItemGroup>
 </Project>

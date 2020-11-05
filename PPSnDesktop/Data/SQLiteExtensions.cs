@@ -14,26 +14,25 @@
 //
 #endregion
 using System;
-using System.Data.SQLite;
 using System.Linq;
 
 namespace TecWare.PPSn.Data
 {
-	[SQLiteFunction(FuncType = FunctionType.Scalar, Name = "ulower", Arguments = 1)]
-	internal class SQLiteUnicodeLower : SQLiteFunction
-	{
-		public override object Invoke(object[] args)
-		{
-			return args[0].ToString().ToLower();
-		} // func Invoke
-	} // class SQLiteUnicodeLower
+	//[SQLiteFunction(FuncType = FunctionType.Scalar, Name = "ulower", Arguments = 1)]
+	//internal class SQLiteUnicodeLower : SQLiteFunction
+	//{
+	//	public override object Invoke(object[] args)
+	//	{
+	//		return args[0].ToString().ToLower();
+	//	} // func Invoke
+	//} // class SQLiteUnicodeLower
 
-	[SQLiteFunction(FuncType = FunctionType.Scalar, Name = "uconcat", Arguments = -1)]
-	internal class SQLiteFullTextConcat : SQLiteFunction
-	{
-		public override object Invoke(object[] args)
-		{
-			return String.Join(" ", args.Where(c => c != null && c != DBNull.Value).Select(c => c.ToString())).ToLower();
-		} // func Invoke
-	} // class SQLiteUnicodeLower
+	//[SQLiteFunction(FuncType = FunctionType.Scalar, Name = "uconcat", Arguments = -1)]
+	//internal class SQLiteFullTextConcat : SQLiteFunction
+	//{
+	//	public override object Invoke(object[] args)
+	//	{
+	//		return String.Join(" ", args.Where(c => c != null && c != DBNull.Value).Select(c => c.ToString())).ToLower();
+	//	} // func Invoke
+	//} // class SQLiteUnicodeLower
 }

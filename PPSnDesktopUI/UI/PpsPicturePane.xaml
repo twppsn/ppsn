@@ -17,7 +17,7 @@ specific language governing permissions and limitations under the Licence.
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 		     xmlns:cm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
-             xmlns:local="clr-namespace:TecWare.PPSn.UI"
+             xmlns:ui="clr-namespace:TecWare.PPSn.UI"
 			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls"
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 mc:Ignorable="d"
@@ -26,20 +26,20 @@ specific language governing permissions and limitations under the Licence.
 			 Image="image"
              d:DesignHeight="300" d:DesignWidth="300">
 	<uiC:PpsWindowPaneControl.Resources>
-		<CollectionViewSource x:Key="shapeFactories" Source="{local:PpsCollectTypedResources {x:Type local:PpsShapeResourceKey},ResourceType={x:Type uiC:IPpsShapeFactory}}">
+		<CollectionViewSource x:Key="shapeFactories" Source="{ui:PpsCollectTypedResources {x:Type ui:PpsShapeResourceKey},ResourceType={x:Type uiC:IPpsShapeFactory}}">
 			<CollectionViewSource.GroupDescriptions>
-				<PropertyGroupDescription PropertyName="Order" Converter="{x:Static local:PpsCommandOrder.GetGroup}" />
+				<PropertyGroupDescription PropertyName="Order" Converter="{x:Static ui:PpsCommandOrder.GetGroup}" />
 			</CollectionViewSource.GroupDescriptions>
 			<CollectionViewSource.SortDescriptions>
 				<cm:SortDescription PropertyName="Order" />
 			</CollectionViewSource.SortDescriptions>
 		</CollectionViewSource>
-		<CollectionViewSource x:Key="colorTable" Source="{local:PpsCollectTypedResources {x:Type local:PpsColorResourceKey},ResourceType={x:Type Color},Comparer={x:Static local:PpsComparer.Colors}}" />
-		<CollectionViewSource x:Key="thicknessTable" Source="{local:PpsCollectTypedResources {x:Type local:PpsThicknesResourceKey},ResourceType={x:Type Thickness}}" />
+		<CollectionViewSource x:Key="colorTable" Source="{ui:PpsCollectTypedResources {x:Type ui:PpsColorResourceKey},ResourceType={x:Type Color},Comparer={x:Static ui:PpsComparer.Colors}}" />
+		<CollectionViewSource x:Key="thicknessTable" Source="{ui:PpsCollectTypedResources {x:Type ui:PpsThicknesResourceKey},ResourceType={x:Type Thickness}}" />
 	</uiC:PpsWindowPaneControl.Resources>
 	<uiC:PpsWindowPaneControl.Commands>
-		<local:PpsUISplitCommandButton DisplayText="Neu" Image="plus" Mode="Dropdown">
-			<local:PpsUISplitCommandButton.Popup>
+		<ui:PpsUISplitCommandButton DisplayText="Neu" Image="plus" Mode="Dropdown">
+			<ui:PpsUISplitCommandButton.Popup>
 				<uiC:PpsPopup StaysOpen="False" RouteEvents="True">
 					<Grid Background="Gray">
 						<Grid.RowDefinitions>
@@ -97,8 +97,8 @@ specific language governing permissions and limitations under the Licence.
 						</ItemsControl>					
 					</Grid>
 				</uiC:PpsPopup>
-			</local:PpsUISplitCommandButton.Popup>
-		</local:PpsUISplitCommandButton>
+			</ui:PpsUISplitCommandButton.Popup>
+		</ui:PpsUISplitCommandButton>
 	</uiC:PpsWindowPaneControl.Commands>
 
 	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsManipulationEnabled="True">
@@ -142,7 +142,7 @@ specific language governing permissions and limitations under the Licence.
 				<Setter.Value>
 					<DataTemplate>
 						<uiC:PpsButton x:Name="colorButton"
-									   Command="{x:Static local:PpsPicturePane.OverlaySetColorCommand}" 
+									   Command="{x:Static ui:PpsPicturePane.OverlaySetColorCommand}" 
 									   CommandParameter="{Binding}"
 									   Focusable="False"
 									   Background="Transparent"
@@ -180,7 +180,7 @@ specific language governing permissions and limitations under the Licence.
 				<Setter.Value>
 					<DataTemplate>
 						<uiC:PpsButton x:Name="thicknessButton"
-									   Command="{x:Static local:PpsPicturePane.OverlaySetThicknessCommand}" 
+									   Command="{x:Static ui:PpsPicturePane.OverlaySetThicknessCommand}" 
 									   CommandParameter="{Binding}"
 									   Focusable="False"
 									   Background="Transparent"
@@ -214,14 +214,14 @@ specific language governing permissions and limitations under the Licence.
 			<RowDefinition Height="auto"/>
 		</Grid.RowDefinitions>
 
-		<Image Source="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedCamera.Preview, Mode=OneWay}"
-			   Visibility="{Binding SelectedCamera, RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Converter={x:Static local:PpsConverter.Visibility}}" />
+		<Image Source="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=SelectedCamera.Preview, Mode=OneWay}"
+			   Visibility="{Binding SelectedCamera, RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Converter={x:Static ui:PpsConverter.Visibility}}" />
 
 		<Image Grid.RowSpan="2"
 			   Width="1"
 			   VerticalAlignment="Bottom"
 			   HorizontalAlignment="Center"
-			   Source="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=LastSnapshot.DataLazy.RawData, Mode=OneWay, NotifyOnTargetUpdated=True}" 
+			   Source="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=LastSnapshot.DataLazy.RawData, Mode=OneWay, NotifyOnTargetUpdated=True}" 
 			   Opacity="0">
 			<Image.RenderTransform>
 				<ScaleTransform  />
@@ -248,18 +248,18 @@ specific language governing permissions and limitations under the Licence.
 
 		<Grid>
 			<Image x:Name="CurrentObjectImageMax"
-				   DataContext="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedAttachment, UpdateSourceTrigger=PropertyChanged,Mode=OneWay}"
+				   DataContext="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=SelectedAttachment, UpdateSourceTrigger=PropertyChanged,Mode=OneWay}"
 				   Source="{Binding LinkedObject.DataLazy.RawData}">
 				--><!-- RK: Image can handle byte[] as source --><!--
 			</Image>
-			<InkCanvas Cursor="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkEditCursor}"
+			<InkCanvas Cursor="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=InkEditCursor}"
 					   Width="{Binding ElementName=CurrentObjectImageMax, Path=Source.Width}"
 					   Height="{Binding ElementName=CurrentObjectImageMax, Path=Source.Height}"
 					   UseCustomCursor="True"
 					   Background="Transparent"
-					   EditingMode="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkEditMode, Mode=OneWay}"
-					   Strokes="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkStrokes, UpdateSourceTrigger=PropertyChanged}"
-					   DefaultDrawingAttributes="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkDrawingAttributes, Mode=OneWay}">
+					   EditingMode="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=InkEditMode, Mode=OneWay}"
+					   Strokes="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=InkStrokes, UpdateSourceTrigger=PropertyChanged}"
+					   DefaultDrawingAttributes="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=InkDrawingAttributes, Mode=OneWay}">
 				<InkCanvas.LayoutTransform>
 					<MultiBinding Mode="OneWay" Converter="{StaticResource ScaleConverter}">
 						<Binding ElementName="CurrentObjectImageMax" Path="ActualWidth"/>
@@ -271,7 +271,7 @@ specific language governing permissions and limitations under the Licence.
 				<Style TargetType="{x:Type Grid}">
 					<Setter Property="Visibility" Value="Visible"/>
 					<Style.Triggers>
-						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedAttachment}" Value="{x:Null}">
+						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=SelectedAttachment}" Value="{x:Null}">
 							<Setter Property="Visibility" Value="Hidden"/>
 						</DataTrigger>
 					</Style.Triggers>
@@ -289,7 +289,7 @@ specific language governing permissions and limitations under the Licence.
 				<Style TargetType="Border">
 					<Setter Property="Visibility" Value="Visible"/>
 					<Style.Triggers>
-						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedAttachment}" Value="{x:Null}">
+						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=SelectedAttachment}" Value="{x:Null}">
 							<Setter Property="Visibility" Value="Hidden"/>
 						</DataTrigger>
 						<Trigger Property="IsMouseOver" Value="true">
@@ -312,7 +312,7 @@ specific language governing permissions and limitations under the Licence.
 				</Style>
 			</Border.Style>
 
-			<Grid DataContext="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=StrokeSettings}">
+			<Grid DataContext="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=StrokeSettings}">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="auto"/>
 					<RowDefinition/>
@@ -342,24 +342,24 @@ specific language governing permissions and limitations under the Licence.
 									<ColumnDefinition />
 								</Grid.ColumnDefinitions>
 								<uiC:PpsButton x:Name="editButton"
-											   Command="{x:Static local:PpsPicturePane.OverlayEditFreehandCommand}"
+											   Command="{x:Static ui:PpsPicturePane.OverlayEditFreehandCommand}"
 											   GeometryName="edit" />
 								<uiC:PpsButton x:Name="cancelButton"
-											   Command="{x:Static local:PpsPicturePane.OverlayCancelEditModeCommand}"
+											   Command="{x:Static ui:PpsPicturePane.OverlayCancelEditModeCommand}"
 											   Grid.Column="1"
 											   GeometryName="cursor" />
 								<uiC:PpsButton x:Name="removeButton"
-											   Command="{x:Static local:PpsPicturePane.OverlayRemoveStrokeCommand}"
+											   Command="{x:Static ui:PpsPicturePane.OverlayRemoveStrokeCommand}"
 											   Grid.Column="2"
 											   GeometryName="eraser" />
 							</Grid>
 							<ControlTemplate.Triggers>
-								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkEditMode}" Value="{x:Static InkCanvasEditingMode.Ink}">
+								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=InkEditMode}" Value="{x:Static InkCanvasEditingMode.Ink}">
 									<Setter TargetName="editButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}" />
 									<Setter TargetName="editButton" Property="BorderThickness" Value="2" />
 									<Setter TargetName="editButton" Property="Padding" Value="0" />
 								</DataTrigger>
-								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=InkEditMode}" Value="{x:Static InkCanvasEditingMode.EraseByStroke}">
+								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=InkEditMode}" Value="{x:Static InkCanvasEditingMode.EraseByStroke}">
 									<Setter TargetName="removeButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}" />
 									<Setter TargetName="removeButton" Property="BorderThickness" Value="2" />
 									<Setter TargetName="removeButton" Property="Padding" Value="0" />
@@ -371,17 +371,17 @@ specific language governing permissions and limitations under the Licence.
 
 				<ListBox Grid.Row="1"
 						 ItemsSource="{Binding Thicknesses}"
-						 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=CurrentStrokeThickness, Mode=OneWay}"
+						 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=CurrentStrokeThickness, Mode=OneWay}"
 						 Style="{StaticResource PPSnStrokeThicknessListBoxStyle}"/>
 				<ListBox Grid.Row="2" Margin="0,3,0,0"
 						 ItemsSource="{Binding Colors}"
-						 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=CurrentStrokeColor, Mode=OneWay}"
+						 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=CurrentStrokeColor, Mode=OneWay}"
 						 Style="{StaticResource PPSnStrokeColorListBoxStyle}"/>
 			</Grid>
 		</Border>
 		
-		<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=CameraEnum}"
-				 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedCamera, Mode=OneWay}"
+		<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=CameraEnum}"
+				 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=SelectedCamera, Mode=OneWay}"
 				 Style="{StaticResource PPSnListBoxStyle}"
 				 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 				 HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,16,0,0"
@@ -389,7 +389,7 @@ specific language governing permissions and limitations under the Licence.
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<uiC:PpsButton x:Name="cameraButton"
-								   Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
+								   Command="{x:Static ui:PpsPicturePane.ChangeCameraCommand}" 
 								   CommandParameter="{Binding}"
 								   Focusable="False"
 								   BorderBrush="{StaticResource PpsPicturePaneBorderBrush}"
@@ -450,7 +450,7 @@ specific language governing permissions and limitations under the Licence.
 		<Border x:Name="existingImagesPanel" Grid.Row="1" Height="{StaticResource PpsPicturePaneImagePanelHeight}" Padding="0,16,0,0">
 			<ListBox x:Name="imagesList" 
 					 ItemsSource="{Binding Source={StaticResource FilteredAttachments}}"
-					 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedAttachment, Mode=OneWay}"
+					 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type ui:PpsPicturePane}}, Path=SelectedAttachment, Mode=OneWay}"
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ScrollViewer.VerticalScrollBarVisibility="Disabled"
 					 Focusable="False">
@@ -462,7 +462,7 @@ specific language governing permissions and limitations under the Licence.
 				<ListBox.ItemTemplate>
 					<DataTemplate>
 						<uiC:PpsButton x:Name="imageButton"
-									   Command="{x:Static local:PpsPicturePane.EditOverlayCommand}" 
+									   Command="{x:Static ui:PpsPicturePane.EditOverlayCommand}" 
 									   CommandParameter="{Binding}"
 									   Focusable="False"
 									   BorderBrush="{StaticResource PpsPicturePaneBorderBrush}"

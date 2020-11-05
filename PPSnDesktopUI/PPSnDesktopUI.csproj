@@ -1,382 +1,62 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C7D09A93-DA78-4B81-8D3C-260442C61C5F}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TecWare.PPSn</RootNamespace>
-    <AssemblyName>PPSn.Desktop.UI</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <WarningLevel>4</WarningLevel>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;WPF</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+		<TargetFramework>net48</TargetFramework>
+		<RootNamespace>TecWare.PPSn</RootNamespace>
+		<AssemblyName>PPSn.Desktop.UI</AssemblyName>
+		<PackageId>TecWare.PPSn.DesktopUI</PackageId>
+		<Authors>TecWare</Authors>
+		<Company>TecWare Gesellschaft für Softwareentwicklung mbH</Company>
+		<Product>PPSn</Product>
+		<PackageProjectUrl>https://github.com/twppsn/ppsn/</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/twppsn/ppsn.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+	</PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DocumentationFile>bin\Debug\PPSn.Desktop.UI.xml</DocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;WPF</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DocumentationFile>bin\Release\PPSn.Desktop.UI.xml</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AForge, Version=2.2.5.0, Culture=neutral, PublicKeyToken=c1db6ff4eaa06aeb, processorArchitecture=MSIL">
-      <HintPath>..\packages\AForge.2.2.5\lib\AForge.dll</HintPath>
-    </Reference>
-    <Reference Include="AForge.Video, Version=2.2.5.0, Culture=neutral, PublicKeyToken=cbfb6e07d173c401, processorArchitecture=MSIL">
-      <HintPath>..\packages\AForge.Video.2.2.5\lib\AForge.Video.dll</HintPath>
-    </Reference>
-    <Reference Include="AForge.Video.DirectShow, Version=2.2.5.0, Culture=neutral, PublicKeyToken=61ea4348d43881b7, processorArchitecture=MSIL">
-      <HintPath>..\packages\AForge.Video.DirectShow.2.2.5\lib\AForge.Video.DirectShow.dll</HintPath>
-    </Reference>
-    <Reference Include="DES.Core, Version=3.4.0.0, Culture=neutral, PublicKeyToken=65aa0de0ef4a3cd4, processorArchitecture=MSIL">
-      <HintPath>..\packages\TecWare.DES.Core.3.4.64\lib\net47\DES.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Markdig, Version=0.22.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Markdig.0.22.0\lib\net452\Markdig.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Dynamic, Version=1.2.3.0, Culture=neutral, PublicKeyToken=7f709c5b713576e1, processorArchitecture=MSIL">
-      <HintPath>..\packages\DynamicLanguageRuntime.1.2.3\lib\net45\Microsoft.Dynamic.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Scripting, Version=1.2.3.0, Culture=neutral, PublicKeyToken=7f709c5b713576e1, processorArchitecture=MSIL">
-      <HintPath>..\packages\DynamicLanguageRuntime.1.2.3\lib\net45\Microsoft.Scripting.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Scripting.Metadata, Version=1.2.3.0, Culture=neutral, PublicKeyToken=7f709c5b713576e1, processorArchitecture=MSIL">
-      <HintPath>..\packages\DynamicLanguageRuntime.1.2.3\lib\net45\Microsoft.Scripting.Metadata.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Web.WebView2.Core, Version=1.0.674.0, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.Web.WebView2.WinForms, Version=1.0.674.0, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.WinForms.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.Web.WebView2.Wpf, Version=1.0.674.0, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\lib\net462\Microsoft.Web.WebView2.Wpf.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
-      <HintPath>..\packages\NeoLua.1.3.11\lib\net47\Neo.Lua.dll</HintPath>
-    </Reference>
-    <Reference Include="Neo.Markdig.Xaml, Version=1.0.9.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Neo.Markdig.Xaml.1.0.9\lib\net47\Neo.Markdig.Xaml.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="PresentationFramework.Aero2" />
-    <Reference Include="ReachFramework" />
-    <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Printing" />
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.7.1\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Xaml">
-      <RequiredTargetFramework>4.0</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="WindowsBase" />
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
+    <None Remove="Controls\PpsButton.xaml" />
+    <None Remove="Controls\PpsCircularListBox.xaml" />
+    <None Remove="Controls\PpsComboBox.xaml" />
+    <None Remove="Controls\PpsCommandBar.xaml" />
+    <None Remove="Controls\PpsContextMenu.xaml" />
+    <None Remove="Controls\PpsDataFieldPanel.xaml" />
+    <None Remove="Controls\PpsDataFilterBase.xaml" />
+    <None Remove="Controls\PpsDataListBox.xaml" />
+    <None Remove="Controls\PpsEditableListbox.xaml" />
+    <None Remove="Controls\PpsGeometryImage.xaml" />
+    <None Remove="Controls\PpsListbox.xaml" />
+    <None Remove="Controls\PpsNamedSeparator.xaml" />
+    <None Remove="Controls\PpsPanel.xaml" />
+    <None Remove="Controls\PpsPdfViewer.xaml" />
+    <None Remove="Controls\PpsPopup.xaml" />
+    <None Remove="Controls\PpsProgressControl.xaml" />
+    <None Remove="Controls\PpsScrollViewer.xaml" />
+    <None Remove="Controls\PpsShapeCanvas.xaml" />
+    <None Remove="Controls\PpsSharedResourceKey.xaml" />
+    <None Remove="Controls\PpsSideBarControl.xaml" />
+    <None Remove="Controls\PpsStackSectionControl.xaml" />
+    <None Remove="Controls\PpsTextBox.xaml" />
+    <None Remove="Themes\Generic.xaml" />
+    <None Remove="UI\PpsCameraDialog.xaml" />
+    <None Remove="UI\PpsMessageDialog.xaml" />
+    <None Remove="UI\PpsPdfViewerPane.xaml" />
+    <None Remove="UI\PpsPicturePane.xaml" />
+    <None Remove="UI\Styles\DefaultShapes.xaml" />
+    <None Remove="UI\Styles\DrawingImages.xaml" />
+    <None Remove="UI\Styles\WindowStyles.xaml" />
+    <None Remove="UI\UI.xaml" />
+    <None Remove="x64\pdfium.dll" />
+    <None Remove="x86\pdfium.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Controls\ComboBoxBehavior.cs" />
-    <Compile Include="Controls\PpsListbox.cs" />
-    <Compile Include="Controls\PpsDataListBox.cs" />
-    <Compile Include="Controls\PpsPanel.cs" />
-    <Compile Include="Controls\PpsProgressOverlay.cs" />
-    <Compile Include="Controls\PpsShapeCanvas.cs" />
-    <Compile Include="Controls\PpsWebView.cs" />
-    <Compile Include="PpsWpfShell.Panes.cs" />
-    <Compile Include="PpsWpfShell.Stuff.cs" />
-    <Compile Include="UI\KeyboardScanner.cs" />
-    <Compile Include="Interop\Win32Window.cs" />
-    <Compile Include="NativeMethods.RawInput.cs" />
-    <Compile Include="UI\Comparer.cs" />
-    <Compile Include="UI\PpsAttachments.cs" />
-    <Compile Include="Data\PpsDataRowEnumerableCollectionView.cs" />
-    <Compile Include="Data\PpsTypedListCollectionView.cs" />
-    <Compile Include="UI\PpsCameraDialog.xaml.cs">
-      <DependentUpon>PpsCameraDialog.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\PpsCircularListBox.cs" />
-    <Compile Include="Controls\PpsComboBox.cs" />
-    <Compile Include="Controls\PpsGeometryImage.cs" />
-    <Compile Include="Controls\PpsPdfViewer.cs" />
-    <Compile Include="Controls\PpsPopup.cs" />
-    <Compile Include="Controls\PpsButton.cs" />
-    <Compile Include="Controls\PpsCommandBar.cs" />
-    <Compile Include="Controls\PpsDataField.cs" />
-    <Compile Include="Controls\PpsDataFieldPanel.cs" />
-    <Compile Include="Controls\PpsDataFilterBase.cs" />
-    <Compile Include="Controls\PpsEditableListbox.cs" />
-    <Compile Include="Controls\PpsNamedSeparator.cs" />
-    <Compile Include="Controls\PpsProgressControl.cs" />
-    <Compile Include="Controls\PpsScrollViewer.cs" />
-    <Compile Include="Controls\PpsSharedResourceKey.cs" />
-    <Compile Include="Controls\PpsSideBarControl.cs" />
-    <Compile Include="Controls\PpsStackSectionControl.cs" />
-    <Compile Include="Controls\PpsGenericWpfControl.cs" />
-    <Compile Include="Controls\PpsTextBox.cs" />
-    <Compile Include="Controls\PpsControl.cs" />
-    <Compile Include="Controls\PpsVisibleBox.cs" />
-    <Compile Include="Data\Object.cs" />
-    <Compile Include="NativeMethods.Pdfium.cs" />
-    <Compile Include="Data\PdfReader.cs" />
-    <Compile Include="PpsWpfShell.cs" />
-    <Compile Include="UI\PpsPdfViewerPane.xaml.cs">
-      <DependentUpon>PpsPdfViewerPane.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\PpsWindowPaneControl.cs" />
-    <Compile Include="UI\PpsXamlParser.cs" />
-    <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
-    <Compile Include="Controls\TreeListView.cs" />
-    <Compile Include="Controls\UndoManagerListBox.cs" />
-    <Compile Include="Data\DataFilter.cs" />
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Stuff.cs" />
-    <Compile Include="UI\Converter.cs" />
-    <Compile Include="UI\LuaUI.cs" />
-    <Compile Include="UI\PpsMessageDialog.xaml.cs">
-      <DependentUpon>PpsMessageDialog.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <AppDesigner Include="Properties\" />
-    <Compile Include="UI\Markups.cs" />
-    <Compile Include="NativeMethods.cs" />
-    <Compile Include="UI\PpsCommand.cs" />
-    <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
-    <Compile Include="UI\PpsPicturePane.xaml.cs">
-      <DependentUpon>PpsPicturePane.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\PpsWindow.Chrome.cs" />
-    <Compile Include="Controls\PpsWindow.cs" />
-    <Compile Include="UI\PpsWindowPane.cs" />
-    <Compile Include="UI\Printing.cs" />
-    <Compile Include="UI\TakeList.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Controls\text.fx" />
-    <Content Include="x64\pdfium.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="x86\pdfium.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="UI\KeyboardScanner.csv" />
-    <None Include="x64\args.gn" />
-    <None Include="x86\args.gn" />
-    <Resource Include="x86\Readme.txt" />
-    <None Include="app.config" />
-    <None Include="TecWare.PPSn.DesktopUI.nuspec">
-      <SubType>Designer</SubType>
-    </None>
-    <Resource Include="Images\SplashLogo.png" />
-    <None Include="packages.config" />
-    <None Include="ppsn.licenseheader" />
-    <Resource Include="Images\SizeGrip.png" />
-    <Resource Include="Images\EastBottom.png" />
-    <Resource Include="Images\EastMiddle.png" />
-    <Resource Include="Images\EastTop.png" />
-    <Resource Include="Images\NorthMiddle.png" />
-    <Resource Include="Images\SouthMiddle.png" />
-    <Resource Include="Images\WestBottom.png" />
-    <Resource Include="Images\WestMiddle.png" />
-    <Resource Include="Images\WestTop.png" />
-    <None Include="Controls\text.fx.ps" />
-  </ItemGroup>
-  <ItemGroup>
-    <Page Include="Controls\PpsButton.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsCircularListBox.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\PpsComboBox.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsDataListBox.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsEditableListbox.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\PpsGeometryImage.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsDataFieldPanel.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsCommandBar.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsDataFilterBase.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\PpsListbox.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsPanel.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\PpsPdfViewer.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsNamedSeparator.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsProgressControl.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsShapeCanvas.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsScrollViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\PpsSideBarControl.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsStackSectionControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\PpsSharedResourceKey.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsPopup.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\PpsTextBox.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Themes\Generic.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="UI\PpsCameraDialog.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\PpsMessageDialog.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\PpsPdfViewerPane.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\PpsPicturePane.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\Styles\DefaultShapes.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="UI\Styles\DrawingImages.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\PpsContextMenu.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\Styles\WindowStyles.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\UI.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Design\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Images\NorthLeft.png" />
-    <Resource Include="Images\NorthRight.png" />
-    <Resource Include="Images\SouthLeft.png" />
-    <Resource Include="Images\SouthRight.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">
@@ -388,24 +68,96 @@
       <Name>PPSnUI</Name>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="..\PPSnClient\PPSnClient.projitems" Label="Shared" />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\packages\jnm2.ReferenceAssemblies.net35.1.0.1\build\jnm2.ReferenceAssemblies.net35.targets" Condition="Exists('..\packages\jnm2.ReferenceAssemblies.net35.1.0.1\build\jnm2.ReferenceAssemblies.net35.targets')" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\packages\jnm2.ReferenceAssemblies.net35.1.0.1\build\jnm2.ReferenceAssemblies.net35.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\jnm2.ReferenceAssemblies.net35.1.0.1\build\jnm2.ReferenceAssemblies.net35.targets'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net47.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net47.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.NETFramework.ReferenceAssemblies.net47.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net47.targets'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets'))" />
-  </Target>
-  <Import Project="..\packages\Microsoft.NETFramework.ReferenceAssemblies.net47.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net47.targets" Condition="Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net47.1.0.0\build\Microsoft.NETFramework.ReferenceAssemblies.net47.targets')" />
-  <Import Project="..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets" Condition="Exists('..\packages\Microsoft.Web.WebView2.1.0.674-prerelease\build\Microsoft.Web.WebView2.targets')" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+  <ItemGroup>
+    <PackageReference Include="AForge">
+      <Version>2.2.5</Version>
+    </PackageReference>
+    <PackageReference Include="AForge.Video">
+      <Version>2.2.5</Version>
+    </PackageReference>
+    <PackageReference Include="AForge.Video.DirectShow">
+      <Version>2.2.5</Version>
+    </PackageReference>
+    <PackageReference Include="DynamicLanguageRuntime">
+      <Version>1.2.3</Version>
+    </PackageReference>
+    <PackageReference Include="jnm2.ReferenceAssemblies.net35">
+      <Version>1.0.1</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Markdig">
+      <Version>0.22.0</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CSharp">
+      <Version>4.7.0</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies">
+      <Version>1.0.0</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Web.WebView2">
+      <Version>1.0.674-prerelease</Version>
+    </PackageReference>
+    <PackageReference Include="Neo.Markdig.Xaml">
+      <Version>1.0.9</Version>
+    </PackageReference>
+    <PackageReference Include="NeoLua">
+      <Version>1.3.11</Version>
+    </PackageReference>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe">
+      <Version>4.7.1</Version>
+    </PackageReference>
+    <PackageReference Include="TecWare.DES.Core">
+      <Version>3.4.64</Version>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Controls\PpsButton.xaml" />
+    <Page Include="Controls\PpsCircularListBox.xaml" />
+    <Page Include="Controls\PpsComboBox.xaml" />
+    <Page Include="Controls\PpsCommandBar.xaml" />
+    <Page Include="Controls\PpsContextMenu.xaml" />
+    <Page Include="Controls\PpsDataFieldPanel.xaml" />
+    <Page Include="Controls\PpsDataFilterBase.xaml" />
+    <Page Include="Controls\PpsDataListBox.xaml" />
+    <Page Include="Controls\PpsEditableListbox.xaml" />
+    <Page Include="Controls\PpsGeometryImage.xaml" />
+    <Page Include="Controls\PpsListbox.xaml" />
+    <Page Include="Controls\PpsNamedSeparator.xaml" />
+    <Page Include="Controls\PpsPanel.xaml" />
+    <Page Include="Controls\PpsPdfViewer.xaml" />
+    <Page Include="Controls\PpsPopup.xaml" />
+    <Page Include="Controls\PpsProgressControl.xaml" />
+    <Page Include="Controls\PpsScrollViewer.xaml" />
+    <Page Include="Controls\PpsShapeCanvas.xaml" />
+    <Page Include="Controls\PpsSharedResourceKey.xaml" />
+    <Page Include="Controls\PpsSideBarControl.xaml" />
+    <Page Include="Controls\PpsStackSectionControl.xaml" />
+    <Page Include="Controls\PpsTextBox.xaml" />
+    <Page Include="Themes\Generic.xaml" />
+    <Page Include="UI\PpsCameraDialog.xaml" />
+    <Page Include="UI\PpsMessageDialog.xaml" />
+    <Page Include="UI\PpsPdfViewerPane.xaml" />
+    <Page Include="UI\PpsPicturePane.xaml" />
+    <Page Include="UI\Styles\DefaultShapes.xaml" />
+    <Page Include="UI\Styles\DrawingImages.xaml" />
+    <Page Include="UI\Styles\WindowStyles.xaml" />
+    <Page Include="UI\UI.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+    <Reference Include="PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+    <Reference Include="ReachFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+    <Reference Include="System.Printing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+    <Reference Include="System.Web, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="System.Xaml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+    <Reference Include="WindowsBase, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="x64\pdfium.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
