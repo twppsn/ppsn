@@ -27,6 +27,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Bde;
@@ -38,7 +39,7 @@ using TecWare.PPSn.UI;
 namespace TecWare.PPSn
 {
 	/// <summary></summary>
-	public partial class App : Application
+	public partial class App : Application, IPpsShellApplication
 	{
 		#region -- class BindingErrorListener -----------------------------------------
 
@@ -70,23 +71,26 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class RestartApplicationException ----------------------------------
+		#region -- class ExitApplicationException -------------------------------------
 
-		private sealed class RestartApplicationException : Exception
+		private sealed class ExitApplicationException : Exception
 		{
+			private readonly bool restart;
 			private readonly IPpsShellInfo shellInfo;
 			private readonly ICredentials userInfo;
 
-			public RestartApplicationException(IPpsShellInfo shellInfo, ICredentials userInfo)
+			public ExitApplicationException(bool restart, IPpsShellInfo shellInfo, ICredentials userInfo)
 				: base("Restart application")
 			{
+				this.restart = restart;
 				this.shellInfo = shellInfo;
 				this.userInfo = userInfo;
 			} // ctor
 
+			public bool Restart => restart;
 			public IPpsShellInfo ShellInfo => shellInfo;
 			public ICredentials UserInfo => userInfo;
-		} // class RestartApplicationException
+		} // class ExitApplicationException
 
 		#endregion
 
@@ -440,7 +444,7 @@ namespace TecWare.PPSn
 
 				// try start shell
 				if (errorInfo != null) // previous shell loaded with error -> restart to load
-					throw new RestartApplicationException(shellInfo, null);
+					throw new ExitApplicationException(true, shellInfo, null);
 
 				try
 				{
@@ -468,7 +472,7 @@ namespace TecWare.PPSn
 				else if (newLoginShellInfo != null && !newLoginShellInfo.Equals(newShell.Info))
 				{
 					await newShell.ShutdownAsync();  // shutdown partly loaded shell
-					throw new RestartApplicationException(newShell.Info, newUserInfo);
+					throw new ExitApplicationException(true, newShell.Info, newUserInfo);
 				}
 
 				return newUserInfo;
@@ -578,13 +582,9 @@ namespace TecWare.PPSn
 						ShutdownMode = ShutdownMode.OnLastWindowClose;
 						return true;
 					}
-					catch (RestartApplicationException)
+					catch (ExitApplicationException)
 					{
 						throw;
-					}
-					catch (PpsApplicationRestartNeededException)
-					{
-						throw new RestartApplicationException(newShell.Info, userInfo);
 					}
 					catch (Exception e)
 					{
@@ -592,9 +592,10 @@ namespace TecWare.PPSn
 					}
 				}
 			}
-			catch (RestartApplicationException e)
+			catch (ExitApplicationException e)
 			{
-				InvokeRestartCore(e.ShellInfo, e.UserInfo);
+				if (e.Restart)
+					InvokeRestartCore(e.ShellInfo, e.UserInfo);
 				return false;
 			}
 			catch (Exception e)
@@ -683,6 +684,7 @@ namespace TecWare.PPSn
 			);
 
 			// Init services
+			PpsShell.Global.AddService(typeof(IPpsShellApplication), this);
 			PpsShell.Collect(typeof(StuffUI).Assembly);
 			PpsShell.Collect(typeof(App).Assembly);
 
@@ -882,6 +884,45 @@ namespace TecWare.PPSn
 			=> ResolveAssemblyCore(args.Name);
 
 		#endregion
+
+		#region -- IPpsShellApplication - members -------------------------------------
+
+		private const string applicationName = "PPSnDesktop";
+
+		private static Version GetInstalledVersionDefault()
+		{
+			using (var reg = Registry.CurrentUser.OpenSubKey(@"Software\TecWare\" + applicationName + @"\Components", false))
+			{
+				return reg?.GetValue(null) is string v
+					? new Version(v)
+					: new Version(1, 0, 0, 0);
+			}
+		} // func GetInstalledVersionDefault
+
+		Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri)
+		{
+			// run msi
+			var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
+			var msiLogFile = Path.Combine(Path.GetTempPath(), applicationName + ".msi.txt");
+			var psi = new ProcessStartInfo(msiExe, "/i " + uri.ToString() + " /qb /l*v \"" + msiLogFile + "\" SHELLNAME=" + shell.Info.Name);
+
+#if DEBUG
+			MessageBox.Show($"RunMSI: {psi.FileName} {psi.Arguments}");
+			return Task.CompletedTask;
+#else
+			Process.Start(psi);
+			throw new RestartApplicationException(false, null, null); // means quit application
+#endif
+		} // proc IPpsShellApplication.RequaestUpdateAsync
+
+		Task IPpsShellApplication.RequestRestartAsync(IPpsShell shell)
+			=> throw new ExitApplicationException(true, shell.Info, shell.Http.Credentials);
+
+		string IPpsShellApplication.Name => applicationName;
+		Version IPpsShellApplication.AssenblyVersion => PpsShell.GetDefaultAssemblyVersion(this);
+		Version IPpsShellApplication.InstalledVersion => GetInstalledVersionDefault();
+
+#endregion
 
 		/// <summary>Return the current environemnt</summary>
 		public IPpsShell Shell => shell;

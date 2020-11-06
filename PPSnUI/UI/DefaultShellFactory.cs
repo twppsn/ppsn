@@ -334,7 +334,7 @@ namespace TecWare.PPSn.UI
 				if (shell == null || shell.Http == null)
 					throw new InvalidOperationException();
 
-				return PpsShell.LoadSettingsFromServerAsync(this, shell.Http, deviceId.Value, 0);
+				return PpsShell.LoadSettingsFromServerAsync(this, shell, deviceId.Value, 0);
 			} // proc LoadSettingsFromServerAsync
 
 			protected override IReadOnlyList<Tuple<XName, string>> TranslateProperties => translateInstanceProperties;

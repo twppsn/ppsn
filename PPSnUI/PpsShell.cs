@@ -70,6 +70,29 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- interface IPpsShellApplication -----------------------------------------
+
+	/// <summary>This interface is implemented by the main assembly.</summary>
+	public interface IPpsShellApplication
+	{
+		/// <summary>Schedule restart for the application, because a new version of the package is detected.</summary>
+		/// <param name="shell"></param>
+		/// <param name="uri"></param>
+		Task RequestUpdateAsync(IPpsShell shell, Uri uri);
+		/// <summary>Schedule restart for the application, because a new version is detected.</summary>
+		/// <param name="shell"></param>
+		Task RequestRestartAsync(IPpsShell shell);
+
+		/// <summary>Internal application name of the host.</summary>
+		string Name { get; }
+		/// <summary>Version of the running application.</summary>
+		Version AssenblyVersion { get; }
+		/// <summary>Version if the installed package.</summary>
+		Version InstalledVersion { get; }
+	} // interface IPpsShellApplication
+
+	#endregion
+
 	#region -- interface IPpsShellService ---------------------------------------------
 
 	/// <summary>Service that is hosted with a shell environment.</summary>
@@ -648,7 +671,7 @@ namespace TecWare.PPSn
 						http = dpcHttp;
 
 						// load settings from server
-						await LoadSettingsFromServerAsync(settingsService, dpcHttp, instanceSettingsInfo.DpcDeviceId, 0);
+						await LoadSettingsFromServerAsync(settingsService, this, instanceSettingsInfo.DpcDeviceId, 0);
 
 
 						// notify settings loaded
@@ -1251,25 +1274,29 @@ namespace TecWare.PPSn
 		public static IEnumerable<IPpsShellInfo> GetShellInfo()
 			=> (IEnumerable<IPpsShellInfo>)GetService<IPpsShellFactory>(false) ?? Array.Empty<IPpsShellInfo>();
 
+		private static IEnumerable<PropertyValue> GetLoadSettingsArguments(IPpsShellApplication application, string clientId, int lastRefreshTick)
+		{
+			if (application != null)
+				yield return new PropertyValue("app", application.Name);
+			yield return new PropertyValue("id", clientId);
+			yield return new PropertyValue("last", lastRefreshTick);
+		} // func GetLoadSettingsArguments
+
 		/// <summary></summary>
 		/// <param name="settingsService"></param>
-		/// <param name="http"></param>
+		/// <param name="shell"></param>
 		/// <param name="clientId"></param>
 		/// <param name="lastRefreshTick"></param>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
-		public static async Task<int> LoadSettingsFromServerAsync(IPpsSettingsService settingsService, DEHttpClient http, string clientId, int lastRefreshTick)
+		public static async Task<int> LoadSettingsFromServerAsync(IPpsSettingsService settingsService, IPpsShell shell, string clientId, int lastRefreshTick)
 		{
+			var http = shell.Http;
+			var application = Global.GetService<IPpsShellApplication>(false);
+
 			// refresh properties from server
 			var sb = new StringBuilder("info.xml");
-			HttpStuff.MakeUriArguments(sb, false,
-				new PropertyValue[]
-				{
-					new PropertyValue("app", "PPSnDesktop"),
-					new PropertyValue("id", clientId),
-					new PropertyValue("last", lastRefreshTick)
-				}
-			);
+			HttpStuff.MakeUriArguments(sb, false, GetLoadSettingsArguments(application, clientId, lastRefreshTick));
 			var request = new HttpRequestMessage(HttpMethod.Get, http.CreateFullUri(sb.ToString()));
 			request.Headers.Accept.TryParseAdd(MimeTypes.Text.Xml);
 
@@ -1295,6 +1322,18 @@ namespace TecWare.PPSn
 
 				var xInfo = await r.GetXmlAsync(MimeTypes.Text.Xml, "ppsn");
 
+				// check version of shell application
+				if (application != null && Version.TryParse(xInfo.GetAttribute("version", "1.0.0.0"), out var serverVersion))
+				{
+					var installedVersion = application.InstalledVersion;
+					var assemblyVersion = application.AssenblyVersion;
+
+					if (installedVersion < serverVersion) // new version is provided
+						await application.RequestUpdateAsync(shell, new Uri(xInfo.GetAttribute("src", null), UriKind.Absolute));
+					else if (assemblyVersion < installedVersion) // new version is installed, but not active
+						await application.RequestRestartAsync(shell);
+				}
+				
 				// update mime type mappings
 				var xMimeTypes = xInfo.Element("mimeTypes");
 				if (xMimeTypes != null)
@@ -1407,6 +1446,19 @@ namespace TecWare.PPSn
 		public static T GetSettings<T>(this IServiceProvider sp)
 			where T : PpsSettingsInfoBase
 			=> (T)Activator.CreateInstance(typeof(T), sp.GetService<IPpsSettingsService>(true));
+
+		#endregion
+
+		#region -- Application --------------------------------------------------------
+
+		/// <summary>Get the assembly version from the type.</summary>
+		/// <param name="application"></param>
+		/// <returns></returns>
+		public static Version GetDefaultAssemblyVersion(this IPpsShellApplication application)
+		{
+			var fileVersion = application.GetType().Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
+			return fileVersion == null ? new Version(1, 0, 0, 0) : new Version(fileVersion.Version);
+		} // func GetDefaultAssemblyVersion
 
 		#endregion
 

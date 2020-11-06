@@ -19,12 +19,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Cache;
 using System.Threading.Tasks;
-using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn

@@ -189,18 +189,4 @@ namespace TecWare.PPSn
 	} // class PpsShell
 
 	#endregion
-
-	#region -- class PpsApplicationRestartNeededException -----------------------------
-
-	/// <summary>Exception to initiate a restart.</summary>
-	public sealed class PpsApplicationRestartNeededException : Exception
-	{
-		/// <summary>Exception to initiate a restart.</summary>
-		public PpsApplicationRestartNeededException()
-			: base("Application need to restart.")
-		{
-		} // cto
-	} // class PpsApplicationRestartNeededException
-
-	#endregion
 }
