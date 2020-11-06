@@ -1346,12 +1346,12 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	// interface Status
-	public interface IStatusList : INotifyPropertyChanged
-	{
-		object ActualItem { get; }
-		ObservableCollection<object> TopTen { get; }
-	}
+	//// interface Status
+	//public interface IStatusList : INotifyPropertyChanged
+	//{
+	//	object ActualItem { get; }
+	//	ObservableCollection<object> TopTen { get; }
+	//}
 
 	//public class ProxyStatus : IStatusList
 	//{

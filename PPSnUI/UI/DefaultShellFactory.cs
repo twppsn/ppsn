@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Xml;
@@ -58,13 +59,13 @@ namespace TecWare.PPSn.UI
 				localPath.Create();
 
 			infoFile = new FileInfo(Path.Combine(localPath.FullName, infoFileId));
-			
+
 			ReadHeaderInfo();
 		} // ctor
 
 		private void ReadHeaderInfo()
 		{
-			using(var x = FileSettingsInfo.CreateReader(infoFile))
+			using (var x = FileSettingsInfo.CreateReaderAsync(infoFile).Await())
 			{
 				if (x == null)
 					return;
@@ -83,7 +84,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (!infoFile.Exists)
 			{
-				using (var x = FileSettingsInfo.CreateWriter(infoFile))
+				using (var x = FileSettingsInfo.CreateWriterUnsafe(infoFile))
 				{
 					x.WriteStartDocument();
 					x.WriteStartElement("ppsn");
@@ -144,7 +145,7 @@ namespace TecWare.PPSn.UI
 		public string DisplayName { get => displayName ?? name; set => Set(ref displayName, value, nameof(DisplayName)); }
 		public Uri Uri
 		{
-			get => uri; 
+			get => uri;
 			set
 			{
 				PpsShell.GetUriParts(value, out var uriPath, out var uriQuery);
@@ -317,7 +318,7 @@ namespace TecWare.PPSn.UI
 
 			protected override void OnSettingChanged(string key, string value)
 			{
-				switch(key)
+				switch (key)
 				{
 					case PpsShellSettings.PpsnUriKey:
 						info.Uri = new Uri(value, UriKind.Absolute);
@@ -387,6 +388,7 @@ namespace TecWare.PPSn.UI
 		private readonly IPpsShell shell;
 		private readonly FileInfo fileInfo;
 		private DateTime lastReaded = DateTime.MinValue;
+		private FileSystemWatcher fileSystemWatcher = null;
 
 		private bool isDirty = false;
 		private readonly List<IXSettingKey> settings = new List<IXSettingKey>();
@@ -396,25 +398,150 @@ namespace TecWare.PPSn.UI
 		protected FileSettingsInfo(IPpsShell shell, FileInfo fileInfo)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
-			// todo: FileSystemWatcher
 			this.fileInfo = fileInfo ?? throw new ArgumentNullException(nameof(fileInfo));
 		} // ctor
 
-		internal static XmlReader CreateReader(FileInfo fi)
-			=> fi.Exists ? XmlReader.Create(fi.FullName, Procs.XmlReaderSettings) : null;
-
-		private XmlReader CreateReader()
-			=> CreateReader(fileInfo);
-
-		internal static XmlWriter CreateWriter(FileInfo fi)
+		protected override void Dispose(bool disposing)
 		{
+			if (disposing)
+			{
+				fileSystemWatcher.Dispose();
+				fileSystemWatcher = null;
+			}
+			base.Dispose(disposing);
+		} // proc Dispose
+
+		#endregion
+
+		#region -- Read/Write primitives ----------------------------------------------
+
+		private static async Task<FileStream> OpenFileSafeAsync(FileInfo fi, bool forRead)
+		{
+			var sw = Stopwatch.StartNew();
+			while (true)
+			{
+				try
+				{
+					return new FileStream(fi.FullName,
+						forRead ? FileMode.Open : FileMode.OpenOrCreate,
+						forRead ? FileAccess.Read : FileAccess.ReadWrite,
+						forRead ? FileShare.Read : FileShare.None
+					);
+				}
+				catch (IOException e)
+				{
+					var code = e.HResult & 0xFFFF;
+					if (code == 32 || code == 33)
+					{
+						if (sw.ElapsedMilliseconds > 10000)
+							throw new TimeoutException($"Timeout to lock file: {fi.Name}");
+						await Task.Delay(100);
+					}
+					else
+						throw;
+				}
+			}
+		} // func OpenFileSafe
+
+		private static XmlReader CreateReader(FileStream src)
+			=> XmlReader.Create(src, Procs.XmlReaderSettings);
+
+		internal static async Task<XmlReader> CreateReaderAsync(FileInfo fi)
+			=> fi.Exists ? XmlReader.Create(await OpenFileSafeAsync(fi, true), Procs.XmlReaderSettings) : null;
+
+		internal static XmlWriter CreateWriterUnsafe(FileInfo fi)
+		{
+			// check directory exists
 			if (!fi.Directory.Exists)
 				fi.Directory.Create();
-			return XmlWriter.Create(fi.FullName, Procs.XmlWriterSettings);
+
+			// create unsafe writer
+			return XmlWriter.Create(new FileStream(fi.FullName, FileMode.CreateNew), Procs.XmlWriterSettings);
 		} // func CreateWriter
 
-		private XmlWriter CreateWriter()
-			=> CreateWriter(fileInfo);
+		private async Task<(FileStream, XmlWriter)> CreateWriterAsync()
+		{
+			// check directory exists
+			if (!fileInfo.Directory.Exists)
+				fileInfo.Directory.Create();
+			VerifyFileSystemWatcher();
+
+			// open file locked
+			var infoStream = await OpenFileSafeAsync(fileInfo, false);
+			try
+			{
+				// check for changes
+				await LoadCoreAsync(infoStream, false);
+
+				infoStream.Position = 0; // reset file pointer
+				lastReaded = DateTime.MaxValue; // do not change content during write
+
+				// create xml-write
+				return (infoStream, XmlWriter.Create(infoStream, Procs.XmlWriterSettings));
+			}
+			catch
+			{
+				infoStream.Dispose();
+				throw;
+			}
+		} // func CreateWriter
+
+		#endregion
+
+		#region -- File Watcher -------------------------------------------------------
+
+		private void VerifyFileSystemWatcher()
+		{
+			if (fileSystemWatcher == null)
+			{
+				fileSystemWatcher = new FileSystemWatcher(fileInfo.Directory.FullName, fileInfo.Name) { NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size };
+				fileSystemWatcher.Changed += FileSystemWatcher_Changed;
+				fileSystemWatcher.EnableRaisingEvents = true;
+			}
+		} // proc VerifyFileSystemWatcher
+
+		private sealed class RefreshIdleAction : IPpsIdleAction
+		{
+			private readonly FileSettingsInfo fileSettingsInfo;
+
+			public RefreshIdleAction(FileSettingsInfo fileSettingsInfo)
+				=> this.fileSettingsInfo = fileSettingsInfo ?? throw new ArgumentNullException(nameof(fileSettingsInfo));
+
+			private void LoadAsyncFinished(Task t)
+			{
+				try
+				{
+					t.Wait();
+				}
+				catch (Exception e)
+				{
+					fileSettingsInfo.shell.LogProxy().Except(e);
+				}
+				finally
+				{
+					Interlocked.CompareExchange(ref fileSettingsInfo.currentAction, null, this);
+				}
+			} // proc LoadAsyncFinished
+
+			PpsIdleReturn IPpsIdleAction.OnIdle(int elapsed)
+			{
+				fileSettingsInfo.LoadAsync(false).ContinueWith(LoadAsyncFinished, TaskContinuationOptions.ExecuteSynchronously);
+				return PpsIdleReturn.Remove;
+			} // func IPpsIdleAction.OnIdle
+		} // class RefreshIdleAction
+
+		private IPpsIdleAction currentAction = null;
+
+		private void FileSystemWatcher_Changed(object sender, FileSystemEventArgs e)
+		{
+			if (currentAction != null)
+				return;
+
+			// schedule reload
+			var action = new RefreshIdleAction(this);
+			Interlocked.Exchange(ref currentAction, action);
+			shell.GetService<IPpsUIService>(true).RunUI(() => shell.GetService<IPpsIdleService>(true).Add(action));
+		} // event FileSystemWatcher_Changed
 
 		#endregion
 
@@ -487,15 +614,9 @@ namespace TecWare.PPSn.UI
 			base.OnSettingChanged(key, value);
 		} // proc OnSettingChanged
 
-		private void Reset()
-		{ 
-			isDirty = false;
-			lastReaded = DateTime.Now;
-		} // proc Reset
-
-		private IEnumerable<KeyValuePair<string,string>> LoadSettingsFromFile()
+		private IEnumerable<KeyValuePair<string, string>> LoadSettingsFromFile(FileStream src)
 		{
-			using (var xml = CreateReader())
+			using (var xml = CreateReader(src))
 			{
 				if (xml != null)
 				{
@@ -505,25 +626,52 @@ namespace TecWare.PPSn.UI
 			}
 		} // func LoadSettingsFromFileAsync
 
-		/// <summary>Read all settings from disk.</summary>
-		/// <returns></returns>
-		public async Task LoadAsync()
+		private async Task LoadCoreAsync(FileStream src, bool force)
 		{
-			// reset all setings
-			settings.ForEach(c => c.Setting.ResetTouched());
-
-			// load settings from file
-			LoadSettings(await Task.Run(() => LoadSettingsFromFile().ToArray()));
-
-			// remove untouched settings
-			for (var i = settings.Count - 1; i >= 0; i--)
+			if (!force)
 			{
-				if (!settings[i].Setting.ResetTouched())
-					settings.RemoveAt(i);
+				fileInfo.Refresh();
+				if (lastReaded >= fileInfo.LastWriteTime)
+					return;
 			}
 
-			// reset state
-			Reset();
+			// load settings from file, do not remove any settings
+			LoadSettings(await Task.Run(() => LoadSettingsFromFile(src).ToArray()));
+		} // proc LoadCoreAsync
+
+		/// <summary>Read all settings from disk.</summary>
+		/// <param name="force"></param>
+		/// <returns></returns>
+		public async Task LoadAsync(bool force = true)
+		{
+			if (!fileInfo.Exists)
+				return;
+			VerifyFileSystemWatcher();
+
+			using (var src = await OpenFileSafeAsync(fileInfo, true))
+			{
+				// reset state
+				fileInfo.Refresh();
+				if (!force)
+				{
+					if (lastReaded >= fileInfo.LastWriteTime)
+						return;
+				}
+				lastReaded = fileInfo.LastWriteTime;
+
+				// reset all setings
+				settings.ForEach(c => c.Setting.ResetTouched());
+
+				// load settings from file
+				await LoadCoreAsync(src, true);
+
+				// remove untouched settings
+				for (var i = settings.Count - 1; i >= 0; i--)
+				{
+					if (!settings[i].Setting.ResetTouched())
+						settings.RemoveAt(i);
+				}
+			}
 		} // proc LoadAsync
 
 		private static XElement EnforceElement(XElement xCur, string localName)
@@ -605,14 +753,24 @@ namespace TecWare.PPSn.UI
 			}
 
 			// write file
-			await Task.Run(() =>
+			lastReaded = await Task.Run(() =>
 			{
 				var xDoc = new XDocument(xRoot);
-				using (var xml = CreateWriter())
+				var (src, xml) = CreateWriterAsync().Result;
+				using (xml) // lock file for other write, read operations
+				{
+					// write xml-tags
 					xDoc.WriteTo(xml);
-			});
 
-			Reset();
+					// truncate file
+					xml.Flush();
+					src.SetLength(src.Position);
+
+					fileInfo.Refresh();
+					return fileInfo.LastWriteTime;
+				}
+			});
+			isDirty = false;
 		} // proc WriteAsync
 
 		#endregion
@@ -730,7 +888,7 @@ namespace TecWare.PPSn.UI
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		public static IEnumerable<KeyValuePair<string, string>> ParseUserSettings(XmlReader xml)
 			=> ParseSettings(xml, a => TranslateAttributeToSettingName(a, translateUserProperties));
-		
+
 		private static string TranslateAttributeToSettingName(XName attributeName, IEnumerable<Tuple<XName, string>> translateProperties)
 			=> (from cur in translateProperties where cur.Item1.LocalName == attributeName.LocalName select cur.Item2).FirstOrDefault();
 
@@ -799,7 +957,7 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // func GetEnumerator
-		
+
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 

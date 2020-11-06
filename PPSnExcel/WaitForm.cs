@@ -117,7 +117,7 @@ namespace PPSnExcel
 		public WaitForm(Excel.Application application)
 		{
 			this.application = application;
-			
+
 			synchronizationContext = new WaitSynchronizationContext(this);
 			mainThreadId = Thread.CurrentThread.ManagedThreadId;
 
@@ -244,20 +244,33 @@ namespace PPSnExcel
 		int IPpsUIService.MsgBox(string text, PpsImage image, params string[] buttons)
 			=> PpsWinShell.ShowMessage(Globals.ThisAddIn, text, image, buttons);
 
-		private Task<T> RunUICore<T>(Delegate func)
+		private Task RunUICore(Action action)
+		{
+			if (InvokeRequired)
+			{
+				var ar = BeginInvoke(action);
+				return Task.Factory.FromAsync(ar, EndInvoke);
+			}
+			else
+			{
+				action.Invoke();
+				return Task.CompletedTask;
+			}
+		} // proc RunUICore
+
+		private Task<T> RunUICore<T>(Func<T> func)
 		{
 			if (InvokeRequired)
 			{
 				var ar = BeginInvoke(func);
-
 				return Task.Factory.FromAsync(ar, EndInvoke).ContinueWith(t => (T)t.Result);
 			}
 			else
-				return Task.FromResult((T)func.DynamicInvoke());
+				return Task.FromResult(func.Invoke());
 		} // func RunCore
 
 		Task IPpsUIService.RunUI(Action action)
-			=> RunUICore<VoidResult>(action);
+			=> RunUICore(action);
 
 		Task<T> IPpsUIService.RunUI<T>(Func<T> action)
 			=> RunUICore<T>(action);
@@ -265,7 +278,7 @@ namespace PPSnExcel
 		void IPpsUIService.ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage)
 			=> PpsWinShell.ShowException(Globals.ThisAddIn, flags, exception, alternativeMessage);
 
-		void IPpsUIService.ShowNotification(string message, PpsImage image) 
+		void IPpsUIService.ShowNotification(string message, PpsImage image)
 			=> throw new NotImplementedException();
 
 		string[] IPpsUIService.Ok => new string[] { "Ok" };
@@ -313,7 +326,7 @@ namespace PPSnExcel
 
 		#endregion
 
-		IPpsProgress IPpsProgressFactory.CreateProgress(bool blockUI) 
+		IPpsProgress IPpsProgressFactory.CreateProgress(bool blockUI)
 			=> new ProgressBar(this);
 
 		public SynchronizationContext SynchronizationContext => synchronizationContext;

@@ -193,12 +193,9 @@
     can be found.
   -->
   <ItemGroup>
-    <Compile Include="..\Common\AssemblyInfoXl..cs">
-      <Link>Properties\AssemblyInfoXl..cs</Link>
+    <Compile Include="..\Common\AssemblyInfo.cs">
+      <Link>Properties\AssemblyInfo.cs</Link>
     </Compile>
-    <None Include="..\Common\AssemblyInfoXl.template.cs">
-      <Link>Properties\AssemblyInfoXl.template.cs</Link>
-    </None>
     <Compile Include="Data\Converter.cs" />
     <Compile Include="PpsListData.cs" />
     <Compile Include="PpsMenu.cs">
@@ -207,7 +204,7 @@
     <Compile Include="PpsMenu.Designer.cs">
       <DependentUpon>PpsMenu.cs</DependentUpon>
     </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs">
+    <Compile Include="Properties\AssemblyInfoXl.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="ReportInsertForm.cs">

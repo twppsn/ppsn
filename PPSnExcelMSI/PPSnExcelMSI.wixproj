@@ -6,7 +6,7 @@
     <ProductVersion>3.10</ProductVersion>
     <ProjectGuid>244fbc1b-0ecd-4e6f-9692-c92b5831b412</ProjectGuid>
     <SchemaVersion>2.0</SchemaVersion>
-    <OutputName>PPSnExcel</OutputName>
+    <OutputName>PPSnExcelMSI</OutputName>
     <OutputType>Package</OutputType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
@@ -39,6 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="de\License.rtf" />
+    <Content Include="Version.wxi" />
   </ItemGroup>
   <Import Project="$(WixTargetsPath)" Condition=" '$(WixTargetsPath)' != '' " />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets" Condition=" '$(WixTargetsPath)' == '' AND Exists('$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets') " />

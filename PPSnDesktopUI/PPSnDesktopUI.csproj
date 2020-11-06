@@ -5,14 +5,9 @@
 		<RootNamespace>TecWare.PPSn</RootNamespace>
 		<AssemblyName>PPSn.Desktop.UI</AssemblyName>
 		<PackageId>TecWare.PPSn.DesktopUI</PackageId>
-		<Authors>TecWare</Authors>
-		<Company>TecWare Gesellschaft für Softwareentwicklung mbH</Company>
-		<Product>PPSn</Product>
-		<PackageProjectUrl>https://github.com/twppsn/ppsn/</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/twppsn/ppsn.git</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	<Import Project="..\Common\AssemblyInfo.targets" />
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -41,6 +36,20 @@
     <None Remove="Controls\PpsSideBarControl.xaml" />
     <None Remove="Controls\PpsStackSectionControl.xaml" />
     <None Remove="Controls\PpsTextBox.xaml" />
+    <None Remove="Images\EastBottom.png" />
+    <None Remove="Images\EastMiddle.png" />
+    <None Remove="Images\EastTop.png" />
+    <None Remove="Images\NorthLeft.png" />
+    <None Remove="Images\NorthMiddle.png" />
+    <None Remove="Images\NorthRight.png" />
+    <None Remove="Images\SizeGrip.png" />
+    <None Remove="Images\SouthLeft.png" />
+    <None Remove="Images\SouthMiddle.png" />
+    <None Remove="Images\SouthRight.png" />
+    <None Remove="Images\SplashLogo.png" />
+    <None Remove="Images\WestBottom.png" />
+    <None Remove="Images\WestMiddle.png" />
+    <None Remove="Images\WestTop.png" />
     <None Remove="Themes\Generic.xaml" />
     <None Remove="UI\PpsCameraDialog.xaml" />
     <None Remove="UI\PpsMessageDialog.xaml" />
@@ -159,5 +168,21 @@
     <Content Include="x64\pdfium.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\EastBottom.png" />
+    <Resource Include="Images\EastMiddle.png" />
+    <Resource Include="Images\EastTop.png" />
+    <Resource Include="Images\NorthLeft.png" />
+    <Resource Include="Images\NorthMiddle.png" />
+    <Resource Include="Images\NorthRight.png" />
+    <Resource Include="Images\SizeGrip.png" />
+    <Resource Include="Images\SouthLeft.png" />
+    <Resource Include="Images\SouthMiddle.png" />
+    <Resource Include="Images\SouthRight.png" />
+    <Resource Include="Images\SplashLogo.png" />
+    <Resource Include="Images\WestBottom.png" />
+    <Resource Include="Images\WestMiddle.png" />
+    <Resource Include="Images\WestTop.png" />
   </ItemGroup>
 </Project>

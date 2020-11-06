@@ -21,6 +21,7 @@ using System.Drawing.Drawing2D;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
@@ -39,7 +40,7 @@ namespace PPSnExcel
 			InitializeComponent();
 
 			// run in background
-			shell.Spawn(RefreshViewAsync);
+			RefreshViewAsync().Spawn(shell);
 		} // ctor
 
 		protected override void ScaleControl(SizeF factor, BoundsSpecified specified)
@@ -72,7 +73,7 @@ namespace PPSnExcel
 				}
 			);
 
-			await shell.InvokeAsync(() => RefreshViewUI(dt));
+			await shell.GetService<IPpsUIService>(true).RunUI(() => RefreshViewUI(dt));
 		} // proc RefreshViewAsync
 
 		private void RefreshViewUI(DataTable dt)

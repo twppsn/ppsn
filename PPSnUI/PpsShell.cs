@@ -142,6 +142,9 @@ namespace TecWare.PPSn
 	/// <summary>Active shell for services.</summary>
 	public interface IPpsShell : IServiceContainer, IPpsCommunicationService, IServiceProvider, INotifyPropertyChanged, IDisposable
 	{
+		/// <summary>Gets called on the dispose of a shell.</summary>
+		event EventHandler Disposed;
+
 		/// <summary>Create a new http request for the uri.</summary>
 		/// <param name="uri"></param>
 		/// <returns></returns>
@@ -192,6 +195,8 @@ namespace TecWare.PPSn
 		string DisplayName { get; }
 		/// <summary>Uri</summary>
 		Uri Uri { get; }
+		/// <summary>Last Server-Version</summary>
+		Version Version { get; }
 
 		/// <summary>Local store for the instance data.</summary>
 		DirectoryInfo LocalPath { get; }
@@ -596,6 +601,7 @@ namespace TecWare.PPSn
 		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, ILogger, IDisposable
 		{
 			public event PropertyChangedEventHandler PropertyChanged;
+			public event EventHandler Disposed;
 
 			private readonly IServiceProvider parentProvider;
 			private readonly IPpsShellInfo info;
@@ -628,6 +634,8 @@ namespace TecWare.PPSn
 			{
 				if (currentShell == this)
 					SetCurrent(null);
+
+				Disposed?.Invoke(this, EventArgs.Empty);
 
 				// stop background worker
 				backgroundWorker.Dispose();
@@ -665,7 +673,6 @@ namespace TecWare.PPSn
 				try
 				{
 					// create a none user context for the initialization
-
 					using (var dpcHttp = CreateHttpCore(info.Uri, Settings.GetDpcCredentials()))
 					{
 						http = dpcHttp;

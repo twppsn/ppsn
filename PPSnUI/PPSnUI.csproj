@@ -5,15 +5,10 @@
     <RootNamespace>TecWare.PPSn</RootNamespace>
     <PackageId>TecWare.PPSn.UI</PackageId>
     <Description>Basic contracts and functionality for the ppsn, they are only for client applications.</Description>
-    <PackageProjectUrl>https://github.com/twppsn/ppsn/</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/twppsn/ppsn.git</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <Company>TecWare Gesellschaft für Softwareentwicklung mbH</Company>
-    <Authors>TecWare</Authors>
-    <Product>PPSn</Product>
   </PropertyGroup>
+	<Import Project="..\Common\AssemblyInfo.targets" />
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>C:\Projects\PPSnOS\twppsn\Extern\ppsn\PPSnUI\bin\Debug\PPSnUI.xml</DocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>

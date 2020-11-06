@@ -405,6 +405,9 @@ namespace TecWare.PPSn
 			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
 			AppDomain.CurrentDomain.TypeResolve += CurrentDomain_TypeResolve;
 
+#if DEBUG
+			AddAssemblyResolveDirectory(Environment.CurrentDirectory);
+#endif
 			AddAssemblyResolveDirectory(Path.GetDirectoryName(typeof(App).Assembly.Location));
 
 			PresentationTraceSources.DataBindingSource.Listeners.Add(new BindingErrorListener(this));
@@ -745,7 +748,10 @@ namespace TecWare.PPSn
 							break;
 						case '-':
 							if (arg == "--nosync")
+							{
 								r.AllowSync = false;
+								noRestart = true;
+							}
 							break;
 					}
 				}
@@ -888,6 +894,7 @@ namespace TecWare.PPSn
 		#region -- IPpsShellApplication - members -------------------------------------
 
 		private const string applicationName = "PPSnDesktop";
+		private static bool noRestart = false;
 
 		private static Version GetInstalledVersionDefault()
 		{
@@ -901,28 +908,36 @@ namespace TecWare.PPSn
 
 		Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri)
 		{
+			if (noRestart)
+				return Task.CompletedTask;
+
 			// run msi
 			var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
 			var msiLogFile = Path.Combine(Path.GetTempPath(), applicationName + ".msi.txt");
 			var psi = new ProcessStartInfo(msiExe, "/i " + uri.ToString() + " /qb /l*v \"" + msiLogFile + "\" SHELLNAME=" + shell.Info.Name);
 
 #if DEBUG
-			MessageBox.Show($"RunMSI: {psi.FileName} {psi.Arguments}");
+			MessageBox.Show($"RunMSI: {psi.FileName} {psi.Arguments}", "Debug");
 			return Task.CompletedTask;
 #else
 			Process.Start(psi);
-			throw new RestartApplicationException(false, null, null); // means quit application
+			throw new ExitApplicationException(false, null, null); // means quit application
 #endif
 		} // proc IPpsShellApplication.RequaestUpdateAsync
 
 		Task IPpsShellApplication.RequestRestartAsync(IPpsShell shell)
-			=> throw new ExitApplicationException(true, shell.Info, shell.Http.Credentials);
+		{
+			if (noRestart)
+				return Task.CompletedTask;
+
+			throw new ExitApplicationException(true, shell.Info, shell.Http.Credentials);
+		} // proc IPpsShellApplication.RequestRestartAsync
 
 		string IPpsShellApplication.Name => applicationName;
 		Version IPpsShellApplication.AssenblyVersion => PpsShell.GetDefaultAssemblyVersion(this);
 		Version IPpsShellApplication.InstalledVersion => GetInstalledVersionDefault();
 
-#endregion
+		#endregion
 
 		/// <summary>Return the current environemnt</summary>
 		public IPpsShell Shell => shell;

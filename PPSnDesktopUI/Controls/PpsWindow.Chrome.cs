@@ -708,7 +708,7 @@ namespace TecWare.PPSn.Controls
 		/// <inheritdoc/>
 		protected override void OnClosed(EventArgs e)
 		{
-			hwndSource.RemoveHook(wndProc);
+			hwndSource?.RemoveHook(wndProc);
 			DestroyGlowWindows();
 			base.OnClosed(e);
 		} // proc OnClosed

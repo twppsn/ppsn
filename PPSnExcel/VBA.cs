@@ -14,6 +14,7 @@
 //
 #endregion
 using System.Runtime.InteropServices;
+using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
@@ -38,7 +39,7 @@ namespace PPSnExcel
 		{
 			if (listObject is Excel.ListObject list)
 			{
-				Globals.ThisAddIn.Run(() => Globals.ThisAddIn.RefreshTableAsync(list, null, refreshLayout is bool l && l));
+				Globals.ThisAddIn.RefreshTableAsync(list, null, refreshLayout is bool l && l).Await();
 				return true;
 			}
 			else

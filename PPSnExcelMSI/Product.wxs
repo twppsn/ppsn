@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<!-- version, productcode und assemblyfile ändern!!!! -->
-<?define ProductVersion = "1.2.16.0" ?>
-<?define ProductCode = "16e48283-c39d-428a-89a6-4ed735c52e3c" ?>
-
+<?include Version.wxi ?>
 <?define ProductUpgradeCode = "59d50ec7-25af-4684-9681-ea8e4c7c593f" ?>
-
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Product Id="$(var.ProductCode)"
 					 UpgradeCode="$(var.ProductUpgradeCode)"
@@ -45,7 +40,7 @@
 		<Directory Id="TARGETDIR" Name="SourceDir">
 			<Directory Id="LocalAppDataFolder" Name="AppData">
 				<Directory Id="ppsn" Name="ppsn">
-					<Directory Id="INSTALLFOLDER" Name="BinXl" />
+					<Directory Id="INSTALLFOLDER" Name="PPSnExcel" />
 				</Directory>
 			</Directory>
 		</Directory>

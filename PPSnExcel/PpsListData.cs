@@ -844,7 +844,7 @@ namespace PPSnExcel
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && !(range.ListObject is null))
 			{
 				var xlList = Globals.Factory.GetVstoObject(range.ListObject);
-				return TryParse(Globals.ThisAddIn.FindShell, xlList.XmlMap, out ppsMap);
+				return TryParse(Globals.ThisAddIn.EnforceShell, xlList.XmlMap, out ppsMap);
 			}
 			else
 			{
@@ -1420,7 +1420,7 @@ namespace PPSnExcel
 			else
 			{
 				var xlList = Globals.Factory.GetVstoObject(xlListObject);
-				return TryGet(Globals.ThisAddIn.FindShell, xlList, out ppsList);
+				return TryGet(Globals.ThisAddIn.EnforceShell, xlList, out ppsList);
 			}
 		} // func TryGetFromListObject
 

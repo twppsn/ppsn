@@ -119,8 +119,8 @@ namespace PPSnExcel
 				ribbonButton.ScreenTip = $"{ cur.Name} ({cur.DisplayName})";
 				ribbonButton.SuperTip =
 					shell == null
-						? String.Format("Version {0}\nUri: {1}", "cur.Version", cur.Uri.ToString())
-						: String.Format("Angemeldet: {2}\nVersion {0}\nUri: {1}", "cur.Version", cur.Uri.ToString(), "shell.UserName");
+						? String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString())
+						: String.Format("Angemeldet: {2}\nVersion {0}\nUri: {1}", cur.Version, cur.Uri.ToString(), PpsShell.GetUserNameFromCredentials(shell.Http?.Credentials));
 				ribbonButton.Tag = cur;
 				ribbonButton.Image = shell != null && shell.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
 				loginGalery.Items.Add(ribbonButton);

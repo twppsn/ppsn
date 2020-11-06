@@ -18,6 +18,21 @@ using System.Collections.Generic;
 
 namespace TecWare.PPSn
 {
+	#region -- enum PpsIdleReturn -----------------------------------------------------
+
+	/// <summary>Return for OnIdle</summary>
+	public enum PpsIdleReturn
+	{
+		/// <summary>Wait for next idle.</summary>
+		Idle,
+		/// <summary>No more idles needed, before next idle restart.</summary>
+		StopIdle,
+		/// <summary>Remove this idle action, from idle list.</summary>
+		Remove
+	} // enum PpsIdleReturn
+
+	#endregion
+
 	#region -- interface IPpsIdleAction -----------------------------------------------
 
 	/// <summary>Implementation for a idle action.</summary>
@@ -25,8 +40,9 @@ namespace TecWare.PPSn
 	{
 		/// <summary>Gets called on application idle start.</summary>
 		/// <param name="elapsed">ms elapsed since the idle started</param>
-		/// <returns><c>false</c>, if there are more idles needed.</returns>
-		bool OnIdle(int elapsed);
+		/// <returns><see cref="PpsIdleReturn"/></returns>
+		// <returns><c>false</c>, if there are more idles needed.</returns>
+		PpsIdleReturn OnIdle(int elapsed);
 	} // interface IPpsIdleAction
 
 	#endregion
@@ -53,8 +69,47 @@ namespace TecWare.PPSn
 	/// <summary>Basis implementation for an idle service.</summary>
 	public abstract class PpsIdleServiceBase : IPpsIdleService
 	{
+		#region -- class IdleActionItem -----------------------------------------------
+
+		private sealed class IdleActionItem
+		{
+			private readonly WeakReference<IPpsIdleAction> action;
+			private bool isStopped = false;
+
+			public IdleActionItem(IPpsIdleAction action)
+				=> this.action = new WeakReference<IPpsIdleAction>(action);
+			
+			public bool IsIdleAction(IPpsIdleAction idleAction)
+				=> action.TryGetTarget(out var t) && t == idleAction;
+
+			public void Reset()
+				=> isStopped = false;
+
+			public PpsIdleReturn OnIdle(int elapsed)
+			{
+				if (action.TryGetTarget(out var t))
+				{
+					if (isStopped)
+						return PpsIdleReturn.StopIdle;
+					else
+					{
+						var r = t.OnIdle(elapsed);
+						if (r == PpsIdleReturn.StopIdle)
+							isStopped = true;
+						return r;
+					}
+				}
+				else
+					return PpsIdleReturn.Remove;
+			} // func OnIdle
+
+			public bool IsStopped => isStopped;
+		} // struct IdleActionItem
+
+		#endregion
+
 		private int restartTime = 0;
-		private readonly List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
+		private readonly List<IdleActionItem> idleActions = new List<IdleActionItem>();
 
 		/// <summary>Check thread access for add,remove operation.</summary>
 		protected virtual void VerifyAccess() { }
@@ -63,7 +118,7 @@ namespace TecWare.PPSn
 		{
 			for (var i = 0; i < idleActions.Count; i++)
 			{
-				if (idleActions[i].TryGetTarget(out var t) && t == idleAction)
+				if (idleActions[i].IsIdleAction(idleAction))
 					return i;
 			}
 			return -1;
@@ -75,7 +130,7 @@ namespace TecWare.PPSn
 
 			if (IndexOfIdleAction(idleAction) == -1)
 			{
-				idleActions.Add(new WeakReference<IPpsIdleAction>(idleAction));
+				idleActions.Add(new IdleActionItem(idleAction));
 				if (idleActions.Count == 1)
 					RestartIdle();
 			}
@@ -110,6 +165,9 @@ namespace TecWare.PPSn
 			if (idleActions.Count > 0)
 			{
 				restartTime = Environment.TickCount;
+				for (var i = 0; i < idleActions.Count; i++)
+					idleActions[i].Reset();
+
 				StartIdleCore();
 			}
 		} // proc StartIdle
@@ -123,10 +181,15 @@ namespace TecWare.PPSn
 
 			for (var i = idleActions.Count - 1; i >= 0; i--)
 			{
-				if (idleActions[i].TryGetTarget(out var t))
-					stopIdle = stopIdle && !t.OnIdle(timeSinceRestart);
-				else
-					idleActions.RemoveAt(i);
+				switch (idleActions[i].OnIdle(timeSinceRestart))
+				{
+					case PpsIdleReturn.StopIdle:
+						stopIdle = stopIdle && true;
+						break;
+					case PpsIdleReturn.Remove:
+						idleActions.RemoveAt(i);
+						break;
+				}
 			}
 		} // proc DoIdle
 	} // class PpsIdleServiceBase

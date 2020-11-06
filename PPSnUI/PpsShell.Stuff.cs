@@ -147,24 +147,32 @@ namespace TecWare.PPSn
 
 		private sealed class FunctionIdleActionImplementation : IPpsIdleAction
 		{
-			private readonly Func<int, bool> onIdle;
+			private readonly Func<int, PpsIdleReturn> onIdle;
 
-			public FunctionIdleActionImplementation(Func<int, bool> onIdle)
+			public FunctionIdleActionImplementation(Func<int, PpsIdleReturn> onIdle)
 			{
 				this.onIdle = onIdle ?? throw new ArgumentNullException(nameof(onIdle));
 			} // ctor
 
-			public bool OnIdle(int elapsed)
+			PpsIdleReturn IPpsIdleAction.OnIdle(int elapsed)
 				=> onIdle(elapsed);
 		} // class FunctionIdleActionImplementation
 
 		#endregion
 
-		/// <summary>Add a idle action.</summary>
+		/// <summary>Add a idle function to the idle-service</summary>
 		/// <param name="idleService"></param>
 		/// <param name="onIdle"></param>
 		/// <returns></returns>
+		[Obsolete("Use AddIdleFunction with new return.")]
 		public static IPpsIdleAction AddIdleFunction(this IPpsIdleService idleService, Func<int, bool> onIdle)
+			=> idleService.Add(new FunctionIdleActionImplementation(e => onIdle(e) ? PpsIdleReturn.Idle : PpsIdleReturn.StopIdle));
+
+		/// <summary>Add a idle function to the idle-service</summary>
+		/// <param name="idleService"></param>
+		/// <param name="onIdle"></param>
+		/// <returns></returns>
+		public static IPpsIdleAction AddIdleFunction(this IPpsIdleService idleService, Func<int, PpsIdleReturn> onIdle)
 			=> idleService.Add(new FunctionIdleActionImplementation(onIdle));
 
 		#endregion
