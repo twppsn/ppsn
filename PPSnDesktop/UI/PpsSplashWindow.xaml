@@ -108,7 +108,7 @@
 			</Grid.RowDefinitions>
 			<Border x:Name="leftBar" Grid.Column="0" Grid.RowSpan="2" Background="#F0F0F0">
 				<Viewbox Width="52" Height="48" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,16" Opacity=".5">
-					<Image Width="152" Height="151" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SplashLogo.png"/>
+					<Image Width="152" Height="151" Source="pack://application:,,,/PPSn.Desktop.UI;component/Themes/Images/SplashLogo.png"/>
 				</Viewbox>
 			</Border>
 

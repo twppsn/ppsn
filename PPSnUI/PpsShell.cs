@@ -365,6 +365,8 @@ namespace TecWare.PPSn
 			public PpsMessageHandler(IPpsShell shell)
 			{
 				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+
+				AllowAutoRedirect = false;
 			} // ctor
 
 			protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

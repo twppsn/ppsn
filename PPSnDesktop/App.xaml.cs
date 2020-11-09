@@ -551,7 +551,7 @@ namespace TecWare.PPSn
 				var autoLogin = args.DoAutoLogin;
 
 				// try find auto login
-				var autoUserInfo = settings.GetAutoLogin();
+				var autoUserInfo = settings.GetAutoLogin(userInfo);
 				if (autoUserInfo != null)
 				{
 					userInfo = autoUserInfo;

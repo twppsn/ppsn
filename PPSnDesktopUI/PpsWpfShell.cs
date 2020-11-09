@@ -102,26 +102,18 @@ namespace TecWare.PPSn
 		/// <summary>Get the shell, that is attached to the current element.</summary>
 		/// <param name="dependencyObject"></param>
 		/// <returns></returns>
-		public static IPpsShell GetShell(DependencyObject dependencyObject = null)
-			=> GetShell<IPpsShell>(dependencyObject);
-
-		/// <summary>Get the shell, that is attached to the current element.</summary>
-		/// <param name="dependencyObject"></param>
-		/// <returns></returns>
-		/// <typeparam name="T"></typeparam>
-		public static T GetShell<T>(DependencyObject dependencyObject = null)
-			where T : class, IPpsShell
+		public static IPpsShell GetShell(this DependencyObject dependencyObject)
 		{
 			switch (dependencyObject)
 			{
 				case null:
 					goto default;
 				case FrameworkElement fe:
-					return (T)fe.TryFindResource(DefaultShellKey) ?? GetShell<T>(null);
+					return (IPpsShell)fe.TryFindResource(DefaultShellKey) ?? GetShell(null);
 				case FrameworkContentElement fce:
-					return (T)fce.TryFindResource(DefaultShellKey) ?? GetShell<T>(null);
+					return (IPpsShell)fce.TryFindResource(DefaultShellKey) ?? GetShell(null);
 				default:
-					return (T)Application.Current.TryFindResource(DefaultShellKey);
+					return (IPpsShell)Application.Current.TryFindResource(DefaultShellKey);
 			}
 		} // func GetShell	
 
@@ -159,11 +151,12 @@ namespace TecWare.PPSn
 			if (r != null)
 				return r;
 
-			return GetControlService(
-				useVisualTree
+			var parentObject = useVisualTree
 					? GetVisualParent(current)
-					: GetLogicalParent(current), serviceType, useVisualTree
-			);
+					: GetLogicalParent(current);
+			return parentObject == null
+				? GetShell(current)?.GetService(serviceType)
+				: GetControlService(parentObject, serviceType, useVisualTree);
 		} // func GetControlService
 
 		#endregion
@@ -640,14 +633,22 @@ namespace TecWare.PPSn
 
 		/// <summary>Automatic login</summary>
 		/// <return></return>
-		public ICredentials GetAutoLogin()
+		public ICredentials GetAutoLogin(ICredentials credentials)
 		{
 			if (String.IsNullOrEmpty(AutoLoginUser))
 				return null;
 			else if (AutoLoginUser == ".")
 				return CredentialCache.DefaultCredentials;
 
-			return UserCredential.Create(AutoLoginUser, AutoLoginPassword);
+			var autoUserName = AutoLoginUser;
+			var autoPassword = AutoLoginPassword;
+
+			// check for saved password
+			var userName = PpsShell.GetUserNameFromCredentials(credentials);
+			if (String.Compare(autoUserName, userName, StringComparison.OrdinalIgnoreCase) == 0 && String.IsNullOrEmpty(autoPassword))
+				return credentials;
+			else
+				return UserCredential.Create(autoUserName, autoPassword);
 		} // func GetAutoLogin
 
 		/// <summary>Automatic login</summary>

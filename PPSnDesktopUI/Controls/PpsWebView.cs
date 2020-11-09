@@ -14,19 +14,19 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Networking;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -184,53 +184,41 @@ namespace TecWare.PPSn.Controls
 		private async Task<bool> TryRedirectToInternalViewerAsync(HttpContent content)
 		{
 			// is content marked as attachment
-			if (!content.TryGetExtensionFromContent(true, out var extension))
+			if (!content.TryGetExtensionFromContent(true, out var mimeType, out var _))
 				return false;
 
-			//// read external data
-			//var data = await content.ReadAsByteArrayAsync();
-			//if (String.Compare(extension, ".pdf", StringComparison.OrdinalIgnoreCase) == 0)
-			//	await AppBase.Current.Navigation.PushAsync(ModulPage.Create("pdfviewer", new LuaTable { ["bytes"] = data }));
+			// find pane register
+			var paneRegistrar = this.GetControlService<IPpsKnownWindowPanes>(false);
+			if (paneRegistrar == null)
+				return false;
 
+			// find pane managar
+			var paneManager = this.GetControlService<IPpsWindowPaneManager>(false);
+			if (paneManager == null)
+				return false;
+
+			// find pane type
+			var paneType = paneRegistrar.GetPaneTypeMimeType(mimeType, false);
+			if (paneType == null)
+				return false;
+			
+			// todo: create IPpsDataObject
+			await paneManager.OpenPaneAsync(paneType, arguments: new LuaTable { ["Object"] = await content.ReadAsByteArrayAsync() });
 			return true;
 		} // func TryRedirectToInternalViewerAsync
 
 		private void SetResponse(CoreWebView2WebResourceRequestedEventArgs e, string responseHeader, int responseCode, string responseMessage, Stream responseStream)
 		{
-			e.Response = CoreWebView2.Environment.CreateWebResourceResponse(responseStream, responseCode, responseMessage, responseHeader);
-			
-			//#region var nativeArgs = e._nativeCoreWebView2PermissionRequestedEventArgs
-			//var eventType = e.GetType();
-			//var field = eventType.GetField("_nativeCoreWebView2WebResourceRequestedEventArgs", BindingFlags.NonPublic | BindingFlags.Instance);
-			//var nativeArgs = field.GetValue(e);
-			//#endregion
-			//#region var nativeEnvironment = Control.Environment._nativeCoreWebView2Environment
-			//var environment = (CoreWebView2Environment)GetType().GetProperty("Environment", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(this);
-			//field = environment.GetType().GetField("_nativeCoreWebView2Environment", BindingFlags.NonPublic | BindingFlags.Instance);
-			//var nativeEnvironment = field.GetValue(environment);
-			//#endregion
-
-			//#region var managedStream = new ManagedIStream(responseStream)
-			//var managedStream = Activator.CreateInstance(eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.ManagedIStream"),
-			//	BindingFlags.NonPublic | BindingFlags.Instance,
-			//	null,
-			//	new object[] { responseStream },
-			//	null
-			//);
-			//#endregion
-			//#region var response = CreateWebResourceResponse(managedStream, responseCode, responseMessage, responseHeader)
-			//var method = eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.Raw.ICoreWebView2Environment").GetMethod("CreateWebResourceResponse");
-			//var response = method.Invoke(nativeEnvironment, new object[] { managedStream, responseCode, responseMessage, responseHeader });
-			//#endregion
-
-			//#region e.Response = response
-			//var property = eventType.Assembly.GetType("Microsoft.Web.WebView2.Core.Raw.ICoreWebView2WebResourceRequestedEventArgs").GetProperty("Response");
-			//property.SetValue(nativeArgs, response);
-			//#endregion
+			e.Response = CoreWebView2.Environment.CreateWebResourceResponse(
+				responseStream, 
+				responseCode, 
+				responseMessage, 
+				responseHeader
+			);
 		} // proc SetResponse
 
 		private void SetEmptyResponse(CoreWebView2WebResourceRequestedEventArgs e)
-			=> SetResponse(e, String.Empty, (int)HttpStatusCode.NoContent, "NoContent", new MemoryStream());
+			=> SetResponse(e, String.Empty, (int)HttpStatusCode.NoContent, "NoContent", null);
 
 		private void SetErrorResponse(CoreWebView2WebResourceRequestedEventArgs e, Exception ex)
 		{
@@ -241,7 +229,9 @@ namespace TecWare.PPSn.Controls
 		private void SetErrorResponse(CoreWebView2WebResourceRequestedEventArgs e, int responseCode, string text)
 		{
 			// todo: error-html laden
-			SetResponse(e, String.Empty, responseCode, "Error", new MemoryStream());
+			// var src = Application.GetResourceStream(new Uri("pack://application:,,,/PPSn.Desktop.UI;component/themes/pages/error.html", UriKind.Absolute));
+			var s = "<html><head><title>Error</title></head><body>" + text + "</body></html>";
+			SetResponse(e, String.Empty, responseCode, "Error", new MemoryStream(Encoding.UTF8.GetBytes(s)));
 		} // SetErrorResponse
 
 		private async Task InterceptWebRequestAsync(CoreWebView2WebResourceRequestedEventArgs e, Uri uri)
@@ -253,32 +243,49 @@ namespace TecWare.PPSn.Controls
 
 			var httpResponse = await http.SendAsync(httpRequest);
 
-			if (httpResponse.IsSuccessStatusCode
-				&& e.ResourceContext == CoreWebView2WebResourceContext.Document
-				&& await TryRedirectToInternalViewerAsync(httpResponse.Content))
-			{
-				httpResponse.Dispose();
-				SetEmptyResponse(e);
-			}
-			else if (httpResponse.StatusCode == HttpStatusCode.Moved
-				|| httpResponse.StatusCode == HttpStatusCode.Found
-				|| httpResponse.StatusCode == HttpStatusCode.TemporaryRedirect) // process move
+			if (httpResponse.StatusCode == HttpStatusCode.Moved
+			   || httpResponse.StatusCode == HttpStatusCode.Found
+			   || httpResponse.StatusCode == HttpStatusCode.TemporaryRedirect) // process move
 			{
 				var navUri = new Uri(uri, httpResponse.Headers.Location);
-				//if (Controller != null)
-				//{
-				//	if (Controller.OnPreNavigateUrl(navUri.ToString()))
-				//		SetEmptyResponse(e);
-				//	else
-				//		await InterceptWebRequestAsync(e, navUri);
-				//}
-				//else
-					await InterceptWebRequestAsync(e, navUri);
+				await InterceptWebRequestAsync(e, navUri);
 			}
-			else if (httpResponse.StatusCode == HttpStatusCode.InternalServerError)
+			else if (httpResponse.IsSuccessStatusCode)
+			{
+				if (e.ResourceContext == CoreWebView2WebResourceContext.Document
+					&& await TryRedirectToInternalViewerAsync(httpResponse.Content))
+				{
+					httpResponse.Dispose();
+					SetEmptyResponse(e);
+				}
+				else
+				{
+					var headers = new StringBuilder();
+
+					// concat headers
+					foreach (var h in httpResponse.Headers)
+					{
+						headers.Append(h.Key)
+						   .Append(": ")
+						   .Append(String.Join("; ", h.Value))
+						   .AppendLine();
+					}
+					foreach (var h in httpResponse.Content.Headers)
+					{
+						headers.Append(h.Key)
+						   .Append(": ")
+						   .Append(String.Join("; ", h.Value))
+						   .AppendLine();
+					}
+
+					// set response
+					SetResponse(e, headers.ToString(), (int)httpResponse.StatusCode, httpResponse.ReasonPhrase, await httpResponse.Content.ReadAsStreamAsync());
+				}
+			}
+			else
 			{
 				var (image, text) = httpResponse.DecodeReasonPhrase();
-				
+
 				var ui = shell.Value.GetService<IPpsUIService>(false);
 				if (ui != null && image.HasValue)
 				{
@@ -286,30 +293,7 @@ namespace TecWare.PPSn.Controls
 					SetEmptyResponse(e);
 				}
 				else
-					SetErrorResponse(e, (int)HttpStatusCode.InternalServerError, text);
-			}
-			else
-			{
-				var headers = new StringBuilder();
-
-				// concat headers
-				foreach (var h in httpResponse.Headers)
-				{
-					headers.Append(h.Key)
-					   .Append(": ")
-					   .Append(String.Join("; ", h.Value))
-					   .AppendLine();
-				}
-				foreach (var h in httpResponse.Content.Headers)
-				{
-					headers.Append(h.Key)
-					   .Append(": ")
-					   .Append(String.Join("; ", h.Value))
-					   .AppendLine();
-				}
-
-				// set response
-				SetResponse(e, headers.ToString(), (int)httpResponse.StatusCode, httpResponse.ReasonPhrase, await httpResponse.Content.ReadAsStreamAsync());
+					SetErrorResponse(e, (int)httpResponse.StatusCode, text);
 			}
 		} // proc InterceptWebRequestAsync
 

@@ -21,7 +21,8 @@
 0x0C2E;0x0961;;Elimicron ES 8023
 0x060E;0x16C1;;Generic Handheld 2D QR USB
 0x065A;0xA001;;Generic LX-51X
-0x08FF;0x0009;;Generic Generic RFID-Reader (125kHz)
+0x08FF;0x0009;;Generic RFID-Reader (125kHz)
+0x09D8;0x0310;;Generic RFID-Reader
 0x0D3D;0x0001;;Generic LS 300
 0x0D6C;0x0802;;Generic Long Range CCD
 0x1241;0xE000;;Generic Generic RFID

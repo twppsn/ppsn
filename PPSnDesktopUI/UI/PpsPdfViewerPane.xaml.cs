@@ -55,6 +55,10 @@ namespace TecWare.PPSn.UI
 					using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Datei ({0})...", fileName)))
 						SetLoadedDocument(await LoadDocumentFromFileNameAsync(fileName)); // parse pdf in background
 					break;
+				case byte[] bytes:
+					using (var bar = this.CreateProgress(progressText: "Lade Pdf-Datei..."))
+						SetLoadedDocument(PdfReader.Open(bytes));
+					break;
 				case IPpsDataInfo info: // open a internal object
 					using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Dokument ({0})...", info.Name)))
 					{

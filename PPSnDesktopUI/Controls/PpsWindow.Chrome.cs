@@ -293,7 +293,7 @@ namespace TecWare.PPSn.Controls
 				var assembly = typeof(GlowBitmap).Assembly.GetName().Name;
 				for (var i = 0; i < 12; i++)
 				{
-					var path = String.Format("Images/{0}.png", (BitmapPart)i);
+					var path = String.Format("Themes/Images/{0}.png", (BitmapPart)i);
 					var uri = new Uri(String.Format("pack://application:,,,/{0};component/{1}", assembly, path), UriKind.Absolute);
 					var bitmapImage = new BitmapImage(uri);
 					var array = new byte[4 * bitmapImage.PixelWidth * bitmapImage.PixelHeight];

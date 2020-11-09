@@ -265,7 +265,7 @@
 			</Viewbox>
 
 			<Viewbox x:Name="PART_SizeGripper" Grid.Column="4" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
-				<Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
+				<Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Themes/Images/SizeGrip.png">
 					<Image.Tag>
 						<ui:PpsWindowHitTest HitTest="17"/>
 					</Image.Tag>

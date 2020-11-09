@@ -37,7 +37,8 @@ namespace TecWare.PPSn
 {
 	#region -- class LogicalContentEnumerator -----------------------------------------
 
-	internal class LogicalContentEnumerator : IEnumerator
+	[Obsolete("Procs.CombineEnumerator vs LogicalContentEnumerator")]
+	public class LogicalContentEnumerator : IEnumerator
 	{
 		private int state = -1;
 		private readonly IEnumerator baseItems; // base enumerator
@@ -78,7 +79,7 @@ namespace TecWare.PPSn
 			baseItems?.Reset();
 		} // proc Reset
 
-		internal static IEnumerator GetLogicalEnumerator(DependencyObject d, IEnumerator logicalChildren, Func<object> getContent)
+		public static IEnumerator GetLogicalEnumerator(DependencyObject d, IEnumerator logicalChildren, Func<object> getContent)
 		{
 			var content = getContent();
 			if (content != null)

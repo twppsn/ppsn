@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -227,8 +228,10 @@ namespace TecWare.PPSn.UI
 		{
 			if (serviceType == typeof(IPpsProgressFactory))
 				return progressStack;
-			else
+			else if (paneManager != null)
 				return paneManager.GetService(serviceType);
+			else
+				return null;
 		} // func IServiceProvider.GetService
 
 		private void Pane_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -272,7 +275,18 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty ControlProperty = controlPropertyKey.DependencyProperty;
 
 		private void SetControl(object value)
-			=> SetValue(controlPropertyKey, (UIElement)value);
+		{
+			var oldUI = GetValue(ControlProperty);
+			var ui = (UIElement)value;
+
+			if (oldUI != null)
+				RemoveLogicalChild(oldUI);
+
+			SetValue(controlPropertyKey, ui);
+
+			if (ui != null)
+				AddLogicalChild(value);
+		} // proc SetControl
 
 		public UIElement Control => (UIElement)GetValue(ControlProperty);
 
@@ -333,8 +347,11 @@ namespace TecWare.PPSn.UI
 		public PpsProgressStack ProgressStack => progressStack;
 
 		IPpsProgressFactory IPpsWindowPaneHost.Progress => progressStack;
-		
+
 		#endregion
+
+		protected override IEnumerator LogicalChildren
+			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Control);
 
 		/// <summary>Access the pane manager</summary>
 		public IPpsWindowPaneManager PaneManager => paneManager;

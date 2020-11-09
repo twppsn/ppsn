@@ -83,7 +83,7 @@ namespace TecWare.PPSn.Main
 				charmBarControl.HelpKey = currentPane.HelpKey;
 			}
 
-			this.AddCommandDefaultHandler(PaneManager.Shell);
+			this.AddCommandDefaultHandler(this.GetControlService<IPpsShell>(true));
 
 			UpdateFocus(false);
 		} // proc OnApplyTemplate

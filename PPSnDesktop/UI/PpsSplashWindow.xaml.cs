@@ -705,12 +705,14 @@ namespace TecWare.PPSn.UI
 		{
 			var login = new LoginStateData(this, shell.Info, userInfo);
 			SetValue(loginStatePropertyKey, login);
+			PasswordChanged(null, null);
+
 			PushState(login);
 			return login.Result;
 		} // func ShowLoginAsync
 
 		private void PasswordChanged(object sender, RoutedEventArgs e)
-			=> LoginState.Validate(true);
+			=> LoginState?.Validate(true);
 
 		private void EnterKey(object sender, ExecutedRoutedEventArgs e)
 		{

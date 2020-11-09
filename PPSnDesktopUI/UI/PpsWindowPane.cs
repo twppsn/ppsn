@@ -294,7 +294,7 @@ namespace TecWare.PPSn.UI
 			foreach (var mimeType in mimeTypes)
 			{
 				if (!String.IsNullOrEmpty(mimeType))
-					namePaneTypes[mimeType] = idx;
+					mimePaneTypes[mimeType] = idx;
 			}
 		} // proc RegisterPaneType
 

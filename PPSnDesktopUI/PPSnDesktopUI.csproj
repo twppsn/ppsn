@@ -36,21 +36,23 @@
     <None Remove="Controls\PpsSideBarControl.xaml" />
     <None Remove="Controls\PpsStackSectionControl.xaml" />
     <None Remove="Controls\PpsTextBox.xaml" />
-    <None Remove="Images\EastBottom.png" />
-    <None Remove="Images\EastMiddle.png" />
-    <None Remove="Images\EastTop.png" />
-    <None Remove="Images\NorthLeft.png" />
-    <None Remove="Images\NorthMiddle.png" />
-    <None Remove="Images\NorthRight.png" />
-    <None Remove="Images\SizeGrip.png" />
-    <None Remove="Images\SouthLeft.png" />
-    <None Remove="Images\SouthMiddle.png" />
-    <None Remove="Images\SouthRight.png" />
-    <None Remove="Images\SplashLogo.png" />
-    <None Remove="Images\WestBottom.png" />
-    <None Remove="Images\WestMiddle.png" />
-    <None Remove="Images\WestTop.png" />
+    <None Remove="Themes\Images\EastBottom.png" />
+    <None Remove="Themes\Images\EastMiddle.png" />
+    <None Remove="Themes\Images\EastTop.png" />
+    <None Remove="Themes\Images\NorthLeft.png" />
+    <None Remove="Themes\Images\NorthMiddle.png" />
+    <None Remove="Themes\Images\NorthRight.png" />
+    <None Remove="Themes\Images\SizeGrip.png" />
+    <None Remove="Themes\Images\SouthLeft.png" />
+    <None Remove="Themes\Images\SouthMiddle.png" />
+    <None Remove="Themes\Images\SouthRight.png" />
+    <None Remove="Themes\Images\SplashLogo.png" />
+    <None Remove="Themes\Images\WestBottom.png" />
+    <None Remove="Themes\Images\WestMiddle.png" />
+    <None Remove="Themes\Images\WestTop.png" />
     <None Remove="Themes\Generic.xaml" />
+    <None Remove="Themes\Pages\Error.html" />
+    <None Remove="UI\KeyboardScanner.csv" />
     <None Remove="UI\PpsCameraDialog.xaml" />
     <None Remove="UI\PpsMessageDialog.xaml" />
     <None Remove="UI\PpsPdfViewerPane.xaml" />
@@ -170,19 +172,23 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\EastBottom.png" />
-    <Resource Include="Images\EastMiddle.png" />
-    <Resource Include="Images\EastTop.png" />
-    <Resource Include="Images\NorthLeft.png" />
-    <Resource Include="Images\NorthMiddle.png" />
-    <Resource Include="Images\NorthRight.png" />
-    <Resource Include="Images\SizeGrip.png" />
-    <Resource Include="Images\SouthLeft.png" />
-    <Resource Include="Images\SouthMiddle.png" />
-    <Resource Include="Images\SouthRight.png" />
-    <Resource Include="Images\SplashLogo.png" />
-    <Resource Include="Images\WestBottom.png" />
-    <Resource Include="Images\WestMiddle.png" />
-    <Resource Include="Images\WestTop.png" />
+    <EmbeddedResource Include="UI\KeyboardScanner.csv" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Themes\Images\EastBottom.png" />
+    <Resource Include="Themes\Images\EastMiddle.png" />
+    <Resource Include="Themes\Images\EastTop.png" />
+    <Resource Include="Themes\Images\NorthLeft.png" />
+    <Resource Include="Themes\Images\NorthMiddle.png" />
+    <Resource Include="Themes\Images\NorthRight.png" />
+    <Resource Include="Themes\Images\SizeGrip.png" />
+    <Resource Include="Themes\Images\SouthLeft.png" />
+    <Resource Include="Themes\Images\SouthMiddle.png" />
+    <Resource Include="Themes\Images\SouthRight.png" />
+    <Resource Include="Themes\Images\SplashLogo.png" />
+    <Resource Include="Themes\Images\WestBottom.png" />
+    <Resource Include="Themes\Images\WestMiddle.png" />
+    <Resource Include="Themes\Images\WestTop.png" />
+    <Resource Include="Themes\Pages\Error.html" />
   </ItemGroup>
 </Project>

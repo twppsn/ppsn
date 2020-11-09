@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
@@ -103,7 +104,7 @@ namespace TecWare.PPSn
 		/// <summary>Get the user name from the credentials.</summary>
 		/// <param name="userInfo"></param>
 		/// <returns></returns>
-		public static string GetUserNameFromCredentials(ICredentials userInfo)
+		public static string GetUserNameFromCredentials(this ICredentials userInfo)
 		{
 			if (userInfo == null)
 				return null;
@@ -111,6 +112,8 @@ namespace TecWare.PPSn
 				return GetDomainUserName(Environment.UserDomainName, Environment.UserName);
 			else if (userInfo is NetworkCredential networkCredential)
 				return GetDomainUserName(networkCredential.Domain, networkCredential.UserName);
+			else if (userInfo is UserCredential userCredential)
+				return GetDomainUserName(userCredential.Domain, userCredential.UserName);
 			else
 				throw new ArgumentOutOfRangeException("Invalid userInfo.");
 		} // func GetUserNameFromCredentials

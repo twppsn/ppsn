@@ -112,14 +112,16 @@ namespace TecWare.PPSn.Networking
 		/// <summary></summary>
 		/// <param name="httpContent"></param>
 		/// <param name="enforceExternalViewer"></param>
+		/// <param name="mimeType"></param>
 		/// <param name="extension"></param>
 		/// <returns></returns>
-		public static bool TryGetExtensionFromContent(this HttpContent httpContent, bool enforceExternalViewer, out string extension)
+		public static bool TryGetExtensionFromContent(this HttpContent httpContent, bool enforceExternalViewer, out string mimeType, out string extension)
 		{
 			// get media type
 			var mediaType = httpContent.Headers.ContentType?.MediaType;
 			if (String.IsNullOrEmpty(mediaType))
 			{
+				mimeType = null;
 				extension = null;
 				return false;
 			}
@@ -132,10 +134,13 @@ namespace TecWare.PPSn.Networking
 				extension = String.IsNullOrEmpty(fileName) ? System.IO.Path.GetExtension(fileName) : null;
 				if (String.IsNullOrEmpty(extension))
 					extension = MimeTypeMapping.GetExtensionFromMimeType(mediaType);
+
+				mimeType = mediaType;
 				return !String.IsNullOrEmpty(extension);
 			}
 			else
 			{
+				mimeType = null;
 				extension = null;
 				return false;
 			}

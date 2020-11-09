@@ -471,7 +471,8 @@ namespace TecWare.PPSn.UI
 			try
 			{
 				// check for changes
-				await LoadCoreAsync(infoStream, false);
+				if (infoStream.Length > 0)
+					await LoadCoreAsync(infoStream, false);
 
 				infoStream.Position = 0; // reset file pointer
 				lastReaded = DateTime.MaxValue; // do not change content during write

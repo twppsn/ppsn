@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -103,6 +104,7 @@ namespace TecWare.PPSn.Bde
 
 			// add host and activate it
 			panes.Add(host);
+			AddLogicalChild(host);
 			SetValue(topPaneHostPropertyKey, panes.LastOrDefault());
 
 			// load content
@@ -116,6 +118,7 @@ namespace TecWare.PPSn.Bde
 			var topPane = TopPaneHost;
 			if (topPane != null && await topPane.UnloadAsync(null))
 			{
+				RemoveLogicalChild(topPane);
 				panes.Remove(topPane);
 				SetValue(topPaneHostPropertyKey, panes.LastOrDefault());
 				return true;
@@ -195,6 +198,9 @@ namespace TecWare.PPSn.Bde
 		} // func CanBackCommandExecute
 
 		#endregion
+
+		protected override IEnumerator LogicalChildren
+			=> Procs.CombineEnumerator(base.LogicalChildren, panes.GetEnumerator());
 
 		bool IPpsBarcodeReceiver.IsActive => IsActive;
 
