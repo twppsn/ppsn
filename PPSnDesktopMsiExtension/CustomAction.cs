@@ -13,7 +13,7 @@ namespace PPSnDesktopMsiExtension
 	{
 		private static void ValidateShell(Session session, string targetPath, string shellName, string shellUri)
 		{
-			var shellDirectory = new DirectoryInfo(Path.GetFullPath(Path.Combine(targetPath, @"..\env\", shellName)));
+			var shellDirectory = new DirectoryInfo(Path.GetFullPath(Path.Combine(targetPath, "env", shellName)));
 
 			if (shellDirectory.Exists)
 				session.Log($"Shell Directory exists: {shellDirectory.FullName}");

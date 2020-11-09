@@ -752,6 +752,10 @@ namespace TecWare.PPSn
 								r.AllowSync = false;
 								noRestart = true;
 							}
+							else if(arg == "--norestart")
+							{
+								noRestart = true;
+							}
 							break;
 					}
 				}

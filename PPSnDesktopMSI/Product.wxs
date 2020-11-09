@@ -47,6 +47,8 @@
 		<Condition Message="!(loc.ConditionAllUsers)">NOT ALLUSERS</Condition>
 
 		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="DesktopFolder" Name="DesktopFolder" />
+
 			<Directory Id="LocalAppDataFolder" Name="AppData">
 				<Directory Id="ppsn" Name="ppsn">
 					<Directory Id="INSTALLFOLDER" Name="PPSnDesktop">

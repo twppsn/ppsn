@@ -14,7 +14,9 @@
 				<RemoveFolder Id="ppsn" Directory="ppsn" On="uninstall" />
 				<RemoveFolder Id="INSTALLFOLDER" On="uninstall" />
 
-				<File Id="PPSnDesktopExe" Name="PPSnDesktop.exe" Source="$(var.BinDirectory)\PPSnDesktop.exe" />
+				<File Id="PPSnDesktopExe" Name="PPSnDesktop.exe" Source="$(var.BinDirectory)\PPSnDesktop.exe">
+					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" />
+				</File>
 				<File Id="PPSnDesktopPdb" Name="PPSnDesktop.pdb" Source="$(var.BinDirectory)\PPSnDesktop.pdb" />
 				<File Id="PPSnDesktopExeConfig" Name="PPSnDesktop.exe.config" Source="$(var.BinDirectory)\PPSnDesktop.exe.config" />
 
