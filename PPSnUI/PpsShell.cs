@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.IO;
@@ -336,6 +337,38 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsShellLogItem --------------------------------------------------
+
+	/// <summary>Simple log-item store.</summary>
+	public sealed class PpsShellLogItem
+	{
+		internal PpsShellLogItem(LogMsgType type, string message)
+		{
+			Type = type;
+			Text = message;
+		}
+
+		/// <summary></summary>
+		public DateTime Stamp { get; } = DateTime.Now;
+		/// <summary>Type of the message.</summary>
+		public LogMsgType Type { get; }
+		/// <summary>Text</summary>
+		public string Text { get; }
+	} // class PpsShellLogItem
+
+	#endregion
+
+	#region -- interface IPpsLogService -----------------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsLogService
+	{
+		/// <summary></summary>
+		IReadOnlyCollection<PpsShellLogItem> Log { get; }
+	} // interface IPpsLogService
+
+	#endregion
+
 	#region -- class PpsShell ---------------------------------------------------------
 
 	/// <summary>Global environment to host multiple active environments.</summary>
@@ -557,7 +590,7 @@ namespace TecWare.PPSn
 
 			#endregion
 
-			#region -- Background Communication -------------------------------------------
+			#region -- Background Communication ---------------------------------------
 
 			private void ExecuteCommunication()
 			{
@@ -600,7 +633,7 @@ namespace TecWare.PPSn
 
 		#region -- class PpsShellImplementation ---------------------------------------
 
-		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, ILogger, IDisposable
+		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, ILogger, IPpsLogService, IDisposable
 		{
 			public event PropertyChangedEventHandler PropertyChanged;
 			public event EventHandler Disposed;
@@ -618,6 +651,8 @@ namespace TecWare.PPSn
 			private DEHttpClient http = null;
 			private bool isOnline = false;
 
+			private readonly ObservableCollection<PpsShellLogItem> logItems = new ObservableCollection<PpsShellLogItem>();
+
 			#region -- Ctor/Dtor ------------------------------------------------------
 
 			public PpsShellImplementation(IServiceProvider parentProvider, IPpsShellInfo info)
@@ -628,6 +663,7 @@ namespace TecWare.PPSn
 				AddService(typeof(IPpsShell), this);
 				AddService(typeof(IPpsCommunicationService), this);
 				AddService(typeof(ILogger), this);
+				AddService(typeof(IPpsLogService), this);
 
 				backgroundWorker = new PpsBackgroundWorker(this);
 			} // ctor
@@ -681,7 +717,6 @@ namespace TecWare.PPSn
 
 						// load settings from server
 						await LoadSettingsFromServerAsync(settingsService, this, instanceSettingsInfo.DpcDeviceId, 0);
-
 
 						// notify settings loaded
 						OnPropertyChanged(nameof(Settings));
@@ -961,8 +996,24 @@ namespace TecWare.PPSn
 
 			#region -- Logger ---------------------------------------------------------
 
+			private void LogMsgAppend(LogMsgType type, string message)
+			{
+				lock (logItems)
+				{
+					logItems.Add(new PpsShellLogItem(type, message));
+
+					while (logItems.Count > 0xFFFF)
+						logItems.RemoveAt(0);
+				}
+			} // proc LogMsgAppend
+
 			void ILogger.LogMsg(LogMsgType type, string message)
-				=> DebugLogger.LogMsg(type, message);
+			{
+				DebugLogger.LogMsg(type, message);
+					LogMsgAppend(type, message);
+			} // proc ILogger.LogMsg
+
+			IReadOnlyCollection<PpsShellLogItem> IPpsLogService.Log => logItems;
 
 			#endregion
 

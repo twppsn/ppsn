@@ -16,15 +16,18 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Microsoft.Scripting.Debugging;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
@@ -39,8 +42,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>Pane to display trace messages.</summary>
 	internal sealed partial class PpsTracePane : PpsWindowPaneControl
 	{
-		//public static readonly RoutedCommand AssignDebugTarget = new RoutedCommand("Assign", typeof(PpsTracePane));
-		//public static readonly RoutedCommand ClearDebugTarget = new RoutedCommand("Clear", typeof(PpsTracePane));
+		public static readonly RoutedCommand ToggleDebugCommand = new RoutedCommand();
 
 		#region -- class PpsTraceTable ------------------------------------------------
 
@@ -71,7 +73,6 @@ namespace TecWare.PPSn.UI
 			private async Task LuaRunTaskAsync(Func<Task> action, string finishMessage)
 			{
 				await action();
-				await Task.Delay(3000);
 				if (finishMessage != null)
 					await UI.ShowNotificationAsync(finishMessage, PpsImage.Information);
 			} // proc LuaRunTaskAsync
@@ -95,13 +96,20 @@ namespace TecWare.PPSn.UI
 
 			#region -- Lock-Service ---------------------------------------------------
 
+			public async Task SendLogAsync()
+			{
+				await lockService.SendLogAsync();
+				await Task.Delay(3000);
+				await UI.ShowNotificationAsync("Log gesendet.", PpsImage.Information);
+			} // proc SendLogAsync
+
 			[LuaMember, LuaMember("Lock")]
 			public void Unlock(string pin)
 				=> UI.ShowNotificationAsync(lockService.Unlock(pin ?? "\0") ? "Entsperrt" : "Gesperrt", PpsImage.Information).Await();
 
 			[LuaMember]
 			public void SendLog()
-				=> LuaRunTask(() => lockService.SendLogAsync(), "Log gesendet.");
+				=> SendLogAsync().Await();
 
 			#endregion
 
@@ -126,12 +134,12 @@ namespace TecWare.PPSn.UI
 					fileName = Path.Combine(Path.GetTempPath(), fileName);
 
 				using (var tr = new StreamWriter(fileName))
-					LuaRunTask(() => WriteLiveDataAsync(tr), "{fileName} geschrieben.");
+					LuaRunTask(() => WriteLiveDataAsync(tr), $"{fileName} geschrieben.");
 			} // proc DumpLiveData
 
 			#endregion
 
-			#region -- Shell Mode ---------------------------------------------------------
+			#region -- Shell Mode -----------------------------------------------------
 
 			[LuaMember]
 			public void SetAsShell(string pin)
@@ -155,16 +163,30 @@ namespace TecWare.PPSn.UI
 
 			private void Exec(string command)
 			{
-				Process.Start(command).Dispose();
+				var psi = new ProcessStartInfo
+				{
+					FileName = command,
+					WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+				};
+				Process.Start(psi).Dispose();
 			} // proc Exec
+
+			private string FindRemoteDebugger()
+			{
+				var fi = new FileInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio 16.0", "Common7", "IDE", "Remote Debugger", "x64", "msvsmon.exe"));
+				return fi.Exists ? fi.FullName : null;
+			} // funcFindRemoteDebugger
 
 			[LuaMember]
 			public void Exec(string command, string pin)
 			{
 				if (command == null)
 					command = "cmd.exe";
+				else if (command == "rdbg")
+					command = FindRemoteDebugger();
 
-				PinProtected(() => Exec(command), pin, command + " ausgeführt.");
+				if (command != null)
+					PinProtected(() => Exec(command), pin, command + " ausgeführt.");
 			} // proc Exec
 
 			#endregion
@@ -181,6 +203,24 @@ namespace TecWare.PPSn.UI
 
 			#endregion
 
+			#region -- Help -----------------------------------------------------------
+
+			[LuaMember]
+			public void Help()
+			{
+				var p = pane.Shell.LogProxy("Help");
+				foreach(var d in Members)
+				{
+					if (d.Value is ILuaMethod)
+					{
+						// todo: parameter info
+						p.Info(d.Key);
+					}
+				}
+			} // proc Help
+
+			#endregion
+
 			public IPpsUIService UI => pane.ui;
 			public IPpsLuaShell Shell => luaShell;
 		} // class PpsTraceTable
@@ -188,6 +228,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		private readonly IPpsUIService ui;
+		private readonly IPpsLogService log;
 		private readonly PpsTraceTable traceTable;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -200,6 +241,7 @@ namespace TecWare.PPSn.UI
 			InitializeComponent();
 
 			ui = Shell.GetService<IPpsUIService>(true);
+			log = Shell.GetService<IPpsLogService>(false);
 
 			eventPane.AddCommandBinding(
 				Shell, ApplicationCommands.Open,
@@ -212,9 +254,28 @@ namespace TecWare.PPSn.UI
 				Shell, ApplicationCommands.Delete,
 				new PpsCommand(ctx => commandTextBox.Clear(), ctx => !String.IsNullOrEmpty(commandTextBox.Text))
 			);
+			eventPane.AddCommandBinding(Shell, ApplicationCommands.SaveAs,
+				new PpsAsyncCommand(
+					ctx => traceTable.SendLogAsync()
+				)
+			);
+
+			eventPane.AddCommandBinding(Shell, ApplicationCommands.Copy,
+				new PpsCommand(
+					ctx => CopyToClipboard(ctx.Parameter),
+					ctx => CanCopyToClipboard(ctx.Parameter)
+				)
+			);
+
+			eventPane.AddCommandBinding(Shell, ToggleDebugCommand,
+				new PpsCommand(ctx => ToggleDebug())
+			);
 
 			// create environment for the command box
 			traceTable = new PpsTraceTable(this);
+
+			if (log != null)
+				InitLog();
 		} // ctor
 
 		protected override Task OnLoadAsync(LuaTable args)
@@ -252,7 +313,7 @@ namespace TecWare.PPSn.UI
 
 				// print result
 				for (var i = 0; i < r.Count; i++)
-					p.Debug($"[{i}]: {r[i]}");
+					p.Info($"[{i}]: {r[i]}");
 			}
 			catch (LuaParseException ex)
 			{
@@ -265,343 +326,53 @@ namespace TecWare.PPSn.UI
 			finally
 			{
 				commandTextBox.IsEnabled = true;
+				commandTextBox.Focus();
 			}
 		} // proc ExecuteCommandAsync
 
 		#endregion
 
+		#region -- Log ----------------------------------------------------------------
 
+		private bool showDebug = false;
 
-
-
-
-
-
-
-
-		#region -- Ctor/Dtor ----------------------------------------------------------
-
-		///// <summary>Trace pane constructor</summary>
-		///// <param name="paneHost"></param>
-		//public PpsTracePane(IPpsWindowPaneHost paneHost)
-		//	: base(paneHost)
-		//{
-		//	this.AddCommandBinding(Shell, ApplicationCommands.SaveAs,
-		//		new PpsCommand(
-		//			 ctx => SaveTrace()
-		//		)
-		//	);
-
-		//	this.AddCommandBinding(Shell, ApplicationCommands.Copy,
-		//		new PpsCommand(
-		//			 ctx => CopyToClipboard(ctx.Parameter),
-		//			 ctx => CanCopyToClipboard(ctx.Parameter)
-		//		)
-		//	);
-
-
-		//	//this.AddCommandBinding(Shell, AssignDebugTarget,
-		//	//	new PpsAsyncCommand(
-		//	//		ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, false),
-		//	//		ctx => ctx.Parameter is PpsMasterDataRow
-		//	//	)
-		//	//);
-
-
-		//	//this.AddCommandBinding(Shell, ClearDebugTarget,
-		//	//	new PpsAsyncCommand(
-		//	//		ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, true),
-		//	//		ctx => ctx.Parameter is PpsMasterDataRow row && row.GetProperty("DebugPath", null) != null
-		//	//	)
-		//	//);
-
-		//	//var collectionView = CollectionViewSource.GetDefaultView(Environment?.Log);
-		//	//collectionView.SortDescriptions.Add(new SortDescription(nameof(PpsTraceItemBase.Stamp), ListSortDirection.Descending));
-		//} // ctor
-
-		#endregion
-
-		#region -- Copy, SaveAs -------------------------------------------------------
-
-		private void SaveTrace()
+		private void InitLog()
 		{
-			var openFileDialog = new SaveFileDialog
-			{
-				Filter = "TraceLog | *.csv;",
-				DefaultExt = ".csv",
-				CheckFileExists = false,
-				CheckPathExists = true,
-				AddExtension = true
-			};
+			var logItems = log.Log;
 
-			if (openFileDialog.ShowDialog() != true)
-				return;
+			// enable synchronization
+			BindingOperations.EnableCollectionSynchronization(logItems, log.Log, LogSyncCallback);
 
-			if (File.Exists(openFileDialog.FileName)
-				&& MessageBox.Show("Die Datei existiert bereits. Möchten Sie überschreiben?", "Warnung", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
-				return;
+			// create collectionView
+			var collectionView = CollectionViewSource.GetDefaultView(logItems);
+			collectionView.Filter = FilterLogItems;
+			collectionView.SortDescriptions.Add(new SortDescription(nameof(PpsShellLogItem.Stamp), ListSortDirection.Descending));
+			logList.ItemsSource = collectionView;
+		} // proc InitLog
 
-			using (var sw = new StreamWriter(openFileDialog.FileName))
-			{
-				// write log content
-				//if (Environment.Log is PpsTraceLog log)
-				//{
-				//	foreach (var c in log.OfType<PpsTraceItemBase>())
-				//	{
-				//		sw.Write(c.Type);
-				//		sw.Write(';');
-				//		sw.Write(c.Stamp.ToString("G"));
-				//		sw.Write(';');
+		private void LogSyncCallback(IEnumerable collection, object context, Action accessMethod, bool writeAccess)
+			=> Dispatcher.Invoke(accessMethod);
 
-				//		if (c is PpsExceptionItem exi)
-				//		{
-				//			sw.Write('"');
-				//			sw.Write(ExceptionFormatter.FormatPlainText(exi.Exception).Replace("\"", "\"\""));
-				//			sw.Write('"');
-				//		}
-				//		else
-				//			sw.Write(c.Message.Replace("\"", "\"\""));
-				//		sw.WriteLine();
-				//	}
-				//}
-				//else
-					sw.WriteLine("Log is not a trace log?");
+		private bool FilterLogItems(object obj)
+			=> obj is PpsShellLogItem item ? showDebug || item.Type != LogMsgType.Debug : false;
 
-				//// write statistics
-				//foreach (var statistic in Environment.Statistics)
-				//{
-				//	if (!statistic.HasData)
-				//		continue;
-				//	var en = statistic.History.GetEnumerator();
-				//	var historic = 0;
-				//	en.Reset();
-				//	while (en.MoveNext())
-				//	{
-				//		sw.WriteLine($"{statistic.Name};{DateTime.Now.AddSeconds(historic)};{en.Current}");
-				//		historic--;
-				//	}
-				//}
-			}
-		} // proc SaveTrace
-
-		#endregion
-
-		#region -- Copy To Clipboard --------------------------------------------------
-
-		private string TraceToString(object item)
+		private void ToggleDebug()
 		{
-			switch (item)
-			{
-				case PpsTraceItem pti:
-					return $"{pti.Type} - {pti.Stamp} - ID:{pti.Id} - Source: {pti.Source} - Message: {pti.Message}";
-				case PpsTextItem pti:
-					return $"{pti.Type} - {pti.Stamp} - {pti.Message}";
-				case string s:
-					return s;
-				case PpsExceptionItem exc:
-					var ret = new StringBuilder();
-
-					ret.Append($"{exc.Type} - {exc.Stamp} - ");
-
-					ExceptionFormatter.FormatPlainText(ret, exc.Exception);
-
-					return ret.ToString();
-				default:
-					return null;
-			}
-		} // func TraceToString
+			showDebug = !showDebug;
+			CollectionViewSource.GetDefaultView(log.Log).Refresh();
+		} // proc ToggleDebug
 
 		private bool CanCopyToClipboard(object item)
-			=> false; // item != null || logList.SelectedItem != null;
+			=> item is PpsShellLogItem && logList.SelectedItem != null;
 
 		private void CopyToClipboard(object item)
 		{
-			//var clipText = TraceToString(item ?? logList.SelectedItem);
-			//if (clipText != null)
-			//	Clipboard.SetText(clipText);
+			if (item is PpsShellLogItem logItem)
+				Clipboard.SetText(logItem.Text);
 		} // proc CopyToClipboard
 
 		#endregion
-
-		#region -- UpdateDebugTarget --------------------------------------------------
-
-		private string GetDebugTargetFileName(string path, string currentDebugTarget)
-		{
-			var queryIndex = path.IndexOf('?');
-			var name = queryIndex >= 0 ? Path.GetFileName(path.Substring(0, queryIndex)) : Path.GetFileName(path);
-
-			var openDialog = new OpenFileDialog
-			{
-				Title = "Assign Debug Target to " + name,
-				Filter = name + "|" + name,
-				FileName = currentDebugTarget,
-				CheckFileExists = true
-			};
-
-			if (openDialog.ShowDialog() != true)
-				return null;
-			return openDialog.FileName;
-		} // func GetDebugTargetFileName
-
-		//private async Task UpdateDebugTargetAsync(PpsMasterDataRow row, bool clear)
-		//{
-		//	var path = row.GetProperty("Path", String.Empty);
-		//	if (String.IsNullOrEmpty(path))
-		//		return;
-
-		//	var newFileName = clear ? null : GetDebugTargetFileName(path, row.GetProperty("DebugPath", null));
-		//	//try
-		//	//{
-		//	//	await Environment.MasterData.UpdateDebugPathAsync(row.RowId, path, newFileName);
-		//	//}
-		//	//catch (Exception e)
-		//	//{
-		//	//	Environment.ShowException(e);
-		//	//}
-		//} // proc UpdateDebugTargetAsync
-
-		#endregion
 	} // class PpsTracePane
-
-	#endregion
-
-	#region -- class PpsTraceItemTemplateSelector -------------------------------------
-
-	internal sealed class PpsTraceItemTemplateSelector : DataTemplateSelector
-	{
-		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-		{
-			DataTemplate GetTemplate()
-			{
-				switch (item)
-				{
-					case PpsExceptionItem ei:
-					case Exception e:
-						return ExceptionTemplate;
-					case PpsTraceItem ti:
-						return TraceItemTemplate;
-					case PpsTextItem tt:
-						return TextItemTemplate;
-					default:
-						return null;
-				}
-			} // func GetTemplate
-			return GetTemplate() ?? NullTemplate;
-		} // proc SelectTemplate
-
-		/// <summary>Template for the exception items</summary>
-		public DataTemplate NullTemplate { get; set; }
-		/// <summary>Template for the exception items</summary>
-		public DataTemplate ExceptionTemplate { get; set; }
-		/// <summary></summary>
-		public DataTemplate TraceItemTemplate { get; set; }
-		/// <summary></summary>
-		public DataTemplate TextItemTemplate { get; set; }
-	} // class PpsTraceItemTemplateSelector
-
-	#endregion
-
-	#region -- class ExceptionToPropertyConverter -------------------------------------
-
-	internal sealed class ExceptionToPropertyConverter : IValueConverter
-	{
-		#region -- class ExceptionView ------------------------------------------------
-
-		public sealed class ExceptionView : IEnumerable<PropertyValue>
-		{
-			private readonly string title;
-			private readonly string type;
-			private readonly string text;
-			private readonly PropertyValue[] properties;
-
-			public ExceptionView(string title, string type, string text, PropertyValue[] properties)
-			{
-				this.title = title;
-				this.type = type ?? throw new ArgumentNullException(nameof(type));
-				this.text = text;
-				this.properties = properties ?? throw new ArgumentNullException(nameof(properties));
-			} // ctor
-
-			public IEnumerator<PropertyValue> GetEnumerator()
-				=> ((IEnumerable<PropertyValue>)properties).GetEnumerator();
-
-			IEnumerator IEnumerable.GetEnumerator()
-				=> GetEnumerator();
-
-			public string Title => title;
-			public string Type => type;
-			public string Text => text;
-		} // class ExceptionView
-
-		#endregion
-
-		#region -- class ExceptionViewArrayFormatter ----------------------------------
-
-		private sealed class ExceptionViewArrayFormatter : ExceptionFormatter
-		{
-			private List<ExceptionView> exceptions = new List<ExceptionView>();
-
-			private string currentTitle;
-			private Exception currentException;
-			private List<PropertyValue> currentProperties = new List<PropertyValue>();
-
-			protected override void AppendProperty(string name, Type type, Func<object> value)
-			{
-				var val = value.Invoke();
-				if (val != null && !String.IsNullOrEmpty(val.ToString()))
-					currentProperties.Add(new PropertyValue(name, type, value()));
-			}
-
-			protected override void AppendSection(bool isFirst, string sectionName, Exception ex)
-			{
-				if (isFirst)
-				{
-					exceptions.Clear();
-					currentProperties.Clear();
-
-					currentTitle = null;
-					currentException = ex;
-				}
-				else
-				{
-					CompileCurrentException();
-					currentProperties.Clear();
-
-					currentTitle = sectionName;
-					currentException = ex;
-				}
-			} // proc AppendSection
-
-			private void CompileCurrentException()
-			{
-				if (currentException == null)
-					throw new InvalidOperationException();
-
-				exceptions.Add(new ExceptionView(currentTitle, currentException.GetType().Name, currentException.Message, currentProperties.ToArray()));
-			} // proc CompileCurrentException
-
-			protected override object Compile()
-			{
-				CompileCurrentException();
-				return exceptions.ToArray();
-			} // func Compile
-		} // class ExceptionViewArrayFormatter
-
-		#endregion
-
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			if (value == null)
-				return null;
-
-			return value is Exception e
-				? ExceptionFormatter.Format<ExceptionViewArrayFormatter>(e)
-				: throw new ArgumentException(nameof(value));
-		} // func Convert
-
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-			=> throw new NotSupportedException();
-	} // class ExceptionToPropertyConverter
 
 	#endregion
 }
