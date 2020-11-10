@@ -131,6 +131,26 @@ namespace TecWare.PPSn
 			=> shell.GetService<IPpsWpfResources>(true).FindResource<T>(resourceKey);
 
 		#endregion
+
+		#region -- ToGeometryName -----------------------------------------------------
+
+		public static string ToGeometryName(this PpsImage image)
+		{
+			switch(image)
+			{
+				case PpsImage.Information:
+				case PpsImage.Question:
+					return "informationPathGeometry";
+				case PpsImage.Error:
+					return "exceptionPathGeometry";
+				case PpsImage.Warning:
+					return "warningPathGeometry";
+				default:
+					return null;
+			}
+		} // proc ToGeometryName
+
+		#endregion
 	} // class PpsWpfShell
 
 	#endregion

@@ -23,7 +23,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>\\192.168.58.75\temp\bin\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -44,6 +44,19 @@
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugRemote|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>\\192.168.58.75\temp\bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DES.Core, Version=3.4.0.0, Culture=neutral, PublicKeyToken=65aa0de0ef4a3cd4, processorArchitecture=MSIL">
@@ -117,13 +130,16 @@
     <Compile Include="Data\PpsDataSetDesktop.cs" />
     <Compile Include="Data\PpsTraceLog.cs" />
     <Compile Include="Data\SQLiteExtensions.cs" />
+    <Compile Include="Lua\PpsLuaShell.cs" />
     <Compile Include="Main\PpsMainWindowService.cs" />
+    <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.Data.cs" />
     <Compile Include="PpsEnvironment.Http.cs" />
     <Compile Include="PpsEnvironment.Lua.cs" />
     <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Views.cs" />
     <Compile Include="Bde\PpsBdePaneHost.cs" />
+    <Compile Include="UI\PpsLockService.cs" />
     <Compile Include="UI\PpsBarcodePopup.cs" />
     <Compile Include="UI\FieldFactory.cs" />
     <Compile Include="UI\PpsAttachmentsControl.xaml.cs">

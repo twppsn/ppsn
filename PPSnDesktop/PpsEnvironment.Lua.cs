@@ -37,65 +37,6 @@ namespace TecWare.PPSn
 {
 	//public partial class PpsEnvironment : IPpsRequest
 	//{
-	//	#region -- class LuaTraceLineDebugInfo ----------------------------------------
-
-	//	/// <summary></summary>
-	//	private sealed class LuaTraceLineDebugInfo : ILuaDebugInfo
-	//	{
-	//		private readonly string chunkName;
-	//		private readonly string sourceFile;
-	//		private readonly int line;
-
-	//		public LuaTraceLineDebugInfo(LuaTraceLineExceptionEventArgs e, string sourceFile)
-	//		{
-	//			this.chunkName = e.SourceName;
-	//			this.sourceFile = sourceFile;
-	//			this.line = e.SourceLine;
-	//		} // ctor
-
-	//		public string ChunkName => chunkName;
-	//		public int Column => 0;
-	//		public string FileName => sourceFile;
-	//		public int Line => line;
-	//	} // class LuaTraceLineDebugInfo
-
-	//	#endregion
-
-	//	#region -- class LuaEnvironmentTraceLineDebugger ------------------------------
-
-	//	/// <summary></summary>
-	//	private sealed class LuaEnvironmentTraceLineDebugger : LuaTraceLineDebugger
-	//	{
-	//		protected override void OnExceptionUnwind(LuaTraceLineExceptionEventArgs e)
-	//		{
-	//			var luaFrames = new List<LuaStackFrame>();
-	//			var offsetForRecalc = 0;
-	//			LuaExceptionData currentData = null;
-
-	//			// get default exception data
-	//			if (e.Exception.Data[LuaRuntimeException.ExceptionDataKey] is LuaExceptionData)
-	//			{
-	//				currentData = LuaExceptionData.GetData(e.Exception);
-	//				offsetForRecalc = currentData.Count;
-	//				luaFrames.AddRange(currentData);
-	//			}
-	//			else
-	//				currentData = LuaExceptionData.GetData(e.Exception, resolveStackTrace: false);
-
-	//			// re-trace the stack frame
-	//			var trace = new StackTrace(e.Exception, true);
-	//			for (var i = offsetForRecalc; i < trace.FrameCount - 1; i++)
-	//				luaFrames.Add(LuaExceptionData.GetStackFrame(trace.GetFrame(i)));
-
-	//			// add trace point
-	//			luaFrames.Add(new LuaStackFrame(trace.GetFrame(trace.FrameCount - 1), new LuaTraceLineDebugInfo(e, e.SourceName)));
-
-	//			currentData.UpdateStackTrace(luaFrames.ToArray());
-	//		} // proc OnExceptionUnwind
-	//	} // class LuaEnvironmentTraceLineDebugger
-
-	//	#endregion
-
 	//	private PpsDataFieldFactory fieldFactory;
 
 	//	#region -- LuaHelper ----------------------------------------------------------

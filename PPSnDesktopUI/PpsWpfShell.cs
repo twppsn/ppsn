@@ -424,6 +424,7 @@ namespace TecWare.PPSn
 	internal class PpsWpfSerivce : IPpsUIService, IPpsAsyncService
 	{
 		private readonly Dispatcher dispatcher;
+		private PpsNotificationWindow currentNotificationWindow = null;
 
 		public PpsWpfSerivce()
 		{
@@ -434,7 +435,8 @@ namespace TecWare.PPSn
 
 		public void ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
-			// todo: Log.Append(PpsLogType.Exception, exception, alternativeMessage);
+			// log exception
+			PpsShell.Current.LogProxy().Except(exception, alternativeMessage);
 
 			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
 			{
@@ -447,12 +449,24 @@ namespace TecWare.PPSn
 			}
 		} // proc ShowException
 
-		public void ShowNotification(string message, PpsImage image)
+		public async Task ShowNotificationAsync(object message, PpsImage image)
 		{
-		} // proc ShowNotification
+			await await dispatcher.InvokeAsync(() =>
+			{
+				var activeWindow = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+				if (currentNotificationWindow == null)
+				{
+					currentNotificationWindow = new PpsNotificationWindow();
+					currentNotificationWindow.Closed += (sender, e) => currentNotificationWindow = null;
+				}
+				return currentNotificationWindow.ShowAsync(activeWindow, message, image);
+			});
+		} // proc ShowNotificationAsync
 
 		public int MsgBox(string text, PpsImage image = PpsImage.Information, params string[] buttons)
 		{
+			// PpsMessageDialog ausbauen
+
 			MessageBox.Show(text);
 			return 0;
 		} // func MsgBox
@@ -512,6 +526,7 @@ namespace TecWare.PPSn
 
 	[
 	PpsService(typeof(IPpsCommandManager)),
+	PpsService(typeof(IPpsWpfResources))
 	]
 	internal sealed class PpsWpfShellService : IPpsCommandManager, IPpsWpfResources, IPpsShellService, IPpsShellServiceInit
 	{

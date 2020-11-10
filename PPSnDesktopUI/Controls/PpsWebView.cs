@@ -289,7 +289,7 @@ namespace TecWare.PPSn.Controls
 				var ui = shell.Value.GetService<IPpsUIService>(false);
 				if (ui != null && image.HasValue)
 				{
-					ui.ShowNotification(text, image.Value.ToPpsImage());
+					ui.ShowNotificationAsync(text, image.Value.ToPpsImage()).Silent();
 					SetEmptyResponse(e);
 				}
 				else

@@ -53,5 +53,4 @@ namespace TecWare.PPSn.UI
 	} // class BooleanBox
 
 	#endregion
-
 }

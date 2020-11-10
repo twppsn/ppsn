@@ -431,7 +431,7 @@ namespace TecWare.PPSn
 
 			private DateTime nextBackgroundCycle = DateTime.MinValue;
 
-			#region -- Ctor/Dtor ----------------------------------------------------------
+			#region -- Ctor/Dtor ------------------------------------------------------
 
 			public PpsBackgroundWorker(PpsShellImplementation shell)
 			{

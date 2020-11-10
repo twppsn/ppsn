@@ -16,7 +16,7 @@
 		<sys:Double x:Key="maxScrollHeight">300</sys:Double>
 		<sys:Double x:Key="collapsedScrollHeight">19</sys:Double>
 
-		<local:PpsTraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
+		<!--<local:PpsTraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
 			<local:PpsTraceItemTemplateSelector.NullTemplate>
 				<DataTemplate>
 					<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
@@ -158,19 +158,19 @@
 					</DataTemplate.Triggers>
 				</DataTemplate>
 			</local:PpsTraceItemTemplateSelector.TextItemTemplate>
-		</local:PpsTraceItemTemplateSelector>
+		</local:PpsTraceItemTemplateSelector>-->
 	</UserControl.Resources>
 
 	<ui:PpsSideBarControl AllowToggleSelection="False">
 		<ui:PpsSideBarPanel Header="Ereignisse">
-			<Grid Margin="16,16,0,16">
+			<Grid x:Name="eventPane" Margin="16,16,0,16">
 				<Grid.RowDefinitions>
 					<RowDefinition/>
 					<RowDefinition Height="auto"/>
 					<RowDefinition Height="auto" />
 				</Grid.RowDefinitions>
 
-				<ui:PpsDataListBox x:Name="logList" ItemsSource="{Binding Log}">
+				<!--<ui:PpsDataListBox x:Name="logList" ItemsSource="{Binding Log}">
 					<ui:PpsDataListBox.ListCommands>
 						<ui:PpsUICommandButton Order="100;100" DisplayText="Speichern" Image="save" Description="Speichere alle Log in eine Datei." Command="{x:Static ApplicationCommands.SaveAs}" />
 					</ui:PpsDataListBox.ListCommands>
@@ -232,23 +232,23 @@
 							</Grid>
 						</DataTemplate>
 					</ui:PpsDataListBox.ItemTemplate>
-				</ui:PpsDataListBox>
+				</ui:PpsDataListBox>-->
+				
 				<Grid Grid.Row="1" Margin="0,12,0,6">
 					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="auto"/>
 						<ColumnDefinition Width="*"/>
 						<ColumnDefinition Width="auto"/>
-						<ColumnDefinition Width="auto"/>
 					</Grid.ColumnDefinitions>
-					<TextBlock Text="Befehl:" Foreground="{DynamicResource PPSnWindowForegroundBrush}" VerticalAlignment="Center" />
-					<ui:PpsTextBox Grid.Column="1" x:Name="ConsoleCommandTextBox" Height="23" Margin="6,0">
+					
+					<ui:PpsTextBox Grid.Column="0" x:Name="commandTextBox" Height="23" Margin="6,0">
 						<TextBox.InputBindings>
 							<KeyBinding Command="{x:Static ApplicationCommands.Open}" Key="Return" />
 							<KeyBinding Command="{x:Static ApplicationCommands.Delete}" Key="Esc" />
 						</TextBox.InputBindings>
 					</ui:PpsTextBox>
-					<ui:PpsButton Grid.Column="2" Content="Ausführen" Command="{x:Static ApplicationCommands.Open}" />
-					<CheckBox Grid.Column="3" x:Name="ShowStatisticCheckBox" Content="Statistiken anzeigen" Margin="32,0,0,0">
+					<ui:PpsButton Grid.Column="1" Content="Ausführen" Command="{x:Static ApplicationCommands.Open}" />
+					
+					<!--<CheckBox Grid.Column="3" x:Name="ShowStatisticCheckBox" Content="Statistiken anzeigen" Margin="32,0,0,0">
 						<CheckBox.Style>
 							<Style TargetType="{x:Type CheckBox}" BasedOn="{StaticResource PPSnCheckBoxStyle}">
 								<Setter Property="Visibility" Value="Collapsed" />
@@ -262,10 +262,10 @@
 								</Style.Triggers>
 							</Style>
 						</CheckBox.Style>
-					</CheckBox>
+					</CheckBox>-->
 				</Grid>
 
-				<ItemsControl Grid.Row="2" ItemsSource="{Binding Statistics}" Focusable="False">
+				<!--<ItemsControl Grid.Row="2" ItemsSource="{Binding Statistics}" Focusable="False">
 					<ItemsControl.Style>
 						<Style TargetType="{x:Type ItemsControl}">
 							<Setter Property="Visibility" Value="Collapsed" />
@@ -326,10 +326,10 @@
 							</Grid>
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>
-				</ItemsControl>
+				</ItemsControl>-->
 			</Grid>
 		</ui:PpsSideBarPanel>
-		<Separator />
+		<!--<Separator />
 		<ui:PpsSideBarPanel Header="Dateien">
 			<ui:PpsDataListBox ItemsSource="{Binding MasterData.OfflineCache}">
 				<ui:PpsDataListBox.ItemCommands>
@@ -356,6 +356,6 @@
 					</DataTemplate>
 				</ui:PpsDataListBox.ItemTemplate>
 			</ui:PpsDataListBox>
-		</ui:PpsSideBarPanel>
+		</ui:PpsSideBarPanel>-->
 	</ui:PpsSideBarControl>
 </ui:PpsWindowPaneControl>

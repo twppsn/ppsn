@@ -103,7 +103,7 @@
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
-							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}" />
+							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.MaximizeCommand}"
 							  ToolTip="Maximieren"
 							  DisplayMode="Image"
@@ -114,7 +114,7 @@
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
-							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}" />
+							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.CloseCommand}"
 							  ToolTip="Schließen"
 							  DisplayMode="Image"
@@ -125,7 +125,7 @@
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
-							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}" />
+							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
 			</StackPanel>
 		</Grid>
 

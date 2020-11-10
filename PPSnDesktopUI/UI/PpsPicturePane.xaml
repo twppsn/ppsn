@@ -101,7 +101,7 @@ specific language governing permissions and limitations under the Licence.
 		</ui:PpsUISplitCommandButton>
 	</uiC:PpsWindowPaneControl.Commands>
 
-	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsManipulationEnabled="True">
+	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" PanningMode="Both" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsManipulationEnabled="True">
 		<Grid>
 			<Image x:Name="imageView" Stretch="None" Source="{Binding CurrentImage}" >
 				<Image.LayoutTransform>

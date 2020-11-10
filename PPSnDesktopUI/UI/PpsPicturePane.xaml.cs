@@ -164,7 +164,14 @@ namespace TecWare.PPSn.UI
 		protected override async Task OnLoadAsync(LuaTable args)
 		{
 			// set current picture
-			await OpenPictureAsync(args["Object"] as IPpsDataInfo);
+			if (args["Object"] is byte[] bytes)
+			{
+				CurrentImage = BitmapFrame.Create(new MemoryStream(bytes));
+				SubTitle = "Bild";
+				CanEdit = false;
+			}
+			else
+				await OpenPictureAsync(args["Object"] as IPpsDataInfo);
 
 			if (args["SubTitle"] is string subTitle)
 				SubTitle = subTitle;

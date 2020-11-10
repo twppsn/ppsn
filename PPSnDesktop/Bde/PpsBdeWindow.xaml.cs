@@ -16,9 +16,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
@@ -35,6 +38,7 @@ namespace TecWare.PPSn.Bde
 		private static readonly DependencyPropertyKey topPaneHostPropertyKey = DependencyProperty.RegisterReadOnly(nameof(TopPaneHost), typeof(PpsBdePaneHost), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty TopPaneHostProperty = topPaneHostPropertyKey.DependencyProperty;
 
+		private readonly PpsLockService lockService;
 		private readonly PpsWindowApplicationSettings settings;
 
 		private readonly PpsBarcodeService barcodeService;
@@ -44,7 +48,7 @@ namespace TecWare.PPSn.Bde
 		private readonly List<PpsBdePaneHost> panes = new List<PpsBdePaneHost>();
 
 		public PpsBdeWindow(IServiceProvider services)
-			:base(services)
+			: base(services)
 		{
 			InitializeComponent();
 
@@ -57,8 +61,20 @@ namespace TecWare.PPSn.Bde
 			this.AddCommandBinding(Shell, BackCommand, new PpsCommand(BackCommandExecuted, CanBackCommandExecute));
 			this.AddCommandBinding(Shell, TraceLogCommand, new PpsAsyncCommand(AppInfoCommandExecutedAsync, CanAppInfoCommandExecute));
 
-			settings = new PpsWindowApplicationSettings(this, "bde");
+			// init locking
+			lockService = services.GetService<PpsLockService>(true);
+			lockService.PropertyChanged += LockService_PropertyChanged;
+			SetValue(isLockedPropertyKey, lockService.IsLocked);
 
+			if (lockService.IsShellMode)
+			{
+				WindowStyle = WindowStyle.None;
+				WindowState = WindowState.Maximized;
+			}
+			// init window settings
+			if (WindowStyle != WindowStyle.None)
+				settings = new PpsWindowApplicationSettings(this, "bde");
+			
 			UpdateDateTimeFormat();
 		} // ctor
 
@@ -138,7 +154,7 @@ namespace TecWare.PPSn.Bde
 			return await PopPaneAsync();
 		} // func PopPaneAsync
 
-		bool IPpsWindowPaneManager.ActivatePane(IPpsWindowPane pane) 
+		bool IPpsWindowPaneManager.ActivatePane(IPpsWindowPane pane)
 			=> throw GetPaneStackException();
 
 		/// <summary>Push a new pane to the stack</summary>
@@ -148,7 +164,7 @@ namespace TecWare.PPSn.Bde
 		/// <returns></returns>
 		public Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null)
 		{
-			switch(newPaneMode)
+			switch (newPaneMode)
 			{
 				case PpsOpenPaneMode.Default:
 				case PpsOpenPaneMode.NewPane:
@@ -199,6 +215,21 @@ namespace TecWare.PPSn.Bde
 
 		#endregion
 
+		#region -- IsLocked - property ------------------------------------------------
+
+		private static readonly DependencyPropertyKey isLockedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsLocked), typeof(bool), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty IsLockedProperty = isLockedPropertyKey.DependencyProperty;
+
+		private void LockService_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == nameof(PpsLockService.IsLocked))
+				SetValue(isLockedPropertyKey, lockService.IsLocked);
+		} // event LockService_PropertyChanged
+
+		public bool IsLocked => BooleanBox.GetBool(GetValue(IsLockedProperty));
+
+		#endregion
+
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, panes.GetEnumerator());
 
@@ -206,9 +237,33 @@ namespace TecWare.PPSn.Bde
 
 		public string CurrentTimeString => currentDateTimeFormat;
 
-		/// <summary>Settings of the current window.</summary>
-		public PpsWindowApplicationSettings Settings => settings;
 
-		public bool IsLocked => false;
+		#region -- WindowStyle - Converter --------------------------------------------
+
+		private sealed class WindowStyleConverterImplementation : IValueConverter
+		{
+			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+			{
+				if (value is WindowStyle windowStyle)
+				{
+					switch (windowStyle)
+					{
+						case WindowStyle.None:
+							return Visibility.Collapsed;
+						default:
+							return Visibility.Visible;
+					}
+				}
+				else
+					return Visibility.Visible;
+			} // func Convert
+
+			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+				=> throw new NotSupportedException();
+		} // class WindowStyleConverterImplementation
+
+		public static IValueConverter WindowStyleConverter { get; } = new WindowStyleConverterImplementation();
+
+		#endregion
 	} // class PpsBdeWindow
 }

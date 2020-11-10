@@ -1,0 +1,42 @@
+﻿<!--
+Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+European Commission - subsequent versions of the EUPL(the "Licence"); You may
+not use this work except in compliance with the Licence.
+
+You may obtain a copy of the Licence at:
+http://ec.europa.eu/idabc/eupl
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+specific language governing permissions and limitations under the Licence.
+-->
+<Window x:Class="TecWare.PPSn.UI.PpsNotificationWindow" x:ClassModifier="internal"
+		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="clr-namespace:TecWare.PPSn.UI"
+		xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
+        mc:Ignorable="d"
+		x:Name="notificationWindow"
+		Background="Transparent"
+		Height="Auto" Width="Auto" WindowStyle="None" SizeToContent="WidthAndHeight" 
+		AllowsTransparency="True" Opacity="95" ResizeMode="NoResize" ShowActivated="False" ShowInTaskbar="False" Topmost="True">
+	<Window.Resources>
+		<Storyboard x:Key="windowStoryboard" Completed="WindowStoryboard_Completed">
+			<DoubleAnimation Storyboard.TargetProperty="Opacity" Storyboard.TargetName="notificationWindow" From="0.0" To="0.95" Duration="0:0:0.3" />
+			<DoubleAnimation Storyboard.TargetProperty="Opacity" Storyboard.TargetName="notificationWindow" From="0.95" To="0.0" Duration="0:0:0.6" BeginTime="0:0:3" />
+		</Storyboard>
+
+		<DataTemplate x:Key="textTemplate">
+			<StackPanel Orientation="Horizontal">
+				<pps:PpsGeometryImage GeometryName="{Binding ImageName,Mode=OneWay}" Foreground="{DynamicResource {x:Static SystemColors.ControlLightLightBrushKey}}" Width="16" Height="16" Margin="0,0,4,0" />
+				<TextBlock Text="{Binding Text,Mode=OneWay}" FontSize="16" Foreground="{DynamicResource {x:Static SystemColors.ControlLightLightBrushKey}}" />
+			</StackPanel>
+		</DataTemplate>
+	</Window.Resources>
+	<Border Background="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" CornerRadius="10" Padding="8">
+		<ContentPresenter x:Name="content" Margin="10" />
+	</Border>
+</Window>

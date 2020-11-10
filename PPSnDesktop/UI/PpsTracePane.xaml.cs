@@ -16,10 +16,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -31,6 +30,7 @@ using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Lua;
 
 namespace TecWare.PPSn.UI
 {
@@ -39,52 +39,157 @@ namespace TecWare.PPSn.UI
 	/// <summary>Pane to display trace messages.</summary>
 	internal sealed partial class PpsTracePane : PpsWindowPaneControl
 	{
-		public static readonly RoutedCommand AssignDebugTarget = new RoutedCommand("Assign", typeof(PpsTracePane));
-		public static readonly RoutedCommand ClearDebugTarget = new RoutedCommand("Clear", typeof(PpsTracePane));
+		//public static readonly RoutedCommand AssignDebugTarget = new RoutedCommand("Assign", typeof(PpsTracePane));
+		//public static readonly RoutedCommand ClearDebugTarget = new RoutedCommand("Clear", typeof(PpsTracePane));
 
-		#region -- class PpsTraceEnvironment ------------------------------------------
+		#region -- class PpsTraceTable ------------------------------------------------
 
-		private sealed class PpsTraceEnvironment : LuaTable
+		private sealed class PpsTraceTable : LuaTable
 		{
-			private readonly IPpsWindowPaneHost paneHost;
-			
-			public PpsTraceEnvironment(IPpsWindowPaneHost paneHost)
+			private readonly PpsTracePane pane;
+			private readonly IPpsLuaShell luaShell;
+
+			private readonly PpsLockService lockService;
+
+			#region -- Ctor/Dtor ------------------------------------------------------
+
+			public PpsTraceTable(PpsTracePane pane)
 			{
-				this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
+				this.pane = pane ?? throw new ArgumentNullException(nameof(pane));
+
+				luaShell = pane.Shell.GetService<IPpsLuaShell>(false);
+				lockService = pane.Shell.GetService<PpsLockService>(false);
 			} // ctor
 
-			#region -- remove --
-
-			//[LuaMember]
-			//public void LoadPdf(string guid)
-			//{
-			//	var obj = Environment.GetObject(new Guid(guid ?? "F83EA1D1-0248-4880-8FB9-6121960B3FF5"));
-			//	obj.OpenPaneAsync(paneHost.PaneManager).AwaitTask();
-			//}
-
-			//[LuaMember]
-			//public void StartStat()
-			//{
-			//	Environment["collectStatistics"] = true;
-			//} // proc StartState
+			protected override object OnIndex(object key)
+				=> luaShell.Global.GetValue(key) ?? base.OnIndex(key);
 
 			#endregion
-			
-			//protected override object OnIndex(object key)
-			//	=> base.OnIndex(key) ?? Context?.GetValue(key) ?? paneHost.PaneManager._Shell.GetValue(key);
 
-			public LuaTable Context { get; set; } = null;
+			#region -- Run Helper -----------------------------------------------------
+
+			private async Task LuaRunTaskAsync(Func<Task> action, string finishMessage)
+			{
+				await action();
+				await Task.Delay(3000);
+				if (finishMessage != null)
+					await UI.ShowNotificationAsync(finishMessage, PpsImage.Information);
+			} // proc LuaRunTaskAsync
+
+			private void LuaRunTask(Func<Task> action, string finishMessage = null)
+				=> LuaRunTaskAsync(action, finishMessage).Await();
+
+			private void PinProtected(Action action, string pin, string finishMessage = null)
+			{
+				if (lockService.IsDpcPin(pin))
+				{
+					action();
+					if (finishMessage != null)
+						UI.ShowNotificationAsync(finishMessage, PpsImage.Information).Await();
+				}
+				else
+					UI.ShowNotificationAsync("PIN falsch.", PpsImage.Error).Await();
+			} // proc PinProtected
+
+			#endregion
+
+			#region -- Lock-Service ---------------------------------------------------
+
+			[LuaMember, LuaMember("Lock")]
+			public void Unlock(string pin)
+				=> UI.ShowNotificationAsync(lockService.Unlock(pin ?? "\0") ? "Entsperrt" : "Gesperrt", PpsImage.Information).Await();
 
 			[LuaMember]
-			public IPpsWindowPaneManager Window => paneHost.PaneManager;
-			//[LuaMember]
-			//public PpsEnvironment Environment => (PpsEnvironment)paneHost.PaneManager._Shell;
-		} // class PpsTraceEnvironment
+			public void SendLog()
+				=> LuaRunTask(() => lockService.SendLogAsync(), "Log gesendet.");
+
+			#endregion
+
+			#region -- DumpLiveData ---------------------------------------------------
+
+			public Task WriteLiveDataAsync(TextWriter tr)
+				=> Task.Run(() => pane.Shell.GetService<PpsLiveData>(true).Dump(tr));
+
+			[LuaMember]
+			internal void DumpLiveData(string fileName)
+			{
+				if (String.IsNullOrEmpty(fileName))
+				{
+					var dlg = new SaveFileDialog { DefaultExt = ".txt", Filter = "Text-File (*.txt)|*.txt" };
+					if (dlg.ShowDialog() != true)
+						return;
+					fileName = dlg.FileName;
+				}
+
+				// check root of path
+				if (!Path.IsPathRooted(fileName))
+					fileName = Path.Combine(Path.GetTempPath(), fileName);
+
+				using (var tr = new StreamWriter(fileName))
+					LuaRunTask(() => WriteLiveDataAsync(tr), "{fileName} geschrieben.");
+			} // proc DumpLiveData
+
+			#endregion
+
+			#region -- Shell Mode ---------------------------------------------------------
+
+			[LuaMember]
+			public void SetAsShell(string pin)
+				=> PinProtected(PpsLockService.SetShellEntry, pin, "Als Shell registriert.");
+
+			[LuaMember]
+			public void RemoveAsShell(string pin)
+				=> PinProtected(PpsLockService.RemoveShellEntry, pin, "Als Shell-Registrierung entfernt.");
+
+			[LuaMember]
+			public void Quit(string pin)
+				=> PinProtected(Application.Current.Shutdown, pin);
+
+			[LuaMember]
+			public bool IsShell 
+				=> PpsLockService.GetIsShellMode();
+
+			#endregion
+
+			#region -- Exec -----------------------------------------------------------
+
+			private void Exec(string command)
+			{
+				Process.Start(command).Dispose();
+			} // proc Exec
+
+			[LuaMember]
+			public void Exec(string command, string pin)
+			{
+				if (command == null)
+					command = "cmd.exe";
+
+				PinProtected(() => Exec(command), pin, command + " ausgeführt.");
+			} // proc Exec
+
+			#endregion
+
+			#region -- Shutdown/Restart -----------------------------------------------
+
+			[LuaMember]
+			public void ExecShutdown(string pin)
+				=> PinProtected(() => PpsLockService.ShutdownOperationSystem(true), pin);
+
+			[LuaMember]
+			public void ExecRestart(string pin)
+				=> PinProtected(() => PpsLockService.ShutdownOperationSystem(true), pin);
+
+			#endregion
+
+			public IPpsUIService UI => pane.ui;
+			public IPpsLuaShell Shell => luaShell;
+		} // class PpsTraceTable
 
 		#endregion
 
-		private readonly PpsTraceEnvironment traceEnvironment;
-		
+		private readonly IPpsUIService ui;
+		private readonly PpsTraceTable traceTable;
+
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Trace pane constructor</summary>
@@ -92,82 +197,127 @@ namespace TecWare.PPSn.UI
 		public PpsTracePane(IPpsWindowPaneHost paneHost)
 			: base(paneHost)
 		{
-			traceEnvironment = new PpsTraceEnvironment(paneHost);
-
 			InitializeComponent();
 
-			this.AddCommandBinding(Shell, ApplicationCommands.SaveAs,
-				new PpsCommand(
-					 ctx => SaveTrace()
-				)
-			);
+			ui = Shell.GetService<IPpsUIService>(true);
 
-			this.AddCommandBinding(Shell, ApplicationCommands.Copy,
-				new PpsCommand(
-					 ctx => CopyToClipboard(ctx.Parameter),
-					 ctx => CanCopyToClipboard(ctx.Parameter)
-				)
-			);
-
-			this.AddCommandBinding(
+			eventPane.AddCommandBinding(
 				Shell, ApplicationCommands.Open,
 				new PpsAsyncCommand(
-					ctx => ExecuteCommandAsync(ConsoleCommandTextBox.Text),
-					ctx => !String.IsNullOrEmpty(ConsoleCommandTextBox.Text)
+					ctx => ExecuteCommandAsync(commandTextBox.Text),
+					ctx => traceTable.Shell != null && !String.IsNullOrEmpty(commandTextBox.Text)
 				)
 			);
+			commandTextBox.AddCommandBinding(
+				Shell, ApplicationCommands.Delete,
+				new PpsCommand(ctx => commandTextBox.Clear(), ctx => !String.IsNullOrEmpty(commandTextBox.Text))
+			);
 
-			//this.AddCommandBinding(Shell, AssignDebugTarget,
-			//	new PpsAsyncCommand(
-			//		ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, false),
-			//		ctx => ctx.Parameter is PpsMasterDataRow
-			//	)
-			//);
-
-
-			//this.AddCommandBinding(Shell, ClearDebugTarget,
-			//	new PpsAsyncCommand(
-			//		ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, true),
-			//		ctx => ctx.Parameter is PpsMasterDataRow row && row.GetProperty("DebugPath", null) != null
-			//	)
-			//);
-
-			//var collectionView = CollectionViewSource.GetDefaultView(Environment?.Log);
-			//collectionView.SortDescriptions.Add(new SortDescription(nameof(PpsTraceItemBase.Stamp), ListSortDirection.Descending));
+			// create environment for the command box
+			traceTable = new PpsTraceTable(this);
 		} // ctor
 
 		protected override Task OnLoadAsync(LuaTable args)
-		{
-			//DataContext = Environment; // set environment to DataContext
-			return Task.CompletedTask;
-		} // proc OnLoadAsync
+			=> Task.CompletedTask;
 
 		#endregion
 
-		#region -- Execute Command ----------------------------------------------------
+		#region -- Lua Execute Command ------------------------------------------------
+
+		private static readonly string[] statementKeywords = new string[] { "return ", "local ", "do ", "function " };
+
+		private static bool IsLuaStatement(string command)
+		{
+			for (var i = 0; i < statementKeywords.Length; i++)
+			{
+				if (command.StartsWith(statementKeywords[i]))
+					return true;
+			}
+			return false;
+		} // func IsLuaStatement
 
 		private async Task ExecuteCommandAsync(string command)
 		{
+			var p = Shell.LogProxy("Command");
+			commandTextBox.IsEnabled = false;
 			try
 			{
-				//var chunk = await Environment.CompileAsync(command, "command.lua", true);
+				// compile command
+				if (!IsLuaStatement(command))
+					command = "return " + command;
+				var chunk = await traceTable.Shell.CompileAsync(command, true);
 
-				//var r = chunk.Run(traceEnvironment);
+				// run command
+				var r = chunk.Run(traceTable);
 
-				//// print result
-				//var i = 0;
-				//foreach (var c in r)
-				//	Environment.Log.Append(PpsLogType.Debug, $"${i++}: {c}");
+				// print result
+				for (var i = 0; i < r.Count; i++)
+					p.Debug($"[{i}]: {r[i]}");
 			}
 			catch (LuaParseException ex)
 			{
-				//Environment.Log.Append(PpsLogType.Fail, String.Format("Could not parse command: {0}", ex.Message));
+				p.Except(String.Format("Could not parse command: {0}", ex.Message));
 			}
 			catch (Exception ex)
 			{
-				//Environment.Log.Append(PpsLogType.Fail, ex, String.Format("Command \"{0}\" threw an Exception: {1}", command, ex.Message));
+				p.Except(ex);
+			}
+			finally
+			{
+				commandTextBox.IsEnabled = true;
 			}
 		} // proc ExecuteCommandAsync
+
+		#endregion
+
+
+
+
+
+
+
+
+
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		///// <summary>Trace pane constructor</summary>
+		///// <param name="paneHost"></param>
+		//public PpsTracePane(IPpsWindowPaneHost paneHost)
+		//	: base(paneHost)
+		//{
+		//	this.AddCommandBinding(Shell, ApplicationCommands.SaveAs,
+		//		new PpsCommand(
+		//			 ctx => SaveTrace()
+		//		)
+		//	);
+
+		//	this.AddCommandBinding(Shell, ApplicationCommands.Copy,
+		//		new PpsCommand(
+		//			 ctx => CopyToClipboard(ctx.Parameter),
+		//			 ctx => CanCopyToClipboard(ctx.Parameter)
+		//		)
+		//	);
+
+
+		//	//this.AddCommandBinding(Shell, AssignDebugTarget,
+		//	//	new PpsAsyncCommand(
+		//	//		ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, false),
+		//	//		ctx => ctx.Parameter is PpsMasterDataRow
+		//	//	)
+		//	//);
+
+
+		//	//this.AddCommandBinding(Shell, ClearDebugTarget,
+		//	//	new PpsAsyncCommand(
+		//	//		ctx => UpdateDebugTargetAsync((PpsMasterDataRow)ctx.Parameter, true),
+		//	//		ctx => ctx.Parameter is PpsMasterDataRow row && row.GetProperty("DebugPath", null) != null
+		//	//	)
+		//	//);
+
+		//	//var collectionView = CollectionViewSource.GetDefaultView(Environment?.Log);
+		//	//collectionView.SortDescriptions.Add(new SortDescription(nameof(PpsTraceItemBase.Stamp), ListSortDirection.Descending));
+		//} // ctor
 
 		#endregion
 
@@ -262,13 +412,13 @@ namespace TecWare.PPSn.UI
 		} // func TraceToString
 
 		private bool CanCopyToClipboard(object item)
-			=> item != null || logList.SelectedItem != null;
+			=> false; // item != null || logList.SelectedItem != null;
 
 		private void CopyToClipboard(object item)
 		{
-			var clipText = TraceToString(item ?? logList.SelectedItem);
-			if (clipText != null)
-				Clipboard.SetText(clipText);
+			//var clipText = TraceToString(item ?? logList.SelectedItem);
+			//if (clipText != null)
+			//	Clipboard.SetText(clipText);
 		} // proc CopyToClipboard
 
 		#endregion
@@ -311,12 +461,6 @@ namespace TecWare.PPSn.UI
 		//} // proc UpdateDebugTargetAsync
 
 		#endregion
-
-		protected override IEnumerator LogicalChildren
-			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
-
-		///// <summary>Access the environment</summary>
-		//public PpsEnvironment Environment => (PpsEnvironment)PaneHost.PaneManager._Shell;
 	} // class PpsTracePane
 
 	#endregion

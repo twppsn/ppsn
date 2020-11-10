@@ -557,7 +557,7 @@ namespace TecWare.PPSn
 		/// <summary>Show a short notification message</summary>
 		/// <param name="message"></param>
 		/// <param name="image"></param>
-		void ShowNotification(string message, PpsImage image = PpsImage.None); 
+		Task ShowNotificationAsync(object message, PpsImage image = PpsImage.None); 
 
 		/// <summary>Display a simple messagebox</summary>
 		/// <param name="text"></param>

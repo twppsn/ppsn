@@ -22,6 +22,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -211,7 +212,7 @@ namespace TecWare.PPSn
 			{
 				// register pane types
 				var paneRegister = shell.GetService<IPpsKnownWindowPanes>(true);
-				paneRegister.RegisterPaneType(typeof(PpsPicturePane), "picture", MimeTypes.Image.Png, MimeTypes.Image.Bmp, MimeTypes.Image.Jpeg);
+				paneRegister.RegisterPaneType(typeof(PpsPicturePane), "picture", MimeTypes.Image.Png, MimeTypes.Image.Bmp, MimeTypes.Image.Jpeg, "images/tiff");
 				paneRegister.RegisterPaneType(typeof(PpsPdfViewerPane), "pdf", MimeTypes.Application.Pdf);
 				paneRegister.RegisterPaneType(typeof(PpsMarkdownPane), "markdown", MimeTypes.Text.Markdown);
 
@@ -376,7 +377,7 @@ namespace TecWare.PPSn
 						AddAssemblyResolveDirectory(f.FileInfo.DirectoryName);
 
 						progress.Text = String.Format("Lade Anwendungsmodul {0}...", assemblyName.Name);
-						var asm = Assembly.Load(assemblyName);
+						var asm = ResolveAssemblyCore(assemblyName);
 						log.Debug($"Assembly {f.FileId} loaded: {asm.Location}");
 
 						// add alias for type resolver
@@ -396,6 +397,7 @@ namespace TecWare.PPSn
 		#endregion
 
 		private IPpsShell shell = null;
+		private bool isProcessProtected = false;
 
 		/// <summary>Start application</summary>
 		public App()
@@ -669,6 +671,9 @@ namespace TecWare.PPSn
 		private static string GetNativeLibrariesPath()
 			=> Path.Combine(Path.GetDirectoryName(typeof(App).Assembly.Location), IntPtr.Size == 8 ? "x64" : "x86");
 
+		private static string EscapeArg(string arg)
+			=> arg.IndexOf(" ") >= 0 ? "\"" + arg + "\"" : arg;
+
 		/// <summary>Start application</summary>
 		/// <param name="e"></param>
 		protected override void OnStartup(StartupEventArgs e)
@@ -693,13 +698,33 @@ namespace TecWare.PPSn
 
 			FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
-			StartApplicationAsync(ParseArguments(e))
-				.ContinueWith(t =>
+			isProcessProtected = e.Args.Contains("--run");
+			if (!isProcessProtected && PpsLockService.GetIsShellMode()) // protect process in shell mode
+			{
+				while (true) // restart loop
 				{
-					if (!t.Result)
-						Dispatcher.Invoke(Shutdown);
+					using (var p = Process.Start(typeof(App).Assembly.Location, "--run " + String.Join(" ", e.Args.Select(c => EscapeArg(c)))))
+					{
+						p.WaitForExit();
+						if (p.ExitCode == 2682)
+						{
+							Shutdown(0);
+							return;
+						}
+					}
+					Thread.Sleep(10000);
 				}
-			);
+			}
+			else
+			{
+				StartApplicationAsync(ParseArguments(e))
+					.ContinueWith(t =>
+					{
+						if (!t.Result)
+							Dispatcher.Invoke(Shutdown);
+					}
+				);
+			}
 
 			base.OnStartup(e);
 		} // proc OnStartup
@@ -710,6 +735,13 @@ namespace TecWare.PPSn
 		{
 			base.OnExit(e);
 			CloseApplicationAsync().Await();
+
+			if (isProcessProtected)
+			{
+				if (PpsLockService.GetIsShellMode())
+					PpsLockService.LogoffOperationSystem();
+				e.ApplicationExitCode = 2682; // mark real shutdown -> no restart
+			}
 		} // proc OnExit
 
 		private static AppStartArguments ParseArguments(StartupEventArgs e)
@@ -855,14 +887,8 @@ namespace TecWare.PPSn
 			return choosen;
 		} // func LocateAssemblyFile
 
-		private static Assembly ResolveAssemblyCore(string name)
+		private static Assembly ResolveAssemblyCore(AssemblyName assemblyName)
 		{
-			// check for assembly alias
-			if (assemblyAlias.TryGetValue(name, out var asm))
-				return asm;
-
-			var assemblyName = new AssemblyName(name);
-
 			// check if the file is loaded
 			foreach (var cur in AppDomain.CurrentDomain.GetAssemblies())
 			{
@@ -878,6 +904,15 @@ namespace TecWare.PPSn
 			// load assembly
 			var fi = LocateAssemblyFile(assemblyName.Name);
 			return fi == null ? null : Assembly.LoadFile(fi.FullName);
+		} // func ResolveAssemblyCore
+
+		private static Assembly ResolveAssemblyCore(string name)
+		{
+			// check for assembly alias
+			if (assemblyAlias.TryGetValue(name, out var asm))
+				return asm;
+
+			return ResolveAssemblyCore(new AssemblyName(name));
 		} // func ResolveAssemblyCore
 
 		private static Assembly CurrentDomain_TypeResolve(object sender, ResolveEventArgs args)

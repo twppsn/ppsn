@@ -55,6 +55,7 @@
     <None Remove="UI\KeyboardScanner.csv" />
     <None Remove="UI\PpsCameraDialog.xaml" />
     <None Remove="UI\PpsMessageDialog.xaml" />
+    <None Remove="UI\PpsNotificationWindow.xaml" />
     <None Remove="UI\PpsPdfViewerPane.xaml" />
     <None Remove="UI\PpsPicturePane.xaml" />
     <None Remove="UI\Styles\DefaultShapes.xaml" />
@@ -150,6 +151,9 @@
     <Page Include="Themes\Generic.xaml" />
     <Page Include="UI\PpsCameraDialog.xaml" />
     <Page Include="UI\PpsMessageDialog.xaml" />
+    <Page Include="UI\PpsNotificationWindow.xaml">
+      <Generator></Generator>
+    </Page>
     <Page Include="UI\PpsPdfViewerPane.xaml" />
     <Page Include="UI\PpsPicturePane.xaml" />
     <Page Include="UI\Styles\DefaultShapes.xaml" />

@@ -82,15 +82,6 @@ namespace TecWare.PPSn.Networking
 				return (null, text);
 		} // func DecodeReasonPhrase
 
-		private static readonly string[] redirectMimeTypes = new string[]
-		{
-			MimeTypes.Application.Pdf,
-			MimeTypes.Image.Bmp,
-			MimeTypes.Image.Png,
-			MimeTypes.Image.Jpeg,
-			MimeTypes.Image.Gif
-		}; // redirectMimeTypes
-
 		/// <summary></summary>
 		/// <param name="contentDisposition"></param>
 		/// <param name="name"></param>
@@ -111,11 +102,11 @@ namespace TecWare.PPSn.Networking
 
 		/// <summary></summary>
 		/// <param name="httpContent"></param>
-		/// <param name="enforceExternalViewer"></param>
+		/// <param name="enforceAttachment"></param>
 		/// <param name="mimeType"></param>
 		/// <param name="extension"></param>
 		/// <returns></returns>
-		public static bool TryGetExtensionFromContent(this HttpContent httpContent, bool enforceExternalViewer, out string mimeType, out string extension)
+		public static bool TryGetExtensionFromContent(this HttpContent httpContent, bool enforceAttachment, out string mimeType, out string extension)
 		{
 			// get media type
 			var mediaType = httpContent.Headers.ContentType?.MediaType;
@@ -127,9 +118,8 @@ namespace TecWare.PPSn.Networking
 			}
 
 			//System.Diagnostics.Debug.Print("Content: " + httpContent.Headers.ContentDisposition ?? "null");
-			if (TryGetAttachment(httpContent.Headers.ContentDisposition, out var fileName) // is an attachment
-				|| (enforceExternalViewer && Array.Exists(redirectMimeTypes, c => c == mediaType))  // enforce some mime types
-			)
+			if (TryGetAttachment(httpContent.Headers.ContentDisposition, out var fileName)  // is an attachment
+				|| enforceAttachment && fileName != null)
 			{
 				extension = String.IsNullOrEmpty(fileName) ? System.IO.Path.GetExtension(fileName) : null;
 				if (String.IsNullOrEmpty(extension))
