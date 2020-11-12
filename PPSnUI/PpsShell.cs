@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.Design;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -27,11 +28,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using System.Xml.XPath;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Networking;
+using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -138,6 +141,23 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- interface IPpsShellBackgroundTask --------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsShellBackgroundTask : IDisposable
+	{
+		/// <summary>Pulse this background task.</summary>
+		void Pulse();
+		/// <summary>Execute task in background, and wait for finish.</summary>
+		/// <returns></returns>
+		Task RunAsync();
+		/// <summary>Wait for the execution of the background task.</summary>
+		/// <returns></returns>
+		Task WaitAsync();
+	} // interface IPpsShellBackgroundTask
+
+	#endregion
+
 	#region -- interface IPpsShell ----------------------------------------------------
 
 	/// <summary>Active shell for services.</summary>
@@ -155,6 +175,11 @@ namespace TecWare.PPSn
 		/// <param name="userInfo"></param>
 		/// <returns></returns>
 		Task LoginAsync(ICredentials userInfo);
+
+		/// <summary>Register a new background task.</summary>
+		/// <param name="taskAction"></param>
+		/// <param name="waitTime"></param>
+		IPpsShellBackgroundTask RegisterTask(Func<Task> taskAction, TimeSpan waitTime);
 
 		/// <summary>Invoke a shutdown of this shell.</summary>
 		/// <returns></returns>
@@ -267,7 +292,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Basic shell settings</summary>
 		/// <param name="settingsService"></param>
-		public PpsShellSettings(IPpsSettingsService settingsService) 
+		public PpsShellSettings(IPpsSettingsService settingsService)
 			: base(settingsService)
 		{
 		} // ctor
@@ -346,7 +371,12 @@ namespace TecWare.PPSn
 		{
 			Type = type;
 			Text = message;
-		}
+		} // ctor
+
+		/// <summary>Generate a log line</summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> $"{Stamp:yyyy-MM-dd HH:mm:ss:fff}\t{(int)Type}\t{Text.EscapeSpecialChars()}";
 
 		/// <summary></summary>
 		public DateTime Stamp { get; } = DateTime.Now;
@@ -404,65 +434,183 @@ namespace TecWare.PPSn
 
 			protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 			{
-				// todo: proxy?
-				return base.SendAsync(request, cancellationToken);
+				// todo: download cache for files?
+
+				if (shell is PpsShellImplementation shellImpl)
+					shellImpl.HttpRequestStarted();
+
+				return base.SendAsync(request, cancellationToken)
+					.ContinueWith(SendFinish, TaskContinuationOptions.ExecuteSynchronously);
 			} // func SendAsync
+
+			private HttpResponseMessage SendFinish(Task<HttpResponseMessage> task)
+			{
+				try
+				{
+					var result = task.Result;
+
+					if (shell is PpsShellImplementation shellImpl)
+						shellImpl.HttpRequestFinished(null);
+
+					return result;
+				}
+				catch (AggregateException e)
+				{
+					if (e.InnerException is HttpRequestException ex)
+					{
+						if (shell is PpsShellImplementation shellImpl)
+							shellImpl.HttpRequestFinished(ex);
+					}
+					throw;
+				}
+			} // proc SendFinish
 		} // class PpsMessageHandler
 
 		#endregion
 
 		#region -- class PpsBackgroundWorker ------------------------------------------
 
-		private sealed class PpsBackgroundWorker : IDisposable
+		private sealed class PpsBackgroundWorker : PpsSynchronizationQueue, IDisposable
 		{
-			#region -- class PpsBackgroundContext -------------------------------------
+			private struct VoidResult { }
 
-			private sealed class PpsBackgroundContext : SynchronizationContext, IPpsProcessMessageLoop
+			#region -- class BackgroundTask -------------------------------------------
+
+			private sealed class BackgroundTask : IPpsShellBackgroundTask
 			{
 				private readonly PpsBackgroundWorker worker;
+				private readonly Func<Task> taskAction;
+				private readonly TimeSpan waitTime;
 
-				/// <summary></summary>
-				/// <param name="thread"></param>
-				public PpsBackgroundContext(PpsBackgroundWorker thread)
-					=> this.worker = thread ?? throw new ArgumentNullException(nameof(thread));
+				private readonly object nextRunLock = new object();
+				private DateTime nextRun = DateTime.MinValue;
+				private bool restartPulse = false;
 
-				/// <summary></summary>
-				/// <returns></returns>
-				public override SynchronizationContext CreateCopy()
-					=> new PpsBackgroundContext(worker);
+				private readonly List<TaskCompletionSource<VoidResult>> waitForCycle = new List<TaskCompletionSource<VoidResult>>();
+				private readonly List<TaskCompletionSource<VoidResult>> waitForNextCycle = new List<TaskCompletionSource<VoidResult>>();
 
-				public override void Post(SendOrPostCallback d, object state)
-					=> worker.Post(d, state);
+				public BackgroundTask(PpsBackgroundWorker worker, Func<Task> taskAction, TimeSpan waitTime)
+				{
+					this.worker = worker ?? throw new ArgumentNullException(nameof(worker));
+					this.taskAction = taskAction ?? throw new ArgumentNullException(nameof(taskAction));
+					this.waitTime = waitTime;
+					if (waitTime.TotalMilliseconds < 0)
+						throw new ArgumentOutOfRangeException(nameof(waitTime));
+				} // ctor
 
-				public override void Send(SendOrPostCallback d, object state)
-					=> worker.Send(d, state);
-				
-				void IPpsProcessMessageLoop.ProcessMessageLoop(CancellationToken cancellationToken) 
-					=> worker.ProcessMessageLoop(cancellationToken);
-			} // class DEThreadContext
+				public void Dispose()
+					=> worker.UnregisterTask(this);
 
-			#endregion
+				private async Task RunTaskCoreAsync()
+				{
+					Exception exception = null;
+					try
+					{
+						await taskAction();
+					}
+					catch (Exception e)
+					{
+						exception = e;
+						worker.shell.LogMsg(LogMsgType.Error, e);
+					}
 
-			#region -- struct CurrentTaskItem -----------------------------------------
+					lock (nextRunLock)
+					{
+						if (restartPulse)
+						{
+							restartPulse = false;
+							nextRun = DateTime.MinValue;
+						}
+						else
+							nextRun = DateTime.Now + waitTime;
 
-			private struct CurrentTaskItem
-			{
-				public SendOrPostCallback Callback;
-				public object State;
-				public ManualResetEventSlim Wait;
-			} // struct CurrentTaskItem
+						// finish wait tasks
+						while (waitForCycle.Count > 0)
+						{
+							var i = waitForCycle.Count - 1;
+							var tcs = waitForCycle[i];
+							waitForCycle.RemoveAt(i);
+
+							// notify wait event
+							if (exception == null)
+								tcs.TrySetResult(new VoidResult());
+							else if (exception is TaskCanceledException)
+								tcs.TrySetCanceled();
+							else
+								tcs.TrySetException(exception);
+						}
+
+						// copy wait tasks
+						waitForCycle.AddRange(waitForNextCycle);
+						waitForNextCycle.Clear();
+					}
+				} // proc RunTaskFinish
+
+				internal (Task, DateTime) RunTaskAsync()
+				{
+					lock (nextRunLock)
+					{
+						// is time reached
+						if (nextRun >= DateTime.Now)
+							return (null, nextRun);
+
+						// mark start
+						nextRun = DateTime.MaxValue;
+					}
+
+					return (RunTaskCoreAsync(), DateTime.MaxValue);
+				} // proc RunTaskAsync
+
+				public void Pulse()
+				{
+					lock (nextRunLock)
+					{
+						if (nextRun == DateTime.MaxValue)
+							restartPulse = true;
+						else
+							nextRun = DateTime.MinValue;
+					}
+					worker.PulseTaskQueue();
+				} // proc Pulse
+
+				public Task RunAsync()
+				{
+					var tcs = new TaskCompletionSource<VoidResult>();
+
+					lock (nextRunLock)
+					{
+						if (nextRun == DateTime.MaxValue)
+						{
+							restartPulse = true;
+							waitForNextCycle.Add(tcs);
+						}
+						else
+						{
+							nextRun = DateTime.MinValue;
+							waitForCycle.Add(tcs);
+						}
+					}
+
+					worker.PulseTaskQueue();
+
+					return tcs.Task;
+				} // proc RunAsync
+
+				public Task WaitAsync()
+				{
+					var tcs = new TaskCompletionSource<VoidResult>();
+					lock (nextRunLock)
+						waitForCycle.Add(tcs);
+					return tcs.Task;
+				} // proc WaitBackgroundCycleAsync
+			} // class BackgroundTask
 
 			#endregion
 
 			private readonly PpsShellImplementation shell;
-
 			private readonly Thread thread;
-			private readonly Queue<CurrentTaskItem> currentTasks = new Queue<CurrentTaskItem>();
-			private volatile bool threadDoStop = false;
-			private readonly ManualResetEventSlim communicationThreadRun;
-			private readonly ManualResetEventSlim tasksFilled;
 
-			private DateTime nextBackgroundCycle = DateTime.MinValue;
+			private readonly List<BackgroundTask> backgroundTasks = new List<BackgroundTask>();
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -470,9 +618,6 @@ namespace TecWare.PPSn
 			{
 				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 
-				tasksFilled = new ManualResetEventSlim(false);
-
-				communicationThreadRun = new ManualResetEventSlim(false);
 				thread = new Thread(ExecuteCommunication)
 				{
 					Name = nameof(PpsBackgroundWorker) + " " + shell.Info.Name,
@@ -483,150 +628,88 @@ namespace TecWare.PPSn
 
 			public void Dispose()
 			{
-				threadDoStop = true;
-				communicationThreadRun.Set();
+				Stop();
 				thread.Join(5000);
-				tasksFilled.Dispose();
 			} // prop Dispose
 
 			#endregion
 
-			#region -- Message Loop ---------------------------------------------------
+			#region -- Background -----------------------------------------------------
 
-			private void ResetMessageLoopUnsafe()
+			protected override void OnWait(ManualResetEventSlim wait)
 			{
-				if (!threadDoStop)
-					tasksFilled.Reset();
-			} // proc ResetMessageLoopUnsafe
-
-			private void PulseMessageLoop()
-			{
-				lock (tasksFilled)
-					tasksFilled.Set();
-			} // proc PulseMessageLoop
-
-			private bool TryDequeueTask(out SendOrPostCallback d, out object state, out ManualResetEventSlim wait)
-			{
-				lock (currentTasks)
+				if (TryGetRunTasks(out var tasks, out var nextCycleScheduled)) // start batch of background tasks
 				{
-					if (currentTasks.Count == 0)
-					{
-						ResetMessageLoopUnsafe();
-						d = null;
-						state = null;
-						wait = null;
-						return false;
-					}
+					// run task within this context
+					var ts = new CancellationTokenSource();
+					var t = Task.WhenAll(tasks); // start all tasks
+
+					// on completed finish task loop
+					t.GetAwaiter().OnCompleted(ts.Cancel);
+					ProcessTaskLoopUnsafe(ts.Token, false);
+
+					// is loop faulted, log exception
+					if (t.IsFaulted)
+						shell.ShowExceptionAsync(true, t.Exception);
+				}
+				else
+				{
+					// calculate next wake up time
+					var sleepFor = (int)(nextCycleScheduled - DateTime.Now).TotalMilliseconds;
+					if (sleepFor <= 0)
+						Thread.Sleep(100); // avoid endless loops
 					else
-					{
-						var currentTask = currentTasks.Dequeue();
-						d = currentTask.Callback;
-						state = currentTask.State;
-						wait = currentTask.Wait;
-						return true;
-					}
+						wait.Wait(sleepFor);
 				}
-			} // proc TryDequeueTask
-
-			private void EnqueueTask(SendOrPostCallback d, object state, ManualResetEventSlim waitHandle)
-			{
-				lock (currentTasks)
-				{
-					currentTasks.Enqueue(new CurrentTaskItem() { Callback = d, State = state, Wait = waitHandle });
-					PulseMessageLoop();
-				}
-			} // proc EnqueueTask
-
-			internal void Post(SendOrPostCallback d, object state)
-				=> EnqueueTask(d, state, null);
-
-			internal void Send(SendOrPostCallback d, object state)
-			{
-				if (thread == Thread.CurrentThread)
-					throw new InvalidOperationException($"Send can not be called from the same thread (Deadlock).");
-
-				using (var waitHandle = new ManualResetEventSlim(false))
-				{
-					EnqueueTask(d, state, waitHandle);
-					waitHandle.Wait();
-				}
-			} // proc Send
-
-			private void ProcessMessageLoopUnsafe(CancellationToken cancellationToken)
-			{
-				// if cancel, then run the loop, we avoid an TaskCanceledException her
-				cancellationToken.Register(PulseMessageLoop);
-
-				// process messages until cancel
-				while (!threadDoStop)
-				{
-					while (TryDequeueTask(out var d, out var state, out var wait))
-					{
-						try
-						{
-							d(state);
-						}
-						finally
-						{
-							if (wait != null)
-								wait.Set();
-						}
-					}
-
-					// wait for event
-					if (cancellationToken.IsCancellationRequested)
-						break;
-					tasksFilled.Wait();
-				}
-			} // proc ProcessMessageLoopUnsafe
-
-			public void ProcessMessageLoop(CancellationToken cancellationToken)
-			{
-				if (thread != Thread.CurrentThread)
-					throw new InvalidOperationException($"Process of the queued task is only allowed in the same thread.(queue threadId {thread.ManagedThreadId}, caller thread id: {Thread.CurrentThread.ManagedThreadId})");
-
-				ProcessMessageLoopUnsafe(cancellationToken);
-			} // proc ProcessMessageLoop
-
-			#endregion
-
-			#region -- Background Communication ---------------------------------------
+			} // proc OnWait
 
 			private void ExecuteCommunication()
-			{
-				// todo: allow spin cycle
-
-				SynchronizationContext.SetSynchronizationContext(new PpsBackgroundContext(this));
-
-				// stop for every
-				while (!threadDoStop)
-				{
-					// run synchronization
-					if (nextBackgroundCycle <= DateTime.Now)
-					{
-						nextBackgroundCycle = DateTime.Now.AddSeconds(15); // ask every 15 seconds
-
-						// start batch of background tasks
-						var t = shell.RunBackgroundTasksAsync();
-
-						// process queue until all tasks are done
-						using (var cancellationTokenSource = new CancellationTokenSource())
-						{
-							t.GetAwaiter().OnCompleted(cancellationTokenSource.Cancel);
-							ProcessMessageLoop(cancellationTokenSource.Token);
-						}
-					}
-
-					// calculate next wake up time
-					var sleepFor = (int)(nextBackgroundCycle - DateTime.Now).TotalMilliseconds;
-					if (sleepFor <= 0)
-						Thread.Sleep(100);
-					else if (communicationThreadRun.Wait(sleepFor))
-						communicationThreadRun.Reset();
-				}
-			} // proc ExecuteCommunication
+				=> Use(() => ProcessTaskLoopUnsafe(CancellationToken.None, true));
 
 			#endregion
+
+			#region -- Tasks ----------------------------------------------------------
+
+			public IPpsShellBackgroundTask RegisterTask(Func<Task> taskAction, TimeSpan waitTime)
+			{
+				lock (backgroundTasks)
+				{
+					var t = new BackgroundTask(this, taskAction, waitTime);
+					backgroundTasks.Add(t);
+					return t;
+				}
+			} // func RegisterTask
+
+			private void UnregisterTask(BackgroundTask task)
+			{
+				lock (backgroundTasks)
+					backgroundTasks.Remove(task);
+			} // proc UnregisterTask
+
+			private bool TryGetRunTasks(out Task[] tasks, out DateTime minNextRun)
+			{
+				var waitTasks = new List<Task>();
+				minNextRun = DateTime.MaxValue;
+
+				lock (backgroundTasks)
+				{
+					foreach (var t in backgroundTasks)
+					{
+						var (task, nextRun) = t.RunTaskAsync();
+						if (task != null)
+							waitTasks.Add(task);
+						else if (nextRun < minNextRun)
+							minNextRun = nextRun;
+					}
+				}
+
+				tasks = waitTasks.ToArray();
+				return tasks.Length > 0;
+			} // proc RunTasksAsync
+
+			#endregion
+
+			protected override Thread Thread => thread;
 		} // class PpsBackgroundWorker 
 
 		#endregion
@@ -648,8 +731,10 @@ namespace TecWare.PPSn
 			private DirectoryInfo localUserPath = null;
 
 			private readonly PpsBackgroundWorker backgroundWorker = null;
+			private IPpsShellBackgroundTask serverSettingsTask = null;
+			private long lastSettingsVersion = 0;
 			private DEHttpClient http = null;
-			private bool isOnline = false;
+			private PpsCommunicationState connectionState = PpsCommunicationState.Disconnected;
 
 			private readonly ObservableCollection<PpsShellLogItem> logItems = new ObservableCollection<PpsShellLogItem>();
 
@@ -676,6 +761,7 @@ namespace TecWare.PPSn
 				Disposed?.Invoke(this, EventArgs.Empty);
 
 				// stop background worker
+				serverSettingsTask?.Dispose();
 				backgroundWorker.Dispose();
 
 				// dispose all services
@@ -716,7 +802,7 @@ namespace TecWare.PPSn
 						http = dpcHttp;
 
 						// load settings from server
-						await LoadSettingsFromServerAsync(settingsService, this, instanceSettingsInfo.DpcDeviceId, 0);
+						lastSettingsVersion = await LoadSettingsFromServerAsync(settingsService, this, instanceSettingsInfo.DpcDeviceId, lastSettingsVersion);
 
 						// notify settings loaded
 						OnPropertyChanged(nameof(Settings));
@@ -738,6 +824,9 @@ namespace TecWare.PPSn
 
 						if (notify != null)
 							await notify.OnAfterInitServicesAsync(this);
+
+						// start background task for settings
+						serverSettingsTask = backgroundWorker.RegisterTask(RefreshSettingsFromServerTaskAsync, TimeSpan.FromSeconds(60));
 					}
 				}
 				finally
@@ -772,8 +861,8 @@ namespace TecWare.PPSn
 			private void OnPropertyChanged(string propertyName)
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-			private static string GetDefaultDeviceKey()
-				=> Environment.MachineName;
+			IPpsShellBackgroundTask IPpsShell.RegisterTask(Func<Task> taskAction, TimeSpan waitTime)
+				=> backgroundWorker.RegisterTask(taskAction, waitTime);
 
 			#endregion
 
@@ -925,7 +1014,7 @@ namespace TecWare.PPSn
 					userSettingsService = userSettings;
 					userSettingsInfo = new PpsShellUserSettings(userSettingsService);
 					await LoadUserSettingsFromServerAsync(userSettingsService, newHttp);
-					
+
 					// update http
 					http = newHttp;
 					OnPropertyChanged(nameof(Http));
@@ -940,18 +1029,44 @@ namespace TecWare.PPSn
 					throw;
 				}
 			} // proc LoginAsync
-		
+
 			private async Task LogoutAsync()
 			{
 				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
 					await init.DoneUserAsync();
 			} // proc LogoutAsync
 
-			internal Task RunBackgroundTasksAsync()
+			private async Task RefreshSettingsFromServerTaskAsync()
 			{
-				// must not return any exception
-				return Task.CompletedTask;
+				// settings from server and check connection state
+				if (http != null)
+					lastSettingsVersion = await LoadSettingsFromServerAsync(settingsService, this, instanceSettingsInfo.DpcDeviceId, lastSettingsVersion);
 			} // proc RunBackgroundTasksAsync
+
+			internal void HttpRequestStarted()
+			{
+				if (connectionState == PpsCommunicationState.Disconnected)
+					SetConnectionState(PpsCommunicationState.Connecting);
+			} // proc HttpRequestStarted
+
+			internal void HttpRequestFinished(HttpRequestException e)
+			{
+				if (e == null)
+					SetConnectionState(PpsCommunicationState.Connected);
+				else
+				{
+					SetConnectionState(PpsCommunicationState.Disconnected);
+				}
+			} // proc HttpRequestFinished
+
+			private void SetConnectionState(PpsCommunicationState state)
+			{
+				if (state != connectionState)
+				{
+					connectionState = state;
+					OnPropertyChanged(nameof(ConnectionState));
+				}
+			} // proc SetConnectionState
 
 			#endregion
 
@@ -1010,16 +1125,16 @@ namespace TecWare.PPSn
 			void ILogger.LogMsg(LogMsgType type, string message)
 			{
 				DebugLogger.LogMsg(type, message);
-					LogMsgAppend(type, message);
+				LogMsgAppend(type, message);
 			} // proc ILogger.LogMsg
 
 			IReadOnlyCollection<PpsShellLogItem> IPpsLogService.Log => logItems;
 
 			#endregion
 
-			public string DeviceId => GetDefaultDeviceKey();
+			public string DeviceId => instanceSettingsInfo.DpcDeviceId;
 			public IPpsShellInfo Info => info;
-			
+
 			public DEHttpClient Http => http;
 			public IPpsSettingsService SettingsService => settingsService;
 			public PpsShellSettings Settings => instanceSettingsInfo;
@@ -1029,8 +1144,8 @@ namespace TecWare.PPSn
 			public DirectoryInfo LocalUserPath => localUserPath;
 
 			public bool IsInitialized { get; private set; }
-			public bool IsAuthentificated => isOnline && http.Credentials != null;
-			public bool IsOnline => isOnline;
+			public bool IsAuthentificated => connectionState == PpsCommunicationState.Connected && http.Credentials != null;
+			public PpsCommunicationState ConnectionState => connectionState;
 		} // class PpsShellImplementation
 
 		#endregion
@@ -1083,12 +1198,12 @@ namespace TecWare.PPSn
 
 			private void ConnectSettingsService(IPpsSettingsService settingsService)
 			{
-				if(currentSettingsService != null)
+				if (currentSettingsService != null)
 					currentSettingsService.PropertyChanged -= CurrentSettingsService_PropertyChanged;
 
 				currentSettingsService = settingsService;
 
-				if(currentSettingsService != null)
+				if (currentSettingsService != null)
 					currentSettingsService.PropertyChanged += CurrentSettingsService_PropertyChanged;
 			} // proc ConnectSettingsService
 
@@ -1139,7 +1254,7 @@ namespace TecWare.PPSn
 
 				OnPropertyChanged(new PropertyChangedEventArgs(nameof(Http)));
 				OnPropertyChanged(new PropertyChangedEventArgs(nameof(IsAuthentificated)));
-				OnPropertyChanged(new PropertyChangedEventArgs(nameof(IsOnline)));
+				OnPropertyChanged(new PropertyChangedEventArgs(nameof(ConnectionState)));
 			} // proc OnCurrentChanged
 
 			protected override void OnCurrentPropertyChanged(PropertyChangedEventArgs e)
@@ -1148,7 +1263,7 @@ namespace TecWare.PPSn
 				{
 					case nameof(Http):
 					case nameof(IsAuthentificated):
-					case nameof(IsOnline):
+					case nameof(ConnectionState):
 						OnPropertyChanged(e);
 						break;
 					default:
@@ -1163,7 +1278,7 @@ namespace TecWare.PPSn
 			public DEHttpClient Http => currentShell?.Http;
 
 			public bool IsAuthentificated => currentShell?.IsAuthentificated ?? false;
-			public bool IsOnline => currentShell?.IsOnline ?? false;
+			public PpsCommunicationState ConnectionState => currentShell?.ConnectionState ?? PpsCommunicationState.Disconnected;
 		} // class PpsCommunicationProxy
 
 		#endregion
@@ -1334,7 +1449,7 @@ namespace TecWare.PPSn
 		public static IEnumerable<IPpsShellInfo> GetShellInfo()
 			=> (IEnumerable<IPpsShellInfo>)GetService<IPpsShellFactory>(false) ?? Array.Empty<IPpsShellInfo>();
 
-		private static IEnumerable<PropertyValue> GetLoadSettingsArguments(IPpsShellApplication application, string clientId, int lastRefreshTick)
+		private static IEnumerable<PropertyValue> GetLoadSettingsArguments(IPpsShellApplication application, string clientId, long lastRefreshTick)
 		{
 			if (application != null)
 				yield return new PropertyValue("app", application.Name);
@@ -1349,7 +1464,7 @@ namespace TecWare.PPSn
 		/// <param name="lastRefreshTick"></param>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
-		public static async Task<int> LoadSettingsFromServerAsync(IPpsSettingsService settingsService, IPpsShell shell, string clientId, int lastRefreshTick)
+		public static async Task<long> LoadSettingsFromServerAsync(IPpsSettingsService settingsService, IPpsShell shell, string clientId, long lastRefreshTick)
 		{
 			var http = shell.Http;
 			var application = Global.GetService<IPpsShellApplication>(false);
@@ -1393,7 +1508,7 @@ namespace TecWare.PPSn
 					else if (assemblyVersion < installedVersion) // new version is installed, but not active
 						await application.RequestRestartAsync(shell);
 				}
-				
+
 				// update mime type mappings
 				var xMimeTypes = xInfo.Element("mimeTypes");
 				if (xMimeTypes != null)

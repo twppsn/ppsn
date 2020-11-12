@@ -51,7 +51,7 @@ namespace TecWare.PPSn.UI
 			private readonly PpsTracePane pane;
 			private readonly IPpsLuaShell luaShell;
 
-			private readonly PpsLockService lockService;
+			private readonly PpsDpcService dpcService;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -60,7 +60,7 @@ namespace TecWare.PPSn.UI
 				this.pane = pane ?? throw new ArgumentNullException(nameof(pane));
 
 				luaShell = pane.Shell.GetService<IPpsLuaShell>(false);
-				lockService = pane.Shell.GetService<PpsLockService>(false);
+				dpcService = pane.Shell.GetService<PpsDpcService>(false);
 			} // ctor
 
 			protected override object OnIndex(object key)
@@ -82,7 +82,7 @@ namespace TecWare.PPSn.UI
 
 			private void PinProtected(Action action, string pin, string finishMessage = null)
 			{
-				if (lockService.IsDpcPin(pin))
+				if (dpcService.IsDpcPin(pin))
 				{
 					action();
 					if (finishMessage != null)
@@ -98,14 +98,15 @@ namespace TecWare.PPSn.UI
 
 			public async Task SendLogAsync()
 			{
-				await lockService.SendLogAsync();
+				var logService = pane.Shell.GetService<IPpsLogService>(true);
+				await dpcService.PushLogAsync(String.Join(Environment.NewLine, logService.Log.Select(c => c.ToString())));
 				await Task.Delay(3000);
 				await UI.ShowNotificationAsync("Log gesendet.", PpsImage.Information);
 			} // proc SendLogAsync
 
 			[LuaMember, LuaMember("Lock")]
 			public void Unlock(string pin)
-				=> UI.ShowNotificationAsync(lockService.Unlock(pin ?? "\0") ? "Entsperrt" : "Gesperrt", PpsImage.Information).Await();
+				=> UI.ShowNotificationAsync(dpcService.Unlock(pin ?? "\0") ? "Entsperrt" : "Gesperrt", PpsImage.Information).Await();
 
 			[LuaMember]
 			public void SendLog()
@@ -143,11 +144,11 @@ namespace TecWare.PPSn.UI
 
 			[LuaMember]
 			public void SetAsShell(string pin)
-				=> PinProtected(PpsLockService.SetShellEntry, pin, "Als Shell registriert.");
+				=> PinProtected(PpsDpcService.SetShellEntry, pin, "Als Shell registriert.");
 
 			[LuaMember]
 			public void RemoveAsShell(string pin)
-				=> PinProtected(PpsLockService.RemoveShellEntry, pin, "Als Shell-Registrierung entfernt.");
+				=> PinProtected(PpsDpcService.RemoveShellEntry, pin, "Als Shell-Registrierung entfernt.");
 
 			[LuaMember]
 			public void Quit(string pin)
@@ -155,7 +156,7 @@ namespace TecWare.PPSn.UI
 
 			[LuaMember]
 			public bool IsShell 
-				=> PpsLockService.GetIsShellMode();
+				=> PpsDpcService.GetIsShellMode();
 
 			#endregion
 
@@ -195,11 +196,11 @@ namespace TecWare.PPSn.UI
 
 			[LuaMember]
 			public void ExecShutdown(string pin)
-				=> PinProtected(() => PpsLockService.ShutdownOperationSystem(true), pin);
+				=> PinProtected(() => PpsDpcService.ShutdownOperationSystem(true), pin);
 
 			[LuaMember]
 			public void ExecRestart(string pin)
-				=> PinProtected(() => PpsLockService.ShutdownOperationSystem(true), pin);
+				=> PinProtected(() => PpsDpcService.ShutdownOperationSystem(true), pin);
 
 			#endregion
 

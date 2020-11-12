@@ -38,7 +38,7 @@ namespace TecWare.PPSn.Bde
 		private static readonly DependencyPropertyKey topPaneHostPropertyKey = DependencyProperty.RegisterReadOnly(nameof(TopPaneHost), typeof(PpsBdePaneHost), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty TopPaneHostProperty = topPaneHostPropertyKey.DependencyProperty;
 
-		private readonly PpsLockService lockService;
+		private readonly PpsDpcService dpcService;
 		private readonly PpsWindowApplicationSettings settings;
 
 		private readonly PpsBarcodeService barcodeService;
@@ -62,11 +62,11 @@ namespace TecWare.PPSn.Bde
 			this.AddCommandBinding(Shell, TraceLogCommand, new PpsAsyncCommand(AppInfoCommandExecutedAsync, CanAppInfoCommandExecute));
 
 			// init locking
-			lockService = services.GetService<PpsLockService>(true);
-			lockService.PropertyChanged += LockService_PropertyChanged;
-			SetValue(isLockedPropertyKey, lockService.IsLocked);
+			dpcService = services.GetService<PpsDpcService>(true);
+			dpcService.PropertyChanged += LockService_PropertyChanged;
+			SetValue(isLockedPropertyKey, dpcService.IsLocked);
 
-			if (lockService.IsShellMode)
+			if (dpcService.IsShellMode)
 			{
 				WindowStyle = WindowStyle.None;
 				WindowState = WindowState.Maximized;
@@ -222,8 +222,8 @@ namespace TecWare.PPSn.Bde
 
 		private void LockService_PropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
-			if (e.PropertyName == nameof(PpsLockService.IsLocked))
-				SetValue(isLockedPropertyKey, lockService.IsLocked);
+			if (e.PropertyName == nameof(PpsDpcService.IsLocked))
+				SetValue(isLockedPropertyKey, dpcService.IsLocked);
 		} // event LockService_PropertyChanged
 
 		public bool IsLocked => BooleanBox.GetBool(GetValue(IsLockedProperty));

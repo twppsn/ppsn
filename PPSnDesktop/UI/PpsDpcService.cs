@@ -14,33 +14,49 @@
 //
 #endregion
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Data;
 using static TecWare.PPSn.NativeMethods;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class PpsLockService ---------------------------------------------------
+	#region -- interface IPpsSettingRestartCondition ----------------------------------
+
+	internal interface IPpsSettingRestartCondition
+	{
+		bool IsChanged(PpsSettingsInfoBase settings);
+
+		string Setting { get; }
+	} // interface IPpsSettingRestartCondition
+
+	#endregion
+
+	#region -- class PpsDpcService ----------------------------------------------------
 
 	[
-	PpsService(typeof(PpsLockService))
+	PpsService(typeof(PpsDpcService))
 	]
-	internal class PpsLockService : ObservableObject, IPpsShellService
+	internal class PpsDpcService : ObservableObject, IPpsShellService
 	{
 		private readonly IPpsShell shell;
 		private bool isUnlocked = false;
 		private bool isLocked;
-		
+
+		private readonly Dictionary<string, IPpsSettingRestartCondition> conditions = new Dictionary<string, IPpsSettingRestartCondition>();
+
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsLockService(IPpsShell shell)
+		public PpsDpcService(IPpsShell shell)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 			shell.Settings.PropertyChanged += Settings_PropertyChanged;
@@ -54,7 +70,51 @@ namespace TecWare.PPSn.UI
 		{
 			if (e.PropertyName == PpsShellSettings.DpcDebugModeKey)
 				CheckIsLockedProperty();
+			else if (conditions.TryGetValue(e.PropertyName, out var condition) && condition.IsChanged(shell.Settings))
+				ScheduleRestart(condition.ToString());
 		} // event Settings_PropertyChanged
+
+		#endregion
+
+		#region -- Dpc - http ---------------------------------------------------------
+
+		private DEHttpClient CreateDpcHttpClient()
+			=> DEHttpClient.Create(shell.Settings.DpcUri, shell.Settings.GetDpcCredentials());
+
+		public async Task PushMessageAsync(LogMsgType type, string message)
+		{
+			try
+			{
+				string GetLogType()
+				{
+					switch (type)
+					{
+						case LogMsgType.Warning:
+							return "w";
+						case LogMsgType.Error:
+							return "e";
+						default:
+							return "i";
+					}
+				} // func GetLogType
+
+				using (var http = CreateDpcHttpClient())
+				using (var r = await http.GetResponseAsync($"./?action=logmsg&id={shell.DeviceId}&typ={GetLogType()}&msg={Uri.EscapeDataString(message)}"))
+				{
+				}
+			}
+			catch (Exception e)
+			{
+				Debug.Print(e.ToString());
+			}
+		} // func PushMessageAsync
+
+		public async Task PushLogAsync(string log)
+		{
+			using (var http = CreateDpcHttpClient())
+			using (var content = new StringContent(log, Encoding.UTF8, MimeTypes.Text.Plain))
+				await http.GetResponseAsync($"./?action=logcat&id={shell.DeviceId}", putContent: content);
+		} // func PushLogAsync
 
 		#endregion
 
@@ -90,15 +150,6 @@ namespace TecWare.PPSn.UI
 				? isUnlocked
 				: pin == shell.Settings.DpcPin;
 		} // func IsDpcPin
-
-		#endregion
-
-		#region -- SendLock -----------------------------------------------------------
-
-		public Task SendLogAsync()
-		{
-			return Task.CompletedTask;
-		} // proc SendLogAsync
 
 		#endregion
 
@@ -175,10 +226,24 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- Restart Information ------------------------------------------------
+
+		public void AddSettingRestartConditions(IEnumerable<IPpsSettingRestartCondition> restartConditions)
+		{
+			foreach (var c in restartConditions)
+				conditions[c.Setting] = c;
+		} // proc AddSettingRestartConditions
+
+		public void ScheduleRestart(string reason)
+		{
+		} // proc ScheduleRestart
+
+		#endregion
+
 		public bool IsLocked => isLocked;
 
 		public IPpsShell Shell => shell;
-	} // class PpsLockService
+	} // class PpsDpcService
 
 	#endregion
 }

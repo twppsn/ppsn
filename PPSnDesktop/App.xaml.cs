@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Data.Odbc;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -95,6 +96,34 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- class RestartIfSettingChangedNotifier ------------------------------
+
+		[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
+		private sealed class RestartIfSettingChangedNotifier<T> : IPpsSettingRestartCondition
+		{
+			private readonly string propertyPath;
+			private readonly T originalValue;
+
+			public RestartIfSettingChangedNotifier(string propertyPath, T originalValue)
+			{
+				this.propertyPath = propertyPath ?? throw new ArgumentNullException(nameof(propertyPath));
+				this.originalValue = originalValue;
+			} // ctor
+
+			public override string ToString()
+				=> $"Setting: {propertyPath}: {originalValue}";
+
+			private string GetDebuggerDisplay()
+				=> ToString();
+
+			public bool IsChanged(PpsSettingsInfoBase settings)
+				=> !Equals(settings.GetProperty<T>(propertyPath, default), originalValue);
+
+			public string Setting => propertyPath;
+		} // class RestartIfSettingChangedNotifier
+
+		#endregion
+
 		#region -- class ShellLoadNotify ----------------------------------------------
 
 		private sealed class ShellLoadNotify : IPpsShellLoadNotify
@@ -146,6 +175,15 @@ namespace TecWare.PPSn
 					return null;
 				} // func IsApplicationBlocked
 
+				public IReadOnlyList<IPpsSettingRestartCondition> CreateRestartNotifier()
+				{
+					return new IPpsSettingRestartCondition[]
+					{
+						new RestartIfSettingChangedNotifier<long>(GetPropertyName(FileId, "Length"), expectedLength),
+						new RestartIfSettingChangedNotifier<DateTime>(GetPropertyName(FileId, "LastWriteTime"), expectedLastWriteTime)
+					};
+				} // func CreateRestartNotifier
+
 				public string FileId => fileId;
 				public Uri Uri => uri;
 				public FileInfo FileInfo => fi;
@@ -157,6 +195,9 @@ namespace TecWare.PPSn
 
 				// -- Static --------------------------------------------------
 
+				private static string GetPropertyName(string groupName, string name)
+					=> "PPSn.Application.Files." + groupName + "." + name;
+
 				public static FileVerifyInfo Create(string groupName, DirectoryInfo baseDirectory, string path, string source, long expectedLength, string expectedLastWriteTimeText, string loadFlags)
 				{
 					if (groupName == null)
@@ -164,25 +205,22 @@ namespace TecWare.PPSn
 					if (baseDirectory == null)
 						throw new ArgumentNullException(nameof(baseDirectory));
 
-					string GetPropertyName(string name)
-						=> "PPSn.Application.Files." + groupName + "." + name;
-
 					if (String.IsNullOrEmpty(source))
-						throw new ArgumentNullException(GetPropertyName("Uri"));
+						throw new ArgumentNullException(GetPropertyName(groupName, "Uri"));
 					if (String.IsNullOrEmpty(path))
-						throw new ArgumentNullException(GetPropertyName("Path"));
+						throw new ArgumentNullException(GetPropertyName(groupName, "Path"));
 					if (path.Contains(".."))
-						throw new ArgumentOutOfRangeException(GetPropertyName("Path"), path, "Invalid relative path.");
+						throw new ArgumentOutOfRangeException(GetPropertyName(groupName, "Path"), path, "Invalid relative path.");
 					if (expectedLength < 0)
-						throw new ArgumentNullException(GetPropertyName("Length"));
+						throw new ArgumentNullException(GetPropertyName(groupName, "Length"));
 					if (expectedLastWriteTimeText == null)
-						throw new ArgumentNullException(GetPropertyName("LastWriteTime"));
+						throw new ArgumentNullException(GetPropertyName(groupName, "LastWriteTime"));
 
 					if (!Uri.TryCreate(source, UriKind.Absolute, out var uri))
-						throw new ArgumentOutOfRangeException(GetPropertyName("Uri"), source, "Invalid uri.");
+						throw new ArgumentOutOfRangeException(GetPropertyName(groupName, "Uri"), source, "Invalid uri.");
 
 					if (!DateTime.TryParse(expectedLastWriteTimeText, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var expectedLastWriteTime))
-						throw new ArgumentOutOfRangeException(GetPropertyName("LastWriteTime"), expectedLastWriteTimeText, "Could not parse timestamp.");
+						throw new ArgumentOutOfRangeException(GetPropertyName(groupName, "LastWriteTime"), expectedLastWriteTimeText, "Could not parse timestamp.");
 
 					var flags = FileLoadFlag.None;
 					if (loadFlags != null)
@@ -202,6 +240,8 @@ namespace TecWare.PPSn
 			private readonly PpsSplashWindow splashWindow;
 			private readonly bool allowSync;
 
+			private readonly List<IPpsSettingRestartCondition> restartNotifier = new List<IPpsSettingRestartCondition>();
+
 			public ShellLoadNotify(PpsSplashWindow splashWindow, bool allowSync)
 			{
 				this.splashWindow = splashWindow;
@@ -220,6 +260,10 @@ namespace TecWare.PPSn
 				var liveData = shell.GetService<PpsLiveData>(true);
 				liveData.SetDebugLog(shell.GetService<ILogger>(true));
 				liveData.DataChanged += (sender, e) => CommandManager.InvalidateRequerySuggested();
+
+				// register restart notifier
+				var dpcService = shell.GetService<PpsDpcService>(true);
+				dpcService.AddSettingRestartConditions(restartNotifier);
 
 				return Task.CompletedTask;
 			} // func OnAfterInitServicesAsync
@@ -324,6 +368,9 @@ namespace TecWare.PPSn
 							log.Debug($"Schedule {cur.FileInfo} for update: {cur.Uri}");
 							totalBytesToUpdate += cur.Length;
 						}
+
+						// add to restart notifier
+						restartNotifier.AddRange(cur.CreateRestartNotifier());
 					}
 
 					// we need to sync
@@ -699,7 +746,7 @@ namespace TecWare.PPSn
 			FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
 			isProcessProtected = e.Args.Contains("--run");
-			if (!isProcessProtected && PpsLockService.GetIsShellMode()) // protect process in shell mode
+			if (!isProcessProtected && PpsDpcService.GetIsShellMode()) // protect process in shell mode
 			{
 				while (true) // restart loop
 				{
@@ -738,8 +785,8 @@ namespace TecWare.PPSn
 
 			if (isProcessProtected)
 			{
-				if (PpsLockService.GetIsShellMode())
-					PpsLockService.LogoffOperationSystem();
+				if (PpsDpcService.GetIsShellMode())
+					PpsDpcService.LogoffOperationSystem();
 				e.ApplicationExitCode = 2682; // mark real shutdown -> no restart
 			}
 		} // proc OnExit

@@ -20,10 +20,24 @@ using System.Net.Http.Headers;
 using System.Text;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Networking
 {
+	#region -- enum PpsCommunicationState ---------------------------------------------
+
+	/// <summary>Current state of the connection.</summary>
+	public enum PpsCommunicationState
+	{
+		/// <summary>Disconnected from server.</summary>
+		Disconnected,
+		/// <summary>Connecting to the server.</summary>
+		Connecting,
+		/// <summary>Connection is active</summary>
+		Connected
+	} // enum PpsCommunicationState
+
+	#endregion
+
 	#region -- interface IPpsCommunicationService  ------------------------------------
 
 	/// <summary>Access the communication service.</summary>
@@ -33,8 +47,8 @@ namespace TecWare.PPSn.Networking
 		DEHttpClient Http { get; }
 		/// <summary>Is a user attached to the http-context.</summary>
 		bool IsAuthentificated { get; }
-		/// <summary>Is the connection alive.</summary>
-		bool IsOnline { get; }
+		/// <summary>Is the connection alive</summary>
+		PpsCommunicationState ConnectionState { get; }
 	} // interface IPpsCommunicationService
 
 	#endregion

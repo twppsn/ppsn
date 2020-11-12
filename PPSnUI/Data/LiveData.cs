@@ -2912,351 +2912,163 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class BackgroundRefreshThread --------------------------------------
+		#region -- class MergeItem ----------------------------------------------------
 
-		// todo: concept for background tasks? shell service!
-		private sealed class BackgroundRefreshThread
+		private sealed class MergeItem
 		{
-			#region -- class MergeItem ------------------------------------------------
+			private readonly Table table;
 
-			private sealed class MergeItem
+			private bool refreshAll;
+			private readonly List<long> refreshIds = new List<long>();
+			private readonly List<long> deleteIds = new List<long>();
+			private long nextSyncId = -1L;
+
+			public MergeItem(Table table, bool refreshAll)
 			{
-				private readonly Table table;
-
-				private bool refreshAll;
-				private readonly List<long> refreshIds = new List<long>();
-				private readonly List<long> deleteIds = new List<long>();
-				private long nextSyncId = -1L;
-
-				public MergeItem(Table table, bool refreshAll)
-				{
-					this.table = table ?? throw new ArgumentNullException(nameof(table));
-					this.refreshAll = refreshAll;
-				} // ctor
-
-				private static void AppendIds(StringBuilder sb, string prefix, List<long> ids)
-				{
-					if (ids.Count > 0)
-					{
-						sb.Append(prefix);
-						sb.Append(ids[0]);
-						for (var i = 1; i < ids.Count; i++)
-						{
-							sb.Append(',');
-							sb.Append(ids[i]);
-						}
-						sb.AppendLine();
-					}
-				} // proc AppendIds
-
-				public void LogBefore(StringBuilder sb)
-					=> sb.AppendLine($"{(refreshAll ? "Diff" : "All")} for {table.TableName} with sync {table.SyncId}.");
-
-				public void LogAfter(StringBuilder sb)
-				{
-					sb.AppendLine($"{table.TableName} new sync {nextSyncId}");
-					AppendIds(sb, "+ ", refreshIds);
-					AppendIds(sb, "- ", deleteIds);
-				} // proc LogAfter
-
-				public void SetRefreshAll()
-					=> refreshAll = true;
-
-				private bool IsPrimaryMatching(string rowId)
-				{
-					if (table.PrimaryKey == null || String.IsNullOrEmpty(rowId) || table.PrimaryKey.Length != 1)
-						return false;
-
-					return String.Compare(table.GetFieldName(table.PrimaryKey[0]), rowId, StringComparison.OrdinalIgnoreCase) == 0;
-				} // proc IsPrimaryMatching
-
-				public void UpdateNextSyncId(long nextSyncId)
-				{
-					if (this.nextSyncId < nextSyncId)
-						this.nextSyncId = nextSyncId;
-				} // proc UpdateNextSyncId
-
-				public void ParseMerge(XElement xTable)
-				{
-					if (IsPrimaryMatching(xTable.GetAttribute("rowId", String.Empty)))
-						SetRefreshAll(); // no primary key mapping, set to full refresh
-
-					foreach (var xItem in xTable.Elements())
-					{
-						switch (xItem.Name.LocalName)
-						{
-							case "full":
-								UpdateNextSyncId(xItem.GetAttribute("id", -1L));
-								SetRefreshAll();
-								break; // nothing else to read
-							case "columns":
-								if (!refreshAll) // we will refresh all anyway, so only collect id's
-								{
-									SetRefreshAll(); // todo: wir schalten erstmal in den full mode, später wird das detail gemacht
-								}
-								break;
-							case "u":
-								if (refreshAll)
-									UpdateNextSyncId(xItem.GetAttribute("id", -1L));
-								//else
-								//	updates.Add(); // todo: read attributes???
-								break;
-							case "i":
-							case "r":
-								if (refreshAll)
-									UpdateNextSyncId(xItem.GetAttribute("id", -1L));
-								//else
-								//	refreshIds.Add();
-								break;
-							case "d":
-								if (refreshAll)
-									UpdateNextSyncId(xItem.GetAttribute("id", -1L));
-								//else
-								//	deleteIds.Add();
-								break;
-						}
-					}
-				} // proc ParseMerge
-
-				public async Task<(Exception ex, bool isModified)> ApplyMergeAsync(DEHttpClient client)
-				{
-					var isModified = false;
-					try
-					{
-						if (refreshAll)
-						{
-							isModified = await table.RefreshCoreAsync(client);
-						}
-						else
-						{
-							// remove rows
-							for (var i = 0; i < deleteIds.Count; i++)
-								table.DeleteRow(deleteIds[i]);
-
-							// update rows
-							//for (var i = 0; i < updates.Count; i++)
-							//	;
-
-							// refresh rows
-							if (refreshIds.Count > 0)
-							{
-								// build view filter
-								var viewFilter = table.GetCurrentViewFilter();
-								// build in filter for refresh rows
-								var refreshFilter = PpsDataFilterExpression.CompareIn(table.GetFieldName(table.PrimaryKey[0]), refreshIds.Select(c => c));
-								// create row filter
-								var rowFilter = PpsDataFilterExpression.Combine(viewFilter, refreshFilter);
-								// fetch rows from server
-								isModified = await table.RefreshRowsAsync(client, false, rowFilter);
-							}
-						}
-
-						return (null, isModified);
-					}
-					catch (Exception e)
-					{
-						return (e, isModified);
-					}
-					finally
-					{
-						// update sync id
-						if (nextSyncId > 0)
-							table.SetSyncId(nextSyncId);
-						else
-							table.SetSyncId(table.Data.globalSyncId);
-					}
-				} // proc ApplyMergeAsync
-
-				public Table Table => table;
-				public bool IsRefreshAll => refreshAll;
-			} // class MergeItem
-
-			#endregion
-
-			private const int pollTimeout = 4000;
-
-			private readonly ManualResetEventSlim isFilled = new ManualResetEventSlim(false);
-			private volatile bool isRunning = true;
-			private volatile bool scheduledEnforce = false;
-
-			private readonly PpsLiveData data;
-			private readonly Thread thread;
-
-			public BackgroundRefreshThread(PpsLiveData data)
-			{
-				this.data = data ?? throw new ArgumentNullException(nameof(data));
-
-				thread = new Thread(ExecuteLiveData)
-				{
-					IsBackground = true,
-					Name = "LiveData"
-				};
-				thread.Start();
+				this.table = table ?? throw new ArgumentNullException(nameof(table));
+				this.refreshAll = refreshAll;
 			} // ctor
 
-			public void Cycle(bool enforceCDC)
+			private static void AppendIds(StringBuilder sb, string prefix, List<long> ids)
 			{
-				lock (isFilled)
+				if (ids.Count > 0)
 				{
-					if (enforceCDC)
-						scheduledEnforce = true;
-					isFilled.Set();
+					sb.Append(prefix);
+					sb.Append(ids[0]);
+					for (var i = 1; i < ids.Count; i++)
+					{
+						sb.Append(',');
+						sb.Append(ids[i]);
+					}
+					sb.AppendLine();
 				}
-			} // proc Cycle
+			} // proc AppendIds
 
-			public void Stop()
+			public void LogBefore(StringBuilder sb)
+				=> sb.AppendLine($"{(refreshAll ? "Diff" : "All")} for {table.TableName} with sync {table.SyncId}.");
+
+			public void LogAfter(StringBuilder sb)
 			{
-				lock (isFilled)
-					isRunning = false;
-			} // proc Stop
+				sb.AppendLine($"{table.TableName} new sync {nextSyncId}");
+				AppendIds(sb, "+ ", refreshIds);
+				AppendIds(sb, "- ", deleteIds);
+			} // proc LogAfter
 
-			private bool WaitCycle(int timeout, out bool enforceCDC)
+			public void SetRefreshAll()
+				=> refreshAll = true;
+
+			private bool IsPrimaryMatching(string rowId)
 			{
-				lock (isFilled)
-				{
-					enforceCDC = scheduledEnforce;
-					scheduledEnforce = false;
-				}
-
-				isFilled.Wait(timeout);
-				isFilled.Reset();
-
-				return isRunning;
-			} // func WaitCycle
-
-			private static bool TryFindMergeItem(List<MergeItem> mergeList, XElement xTable, out MergeItem mergeItem)
-			{
-				var syncExpr = xTable.GetAttribute("expr", String.Empty);
-				if (String.IsNullOrEmpty(syncExpr))
-				{
-					mergeItem = null;
+				if (table.PrimaryKey == null || String.IsNullOrEmpty(rowId) || table.PrimaryKey.Length != 1)
 					return false;
+
+				return String.Compare(table.GetFieldName(table.PrimaryKey[0]), rowId, StringComparison.OrdinalIgnoreCase) == 0;
+			} // proc IsPrimaryMatching
+
+			public void UpdateNextSyncId(long nextSyncId)
+			{
+				if (this.nextSyncId < nextSyncId)
+					this.nextSyncId = nextSyncId;
+			} // proc UpdateNextSyncId
+
+			public void ParseMerge(XElement xTable)
+			{
+				if (IsPrimaryMatching(xTable.GetAttribute("rowId", String.Empty)))
+					SetRefreshAll(); // no primary key mapping, set to full refresh
+
+				foreach (var xItem in xTable.Elements())
+				{
+					switch (xItem.Name.LocalName)
+					{
+						case "full":
+							UpdateNextSyncId(xItem.GetAttribute("id", -1L));
+							SetRefreshAll();
+							break; // nothing else to read
+						case "columns":
+							if (!refreshAll) // we will refresh all anyway, so only collect id's
+							{
+								SetRefreshAll(); // todo: wir schalten erstmal in den full mode, später wird das detail gemacht
+							}
+							break;
+						case "u":
+							if (refreshAll)
+								UpdateNextSyncId(xItem.GetAttribute("id", -1L));
+							//else
+							//	updates.Add(); // todo: read attributes???
+							break;
+						case "i":
+						case "r":
+							if (refreshAll)
+								UpdateNextSyncId(xItem.GetAttribute("id", -1L));
+							//else
+							//	refreshIds.Add();
+							break;
+						case "d":
+							if (refreshAll)
+								UpdateNextSyncId(xItem.GetAttribute("id", -1L));
+							//else
+							//	deleteIds.Add();
+							break;
+					}
 				}
+			} // proc ParseMerge
 
-				mergeItem = mergeList.Find(c => c.Table.TableName == syncExpr);
-				return mergeItem != null;
-			} // func TryFindMergeItem
-
-			private async Task<Exception[]> ApplyMergeAsync(List<MergeItem> mergeList, DEHttpClient client)
+			public async Task<(Exception ex, bool isModified)> ApplyMergeAsync(DEHttpClient client)
 			{
 				var isModified = false;
-				var exceptions = new List<Exception>();
-				foreach (var m in mergeList)
-				{
-					var r = await m.ApplyMergeAsync(client);
-					if (r.ex != null)
-						exceptions.Add(r.ex.GetInnerException());
-					
-					isModified |= r.isModified;
-				}
-
-				if (isModified)
-					data.FireDataChanged();
-
-				return exceptions.ToArray();
-			} // func ApplyMergeAsync
-
-			private void ExecuteLiveData()
-			{
-				data.Notify?.StartRefreshThread();
 				try
 				{
-					var com = data.Shell.GetService<IPpsCommunicationService>(true);
-					while (WaitCycle(pollTimeout, out var enforceCDC))
+					if (refreshAll)
 					{
-						var refreshTasks = data.GetNextRefreshTasks();
-						try
+						isModified = await table.RefreshCoreAsync(client);
+					}
+					else
+					{
+						// remove rows
+						for (var i = 0; i < deleteIds.Count; i++)
+							table.DeleteRow(deleteIds[i]);
+
+						// update rows
+						//for (var i = 0; i < updates.Count; i++)
+						//	;
+
+						// refresh rows
+						if (refreshIds.Count > 0)
 						{
-							// create sync request
-							var xRequest = new XElement("batch");
-							xRequest.SetAttributeValue("lastSyncTimeStamp", data.globalSyncId.ChangeType<string>());
-							if (enforceCDC)
-								xRequest.SetAttributeValue("enforceCDC", "true");
-
-							var mergeList = new List<MergeItem>();
-							var tables = data.TableSnapShot();
-							foreach (var t in tables)
-							{
-
-								var customer = refreshTasks?.Any(c => c.Table == t) ?? false;
-								var isClientFullRefresh = customer   // is this table scheduled for refresh
-									|| t.SyncId > 0; // is this table initialized
-
-								var xSync = new XElement("sync");
-								xSync.SetAttributeValue("table", t.TableName);
-								xSync.SetAttributeValue("syncId", isClientFullRefresh ? -1L : t.SyncId);
-								xRequest.Add(xSync);
-
-								mergeList.Add(new MergeItem(t, isClientFullRefresh));
-							}
-
-							if (mergeList.Count > 0)
-							{
-								if (data.Notify != null)
-								{
-									var sb = new StringBuilder();
-									mergeList.ForEach(c => c.LogBefore(sb));
-									data.Notify?.ReportRefreshArgs(sb.ToString());
-								}
-
-								// do request and process result
-								var http = com.Http;
-								// todo: wirft eine ObjectDisposedException
-								using (var response = http.PutResponseXmlAsync("?action=syncget", new XDocument(xRequest), MimeTypes.Text.Xml, MimeTypes.Text.Xml).Result)
-								{
-									var xResult = HttpStuff.GetXmlAsync(response).Result;
-
-									// process result
-									foreach (var xTable in xResult.Elements())
-									{
-										if (xTable.Name.LocalName == "table")
-										{
-											if (!TryFindMergeItem(mergeList, xTable, out var mergeItem))
-												continue;
-
-											mergeItem.ParseMerge(xTable);
-										}
-										else if (xTable.Name.LocalName == "syncStamp") // update global stamp
-											data.globalSyncId = xTable.Value.ChangeType<long>();
-									}
-								}
-
-								if (data.Notify != null)
-								{
-									var sb = new StringBuilder();
-									mergeList.ForEach(c => c.LogAfter(sb));
-									data.Notify?.ReportRefreshResult(sb.ToString());
-								}
-
-								// apply merge commands to tables
-								// use ui-thread for this
-								var uiExceptions = data.Shell.GetService<IPpsUIService>(true).RunUI(new Func<Task<Exception[]>>(() => ApplyMergeAsync(mergeList, http))).Result.Result;
-
-								// notify finish
-								if (uiExceptions.Length > 0)
-									data.FinishWaitForSync(refreshTasks, new AggregateException(uiExceptions));
-								//else
-								data.FinishWaitForSync(refreshTasks, null);
-							}
-							else
-								data.FinishWaitForSync(refreshTasks, null);
-						}
-						catch (Exception e)
-						{
-							data.Notify?.UnexpectedBackgroundFailure(e);
-
-							data.FinishWaitForSync(refreshTasks, e);
+							// build view filter
+							var viewFilter = table.GetCurrentViewFilter();
+							// build in filter for refresh rows
+							var refreshFilter = PpsDataFilterExpression.CompareIn(table.GetFieldName(table.PrimaryKey[0]), refreshIds.Select(c => c));
+							// create row filter
+							var rowFilter = PpsDataFilterExpression.Combine(viewFilter, refreshFilter);
+							// fetch rows from server
+							isModified = await table.RefreshRowsAsync(client, false, rowFilter);
 						}
 					}
+
+					return (null, isModified);
+				}
+				catch (Exception e)
+				{
+					return (e, isModified);
 				}
 				finally
 				{
-					data.Notify?.StopRefreshThread();
+					// update sync id
+					if (nextSyncId > 0)
+						table.SetSyncId(nextSyncId);
+					else
+						table.SetSyncId(table.Data.globalSyncId);
 				}
-			} // proc ExecuteLiveData
-		} // class BackgroundRefreshThread
+			} // proc ApplyMergeAsync
+
+			public Table Table => table;
+			public bool IsRefreshAll => refreshAll;
+		} // class MergeItem
 
 		#endregion
+
+		private struct VoidResult {  }
 
 		/// <summary>Some data changed.</summary>
 		public event EventHandler DataChanged;
@@ -3264,9 +3076,6 @@ namespace TecWare.PPSn.Data
 		private readonly IPpsShell shell;
 		private readonly List<Table> tables = new List<Table>();
 		private readonly List<EnforceRefreshTableTask> refreshTasks = new List<EnforceRefreshTableTask>();
-		private readonly List<TaskCompletionSource<bool>> waitForSync = new List<TaskCompletionSource<bool>>();
-		private int backgroundRefreshActive = 0;
-		private BackgroundRefreshThread backgroundRefresh;
 		private long globalSyncId = -1L;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -3382,6 +3191,145 @@ namespace TecWare.PPSn.Data
 
 		#region -- Refresh ------------------------------------------------------------
 
+		private int scheduledEnforce = 0;
+		private int backgroundRefreshActive = 0;
+		private IPpsShellBackgroundTask backgroundTask = null;
+
+		private static bool TryFindMergeItem(List<MergeItem> mergeList, XElement xTable, out MergeItem mergeItem)
+		{
+			var syncExpr = xTable.GetAttribute("expr", String.Empty);
+			if (String.IsNullOrEmpty(syncExpr))
+			{
+				mergeItem = null;
+				return false;
+			}
+
+			mergeItem = mergeList.Find(c => c.Table.TableName == syncExpr);
+			return mergeItem != null;
+		} // func TryFindMergeItem
+
+		private async Task<Exception[]> ApplyMergeAsync(List<MergeItem> mergeList, DEHttpClient client)
+		{
+			var isModified = false;
+			var exceptions = new List<Exception>();
+			foreach (var m in mergeList)
+			{
+				var r = await m.ApplyMergeAsync(client);
+				if (r.ex != null)
+					exceptions.Add(r.ex.GetInnerException());
+
+				isModified |= r.isModified;
+			}
+
+			if (isModified)
+				FireDataChanged();
+
+			return exceptions.ToArray();
+		} // func ApplyMergeAsync
+
+		private async Task RefreshLiveDataFromServerAsync()
+		{
+			Notify?.StartRefreshThread();
+			try
+			{
+				var com = shell.GetService<IPpsCommunicationService>(true);
+
+				var enforceCDC = Interlocked.Exchange(ref scheduledEnforce, 0) != 0;
+				var refreshTasks = GetNextRefreshTasks();
+				try
+				{
+					// create sync request
+					var xRequest = new XElement("batch");
+					xRequest.SetAttributeValue("lastSyncTimeStamp", globalSyncId.ChangeType<string>());
+					if (enforceCDC)
+						xRequest.SetAttributeValue("enforceCDC", "true");
+
+					var mergeList = new List<MergeItem>();
+					var tables = TableSnapShot();
+					foreach (var t in tables)
+					{
+
+						var customer = refreshTasks?.Any(c => c.Table == t) ?? false;
+						var isClientFullRefresh = customer   // is this table scheduled for refresh
+							|| t.SyncId > 0; // is this table initialized
+
+						var xSync = new XElement("sync");
+						xSync.SetAttributeValue("table", t.TableName);
+						xSync.SetAttributeValue("syncId", isClientFullRefresh ? -1L : t.SyncId);
+						xRequest.Add(xSync);
+
+						mergeList.Add(new MergeItem(t, isClientFullRefresh));
+					}
+
+					if (mergeList.Count > 0)
+					{
+						if (Notify != null)
+						{
+							var sb = new StringBuilder();
+							mergeList.ForEach(c => c.LogBefore(sb));
+							Notify?.ReportRefreshArgs(sb.ToString());
+						}
+
+						// do request and process result
+						var http = com.Http;
+						// todo: wirft eine ObjectDisposedException
+						using (var response = await http.PutResponseXmlAsync("?action=syncget", new XDocument(xRequest), MimeTypes.Text.Xml, MimeTypes.Text.Xml))
+						{
+							var xResult = await HttpStuff.GetXmlAsync(response);
+
+							// process result
+							foreach (var xTable in xResult.Elements())
+							{
+								if (xTable.Name.LocalName == "table")
+								{
+									if (!TryFindMergeItem(mergeList, xTable, out var mergeItem))
+										continue;
+
+									mergeItem.ParseMerge(xTable);
+								}
+								else if (xTable.Name.LocalName == "syncStamp") // update global stamp
+									globalSyncId = xTable.Value.ChangeType<long>();
+							}
+						}
+
+						if (Notify != null)
+						{
+							var sb = new StringBuilder();
+							mergeList.ForEach(c => c.LogAfter(sb));
+							Notify?.ReportRefreshResult(sb.ToString());
+						}
+
+						// apply merge commands to tables
+						// use ui-thread for this
+						var uiExceptions = await await shell.GetService<IPpsUIService>(true).RunUI(new Func<Task<Exception[]>>(() => ApplyMergeAsync(mergeList, http)));
+
+						// notify finish
+						if (uiExceptions.Length > 0)
+						{
+							var aggEx = new AggregateException(uiExceptions);
+							FinishWaitForSync(refreshTasks, aggEx);
+							Notify?.UnexpectedBackgroundFailure(aggEx);
+						}
+
+						FinishWaitForSync(refreshTasks, null);
+					}
+					else
+						FinishWaitForSync(refreshTasks, null);
+				}
+				catch (Exception e)
+				{
+					Notify?.UnexpectedBackgroundFailure(e);
+
+					FinishWaitForSync(refreshTasks, e);
+					throw;
+				}
+			}
+			finally
+			{
+				Notify?.StopRefreshThread();
+			}
+		} // proc RefreshLiveDataFromServerAsync
+
 		private EnforceRefreshTableTask EnqueueRefreshViewCore(IPpsLiveDataViewEvents view)
 		{
 			var t = (Table)view.Type.GetDataTable(this);
@@ -3400,8 +3348,7 @@ namespace TecWare.PPSn.Data
 				if (r == null)
 					refreshTasks.Add(r = new EnforceRefreshTableTask(table));
 
-				backgroundRefresh?.Cycle(false);
-
+				backgroundTask.Pulse();
 				return r;
 			}
 		} // func EnqueueRefreshViewCore
@@ -3447,18 +3394,6 @@ namespace TecWare.PPSn.Data
 				foreach (var t in refreshTasks)
 					t.FinishTasks(e);
 			}
-
-			lock (waitForSync)
-			{
-				for (var i = 0; i < waitForSync.Count; i++)
-				{
-					if (e == null)
-						waitForSync[i].TrySetResult(true);
-					else
-						waitForSync[i].TrySetException(e);
-				}
-				waitForSync.Clear();
-			}
 		} // proc FinishWaitForSync
 
 		/// <summary>Wait for a complete sync cycle.</summary>
@@ -3466,39 +3401,45 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public Task WaitForSync(bool enforceServerSync = false)
 		{
-			var t = new TaskCompletionSource<bool>();
-			lock (waitForSync)
-				waitForSync.Add(t);
+			if (backgroundTask == null)
+				throw new InvalidOperationException("Background task is not started.");
 
-			backgroundRefresh?.Cycle(enforceServerSync);
-			return Notify == null ? t.Task : DebugWaitForSync(t.Task);
+			if (enforceServerSync)
+				Interlocked.CompareExchange(ref scheduledEnforce, 1, 0);
+			
+			var t = backgroundTask.RunAsync();
+			return Notify == null ? t : DebugWaitForSync(t);
 		} // proc WaitForSync
 
-		private async Task<bool> DebugWaitForSync(Task<bool> task)
+		private Task DebugWaitForSync(Task task)
 		{
 			Notify?.WaitForSyncStart();
-			try
-			{
-				return await task;
-			}
-			finally
-			{
-				Notify?.WaitForSyncStop();
-			}
+			return task.ContinueWith(t =>
+				{
+					try
+					{
+						t.Wait();
+					}
+					finally
+					{
+						Notify?.WaitForSyncStop();
+					}
+				}, TaskContinuationOptions.ExecuteSynchronously
+			);
 		} // func DebugWaitForSync
 
 		private void InitBackgroundRefresh()
 		{
 			if (Interlocked.Increment(ref backgroundRefreshActive) == 1) // activate background refresh
-				backgroundRefresh = new BackgroundRefreshThread(this);
+				backgroundTask = shell.RegisterTask(RefreshLiveDataFromServerAsync, TimeSpan.FromSeconds(4));
 		} // proc InitBackgroundRefresh
 
 		private void DoneBackgroundRefresh()
 		{
 			if (Interlocked.Decrement(ref backgroundRefreshActive) == 0) // stop background refresh
 			{
-				backgroundRefresh.Stop();
-				backgroundRefresh = null;
+				backgroundTask.Dispose();
+				backgroundTask = null;
 			}
 		} // proc DoneBackgroundRefresh
 

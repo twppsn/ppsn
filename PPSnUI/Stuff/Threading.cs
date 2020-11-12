@@ -15,7 +15,6 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,8 +24,40 @@ namespace TecWare.PPSn.Stuff
 
 	/// <summary>Synchronization context, that implements message queue behaviour 
 	/// in a thread. Tasks </summary>
-	public abstract class PpsSynchronizationContext : SynchronizationContext, IPpsProcessMessageLoop
+	public abstract class PpsSynchronizationQueue
 	{
+		#region -- class PpsSynchronizationContext ------------------------------------
+
+		private sealed class PpsSynchronizationContext : SynchronizationContext, IPpsProcessMessageLoop
+		{
+			private readonly PpsSynchronizationQueue queue;
+
+			public PpsSynchronizationContext(PpsSynchronizationQueue queue)
+			{
+				this.queue = queue ?? throw new ArgumentNullException(nameof(queue));
+			} // ctor
+
+			public override SynchronizationContext CreateCopy()
+				=> queue.CreateSynchronizationContext();
+
+			public override void Post(SendOrPostCallback d, object state)
+				=> queue.EnqueueTask(d, state, null);
+
+			public override void Send(SendOrPostCallback d, object state)
+			{
+				using (var waitHandle = new ManualResetEventSlim(false))
+				{
+					queue.EnqueueTask(d, state, waitHandle);
+					waitHandle.Wait();
+				}
+			} // proc Send
+
+			void IPpsProcessMessageLoop.ProcessMessageLoop(CancellationToken cancellationToken)
+				=> queue.ProcessMessageLoop(cancellationToken);
+		} // class PpsSynchronizationContext
+
+		#endregion
+
 		#region -- struct CurrentTask -------------------------------------------------
 
 		private struct CurrentTask
@@ -42,15 +73,33 @@ namespace TecWare.PPSn.Stuff
 		private readonly Queue<CurrentTask> tasks = new Queue<CurrentTask>();
 		private volatile bool doContinue = true;
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
 		/// <summary></summary>
-		protected PpsSynchronizationContext()
+		protected PpsSynchronizationQueue()
 		{
 		} // ctor
 
-		/// <summary>Do not copy the context, hold the reference.</summary>
+		/// <summary>Create a synchronization context, for this queue.</summary>
 		/// <returns></returns>
-		public override SynchronizationContext CreateCopy()
-			=> this;
+		protected SynchronizationContext CreateSynchronizationContext()
+			=> new PpsSynchronizationContext(this);
+
+		/// <summary></summary>
+		/// <param name="execute"></param>
+		protected void Use(Action execute)
+		{
+			var oldContext = SynchronizationContext.Current;
+			SynchronizationContext.SetSynchronizationContext(CreateSynchronizationContext());
+			try
+			{
+				execute();
+			}
+			finally
+			{
+				SynchronizationContext.SetSynchronizationContext(oldContext);
+			}
+		} // proc Use
 
 		/// <summary>Stop the message loop, of the current context/thread.</summary>
 		protected void Stop()
@@ -62,10 +111,14 @@ namespace TecWare.PPSn.Stuff
 			}
 		} // proc Stop
 
+		#endregion
+
+		#region -- Message Loop -------------------------------------------------------
+
 		private void VerifyThreadAccess()
 		{
-			if (QueueThread != Thread.CurrentThread)
-				throw new InvalidOperationException($"Process of the queued task is only allowed in the same thread.(queue threadid {QueueThread.ManagedThreadId}, caller thread id: {Thread.CurrentThread.ManagedThreadId})");
+			if (Thread != Thread.CurrentThread)
+				throw new InvalidOperationException($"Process of the queued task is only allowed in the same thread.(queue threadid {Thread.ManagedThreadId}, caller thread id: {Thread.CurrentThread.ManagedThreadId})");
 		} // proc VerifyThreadAccess
 
 		private bool TryDequeueTask(CancellationToken cancellationToken, out SendOrPostCallback d, out object state, out ManualResetEventSlim waitHandle)
@@ -98,7 +151,11 @@ namespace TecWare.PPSn.Stuff
 			}
 		} // proc DequeueTask
 
-		private void EnqueueTask(SendOrPostCallback d, object state, ManualResetEventSlim waitHandle)
+		/// <summary>Enqueue a new task.</summary>
+		/// <param name="d"></param>
+		/// <param name="state"></param>
+		/// <param name="waitHandle"></param>
+		protected void EnqueueTask(SendOrPostCallback d, object state, ManualResetEventSlim waitHandle)
 		{
 			lock (tasksFilled)
 			{
@@ -115,9 +172,15 @@ namespace TecWare.PPSn.Stuff
 				tasksFilled.Set();
 		} // proc PulseTaskQueue
 
+		/// <summary>Wait for new tasks to process.</summary>
+		/// <param name="wait"></param>
+		protected virtual void OnWait(ManualResetEventSlim wait)
+			=> wait.Wait();
+
 		/// <summary>Run the message loop in the current context/thread.</summary>
 		/// <param name="cancellationToken">Cancellation condition.</param>
-		protected void ProcessMessageLoopUnsafe(CancellationToken cancellationToken)
+		/// <param name="callOnWait"></param>
+		protected void ProcessTaskLoopUnsafe(CancellationToken cancellationToken, bool callOnWait)
 		{
 			// if cancel, then run the loop, we avoid an TaskCanceledException her
 			cancellationToken.Register(PulseTaskQueue);
@@ -134,49 +197,36 @@ namespace TecWare.PPSn.Stuff
 				}
 
 				// wait for event
-				tasksFilled.Wait();
+				if (callOnWait)
+					OnWait(tasksFilled);
+				else
+					tasksFilled.Wait();
 			}
-		} // proc ProcessMessageLoop
+		} // proc ProcessTaskLoopUnsafe
 
 		/// <summary>Run the message loop in the current context/thread.</summary>
 		/// <param name="cancellationToken">Cancellation condition.</param>
 		public void ProcessMessageLoop(CancellationToken cancellationToken)
 		{
 			VerifyThreadAccess();
-			ProcessMessageLoopUnsafe(cancellationToken);
+			ProcessTaskLoopUnsafe(cancellationToken, true);
 		} // proc ProcessMessageLoop
 
-		/// <summary>Post a task in this context.</summary>
-		/// <param name="d"></param>
-		/// <param name="state"></param>
-		public sealed override void Post(SendOrPostCallback d, object state)
-			=> EnqueueTask(d, state, null);
+		#endregion
 
-		/// <summary>Wait for a task, that will be executed in the current context.</summary>
-		/// <param name="d"></param>
-		/// <param name="state"></param>
-		public sealed override void Send(SendOrPostCallback d, object state)
-		{
-			using (var waitHandle = new ManualResetEventSlim(false))
-			{
-				EnqueueTask(d, state, waitHandle);
-				waitHandle.Wait();
-			}
-		} // proc Send
-
-		/// <summary>Access the the assigned thread.</summary>
-		protected abstract Thread QueueThread { get; }
+		/// <summary>Access the thread.</summary>
+		protected abstract Thread Thread { get; }
 		/// <summary>Is the message loop active.</summary>
 		protected bool Continue => doContinue;
-	} // class PpsSynchronizationContext
+	} // class PpsSynchronizationQueue
 
 	#endregion
-
-	#region -- class PpsSingleThreadSynchronizationContext ----------------------------
+	
+	#region -- class PpsSynchronizationThread -----------------------------------------
 
 	/// <summary>For background task, we want one execution thread, that we do not
 	/// switch between thread, and destroy the assigned context to an thread.</summary>
-	public sealed class PpsSingleThreadSynchronizationContext : PpsSynchronizationContext
+	public sealed class PpsSynchronizationThread : PpsSynchronizationQueue
 	{
 		private struct NoneResult { }
 
@@ -188,7 +238,7 @@ namespace TecWare.PPSn.Stuff
 		/// <param name="name"></param>
 		/// <param name="cancellationToken"></param>
 		/// <param name="mainProc"></param>
-		public PpsSingleThreadSynchronizationContext(string name, Func<Task> mainProc, CancellationToken cancellationToken)
+		public PpsSynchronizationThread(string name, Func<Task> mainProc, CancellationToken cancellationToken)
 		{
 			cancellationToken.Register(Finish);
 
@@ -202,9 +252,7 @@ namespace TecWare.PPSn.Stuff
 			// single thread apartment
 			thread.SetApartmentState(ApartmentState.STA);
 
-			Post(
-				state => mainProc().GetAwaiter().OnCompleted(Finish), null
-			);
+			EnqueueTask(state => mainProc().GetAwaiter().OnCompleted(Finish), null, null);
 
 			thread.Start();
 		} // ctor
@@ -213,30 +261,27 @@ namespace TecWare.PPSn.Stuff
 		public void Finish()
 			=> Stop();
 
-		private void ExecuteMessageLoop()
+		private void ExecuteMessageLoopCore()
 		{
-			var oldContext = Current;
-			SetSynchronizationContext(this);
 			try
 			{
-				ProcessMessageLoopUnsafe(CancellationToken.None);
+				ProcessTaskLoopUnsafe(CancellationToken.None, true);
 				taskCompletion.TrySetResult(new NoneResult());
 			}
 			catch (Exception e)
 			{
 				taskCompletion.TrySetException(e);
 			}
-			finally
-			{
-				SetSynchronizationContext(oldContext);
-			}
-		} // proc ExecuteMessageLoop
+		} // proc ExecuteMessageLoopCore
+
+		private void ExecuteMessageLoop()
+			=> Use(ExecuteMessageLoopCore);
 
 		/// <summary>Task for this execution thread.</summary>
 		public Task Task => taskCompletion.Task;
 		/// <summary>Assigned thread.</summary>
-		protected override Thread QueueThread => thread;
-	} // class PpsSingleThreadSynchronizationContext
+		protected override Thread Thread => thread;
+	} // class PpsSynchronizationThread
 
 	#endregion
 
@@ -291,5 +336,4 @@ namespace TecWare.PPSn.Stuff
 	} // class PpsThreadSafeMonitor
 
 	#endregion
-
 }

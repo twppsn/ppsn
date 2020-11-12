@@ -139,7 +139,7 @@
     <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Views.cs" />
     <Compile Include="Bde\PpsBdePaneHost.cs" />
-    <Compile Include="UI\PpsLockService.cs" />
+    <Compile Include="UI\PpsDpcService.cs" />
     <Compile Include="UI\PpsBarcodePopup.cs" />
     <Compile Include="UI\FieldFactory.cs" />
     <Compile Include="UI\PpsAttachmentsControl.xaml.cs">
