@@ -564,7 +564,15 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="uic:PpsConnectionState">
-					<TextBlock Text="State" />
+					<TextBlock x:Name="text" Text="Getrennt" />
+					<ControlTemplate.Triggers>
+						<DataTrigger Binding="{Binding ConnectionState}" Value="Connecting">
+							<Setter TargetName="text" Property="Text" Value="Verbinden" />
+						</DataTrigger>
+						<DataTrigger Binding="{Binding ConnectionState}" Value="Connected">
+							<Setter TargetName="text" Property="Text" Value="Verbunden" />
+						</DataTrigger>
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>

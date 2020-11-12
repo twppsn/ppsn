@@ -29,7 +29,7 @@
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
 
-			<ui:PpsGeometryImage Geometry="{Binding TopPaneHost.Image}" Foreground="{StaticResource PPSnWindowBackgroundBrush}" Width="26" Height="26" Opacity=".85" GeometryCircled="False" />
+			<ui:PpsGeometryImage Geometry="{Binding TopPaneHost.Image,Converter={x:Static ui:PpsGeometryImage.GeometryConverter}}" Foreground="{StaticResource PPSnWindowBackgroundBrush}" Width="26" Height="26" Opacity=".85" GeometryCircled="False" />
 			<Label Grid.Column="1" FontSize="20" Foreground="{StaticResource PPSnWindowBackgroundBrush}"
 				   VerticalContentAlignment="Center" Padding="0" Margin="0,0,12,0">
 				<Label.Tag>
@@ -131,10 +131,14 @@
 
 		<uic:PpsBarcodePopup IsOpen="{Binding IsChecked,ElementName=barcodeButton,Mode=TwoWay}" PlacementTarget="{Binding ElementName=barcodeButton}" Placement="Bottom" />
 
-		<ContentControl Grid.Row="1" Content="{Binding TopPaneHost}" />
+		<ContentControl x:Name="paneContent" Grid.Row="1" Content="{Binding TopPaneHost}" />
+		<Grid x:Name="disconnectProgress" Grid.Row="1" Grid.RowSpan="2" Visibility="Hidden">
+			<ui:PpsProgressControl Width="64" Height="64" Visibility="Visible" />
+		</Grid>
 
 		<!--Separator-->
 		<Rectangle Grid.Row="2" Height="1" StrokeThickness="0" Fill="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Top" SnapsToDevicePixels="True" Opacity=".5"/>
+		
 		<!--Navigation-->
 		<ui:PpsButton Grid.Row="2" Command="{x:Static bde:PpsBdeWindow.BackCommand}" Width="72" HorizontalAlignment="Left"
 					   Foreground="{StaticResource PPSnWindowForegroundBrush}" Background="Transparent" >
@@ -148,21 +152,5 @@
 			</ui:PpsButton.Content>
 		</ui:PpsButton>
 		<ui:PpsCommandBar Grid.Row="2" ExternalCommands="{Binding TopPaneHost.Commands}" Mode="Mixed" Margin="64,8,8,8" HorizontalAlignment="Right" VerticalAlignment="Center" />
-
-		<!-- Notification 
-		<Border DataContext="{Binding CurrentNotification,RelativeSource={RelativeSource AncestorType={x:Type local:PpsBdeWindow}}}" 
-				Grid.RowSpan="4"
-				Background="DarkGray" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="100" Padding="16"
-				Visibility="{Binding IsVisible,Converter={x:Static ui:PpsConverter.Visibility}}">
-			<StackPanel Orientation="Horizontal">
-				<lui:MdeImage XImageSource="{Binding Image}" Foreground="White" Width="30" Height="30"  />
-				<TextBlock Text="{Binding Text}" Foreground="White" FontSize="30" />
-			</StackPanel>
-		</Border>-->
-
-		<!--Alert
-		<Popup x:Name="alertPopup" StaysOpen="True" Placement="Center">
-			<lui:MdeAlertControl x:Name="altertView" />
-		</Popup>-->
 	</Grid>
 </ui:PpsWindow>

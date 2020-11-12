@@ -26,6 +26,7 @@ using System.Windows.Input;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Networking;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Bde
@@ -63,8 +64,9 @@ namespace TecWare.PPSn.Bde
 
 			// init locking
 			dpcService = services.GetService<PpsDpcService>(true);
-			dpcService.PropertyChanged += LockService_PropertyChanged;
+			dpcService.PropertyChanged += Shell_PropertyChanged;
 			SetValue(isLockedPropertyKey, dpcService.IsLocked);
+			Shell.PropertyChanged += Shell_PropertyChanged;
 
 			if (dpcService.IsShellMode)
 			{
@@ -92,6 +94,28 @@ namespace TecWare.PPSn.Bde
 
 		private bool CanAppInfoCommandExecute(PpsCommandContext arg)
 			=> FindOpenPane(typeof(PpsTracePane)) == null;
+
+		private void Shell_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == nameof(PpsDpcService.IsLocked))
+				SetValue(isLockedPropertyKey, dpcService.IsLocked);
+			else if (e.PropertyName == nameof(PpsDpcService.IsRestartNeeded))
+				App.InvokeRestartAsync(Shell).AwaitUI(this);
+			else if (e.PropertyName == nameof(IPpsCommunicationService.ConnectionState))
+			{
+				if (Shell.ConnectionState == PpsCommunicationState.Connected)
+				{
+					paneContent.IsEnabled = true;
+					disconnectProgress.Visibility = Visibility.Hidden; 
+				}
+				else
+				{
+					paneContent.IsEnabled = false;
+					disconnectProgress.Visibility = Visibility.Hidden;
+				}
+
+			}
+		} // event Shell_PropertyChanged
 
 		async Task IPpsBarcodeReceiver.OnBarcodeAsync(IPpsBarcodeProvider provider, string text, string format)
 		{
@@ -219,12 +243,6 @@ namespace TecWare.PPSn.Bde
 
 		private static readonly DependencyPropertyKey isLockedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsLocked), typeof(bool), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty IsLockedProperty = isLockedPropertyKey.DependencyProperty;
-
-		private void LockService_PropertyChanged(object sender, PropertyChangedEventArgs e)
-		{
-			if (e.PropertyName == nameof(PpsDpcService.IsLocked))
-				SetValue(isLockedPropertyKey, dpcService.IsLocked);
-		} // event LockService_PropertyChanged
 
 		public bool IsLocked => BooleanBox.GetBool(GetValue(IsLockedProperty));
 

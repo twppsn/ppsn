@@ -1054,9 +1054,7 @@ namespace TecWare.PPSn
 				if (e == null)
 					SetConnectionState(PpsCommunicationState.Connected);
 				else
-				{
 					SetConnectionState(PpsCommunicationState.Disconnected);
-				}
 			} // proc HttpRequestFinished
 
 			private void SetConnectionState(PpsCommunicationState state)
@@ -1064,7 +1062,7 @@ namespace TecWare.PPSn
 				if (state != connectionState)
 				{
 					connectionState = state;
-					OnPropertyChanged(nameof(ConnectionState));
+					this.GetService<IPpsUIService>(true).RunUI(() => OnPropertyChanged(nameof(ConnectionState)));
 				}
 			} // proc SetConnectionState
 
@@ -1634,6 +1632,16 @@ namespace TecWare.PPSn
 			var fileVersion = application.GetType().Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
 			return fileVersion == null ? new Version(1, 0, 0, 0) : new Version(fileVersion.Version);
 		} // func GetDefaultAssemblyVersion
+
+		#endregion
+
+		#region -- Log ----------------------------------------------------------------
+
+		/// <summary>Create a text file from the current log.</summary>
+		/// <param name="logService"></param>
+		/// <returns></returns>
+		public static string GetLogAsText(this IPpsLogService logService)
+			=> String.Join(Environment.NewLine, logService.Log.Select(c => c.ToString()));
 
 		#endregion
 

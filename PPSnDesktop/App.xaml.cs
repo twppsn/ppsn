@@ -661,7 +661,7 @@ namespace TecWare.PPSn
 			}
 		} // proc StartApplicationAsync
 
-		private void InvokeRestartCore(IPpsShellInfo shellInfo, ICredentials userInfo)
+		private static void InvokeRestartCore(IPpsShellInfo shellInfo, ICredentials userInfo)
 		{
 			var sb = new StringBuilder();
 
@@ -699,6 +699,19 @@ namespace TecWare.PPSn
 #endif
 			Process.Start(fileName, arguments);
 		} // proc InvokeRestartCore
+
+		/// <summary>Invoke restart</summary>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		public static async Task InvokeRestartAsync(IPpsShell shell)
+		{
+			// write log, before restart
+			await shell.GetService<PpsDpcService>(true).WriteLogToTempAsync();
+
+			// restart application
+			InvokeRestartCore(shell.Info, shell.Http.Credentials);
+			Current.Shutdown();
+		} // proc InvokeRestartAsync
 
 		private async Task<bool> CloseApplicationAsync()
 		{
@@ -997,18 +1010,27 @@ namespace TecWare.PPSn
 			if (noRestart)
 				return Task.CompletedTask;
 
-			// run msi
-			var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
-			var msiLogFile = Path.Combine(Path.GetTempPath(), applicationName + ".msi.txt");
-			var psi = new ProcessStartInfo(msiExe, "/i " + uri.ToString() + " /qb /l*v \"" + msiLogFile + "\" SHELLNAME=" + shell.Info.Name);
+			var dpc = shell.GetService<PpsDpcService>(false);
+			if (dpc == null)
+			{
+				// run msi
+				var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
+				var msiLogFile = Path.Combine(Path.GetTempPath(), applicationName + ".msi.txt");
+				var psi = new ProcessStartInfo(msiExe, "/i " + uri.ToString() + " /qb /l*v \"" + msiLogFile + "\" SHELLNAME=" + shell.Info.Name);
 
 #if DEBUG
-			MessageBox.Show($"RunMSI: {psi.FileName} {psi.Arguments}", "Debug");
-			return Task.CompletedTask;
+				MessageBox.Show($"RunMSI: {psi.FileName} {psi.Arguments}", "Debug");
+				return Task.CompletedTask;
 #else
-			Process.Start(psi);
-			throw new ExitApplicationException(false, null, null); // means quit application
+				Process.Start(psi);
+				throw new ExitApplicationException(false, null, null); // means quit application
 #endif
+			}
+			else
+			{
+				dpc.ScheduleRestart("Shell application version is newer.");
+				return Task.CompletedTask;
+			}
 		} // proc IPpsShellApplication.RequaestUpdateAsync
 
 		Task IPpsShellApplication.RequestRestartAsync(IPpsShell shell)
@@ -1016,7 +1038,14 @@ namespace TecWare.PPSn
 			if (noRestart)
 				return Task.CompletedTask;
 
-			throw new ExitApplicationException(true, shell.Info, shell.Http.Credentials);
+			var dpc = shell.GetService<PpsDpcService>(false);
+			if (dpc == null)
+				throw new ExitApplicationException(true, shell.Info, shell.Http.Credentials);
+			else
+			{
+				dpc.ScheduleRestart("Missmatch of application version.");
+				return Task.CompletedTask;
+			}
 		} // proc IPpsShellApplication.RequestRestartAsync
 
 		string IPpsShellApplication.Name => applicationName;

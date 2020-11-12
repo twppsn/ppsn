@@ -153,13 +153,15 @@ namespace TecWare.PPSn.Controls
 
 		private void ShowProgressOverlay(PpsProgressStack progressStack, DataTemplate progressTemplate)
 		{
-			progressOverlaySource.SetProgress(progressTemplate, progressStack);
+			if (progressOverlaySource != null)
+				progressOverlaySource.SetProgress(progressTemplate, progressStack);
 			Visibility = Visibility.Visible;
 		} // proc ShowProgressOverlay
 
 		private void HideProgressOverlay()
 		{
-			progressOverlaySource.ClearProgress();
+			if (progressOverlaySource != null)
+				progressOverlaySource.ClearProgress();
 			Visibility = Visibility.Collapsed;
 		} // proc HideProgressOverlay
 

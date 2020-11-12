@@ -19,9 +19,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using Microsoft.Win32;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -51,6 +51,7 @@ namespace TecWare.PPSn.UI
 		private readonly IPpsShell shell;
 		private bool isUnlocked = false;
 		private bool isLocked;
+		private bool isRestartNeeded = false;
 
 		private readonly Dictionary<string, IPpsSettingRestartCondition> conditions = new Dictionary<string, IPpsSettingRestartCondition>();
 
@@ -108,6 +109,16 @@ namespace TecWare.PPSn.UI
 				Debug.Print(e.ToString());
 			}
 		} // func PushMessageAsync
+
+		public async Task WriteLogToTempAsync()
+		{
+			var logService = shell.GetService<IPpsLogService>(false);
+			if (logService != null)
+			{
+				var text = logService.GetLogAsText();
+				await Task.Run(() => File.WriteAllText(Path.Combine(Path.GetTempPath(), "PPSnDesktop.txt"), text));
+			}
+		} // proc WriteLogToTempAsync
 
 		public async Task PushLogAsync(string log)
 		{
@@ -236,11 +247,15 @@ namespace TecWare.PPSn.UI
 
 		public void ScheduleRestart(string reason)
 		{
+			shell.LogProxy("Shutdown").LogMsg(LogMsgType.Information, reason);
+
+			Set(ref isRestartNeeded, true, nameof(isRestartNeeded));
 		} // proc ScheduleRestart
 
 		#endregion
 
 		public bool IsLocked => isLocked;
+		public bool IsRestartNeeded => isRestartNeeded;
 
 		public IPpsShell Shell => shell;
 	} // class PpsDpcService

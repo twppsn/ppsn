@@ -97,9 +97,10 @@ namespace TecWare.PPSn.UI
 			#region -- Lock-Service ---------------------------------------------------
 
 			public async Task SendLogAsync()
-			{
-				var logService = pane.Shell.GetService<IPpsLogService>(true);
-				await dpcService.PushLogAsync(String.Join(Environment.NewLine, logService.Log.Select(c => c.ToString())));
+			{	
+				await dpcService.PushLogAsync(
+					pane.Shell.GetService<IPpsLogService>(true).GetLogAsText()
+				);
 				await Task.Delay(3000);
 				await UI.ShowNotificationAsync("Log gesendet.", PpsImage.Information);
 			} // proc SendLogAsync

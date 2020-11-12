@@ -14,8 +14,10 @@
 //
 #endregion
 using System;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using TecWare.PPSn.UI;
@@ -43,13 +45,18 @@ namespace TecWare.PPSn.Controls
 		private static void OnGeometryNameChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			var image = (PpsGeometryImage)d;
-			object resource = null;
-			if (e.NewValue is string resName)
-				resource = Application.Current.TryFindResource($"{resName}PathGeometry") ?? Application.Current.TryFindResource(resName);
+			var resource = e.NewValue is string resName ? TryFindGeometryByName(resName) : null;
 
-			image.Geometry = resource  as Geometry ?? Geometry.Empty;
+			image.Geometry = resource as Geometry ?? Geometry.Empty;
 			image.HasGeometry = resource != null;
 		} // proc OnImageNameChanged
+
+		private static object TryFindGeometryByName(string geometryName)
+		{
+			return geometryName.EndsWith("PathGeometry")
+				? Application.Current.TryFindResource(geometryName)
+				: Application.Current.TryFindResource($"{geometryName}PathGeometry") ?? Application.Current.TryFindResource(geometryName);
+		} // func TryFindGeometryByName
 
 		/// <summary></summary>
 		/// <param name="sizeInfo"></param>
@@ -85,5 +92,28 @@ namespace TecWare.PPSn.Controls
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsGeometryImage), new FrameworkPropertyMetadata(typeof(PpsGeometryImage)));
 		}
+
+		#region -- GeometryConverter --------------------------------------------------
+
+		private sealed class GeometryConverterImplementation : IValueConverter
+		{
+			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+			{
+				if (value is Geometry)
+					return value;
+				else if (value is string name)
+					return TryFindGeometryByName(name);
+				else
+					return value;
+			} // func Convert
+
+			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) 
+				=> throw new NotSupportedException();
+		}
+
+		/// <summary>Convert to enforce a geometry.</summary>
+		public static IValueConverter GeometryConverter { get; } = new GeometryConverterImplementation();
+
+		#endregion
 	} // class class PpsGeometryImage
 }
