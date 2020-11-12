@@ -273,12 +273,12 @@ namespace PPSnExcel
 			=> RunUICore(action);
 
 		Task<T> IPpsUIService.RunUI<T>(Func<T> action)
-			=> RunUICore<T>(action);
+			=> RunUICore(action);
 
 		void IPpsUIService.ShowException(PpsExceptionShowFlags flags, Exception exception, string alternativeMessage)
 			=> PpsWinShell.ShowException(Globals.ThisAddIn, flags, exception, alternativeMessage);
 
-		void IPpsUIService.ShowNotification(string message, PpsImage image)
+		Task IPpsUIService.ShowNotificationAsync(object message, PpsImage image)
 			=> throw new NotImplementedException();
 
 		string[] IPpsUIService.Ok => new string[] { "Ok" };
