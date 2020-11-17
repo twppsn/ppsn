@@ -17,6 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -409,6 +411,156 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public static long GetVersionCode(this Version version)
 			=> GetPart(version.Major, 48) | GetPart(version.Minor, 32) | GetPart(version.Build, 16) | GetPart(version.Revision, 0);
+
+		#endregion
+
+		#region -- Drawing Helper -----------------------------------------------------
+
+		/// <summary>Parse a rectangle.</summary>
+		/// <param name="value"></param>
+		/// <param name="rectangle"></param>
+		/// <returns></returns>
+		public static bool TryParseRectangle(string value, out RectangleF rectangle)
+		{
+			if (value == null)
+				goto fail;
+
+			var values = value.Split(',');
+			if (values.Length == 4
+				&& Single.TryParse(values[0], NumberStyles.Number, CultureInfo.InvariantCulture, out var x)
+				&& Single.TryParse(values[1], NumberStyles.Number, CultureInfo.InvariantCulture, out var y)
+				&& Single.TryParse(values[2], NumberStyles.Number, CultureInfo.InvariantCulture, out var w)
+				&& Single.TryParse(values[3], NumberStyles.Number, CultureInfo.InvariantCulture, out var h)
+			)
+			{
+				rectangle = new RectangleF(x, y, x + w, y + h);
+				return true;
+			}
+			fail:
+			rectangle = RectangleF.Empty;
+			return false;
+		} // func TryParseRectangle
+
+
+		private static bool TryParseColorPart(string[] values, int idx, out byte result)
+		{
+			var p = values[idx].Trim();
+			if (String.IsNullOrEmpty(p))
+			{
+				result = 0;
+				return true;
+			}
+			else if (p.IndexOf('.') >= 0 && Double.TryParse(p, NumberStyles.Number, CultureInfo.InvariantCulture, out var f))
+			{
+				result = unchecked((byte)Convert.ToInt32(f * 255));
+				return true;
+			}
+			else if (Int32.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i))
+			{
+				result = unchecked((byte)i);
+				return true;
+			}
+			else
+			{
+				result = 0;
+				return false;
+			}
+		} // func TryParseColorPart
+
+		private static bool TryParseColorHexPart(string value, int ofs, out byte result)
+		{
+			var p = value.Substring(ofs, 2);
+			if (Byte.TryParse(p, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out result))
+				return true;
+			else
+			{
+				result = 0;
+				return false;
+			}
+		} // func TryParseColorHexPart
+
+		/// <summary>Parse a color from a string.</summary>
+		/// <param name="value"></param>
+		/// <param name="color"></param>
+		/// <returns></returns>
+		public static bool TryParseColor(string value, out Color color)
+		{
+			color = Color.Transparent;
+
+			if (String.IsNullOrWhiteSpace(value))
+				return false;
+
+			value = value.Trim();
+			if (value[0] == '#') // html-format
+			{
+				switch (value.Length)
+				{
+					case 9: // ARGB
+						if (TryParseColorHexPart(value, 1, out var a)
+							&& TryParseColorHexPart(value, 3, out var r)
+							&& TryParseColorHexPart(value, 5, out var g)
+							&& TryParseColorHexPart(value, 7, out var b))
+						{
+							color = Color.FromArgb(a, r, g, b);
+							return true;
+						}
+						return false;
+					case 7: // RGB
+						if (TryParseColorHexPart(value, 1, out r)
+							&& TryParseColorHexPart(value, 3, out g)
+							&& TryParseColorHexPart(value, 5, out b))
+						{
+							color = Color.FromArgb(255, r, g, b);
+							return true;
+						}
+						return false;
+					default:
+						return false;
+				}
+			}
+			else
+			{
+				var values = value.Split(new char[] { ',', ';' });
+				switch (values.Length)
+				{
+					case 4: // ARGB
+						if (TryParseColorPart(values, 0, out var a)
+							&& TryParseColorPart(values, 1, out var r)
+							&& TryParseColorPart(values, 2, out var g)
+							&& TryParseColorPart(values, 3, out var b))
+						{
+							color = Color.FromArgb(a, r, g, b);
+							return true;
+						}
+						return false;
+					case 3: // RGB
+						if (TryParseColorPart(values, 0, out r)
+							&& TryParseColorPart(values, 1, out g)
+							&& TryParseColorPart(values, 2, out b))
+						{
+							color = Color.FromArgb(255, r, g, b);
+							return true;
+						}
+						return false;
+					default:
+						return false;
+				}
+			}
+		} // func TryParseColor
+
+		/// <summary>Parse a color from a string.</summary>
+		/// <param name="value"></param>
+		/// <param name="defaultColor"></param>
+		/// <returns></returns>
+		public static Color ParseColor(string value, Color defaultColor)
+			=> TryParseColor(value, out var cl) ? cl : defaultColor;
+
+		/// <summary></summary>
+		/// <param name="color"></param>
+		/// <param name="alpha"></param>
+		/// <returns></returns>
+		public static Color ChangeColorOpacity(Color color, int alpha)
+			=> Color.FromArgb(alpha, color.R, color.G, color.B);
 
 		#endregion
 	} // class PpsStuff

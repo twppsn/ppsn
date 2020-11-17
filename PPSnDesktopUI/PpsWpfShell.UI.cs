@@ -16,9 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using TecWare.DE.Stuff;
 
@@ -41,7 +38,7 @@ namespace TecWare.PPSn
 
 	public static partial class PpsWpfShell
 	{
-		#region -- FindResource -------------------------------------------------------
+		#region -- FindResource, LoadResource -----------------------------------------
 
 		#region -- class FindResourceStackItem ----------------------------------------
 
@@ -129,6 +126,20 @@ namespace TecWare.PPSn
 		public static T FindResource<T>(this IPpsShell shell, object resourceKey)
 			where T : class
 			=> shell.GetService<IPpsWpfResources>(true).FindResource<T>(resourceKey);
+
+		/// <summary>Load a resource dictionary from a xaml-source.</summary>
+		/// <param name="type"></param>
+		/// <param name="relativePath"></param>
+		/// <returns></returns>
+		public static ResourceDictionary LoadResources(Type type, string relativePath)
+			=> new ResourceDictionary { Source = GetResourceUri(type, relativePath) };
+
+		/// <summary>Create a application resource uri for the resource from an assembly.</summary>
+		/// <param name="type"></param>
+		/// <param name="relativePath"></param>
+		/// <returns></returns>
+		public static Uri GetResourceUri(Type type, string relativePath) 
+			=> new Uri($"pack://application:,,,/{type.Assembly.GetName().Name};component/" + relativePath);
 
 		#endregion
 

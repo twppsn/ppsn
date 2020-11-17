@@ -16,7 +16,7 @@ specific language governing permissions and limitations under the Licence.
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
 	<!--arrow-right-bold-->
-	<PathGeometry x:Key="debugPathGeometry" 
+	<PathGeometry x:Key="debugPathGeometry"
 				  Figures="M4,15V9H12V4.16L19.84,12L12,19.84V15H4Z" />
 
 	<!--information-->
