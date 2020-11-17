@@ -30,18 +30,19 @@ using TecWare.DE.Networking;
 using TecWare.DE.Server.Configuration;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class GeometryInfo -----------------------------------------------------
+	#region -- class PpsGeometryInfo --------------------------------------------------
 
 	/// <summary>Description of a style geometry</summary>
-	public sealed class GeometryInfo
+	public sealed class PpsGeometryInfo
 	{
 		/// <summary>Default path view port.</summary>
 		public const string DefaultViewPort = "0,0,24,24";
 
-		internal GeometryInfo(string name, string path, string path2, string viewport)
+		internal PpsGeometryInfo(string name, string path, string path2, string viewport)
 		{
 			Name = name ?? throw new ArgumentNullException(nameof(name));
 			RawPath = path ?? throw new ArgumentNullException(nameof(path));
@@ -97,7 +98,7 @@ namespace TecWare.PPSn.Server
 		public string RawPath { get; }
 		/// <summary>Wpf path of the geometry for the accent color.</summary>
 		public string RawPath2 { get; }
-	} // class GeometryInfo
+	} // class PpsGeometryInfo
 
 	#endregion
 
@@ -124,9 +125,9 @@ namespace TecWare.PPSn.Server
 			return styles != null;
 		} // func TryGetStyleNode
 
-		private static GeometryInfo CreateGeometryInfo(XConfigNode x)
+		private static PpsGeometryInfo CreateGeometryInfo(XConfigNode x)
 		{
-			return new GeometryInfo(
+			return new PpsGeometryInfo(
 				x.GetAttribute<string>("name"),
 				x.GetAttribute<string>("path"),
 				x.GetAttribute<string>("path2"),
@@ -141,7 +142,7 @@ namespace TecWare.PPSn.Server
 		/// <summary>Get all geometries</summary>
 		/// <returns></returns>
 		[LuaMember]
-		public IEnumerable<GeometryInfo> GetGeometries()
+		public IEnumerable<PpsGeometryInfo> GetGeometries()
 		{
 			if (TryGetStyleNode(out var styles))
 			{
@@ -154,7 +155,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="geometryName"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public GeometryInfo GetGeometry(string geometryName)
+		public PpsGeometryInfo GetGeometry(string geometryName)
 		{
 			if (TryGetStyleNode(out var styles))
 				return styles.Elements(PpsStuff.xnStyleGeometry)
@@ -164,6 +165,12 @@ namespace TecWare.PPSn.Server
 			else
 				return null;
 		} // func GetGeometryPath
+
+		/// <summary>Selector for geometries</summary>
+		/// <param name="dataSource"></param>
+		/// <returns></returns>
+		public PpsDataSelector GetGeometrySelector(PpsSysDataSource dataSource)
+			=> new PpsGenericSelector<PpsGeometryInfo>(dataSource.SystemConnection, "sys.geometries", Server.Configuration.ConfigurationStamp.ToFileTimeUtc(), GetGeometries());
 
 		#endregion
 
@@ -260,64 +267,6 @@ namespace TecWare.PPSn.Server
 			return true;
 		} // func WriteXmllGeometriesAsync
 
-		private async Task<bool> WriteXamlGeometriesAsync(IDEWebRequestScope r)
-		{
-			// set time stamp
-			r.SetLastModified(lastConfigurationTimeStamp);
-
-			// write content
-			if (r.InputMethod == HttpMethod.Head.Method)
-				r.SetStatus(HttpStatusCode.OK, "Ok");
-			else
-			{
-				await Task.Run(() =>
-					{
-						using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Application.Xaml), Procs.XmlWriterSettings))
-						{
-							xml.WriteAttributeString("xmlns", "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
-							xml.WriteAttributeString("xmlns:x", "http://schemas.microsoft.com/winfx/2006/xaml");
-							
-							xml.WriteStartElement("ResourceDictionary");
-
-							foreach (var g in GetGeometries())
-							{
-								if (g.RawPath2 == null)
-								{
-									xml.WriteStartElement("PathGeometry");
-									xml.WriteAttributeString("Key", "x", g.Name + "PathGeometry");
-									xml.WriteAttributeString("Figures", g.RawPath);
-									xml.WriteEndElement();
-								}
-								else
-								{
-									xml.WriteStartElement("CombinedGeometry");
-
-									xml.WriteStartElement("CombinedGeometry.Geometry1");
-									xml.WriteStartElement("PathGeometry");
-									xml.WriteAttributeString("Figures", g.RawPath);
-									xml.WriteEndElement();
-									xml.WriteEndElement();
-
-									xml.WriteStartElement("CombinedGeometry.Geometry2");
-									xml.WriteStartElement("PathGeometry");
-									xml.WriteAttributeString("Figures", g.RawPath2);
-									xml.WriteEndElement();
-									xml.WriteEndElement();
-
-									xml.WriteEndElement();
-								}
-							}
-
-							xml.WriteEndElement();
-							xml.Flush();
-						}
-					}
-				);
-			}
-			
-			return true;
-		} // func WriteXamlGeometriesAsync
-
 		#endregion
 
 		#region -- Write single geometry ----------------------------------------------
@@ -383,7 +332,7 @@ namespace TecWare.PPSn.Server
 			g.FillPath(brush, graphicsPath);
 		} // func DrawSvgPath
 
-		private bool TryGetSvgPath(IDEWebRequestScope r, GeometryInfo geometry, out string path, out string pathFill)
+		private bool TryGetSvgPath(IDEWebRequestScope r, PpsGeometryInfo geometry, out string path, out string pathFill)
 		{
 			if (!geometry.TryGetPath(out path, out pathFill))
 			{
@@ -413,7 +362,7 @@ namespace TecWare.PPSn.Server
 			color2 = PpsStuff.ChangeColorOpacity(PpsStuff.ParseColor(r.GetProperty("f2", null), color), Convert.ToInt32(opacity * 255));
 		} // func GetImagePropertiesFromRequest
 
-		private async Task<bool> ProcessSingleGeometryAsSvgAsync(IDEWebRequestScope r, GeometryInfo geometry)
+		private async Task<bool> ProcessSingleGeometryAsSvgAsync(IDEWebRequestScope r, PpsGeometryInfo geometry)
 		{
 			if (TryGetSvgPath(r, geometry, out var path, out var pathFill))
 			{
@@ -439,7 +388,7 @@ namespace TecWare.PPSn.Server
 			return true;
 		} // func ProcessSingleGeometryAsSvgAsync
 
-		private async Task<bool> ProcessSingleGeometryAsImageAsync(IDEWebRequestScope r, GeometryInfo geometry, string mimeType, ImageFormat imageFormat )
+		private async Task<bool> ProcessSingleGeometryAsImageAsync(IDEWebRequestScope r, PpsGeometryInfo geometry, string mimeType, ImageFormat imageFormat )
 		{
 			if (TryGetSvgPath(r, geometry, out var pathData, out var pathFill))
 			{
@@ -502,7 +451,7 @@ namespace TecWare.PPSn.Server
 			return true;
 		} // proc ProcessSingleGeometryAsImageAsync
 
-		private Task<bool> ProcessSingleGeometryAsync(IDEWebRequestScope r, GeometryInfo geometry)
+		private Task<bool> ProcessSingleGeometryAsync(IDEWebRequestScope r, PpsGeometryInfo geometry)
 		{
 			var outputType = GetImageOutputByArgument(r.GetProperty("t", null), GetImageOutputByMimeType(r.AcceptedTypes?.FirstOrDefault(), ImageOuput.Svg));
 			switch(outputType)

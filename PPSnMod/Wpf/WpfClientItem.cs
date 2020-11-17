@@ -19,6 +19,7 @@ using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -1228,80 +1229,131 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc GetXamlContentType
 
+		private async Task<bool> WriteStyleResourceDictionaryAsync(IDEWebRequestScope r)
+		{
+			// set time stamp
+			r.SetLastModified(Server.Configuration.ConfigurationStamp);
+			r.SetInlineFileName("styles.xaml");
+
+			// write content
+			if (r.InputMethod == HttpMethod.Head.Method)
+				r.SetStatus(HttpStatusCode.OK, "Ok");
+			else
+			{
+				await Task.Run(() =>
+				{
+					using (var xml = XmlWriter.Create(r.GetOutputTextWriter(GetXamlContentType(r)), Procs.XmlWriterSettings))
+					{
+						xml.WriteStartDocument();
+						xml.WriteStartElement(xnXamlResourceDictionary.LocalName, xnXamlResourceDictionary.NamespaceName);
+						xml.WriteAttributeString("xmlns", String.Empty, null, xnXamlResourceDictionary.NamespaceName);
+						xml.WriteAttributeString("xmlns", "x", null, xnXamlKey.NamespaceName);
+
+
+						foreach (var g in application.GetGeometries())
+						{
+							if (g.RawPath2 == null)
+							{
+								xml.WriteStartElement("PathGeometry");
+								xml.WriteAttributeString("x", xnXamlKey.LocalName, null, g.Name + "PathGeometry");
+								xml.WriteAttributeString("Figures", g.RawPath);
+								xml.WriteEndElement();
+							}
+							else
+							{
+								xml.WriteStartElement("CombinedGeometry");
+
+								xml.WriteStartElement("CombinedGeometry.Geometry1");
+								xml.WriteStartElement("PathGeometry");
+								xml.WriteAttributeString("Figures", g.RawPath);
+								xml.WriteEndElement();
+								xml.WriteEndElement();
+
+								xml.WriteStartElement("CombinedGeometry.Geometry2");
+								xml.WriteStartElement("PathGeometry");
+								xml.WriteAttributeString("Figures", g.RawPath2);
+								xml.WriteEndElement();
+								xml.WriteEndElement();
+
+								xml.WriteEndElement();
+							}
+						}
+
+						xml.WriteEndElement();
+						xml.WriteEndDocument();
+						xml.Flush();
+					}
+				}
+				);
+			}
+
+			return true;
+		} // func WriteStyleResourceDictionaryAsync
+
 		/// <summary>Installs handlers for some virtual client files.</summary>
 		/// <param name="r"></param>
 		/// <returns></returns>
 		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			if (r.RelativeSubPath == "styles.xaml")
-			{
-				await Task.Run(() =>
-				{
-					var id = r.GetProperty("id", "default");
-					var data = ParseXamlTheme(id);
-					r.SetInlineFileName(r.RelativeSubPath);
-					r.SetLastModified(data.LastChanged);
-					r.WriteXml(data.Document, GetXamlContentType(r));
-				});
-				return true;
-			}
-			else if (r.RelativeSubPath == "environment.xml")
-			{
-				await Task.Run(() => ParseEnvironment(r));
-				return true;
-			}
-			else if (r.RelativeSubPath == "templates.xaml")
-			{
+				return await WriteStyleResourceDictionaryAsync(r);
+			//else if (r.RelativeSubPath == "environment.xml")
+			//{
+			//	await Task.Run(() => ParseEnvironment(r));
+			//	return true;
+			//}
+			//else if (r.RelativeSubPath == "templates.xaml")
+			//{
 
-				await Task.Run(() =>
-				{
-					var data = ParseXamlTemplates();
-					r.SetInlineFileName(r.RelativeSubPath);
-					r.SetLastModified(data.LastChanged);
-					r.WriteXml(data.Document, GetXamlContentType(r));
-				});
-				return true;
-			}
-			else if (r.RelativeSubPath == "masterdata.xml")
-			{
-				await Task.Run(() =>
-				{
-					r.SetInlineFileName(r.RelativeSubPath);
-					masterDataSetDefinition.WriteToDEContext(r, ConfigPath + "/masterdata.xml");
-				});
-				return true;
-			}
-			else if (r.RelativeSubPath.EndsWith(".xaml")) // parse wpf template file
-			{
-				if (await Task.Run(() =>
-				 {
-					 var paneFile = ParseXaml(r.RelativeSubPath);
-					 if (paneFile != null)
-					 {
-						 r.SetInlineFileName(r.RelativeSubPath);
-						 r.SetLastModified(paneFile.LastChanged);
-						 r.WriteXml(paneFile.Document, GetXamlContentType(r));
-						 return true;
-					 }
-					 else
-						 return false;
-				 }))
-					return true;
-			}
-			else if (r.RelativeSubPath.EndsWith(".lua")) // sent a code snippet
-			{
-				if (await Task.Run(() =>
-				{
-					if (ResolveXamlPath(r.RelativeSubPath, out var fullPath))
-					{
-						r.WriteFile(fullPath, MimeTypes.Text.Plain);
-						return true;
-					}
-					else
-						return false;
-				}))
-					return true;
-			}
+			//	await Task.Run(() =>
+			//	{
+			//		var data = ParseXamlTemplates();
+			//		r.SetInlineFileName(r.RelativeSubPath);
+			//		r.SetLastModified(data.LastChanged);
+			//		r.WriteXml(data.Document, GetXamlContentType(r));
+			//	});
+			//	return true;
+			//}
+			//else if (r.RelativeSubPath == "masterdata.xml")
+			//{
+			//	await Task.Run(() =>
+			//	{
+			//		r.SetInlineFileName(r.RelativeSubPath);
+			//		masterDataSetDefinition.WriteToDEContext(r, ConfigPath + "/masterdata.xml");
+			//	});
+			//	return true;
+			//}
+			//else if (r.RelativeSubPath.EndsWith(".xaml")) // parse wpf template file
+			//{
+			//	if (await Task.Run(() =>
+			//	 {
+			//		 var paneFile = ParseXaml(r.RelativeSubPath);
+			//		 if (paneFile != null)
+			//		 {
+			//			 r.SetInlineFileName(r.RelativeSubPath);
+			//			 r.SetLastModified(paneFile.LastChanged);
+			//			 r.WriteXml(paneFile.Document, GetXamlContentType(r));
+			//			 return true;
+			//		 }
+			//		 else
+			//			 return false;
+			//	 }))
+			//		return true;
+			//}
+			//else if (r.RelativeSubPath.EndsWith(".lua")) // sent a code snippet
+			//{
+			//	if (await Task.Run(() =>
+			//	{
+			//		if (ResolveXamlPath(r.RelativeSubPath, out var fullPath))
+			//		{
+			//			r.WriteFile(fullPath, MimeTypes.Text.Plain);
+			//			return true;
+			//		}
+			//		else
+			//			return false;
+			//	}))
+			//		return true;
+			//}
 			return await base.OnProcessRequestAsync(r);
 		} // func OnProcessRequest
 
