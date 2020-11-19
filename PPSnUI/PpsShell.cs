@@ -819,7 +819,7 @@ namespace TecWare.PPSn
 						}
 
 						// load shell services
-						foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+						foreach (var init in EnumerateShellServiceInit())
 							await init.InitAsync();
 
 						if (notify != null)
@@ -845,7 +845,7 @@ namespace TecWare.PPSn
 				await LogoutAsync();
 
 				// notify shell services
-				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+				foreach (var init in EnumerateShellServiceInit())
 					await init.DoneAsync();
 
 				Dispose();
@@ -863,6 +863,9 @@ namespace TecWare.PPSn
 
 			IPpsShellBackgroundTask IPpsShell.RegisterTask(Func<Task> taskAction, TimeSpan waitTime)
 				=> backgroundWorker.RegisterTask(taskAction, waitTime);
+
+			private IEnumerable<IPpsShellServiceInit> EnumerateShellServiceInit()
+				=> services.Values.OfType<IPpsShellServiceInit>().Distinct();
 
 			#endregion
 
@@ -1020,7 +1023,7 @@ namespace TecWare.PPSn
 					OnPropertyChanged(nameof(Http));
 
 					// notify login to services
-					foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+					foreach (var init in EnumerateShellServiceInit())
 						await init.InitUserAsync();
 				}
 				catch
@@ -1032,7 +1035,7 @@ namespace TecWare.PPSn
 
 			private async Task LogoutAsync()
 			{
-				foreach (var init in services.Values.OfType<IPpsShellServiceInit>())
+				foreach (var init in EnumerateShellServiceInit())
 					await init.DoneUserAsync();
 			} // proc LogoutAsync
 

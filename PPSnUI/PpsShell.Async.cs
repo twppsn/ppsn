@@ -58,7 +58,7 @@ namespace TecWare.PPSn
 
 		private static void AwaitCore(Task t, IServiceProvider sp)
 		{
-			if (asyncHelper.Value != null)
+			if (!t.IsCompleted && asyncHelper.Value != null)
 				asyncHelper.Value.Await(sp, t);
 		} // proc AwaitCore
 
@@ -186,5 +186,61 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- ToAsyncResult ------------------------------------------------------
+
+		/// <summary>Creates the Begin/End-pattern</summary>
+		/// <param name="task"></param>
+		/// <param name="callback"></param>
+		/// <param name="state"></param>
+		/// <returns></returns>
+		public static IAsyncResult ToAsyncResult<T>(this Task<T> task, AsyncCallback callback, object state)
+		{
+			if (task.AsyncState == state)
+			{
+				if (callback == null)
+					return task;
+				else
+					return task.ContinueWith(t => callback(t), TaskContinuationOptions.ExecuteSynchronously);
+			}
+			else
+			{
+				var tcs = new TaskCompletionSource<T>(state);
+
+				task.ContinueWith(
+					t =>
+					{
+						if (t.IsFaulted)
+							tcs.TrySetException(t.Exception.InnerException);
+						else if (t.IsCanceled)
+							tcs.TrySetCanceled();
+						else
+							tcs.TrySetResult(t.Result);
+
+						callback?.Invoke(tcs.Task);
+					},
+					TaskContinuationOptions.ExecuteSynchronously
+				);
+
+				return tcs.Task;
+			}
+		} // func ToAsyncResult
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="ar"></param>
+		/// <returns></returns>
+		public static T EndAsyncResult<T>(IAsyncResult ar)
+		{
+			try
+			{
+				return ((Task<T>)ar).Result;
+			}
+			catch (AggregateException e)
+			{
+				throw e.InnerException;
+			}
+		} // proc EndAsyncResult
+
+		#endregion
 	} // class PpsShell
 }

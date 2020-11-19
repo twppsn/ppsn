@@ -15,9 +15,12 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -545,16 +548,41 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private readonly IPpsShell shell;
+		#region -- class PpsWebRequestCreate ------------------------------------------
 
-		private readonly ResourceDictionary mainResources;	  // Application resources
-		private readonly ResourceDictionary defaultResources; // default resource, loaded from the server
+		private class PpsWebRequestCreate : IWebRequestCreate
+		{
+			private readonly WeakReference<PpsWpfShellService> shellReference;
+
+			public PpsWebRequestCreate(PpsWpfShellService shell)
+			{
+				shellReference = new WeakReference<PpsWpfShellService>(shell);
+			} // ctor
+
+			public WebRequest Create(Uri uri)
+			{
+				if (shellReference.TryGetTarget(out var environment))
+					return environment.CreateWebRequest(uri);
+				else
+					throw new ObjectDisposedException("Shell does not exist anymore.");
+			} // func Create
+		} // class PpsWebRequestCreate
+
+		#endregion
+
+		private readonly IPpsShell shell;
+		private readonly Uri shellUri;
+
+		private readonly ResourceDictionary mainResources;    // Application resources
+		private readonly ResourceDictionary defaultResources; // default resource, to register shell
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsWpfShellService(IPpsShell shell)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+
+			shellUri = RegisterWebRequestProxy(this, GetNextShellId());
 
 			DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, shell, e));
 			DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, shell, e));
@@ -566,6 +594,10 @@ namespace TecWare.PPSn
 		Task IPpsShellServiceInit.InitAsync()
 		{
 			mainResources.MergedDictionaries.Add(defaultResources);
+
+			// try load additional resources from the server
+			defaultResources.Source = CreateProxyUri("wpf/styles.xaml");
+
 			return Task.CompletedTask;
 		} // proc IPpsShellServiceInit.InitAsync
 
@@ -614,7 +646,38 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- WebRequest - Proxy -------------------------------------------------
+
+		private static Uri RegisterWebRequestProxy(PpsWpfShellService shellService, int shellId)
+		{
+			var baseUri = new Uri($"http://ppsn{shellId}.local");
+			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(shellService));
+			return baseUri;
+		} // proc RegisterWebRequestProxy
+
+		private WebRequest CreateWebRequest(Uri uri)
+		{
+			if (!uri.IsAbsoluteUri)
+				throw new ArgumentException("Uri must absolute.", nameof(uri));
+
+			var absolutePath = uri.AbsolutePath;
+			if (absolutePath.StartsWith("/")) // if the uri starts with "/", remove it, because the info.remoteUri is our root
+				absolutePath = absolutePath.Substring(1);
+
+			// create a relative uri
+			var relativeUri = new Uri(absolutePath + uri.GetComponents(UriComponents.Query | UriComponents.KeepDelimiter, UriFormat.UriEscaped), UriKind.Relative);
+			return new PpsProxyRequest(shell.Http, uri, relativeUri);
+		} // func CreateWebRequest
+
+		private Uri CreateProxyUri(string relativePath)
+			=> new Uri(shellUri, relativePath);
+
+		#endregion
+
 		#region -- IPpsWpfResources - members -----------------------------------------
+
+		Uri IPpsWpfResources.CreateProxyUri(string relativePath)
+			=> CreateProxyUri(relativePath);
 
 		IEnumerable<T> IPpsWpfResources.FindResourceByKey<TKEY, T>(Predicate<TKEY> predicate)
 			=> mainResources.FindResourceByKey<TKEY, T>(predicate);
@@ -625,6 +688,13 @@ namespace TecWare.PPSn
 		#endregion
 
 		public IPpsShell Shell => shell;
+
+		// -- Static ----------------------------------------------------------
+
+		private static int shellCounter = 1;
+
+		private static int GetNextShellId()
+			=> shellCounter++;
 	} // class PpsWpfShellService
 
 	#endregion
@@ -704,7 +774,7 @@ namespace TecWare.PPSn
 			inputManager.PreProcessInput -= preProcessInputEventHandler;
 		} // proc Dispose
 
-		protected override void VerifyAccess() 
+		protected override void VerifyAccess()
 			=> dispatcher.VerifyAccess();
 
 		protected override void StartIdleCore()
@@ -733,6 +803,337 @@ namespace TecWare.PPSn
 			CommandManager.InvalidateRequerySuggested();
 		} // proc RestartIdleTimer
 	} // class class PpsWpfIdleService
+
+	#endregion
+
+	#region -- class PpsProxyRequest --------------------------------------------------
+
+	/// <summary>Proxy request to implementation, that is able to switch between offline 
+	/// cache and online mode.</summary>
+	public sealed class PpsProxyRequest : WebRequest, IEquatable<PpsProxyRequest>
+	{
+		#region -- class PpsProxyResponse ---------------------------------------------
+
+		private sealed class PpsProxyResponse : WebResponse
+		{
+			private readonly HttpRequestMessage request;
+			private readonly HttpResponseMessage response;
+			private readonly Stream responseStream;
+
+			private readonly WebHeaderCollection headers;
+
+			public PpsProxyResponse(HttpRequestMessage request, HttpResponseMessage response, Stream responseStream)
+			{
+				this.request = request ?? throw new ArgumentNullException(nameof(request));
+				this.response = response ?? throw new ArgumentNullException(nameof(response));
+				this.responseStream = responseStream ?? new MemoryStream();
+
+				// todo: copy headers
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				responseStream.Dispose();
+				response.Dispose();
+				request.Dispose();
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			public override Stream GetResponseStream()
+				=> responseStream;
+
+			public override WebHeaderCollection Headers => headers;
+
+			public override long ContentLength { get => responseStream.Length; set => throw new NotSupportedException(); }
+			public override string ContentType { get => response.Content?.Headers.ContentType?.ToString(); set => throw new NotSupportedException(); }
+
+			public override Uri ResponseUri => request.RequestUri;
+		} // class PpsProxyResponse
+
+		#endregion
+
+		private readonly DEHttpClient http; // owner, that retrieves a resource
+		private readonly Uri originalUri;
+		private readonly Uri relativeUri; // relative Uri
+
+		private bool aborted = false; // is the request cancelled
+
+		private WebHeaderCollection headers;
+		private readonly string path;
+		private readonly NameValueCollection arguments;
+
+		private HttpMethod method = HttpMethod.Get;
+		private string contentType = null;
+		private long contentLength = -1;
+
+		private MemoryStream requestStream = null;
+		private HttpWebRequest directRequest = null;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		internal PpsProxyRequest(DEHttpClient http, Uri originalUri, Uri relativeUri)
+		{
+			this.http = http ?? throw new ArgumentNullException(nameof(http));
+			this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
+			this.relativeUri = relativeUri ?? throw new ArgumentNullException(nameof(relativeUri));
+
+			if (relativeUri.IsAbsoluteUri)
+				throw new ArgumentException("Uri must be relative.", nameof(relativeUri));
+			if (!originalUri.IsAbsoluteUri)
+				throw new ArgumentException("Uri must be absolute.", nameof(originalUri));
+			
+			if (relativeUri.OriginalString.StartsWith("/"))
+				this.relativeUri = new Uri(relativeUri.OriginalString.Substring(1), UriKind.Relative);
+
+			(path, arguments) = relativeUri.ParseUri();
+		} // ctor
+
+		/// <summary>Returns whether the given proxy request is for the same object</summary>
+		/// <param name="other">Request to compare</param>
+		/// <returns>true if equal</returns>
+		public bool Equals(PpsProxyRequest other)
+			=> Equals(other.relativeUri);
+
+		/// <summary>Returns whether the Uri is equal to the given Uri</summary>
+		/// <param name="otherUri">Uri to compare</param>
+		/// <returns>true if equal</returns>
+		public bool Equals(Uri otherUri)
+			=> PpsWpfShell.EqualUri(relativeUri, otherUri);
+
+		#endregion
+
+		#region -- CreateHttpRequest ----------------------------------------------
+
+		private HttpRequestMessage CreateHttpRequest()
+		{
+			var request = new HttpRequestMessage(method, http.CreateFullUri(relativeUri.ToString()));
+
+			// update header
+			if (headers != null)
+			{
+				var transferEncoding = headers[HttpRequestHeader.TransferEncoding];
+				if (!String.IsNullOrEmpty(transferEncoding))
+					request.Headers.TransferEncoding.ParseAdd(transferEncoding);
+			}
+
+			// request data, cached POST-Data
+			if (requestStream != null)
+			{
+				requestStream.Position = 0;
+				var content = new StreamContent(requestStream);
+
+				// update header
+				// todo:
+
+				request.Content = content;
+			}
+
+			return request;
+		} // func CreateHttpRequest
+
+		private HttpWebRequest CreateWebRequest()
+		{
+			if (relativeUri.IsAbsoluteUri)
+				throw new ArgumentException("Uri must be relative.", nameof(relativeUri));
+
+			// build the remote request with absolute uri and credentials
+			var absoluteUri = http.CreateFullUri(relativeUri.ToString());
+
+			var request = CreateHttp(absoluteUri);
+			request.Credentials = http.Credentials; // override the current credentials
+			request.Headers.Add("des-multiple-authentifications", "true");
+			request.Timeout = -1; // 600 * 1000;
+
+			// copy basic request informationen
+			request.Method = method.Method;
+			if (contentLength > 0)
+				request.ContentLength = contentLength;
+			if (contentType != null)
+				request.ContentType = contentType;
+
+			// copy headers
+			if (headers != null)
+			{
+				headers["ppsn-hostname"] = Environment.MachineName;
+				foreach (var k in headers.AllKeys)
+				{
+					if (String.Compare(k, "Accept", true) == 0)
+						request.Accept = headers[k];
+					else
+						request.Headers[k] = headers[k];
+				}
+			}
+
+			return request;
+		} // func CreateWebRequest
+
+		#endregion
+
+		#region -- GetResponse --------------------------------------------------------
+
+		/// <summary>Handles the request async</summary>
+		/// <param name="callback"></param>
+		/// <param name="state"></param>
+		/// <returns></returns>
+		public override IAsyncResult BeginGetResponse(AsyncCallback callback, object state)
+		{
+			if (aborted)
+				throw new WebException("Canceled", WebExceptionStatus.RequestCanceled);
+
+			if (directRequest != null)
+				return directRequest.BeginGetResponse(callback, state);
+			else
+				return GetResponseAsync().ToAsyncResult(callback, state);
+		} // func BeginGetResponse
+
+		/// <summary></summary>
+		/// <param name="ar"></param>
+		/// <returns></returns>
+		public override WebResponse EndGetResponse(IAsyncResult ar)
+		{
+			if (directRequest != null)
+				return directRequest.EndGetResponse(ar);
+			else
+				return PpsShell.EndAsyncResult<WebResponse>(ar);
+		} // func EndGetResponse
+
+		/// <summary>Get the response and process the request now.</summary>
+		/// <returns></returns>
+		public override WebResponse GetResponse()
+		{
+			if (directRequest != null)
+				return directRequest.GetResponse();
+			else
+				return GetResponseAsync().Await();
+		} // func GetResponse
+
+		public async override Task<WebResponse> GetResponseAsync()
+		{
+			var request = CreateHttpRequest();
+			HttpResponseMessage response = null;
+			Stream responseStream = null;
+			try
+			{
+				// execute request
+				response = await http.SendAsync(request, HttpCompletionOption.ResponseContentRead);
+				if (response.Content != null)
+					responseStream = await response.Content.ReadAsStreamAsync();
+
+				return new PpsProxyResponse(request, response, responseStream);
+			}
+			catch
+			{
+				responseStream?.Dispose();
+				response?.Dispose();
+				request?.Dispose();
+				throw;
+			}
+		} // func GetResponseAsync
+
+		#endregion
+
+		#region -- GetRequestStream ---------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="callback"></param>
+		/// <param name="state"></param>
+		/// <returns></returns>
+		public override IAsyncResult BeginGetRequestStream(AsyncCallback callback, object state)
+			=> GetRequestStreamAsync(false).ToAsyncResult(callback, state);
+
+		/// <summary></summary>
+		/// <param name="ar"></param>
+		/// <returns></returns>
+		public override Stream EndGetRequestStream(IAsyncResult ar)
+			=> PpsShell.EndAsyncResult<Stream>(ar);
+
+		/// <summary>Create the request online, and now to support request streams.</summary>
+		/// <returns></returns>
+		public override Stream GetRequestStream()
+			=> GetRequestStreamAsync(false).Await();
+
+		/// <summary>Create the request online, and now to support request streams.</summary>
+		/// <param name="sendChunked"><c>true</c>, for large data, the request is executed within the GetRequestStream and the inner request stream returned.</param>
+		/// <returns></returns>
+		public Task<Stream> GetRequestStreamAsync(bool sendChunked)
+		{
+			if (directRequest != null || requestStream != null)
+				throw new InvalidOperationException("GetResponse or GetRequestStream is already invoked.");
+
+			if (sendChunked)
+			{
+				directRequest = CreateWebRequest();
+				if (directRequest.Method != HttpMethod.Post.Method
+					&& directRequest.Method != HttpMethod.Put.Method)
+					throw new ArgumentException("Only POST/PUT can use GetRequestStream in none buffering mode.");
+
+				// stream the PUT/POST
+				directRequest.SendChunked = true;
+				directRequest.AllowWriteStreamBuffering = false;
+
+				return directRequest.GetRequestStreamAsync();
+			}
+			else
+			{
+				if (requestStream == null)
+					requestStream = new MemoryStream();
+
+				// return a window stream with open end, that the memory stream is not closed.
+				return Task.FromResult<Stream>(new WindowStream(requestStream, 0, -1, true, true));
+			}
+		} // func GetRequestStreamAsync
+
+		#endregion
+
+		/// <summary>Cancel the current request</summary>
+		public override void Abort()
+		{
+			aborted = true;
+			throw new NotImplementedException("todo:");
+		} // proc Abort
+
+		/// <summary>Request method</summary>
+		public override string Method
+		{
+			get => method.Method;
+			set
+			{
+				switch (value.ToUpperInvariant())
+				{
+					case "GET":
+						method = HttpMethod.Get;
+						break;
+					case "POST":
+					case "PUT":
+						method = HttpMethod.Put;
+						break;
+					case "HEAD":
+						method = HttpMethod.Head;
+						break;
+					default:
+						throw new NotSupportedException();
+				}
+			}
+		} // prop Method
+		/// <summary>Content type of the request (mime type).</summary>
+		public override string ContentType { get => contentType; set => contentType = value; }
+		/// <summary>Content length, to send.</summary>
+		public override long ContentLength { get => contentLength; set => contentLength = value; }
+
+		/// <summary>Request uri.</summary>
+		public override Uri RequestUri => originalUri;
+
+		/// <summary>We do not use any proxy.</summary>
+		public override IWebProxy Proxy { get => null; set { } } // avoid NotImplementedExceptions
+
+		/// <summary>Arguments of the request</summary>
+		public NameValueCollection Arguments => arguments;
+		/// <summary>Relative path for the request.</summary>
+		public string Path => path;
+
+		/// <summary>Header</summary>
+		public override WebHeaderCollection Headers { get => headers ?? (headers = new WebHeaderCollection()); set => headers = value; }
+	} // class PpsProxyRequest
 
 	#endregion
 
@@ -1041,7 +1442,7 @@ namespace TecWare.PPSn
 	//				Application.Current.Shutdown(1);
 	//		}
 	//	} // proc ShowException
-		
+
 	//	/// <summary>Return a data template for the object.</summary>
 	//	/// <param name="data"></param>
 	//	/// <param name="container"></param>

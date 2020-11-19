@@ -23,11 +23,26 @@ namespace TecWare.PPSn
 {
 	#region -- interface IPpsWpfResources ---------------------------------------------
 
+	/// <summary>Resource helper</summary>
 	public interface IPpsWpfResources
 	{
+		/// <summary>Create a full uri that will use the registered http.</summary>
+		/// <param name="relativePath"></param>
+		/// <returns></returns>
+		Uri CreateProxyUri(string relativePath);
+
+		/// <summary>Try to locate a resource</summary>
+		/// <typeparam name="TKEY"></typeparam>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="predicate"></param>
+		/// <returns></returns>
 		IEnumerable<T> FindResourceByKey<TKEY, T>(Predicate<TKEY> predicate = null)
 			where TKEY : ResourceKey;
 
+		/// <summary>Try to locate a resource</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="resourceKey"></param>
+		/// <returns></returns>
 		T FindResource<T>(object resourceKey)
 			where T : class;
 	} // interface IPpsWpfResources

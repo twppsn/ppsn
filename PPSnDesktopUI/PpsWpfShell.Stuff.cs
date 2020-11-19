@@ -14,11 +14,13 @@
 //
 #endregion
 using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Principal;
 using System.Threading.Tasks;
+using System.Web;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -192,13 +194,93 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- class WebRequestHelper ---------------------------------------------
+
+		/// <summary>Parse a relative query for the arguments.</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static NameValueCollection ParseQuery(string uri)
+		{
+			var pos = uri.IndexOf('?');
+			return pos == -1
+				? new NameValueCollection()
+				: HttpUtility.ParseQueryString(uri.Substring(pos + 1));
+		} // func ParseQuery
+
+		/// <summary>Parse a relative or absolute query for the arguments.</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static NameValueCollection ParseQuery(this Uri uri)
+			=> uri.IsAbsoluteUri ? HttpUtility.ParseQueryString(uri.Query) : ParseQuery(uri.OriginalString);
+
+		/// <summary>Get the query from an relative uri.</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static string ParsePath(string uri)
+		{
+			var pos = uri.IndexOf('?');
+			return pos == -1 ? uri : uri.Substring(0, pos);
+		} // func ParsePath
+
+		/// <summary>Get the query from an relative or absolute uri.</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static string ParsePath(this Uri uri)
+			=> uri.IsAbsoluteUri ? uri.AbsolutePath : ParsePath(uri.OriginalString);
+
+		/// <summary>Get the query and path from an relative or absolute uri.</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static (string path, NameValueCollection arguments) ParseUri(this Uri uri)
+			=> uri.IsAbsoluteUri ? (uri.AbsolutePath, HttpUtility.ParseQueryString(uri.Query)) : ParseUri(uri.OriginalString);
+
+		/// <summary>Get the query and path from an relative uri.</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static (string path, NameValueCollection arguments) ParseUri(string uri)
+		{
+			var pos = uri.IndexOf('?');
+			return pos == -1 ? (uri, new NameValueCollection()) : (uri.Substring(0, pos), HttpUtility.ParseQueryString(uri.Substring(pos + 1)));
+		} // func ParseUri
+
+		/// <summary>Compares two Uri</summary>
+		/// <param name="uri1">first Uri</param>
+		/// <param name="uri2">second Uri</param>
+		/// <returns>return true if both Uris have the same result</returns>
+		public static bool EqualUri(Uri uri1, Uri uri2)
+		{
+			if (uri1.IsAbsoluteUri && uri2.IsAbsoluteUri)
+				return uri1.Equals(uri2);
+			else if (uri1.IsAbsoluteUri || uri2.IsAbsoluteUri)
+				return false;
+			else
+			{
+				(var path1, var args1) = uri1.ParseUri();
+				(var path2, var args2) = uri2.ParseUri();
+
+				if (path1 == path2 && args1.Count == args2.Count)
+				{
+					foreach (var k in args1.AllKeys)
+					{
+						if (args1[k] != args2[k])
+							return false;
+					}
+					return true;
+				}
+				else
+					return false;
+			}
+		} // func EqualUri
+
+		#endregion
+
 		#region -- HsvColor - converter -----------------------------------------------
 
 		/// <summary><see cref="Color"/> to <see cref="HsvColor"/></summary>
 		/// <param name="color"></param>
 		/// <returns></returns>
 		public static HsvColor ToHsvColor(this Color color)
-			=> HsvColor.FromArgb(color.A, color.R, color.G, color.B);
+		=> HsvColor.FromArgb(color.A, color.R, color.G, color.B);
 
 		/// <summary><see cref="HsvColor"/> to <see cref="Color"/></summary>
 		/// <param name="color"></param>

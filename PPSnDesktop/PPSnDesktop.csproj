@@ -134,7 +134,6 @@
     <Compile Include="Main\PpsMainWindowService.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.Data.cs" />
-    <Compile Include="PpsEnvironment.Http.cs" />
     <Compile Include="PpsEnvironment.Lua.cs" />
     <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Views.cs" />

@@ -538,11 +538,6 @@ namespace TecWare.PPSn
 	//		// create web request proxy
 	//		webProxy = new PpsWebProxy(this);
 
-	//		// register proxy for the web requests
-	//		var baseUri = new Uri($"http://ppsn{environmentId}.local");
-	//		WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
-	//		Request = CreateHttpCore(baseUri);
-
 	//		// create object information cache
 	//		activeObjectData = new PpsActiveObjectDataImplementation(this);
 	//		objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
