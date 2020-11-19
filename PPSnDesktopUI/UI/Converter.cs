@@ -67,6 +67,10 @@ namespace TecWare.PPSn.UI
 		public static IMultiValueConverter Equality => EqualConverter.Default;
 		/// <summary>Concats Name,Vorname.</summary>
 		public static IMultiValueConverter Name => NameConverter.Default;
+		/// <summary>Replaces a color with the givven resource.</summary>
+		public static IValueConverter DefaultColor => DefaultColorConverter.Default;
+		/// <summary>Replaces a brush with the givven resource.</summary>
+		public static IValueConverter DefaultBrush => DefaultBrushConverter.Default;
 	} // class PpsConverter
 
 	#endregion
@@ -1023,6 +1027,46 @@ namespace TecWare.PPSn.UI
 
 		public static PreviewImageConverter Default { get; } = new PreviewImageConverter();
 	} // class PreviewImageConverter
+
+	#endregion
+
+	#region -- class DefaultColorConverter --------------------------------------------
+
+	internal class DefaultColorConverter : IValueConverter
+	{
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value is Color color && color == Colors.Transparent)
+				value = Application.Current.TryFindResource(parameter) ?? color;
+
+			return value;
+		} // func IValueConverter.Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static IValueConverter Default { get; } = new DefaultBrushConverter();
+	} //class DefaultColorConverter
+
+	#endregion
+
+	#region -- class DefaultBrushConverter --------------------------------------------
+
+	internal class DefaultBrushConverter : IValueConverter
+	{
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if(value is SolidColorBrush brush && brush.Color == Colors.Transparent)
+				value = Application.Current.TryFindResource(parameter) ?? brush;
+
+			return value;
+		} // func IValueConverter.Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static IValueConverter Default { get; } = new DefaultBrushConverter();
+	} //class DefaultBrushConverter
 
 	#endregion
 }
