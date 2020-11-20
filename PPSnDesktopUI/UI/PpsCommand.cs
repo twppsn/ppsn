@@ -922,6 +922,26 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc AppendCommand
 
+		private void CommandIsVisibleChanged(object sender, EventArgs e)
+		{
+			if (sender is PpsUICommand cmd)
+			{
+				if (cmd.IsVisible)
+					AppendCommand(cmd);
+				else
+					RemoveCommand(cmd);
+			}
+		} // event CommandIsVisibleChanged
+
+		private void AddIsVisibleHandler(PpsUICommand command)
+			=> isVisiblePropertyDescriptor.AddValueChanged(command, CommandIsVisibleChanged);
+
+		private void RemoveIsVisibleHandler(PpsUICommand command)
+		{
+			if (command != null)
+				isVisiblePropertyDescriptor.RemoveValueChanged(command, CommandIsVisibleChanged);
+		} // proc RemoveIsVisibleHandler
+
 		private int AppendCommandCore(PpsUICommand cmd)
 		{
 			// find the correct position
@@ -935,6 +955,7 @@ namespace TecWare.PPSn.UI
 				viewCommands.Insert(index, null);
 
 			viewCommands.Insert(index, cmd);
+			AddIsVisibleHandler(cmd);
 
 			return index;
 		} // proc AppendCommandCore
@@ -944,6 +965,8 @@ namespace TecWare.PPSn.UI
 			var index = viewCommands.IndexOf(cmd);
 			if (index == -1)
 				return;
+
+			RemoveIsVisibleHandler(cmd);
 
 			viewCommands.RemoveAt(index);
 			if (index == Count && index > 0 && viewCommands[index - 1] == null) // remove group before
@@ -962,6 +985,7 @@ namespace TecWare.PPSn.UI
 		protected override void RefreshOverride()
 		{
 			// rebuild command list
+			viewCommands.ForEach(RemoveIsVisibleHandler);
 			viewCommands.Clear();
 
 			foreach (var cmds in commandCollections)
@@ -970,20 +994,26 @@ namespace TecWare.PPSn.UI
 				var lastIndex = -1;
 				foreach (var cmd in cmds)
 				{
-					if (cmd.Order.IsEmpty)
+					if (cmd.IsVisible)
 					{
-						AppendCommandCore(cmd);
-						currentGroup = Int32.MinValue;
-					}
-					else if (lastIndex > 0 && cmd.Order.Group == currentGroup && viewCommands[lastIndex].Order.Order < cmd.Order.Order)
-					{
-						viewCommands.Insert(++lastIndex, cmd);
+						if (cmd.Order.IsEmpty)
+						{
+							AppendCommandCore(cmd);
+							currentGroup = Int32.MinValue;
+						}
+						else if (lastIndex > 0 && cmd.Order.Group == currentGroup && viewCommands[lastIndex].Order.Order < cmd.Order.Order)
+						{
+							viewCommands.Insert(++lastIndex, cmd);
+							AddIsVisibleHandler(cmd);
+						}
+						else
+						{
+							lastIndex = AppendCommandCore(cmd);
+							currentGroup = cmd.Order.Group;
+						}
 					}
 					else
-					{
-						lastIndex = AppendCommandCore(cmd);
-						currentGroup = cmd.Order.Group;
-					}
+						AddIsVisibleHandler(cmd);
 				}
 			}
 
@@ -1017,6 +1047,8 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Number of rows in this view.</summary>
 		public sealed override int Count => viewCommands.Count;
+
+		private static readonly DependencyPropertyDescriptor isVisiblePropertyDescriptor = DependencyPropertyDescriptor.FromProperty(PpsUICommand.IsVisibleProperty, typeof(PpsUICommand));
 	} // class PpsUICommandsView
 
 	#endregion

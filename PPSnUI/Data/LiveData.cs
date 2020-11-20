@@ -190,7 +190,7 @@ namespace TecWare.PPSn.Data
 	} // interface IPpsLiveTableView
 
 	/// <summary>Untyped interface for live data table.</summary>
-	public interface IPpsLiveTableView : IPpsLiveTableViewBase, IEnumerable<PpsLiveDataRow>
+	public interface IPpsLiveTableView : IPpsLiveTableViewBase
 	{
 		/// <summary>Create a related view, that is based on the current view.</summary>
 		/// <param name="order">New order expression.</param>
@@ -206,6 +206,9 @@ namespace TecWare.PPSn.Data
 		/// <param name="values">Indexed values.</param>
 		/// <returns></returns>
 		IEnumerable<PpsLiveDataRow> FindRows(params object[] values);
+
+		/// <summary>Enumerated typed rows.</summary>
+		IEnumerable<PpsLiveDataRow> Rows { get; }
 	} // interface IPpsLiveTableView
 
 	/// <summary>Typed interface for live data table.</summary>
@@ -227,6 +230,9 @@ namespace TecWare.PPSn.Data
 		/// <param name="values">Indexed values (the sort key).</param>
 		/// <returns></returns>
 		IEnumerable<T> FindRows(params object[] values);
+
+		/// <summary>Enumerated typed rows.</summary>
+		IEnumerable<T> Rows { get; }
 
 		/// <summary>Index</summary>
 		/// <param name="index"></param>
@@ -1173,28 +1179,94 @@ namespace TecWare.PPSn.Data
 
 		#region -- CreateView ---------------------------------------------------------
 
-		#region -- class PpsLiveFilterVisitor -----------------------------------------
+		#region -- class PpsLiveFilterNormalizeVisitor --------------------------------
 
-		private sealed class PpsLiveFilterVisitor : PpsDataFilterVisitorLambda
+		private sealed class PpsLiveFilterNormalizeVisitor : PpsDataFilterVisitor<PpsDataFilterExpression>
 		{
 			private readonly IDataColumns columns;
 
-			public PpsLiveFilterVisitor(IDataColumns columns)
+			public PpsLiveFilterNormalizeVisitor(IDataColumns columns)
+			{
+				this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
+			} // ctor
+
+			private static bool IsColumnByMember(string memberName, IDataColumn column)
+			{
+				if (column is PpsLiveDataColumn liveColumn && liveColumn.HasProperty && String.Compare(memberName, liveColumn.PropertyName, StringComparison.Ordinal) == 0)
+					return true;
+
+				return String.Compare(column.Name, memberName, StringComparison.OrdinalIgnoreCase) == 0;
+			} // func IsColumnByMember
+
+			private string TranslateOperand(string operand)
+			{
+				for (var i = 0; i < columns.Columns.Count; i++)
+				{
+					var col = columns.Columns[i];
+					if (IsColumnByMember(operand, col))
+						return col.Name;
+				}
+				throw new ArgumentOutOfRangeException($"Member or column '{operand}' not found");
+			} // func TranslateOperand
+
+			public override PpsDataFilterExpression CreateTrueFilter()
+				=> PpsDataFilterExpression.True;
+
+			public override PpsDataFilterExpression CreateNativeFilter(PpsDataFilterNativeExpression expression)
+				=> expression;
+
+			public override PpsDataFilterExpression CreateCompareFilter(PpsDataFilterCompareExpression expression)
+				=> new PpsDataFilterCompareExpression(TranslateOperand(expression.Operand), expression.Operator, expression.Value);
+			
+			public override PpsDataFilterExpression CreateCompareIn(string operand, PpsDataFilterArrayValue values)
+				=> new PpsDataFilterCompareExpression(TranslateOperand(operand), PpsDataFilterCompareOperator.Contains, values);
+
+			public override PpsDataFilterExpression CreateCompareNotIn(string operand, PpsDataFilterArrayValue values)
+				=> new PpsDataFilterCompareExpression(TranslateOperand(operand), PpsDataFilterCompareOperator.NotContains, values);
+
+			public override PpsDataFilterExpression CreateLogicFilter(PpsDataFilterExpressionType method, IEnumerable<PpsDataFilterExpression> arguments)
+				=> new PpsDataFilterLogicExpression(method, arguments.ToArray());
+		} // class PpsLiveFilterNormalizeVisitor
+
+		#endregion
+
+		#region -- class PpsLiveFilterPredicateVisitor --------------------------------
+
+		private sealed class PpsLiveFilterPredicateVisitor : PpsDataFilterVisitorLambda
+		{
+			private readonly IDataColumns columns;
+
+			public PpsLiveFilterPredicateVisitor(IDataColumns columns)
 				: base(Expression.Parameter(typeof(IPpsLiveDataRowSource), "row"))
 			{
 				this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
 			} // ctor
 
+			private (int, IDataColumn) GetColumnIndex(string memberName)
+			{
+				for (var i = 0; i < columns.Columns.Count; i++)
+				{
+					var col = columns.Columns[i];
+					if (String.Compare(col.Name, memberName, StringComparison.OrdinalIgnoreCase) == 0)
+						return (i, columns.Columns[i]);
+				}
+				throw new ArgumentOutOfRangeException($"Member or column '{memberName}' not found");
+			} // func GetColumnIndex
+
 			protected override Expression GetProperty(string memberName)
 			{
-				return Expression.MakeIndex(CurrentRowParameter,
-					PpsLiveData.liveDataRowSourceIndexPropertyInfo,
-					new Expression[] {
-						Expression.Constant(columns.FindColumnIndex(memberName, true), typeof(int))
-					}
+				var (index, column) = GetColumnIndex(memberName);
+				return ConvertTo(
+					Expression.MakeIndex(CurrentRowParameter,
+						PpsLiveData.liveDataRowSourceIndexPropertyInfo,
+						new Expression[] {
+							Expression.Constant(index, typeof(int))
+						}
+					),
+					column.DataType
 				);
 			} // func GetProperty
-		} // class PpsLiveFilterVisitor
+		} // class PpsLiveFilterPredicateVisitor
 
 		#endregion
 
@@ -1254,9 +1326,9 @@ namespace TecWare.PPSn.Data
 
 				type.CheckRowType(typeof(T));
 
-				// create order key
+				// enforce order key
 				if (order == null || order.Length == 0)
-					throw new ArgumentNullException(nameof(order));
+					order = type.GetPrimaryKeyFields();
 
 				orderKeyColumns = new int[order.Length];
 				orderModifier = new int[order.Length];
@@ -1434,8 +1506,8 @@ namespace TecWare.PPSn.Data
 
 			protected void OnFilterChanged()
 			{
-				// get current filter
-				currentFilterExpression = GetFilter().Reduce();
+				// get current filter and normalize to server columns
+				currentFilterExpression = type.NormalizeFilterExpression(GetFilter());
 
 				// rebuild filter predicate
 				currentFilterPredicate = type.CreateLiveSourceRowFilter<T>(currentFilterExpression);
@@ -1534,7 +1606,7 @@ namespace TecWare.PPSn.Data
 				=> throw new NotImplementedException();
 
 			public IEnumerator<T> GetEnumerator()
-				=> rows.Cast<RowKey>().Select(c => c.Row).GetEnumerator();
+				=> Rows.GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
@@ -1545,6 +1617,8 @@ namespace TecWare.PPSn.Data
 			bool IList.IsReadOnly => true;
 			bool ICollection.IsSynchronized => false;
 			object ICollection.SyncRoot => null;
+
+			public IEnumerable<T> Rows => rows.Cast<RowKey>().Select(c => c.Row);
 
 			/// <summary>Access row by index.</summary>
 			/// <param name="index"></param>
@@ -1612,8 +1686,7 @@ namespace TecWare.PPSn.Data
 			IEnumerable<PpsLiveDataRow> IPpsLiveTableView.FindRows(params object[] values)
 				=> FindRows(values);
 
-			IEnumerator<PpsLiveDataRow> IEnumerable<PpsLiveDataRow>.GetEnumerator()
-				=> GetEnumerator();
+			IEnumerable<PpsLiveDataRow> IPpsLiveTableView.Rows => Rows;
 		} // class PpsLiveTableViewImpl
 
 		#endregion
@@ -1685,23 +1758,26 @@ namespace TecWare.PPSn.Data
 			IEnumerable<PpsLiveDataRow> IPpsLiveTableView.FindRows(params object[] values)
 				=> FindRows(values);
 
-			IEnumerator<PpsLiveDataRow> IEnumerable<PpsLiveDataRow>.GetEnumerator()
-				=> GetEnumerator();
+			IEnumerable<PpsLiveDataRow> IPpsLiveTableView.Rows => Rows;
 		} // class PpsLiveTableParentViewImpl
 
 		#endregion
 
+		private PpsDataFilterExpression NormalizeFilterExpression(PpsDataFilterExpression expression)
+			=> new PpsLiveFilterNormalizeVisitor(this).CreateFilter(expression.Reduce());
+
 		private Predicate<IPpsLiveDataRowSource> CreateLiveSourceRowFilter<T>(PpsDataFilterExpression filterExpression)
 			where T : PpsLiveDataRow
 		{
-			var filterCompiler = new PpsLiveFilterVisitor(this);
-			return Expression.Lambda<Predicate<IPpsLiveDataRowSource>>(
+			var filterCompiler = new PpsLiveFilterPredicateVisitor(this);
+			var expr = Expression.Lambda<Predicate<IPpsLiveDataRowSource>>(
 				filterCompiler.CreateFilter(filterExpression),
 				new ParameterExpression[1]
 				{
 					filterCompiler.CurrentRowParameter
 				}
-			).Compile();
+			);
+			return expr.Compile();
 		} // func CreateLiveSourceRowFilter
 
 		private int[] CreateOrderArray(PpsDataOrderExpression[] orderExpressions)
@@ -1748,7 +1824,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="filterExpression"></param>
 		/// <param name="orderExpressions"></param>
 		/// <returns></returns>
-		public IPpsLiveTableView<T> CreateView<T>(PpsLiveData data, PpsDataFilterExpression filterExpression, params PpsDataOrderExpression[] orderExpressions)
+		public IPpsLiveTableFilterView<T> CreateView<T>(PpsLiveData data, PpsDataFilterExpression filterExpression, params PpsDataOrderExpression[] orderExpressions)
 			where T : PpsLiveDataRow
 			=> new PpsLiveTableViewImpl<T>(this, data, filterExpression, CreateOrderArray(orderExpressions));
 
@@ -3165,7 +3241,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Create view.</summary>
 		/// <typeparam name="T"></typeparam>
 		/// <returns></returns>
-		public IPpsLiveTableView<T> NewTable<T>()
+		public IPpsLiveTableFilterView<T> NewTable<T>()
 			where T : PpsLiveDataRow
 			=> NewTable<T>(PpsDataFilterExpression.True);
 
@@ -3174,7 +3250,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="filterExpression"></param>
 		/// <param name="orderExpressions"></param>
 		/// <returns></returns>
-		public IPpsLiveTableView<T> NewTable<T>(PpsDataFilterExpression filterExpression, params PpsDataOrderExpression[] orderExpressions)
+		public IPpsLiveTableFilterView<T> NewTable<T>(PpsDataFilterExpression filterExpression, params PpsDataOrderExpression[] orderExpressions)
 			where T : PpsLiveDataRow
 			=> PpsLiveDataRowType.Get<T>().CreateView<T>(this, filterExpression, orderExpressions);
 

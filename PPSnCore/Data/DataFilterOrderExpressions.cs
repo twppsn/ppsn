@@ -3133,7 +3133,11 @@ namespace TecWare.PPSn.Data
 			}
 		} // func GetBinaryExpressionType
 
-		private static Expression ConvertTo(Expression expr, Type typeTo)
+		/// <summary>Helper for member convert</summary>
+		/// <param name="expr"></param>
+		/// <param name="typeTo"></param>
+		/// <returns></returns>
+		protected static Expression ConvertTo(Expression expr, Type typeTo)
 		{
 			if (typeTo == expr.Type)
 				return expr;
