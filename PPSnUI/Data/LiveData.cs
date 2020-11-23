@@ -2284,7 +2284,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="tableName"></param>
 		/// <param name="typeName"></param>
 		/// <param name="filter"></param>
-		void ViewCreated(string tableName, string typeName, string filter);
+		void ViewCreated(string tableName, string typeName);
 		/// <summary>Log information, when a view is removed from memory.</summary>
 		/// <param name="tableName"></param>
 		void ViewRemoved(string tableName);
@@ -2300,6 +2300,11 @@ namespace TecWare.PPSn.Data
 		/// <summary>Log information after a data refresh.</summary>
 		/// <param name="resultInfo"></param>
 		void ReportRefreshResult(string resultInfo);
+
+		/// <summary>Log refresh table</summary>
+		/// <param name="tableName"></param>
+		/// <param name="filter"></param>
+		void ViewRefresh(string tableName, string filter);
 
 		/// <summary>Wait for sync is started.</summary>
 		void WaitForSyncStart();
@@ -2669,7 +2674,7 @@ namespace TecWare.PPSn.Data
 			private void AddView(IPpsLiveDataViewEvents events, int[] fieldMapping)
 			{
 				views.Add(new ViewMapping(fieldMapping, events));
-				data.Notify?.ViewCreated(name, events.Type.Name, events.Filter.ToString());
+				data.Notify?.ViewCreated(name, events.Type.Name);
 				data.InitBackgroundRefresh();
 			} // proc AddView
 
@@ -2945,8 +2950,11 @@ namespace TecWare.PPSn.Data
 			public void TableCreated(string tableName)
 				=> WriteLine("Create table: " + tableName);
 
-			public void ViewCreated(string tableName, string typeName, string filter)
-				=> WriteLine($"Create view: {tableName} [{typeName}] > {filter}");
+			public void ViewCreated(string tableName, string typeName)
+				=> WriteLine($"Create view: {tableName} [{typeName}]");
+			
+			public void ViewRefresh(string tableName, string filter)
+				=> WriteLine($"Refresh view: {tableName} > {filter}");
 
 			public void ViewRemoved(string tableName)
 				=> WriteLine("Remove view: " + tableName);
@@ -3422,7 +3430,10 @@ namespace TecWare.PPSn.Data
 			{
 				var r = refreshTasks.Find(c => ReferenceEquals(c.Table, table));
 				if (r == null)
+				{
+					Notify?.ViewRefresh(table.TableName, table.GetCurrentViewFilter().ToString());
 					refreshTasks.Add(r = new EnforceRefreshTableTask(table));
+				}
 
 				backgroundTask.Pulse();
 				return r;
