@@ -230,12 +230,23 @@ namespace TecWare.PPSn.Bde
 				PopPaneAsync().Spawn(this);
 		} // proc BackCommandExecuted
 
-		private bool CanBackCommandExecute(PpsCommandContext arg)
+		private bool TryCanBackButton(IPpsWindowPaneBack backButton, out bool backButtonState)
 		{
-			return TopPaneHost?.Pane is IPpsWindowPaneBack backButton && backButton.CanBackButton.HasValue
-				? backButton.CanBackButton.Value
-				: panes.Count > 1;
-		} // func CanBackCommandExecute
+			var c = backButton.CanBackButton;
+			if (c.HasValue)
+			{
+				backButtonState = c.Value;
+				return true;
+			}
+			else
+			{
+				backButtonState = false;
+				return false;
+			}
+		} // func TryCanBackButton
+
+		private bool CanBackCommandExecute(PpsCommandContext arg)
+			=> TopPaneHost?.Pane is IPpsWindowPaneBack backButton && TryCanBackButton(backButton, out var backButtonState) ? backButtonState : panes.Count > 1;
 
 		#endregion
 

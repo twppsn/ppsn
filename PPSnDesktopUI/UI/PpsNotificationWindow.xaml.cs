@@ -17,6 +17,7 @@ using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media.Animation;
 
 namespace TecWare.PPSn.UI
@@ -72,7 +73,11 @@ namespace TecWare.PPSn.UI
 		private Rect GetHoverArea()
 		{
 			if (hoverObject is Window w)
-				return new Rect(w.Left, w.Top, w.ActualWidth, w.ActualHeight);
+			{
+				var wi = new WINDOWINFO();
+				NativeMethods.GetWindowInfo(new WindowInteropHelper(w).Handle, wi);
+				return new Rect(wi.rcWindow.Left, wi.rcWindow.Top, wi.rcWindow.Width, wi.rcWindow.Height);
+			}
 			else
 				return SystemParameters.WorkArea;
 		} // func GetHoverArea
