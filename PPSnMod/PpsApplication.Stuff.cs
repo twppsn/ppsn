@@ -34,12 +34,15 @@ namespace TecWare.PPSn.Server
 		private static LuaTable GetTableCore(IDataRow row)
 		{
 			var t = new LuaTable();
-			for (var i = 0; i < row.Columns.Count; i++)
+			if (row != null)
 			{
-				var v = row[i];
-				if (v == null || v is string s && s.Length == 0)
-					continue;
-				t[row.Columns[i].Name] = v;
+				for (var i = 0; i < row.Columns.Count; i++)
+				{
+					var v = row[i];
+					if (v == null || v is string s && s.Length == 0)
+						continue;
+					t[row.Columns[i].Name] = v;
+				}
 			}
 			return t;
 		} // func GetTableCore

@@ -71,7 +71,7 @@
 														<Setter TargetName="image" Property="GeometryName" Value="warning" />
 														<Setter TargetName="image" Property="Foreground" Value="Goldenrod"/>
 													</DataTrigger>
-													<DataTrigger Binding="{Binding Type,Mode=OneTime}" Value="Erro">
+													<DataTrigger Binding="{Binding Type,Mode=OneTime}" Value="Error">
 														<Setter TargetName="image" Property="GeometryName" Value="exception" />
 														<Setter TargetName="image" Property="Foreground" Value="Red"/>
 													</DataTrigger>
@@ -80,7 +80,7 @@
 										</ContentControl.Template>
 									</ContentControl>
 								</Border>
-								<TextBlock Grid.Column="1" Text="{Binding Stamp,StringFormat=G,Mode=OneTime}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+								<TextBlock Grid.Column="1" Text="{Binding Stamp,StringFormat=G,Mode=OneTime}" VerticalAlignment="Center" Margin="8,0"/>
 								<ContentControl Grid.Column="2" Height="{StaticResource collapsedScrollHeight}">
 									<ContentControl.Template>
 										<ControlTemplate>

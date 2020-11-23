@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -72,8 +73,22 @@ namespace TecWare.PPSn
 			{
 				this.shell = shell;
 
-				Add(DefaultShellKey, shell); // register environment
+				AddShellKey(); // register environment
 			} // ctor
+
+			public void AddShellKey() 
+				=> Add(DefaultShellKey, shell);
+
+			protected override void OnGettingValue(object key, ref object value, out bool canCache)
+			{
+				if (key == DefaultShellKey)  // register environment
+				{
+					value = shell;
+					canCache = false;
+				}
+				else
+					base.OnGettingValue(key, ref value, out canCache);
+			} // proc OnGettingValue
 		} // class DefaultResourceProvider
 
 		#endregion
@@ -90,17 +105,30 @@ namespace TecWare.PPSn
 			CommandManager.AddCanExecuteHandler(element, commandManager.DefaultCanExecuteHandler);
 		} // proc AddCommandDefaultHandler
 
-		/// <summary>Register shell in wpf resource tree.</summary>
-		/// <param name="element"></param>
-		/// <param name="shell"></param>
-		public static void RegisterShell(this FrameworkElement element, IPpsShell shell)
+		internal static ResourceDictionary CreateDefaultResources(IPpsShell shell)
+			=> new DefaultResourceProvider(shell);
+
+		internal static void FixDefaultKey(ResourceDictionary resourceDictionary)
+			=> ((DefaultResourceProvider)resourceDictionary).AddShellKey();
+
+		private static ResourceDictionary RegisterShell(ResourceDictionary resourceDictionary, IPpsShell shell)
 		{
-			var mergedDictionaries = element.Resources.MergedDictionaries;
+			var mergedDictionaries = resourceDictionary.MergedDictionaries;
 			var currentShell = mergedDictionaries.OfType<DefaultResourceProvider>().FirstOrDefault();
 			if (currentShell != null)
 				mergedDictionaries.Remove(currentShell);
-			mergedDictionaries.Add(new DefaultResourceProvider(shell));
-		} // proc AddShell
+
+			var defaultResources = CreateDefaultResources(shell);
+			mergedDictionaries.Add(defaultResources);
+			return defaultResources;
+		} // func RegisterShell
+
+		/// <summary>Register shell in wpf resource tree.</summary>
+		/// <param name="element"></param>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		public static ResourceDictionary RegisterShell(this FrameworkElement element, IPpsShell shell)
+			=> RegisterShell(element.Resources, shell);
 
 		/// <summary>Get the shell, that is attached to the current element.</summary>
 		/// <param name="dependencyObject"></param>
@@ -125,9 +153,10 @@ namespace TecWare.PPSn
 		/// <typeparam name="T">Type of the service.</typeparam>
 		/// <param name="current">Current object in the logical tree.</param>
 		/// <param name="throwException"><c>true</c>, to throw an not found exception.</param>
+		/// <param name="useVisualTree"></param>
 		/// <returns>The service of the default value.</returns>
-		public static T GetControlService<T>(this DependencyObject current, bool throwException = false)
-			=> (T)GetControlService(current, typeof(T), throwException);
+		public static T GetControlService<T>(this DependencyObject current, bool throwException = false, bool useVisualTree = false)
+			=> (T)GetControlService(current, typeof(T), throwException, useVisualTree);
 
 		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its
 		/// parents in the logical tree.</summary>
@@ -135,12 +164,16 @@ namespace TecWare.PPSn
 		/// <param name="serviceType">Type of the service.</param>
 		/// <param name="useVisualTree"></param>
 		/// <returns>The service of the default value.</returns>
-		public static object GetControlService(this DependencyObject current, Type serviceType, bool useVisualTree = false)
+		public static object GetControlService(this DependencyObject current, Type serviceType, bool throwException = false, bool useVisualTree = false)
 		{
 			object r = null;
 
 			if (current == null)
+			{
+				if (throwException)
+					throw new ArgumentException($"Service {serviceType.Name} is not implemented.");
 				return null;
+			}
 			else if (current is IServiceProvider sp)
 			{
 				if (serviceType == typeof(IServiceProvider))
@@ -158,8 +191,8 @@ namespace TecWare.PPSn
 					? GetVisualParent(current)
 					: GetLogicalParent(current);
 			return parentObject == null
-				? GetShell(current)?.GetService(serviceType)
-				: GetControlService(parentObject, serviceType, useVisualTree);
+				? (GetShell(current)?.GetService(serviceType) ?? throw new ArgumentException($"Service {serviceType.Name} is not implemented."))
+				: GetControlService(parentObject, serviceType, throwException, useVisualTree);
 		} // func GetControlService
 
 		#endregion
@@ -469,9 +502,23 @@ namespace TecWare.PPSn
 		public int MsgBox(string text, PpsImage image = PpsImage.Information, params string[] buttons)
 		{
 			// PpsMessageDialog ausbauen
-
-			MessageBox.Show(text);
-			return 0;
+			if (buttons == YesNo || buttons == OkCancel)
+			{
+				switch (MessageBox.Show(text, "Frage", MessageBoxButton.YesNo, MessageBoxImage.Question))
+				{
+					case MessageBoxResult.Yes:
+						return 0;
+					case MessageBoxResult.No:
+						return 1;
+					default:
+						return -1;
+				}
+			}
+			else
+			{
+				MessageBox.Show(text);
+				return 0;
+			}
 		} // func MsgBox
 
 		public async Task RunUI(Action action)
@@ -533,21 +580,6 @@ namespace TecWare.PPSn
 	]
 	internal sealed class PpsWpfShellService : IPpsCommandManager, IPpsWpfResources, IPpsShellService, IPpsShellServiceInit
 	{
-		#region -- class DefaultResourceProvider --------------------------------------
-
-		private sealed class DefaultResourceProvider : ResourceDictionary
-		{
-			public DefaultResourceProvider(IPpsShell shell)
-			{
-				if (shell == null)
-					throw new ArgumentNullException(nameof(shell));
-
-				Add(PpsWpfShell.DefaultShellKey, shell); // register environment
-			} // ctor
-		} // class DefaultResourceProvider
-
-		#endregion
-
 		#region -- class PpsWebRequestCreate ------------------------------------------
 
 		private class PpsWebRequestCreate : IWebRequestCreate
@@ -588,7 +620,7 @@ namespace TecWare.PPSn
 			DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, shell, e));
 
 			mainResources = Application.Current.Resources;
-			defaultResources = new DefaultResourceProvider(shell);
+			defaultResources = PpsWpfShell.CreateDefaultResources(shell);
 		} // ctor
 
 		Task IPpsShellServiceInit.InitAsync()
@@ -597,6 +629,7 @@ namespace TecWare.PPSn
 
 			// try load additional resources from the server
 			defaultResources.Source = CreateProxyUri("wpf/styles.xaml");
+			PpsWpfShell.FixDefaultKey(defaultResources); // Source clears all keys
 
 			return Task.CompletedTask;
 		} // proc IPpsShellServiceInit.InitAsync

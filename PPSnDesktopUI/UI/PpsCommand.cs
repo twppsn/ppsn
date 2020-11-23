@@ -451,7 +451,14 @@ namespace TecWare.PPSn.UI
 				if (task == null)
 					SetIsRunning(commandContext.Target, false);
 				else
-					task.ContinueWith(t => SetIsRunning(commandContext.Target, false), TaskContinuationOptions.ExecuteSynchronously);
+					task.ContinueWith(t =>
+					{
+						SetIsRunning(commandContext.Target, false);
+
+						// show exception
+						if (t.IsFaulted)
+							commandContext.Shell.GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, t.Exception.InnerException);
+					}, TaskContinuationOptions.ExecuteSynchronously);
 			}
 			catch
 			{

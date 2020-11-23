@@ -745,6 +745,7 @@ namespace TecWare.PPSn
 				this.info = info ?? throw new ArgumentNullException(nameof(info));
 				this.parentProvider = parentProvider ?? throw new ArgumentNullException(nameof(parentProvider));
 
+				AddService(typeof(IServiceProvider), this);
 				AddService(typeof(IPpsShell), this);
 				AddService(typeof(IPpsCommunicationService), this);
 				AddService(typeof(ILogger), this);
