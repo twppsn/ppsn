@@ -21,7 +21,9 @@
 		<ui:PpsSideBarPanel Header="Information">
 			<TextBlock Text="APPINFO" />
 		</ui:PpsSideBarPanel>
+		
 		<Separator />
+		
 		<ui:PpsSideBarPanel Header="Ereignisse">
 			<Grid x:Name="eventPane" Margin="16,16,0,16">
 				<Grid.RowDefinitions>
@@ -120,37 +122,40 @@
 				</Grid>
 			</Grid>
 		</ui:PpsSideBarPanel>
+		
 		<Separator />
-		<ui:PpsSideBarPanel x:Name="settingsPanel" Header="Eigenschaften" IsEnabled="False">
-			<TextBlock Text="APPINFO" />
-		</ui:PpsSideBarPanel>
-		<!--<Separator />
-		<ui:PpsSideBarPanel Header="Dateien">
-			<ui:PpsDataListBox ItemsSource="{Binding MasterData.OfflineCache}">
-				<ui:PpsDataListBox.ItemCommands>
-					<ui:PpsUICommandButton Order="200;100" DisplayText="Assign..." Image="openFolder" Command="{x:Static local:PpsTracePane.AssignDebugTarget}" Description="Zuordnung einer Debugquelle" />
-					<ui:PpsUICommandButton Order="200;110" DisplayText="Clear" Image="openFolder" Command="{x:Static local:PpsTracePane.ClearDebugTarget}" Description="Zuordnung einer Debugquelle lösen" />
-				</ui:PpsDataListBox.ItemCommands>
+		
+		<ui:PpsSideBarPanel x:Name="settingsPanel" Header="Eigenschaften">
+			<ui:PpsDataListBox x:Name="settingsList">
 				<ui:PpsDataListBox.ItemTemplate>
 					<DataTemplate>
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition />
-								<ColumnDefinition />
-								<ColumnDefinition />
-							</Grid.ColumnDefinitions>
-							<Grid.RowDefinitions>
-								<RowDefinition Height="16" />
-								<RowDefinition Height="Auto"/>
-							</Grid.RowDefinitions>
-							<TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Path}" />
-							<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LocalContentSize}"/>
-							<TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding LocalContentLastModification}"/>
-							<TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding DebugPath}" Margin="32,0,0,0"/>
-						</Grid>
+						<TextBlock>
+							<Run Text="{Binding Key,Mode=OneTime}" FontWeight="Bold" />
+							=
+							<Run Text="{Binding Value,Mode=OneWay}" />
+						</TextBlock>
 					</DataTemplate>
 				</ui:PpsDataListBox.ItemTemplate>
 			</ui:PpsDataListBox>
-		</ui:PpsSideBarPanel>-->
+		</ui:PpsSideBarPanel>
+		
+		<ui:PpsSideBarPanel x:Name="resourcePanel" Header="Resources">
+			<!-- todo: Support nested Dictionaries -->
+			<TreeView x:Name="resourceTree">
+				<TreeView.ItemTemplate>
+					<HierarchicalDataTemplate DataType="{x:Type ResourceDictionary}" ItemsSource="{Binding Keys}">
+						<HierarchicalDataTemplate.ItemTemplate>
+							<DataTemplate>
+								<TextBlock Text="{Binding}" />
+							</DataTemplate>
+						</HierarchicalDataTemplate.ItemTemplate>
+						
+						<!-- todo: type -->
+						<TextBlock Text="{Binding Source}" />
+					</HierarchicalDataTemplate>
+				</TreeView.ItemTemplate>
+			</TreeView>
+			<!-- todo: resolver -->
+		</ui:PpsSideBarPanel>
 	</ui:PpsSideBarControl>
 </ui:PpsWindowPaneControl>

@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -21,12 +22,14 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Resources;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
+using System.Windows.Resources;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using TecWare.DE.Networking;
@@ -239,6 +242,7 @@ namespace TecWare.PPSn
 			private readonly PpsSplashWindow splashWindow;
 			private readonly bool allowSync;
 
+			private readonly List<Uri> themesToLoad = new List<Uri>();
 			private readonly List<IPpsSettingRestartCondition> restartNotifier = new List<IPpsSettingRestartCondition>();
 
 			public ShellLoadNotify(PpsSplashWindow splashWindow, bool allowSync)
@@ -246,26 +250,6 @@ namespace TecWare.PPSn
 				this.splashWindow = splashWindow;
 				this.allowSync = allowSync;
 			} // ctor
-
-			Task IPpsShellLoadNotify.OnAfterInitServicesAsync(IPpsShell shell)
-			{
-				// register pane types
-				var paneRegister = shell.GetService<IPpsKnownWindowPanes>(true);
-				paneRegister.RegisterPaneType(typeof(PpsPicturePane), "picture", MimeTypes.Image.Png, MimeTypes.Image.Bmp, MimeTypes.Image.Jpeg, "images/tiff");
-				paneRegister.RegisterPaneType(typeof(PpsPdfViewerPane), "pdf", MimeTypes.Application.Pdf);
-				paneRegister.RegisterPaneType(typeof(PpsMarkdownPane), "markdown", MimeTypes.Text.Markdown);
-
-				// change PpsLiveData
-				var liveData = shell.GetService<PpsLiveData>(true);
-				liveData.SetDebugLog(shell.GetService<ILogger>(true));
-				liveData.DataChanged += (sender, e) => CommandManager.InvalidateRequerySuggested();
-
-				// register restart notifier
-				var dpcService = shell.GetService<PpsDpcService>(true);
-				dpcService.AddSettingRestartConditions(restartNotifier);
-
-				return Task.CompletedTask;
-			} // func OnAfterInitServicesAsync
 
 			private static async Task<Stream> OpenFileSafe(IPpsProgress progress, FileInfo fileInfo)
 			{
@@ -324,6 +308,9 @@ namespace TecWare.PPSn
 				fileInfo.LastWriteTimeUtc = lastWriteTimeUtc;
 				fileInfo.Refresh();
 			} // proc DownloadFileAsync
+
+			Task IPpsShellLoadNotify.OnBeforeLoadSettingsAsync(IPpsShell shell)
+				=> Task.CompletedTask;
 
 			async Task IPpsShellLoadNotify.OnAfterLoadSettingsAsync(IPpsShell shell)
 			{
@@ -424,20 +411,47 @@ namespace TecWare.PPSn
 
 						progress.Text = String.Format("Lade Anwendungsmodul {0}...", assemblyName.Name);
 						var asm = ResolveAssemblyCore(assemblyName);
-						log.Debug($"Assembly {f.FileId} loaded: {asm.Location}");
 
 						// add alias for type resolver
 						AddAssemblyAlias(f.FileId, asm);
 
 						// collect services
 						PpsShell.Collect(asm);
+
+						// test for resources
+						if (PpsWpfShell.TryGetResourceUri(asm, "themes/styles.xaml", out var uri))
+							themesToLoad.Add(uri);
+
+						log.Debug($"Assembly {f.FileId} loaded: {asm.Location} resources: {(uri ?.ToString() ?? "<null>")}");
 					}
 				}
 				splashWindow.SetProgressText("Lade Anwendungsmodule...");
 			} // proc OnAfterLoadSettingsAsync
 
-			Task IPpsShellLoadNotify.OnBeforeLoadSettingsAsync(IPpsShell shell)
-				=> Task.CompletedTask;
+			Task IPpsShellLoadNotify.OnAfterInitServicesAsync(IPpsShell shell)
+			{
+				var wpfRes = shell.GetService<IPpsWpfResources>(true);
+				// load styles from assemblies
+				foreach (var uri in themesToLoad)
+					wpfRes.AppendResourceDictionary(uri);
+
+				// register pane types
+				var paneRegister = shell.GetService<IPpsKnownWindowPanes>(true);
+				paneRegister.RegisterPaneType(typeof(PpsPicturePane), "picture", MimeTypes.Image.Png, MimeTypes.Image.Bmp, MimeTypes.Image.Jpeg, "images/tiff");
+				paneRegister.RegisterPaneType(typeof(PpsPdfViewerPane), "pdf", MimeTypes.Application.Pdf);
+				paneRegister.RegisterPaneType(typeof(PpsMarkdownPane), "markdown", MimeTypes.Text.Markdown);
+
+				// change PpsLiveData
+				var liveData = shell.GetService<PpsLiveData>(true);
+				liveData.SetDebugLog(shell.GetService<ILogger>(true));
+				liveData.DataChanged += (sender, e) => CommandManager.InvalidateRequerySuggested();
+
+				// register restart notifier
+				var dpcService = shell.GetService<PpsDpcService>(true);
+				dpcService.AddSettingRestartConditions(restartNotifier);
+
+				return Task.CompletedTask;
+			} // func OnAfterInitServicesAsync
 		} // class ShellLoadNotify
 
 		#endregion

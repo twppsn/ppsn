@@ -712,11 +712,21 @@ namespace TecWare.PPSn
 		Uri IPpsWpfResources.CreateProxyUri(string relativePath)
 			=> CreateProxyUri(relativePath);
 
+		ResourceDictionary IPpsWpfResources.AppendResourceDictionary(Uri uri)
+		{
+			var rd = new ResourceDictionary { Source = uri };
+			// todo: test resource order
+			mainResources.MergedDictionaries.Add(rd);
+			return rd;
+		} // proc IPpsWpfResources.AppendResourceDictionary
+
 		IEnumerable<T> IPpsWpfResources.FindResourceByKey<TKEY, T>(Predicate<TKEY> predicate)
 			=> mainResources.FindResourceByKey<TKEY, T>(predicate);
 
 		T IPpsWpfResources.FindResource<T>(object resourceKey)
 			=> defaultResources[resourceKey] as T;
+
+		ResourceDictionary IPpsWpfResources.Resources => mainResources;
 
 		#endregion
 

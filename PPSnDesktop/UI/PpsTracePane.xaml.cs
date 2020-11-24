@@ -51,7 +51,6 @@ namespace TecWare.PPSn.UI
 			private readonly PpsTracePane pane;
 			private readonly IPpsLuaShell luaShell;
 
-			private readonly PpsDpcService dpcService;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -60,7 +59,6 @@ namespace TecWare.PPSn.UI
 				this.pane = pane ?? throw new ArgumentNullException(nameof(pane));
 
 				luaShell = pane.Shell.GetService<IPpsLuaShell>(false);
-				dpcService = pane.Shell.GetService<PpsDpcService>(false);
 			} // ctor
 
 			protected override object OnIndex(object key)
@@ -82,7 +80,7 @@ namespace TecWare.PPSn.UI
 
 			private void PinProtected(Action action, string pin, string finishMessage = null)
 			{
-				if (dpcService.IsDpcPin(pin))
+				if (Dpc.IsDpcPin(pin))
 				{
 					action();
 					if (finishMessage != null)
@@ -97,8 +95,8 @@ namespace TecWare.PPSn.UI
 			#region -- Lock-Service ---------------------------------------------------
 
 			public async Task SendLogAsync()
-			{	
-				await dpcService.PushLogAsync(
+			{
+				await Dpc.PushLogAsync(
 					pane.Shell.GetService<IPpsLogService>(true).GetLogAsText()
 				);
 				await Task.Delay(3000);
@@ -107,7 +105,7 @@ namespace TecWare.PPSn.UI
 
 			[LuaMember, LuaMember("Lock")]
 			public void Unlock(string pin)
-				=> UI.ShowNotificationAsync(dpcService.Unlock(pin ?? "\0") ? "Entsperrt" : "Gesperrt", PpsImage.Information).Await();
+				=> UI.ShowNotificationAsync(Dpc.Unlock(pin ?? "\0") ? "Entsperrt" : "Gesperrt", PpsImage.Information).Await();
 
 			[LuaMember]
 			public void SendLog()
@@ -156,7 +154,7 @@ namespace TecWare.PPSn.UI
 				=> PinProtected(Application.Current.Shutdown, pin);
 
 			[LuaMember]
-			public bool IsShell 
+			public bool IsShell
 				=> PpsDpcService.GetIsShellMode();
 
 			#endregion
@@ -211,7 +209,7 @@ namespace TecWare.PPSn.UI
 			public void Help()
 			{
 				var p = pane.Shell.LogProxy("Help");
-				foreach(var d in Members)
+				foreach (var d in Members)
 				{
 					if (d.Value is ILuaMethod)
 					{
@@ -225,12 +223,34 @@ namespace TecWare.PPSn.UI
 
 			public IPpsUIService UI => pane.ui;
 			public IPpsLuaShell Shell => luaShell;
+			public PpsDpcService Dpc => pane.dpcService;
 		} // class PpsTraceTable
+
+		#endregion
+
+		#region -- class SettingsCollection -------------------------------------------
+
+		private sealed class SettingsCollection : IEnumerable
+		{
+			private readonly IPpsSettingsService settingsService;
+
+			public SettingsCollection(IPpsSettingsService settingsService)
+			{
+				this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+			}
+
+			public IEnumerator GetEnumerator()
+			{
+				foreach (var kv in settingsService.Query())
+					yield return kv;
+			} // proc GetEnumerator
+		} // class SettingsCollection
 
 		#endregion
 
 		private readonly IPpsUIService ui;
 		private readonly IPpsLogService log;
+		private readonly PpsDpcService dpcService;
 		private readonly PpsTraceTable traceTable;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -244,6 +264,7 @@ namespace TecWare.PPSn.UI
 
 			ui = Shell.GetService<IPpsUIService>(true);
 			log = Shell.GetService<IPpsLogService>(false);
+			dpcService = Shell.GetService<PpsDpcService>(false);
 
 			eventPane.AddCommandBinding(
 				Shell, ApplicationCommands.Open,
@@ -276,12 +297,39 @@ namespace TecWare.PPSn.UI
 			// create environment for the command box
 			traceTable = new PpsTraceTable(this);
 
+			if (dpcService != null)
+				dpcService.PropertyChanged += DpcService_PropertyChanged;
+
 			if (log != null)
 				InitLog();
 		} // ctor
 
 		protected override Task OnLoadAsync(LuaTable args)
-			=> Task.CompletedTask;
+		{
+			// connect settings
+			settingsList.ItemsSource = new SettingsCollection(Shell.GetService<IPpsSettingsService>(true));
+
+			// connect resource
+			resourceTree.ItemsSource = Shell.GetService<IPpsWpfResources>(true).Resources.MergedDictionaries;
+
+			UpdateLockedState();
+
+			return Task.CompletedTask;
+		} // func OnLoadAsync
+
+		private void DpcService_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == nameof(PpsDpcService.IsLocked))
+				UpdateLockedState();
+		}
+
+		private void UpdateLockedState()
+		{
+			var isLocked = dpcService.IsLocked;
+
+			resourcePanel.IsEnabled = !isLocked;
+			settingsPanel.IsEnabled = !isLocked;
+		} // proc UpdateLockedState
 
 		#endregion
 

@@ -14,8 +14,11 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Resources;
 using System.Windows;
 using TecWare.DE.Stuff;
 
@@ -31,6 +34,11 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		Uri CreateProxyUri(string relativePath);
 
+		/// <summary>Append external resources.</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		ResourceDictionary AppendResourceDictionary(Uri uri);
+
 		/// <summary>Try to locate a resource</summary>
 		/// <typeparam name="TKEY"></typeparam>
 		/// <typeparam name="T"></typeparam>
@@ -45,6 +53,9 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		T FindResource<T>(object resourceKey)
 			where T : class;
+
+		/// <summary>Return all main resources</summary>
+		ResourceDictionary Resources { get; }
 	} // interface IPpsWpfResources
 
 	#endregion
@@ -150,11 +161,47 @@ namespace TecWare.PPSn
 			=> new ResourceDictionary { Source = GetResourceUri(type, relativePath) };
 
 		/// <summary>Create a application resource uri for the resource from an assembly.</summary>
+		/// <param name="assembly"></param>
+		/// <param name="relativePath"></param>
+		/// <returns></returns>
+		public static Uri GetResourceUri(Assembly assembly, string relativePath)
+			=> new Uri($"pack://application:,,,/{assembly.GetName().Name};component/" + relativePath);
+
+		/// <summary>Create a application resource uri for the resource from an assembly.</summary>
 		/// <param name="type"></param>
 		/// <param name="relativePath"></param>
 		/// <returns></returns>
-		public static Uri GetResourceUri(Type type, string relativePath) 
-			=> new Uri($"pack://application:,,,/{type.Assembly.GetName().Name};component/" + relativePath);
+		public static Uri GetResourceUri(Type type, string relativePath)
+			=> GetResourceUri(type.Assembly, relativePath);
+
+		/// <summary>Create a application resource uri for the resource from an assembly. And also checks for existens.</summary>
+		/// <param name="assembly"></param>
+		/// <param name="relativePath"></param>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static bool TryGetResourceUri(Assembly assembly, string relativePath, out Uri uri)
+		{
+			uri = null;
+
+			var resName = Uri.EscapeUriString(relativePath.ToLowerInvariant());
+			if (resName.EndsWith(".xaml"))
+				resName = resName.Substring(0, resName.Length - 4) + "baml";
+
+			using (var src = assembly.GetManifestResourceStream(assembly.GetName().Name + ".g.resources"))
+			{
+				if (src != null)
+				{
+					using (var res = new ResourceReader(src))
+					{
+						// search for themes/styles
+						if (res.Cast<DictionaryEntry>().Select(c => c.Key).OfType<string>().FirstOrDefault(c => c == resName) != null)
+							uri = GetResourceUri(assembly, relativePath);
+					}
+				}
+			}
+
+			return uri != null;
+		} // func TryGetResourceUri
 
 		#endregion
 
