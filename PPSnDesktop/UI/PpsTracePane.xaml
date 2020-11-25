@@ -157,5 +157,9 @@
 			</TreeView>
 			<!-- todo: resolver -->
 		</ui:PpsSideBarPanel>
+
+		<ui:PpsSideBarPanel x:Name="barcodePanel" Header="Barcodes">
+			<TextBlock Text="BARCODE TESTER" />
+		</ui:PpsSideBarPanel>
 	</ui:PpsSideBarControl>
 </ui:PpsWindowPaneControl>

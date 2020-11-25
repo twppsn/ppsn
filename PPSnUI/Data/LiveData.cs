@@ -2283,7 +2283,6 @@ namespace TecWare.PPSn.Data
 		/// <summary>Log information, when a view is created.</summary>
 		/// <param name="tableName"></param>
 		/// <param name="typeName"></param>
-		/// <param name="filter"></param>
 		void ViewCreated(string tableName, string typeName);
 		/// <summary>Log information, when a view is removed from memory.</summary>
 		/// <param name="tableName"></param>
