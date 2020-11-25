@@ -118,6 +118,12 @@ namespace TecWare.PPSn
 				throw new ArgumentOutOfRangeException("Invalid userInfo.");
 		} // func GetUserNameFromCredentials
 
+		/// <summary>Returns the current user name.</summary>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		public static string GetUserName(this IPpsShell shell)
+			=> shell.UserSettings?.UserName ?? GetUserNameFromCredentials(shell.Http?.Credentials);
+
 		#endregion
 
 		#region -- Logger -------------------------------------------------------------

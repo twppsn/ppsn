@@ -45,11 +45,11 @@ namespace PPSnExcel
 			application.SheetDeactivate += sh => SelectionChanged(sh, false);
 			application.SheetSelectionChange += (sh, target) => SelectionChanged(target, true);
 
-			PpsShell.CurrentChanged += (s, _e) => { RefreshUsername(); Refresh(); };
+			PpsShell.CurrentChanged += (s, _e) => { RefreshUserName(); Refresh(); };
 
 			// init environment
 			RefreshEnvironments();
-			RefreshUsername();
+			RefreshUserName();
 			Refresh();
 
 			isMenuLoaded = true;
@@ -95,11 +95,11 @@ namespace PPSnExcel
 			cmdRefresh.Enabled =
 				cmdRefreshLayout.Enabled = Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null);
 		} // proc Refresh
-
-		private void RefreshUsername()
+		
+		public void RefreshUserName()
 		{
 			var currentShell = PpsShell.Current;
-			loginMenu.Label = currentShell is null ? "Keine Umgebung" : $"{currentShell.Info.Name} ({"currentShell.UserName"})";
+			loginMenu.Label = currentShell is null ? "Keine Umgebung" : $"{currentShell.Info.Name} ({currentShell.GetUserName()})";
 			loginGalery.Label = currentShell is null ? "Keine Umgebung" : $"{currentShell.Info.Name} ({currentShell.Info.DisplayName})";
 			logoutButton.Enabled = !(currentShell is null);
 		} // proc RefreshUsername

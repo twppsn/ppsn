@@ -191,7 +191,6 @@ namespace PPSnExcel
 
 		#endregion
 
-
 		#region -- Shell Handling -----------------------------------------------------
 
 		private async Task<bool> UpdateApplicationAsync(IPpsShell shell, Uri sourceUri)
@@ -311,6 +310,7 @@ namespace PPSnExcel
 				var shell = CreateShellAsync(info, isDefault).Await();
 				shell.Disposed += ShellDestroyed;
 				activatedShells.Add(shell);
+				Globals.Ribbons.PpsMenu.RefreshUserName();
 				return shell;
 			}
 		} // proc CreateShell
