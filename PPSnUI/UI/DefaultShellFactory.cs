@@ -617,12 +617,15 @@ namespace TecWare.PPSn.UI
 
 		private IEnumerable<KeyValuePair<string, string>> LoadSettingsFromFile(FileStream src)
 		{
-			using (var xml = CreateReader(src))
+			if (src.Length > 0)
 			{
-				if (xml != null)
+				using (var xml = CreateReader(src))
 				{
-					foreach (var kv in ParseSettings(xml, a => TranslateAttributeToSettingName(a, TranslateProperties)))
-						yield return kv;
+					if (xml != null)
+					{
+						foreach (var kv in ParseSettings(xml, a => TranslateAttributeToSettingName(a, TranslateProperties)))
+							yield return kv;
+					}
 				}
 			}
 		} // func LoadSettingsFromFileAsync
