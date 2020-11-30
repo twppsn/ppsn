@@ -185,7 +185,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Is raised after the http request is finished.</summary>
 		public event PpsWebViewNavigationContentHandler NavigationContent { add => AddHandler(NavigationContentEvent, value); remove => RemoveHandler(NavigationContentEvent, value); }
 		/// <summary></summary>
-		public event PpsWebViewNavigationContentHandler NavigationXamlCode { add => AddHandler(NavigationXamlCodeEvent, value); remove => RemoveHandler(NavigationXamlCodeEvent, value); }
+		public event PpsWebViewNavigationXamlCodeHandler NavigationXamlCode { add => AddHandler(NavigationXamlCodeEvent, value); remove => RemoveHandler(NavigationXamlCodeEvent, value); }
 		/// <summary>Is raised on the end of an navigation.</summary>
 		public event PpsWebViewNavigationCompletedHandler NavigationCompleted { add => AddHandler(NavigationCompletedEvent, value); remove => RemoveHandler(NavigationCompletedEvent, value); }
 
@@ -623,6 +623,7 @@ namespace TecWare.PPSn.Controls
 				// get the code modul for the control
 				var e = new PpsWebViewNavigationXamlCodeEventArgs(sourceUri);
 				RaiseEvent(e);
+
 				// create the control
 				var control = await PpsXamlParser.LoadAsync<FrameworkElement>(xml, new PpsXamlReaderSettings { BaseUri = sourceUri, Code = e.Code });
 
