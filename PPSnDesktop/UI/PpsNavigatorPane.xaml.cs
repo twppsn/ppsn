@@ -446,60 +446,60 @@ namespace TecWare.PPSn.UI
 
 	internal partial class PpsNavigatorPane : PpsWindowPaneControl
 	{
-	//	public PpsNavigatorPane(IPpsWindowPaneHost paneHost)
-	//		: base(paneHost)
-	//	{
-	//		InitializeComponent();
+		public PpsNavigatorPane(IPpsWindowPaneHost paneHost)
+			: base(paneHost)
+		{
+			//		InitializeComponent();
 
-	//		AddHandler(PpsNavigationListBox.ExecuteMacroEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
-	//		AddHandler(PpsNavigationListBox.ExecuteLuaEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
-	//	} // ctor
+			//		AddHandler(PpsNavigationListBox.ExecuteMacroEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
+			//		AddHandler(PpsNavigationListBox.ExecuteLuaEvent, new PpsNavigationExecuteEventHandler(OnExecuteEvent), false);
+		} // ctor
 
-	//	private void ShowResult(LuaResult result)
-	//	{
-	//		if (result.Count > 0)
-	//		{
-	//			var msg = String.Format("Ergebnis:\n{0}", result);
-	//			Model.Environment.ShowMessage(msg);
-	//		}
-	//	} // proc ShowResult
+		//	private void ShowResult(LuaResult result)
+		//	{
+		//		if (result.Count > 0)
+		//		{
+		//			var msg = String.Format("Ergebnis:\n{0}", result);
+		//			Model.Environment.ShowMessage(msg);
+		//		}
+		//	} // proc ShowResult
 
-	//	private void OnExecuteEvent(object sender, PpsNavigationExecuteEventArgs e)
-	//	{
-	//		try
-	//		{
-	//			if (e.RoutedEvent == PpsNavigationListBox.ExecuteMacroEvent)
-	//			{
-	//				var (executed, res) = Model.ExecuteMarcoAsync(e.Command).AwaitTask();
-	//				if (executed)
-	//					ShowResult(new LuaResult(res));
-	//				else
-	//				{
-	//					Model.Environment.ShowMessage(res is string msg ? msg : String.Format("Befehl '{0}' nicht ausgeführt.", e.Command));
-	//					e.IsFailed = true;
-	//				}
-	//			}
-	//			else if (e.RoutedEvent == PpsNavigationListBox.ExecuteLuaEvent)
-	//				ShowResult(Model.ExecuteCodeAsync(e.Command).AwaitTask());
-	//		}
-	//		catch (LuaParseException ex)
-	//		{
-	//			e.IsFailed = true;
-	//			Model.Environment.ShowMessage(String.Format("Syntax: {0} at {1}", ex.Message, ex.Index + 2));
-	//		}
-	//		catch (Exception ex)
-	//		{
-	//			e.IsFailed = true;
-	//			Model.Environment.ShowException(PpsExceptionShowFlags.None, ex, "Execution failed.\n" + ex.GetBaseException().Message);
-	//		}
-	//	} // proc OnExecuteEvent
+		//	private void OnExecuteEvent(object sender, PpsNavigationExecuteEventArgs e)
+		//	{
+		//		try
+		//		{
+		//			if (e.RoutedEvent == PpsNavigationListBox.ExecuteMacroEvent)
+		//			{
+		//				var (executed, res) = Model.ExecuteMarcoAsync(e.Command).AwaitTask();
+		//				if (executed)
+		//					ShowResult(new LuaResult(res));
+		//				else
+		//				{
+		//					Model.Environment.ShowMessage(res is string msg ? msg : String.Format("Befehl '{0}' nicht ausgeführt.", e.Command));
+		//					e.IsFailed = true;
+		//				}
+		//			}
+		//			else if (e.RoutedEvent == PpsNavigationListBox.ExecuteLuaEvent)
+		//				ShowResult(Model.ExecuteCodeAsync(e.Command).AwaitTask());
+		//		}
+		//		catch (LuaParseException ex)
+		//		{
+		//			e.IsFailed = true;
+		//			Model.Environment.ShowMessage(String.Format("Syntax: {0} at {1}", ex.Message, ex.Index + 2));
+		//		}
+		//		catch (Exception ex)
+		//		{
+		//			e.IsFailed = true;
+		//			Model.Environment.ShowException(PpsExceptionShowFlags.None, ex, "Execution failed.\n" + ex.GetBaseException().Message);
+		//		}
+		//	} // proc OnExecuteEvent
 
-	//	protected override async Task OnLoadAsync(LuaTable args)
-	//	{
-	//		await base.OnLoadAsync(args);
+		//	protected override async Task OnLoadAsync(LuaTable args)
+		//	{
+		//		await base.OnLoadAsync(args);
 
-	//		DataContext = new PpsNavigatorDataModel(this, Commands, itemList.ListCommands, itemList.ItemCommands);
-	//	} // func OnLoadAsync
+		//		DataContext = new PpsNavigatorDataModel(this, Commands, itemList.ListCommands, itemList.ItemCommands);
+		//	} // func OnLoadAsync
 
 		private void SideBarFilterChanged(object sender, PpsSideBarFilterChangedEventArgs e) { }
 	//		=> Model.CurrentView = e.NewFilter as PpsViewDefinition;

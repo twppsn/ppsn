@@ -24,27 +24,6 @@ using LLua = Neo.IronLua.Lua;
 
 namespace TecWare.PPSn.Lua
 {
-	#region -- interface IPpsLuaShell -------------------------------------------------
-
-	/// <summary>Shell service of the scripting interface.</summary>
-	public interface IPpsLuaShell
-	{
-		/// <summary>Compile a text to a code chunk.</summary>
-		/// <param name="code">Chunk source.</param>
-		/// <param name="source">Source location for the debug information.</param>
-		/// <param name="throwException">If the compile fails, should be raised a exception.</param>
-		/// <param name="arguments">Argument definition for the chunk.</param>
-		/// <returns></returns>
-		Task<LuaChunk> CompileAsync(TextReader code, string source, bool throwException, params KeyValuePair<string, Type>[] arguments);
-
-		/// <summary>Global environment.</summary>
-		LuaTable Global { get; }
-		/// <summary>Lua engine.</summary>
-		LLua Lua { get; }
-	} // interface IPpsLuaShell
-
-	#endregion
-
 	#region -- class PpsLuaShellService -----------------------------------------------
 
 	[

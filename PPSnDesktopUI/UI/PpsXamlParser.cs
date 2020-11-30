@@ -341,9 +341,11 @@ namespace TecWare.PPSn.UI
 		/// <param name="type"></param>
 		/// <returns></returns>
 		public override XamlType GetXamlType(Type type)
-			=> IsDynamicPropertiesImplemented(type)
-				? new PpsXamlDynamicPropertiesType(this, type)
-				: baseContext.GetXamlType(type) ?? base.GetXamlType(type);
+		{
+			return IsDynamicPropertiesImplemented(type)
+				  ? new PpsXamlDynamicPropertiesType(this, type)
+				  : baseContext.GetXamlType(type) ?? base.GetXamlType(type);
+		} // func GetXamlType
 
 		/// <summary></summary>
 		/// <param name="xamlNamespace"></param>
@@ -452,8 +454,8 @@ namespace TecWare.PPSn.UI
 		{
 			if (settings is PpsXamlReaderSettings pps)
 			{
-				this.Code = pps.Code;
-				this.DebugWriter = pps.DebugWriter;
+				Code = pps.Code;
+				DebugWriter = pps.DebugWriter;
 			}
 		} // ctor
 
@@ -686,7 +688,8 @@ namespace TecWare.PPSn.UI
 				=> FallbackInvokeMember(target, args, errorSuggestion);
 
 			public override DynamicMetaObject FallbackInvokeMember(DynamicMetaObject target, DynamicMetaObject[] args, DynamicMetaObject errorSuggestion)
-				=> errorSuggestion ??
+			{
+				return errorSuggestion ??
 					new DynamicMetaObject(
 						LExpression.Throw(LExpression.New(missingMemberConstructorInfo,
 							LExpression.Constant(target.LimitType.Name),
@@ -694,6 +697,7 @@ namespace TecWare.PPSn.UI
 						), ReturnType),
 						target.Restrictions
 					);
+			} // func FallbackInvokeMember
 
 			private static readonly ConstructorInfo missingMemberConstructorInfo;
 
@@ -702,7 +706,7 @@ namespace TecWare.PPSn.UI
 				missingMemberConstructorInfo = typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string), typeof(string) })
 					?? throw new ArgumentNullException(nameof(MissingMemberException));
 			} // sctor
-		} // func CallDynamicBinder
+		} // func XamlInvokeMemberBinder
 
 		#endregion
 
@@ -1439,6 +1443,8 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- class PpsXamlParser ----------------------------------------------------
+
 	/// <summary></summary>
 	public static class PpsXamlParser
 	{
@@ -1446,15 +1452,17 @@ namespace TecWare.PPSn.UI
 
 		static PpsXamlParser()
 		{
-			var type = System.Type.GetType("System.Windows.Baml2006.WpfXamlMember,PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", true);
+			var type = Type.GetType("System.Windows.Baml2006.WpfXamlMember,PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35", true);
 			//type.GetProperty("DependencyProperty")
 			wpfXamlMemberPropertyInfo = type.GetProperty("RoutedEvent", BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty) ?? throw new ArgumentNullException("WpfXamlType.RoutedEvent");
 		} // sctor
 
 		internal static Type GetEventHandlerType(XamlMember member)
-			=> wpfXamlMemberPropertyInfo.DeclaringType.IsAssignableFrom(member.GetType())
+		{
+			return wpfXamlMemberPropertyInfo.DeclaringType.IsAssignableFrom(member.GetType())
 				? ((RoutedEvent)wpfXamlMemberPropertyInfo.GetValue(member)).HandlerType
 				: member.Type.UnderlyingType;
+		} // func GetEventHandlerType
 
 		internal static object CreateEventFromDelegate(Type delegateType, Delegate dlg)
 		{
@@ -1599,4 +1607,6 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		public static bool DebugTransform { get; set; } = false;
 	} // class PpsXamlParser
+
+	#endregion
 }

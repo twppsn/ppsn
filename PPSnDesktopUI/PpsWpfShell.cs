@@ -31,6 +31,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
@@ -187,12 +188,19 @@ namespace TecWare.PPSn
 			if (r != null)
 				return r;
 
+			// ask next control
 			var parentObject = useVisualTree
-					? GetVisualParent(current)
-					: GetLogicalParent(current);
-			return parentObject == null
-				? (GetShell(current)?.GetService(serviceType) ?? throw new ArgumentException($"Service {serviceType.Name} is not implemented."))
-				: GetControlService(parentObject, serviceType, throwException, useVisualTree);
+				? GetVisualParent(current)
+				: GetLogicalParent(current);
+
+			if (parentObject == null) // fallback to shell services
+				r = GetShell(current)?.GetService(serviceType);
+			else
+				return GetControlService(parentObject, serviceType, throwException, useVisualTree);
+
+			if (r == null && throwException)
+				throw new ArgumentException($"Service {serviceType.Name} is not implemented.");
+			return r;
 		} // func GetControlService
 
 		#endregion
