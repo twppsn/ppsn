@@ -71,6 +71,7 @@ namespace TecWare.PPSn
 			public ICredentials UserInfo { get; set; } = null;
 			public bool DoAutoLogin { get; set; } = false;
 			public bool AllowSync { get; set; } = true;
+			public bool EnforceShellSelection { get; set; } = false;
 		} // class AppStartArguments
 
 		#endregion
@@ -422,7 +423,7 @@ namespace TecWare.PPSn
 						if (PpsWpfShell.TryGetResourceUri(asm, "themes/styles.xaml", out var uri))
 							themesToLoad.Add(uri);
 
-						log.Debug($"Assembly {f.FileId} loaded: {asm.Location} resources: {(uri ?.ToString() ?? "<null>")}");
+						log.Debug($"Assembly {f.FileId} loaded: {asm.Location} resources: {(uri?.ToString() ?? "<null>")}");
 					}
 				}
 				splashWindow.SetProgressText("Lade Anwendungsmodule...");
@@ -491,7 +492,7 @@ namespace TecWare.PPSn
 				throw new ArgumentOutOfRangeException(nameof(applicationMode), applicationMode, "Invalid application mode.");
 		} // func GetMainWindowManager
 
-		private async Task<IPpsShell> StartApplicationShellAsync(PpsSplashWindow splashWindow, IPpsShellInfo shellInfo, bool allowSync)
+		private async Task<IPpsShell> StartApplicationShellAsync(PpsSplashWindow splashWindow, IPpsShellInfo shellInfo, bool allowSync, bool enforceShellSelection)
 		{
 			object errorInfo = null;
 			while (true)
@@ -502,7 +503,7 @@ namespace TecWare.PPSn
 					if (errorInfo != null)
 						await splashWindow.SetErrorAsync(errorInfo, null);
 
-					shellInfo = await splashWindow.ShowShellAsync(shellInfo);
+					shellInfo = await splashWindow.ShowShellAsync(shellInfo, enforceShellSelection);
 					if (shellInfo == null)
 						return null; // cancel pressed, exit application
 				}
@@ -598,7 +599,7 @@ namespace TecWare.PPSn
 			{
 				// first load a shell
 				// always restart to change shell, because a load libraries can only load once
-				var newShell = await StartApplicationShellAsync(splashWindow, args.ShellInfo, args.AllowSync);
+				var newShell = await StartApplicationShellAsync(splashWindow, args.ShellInfo, args.AllowSync, args.EnforceShellSelection);
 				if (newShell == null)
 					return false;
 
@@ -846,6 +847,8 @@ namespace TecWare.PPSn
 						case 'a': // shell id
 							var shellName = arg.Substring(2);
 							r.ShellInfo = localShells.Value.FirstOrDefault(c => String.Compare(c.Name, shellName, StringComparison.OrdinalIgnoreCase) == 0);
+							if (r.ShellInfo == null)
+								r.EnforceShellSelection = true;
 							break;
 						case 'w': // wait process id
 							if (Int32.TryParse(arg.Substring(2), out var pid))
@@ -857,9 +860,13 @@ namespace TecWare.PPSn
 								r.AllowSync = false;
 								noRestart = true;
 							}
-							else if(arg == "--norestart")
+							else if (arg == "--norestart")
 							{
 								noRestart = true;
+							}
+							else if (arg == "--shell")
+							{
+								r.EnforceShellSelection = true;
 							}
 							break;
 					}

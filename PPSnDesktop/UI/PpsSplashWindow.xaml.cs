@@ -648,11 +648,11 @@ namespace TecWare.PPSn.UI
 		private static readonly DependencyPropertyKey shellStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(ShellState), typeof(ShellInfoData), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty ShellStateProperty = shellStatePropertyKey.DependencyProperty;
 
-		public Task<IPpsShellInfo> ShowShellAsync(IPpsShellInfo shellInfo)
+		public Task<IPpsShellInfo> ShowShellAsync(IPpsShellInfo shellInfo, bool enforceShellSelection)
 		{
 			// init shell data
 			var shell = new ShellInfoData(this);
-			if (shell.IsOnlyOne())
+			if (!enforceShellSelection && shell.IsOnlyOne())
 				return shell.Result;
 
 			SetValue(shellStatePropertyKey, shell);
