@@ -130,7 +130,6 @@
     <Compile Include="Data\PpsDataSetDesktop.cs" />
     <Compile Include="Data\PpsTraceLog.cs" />
     <Compile Include="Data\SQLiteExtensions.cs" />
-    <Compile Include="Lua\PpsLuaCode.cs" />
     <Compile Include="Lua\PpsLuaShell.cs" />
     <Compile Include="Main\PpsMainWindowService.cs" />
     <Compile Include="NativeMethods.cs" />

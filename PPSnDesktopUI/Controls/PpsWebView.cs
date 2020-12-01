@@ -145,12 +145,22 @@ namespace TecWare.PPSn.Controls
 
 	public class PpsWebViewNavigationXamlCodeEventArgs : PpsWebViewNavigationEventArgs
 	{
+		private IPpsLuaCodeBehind code = null;
+
 		public PpsWebViewNavigationXamlCodeEventArgs(object uri) 
 			: base(PpsWebView.NavigationXamlCodeEvent, uri)
 		{
 		} // ctor
 
-		public IPpsLuaCodeBehind Code { get; set; } = null;
+		public IPpsLuaCodeBehind Code 
+		{
+			get => code;
+			set
+			{
+				code = value;
+				Handled = true;
+			}
+		} // prop Code
 	} // class PpsWebViewNavigationXamlCodeEventArgs
 
 	public delegate void PpsWebViewNavigationXamlCodeHandler(object sender, PpsWebViewNavigationXamlCodeEventArgs e);
@@ -631,8 +641,9 @@ namespace TecWare.PPSn.Controls
 				{
 					// copy arguments
 					var args = new LuaTable();
-					foreach (var kv in sourceUri.ParseQuery().Cast<DictionaryEntry>())
-						args[kv.Key] = kv.Value;
+					var tmp = sourceUri.ParseQuery();
+					foreach (var k in tmp.Keys.Cast<string>())
+						args[k] = tmp[k];
 
 					// mark control as created
 					e.Code.OnControlCreated(control, args);

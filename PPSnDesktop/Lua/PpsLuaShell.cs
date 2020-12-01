@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Neo.IronLua;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using LLua = Neo.IronLua.Lua;
 
@@ -30,7 +31,7 @@ namespace TecWare.PPSn.Lua
 	PpsLazyService,
 	PpsService(typeof(IPpsLuaShell))
 	]
-	internal class PpsLuaShellService : LuaGlobal, IPpsShellService, IPpsLuaShell
+	internal class PpsLuaShellService : LuaGlobal, IPpsShellService, IPpsLuaShell, IPpsLuaCodeSource
 	{
 		#region -- class LuaTraceLineDebugInfo ----------------------------------------
 
@@ -104,6 +105,23 @@ namespace TecWare.PPSn.Lua
 			commandCompileOptions = new LuaCompileOptions { DebugEngine = LuaStackTraceDebugger.Default };
 		} // ctor
 
+		#region -- Require ------------------------------------------------------------
+
+		[LuaMember("require", true)]
+		internal LuaResult LuaRequire(object arg)
+		{
+			if (arg is string path)
+				return LuaRequire(this, path);
+			else
+				throw new ArgumentException("string as argument expected.");
+		} // func LuaRequire
+
+		[LuaMember("require", true)]
+		internal LuaResult LuaRequire(LuaTable self, string path)
+			=> PpsLuaShell.RequireCodeAsync(self, this, path).Await();
+
+		#endregion
+
 		#region -- CombileAsync -------------------------------------------------------
 
 		private async Task<LuaChunk> CompileCoreAsync(TextReader code, string source, bool throwException, KeyValuePair<string, Type>[] arguments)
@@ -136,28 +154,11 @@ namespace TecWare.PPSn.Lua
 
 		public IPpsShell Shell => shell;
 		LLua IPpsLuaShell.Lua => Lua;
-
+		
 		LuaTable IPpsLuaShell.Global => this;
+		Uri IPpsLuaCodeSource.SourceUri => shell.Http.BaseAddress;
+		IPpsLuaShell IPpsLuaCodeSource.LuaShell => this;
 	} // class PpsLuaShellService
-
-	#endregion
-
-	#region -- class PpsLuaShell ------------------------------------------------------
-
-	/// <summary></summary>
-	public static class PpsLuaShell
-	{
-		/// <summary></summary>
-		/// <param name="lua"></param>
-		/// <param name="command"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		public static async Task<LuaChunk> CompileAsync(this IPpsLuaShell lua, string command, bool throwException = true)
-		{
-			using (var tr = new StringReader(command))
-				return await lua.CompileAsync(tr, null, throwException);
-		} // func CompileAsync
-	} // class PpsLuaShell
 
 	#endregion
 }
