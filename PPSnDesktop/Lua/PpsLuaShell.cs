@@ -17,6 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Networking;
@@ -25,13 +27,70 @@ using LLua = Neo.IronLua.Lua;
 
 namespace TecWare.PPSn.Lua
 {
+	#region -- class PpsLuaHttp -------------------------------------------------------
+
+	internal sealed class PpsLuaHttp : LuaTable
+	{
+		private readonly IPpsLuaShell shell;
+
+		public PpsLuaHttp(IPpsLuaShell shell)
+		{
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+		} // ctor
+
+		#region -- Get, Post ----------------------------------------------------------
+
+		private string GetRelativePath(DEHttpClient http, IPpsLuaCodeSource self, string path)
+		{
+			var uri = new Uri(path, UriKind.RelativeOrAbsolute);
+			if (!uri.IsAbsoluteUri)
+				uri = new Uri(self.SourceUri, uri);
+
+			return http.MakeRelative(uri);
+		} // func GetRelativePath
+
+		private Task<LuaTable> LuaGetTableAsync(IPpsLuaCodeSource self, string path, LuaTable args)
+		{
+			var http = self.LuaShell.Shell.Http;
+			var sb = new StringBuilder(GetRelativePath(http, self, path));
+			HttpStuff.MakeUriArguments(sb, false, args.Members.Select(kv => new PropertyValue(kv.Key, kv.Value)));
+			return http.GetTableAsync(sb.ToString());
+		} // proc LuaGetTableAsync
+
+		private Task<LuaTable> LuaPostTableAsync(IPpsLuaCodeSource self, string path, LuaTable args)
+		{
+			var http = self.LuaShell.Shell.Http;
+			return http.PutTableAsync(GetRelativePath(http, self, path), args);
+		} // func LuaPostTableAsync
+
+		//[LuaMember("GetTable", isMethod: true)]
+		//internal LuaTable LuaGetTable(string path, LuaTable args)
+		//	=> LuaGetTableAsync(shell, path, args).Await();
+
+		[LuaMember("GetTable")]
+		internal LuaTable LuaGetTable(LuaTable self, string path, LuaTable args)
+			=> LuaGetTableAsync(self as IPpsLuaCodeSource ?? shell, path, args).Await();
+
+		[LuaMember("PostTable", isMethod: true)]
+		internal LuaTable LuaPostTable(string path, LuaTable args)
+			=> LuaPostTableAsync(shell, path, args).Await();
+
+		[LuaMember("PostTable", isMethod: true)]
+		internal LuaTable LuaPostTable(LuaTable self, string path, LuaTable args)
+			=> LuaPostTableAsync(self as IPpsLuaCodeSource ?? shell, path, args).Await();
+
+		#endregion
+	} // class PpsLuaHttp
+
+	#endregion
+
 	#region -- class PpsLuaShellService -----------------------------------------------
 
 	[
 	PpsLazyService,
 	PpsService(typeof(IPpsLuaShell))
 	]
-	internal class PpsLuaShellService : LuaGlobal, IPpsShellService, IPpsLuaShell, IPpsLuaCodeSource
+	internal sealed class PpsLuaShellService : LuaGlobal, IPpsShellService, IPpsLuaShell, IPpsLuaCodeSource
 	{
 		#region -- class LuaTraceLineDebugInfo ----------------------------------------
 
@@ -96,10 +155,14 @@ namespace TecWare.PPSn.Lua
 		private readonly LuaCompileOptions scriptCompileOptions;
 		private readonly LuaCompileOptions commandCompileOptions;
 
+		private readonly PpsLuaHttp http;
+
 		public PpsLuaShellService(IPpsShell shell)
 			: base(new LLua(LuaIntegerType.Int64, LuaFloatType.Double))
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+
+			this.http = new PpsLuaHttp(this);
 
 			scriptCompileOptions = new LuaCompileOptions { DebugEngine = new PpsLuaDebugger() };
 			commandCompileOptions = new LuaCompileOptions { DebugEngine = LuaStackTraceDebugger.Default };
@@ -118,11 +181,11 @@ namespace TecWare.PPSn.Lua
 
 		[LuaMember("require", true)]
 		internal LuaResult LuaRequire(LuaTable self, string path)
-			=> PpsLuaShell.RequireCodeAsync(self, this, path).Await();
+			=> PpsLuaShell.RequireCodeAsync(PpsLuaCodeScope.Create(this, self), path).Await();
 
 		#endregion
 
-		#region -- CombileAsync -------------------------------------------------------
+		#region -- CompileAsync -------------------------------------------------------
 
 		private async Task<LuaChunk> CompileCoreAsync(TextReader code, string source, bool throwException, KeyValuePair<string, Type>[] arguments)
 		{
@@ -152,11 +215,15 @@ namespace TecWare.PPSn.Lua
 		protected override void OnPrint(string text)
 			=> shell.LogProxy().Debug(text);
 
+		[LuaMember]
+		public LuaTable Http => http;
+
 		public IPpsShell Shell => shell;
 		LLua IPpsLuaShell.Lua => Lua;
 		
 		LuaTable IPpsLuaShell.Global => this;
 		Uri IPpsLuaCodeSource.SourceUri => shell.Http.BaseAddress;
+		LuaTable IPpsLuaCodeSource.Target => this;
 		IPpsLuaShell IPpsLuaCodeSource.LuaShell => this;
 	} // class PpsLuaShellService
 
