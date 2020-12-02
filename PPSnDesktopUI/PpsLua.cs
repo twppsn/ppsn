@@ -119,7 +119,7 @@ namespace TecWare.PPSn
 
 		private Task codeCompiledTask = Task.CompletedTask;
 
-		public PpsLuaCodeBehind(IPpsLuaShell shell, Uri sourceUri) 
+		public PpsLuaCodeBehind(IPpsLuaShell shell, Uri sourceUri)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 			this.sourceUri = sourceUri ?? throw new ArgumentNullException(nameof(sourceUri));
@@ -152,7 +152,7 @@ namespace TecWare.PPSn
 
 		public Uri SourceUri => sourceUri;
 		public IPpsLuaShell LuaShell => shell;
-} // class PpsLuaCodeBehind
+	} // class PpsLuaCodeBehind
 
 	#endregion
 
@@ -194,7 +194,7 @@ namespace TecWare.PPSn
 			// compile code, synchonize the code to this thread
 			if (!sourceUri.IsAbsoluteUri)
 				sourceUri = new Uri(self.SourceUri, sourceUri);
-			
+
 			using (var response = await self.LuaShell.Shell.Http.GetAsync(sourceUri))
 			using (var tr = await response.GetTextReaderAsync())
 				return await RequireCodeAsync(self, tr, sourceUri);

@@ -1282,7 +1282,7 @@ namespace TecWare.PPSn.UI
 		private readonly Type declaredType;
 		private readonly string id;
 
-		private PpsRoutedCommand( Type declaredType, string id)
+		private PpsRoutedCommand(Type declaredType, string id)
 		{
 			this.declaredType = declaredType ?? throw new ArgumentNullException(nameof(declaredType));
 			this.id = id ?? throw new ArgumentNullException(nameof(id));

@@ -28,6 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml;
 using Microsoft.Web.WebView2.Core;
@@ -181,6 +182,9 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		/// <summary></summary>
+		public static readonly RoutedCommand LinkCommand = PpsRoutedCommand.Create(typeof(PpsWebView), nameof(LinkCommand));
+
 		/// <summary>Is raised on the start of an navigation.</summary>
 		public static readonly RoutedEvent NavigationStartedEvent = EventManager.RegisterRoutedEvent(nameof(NavigationStarted), RoutingStrategy.Bubble, typeof(PpsWebViewNavigationStartedHandler), typeof(PpsWebView));
 		/// <summary>Is raised after the http request is finished.</summary>
@@ -224,6 +228,8 @@ namespace TecWare.PPSn.Controls
 			htmlView.CoreWebView2Ready += HtmlView_CoreWebView2Ready;
 
 			SetValue(historyPropertyKey, history);
+
+			CommandBindings.Add(new CommandBinding(LinkCommand, LinkCommandExecuted, CanLinkCommandExecute));
 		} // ctor
 
 		protected override void OnInitialized(EventArgs e)
@@ -479,7 +485,7 @@ namespace TecWare.PPSn.Controls
 			}
 			else // set other response and cancel request
 			{
-				await SetResponseMessageAsync(token, response);
+				await SetResponseMessageAsync(token, response, true);
 				SetHtmlEmptyResponse(e);
 			}
 		} // proc HtmlViewSetMainResourceAsync
@@ -506,7 +512,7 @@ namespace TecWare.PPSn.Controls
 			catch (Exception ex)
 			{
 				SetHtmlEmptyResponse(e);
-				await SetResponseMessageAsync(currentNavigationToken, new ViewResponseMessage(uri, ex));
+				await SetResponseMessageAsync(currentNavigationToken, new ViewResponseMessage(uri, ex), true);
 			}
 		} // proc HtmlViewSetMainResourceAsync
 
@@ -887,7 +893,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc SendShellAsync
 
-		private Task SetResponseMessageAsync(ViewNavigationToken token, ViewResponseMessage response)
+		private Task SetResponseMessageAsync(ViewNavigationToken token, ViewResponseMessage response, bool enforceContent)
 		{
 			if (!token.IsActive)
 				return Task.CompletedTask;
@@ -902,10 +908,15 @@ namespace TecWare.PPSn.Controls
 						return SetHtmlAsync(response.SourceUri, response);
 					case ViewState.Xaml:
 						return SetXamlAsync(response.SourceUri, response.Content, null);
+					case ViewState.Empty:
+						if (enforceContent)
+						{
+							SetViewState(ViewState.Empty);
+							HasContent = false;
+							Title = null;
+						}
+						return Task.CompletedTask;
 					default:
-						SetViewState(ViewState.Empty);
-						HasContent = false;
-						Title = null;
 						return Task.CompletedTask;
 				}
 			}
@@ -1066,7 +1077,7 @@ namespace TecWare.PPSn.Controls
 			if (token.IsActive)
 			{
 				using (var response = new ViewResponseMessage(null, ex))
-					await SetResponseMessageAsync(token, response);
+					await SetResponseMessageAsync(token, response, true);
 			}
 			shell.Value.LogProxy().LogMsg(LogMsgType.Error, ex);
 		} // proc SetExceptionAsync
@@ -1101,7 +1112,7 @@ namespace TecWare.PPSn.Controls
 					try
 					{
 						using (var request = new ViewRequestMessage(HttpMethod.Get.Method, relativeUri, null, null))
-							await SetResponseMessageAsync(token, await SendShellAsync(token, request));
+							await SetResponseMessageAsync(token, await SendShellAsync(token, request), false);
 					}
 					catch (HttpResponseException e)
 					{
@@ -1117,11 +1128,23 @@ namespace TecWare.PPSn.Controls
 				await SetHtmlAsync(newUri, null);
 		} // proc SetUriAsync
 
-		private void SetUri(Uri uri)
+		private void SetUri(Uri uri, bool setAsHome = true)
 		{
-			SetUriAsync(uri)
+			SetUriAsync(uri, setAsHome)
 				.ContinueWith(t => Source = t.Exception.InnerException, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted);
 		} // proc SetUri
+
+		private void LinkCommandExecuted(object sender, ExecutedRoutedEventArgs e)
+		{
+			SetSource(e.Parameter, false);
+			e.Handled = true;
+		} // proc LinkCommandExecuted
+
+		private void CanLinkCommandExecute(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.CanExecute = e.Parameter is string || e.Parameter is Uri || e.Parameter is PpsWebViewHistoryItem;
+			e.Handled = true;
+		} // proc CanLinkCommandExecute
 
 		#endregion
 
@@ -1133,34 +1156,34 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(nameof(Source), typeof(object), typeof(PpsWebView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSourceChanged)));
 
 		private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsWebView)d).OnSourceChanged(e.NewValue);
+			=> ((PpsWebView)d).SetSource(e.NewValue, true);
 
-		private void OnSourceChanged(object newSource)
+		private void SetSource(object newSource, bool setAsHome)
 		{
 			switch (newSource)
 			{
 				case null:
-					SetUri(null);
+					SetUri(null, setAsHome);
 					break;
 				case string path:
 					if (Path.IsPathRooted(path)) // create file uri
-						SetUri(new Uri("file://" + path.Replace(Path.DirectorySeparatorChar, '/')));
+						SetUri(new Uri("file://" + path.Replace(Path.DirectorySeparatorChar, '/')), setAsHome);
 					else if (Uri.TryCreate(path, UriKind.Absolute, out var tmp))
-						SetUri(tmp);
+						SetUri(tmp, setAsHome);
 					else if (TryGetHttp(out var http))
-						SetUri(http.CreateFullUri(path));
+						SetUri(http.CreateFullUri(path), setAsHome);
 					break;
 				case Uri uri:
 					if (uri.IsAbsoluteUri)
-						SetUri(uri);
+						SetUri(uri, setAsHome);
 					else if (TryGetHttp(out var http))
-						SetUri(new Uri(http.BaseAddress, uri));
+						SetUri(new Uri(http.BaseAddress, uri), setAsHome);
 					else
 						throw new ArgumentException("Absolute uri expected.");
 					break;
 				case PpsWebViewHistoryItem his:
 					UpdateHistroyIndex(his);
-					SetUri(his.Uri);
+					SetUri(his.Uri, setAsHome);
 					break;
 				case Exception ex:
 					SetExceptionAsync(ex).Silent();
@@ -1168,7 +1191,7 @@ namespace TecWare.PPSn.Controls
 				default:
 					throw new ArgumentException("Unsupported source type.", nameof(Source));
 			}
-		} // proc OnSourceChanged
+		} // proc SetSource
 
 		public object Source { get => GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
 
