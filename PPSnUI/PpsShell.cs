@@ -287,7 +287,7 @@ namespace TecWare.PPSn
 		public const string PpsnSecurtiyKey = "PPSn.Security";
 		public const string PpsnVersionKey = "PPSn.Version";
 
-		public const string ClockFormatKey = "PPSn.ClockFormat"; // todo: bde
+		public const string ClockFormatKey = "PPSn.ClockFormat";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>Basic shell settings</summary>

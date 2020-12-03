@@ -157,6 +157,7 @@
     <Compile Include="Main\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsLuaWindowPaneControl.cs" />
     <Compile Include="UI\PpsMarkdownPane.xaml.cs">
       <DependentUpon>PpsMarkdownPane.xaml</DependentUpon>
     </Compile>

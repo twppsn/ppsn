@@ -42,6 +42,8 @@ namespace TecWare.PPSn.Lua
 		private readonly IPpsUIService ui;
 		private readonly LoggerProxy log;
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
 		public PpsLuaUI(IPpsLuaShell shell)
 		{
 			if (shell == null)
@@ -51,6 +53,8 @@ namespace TecWare.PPSn.Lua
 			ui = shell.Shell.GetService<IPpsUIService>(true);
 			log = shell.Shell.LogProxy();
 		} // ctor
+
+		#endregion
 
 		#region -- GetResource, Command -----------------------------------------------
 
