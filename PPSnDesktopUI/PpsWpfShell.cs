@@ -1364,20 +1364,6 @@ namespace TecWare.PPSn
 	//		return resourceKey;
 	//	} // func UpdateResource
 
-	//	/// <summary>Find the resource.</summary>
-	//	/// <param name="key"></param>
-	//	/// <param name="dependencyObject"></param>
-	//	/// <returns></returns>
-	//	[LuaMember]
-	//	public object GetResource(object key, DependencyObject dependencyObject)
-	//	{
-	//		if (dependencyObject is FrameworkElement fe)
-	//			return fe.TryFindResource(key);
-	//		else if (dependencyObject is FrameworkContentElement fce)
-	//			return fce.TryFindResource(key);
-	//		else
-	//			return defaultResources[key] ?? Application.Current.TryFindResource(key);
-	//	} // func GetResource
 
 	//	void IPpsXamlCode.CompileCode(Uri uri, string code)
 	//		=> CompileCodeForXaml(this, uri, code);
@@ -1513,37 +1499,6 @@ namespace TecWare.PPSn
 	//	[LuaMember("msgbox")]
 	//	private MessageBoxResult LuaMsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
 	//		=> MsgBox(text, button, image, defaultResult);
-
-	//	/// <summary></summary>
-	//	/// <param name="value"></param>
-	//	/// <param name="targetType"></param>
-	//	/// <returns></returns>
-	//	[LuaMember("ToNumberUI")]
-	//	public object LuaToNumber(object value, Type targetType)
-	//	{
-	//		if (targetType == null)
-	//			throw new ArgumentNullException(nameof(targetType));
-
-	//		var r = PpsConverter.NumericValue.ConvertBack(value, targetType, null, CultureInfo.CurrentUICulture);
-	//		if (r is ValidationResult
-	//			|| r == DependencyProperty.UnsetValue)
-	//			return null;
-	//		return r;
-	//	} // func LuaToNumber
-
-	//	/// <summary></summary>
-	//	/// <param name="value"></param>
-	//	/// <returns></returns>
-	//	[LuaMember("ToStringUI")]
-	//	public new object LuaToString(object value)
-	//	{
-	//		var r = PpsConverter.NumericValue.Convert(value, typeof(string), null, CultureInfo.CurrentUICulture);
-	//		if (r is ValidationResult
-	//			|| r == DependencyProperty.UnsetValue)
-	//			return null;
-	//		return r;
-	//	} // func LuaToString
-
 	//	/// <summary>Helper to await a async process.</summary>
 	//	/// <param name="func"></param>
 	//	/// <returns></returns>
