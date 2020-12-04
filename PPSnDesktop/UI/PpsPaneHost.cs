@@ -351,7 +351,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		protected override IEnumerator LogicalChildren
-			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Control);
+			=> PpsLogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Control);
 
 		/// <summary>Access the pane manager</summary>
 		public IPpsWindowPaneManager PaneManager => paneManager;

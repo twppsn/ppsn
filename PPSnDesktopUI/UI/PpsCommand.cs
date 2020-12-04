@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -200,6 +201,8 @@ namespace TecWare.PPSn.UI
 		/// <param name="commandContext"></param>
 		public abstract void ExecuteCommand(PpsCommandContext commandContext);
 
+		#region -- CreateBinding ------------------------------------------------------
+
 		/// <summary></summary>
 		/// <param name="shell"></param>
 		/// <param name="target"></param>
@@ -241,6 +244,44 @@ namespace TecWare.PPSn.UI
 				}
 			);
 		} // func CreateBinding
+
+		#endregion
+
+		#region -- Command Service ----------------------------------------------------
+
+		private static void CanExecuteCommandHandlerImpl(object sender, CanExecuteRoutedEventArgs e)
+		{
+#if DEBUG
+			if (e.Command is PpsRoutedCommand)
+			{
+				var f = Keyboard.FocusedElement;
+				Debug.Print($"CanExecute: {e.Command} on {(f == null ? "<null>" : f.GetType().Name)}");
+			}
+#endif
+
+			if (!e.Handled && sender is DependencyObject d && e.Command is PpsCommandBase c)
+			{
+				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(d.GetShell(), e.OriginalSource ?? e.Source, e.Source, e.Parameter));
+				e.Handled = true;
+			}
+		} // func CanExecuteCommandHandlerImpl
+
+		private static void ExecutedCommandHandlerImpl(object sender, ExecutedRoutedEventArgs e)
+		{
+			if (!e.Handled && sender is DependencyObject d && e.Command is PpsCommandBase c)
+			{
+				c.ExecuteCommand(new PpsCommandContext(d.GetShell(), e.OriginalSource ?? e.Source, e.Source, e.Parameter));
+				e.Handled = true;
+			}
+		} // func CanExecuteCommandHandlerImpl
+
+		#endregion
+
+		static PpsCommandBase()
+		{
+			EventManager.RegisterClassHandler(typeof(UIElement), CommandManager.ExecutedEvent, new ExecutedRoutedEventHandler(ExecutedCommandHandlerImpl), false);
+			EventManager.RegisterClassHandler(typeof(UIElement), CommandManager.CanExecuteEvent, new CanExecuteRoutedEventHandler(CanExecuteCommandHandlerImpl), false);
+		} // ctor
 	} // class PpsCommandBase
 
 	#endregion
@@ -819,7 +860,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary></summary>
 		protected override IEnumerator LogicalChildren
-			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Popup);
+			=> PpsLogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Popup);
 
 		/// <summary>Split button type</summary>
 		public PpsSplitButtonType Mode { get; set; }
@@ -1258,19 +1299,6 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		PpsUICommandCollection SelectCommands(object item, DependencyObject container);
 	} // interface IPpsCommandsSelector
-
-	#endregion
-
-	#region -- interface IPpsCommandManager -------------------------------------------
-
-	/// <summary>Extention of the shell for redirecting commands.</summary>
-	public interface IPpsCommandManager : IPpsShellService
-	{
-		/// <summary></summary>
-		ExecutedRoutedEventHandler DefaultExecutedHandler { get; }
-		/// <summary></summary>
-		CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
-	} // interface IPpsCommandManager
 
 	#endregion
 

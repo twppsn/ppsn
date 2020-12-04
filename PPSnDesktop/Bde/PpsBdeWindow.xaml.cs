@@ -32,7 +32,7 @@ using TecWare.PPSn.UI;
 namespace TecWare.PPSn.Bde
 {
 	/// <summary>Touch first window</summary>
-	internal partial class PpsBdeWindow : PpsWindow, IPpsWindowPaneManager, IPpsBarcodeReceiver
+	internal partial class PpsBdeWindow : PpsWindow, IPpsWindowPaneManager, IPpsBdeManager, IPpsBarcodeReceiver, IPpsIdleAction
 	{
 		public static readonly RoutedCommand BackCommand = new RoutedCommand();
 
@@ -44,7 +44,7 @@ namespace TecWare.PPSn.Bde
 
 		private readonly PpsBarcodeService barcodeService;
 		private readonly IDisposable barcodeReceiverToken;
-		private string currentDateTimeFormat;
+		private string currentDateTimeFormat = null;
 
 		private readonly List<PpsBdePaneHost> panes = new List<PpsBdePaneHost>();
 
@@ -55,6 +55,7 @@ namespace TecWare.PPSn.Bde
 
 			// register base service
 			Services.AddService(typeof(IPpsWindowPaneManager), this);
+			Services.AddService(typeof(IPpsBdeManager), this);
 
 			barcodeService = services.GetService<PpsBarcodeService>(true);
 			barcodeReceiverToken = barcodeService.RegisterReceiver(this);
@@ -76,6 +77,8 @@ namespace TecWare.PPSn.Bde
 			// init window settings
 			if (WindowStyle != WindowStyle.None)
 				settings = new PpsWindowApplicationSettings(this, "bde");
+
+			Shell.GetService<IPpsIdleService>(true).Add(this);
 			
 			UpdateDateTimeFormat();
 		} // ctor
@@ -85,9 +88,6 @@ namespace TecWare.PPSn.Bde
 			barcodeReceiverToken?.Dispose();
 			base.OnClosed(e);
 		} // proc OnClosed
-
-		private void UpdateDateTimeFormat()
-			=> currentDateTimeFormat = Shell.Settings.ClockFormat;
 
 		private Task AppInfoCommandExecutedAsync(PpsCommandContext arg)
 			=> OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.Default);
@@ -132,10 +132,13 @@ namespace TecWare.PPSn.Bde
 			}
 		} // proc IPpsBarcodeReceiver.OnBarcodeAsync
 
+		PpsIdleReturn IPpsIdleAction.OnIdle(int elapsed)
+			=> UpdateCurrentTimeString() ? PpsIdleReturn.Idle : PpsIdleReturn.StopIdle;
+
 		#region -- Pane Manager -------------------------------------------------------
 
 		private Exception GetPaneStackException()
-			=> new NotSupportedException("Bde uses a pane stack, it is not allowed to changed the steck.");
+			=> new NotSupportedException("Bde uses a pane stack, it is not allowed to changed the stack.");
 
 		private async Task<IPpsWindowPane> PushPaneAsync(Type paneType, LuaTable arguments)
 		{
@@ -259,13 +262,34 @@ namespace TecWare.PPSn.Bde
 
 		#endregion
 
+		#region -- CurrentTimeString - property ---------------------------------------
+
+		private static readonly DependencyPropertyKey currentTimeStringPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentTimeString), typeof(string), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty CurrentTimeStringProperty = currentTimeStringPropertyKey.DependencyProperty;
+
+		private void UpdateDateTimeFormat()
+		{
+			currentDateTimeFormat = Shell.Settings.ClockFormat;
+			UpdateCurrentTimeString();
+		} // proc UpdateDateTimeFormat
+
+		private bool UpdateCurrentTimeString()
+		{
+			var hasTimeFormat = !String.IsNullOrEmpty(currentDateTimeFormat);
+			SetValue(currentTimeStringPropertyKey,
+				 hasTimeFormat ? DateTime.Now.ToString(currentDateTimeFormat) : null
+			);
+			return hasTimeFormat;
+		} // proc UpdateCurrentTimeString
+
+		public string CurrentTimeString => (string)GetValue(CurrentTimeStringProperty);
+
+		#endregion
+
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, panes.GetEnumerator());
 
 		bool IPpsBarcodeReceiver.IsActive => IsActive;
-
-		public string CurrentTimeString => currentDateTimeFormat;
-
 
 		#region -- WindowStyle - Converter --------------------------------------------
 
@@ -295,4 +319,13 @@ namespace TecWare.PPSn.Bde
 
 		#endregion
 	} // class PpsBdeWindow
+
+	#region -- interface IPpsBdeManager -----------------------------------------------
+
+	/// <summary>Implemented by BdeWindow</summary>
+	public interface IPpsBdeManager : IPpsWindowPaneManager
+	{
+	} // interface IPpsBdeManager
+
+	#endregion
 }

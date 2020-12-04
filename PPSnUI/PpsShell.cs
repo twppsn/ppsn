@@ -25,6 +25,7 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -170,6 +171,11 @@ namespace TecWare.PPSn
 		/// <param name="uri"></param>
 		/// <returns></returns>
 		DEHttpClient CreateHttp(Uri uri = null);
+		/// <summary>Translate the uri to an remote uri.</summary>
+		/// <param name="uri"></param>
+		/// <param name="remoteUri"></param>
+		/// <returns></returns>
+		bool TryGetRemoteUri(Uri uri, out Uri remoteUri);
 
 		/// <summary>User login to shell</summary>
 		/// <param name="userInfo"></param>
@@ -185,6 +191,8 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		Task<bool> ShutdownAsync();
 
+		/// <summary>Instance Id of this shell.</summary>
+		int Id { get; }
 		/// <summary>Startup parameter for the device.</summary>
 		string DeviceId { get; }
 		/// <summary>Return the shell info for this shell.</summary>
@@ -254,7 +262,7 @@ namespace TecWare.PPSn
 		/// <param name="shell"></param>
 		/// <returns></returns>
 		Task OnBeforeLoadSettingsAsync(IPpsShell shell);
-		
+
 		/// <summary>Notify basic settings are loaded from server</summary>
 		/// <param name="shell"></param>
 		/// <returns></returns>
@@ -423,14 +431,52 @@ namespace TecWare.PPSn
 
 		private sealed class PpsMessageHandler : HttpClientHandler
 		{
-			private readonly IPpsShell shell;
+			private static readonly Regex regexLocalUri = new Regex(@"^http://ppsn(?<id>\d+).local(?<path>.*)", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-			public PpsMessageHandler(IPpsShell shell)
+			private readonly IPpsShell shell;
+			private readonly Uri remoteUri;
+
+			public PpsMessageHandler(IPpsShell shell, Uri remoteUri)
 			{
 				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+				this.remoteUri = remoteUri ?? throw new ArgumentNullException(nameof(remoteUri));
+				if (!remoteUri.IsAbsoluteUri)
+					throw new ArgumentException("Only absolute uri's are allowed.", nameof(remoteUri));
 
 				AllowAutoRedirect = false;
 			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				if (shell is PpsShellImplementation shellImpl)
+					shellImpl.UnregisterHandler(this);
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			public bool TryGetRemoteUri(Uri uri, out Uri remoteUri)
+			{
+				remoteUri = null;
+
+				if (!uri.IsAbsoluteUri)
+					return false;
+
+				var m = regexLocalUri.Match(uri.ToString());
+				if (!m.Success)
+					return false;
+
+				var uriId = Int32.Parse(m.Groups["id"].Value);
+				var absolutePath = m.Groups["path"].Value;
+
+				if (shell.Id != uriId)
+					throw new ArgumentException("Invalid proxy.");
+
+				if (absolutePath.StartsWith("/")) // if the uri starts with "/", remove it, because the info.remoteUri is our root
+					absolutePath = absolutePath.Substring(1);
+				var relativeUri = new Uri(absolutePath, UriKind.Relative);
+
+				remoteUri = new Uri(this.remoteUri, relativeUri);
+				return true;
+			} // func TryGetRemoteUri
 
 			protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 			{
@@ -438,6 +484,10 @@ namespace TecWare.PPSn
 
 				if (shell is PpsShellImplementation shellImpl)
 					shellImpl.HttpRequestStarted();
+
+				// exchange proxy uri to real one
+				if (TryGetRemoteUri(request.RequestUri, out var uri))
+					request.RequestUri = uri;
 
 				return base.SendAsync(request, cancellationToken)
 					.ContinueWith(SendFinish, TaskContinuationOptions.ExecuteSynchronously);
@@ -464,6 +514,8 @@ namespace TecWare.PPSn
 					throw;
 				}
 			} // proc SendFinish
+
+			public Uri RemoteUri => remoteUri;
 		} // class PpsMessageHandler
 
 		#endregion
@@ -723,6 +775,7 @@ namespace TecWare.PPSn
 
 			private readonly IServiceProvider parentProvider;
 			private readonly IPpsShellInfo info;
+			private readonly int shellId;
 			private readonly Dictionary<Type, object> services = new Dictionary<Type, object>(TypeComparer.Default);
 			private IPpsSettingsService settingsService = null;
 			private IPpsSettingsService userSettingsService = null;
@@ -734,6 +787,7 @@ namespace TecWare.PPSn
 			private IPpsShellBackgroundTask serverSettingsTask = null;
 			private long lastSettingsVersion = 0;
 			private DEHttpClient http = null;
+			private readonly Dictionary<DEHttpClient, PpsMessageHandler> knownMessageHandler = new Dictionary<DEHttpClient, PpsMessageHandler>();
 			private PpsCommunicationState connectionState = PpsCommunicationState.Disconnected;
 
 			private readonly ObservableCollection<PpsShellLogItem> logItems = new ObservableCollection<PpsShellLogItem>();
@@ -743,6 +797,7 @@ namespace TecWare.PPSn
 			public PpsShellImplementation(IServiceProvider parentProvider, IPpsShellInfo info)
 			{
 				this.info = info ?? throw new ArgumentNullException(nameof(info));
+				shellId = GetNextShellId();
 				this.parentProvider = parentProvider ?? throw new ArgumentNullException(nameof(parentProvider));
 
 				AddService(typeof(IServiceProvider), this);
@@ -764,6 +819,9 @@ namespace TecWare.PPSn
 				// stop background worker
 				serverSettingsTask?.Dispose();
 				backgroundWorker.Dispose();
+
+				// dispose http
+				http?.Dispose();
 
 				// dispose all services
 				foreach (var cur in services.OfType<IDisposable>())
@@ -798,7 +856,7 @@ namespace TecWare.PPSn
 				try
 				{
 					// create a none user context for the initialization
-					using (var dpcHttp = CreateHttpCore(info.Uri, Settings.GetDpcCredentials()))
+					using (var dpcHttp = CreateHttpCore(CreateProxyUri(shellId), info.Uri, Settings.GetDpcCredentials()))
 					{
 						http = dpcHttp;
 
@@ -969,22 +1027,44 @@ namespace TecWare.PPSn
 
 			#region -- Http -----------------------------------------------------------
 
-			private DEHttpClient CreateHttpCore(Uri uri, ICredentials credentials)
-				=> DEHttpClient.Create(uri, credentials, httpHandler: new PpsMessageHandler(this));
+			private void RegisterHandler(DEHttpClient http, PpsMessageHandler handler)
+			{
+				knownMessageHandler[http] = handler;
+			} // proc RegisterHandler
+
+			internal void UnregisterHandler(PpsMessageHandler handler)
+			{
+				var kv = knownMessageHandler.FirstOrDefault(c => c.Value == handler);
+				if (kv.Key != null)
+					knownMessageHandler.Remove(kv.Key);
+			} // proc UnregisterHandler
+
+			/// <summary>Createa a http-client that always uses a proxy uri. It is possible to proxy request for other clients.</summary>
+			/// <param name="uri"></param>
+			/// <param name="remoteUri"></param>
+			/// <param name="credentials"></param>
+			/// <returns></returns>
+			private DEHttpClient CreateHttpCore(Uri uri, Uri remoteUri, ICredentials credentials)
+			{
+				var handler = new PpsMessageHandler(this, remoteUri);
+				var http = DEHttpClient.Create(uri, credentials, httpHandler: handler);
+				RegisterHandler(http, handler);
+				return http;
+			} // proc CreateHttpCore
 
 			public DEHttpClient CreateHttp(Uri uri = null)
 			{
 				if (http == null)
 					throw new InvalidOperationException();
 				else if (uri == null)
-					return CreateHttpCore(http.BaseAddress, http.Credentials);
+					return CreateHttpCore(http.BaseAddress, GetRemoteUri(http), http.Credentials);
 				else if (uri.IsAbsoluteUri)
 				{
 					var relativeUri = http.BaseAddress.MakeRelativeUri(uri);
-					return CreateHttpCore(new Uri(http.BaseAddress, relativeUri), http.Credentials);
+					return CreateHttpCore(new Uri(http.BaseAddress, relativeUri), GetRemoteUri(http), http.Credentials);
 				}
 				else // relative to base
-					return CreateHttpCore(new Uri(http.BaseAddress, uri), http.Credentials);
+					return CreateHttpCore(new Uri(http.BaseAddress, uri), GetRemoteUri(http), http.Credentials);
 			} // func CreateHttp
 
 			private void UpdateHttp()
@@ -1000,7 +1080,7 @@ namespace TecWare.PPSn
 
 			public async Task LoginAsync(ICredentials credentials)
 			{
-				var newHttp = CreateHttpCore(info.Uri, credentials);
+				var newHttp = CreateHttpCore(CreateProxyUri(shellId), info.Uri, credentials);
 				try
 				{
 					var userName = GetUserNameFromCredentials(credentials);
@@ -1020,6 +1100,7 @@ namespace TecWare.PPSn
 					await LoadUserSettingsFromServerAsync(userSettingsService, newHttp);
 
 					// update http
+					http?.Dispose();
 					http = newHttp;
 					OnPropertyChanged(nameof(Http));
 
@@ -1069,6 +1150,15 @@ namespace TecWare.PPSn
 					this.GetService<IPpsUIService>(true).RunUI(() => OnPropertyChanged(nameof(ConnectionState)));
 				}
 			} // proc SetConnectionState
+
+			private PpsMessageHandler GetMessageHandler(DEHttpClient http)
+				=> knownMessageHandler[http];
+
+			private Uri GetRemoteUri(DEHttpClient http)
+				=> GetMessageHandler(http).RemoteUri;
+
+			public bool TryGetRemoteUri(Uri uri, out Uri remoteUri)
+				=> GetMessageHandler(http).TryGetRemoteUri(uri, out remoteUri);
 
 			#endregion
 
@@ -1134,6 +1224,7 @@ namespace TecWare.PPSn
 
 			#endregion
 
+			public int Id => shellId;
 			public string DeviceId => instanceSettingsInfo.DpcDeviceId;
 			public IPpsShellInfo Info => info;
 
@@ -1148,6 +1239,13 @@ namespace TecWare.PPSn
 			public bool IsInitialized { get; private set; }
 			public bool IsAuthentificated => connectionState == PpsCommunicationState.Connected && http.Credentials != null;
 			public PpsCommunicationState ConnectionState => connectionState;
+
+			// -- Static ----------------------------------------------------------
+
+			private static int shellCounter = 1;
+
+			private static int GetNextShellId()
+				=> shellCounter++;
 		} // class PpsShellImplementation
 
 		#endregion
@@ -1362,6 +1460,13 @@ namespace TecWare.PPSn
 			else
 				return null;
 		} // func CreateProxyService
+
+		/// <summary>Create the proxy uri for a shell</summary>
+		/// <param name="shellId"></param>
+		/// <returns></returns>
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		public static Uri CreateProxyUri(int shellId)
+			=> new Uri($"http://ppsn{shellId}.local");
 
 		#endregion
 

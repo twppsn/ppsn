@@ -17,7 +17,7 @@ using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
-using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -63,7 +63,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		protected override IEnumerator LogicalChildren 
-			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Content);
+			=> PpsLogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Content);
 		
 		static PpsNamedSeparator()
 		{
