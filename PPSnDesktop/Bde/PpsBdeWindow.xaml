@@ -72,20 +72,23 @@
 							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}">
 					<ToggleButton.Style>
 						<Style TargetType="{x:Type ToggleButton}">
-							<Setter Property="Template">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="Template">
 								<Setter.Value>
 									<ControlTemplate TargetType="{x:Type ToggleButton}">
-										<Border x:Name="border">
+										<Border x:Name="border" Background="{TemplateBinding Background}">
 											<ui:PpsGeometryImage GeometryName="barcodeScan" Width="24" Height="24" Foreground="{StaticResource PPSnWindowBackgroundBrush}" GeometryCircled="False" />
 										</Border>
 										<ControlTemplate.Triggers>
 											<Trigger Property="IsEnabled" Value="False">
-												<Setter Property="Background" Value="Transparent" />
 												<Setter Property="Opacity" Value="0.35" />
 											</Trigger>
-											<Trigger Property="IsMouseOver" Value="False">
-												<Setter TargetName="border" Property="Background" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+											<Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
 											</Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}" />
+                                            </Trigger>
 										</ControlTemplate.Triggers>
 									</ControlTemplate>
 								</Setter.Value>
