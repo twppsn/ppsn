@@ -28,5 +28,6 @@ using System.Windows.Markup;
 [assembly: ComVisible(false)]
 
 [assembly: XmlnsDefinition("http://tecware-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.Controls")]
+[assembly: XmlnsDefinition("http://tecware-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.Themes")]
 //[assembly: XmlnsDefinition("http://tecware-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.Design")]
 [assembly: XmlnsDefinition("http://tecware-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.UI")]
