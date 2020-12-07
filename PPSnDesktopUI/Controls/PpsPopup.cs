@@ -53,15 +53,6 @@ namespace TecWare.PPSn.Controls
 		} // ctor
 
 		/// <summary></summary>
-		/// <param name="e"></param>
-		protected override void OnInitialized(EventArgs e)
-		{
-			this.AddCommandDefaultHandler(PpsWpfShell.GetShell(this));
-
-			base.OnInitialized(e);
-		} // proc OnInitialized
-
-		/// <summary></summary>
 		/// <returns></returns>
 		protected override DependencyObject GetUIParentCore()
 		{

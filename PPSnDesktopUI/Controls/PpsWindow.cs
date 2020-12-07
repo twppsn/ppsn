@@ -85,8 +85,6 @@ namespace TecWare.PPSn.Controls
 					new CommandBinding(MaximizeCommand, (sender, e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized),
 					new CommandBinding(CloseCommand, (sender, e) => Close())
 				});
-
-			this.AddCommandDefaultHandler(shell);
 		} // ctor
 
 		/// <summary>Caption clicked</summary>

@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -50,10 +51,13 @@ namespace TecWare.PPSn
 	/// <summary>Implement for a lua code source.</summary>
 	public interface IPpsLuaCodeSource
 	{
-		/// <summary>Shell that compiled the code.</summary>
-		IPpsLuaShell LuaShell { get; }
+		/// <summary>Lua code target.</summary>
+		LuaTable Target { get; }
 		/// <summary>Source for the code.</summary>
 		Uri SourceUri { get; }
+
+		/// <summary>Shell that compiled the code.</summary>
+		IPpsLuaShell LuaShell { get; }
 	} // interface IPpsLuaCodeSource
 
 	#endregion
@@ -73,47 +77,69 @@ namespace TecWare.PPSn
 
 	#region -- class PpsLuaCodeScope --------------------------------------------------
 
-	public class PpsLuaCodeScope : LuaTable, IPpsLuaCodeSource
+	public sealed class PpsLuaCodeScope : LuaTable, IPpsLuaCodeSource
 	{
 		private readonly Uri sourceUri;
 		private readonly IPpsLuaShell shell;
-		private readonly LuaTable parent;
+		private readonly LuaTable target;
 
-		public PpsLuaCodeScope(IPpsLuaShell shell, LuaTable parent, Uri sourceUri)
+		public PpsLuaCodeScope(IPpsLuaShell shell, LuaTable target, Uri sourceUri)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
-			this.parent = parent ?? shell.Global;
+			this.target = target ?? throw new ArgumentNullException(nameof(target));
 			this.sourceUri = sourceUri ?? throw new ArgumentNullException(nameof(sourceUri));
 		} // ctor
 
 		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? parent.GetValue(key);
+			=> base.OnIndex(key) ?? target.GetValue(key);
+
+		protected override bool OnNewIndex(object key, object value)
+		{
+			target.SetValue(key, value);
+			return true;
+		} // proc OnNewIndex
 
 		public IPpsLuaShell LuaShell => shell;
-		public LuaTable Parent => parent;
+		public LuaTable Target => target;
 		public Uri SourceUri => sourceUri;
+
+		public static IPpsLuaCodeSource Create(IPpsLuaCodeSource currentCodeSource, LuaTable table)
+			=> table is IPpsLuaCodeSource s ? s : new PpsLuaCodeScope(currentCodeSource.LuaShell, table, currentCodeSource.SourceUri);
 	} // class PpsLuaCodeScope
 
 	#endregion
 
 	#region -- class PpsLuaCodeBehind -------------------------------------------------
 
-	public class PpsLuaCodeBehind : PpsLuaCodeScope, IPpsLuaCodeBehind
+	[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
+	public class PpsLuaCodeBehind : LuaTable, IPpsLuaCodeBehind
 	{
+		private readonly IPpsLuaShell shell;
+		private readonly Uri sourceUri;
+
 		private Task codeCompiledTask = Task.CompletedTask;
 
-		public PpsLuaCodeBehind(IPpsLuaShell shell, Uri sourceUri) 
-			: base(shell, null, sourceUri)
+		public PpsLuaCodeBehind(IPpsLuaShell shell, Uri sourceUri)
 		{
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+			this.sourceUri = sourceUri ?? throw new ArgumentNullException(nameof(sourceUri));
 		} // ctor
+
+		private string GetDebuggerDisplay()
+			=> $"Code: {sourceUri}";
+
+		protected override object OnIndex(object key)
+			=> base.OnIndex(key) ?? shell.Global.GetValue(key);
 
 		void IPpsXamlCode.CompileCode(Uri uri, string code)
 		{
 			if (codeCompiledTask == null || codeCompiledTask.IsCompleted)
-				codeCompiledTask = PpsLuaShell.RequireCodeAsync(this, LuaShell, uri);
+				codeCompiledTask = PpsLuaShell.RequireCodeAsync(this, new StringReader(code), uri);
 			else
-				codeCompiledTask = Task.WhenAll(codeCompiledTask, PpsLuaShell.RequireCodeAsync(this, LuaShell, uri));
+				codeCompiledTask = Task.WhenAll(codeCompiledTask, PpsLuaShell.RequireCodeAsync(this, new StringReader(code), uri));
 		} // proc IPpsXamlCode.CompileCode
+
+		LuaTable IPpsLuaCodeSource.Target => this;
 
 		void IPpsLuaCodeBehind.OnControlCreated(FrameworkElement control, LuaTable arguments)
 		{
@@ -123,6 +149,9 @@ namespace TecWare.PPSn
 			// execute method
 			CallMemberDirect("OnCreated", new object[] { control, arguments }, ignoreNilFunction: true);
 		} // proc IPpsLuaCodeBehind.OnControlCreated
+
+		public Uri SourceUri => sourceUri;
+		public IPpsLuaShell LuaShell => shell;
 	} // class PpsLuaCodeBehind
 
 	#endregion
@@ -148,11 +177,11 @@ namespace TecWare.PPSn
 		/// <param name="shell">Shell that should compile cthe code.</param>
 		/// <param name="path">Code source</param>
 		/// <returns>Result of the executed code.</returns>
-		public static Task<LuaResult> RequireCodeAsync(this LuaTable self, IPpsLuaShell shell, string path)
+		public static Task<LuaResult> RequireCodeAsync(this IPpsLuaCodeSource self, string path)
 		{
 			if (String.IsNullOrEmpty(path))
 				throw new ArgumentException("string as argument expected.", nameof(path));
-			return RequireCodeAsync(self, shell, new Uri(path, UriKind.RelativeOrAbsolute));
+			return RequireCodeAsync(self, new Uri(path, UriKind.RelativeOrAbsolute));
 		} // func RequireCodeAsync
 
 		/// <summary>Load code into the table.</summary>
@@ -160,17 +189,15 @@ namespace TecWare.PPSn
 		/// <param name="shell">Shell that should compile cthe code.</param>
 		/// <param name="sourceUri">Code source</param>
 		/// <returns>Result of the executed code.</returns>
-		public static async Task<LuaResult> RequireCodeAsync(this LuaTable self, IPpsLuaShell shell, Uri sourceUri)
+		public static async Task<LuaResult> RequireCodeAsync(this IPpsLuaCodeSource self, Uri sourceUri)
 		{
-			// get the current root
-			var parentSourceUri = self as IPpsLuaCodeSource ?? shell;
-
 			// compile code, synchonize the code to this thread
 			if (!sourceUri.IsAbsoluteUri)
-				sourceUri = new Uri(parentSourceUri.SourceUri, sourceUri);
-			using (var response = await shell.Shell.Http.GetAsync(sourceUri))
+				sourceUri = new Uri(self.SourceUri, sourceUri);
+
+			using (var response = await self.LuaShell.Shell.Http.GetAsync(sourceUri))
 			using (var tr = await response.GetTextReaderAsync())
-				return await RequireCodeAsync(self, shell, tr, sourceUri);
+				return await RequireCodeAsync(self, tr, sourceUri);
 		} // func RequireCodeAsync
 
 		/// <summary>Load code into the table.</summary>
@@ -179,15 +206,15 @@ namespace TecWare.PPSn
 		/// <param name="tr">Code stream.</param>
 		/// <param name="sourceUri">Code source</param>
 		/// <returns>Result of the executed code.</returns>
-		public static async Task<LuaResult> RequireCodeAsync(this LuaTable self, IPpsLuaShell shell, TextReader tr, Uri sourceUri)
+		public static async Task<LuaResult> RequireCodeAsync(this IPpsLuaCodeSource self, TextReader tr, Uri sourceUri)
 		{
 			// compile code
-			var chunk = await shell.CompileAsync(tr, sourceUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+			var chunk = await self.LuaShell.CompileAsync(tr, sourceUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
 
 			// run code
 			return chunk.Run(
-				self, // declaration target
-				new PpsLuaCodeScope(shell, self, new Uri(sourceUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.UriEscaped), UriKind.Absolute)) // source for functions
+				self.Target, // declaration target
+				new PpsLuaCodeScope(self.LuaShell, self.Target, new Uri(sourceUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.UriEscaped), UriKind.Absolute)) // source for functions
 			);
 		} // proc RequireCodeAsync
 	} // class PpsLuaShell

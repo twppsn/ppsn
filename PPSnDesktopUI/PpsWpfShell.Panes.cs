@@ -38,6 +38,9 @@ namespace TecWare.PPSn
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		public static IPpsWindowPane CreateEmptyPane(this IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost, Type paneType)
 		{
+			if (paneType == null)
+				throw new ArgumentNullException(nameof(paneType));
+
 			var ti = paneType.GetTypeInfo();
 			var ctorBest = (ConstructorInfo)null;
 			var ctoreBestParamLength = -1;

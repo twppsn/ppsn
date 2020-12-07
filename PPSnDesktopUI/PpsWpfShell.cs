@@ -15,7 +15,6 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -31,7 +30,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
-using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
@@ -95,16 +93,6 @@ namespace TecWare.PPSn
 		#endregion
 
 		#region -- GetShell, GetControlService ----------------------------------------
-
-		/// <summary>Adds command handler</summary>
-		/// <param name="element"></param>
-		/// <param name="shell"></param>
-		public static void AddCommandDefaultHandler(this UIElement element, IPpsShell shell)
-		{
-			var commandManager = shell.GetService<IPpsCommandManager>(true);
-			CommandManager.AddExecutedHandler(element, commandManager.DefaultExecutedHandler);
-			CommandManager.AddCanExecuteHandler(element, commandManager.DefaultCanExecuteHandler);
-		} // proc AddCommandDefaultHandler
 
 		internal static ResourceDictionary CreateDefaultResources(IPpsShell shell)
 			=> new DefaultResourceProvider(shell);
@@ -583,10 +571,9 @@ namespace TecWare.PPSn
 	#region -- class PpsWpfShellService -----------------------------------------------
 
 	[
-	PpsService(typeof(IPpsCommandManager)),
 	PpsService(typeof(IPpsWpfResources))
 	]
-	internal sealed class PpsWpfShellService : IPpsCommandManager, IPpsWpfResources, IPpsShellService, IPpsShellServiceInit
+	internal sealed class PpsWpfShellService : IPpsWpfResources, IPpsShellService, IPpsShellServiceInit
 	{
 		#region -- class PpsWebRequestCreate ------------------------------------------
 
@@ -611,7 +598,6 @@ namespace TecWare.PPSn
 		#endregion
 
 		private readonly IPpsShell shell;
-		private readonly Uri shellUri;
 
 		private readonly ResourceDictionary mainResources;    // Application resources
 		private readonly ResourceDictionary defaultResources; // default resource, to register shell
@@ -622,10 +608,7 @@ namespace TecWare.PPSn
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 
-			shellUri = RegisterWebRequestProxy(this, GetNextShellId());
-
-			DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, shell, e));
-			DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, shell, e));
+			WebRequest.RegisterPrefix(PpsShell.CreateProxyUri(shell.Id).ToString(), new PpsWebRequestCreate(this));
 
 			mainResources = Application.Current.Resources;
 			defaultResources = PpsWpfShell.CreateDefaultResources(shell);
@@ -636,7 +619,7 @@ namespace TecWare.PPSn
 			mainResources.MergedDictionaries.Add(defaultResources);
 
 			// try load additional resources from the server
-			defaultResources.Source = CreateProxyUri("wpf/styles.xaml");
+			defaultResources.Source = shell.Http.CreateFullUri("wpf/styles.xaml");
 			PpsWpfShell.FixDefaultKey(defaultResources); // Source clears all keys
 
 			return Task.CompletedTask;
@@ -656,69 +639,20 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Command Service ----------------------------------------------------
-
-		private static void CanExecuteCommandHandlerImpl(object _, IPpsShell shell, CanExecuteRoutedEventArgs e)
-		{
-			if (e.Command is PpsRoutedCommand)
-			{
-				var f = Keyboard.FocusedElement;
-				Debug.Print($"CanExecute: {e.Command} on {(f == null ? "<null>" : f.GetType().Name)}");
-			}
-
-			if (!e.Handled && e.Command is PpsCommandBase c)
-			{
-				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(shell, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
-				e.Handled = true;
-			}
-		} // func CanExecuteCommandHandlerImpl
-
-		private static void ExecutedCommandHandlerImpl(object _, IPpsShell shell, ExecutedRoutedEventArgs e)
-		{
-			if (!e.Handled && e.Command is PpsCommandBase c)
-			{
-				c.ExecuteCommand(new PpsCommandContext(shell, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
-				e.Handled = true;
-			}
-		} // func CanExecuteCommandHandlerImpl
-
-		public ExecutedRoutedEventHandler DefaultExecutedHandler { get; }
-		public CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
-
-		#endregion
-
 		#region -- WebRequest - Proxy -------------------------------------------------
-
-		private static Uri RegisterWebRequestProxy(PpsWpfShellService shellService, int shellId)
-		{
-			var baseUri = new Uri($"http://ppsn{shellId}.local");
-			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(shellService));
-			return baseUri;
-		} // proc RegisterWebRequestProxy
 
 		private WebRequest CreateWebRequest(Uri uri)
 		{
-			if (!uri.IsAbsoluteUri)
-				throw new ArgumentException("Uri must absolute.", nameof(uri));
-
-			var absolutePath = uri.AbsolutePath;
-			if (absolutePath.StartsWith("/")) // if the uri starts with "/", remove it, because the info.remoteUri is our root
-				absolutePath = absolutePath.Substring(1);
+			if (!shell.TryGetRemoteUri(uri, out var remoteUri))
+				remoteUri = uri;
 
 			// create a relative uri
-			var relativeUri = new Uri(absolutePath + uri.GetComponents(UriComponents.Query | UriComponents.KeepDelimiter, UriFormat.UriEscaped), UriKind.Relative);
-			return new PpsProxyRequest(shell.Http, uri, relativeUri);
+			return new PpsProxyRequest(shell.Http, uri, remoteUri);
 		} // func CreateWebRequest
-
-		private Uri CreateProxyUri(string relativePath)
-			=> new Uri(shellUri, relativePath);
 
 		#endregion
 
 		#region -- IPpsWpfResources - members -----------------------------------------
-
-		Uri IPpsWpfResources.CreateProxyUri(string relativePath)
-			=> CreateProxyUri(relativePath);
 
 		ResourceDictionary IPpsWpfResources.AppendResourceDictionary(Uri uri)
 		{
@@ -739,13 +673,6 @@ namespace TecWare.PPSn
 		#endregion
 
 		public IPpsShell Shell => shell;
-
-		// -- Static ----------------------------------------------------------
-
-		private static int shellCounter = 1;
-
-		private static int GetNextShellId()
-			=> shellCounter++;
 	} // class PpsWpfShellService
 
 	#endregion
@@ -880,6 +807,7 @@ namespace TecWare.PPSn
 				this.responseStream = responseStream ?? new MemoryStream();
 
 				// todo: copy headers
+				headers = new WebHeaderCollection();
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -905,8 +833,8 @@ namespace TecWare.PPSn
 
 		private readonly DEHttpClient http; // owner, that retrieves a resource
 		private readonly Uri originalUri;
-		private readonly Uri relativeUri; // relative Uri
-
+		private readonly Uri remoteUri;
+		
 		private bool aborted = false; // is the request cancelled
 
 		private WebHeaderCollection headers;
@@ -922,42 +850,41 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		internal PpsProxyRequest(DEHttpClient http, Uri originalUri, Uri relativeUri)
+		internal PpsProxyRequest(DEHttpClient http, Uri originalUri, Uri remoteUri)
 		{
 			this.http = http ?? throw new ArgumentNullException(nameof(http));
+		
 			this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
-			this.relativeUri = relativeUri ?? throw new ArgumentNullException(nameof(relativeUri));
+			this.remoteUri = remoteUri ?? throw new ArgumentNullException(nameof(remoteUri));
 
-			if (relativeUri.IsAbsoluteUri)
-				throw new ArgumentException("Uri must be relative.", nameof(relativeUri));
 			if (!originalUri.IsAbsoluteUri)
 				throw new ArgumentException("Uri must be absolute.", nameof(originalUri));
-			
-			if (relativeUri.OriginalString.StartsWith("/"))
-				this.relativeUri = new Uri(relativeUri.OriginalString.Substring(1), UriKind.Relative);
+			if (!remoteUri.IsAbsoluteUri)
+				throw new ArgumentException("Uri must be absolute.", nameof(remoteUri));
 
-			(path, arguments) = relativeUri.ParseUri();
+
+			(path, arguments) = originalUri.ParseUri();
 		} // ctor
 
 		/// <summary>Returns whether the given proxy request is for the same object</summary>
 		/// <param name="other">Request to compare</param>
 		/// <returns>true if equal</returns>
 		public bool Equals(PpsProxyRequest other)
-			=> Equals(other.relativeUri);
+			=> Equals(other.originalUri);
 
 		/// <summary>Returns whether the Uri is equal to the given Uri</summary>
 		/// <param name="otherUri">Uri to compare</param>
 		/// <returns>true if equal</returns>
 		public bool Equals(Uri otherUri)
-			=> PpsWpfShell.EqualUri(relativeUri, otherUri);
+			=> PpsWpfShell.EqualUri(originalUri, otherUri);
 
 		#endregion
 
-		#region -- CreateHttpRequest ----------------------------------------------
+		#region -- CreateHttpRequest --------------------------------------------------
 
 		private HttpRequestMessage CreateHttpRequest()
 		{
-			var request = new HttpRequestMessage(method, http.CreateFullUri(relativeUri.ToString()));
+			var request = new HttpRequestMessage(method, http.CreateFullUri(originalUri.ToString()));
 
 			// update header
 			if (headers != null)
@@ -984,13 +911,7 @@ namespace TecWare.PPSn
 
 		private HttpWebRequest CreateWebRequest()
 		{
-			if (relativeUri.IsAbsoluteUri)
-				throw new ArgumentException("Uri must be relative.", nameof(relativeUri));
-
-			// build the remote request with absolute uri and credentials
-			var absoluteUri = http.CreateFullUri(relativeUri.ToString());
-
-			var request = CreateHttp(absoluteUri);
+			var request = CreateHttp(remoteUri);
 			request.Credentials = http.Credentials; // override the current credentials
 			request.Headers.Add("des-multiple-authentifications", "true");
 			request.Timeout = -1; // 600 * 1000;
@@ -1364,20 +1285,6 @@ namespace TecWare.PPSn
 	//		return resourceKey;
 	//	} // func UpdateResource
 
-	//	/// <summary>Find the resource.</summary>
-	//	/// <param name="key"></param>
-	//	/// <param name="dependencyObject"></param>
-	//	/// <returns></returns>
-	//	[LuaMember]
-	//	public object GetResource(object key, DependencyObject dependencyObject)
-	//	{
-	//		if (dependencyObject is FrameworkElement fe)
-	//			return fe.TryFindResource(key);
-	//		else if (dependencyObject is FrameworkContentElement fce)
-	//			return fce.TryFindResource(key);
-	//		else
-	//			return defaultResources[key] ?? Application.Current.TryFindResource(key);
-	//	} // func GetResource
 
 	//	void IPpsXamlCode.CompileCode(Uri uri, string code)
 	//		=> CompileCodeForXaml(this, uri, code);
@@ -1513,37 +1420,6 @@ namespace TecWare.PPSn
 	//	[LuaMember("msgbox")]
 	//	private MessageBoxResult LuaMsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
 	//		=> MsgBox(text, button, image, defaultResult);
-
-	//	/// <summary></summary>
-	//	/// <param name="value"></param>
-	//	/// <param name="targetType"></param>
-	//	/// <returns></returns>
-	//	[LuaMember("ToNumberUI")]
-	//	public object LuaToNumber(object value, Type targetType)
-	//	{
-	//		if (targetType == null)
-	//			throw new ArgumentNullException(nameof(targetType));
-
-	//		var r = PpsConverter.NumericValue.ConvertBack(value, targetType, null, CultureInfo.CurrentUICulture);
-	//		if (r is ValidationResult
-	//			|| r == DependencyProperty.UnsetValue)
-	//			return null;
-	//		return r;
-	//	} // func LuaToNumber
-
-	//	/// <summary></summary>
-	//	/// <param name="value"></param>
-	//	/// <returns></returns>
-	//	[LuaMember("ToStringUI")]
-	//	public new object LuaToString(object value)
-	//	{
-	//		var r = PpsConverter.NumericValue.Convert(value, typeof(string), null, CultureInfo.CurrentUICulture);
-	//		if (r is ValidationResult
-	//			|| r == DependencyProperty.UnsetValue)
-	//			return null;
-	//		return r;
-	//	} // func LuaToString
-
 	//	/// <summary>Helper to await a async process.</summary>
 	//	/// <param name="func"></param>
 	//	/// <returns></returns>

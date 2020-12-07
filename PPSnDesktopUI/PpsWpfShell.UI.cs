@@ -30,11 +30,6 @@ namespace TecWare.PPSn
 	/// <summary>Resource helper</summary>
 	public interface IPpsWpfResources
 	{
-		/// <summary>Create a full uri that will use the registered http.</summary>
-		/// <param name="relativePath"></param>
-		/// <returns></returns>
-		Uri CreateProxyUri(string relativePath);
-
 		/// <summary>Append external resources.</summary>
 		/// <param name="uri"></param>
 		/// <returns></returns>

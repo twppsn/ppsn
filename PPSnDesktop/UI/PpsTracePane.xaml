@@ -83,7 +83,7 @@
 									</ContentControl>
 								</Border>
 								<TextBlock Grid.Column="1" Text="{Binding Stamp,StringFormat=G,Mode=OneTime}" VerticalAlignment="Center" Margin="8,0"/>
-								<ContentControl Grid.Column="2" Height="{StaticResource collapsedScrollHeight}">
+								<ContentControl Grid.Column="2">
 									<ContentControl.Template>
 										<ControlTemplate>
 											<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >

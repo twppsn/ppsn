@@ -18,13 +18,16 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Security.Principal;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
@@ -271,6 +274,37 @@ namespace TecWare.PPSn
 					return false;
 			}
 		} // func EqualUri
+
+		/// <summary>Convert arguments to an table</summary>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static LuaTable GetArgumentsAsTable(this Uri uri)
+		{
+			// copy arguments
+			var args = new LuaTable();
+			var tmp = uri.ParseQuery();
+			foreach (var k in tmp.Keys.Cast<string>())
+			{
+				if (k == "_")
+				{
+					var v = tmp[k];
+					
+					// unpack table
+					LuaTable t;
+					if (v.StartsWith("base64-"))
+						t = LuaTable.FromLson(Encoding.UTF8.GetString(Convert.FromBase64String(v.Substring(7))));
+					else
+						t = LuaTable.FromLson(v);
+
+					// copy table
+					foreach (var kv in t)
+						args[kv.Key] = kv.Value;
+				}
+				else
+					args[k] = tmp[k]; // copy value
+			}
+			return args;
+		} // func GetArgumentsAsTable
 
 		#endregion
 

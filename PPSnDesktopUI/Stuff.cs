@@ -18,16 +18,12 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml.Linq;
 using TecWare.DE.Stuff;
@@ -35,77 +31,6 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-	#region -- class LogicalContentEnumerator -----------------------------------------
-
-	[Obsolete("Procs.CombineEnumerator vs LogicalContentEnumerator")]
-	public class LogicalContentEnumerator : IEnumerator
-	{
-		private int state = -1;
-		private readonly IEnumerator baseItems; // base enumerator
-		private readonly object content;
-		private readonly Func<object> getContent;
-
-		private LogicalContentEnumerator(IEnumerator baseItems, Func<object> getContent)
-		{
-			this.baseItems = baseItems;
-			this.content = getContent();
-			this.getContent = getContent;
-		} // ctor
-
-		private object GetContent()
-		{
-			if (content != getContent())
-				throw new InvalidOperationException();
-			return content;
-		} // func GetContent
-
-		public object Current
-			=> state <= 0
-				? GetContent()
-				: baseItems?.Current;
-
-		public bool MoveNext()
-		{
-			if (++state <= 0)
-				return true;
-			else if (state > 0)
-				return baseItems?.MoveNext() ?? false;
-			return false;
-		} // func MoveNext
-
-		public void Reset()
-		{
-			state = -1;
-			baseItems?.Reset();
-		} // proc Reset
-
-		public static IEnumerator GetLogicalEnumerator(DependencyObject d, IEnumerator logicalChildren, Func<object> getContent)
-		{
-			var content = getContent();
-			if (content != null)
-			{
-				var templatedParent =
-					d is FrameworkElement fe
-						? fe.TemplatedParent
-						: (d is FrameworkContentElement fce ? fce.TemplatedParent : null);
-
-				if (templatedParent != null)
-				{
-					if (content is DependencyObject obj)
-					{
-						var p = LogicalTreeHelper.GetParent(obj);
-						if (p != null && p != d)
-							return logicalChildren;
-					}
-				}
-				return new LogicalContentEnumerator(logicalChildren, getContent);
-			}
-			return logicalChildren;
-		} // func GetLogicalEnumerator
-	} // class LogicalElementEnumerator
-
-	#endregion
-
 	#region -- class StuffUI ----------------------------------------------------------
 
 	/// <summary></summary>

@@ -263,7 +263,7 @@ namespace TecWare.PPSn.Controls
 		protected override IEnumerator LogicalChildren
 			=> Popup == null || Popup.Parent != this
 				? base.LogicalChildren
-				: LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Popup);
+				: PpsLogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Popup);
 
 		/// <summary></summary>
 		public bool IsOpen { get { return (bool)GetValue(IsOpenProperty); } set { SetValue(IsOpenProperty, value); } }

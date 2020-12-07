@@ -176,7 +176,7 @@ namespace TecWare.PPSn
 		/// <param name="stopIdle"></param>
 		protected void DoIdle(out bool stopIdle)
 		{
-			stopIdle = true;
+			stopIdle = false;
 			var timeSinceRestart = unchecked(Environment.TickCount - restartTime);
 
 			for (var i = idleActions.Count - 1; i >= 0; i--)
@@ -184,7 +184,7 @@ namespace TecWare.PPSn
 				switch (idleActions[i].OnIdle(timeSinceRestart))
 				{
 					case PpsIdleReturn.StopIdle:
-						stopIdle = stopIdle && true;
+						stopIdle = true;
 						break;
 					case PpsIdleReturn.Remove:
 						idleActions.RemoveAt(i);

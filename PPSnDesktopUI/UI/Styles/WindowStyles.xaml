@@ -17,7 +17,62 @@ specific language governing permissions and limitations under the Licence.
 	                xmlns:ui="clr-namespace:TecWare.PPSn.Controls"
 	                xmlns:ui1="clr-namespace:TecWare.PPSn.UI">
 
-    <Color x:Key="PPSnDesktopColor">#FFFAF0</Color>
+
+	<!--Theme White BackGround -->
+
+
+	<!--<Color x:Key="PPSnDesktopColor">#FFFAF0</Color>
+	<Color x:Key="PPSnAccentColor">#000000</Color>
+	<Color x:Key="PPSnMarkerColor">#637C36</Color>
+	<Color x:Key="PPSnControlBackgroundColor">#FFFFFF</Color>
+	<Color x:Key="PPSnActionButtonColor">#286325</Color>
+	<Color x:Key="PPSnWindowFooterColor">#637C36</Color>
+	<Color x:Key="PPSnBlackColor">#000000</Color>
+
+	<Color x:Key="PPSnWindowActiveGlowColor">#637C36</Color>
+	<Color x:Key="PPSnWindowInActiveGlowColor">#AAAAAA</Color>
+
+	<sys:Single x:Key="Alternation0Transpareny">0.05</sys:Single>
+	<sys:Single x:Key="Alternation1Transpareny">0.025</sys:Single>
+	<sys:Single x:Key="SideBarTranspareny">0.04</sys:Single>-->
+
+	<!--Theme GrayBlue BackGround
+	<Color x:Key="PPSnDesktopColor">#3B4A62</Color>
+	<Color x:Key="PPSnAccentColor">#FFFFFF</Color>
+	<Color x:Key="PPSnMarkerColor">#D2C62B</Color>
+	<Color x:Key="PPSnControlBackgroundColor">#4E5C71</Color>
+	<Color x:Key="PPSnActionButtonColor">#FFFFFF</Color>
+	<Color x:Key="PPSnWindowFooterColor">#007ACC</Color>
+	<Color x:Key="PPSnBlackColor">#FFFFFF</Color>
+	<sys:Single x:Key="Alternation0Transpareny">0.175</sys:Single>
+	<sys:Single x:Key="Alternation1Transpareny">0.098</sys:Single>
+	<sys:Single x:Key="SideBarTranspareny">0.05</sys:Single>-->
+
+	<!--Theme Dark BackGround
+	<Color x:Key="PPSnDesktopColor">#1E1E1E</Color>
+	<Color x:Key="PPSnAccentColor">#E6E6E6</Color>
+	<Color x:Key="PPSnMarkerColor">#007ACC</Color>
+	<Color x:Key="PPSnControlBackgroundColor">#333337</Color>
+	<Color x:Key="PPSnActionButtonColor">#D7AB69</Color>
+	<Color x:Key="PPSnWindowFooterColor">#007ACC</Color>
+	<Color x:Key="PPSnBlackColor">#FFFFFF</Color>
+	<sys:Single x:Key="Alternation0Transpareny">0.14</sys:Single>
+	<sys:Single x:Key="Alternation1Transpareny">0.075</sys:Single>
+	<sys:Single x:Key="SideBarTranspareny">0.08</sys:Single>-->
+
+	<!--Theme British racing Green
+	<Color x:Key="PPSnDesktopColor">#004225</Color>
+	<Color x:Key="PPSnAccentColor">#FFFFFF</Color>
+	<Color x:Key="PPSnMarkerColor">#D2C62B</Color>
+	<Color x:Key="PPSnControlBackgroundColor">#18543A</Color>
+	<Color x:Key="PPSnActionButtonColor">#47F7AB</Color>
+	<Color x:Key="PPSnWindowFooterColor">#637C36</Color>
+	<Color x:Key="PPSnBlackColor">#FFFFFF</Color>
+	<sys:Single x:Key="Alternation0Transpareny">0.175</sys:Single>
+	<sys:Single x:Key="Alternation1Transpareny">0.098</sys:Single>
+	<sys:Single x:Key="SideBarTranspareny">0.08</sys:Single>-->
+
+	<Color x:Key="PPSnDesktopColor">#FFFAF0</Color>
     <Color x:Key="PPSnAccentColor">#000000</Color>
     <Color x:Key="PPSnMarkerColor">#0078D7</Color>
     <Color x:Key="PPSnActionButtonColor">#286325</Color>

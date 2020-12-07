@@ -28,6 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml;
 using Microsoft.Web.WebView2.Core;
@@ -40,12 +41,57 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsWebViewLink ---------------------------------------------------
+
+	/// <summary>Command parameter for the PpsWebView.LinkCommand</summary>
+	public class PpsWebViewLink
+	{
+		private readonly Uri uri;
+
+		public PpsWebViewLink(Uri uri)
+			=> this.uri = uri;
+
+		/// <summary>Open a new window.</summary>
+		public bool NewWindow { get; set; } = false;
+		/// <summary>Uri that will be open.</summary>
+		public Uri Location => uri;
+	} // class PpsWebViewLink
+
+	#endregion
+
 	#region -- class PpsWebViewHistoryItem --------------------------------------------
 
 	/// <summary>History element</summary>
-	public class PpsWebViewHistoryItem
+	public class PpsWebViewHistoryItem : INotifyPropertyChanged
 	{
-		public Uri Uri => null;
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		private readonly Uri uri;
+		private string title;
+
+		public PpsWebViewHistoryItem(Uri uri)
+		{
+			this.uri = uri ?? throw new ArgumentNullException(nameof(uri));
+
+			title = uri.ToString();
+		} // ctor
+
+		/// <summary>Uri</summary>
+		public Uri Uri => uri;
+
+		/// <summary>Title of the web-page</summary>
+		public string Title
+		{
+			get => title;
+			set
+			{
+				if (title != value)
+				{
+					title = value;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Title)));
+				}
+			}
+		} // prop Title
 	} // class PpsWebViewHistoryItem
 
 	#endregion
@@ -80,9 +126,15 @@ namespace TecWare.PPSn.Controls
 		} // ctor
 
 		/// <summary>Cancel the request.</summary>
-		public bool Cancel { get => cancel ?? false; set => cancel = value; }
-		/// <summary>Is cancel setted.</summary>
-		public bool IsHandled => cancel.HasValue;
+		public bool Cancel
+		{
+			get => cancel ?? false;
+			set
+			{
+				Handled = true;
+				cancel = value;
+			}
+		} // prop Cancel
 	} // class PpsWebViewNavigationCancelEventArgs
 
 	#endregion
@@ -147,12 +199,12 @@ namespace TecWare.PPSn.Controls
 	{
 		private IPpsLuaCodeBehind code = null;
 
-		public PpsWebViewNavigationXamlCodeEventArgs(object uri) 
+		public PpsWebViewNavigationXamlCodeEventArgs(object uri)
 			: base(PpsWebView.NavigationXamlCodeEvent, uri)
 		{
 		} // ctor
 
-		public IPpsLuaCodeBehind Code 
+		public IPpsLuaCodeBehind Code
 		{
 			get => code;
 			set
@@ -180,6 +232,15 @@ namespace TecWare.PPSn.Controls
 		} // enum ViewState
 
 		#endregion
+
+		/// <summary></summary>
+		public static readonly RoutedCommand LinkCommand = PpsRoutedCommand.Create(typeof(PpsWebView), nameof(LinkCommand));
+		/// <summary></summary>
+		public static readonly RoutedCommand GoHomeCommand = PpsRoutedCommand.Create(typeof(PpsWebView), nameof(GoHomeCommand));
+		/// <summary></summary>
+		public static readonly RoutedCommand GoBackCommand = PpsRoutedCommand.Create(typeof(PpsWebView), nameof(GoBackCommand));
+		/// <summary></summary>
+		public static readonly RoutedCommand GoForwardCommand = PpsRoutedCommand.Create(typeof(PpsWebView), nameof(GoForwardCommand));
 
 		/// <summary>Is raised on the start of an navigation.</summary>
 		public static readonly RoutedEvent NavigationStartedEvent = EventManager.RegisterRoutedEvent(nameof(NavigationStarted), RoutingStrategy.Bubble, typeof(PpsWebViewNavigationStartedHandler), typeof(PpsWebView));
@@ -224,12 +285,16 @@ namespace TecWare.PPSn.Controls
 			htmlView.CoreWebView2Ready += HtmlView_CoreWebView2Ready;
 
 			SetValue(historyPropertyKey, history);
+
+			CommandBindings.Add(new CommandBinding(LinkCommand, LinkCommandExecuted, CanLinkCommandExecute));
 		} // ctor
 
 		protected override void OnInitialized(EventArgs e)
 		{
 			base.OnInitialized(e);
 			ResetGetShell();
+
+			AddCommandBinding(this.GetShell(), CommandBindings);
 		} // proc OnInitialized
 
 		protected override void OnVisualParentChanged(DependencyObject oldParent)
@@ -335,6 +400,7 @@ namespace TecWare.PPSn.Controls
 		private string currentFilterUri = null;
 		private readonly Dictionary<ulong, ViewNavigationToken> htmlTokens = new Dictionary<ulong, ViewNavigationToken>();
 		private ViewResponseMessage cachedResponseMessage = null;
+		private bool cachedAppendToHistory = true;
 
 		private void HtmlView_DocumentTitleChanged(object sender, object e)
 		{
@@ -352,9 +418,18 @@ namespace TecWare.PPSn.Controls
 				htmlTokens[e.NavigationId] = token;
 
 				if (token.OnStarted(e.Uri, false, true))
+				{
+					if (!cachedAppendToHistory)
+					{
+						token.NoHistory();
+						cachedAppendToHistory = true;
+					}
+
 					e.Cancel = false;
+				}
 				else
 				{
+					token.NoHistory();
 					token.Dispose();
 					e.Cancel = true;
 				}
@@ -479,7 +554,7 @@ namespace TecWare.PPSn.Controls
 			}
 			else // set other response and cancel request
 			{
-				await SetResponseMessageAsync(token, response);
+				await SetResponseMessageAsync(token, response, true);
 				SetHtmlEmptyResponse(e);
 			}
 		} // proc HtmlViewSetMainResourceAsync
@@ -506,7 +581,7 @@ namespace TecWare.PPSn.Controls
 			catch (Exception ex)
 			{
 				SetHtmlEmptyResponse(e);
-				await SetResponseMessageAsync(currentNavigationToken, new ViewResponseMessage(uri, ex));
+				await SetResponseMessageAsync(currentNavigationToken, new ViewResponseMessage(uri, ex), true);
 			}
 		} // proc HtmlViewSetMainResourceAsync
 
@@ -562,7 +637,14 @@ namespace TecWare.PPSn.Controls
 					if (token == null)
 						await HtmlViewSetOtherResourceAsync(e, uri);
 					else
+					{
+						if (!cachedAppendToHistory)
+						{
+							token.NoHistory();
+							cachedAppendToHistory = true;
+						}
 						await HtmlViewSetMainResourceAsync(token, e, uri, relativeUri);
+					}
 				}
 				else
 					throw new ArgumentException("Uri format is wrong.");
@@ -596,7 +678,7 @@ namespace TecWare.PPSn.Controls
 			AddVisualChild(htmlView);
 		} // proc ShowHtml
 
-		private async Task SetHtmlAsync(Uri uri, ViewResponseMessage message)
+		private async Task SetHtmlAsync(Uri uri, bool appendToHistory, ViewResponseMessage message)
 		{
 			SetViewState(ViewState.Html);
 
@@ -605,6 +687,7 @@ namespace TecWare.PPSn.Controls
 				await htmlView.EnsureCoreWebView2Async();
 
 			cachedResponseMessage = message;
+			cachedAppendToHistory = appendToHistory;
 			htmlView.Source = uri;
 
 			SetValue(sourceUriPropertyKey, uri);
@@ -637,17 +720,8 @@ namespace TecWare.PPSn.Controls
 				// create the control
 				var control = await PpsXamlParser.LoadAsync<FrameworkElement>(xml, new PpsXamlReaderSettings { BaseUri = sourceUri, Code = e.Code });
 
-				if (e.Code != null)
-				{
-					// copy arguments
-					var args = new LuaTable();
-					var tmp = sourceUri.ParseQuery();
-					foreach (var k in tmp.Keys.Cast<string>())
-						args[k] = tmp[k];
-
-					// mark control as created
-					e.Code.OnControlCreated(control, args);
-				}
+				if (e.Code != null) // mark control as created
+					e.Code.OnControlCreated(control, sourceUri.GetArgumentsAsTable());
 
 				return control;
 			}
@@ -887,7 +961,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc SendShellAsync
 
-		private Task SetResponseMessageAsync(ViewNavigationToken token, ViewResponseMessage response)
+		private Task SetResponseMessageAsync(ViewNavigationToken token, ViewResponseMessage response, bool enforceContent)
 		{
 			if (!token.IsActive)
 				return Task.CompletedTask;
@@ -899,13 +973,18 @@ namespace TecWare.PPSn.Controls
 				switch (response.State)
 				{
 					case ViewState.Html:
-						return SetHtmlAsync(response.SourceUri, response);
+						return SetHtmlAsync(response.SourceUri, true, response);
 					case ViewState.Xaml:
 						return SetXamlAsync(response.SourceUri, response.Content, null);
+					case ViewState.Empty:
+						if (enforceContent)
+						{
+							SetViewState(ViewState.Empty);
+							HasContent = false;
+							Title = null;
+						}
+						return Task.CompletedTask;
 					default:
-						SetViewState(ViewState.Empty);
-						HasContent = false;
-						Title = null;
 						return Task.CompletedTask;
 				}
 			}
@@ -993,14 +1072,14 @@ namespace TecWare.PPSn.Controls
 		{
 			RaiseEvent(e);
 
-			if (!e.IsHandled && TryRedirectToPaneDefault(e.Uri, null))
+			if (!e.Handled && TryRedirectToPaneDefault(e.Uri, null))
 				e.Cancel = true;
 		} // proc OnNavigationStarted
 
 		private void OnNavigationContent(PpsWebViewNavigationContentEventArgs e)
 		{
 			RaiseEvent(e);
-			if (!e.IsHandled && TryRedirectToPaneDefault(e.Uri, e.Content))
+			if (!e.Handled && TryRedirectToPaneDefault(e.Uri, e.Content))
 				e.Cancel = true;
 		} // proc OnRedirectNavigationContent
 
@@ -1025,7 +1104,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- Source - management ------------------------------------------------
+		#region -- Source, History - management ---------------------------------------
 
 		private bool TryGetHttp(out DEHttpClient http)
 		{
@@ -1033,40 +1112,88 @@ namespace TecWare.PPSn.Controls
 			return http != null;
 		} // func TryGetHttp
 
-		private void AppendHistory(object uri)
+		private void AppendHistory(object source)
 		{
+			Uri uri;
 
+			// convert to real uri
+			if (source is string tmp)
+			{
+				if (!Uri.TryCreate(tmp, UriKind.Absolute, out uri))
+					return;
+			}
+			else
+			{
+				uri = source as Uri;
+				if (uri == null)
+					return;
+			}
+
+			// cut history
+			var newHistoryIndex = CurrentHistoryIndex + 1;
+			while (newHistoryIndex < history.Count)
+				history.RemoveAt(newHistoryIndex);
+
+			// add new item
+			history.Add(new PpsWebViewHistoryItem(uri));
+			UpdateHistroyIndex(newHistoryIndex);
 		} // proc AppendHistory
 
 		private void UpdateHistroyIndex(PpsWebViewHistoryItem item)
 		{
+			var idx = history.IndexOf(item);
+			if (idx < 0)
+				idx = history.Count - 1;
+			UpdateHistroyIndex(idx);
+		} // proc UpdateHistroyIndex
+
+		private void UpdateHistroyIndex(int newIndex)
+		{
+			SetValue(canGoForwardPropertyKey, BooleanBox.GetObject(newIndex < history.Count - 1));
+			SetValue(canGoBackPropertyKey, BooleanBox.GetObject(newIndex > 0));
+			SetValue(canGoHomePropertyKey, BooleanBox.GetObject(history.Count > 0));
+
+			SetValue(currentHistoryIndexPropertyKey, newIndex);
 		} // proc UpdateHistroyIndex
 
 		private void ClearHistory()
 		{
-			SetValue(curentHistoryIndexPropertyKey, -1);
-			SetValue(canForwardPropertyKey, BooleanBox.False);
-			SetValue(canBackPropertyKey, BooleanBox.False);
+			SetValue(currentHistoryIndexPropertyKey, -1);
+			SetValue(canGoForwardPropertyKey, BooleanBox.False);
+			SetValue(canGoBackPropertyKey, BooleanBox.False);
+			SetValue(canGoHomePropertyKey, BooleanBox.False);
 
 			history.Clear();
 		} // proc ClearHistory
 
-		public Task GoForwardAsync()
+		private PpsWebViewHistoryItem GetHistoryItem(int index)
+			=> index >= 0 && index < history.Count ? history[index] : null;
+
+		private Task GoHistoryAsync(int index)
 		{
-			return Task.CompletedTask;
-		} // proc GoForwardAsync
+			var his = GetHistoryItem(index);
+			if (his == null)
+				return Task.CompletedTask;
+
+			UpdateHistroyIndex(his);
+			return SetUriAsync(his.Uri, setAsHome: false, appendToHistory: false);
+		} // proc GoHistoryAsync
+
+		public Task GoForwardAsync()
+			=> GoHistoryAsync(CurrentHistoryIndex + 1);
+
+		public Task GoHomeAsync()
+			=> GoHistoryAsync(0);
 
 		public Task GoBackAsync()
-		{
-			return Task.CompletedTask;
-		} // proc GoBackAsync
+			=> GoHistoryAsync(CurrentHistoryIndex - 1);
 
 		private async Task SetExceptionCoreAsync(ViewNavigationToken token, Exception ex)
 		{
 			if (token.IsActive)
 			{
 				using (var response = new ViewResponseMessage(null, ex))
-					await SetResponseMessageAsync(token, response);
+					await SetResponseMessageAsync(token, response, true);
 			}
 			shell.Value.LogProxy().LogMsg(LogMsgType.Error, ex);
 		} // proc SetExceptionAsync
@@ -1082,7 +1209,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc SetExceptionAsync
 
-		public async Task SetUriAsync(Uri newUri, bool setAsHome = true)
+		public async Task SetUriAsync(Uri newUri, bool setAsHome = true, bool appendToHistory = true)
 		{
 			if (setAsHome)
 				ClearHistory();
@@ -1095,13 +1222,16 @@ namespace TecWare.PPSn.Controls
 			{
 				using (var token = EnforceNavigationToken())
 				{
+					if (!appendToHistory)
+						token.NoHistory();
+
 					if (!token.OnStarted(newUri, false, true))
 						return;
 
 					try
 					{
 						using (var request = new ViewRequestMessage(HttpMethod.Get.Method, relativeUri, null, null))
-							await SetResponseMessageAsync(token, await SendShellAsync(token, request));
+							await SetResponseMessageAsync(token, await SendShellAsync(token, request), false);
 					}
 					catch (HttpResponseException e)
 					{
@@ -1114,14 +1244,26 @@ namespace TecWare.PPSn.Controls
 				}
 			}
 			else // activate html view
-				await SetHtmlAsync(newUri, null);
+				await SetHtmlAsync(newUri, appendToHistory, null);
 		} // proc SetUriAsync
 
-		private void SetUri(Uri uri)
+		private void SetUri(Uri uri, bool setAsHome, bool appendToHistory)
 		{
-			SetUriAsync(uri)
+			SetUriAsync(uri, setAsHome: setAsHome, appendToHistory: appendToHistory)
 				.ContinueWith(t => Source = t.Exception.InnerException, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted);
 		} // proc SetUri
+
+		private void LinkCommandExecuted(object sender, ExecutedRoutedEventArgs e)
+		{
+			SetSource(e.Parameter, false, true);
+			e.Handled = true;
+		} // proc LinkCommandExecuted
+
+		private void CanLinkCommandExecute(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.CanExecute = e.Parameter is string || e.Parameter is Uri || e.Parameter is PpsWebViewHistoryItem || e.Parameter is PpsWebViewLink;
+			e.Handled = true;
+		} // proc CanLinkCommandExecute
 
 		#endregion
 
@@ -1133,34 +1275,37 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(nameof(Source), typeof(object), typeof(PpsWebView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSourceChanged)));
 
 		private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsWebView)d).OnSourceChanged(e.NewValue);
+			=> ((PpsWebView)d).SetSource(e.NewValue, true, true);
 
-		private void OnSourceChanged(object newSource)
+		private void SetSource(object newSource, bool setAsHome, bool appendToHistory)
 		{
 			switch (newSource)
 			{
 				case null:
-					SetUri(null);
+					SetUri(null, setAsHome, appendToHistory);
 					break;
 				case string path:
 					if (Path.IsPathRooted(path)) // create file uri
-						SetUri(new Uri("file://" + path.Replace(Path.DirectorySeparatorChar, '/')));
+						SetUri(new Uri("file://" + path.Replace(Path.DirectorySeparatorChar, '/')), setAsHome, appendToHistory);
 					else if (Uri.TryCreate(path, UriKind.Absolute, out var tmp))
-						SetUri(tmp);
+						SetUri(tmp, setAsHome, appendToHistory);
 					else if (TryGetHttp(out var http))
-						SetUri(http.CreateFullUri(path));
+						SetUri(http.CreateFullUri(path), setAsHome, appendToHistory);
 					break;
 				case Uri uri:
 					if (uri.IsAbsoluteUri)
-						SetUri(uri);
+						SetUri(uri, setAsHome, appendToHistory);
 					else if (TryGetHttp(out var http))
-						SetUri(new Uri(http.BaseAddress, uri));
+						SetUri(new Uri(http.BaseAddress, uri), setAsHome, appendToHistory);
 					else
 						throw new ArgumentException("Absolute uri expected.");
 					break;
 				case PpsWebViewHistoryItem his:
 					UpdateHistroyIndex(his);
-					SetUri(his.Uri);
+					SetSource(his.Uri, setAsHome: setAsHome, appendToHistory: false);
+					break;
+				case PpsWebViewLink link:
+					SetUri(link.Location, true, appendToHistory);
 					break;
 				case Exception ex:
 					SetExceptionAsync(ex).Silent();
@@ -1168,11 +1313,59 @@ namespace TecWare.PPSn.Controls
 				default:
 					throw new ArgumentException("Unsupported source type.", nameof(Source));
 			}
-		} // proc OnSourceChanged
+		} // proc SetSource
 
 		public object Source { get => GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
 
 		public Uri SourceUri => (Uri)GetValue(SourceUriProperty);
+
+		#endregion
+
+		#region -- Command binding ----------------------------------------------------
+
+		private PpsCommandBase goBackCommand = null;
+		private PpsCommandBase goForwardCommand = null;
+		private PpsCommandBase goHomeCommand = null;
+
+		/// <summary>Add to default commands to command binding.</summary>
+		/// <param name="shell"></param>
+		/// <param name="commandBindings"></param>
+		public void AddCommandBinding(IPpsShell shell, CommandBindingCollection commandBindings)
+		{
+			if (shell == null)
+				return;
+
+			if (goBackCommand == null)
+				goBackCommand = new PpsAsyncCommand(GoBackExecuteAsync, CanGoBackExecute);
+			if (goHomeCommand == null)
+				goHomeCommand = new PpsAsyncCommand(GoHomeExecuteAsync, CanGoHomeExecute);
+			if (goForwardCommand == null)
+				goForwardCommand = new PpsAsyncCommand(GoForwardExecuteAsync, CanGoForwardExecute);
+
+			commandBindings.AddRange(new CommandBinding[] {
+				PpsCommandBase.CreateBinding(shell, GoBackCommand, goBackCommand),
+				PpsCommandBase.CreateBinding(shell, GoHomeCommand, goHomeCommand),
+				PpsCommandBase.CreateBinding(shell, GoForwardCommand, goForwardCommand)
+			});
+		} // proc AddCommandBinding
+
+		private Task GoHomeExecuteAsync(PpsCommandContext arg)
+			=> GoHomeAsync();
+
+		private bool CanGoHomeExecute(PpsCommandContext arg)
+			=> CanGoHome;
+
+		private bool CanGoForwardExecute(PpsCommandContext arg)
+			=> CanGoForward;
+
+		private Task GoForwardExecuteAsync(PpsCommandContext arg)
+			=> GoForwardAsync();
+
+		private bool CanGoBackExecute(PpsCommandContext arg)
+			=> CanGoBack;
+
+		private Task GoBackExecuteAsync(PpsCommandContext arg)
+			=> GoBackAsync();
 
 		#endregion
 
@@ -1195,38 +1388,59 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Title - property ---------------------------------------------------
 
-		/// <summary>Title of the current content.</summary>
-		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsWebView), new FrameworkPropertyMetadata(null));
+		private static readonly DependencyPropertyKey titlePropertyKey = DependencyProperty.RegisterReadOnly(nameof(Title), typeof(string), typeof(PpsWebView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnTitleChanged)));
+
+		private static void OnTitleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsWebView)d).OnTitleChanged((string)e.NewValue);
+
+		private void OnTitleChanged(string newValue)
+		{
+			var his = GetHistoryItem(CurrentHistoryIndex);
+			if (his != null)
+				his.Title = newValue;
+		} // proc OnTitleChanged
 
 		/// <summary>Title of the current content.</summary>
-		public string Title { get => (string)GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
+		public static readonly DependencyProperty TitleProperty = titlePropertyKey.DependencyProperty;
+
+		/// <summary>Title of the current content.</summary>
+		public string Title { get => (string)GetValue(TitleProperty); private set => SetValue(titlePropertyKey, value); }
 
 		#endregion
 
 		#region -- CanForward - property ----------------------------------------------
 
-		private static readonly DependencyPropertyKey canForwardPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanForward), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
-		public static readonly DependencyProperty CanForwardProperty = canForwardPropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey canGoForwardPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanGoForward), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty CanGoForwardProperty = canGoForwardPropertyKey.DependencyProperty;
 
-		public bool CanForward => BooleanBox.GetBool(GetValue(CanForwardProperty));
-
-		#endregion
-
-		#region -- CanBack - property -------------------------------------------------
-
-		private static readonly DependencyPropertyKey canBackPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanBack), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
-		public static readonly DependencyProperty CanBackProperty = canBackPropertyKey.DependencyProperty;
-
-		public bool CanBack => BooleanBox.GetBool(GetValue(CanBackProperty));
+		public bool CanGoForward => BooleanBox.GetBool(GetValue(CanGoForwardProperty));
 
 		#endregion
 
-		#region -- CurentHistoryIndex - property --------------------------------------
+		#region -- CanGoHome - property -----------------------------------------------
 
-		private static readonly DependencyPropertyKey curentHistoryIndexPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurentHistoryIndex), typeof(int), typeof(PpsWebView), new FrameworkPropertyMetadata(-1));
-		public static readonly DependencyProperty CurentHistoryIndexProperty = curentHistoryIndexPropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey canGoHomePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanGoHome), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty CanGoHomeProperty = canGoHomePropertyKey.DependencyProperty;
 
-		public int CurentHistoryIndex => (int)GetValue(CurentHistoryIndexProperty);
+		public bool CanGoHome => BooleanBox.GetBool(GetValue(CanGoHomeProperty));
+
+		#endregion
+
+		#region -- CanGoBack - property -----------------------------------------------
+
+		private static readonly DependencyPropertyKey canGoBackPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanGoBack), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty CanGoBackProperty = canGoBackPropertyKey.DependencyProperty;
+
+		public bool CanGoBack => BooleanBox.GetBool(GetValue(CanGoBackProperty));
+
+		#endregion
+
+		#region -- CurrentHistoryIndex - property -------------------------------------
+
+		private static readonly DependencyPropertyKey currentHistoryIndexPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentHistoryIndex), typeof(int), typeof(PpsWebView), new FrameworkPropertyMetadata(-1));
+		public static readonly DependencyProperty CurrentHistoryIndexProperty = currentHistoryIndexPropertyKey.DependencyProperty;
+
+		public int CurrentHistoryIndex => (int)GetValue(CurrentHistoryIndexProperty);
 
 		#endregion
 

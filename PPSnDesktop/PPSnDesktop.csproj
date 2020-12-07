@@ -157,6 +157,7 @@
     <Compile Include="Main\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsLuaWindowPane.cs" />
     <Compile Include="UI\PpsMarkdownPane.xaml.cs">
       <DependentUpon>PpsMarkdownPane.xaml</DependentUpon>
     </Compile>
@@ -176,6 +177,9 @@
     </Compile>
     <Compile Include="UI\PpsTracePane.xaml.cs">
       <DependentUpon>PpsTracePane.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UI\PpsWebViewPane.xaml.cs">
+      <DependentUpon>PpsWebViewPane.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsWindowPaneCharmBarControl.cs" />
     <Compile Include="Main\PpsWindowPaneHost.cs" />
@@ -286,6 +290,10 @@
     <Page Include="UI\PpsTracePane.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
+    </Page>
+    <Page Include="UI\PpsWebViewPane.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

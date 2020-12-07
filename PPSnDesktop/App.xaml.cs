@@ -32,9 +32,11 @@ using System.Windows.Markup;
 using System.Windows.Resources;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Bde;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
@@ -441,6 +443,8 @@ namespace TecWare.PPSn
 				paneRegister.RegisterPaneType(typeof(PpsPicturePane), "picture", MimeTypes.Image.Png, MimeTypes.Image.Bmp, MimeTypes.Image.Jpeg, "images/tiff");
 				paneRegister.RegisterPaneType(typeof(PpsPdfViewerPane), "pdf", MimeTypes.Application.Pdf);
 				paneRegister.RegisterPaneType(typeof(PpsMarkdownPane), "markdown", MimeTypes.Text.Markdown);
+				paneRegister.RegisterPaneType(typeof(PpsLuaWindowPane), "xaml");
+				paneRegister.RegisterPaneType(typeof(PpsLuaWindowPane), "web");
 
 				// change PpsLiveData
 				var liveData = shell.GetService<PpsLiveData>(true);
@@ -654,6 +658,7 @@ namespace TecWare.PPSn
 					}
 					catch (Exception e)
 					{
+						newShell.LogProxy().Except(e);
 						errorInfo = e;
 					}
 				}
@@ -1076,5 +1081,88 @@ namespace TecWare.PPSn
 
 		/// <summary>Return the current environemnt</summary>
 		public IPpsShell Shell => shell;
+
+		#region -- Default Link Processing --------------------------------------------
+
+		private static PpsOpenPaneMode GetOpenPaneModeFromLink(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
+			=> !(paneManager is IPpsBdeManager) && link.NewWindow ? PpsOpenPaneMode.NewSingleWindow : PpsOpenPaneMode.Default;
+
+		private static void ProcessPaneManager(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
+		{
+			// get pane information
+			var paneType = paneManager.Shell.GetService<IPpsKnownWindowPanes>(false)?.GetPaneType(link.Location.Host) ?? Type.GetType(link.Location.AbsolutePath);
+			if (paneType == null)
+				throw new ArgumentNullException(nameof(link), String.Format("PaneType unknown: {0}", link.Location));
+
+			// open pane
+			paneManager.OpenPaneAsync(paneType, GetOpenPaneModeFromLink(paneManager, link), link.Location.GetArgumentsAsTable()).OnException();
+		} // event LinkCommandExecuted
+
+		private static void ProcessDefaultLink(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
+		{
+			try
+			{
+				if (link.Location.IsAbsoluteUri && link.Location.Scheme == "panemanager")
+					ProcessPaneManager(paneManager, link);
+				else
+					paneManager.OpenPaneAsync(typeof(PpsWebViewPane), GetOpenPaneModeFromLink(paneManager, link), new LuaTable { ["uri"] = link.Location });
+			}
+			catch (Exception e)
+			{
+				paneManager.ShowException(e, String.Format("Could not execute link: {0}", link.Location));
+			}
+		} // proc ProcessDefaultLink
+
+		private static void LinkCommandExecuted(object sender, ExecutedRoutedEventArgs e)
+		{
+			if (e.Source is DependencyObject d)
+			{
+				var paneManager = d.GetControlService<IPpsWindowPaneManager>(false);
+				if (paneManager != null)
+				{
+					switch (e.Parameter)
+					{
+						case PpsWebViewLink l:
+							ProcessDefaultLink(paneManager, l);
+							break;
+						case Uri uri:
+							ProcessDefaultLink(paneManager, new PpsWebViewLink(uri));
+							break;
+						case string url:
+							if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var ruri))
+								ProcessDefaultLink(paneManager, new PpsWebViewLink(ruri));
+							break;
+					}
+				}
+			}
+		} // proc LinkCommandExecuted
+
+		private static void CanLinkCommandExecute(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.CanExecute = e.Parameter is string || e.Parameter is Uri || e.Parameter is PpsWebViewLink;
+			e.Handled = true;
+		} // event CanLinkCommandExecute
+
+		private static void DefaultNavigationStarted(object sender, PpsWebViewNavigationStartedEventArgs e)
+		{
+			if (e.Uri is Uri uri 
+				&& e.OriginalSource is DependencyObject d 
+				&& uri.IsAbsoluteUri && uri.Scheme == "panemanager")
+			{
+				
+				ProcessPaneManager(d.GetControlService<IPpsWindowPaneManager>(true), new PpsWebViewLink(uri) { NewWindow = e.NewWindow });
+				e.Cancel = true;
+			}
+		} // event DefaultNavigationStarted
+
+		#endregion
+
+		static App()
+		{
+			// intercept schemes for pane manager
+			EventManager.RegisterClassHandler(typeof(PpsWebView), PpsWebView.NavigationStartedEvent, new PpsWebViewNavigationStartedHandler(DefaultNavigationStarted), false);
+			// unprocessed links
+			CommandManager.RegisterClassCommandBinding(typeof(Window), new CommandBinding(PpsWebView.LinkCommand, LinkCommandExecuted, CanLinkCommandExecute));
+		} // sctor
 	} // class App
 }
