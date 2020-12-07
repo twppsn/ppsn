@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
 
 	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Themes/Images.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSharedResourceKey.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsCommandBar.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsButton.xaml" />

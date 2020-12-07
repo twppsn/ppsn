@@ -1,10 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
 		<TargetFramework>net48</TargetFramework>
 		<RootNamespace>TecWare.PPSn</RootNamespace>
 		<AssemblyName>PPSn.Desktop.UI</AssemblyName>
 		<PackageId>TecWare.PPSn.DesktopUI</PackageId>
+		<UseWpf>True</UseWpf>
 	</PropertyGroup>
 	<Import Project="..\Common\AssemblyInfo.targets" />
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -13,57 +14,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  <ItemGroup>
-    <None Remove="Controls\PpsButton.xaml" />
-    <None Remove="Controls\PpsCircularListBox.xaml" />
-    <None Remove="Controls\PpsComboBox.xaml" />
-    <None Remove="Controls\PpsCommandBar.xaml" />
-    <None Remove="Controls\PpsContextMenu.xaml" />
-    <None Remove="Controls\PpsDataFieldPanel.xaml" />
-    <None Remove="Controls\PpsDataFilterBase.xaml" />
-    <None Remove="Controls\PpsDataListBox.xaml" />
-    <None Remove="Controls\PpsEditableListbox.xaml" />
-    <None Remove="Controls\PpsGeometryImage.xaml" />
-    <None Remove="Controls\PpsListbox.xaml" />
-    <None Remove="Controls\PpsNamedSeparator.xaml" />
-    <None Remove="Controls\PpsPanel.xaml" />
-    <None Remove="Controls\PpsPdfViewer.xaml" />
-    <None Remove="Controls\PpsPopup.xaml" />
-    <None Remove="Controls\PpsProgressControl.xaml" />
-    <None Remove="Controls\PpsScrollViewer.xaml" />
-    <None Remove="Controls\PpsShapeCanvas.xaml" />
-    <None Remove="Controls\PpsSharedResourceKey.xaml" />
-    <None Remove="Controls\PpsSideBarControl.xaml" />
-    <None Remove="Controls\PpsStackSectionControl.xaml" />
-    <None Remove="Controls\PpsTextBox.xaml" />
-    <None Remove="Themes\Images\EastBottom.png" />
-    <None Remove="Themes\Images\EastMiddle.png" />
-    <None Remove="Themes\Images\EastTop.png" />
-    <None Remove="Themes\Images\NorthLeft.png" />
-    <None Remove="Themes\Images\NorthMiddle.png" />
-    <None Remove="Themes\Images\NorthRight.png" />
-    <None Remove="Themes\Images\SizeGrip.png" />
-    <None Remove="Themes\Images\SouthLeft.png" />
-    <None Remove="Themes\Images\SouthMiddle.png" />
-    <None Remove="Themes\Images\SouthRight.png" />
-    <None Remove="Themes\Images\SplashLogo.png" />
-    <None Remove="Themes\Images\WestBottom.png" />
-    <None Remove="Themes\Images\WestMiddle.png" />
-    <None Remove="Themes\Images\WestTop.png" />
-    <None Remove="Themes\Generic.xaml" />
-    <None Remove="UI\KeyboardScanner.csv" />
-    <None Remove="UI\PpsCameraDialog.xaml" />
-    <None Remove="UI\PpsMessageDialog.xaml" />
-    <None Remove="UI\PpsNotificationWindow.xaml" />
-    <None Remove="UI\PpsPdfViewerPane.xaml" />
-    <None Remove="UI\PpsPicturePane.xaml" />
-    <None Remove="UI\Styles\DefaultShapes.xaml" />
-    <None Remove="UI\Styles\DrawingImages.xaml" />
-    <None Remove="UI\Styles\WindowStyles.xaml" />
-    <None Remove="UI\UI.xaml" />
-    <None Remove="x64\pdfium.dll" />
-    <None Remove="x86\pdfium.dll" />
-  </ItemGroup>
   <ItemGroup>
     <Content Include="x86\pdfium.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -123,42 +73,6 @@
     <PackageReference Include="TecWare.DES.Core">
       <Version>3.4.65</Version>
     </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Page Include="Controls\PpsButton.xaml" />
-    <Page Include="Controls\PpsCircularListBox.xaml" />
-    <Page Include="Controls\PpsComboBox.xaml" />
-    <Page Include="Controls\PpsCommandBar.xaml" />
-    <Page Include="Controls\PpsContextMenu.xaml" />
-    <Page Include="Controls\PpsDataFieldPanel.xaml" />
-    <Page Include="Controls\PpsDataFilterBase.xaml" />
-    <Page Include="Controls\PpsDataListBox.xaml" />
-    <Page Include="Controls\PpsEditableListbox.xaml" />
-    <Page Include="Controls\PpsGeometryImage.xaml" />
-    <Page Include="Controls\PpsListbox.xaml" />
-    <Page Include="Controls\PpsNamedSeparator.xaml" />
-    <Page Include="Controls\PpsPanel.xaml" />
-    <Page Include="Controls\PpsPdfViewer.xaml" />
-    <Page Include="Controls\PpsPopup.xaml" />
-    <Page Include="Controls\PpsProgressControl.xaml" />
-    <Page Include="Controls\PpsScrollViewer.xaml" />
-    <Page Include="Controls\PpsShapeCanvas.xaml" />
-    <Page Include="Controls\PpsSharedResourceKey.xaml" />
-    <Page Include="Controls\PpsSideBarControl.xaml" />
-    <Page Include="Controls\PpsStackSectionControl.xaml" />
-    <Page Include="Controls\PpsTextBox.xaml" />
-    <Page Include="Themes\Generic.xaml" />
-    <Page Include="UI\PpsCameraDialog.xaml" />
-    <Page Include="UI\PpsMessageDialog.xaml" />
-    <Page Include="UI\PpsNotificationWindow.xaml">
-      <Generator></Generator>
-    </Page>
-    <Page Include="UI\PpsPdfViewerPane.xaml" />
-    <Page Include="UI\PpsPicturePane.xaml" />
-    <Page Include="UI\Styles\DefaultShapes.xaml" />
-    <Page Include="UI\Styles\DrawingImages.xaml" />
-    <Page Include="UI\Styles\WindowStyles.xaml" />
-    <Page Include="UI\UI.xaml" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="PresentationCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />

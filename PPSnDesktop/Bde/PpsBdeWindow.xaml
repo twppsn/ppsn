@@ -44,6 +44,7 @@
 				</Label.Content>
 			</Label>
 			<StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+				<ui:PpsGeometryImage Geometry="{StaticResource {x:Static ui:PpsTheme.WindowClosePathGeometry}}" Width="24" />
 				<uic:PpsBarcodeState Margin="16,0" />
 				<uic:PpsConnectionState Margin="16,0" />
 				<TextBlock Text="{Binding CurrentTimeString}"
