@@ -49,7 +49,16 @@ namespace TecWare.PPSn.Themes
 
 		#endregion
 
-		/// <summary>Close geometry</summary>
-		public static readonly ResourceKey WindowClosePathGeometry = new PpsThemeKey("windowClose");
+		/// <summary>Connecting geometry</summary>
+		public static readonly ResourceKey ServerConnectingPathGeometry = new PpsThemeKey("serverConnecting");
+		/// <summary>UnConnecting geometry</summary>
+		public static readonly ResourceKey ServerUnConnectedPathGeometry = new PpsThemeKey("serverUnConnected");
+		/// <summary>Connected geometry</summary>
+		public static readonly ResourceKey ServerConnectedPathGeometry = new PpsThemeKey("serverConnected");
+
+		/// <summary>ScannerActive geometry</summary>
+		public static readonly ResourceKey ScannerActivePathGeometry = new PpsThemeKey("scannerActive");
+		/// <summary>ScannerInActive geometry</summary>
+		public static readonly ResourceKey ScannerInActivePathGeometry = new PpsThemeKey("scannerInActive");
 	} // class PpsTheme
 }
