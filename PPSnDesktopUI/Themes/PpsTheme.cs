@@ -32,10 +32,13 @@ namespace TecWare.PPSn.Themes
 			private readonly string name;
 
 			public PpsThemeKey(string name)
-				=> this.name = name ?? throw new ArgumentNullException(nameof(name));
+			{
+				this.name = name ?? throw new ArgumentNullException(nameof(name));
+				namedKeys[name] = this;
+			} // ctor
 
-			public override string ToString() 
-				=> base.ToString();
+			public override string ToString()
+				=> "PPSn:" + name;
 
 			public override bool Equals(object obj)
 				=> obj is PpsThemeKey k && k.name == name;
@@ -48,6 +51,26 @@ namespace TecWare.PPSn.Themes
 		} // class PpsThemeKey
 
 		#endregion
+
+		private static readonly Dictionary<string, PpsThemeKey> namedKeys = new Dictionary<string, PpsThemeKey>();
+
+		/// <summary>Resolves the resource-key from a name.</summary>
+		/// <param name="name"></param>
+		/// <param name="resourceKey"></param>
+		/// <returns></returns>
+		public static bool TryGetNamedResourceKey(string name, out object resourceKey)
+		{
+			if (namedKeys.TryGetValue(name, out var key))
+			{
+				resourceKey = key;
+				return true;
+			}
+			else
+			{
+				resourceKey = null;
+				return false;
+			}
+		} // func TryGetNamedResourceKey
 
 		/// <summary>Close geometry</summary>
 		public static readonly ResourceKey WindowClosePathGeometry = new PpsThemeKey("windowClose");

@@ -20,6 +20,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using TecWare.PPSn.Themes;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
@@ -186,7 +187,9 @@ namespace TecWare.PPSn.Controls
 		{
 			return geometryName.EndsWith("PathGeometry")
 				? Application.Current.TryFindResource(geometryName)
-				: Application.Current.TryFindResource($"{geometryName}PathGeometry") ?? Application.Current.TryFindResource(geometryName);
+				: Application.Current.TryFindResource($"{geometryName}PathGeometry")
+					?? Application.Current.TryFindResource(geometryName)
+					?? (PpsTheme.TryGetNamedResourceKey(geometryName, out var key) ? Application.Current.TryFindResource(key) : null);
 		} // func TryFindGeometryByName
 
 		/// <summary>Convert to enforce a geometry.</summary>
