@@ -44,9 +44,8 @@
 				</Label.Content>
 			</Label>
 			<StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-				<ui:PpsGeometryImage Geometry="{StaticResource {x:Static ui:PpsTheme.WindowClosePathGeometry}}" Width="24" />
-				<uic:PpsBarcodeState Margin="16,0" />
-				<uic:PpsConnectionState Margin="16,0" />
+				<uic:PpsBarcodeState Margin="16,0,0,0" Padding="8"/>
+				<uic:PpsConnectionState Margin="16,0,0,0" Padding="8" />
 				<TextBlock Text="{Binding CurrentTimeString}"
 						   FontSize="14"
 						   LineStackingStrategy="BlockLineHeight"
@@ -65,7 +64,7 @@
 							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
 							  Width="40"
 							  Margin="0,0,6,0"/>
-				<ToggleButton x:Name="barcodeButton"
+                <ToggleButton x:Name="barcodeButton"
 							  ToolTip="Barcode Simulator"
 							  Width="40"
 							  Margin="0,0,24,0"
@@ -78,7 +77,8 @@
 								<Setter.Value>
 									<ControlTemplate TargetType="{x:Type ToggleButton}">
 										<Border x:Name="border" Background="{TemplateBinding Background}">
-											<ui:PpsGeometryImage GeometryName="barcodeScan" Width="24" Height="24" Foreground="{StaticResource PPSnWindowBackgroundBrush}" GeometryCircled="False" />
+											<ui:PpsGeometryImage GeometryName="barcodeScan" Width="24" Height="24"
+                                                                 Foreground="{StaticResource PPSnWindowBackgroundBrush}" GeometryCircled="False" />
 										</Border>
 										<ControlTemplate.Triggers>
 											<Trigger Property="IsEnabled" Value="False">

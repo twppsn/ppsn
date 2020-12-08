@@ -531,12 +531,12 @@
 		</Setter>
 	</Style>
 
-	<Style TargetType="uic:PpsBarcodeState">
+	<!--<Style TargetType="uic:PpsBarcodeState">
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="uic:PpsBarcodeState">
-					<Grid ToolTip="{Binding LastSeenDevice}">
-						<ui:PpsGeometryImage GeometryName="scannerActive" Padding="6" GeometryCircled="False" Foreground="{DynamicResource PPSnWindowBackgroundBrush}">
+					<Grid Background="Transparent" ToolTip="{Binding LastSeenDevice}">
+						<ui:PpsGeometryImage GeometryName="scannerActive" Foreground="{DynamicResource PPSnWindowBackgroundBrush}">
 							<ui:PpsGeometryImage.Visibility>
 								<Binding Path="IsActive" Converter="{x:Static ui:PpsConverter.Visibility}">
 									<Binding.ConverterParameter>
@@ -545,7 +545,7 @@
 								</Binding>
 							</ui:PpsGeometryImage.Visibility>
 						</ui:PpsGeometryImage>
-						<ui:PpsGeometryImage GeometryName="scannerInActive" Padding="6" GeometryCircled="False" Foreground="{DynamicResource PPSnWindowBackgroundBrush}">
+						<ui:PpsGeometryImage GeometryName="scannerInActive" Foreground="{DynamicResource PPSnWindowBackgroundBrush}">
 							<ui:PpsGeometryImage.Visibility>
 								<Binding Path="IsActive" Converter="{x:Static ui:PpsConverter.Visibility}">
 									<Binding.ConverterParameter>
@@ -558,21 +558,52 @@
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
-	</Style>
+	</Style>-->
 
-	<Style TargetType="uic:PpsConnectionState">
-		<Setter Property="Template">
+    <Style TargetType="uic:PpsBarcodeState">
+        <Setter Property="Foreground" Value="{DynamicResource PPSnWindowBackgroundBrush}" />
+        <Setter Property="Padding" Value="0,0,0,0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="uic:PpsBarcodeState">
+                    <Grid Background="Transparent" ToolTip="{Binding LastSeenDevice}">
+                        <ui:PpsGeometryImage x:Name="image"
+                                             Geometry="{StaticResource {x:Static ui:PpsTheme.ScannerInActivePathGeometry}}"
+                                             Foreground="{TemplateBinding Foreground}"
+                                             Margin="{TemplateBinding Padding}" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                            <Setter TargetName="image" Property="Geometry" Value="{StaticResource {x:Static ui:PpsTheme.ScannerActivePathGeometry}}" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="uic:PpsConnectionState">
+        <Setter Property="Foreground" Value="{DynamicResource PPSnWindowBackgroundBrush}" />
+        <Setter Property="Padding" Value="0,0,0,0" />
+        <Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="uic:PpsConnectionState">
-					<TextBlock x:Name="text" Text="Getrennt" />
-					<ControlTemplate.Triggers>
-						<DataTrigger Binding="{Binding ConnectionState}" Value="Connecting">
-							<Setter TargetName="text" Property="Text" Value="Verbinden" />
-						</DataTrigger>
-						<DataTrigger Binding="{Binding ConnectionState}" Value="Connected">
-							<Setter TargetName="text" Property="Text" Value="Verbunden" />
-						</DataTrigger>
-					</ControlTemplate.Triggers>
+                    <Grid x:Name="grid" Background="Transparent" ToolTip="Nicht verbunden">
+                        <ui:PpsGeometryImage x:Name="image"
+                                             Geometry="{StaticResource {x:Static ui:PpsTheme.ServerUnConnectedPathGeometry}}"
+                                             Foreground="{TemplateBinding Foreground}"
+                                             Margin="{TemplateBinding Padding}"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding ConnectionState}" Value="Connecting">
+                            <Setter TargetName="image" Property="Geometry" Value="{StaticResource {x:Static ui:PpsTheme.ServerConnectingPathGeometry}}" />
+                            <Setter TargetName="grid" Property="ToolTip" Value="Verbinden..." />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ConnectionState}" Value="Connected">
+                            <Setter TargetName="image" Property="Geometry" Value="{StaticResource {x:Static ui:PpsTheme.ServerConnectedPathGeometry}}" />
+                            <Setter TargetName="grid" Property="ToolTip" Value="Verbunden" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
