@@ -38,7 +38,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="colorName">Name of the color</param>
 		public PpsColorExtension(string colorName)
 		{
-			color = PpsColorTheme.GetColorByName(colorName);
+			color = PpsColor.Get(colorName);
 		} // ctor
 
 		/// <summary>Create the binding by color key.</summary>
@@ -123,7 +123,7 @@ namespace TecWare.PPSn.UI
 			this.name = name ?? throw new ArgumentNullException(nameof(name));
 			this.callbackValue = callbackValue ?? throw new ArgumentNullException(nameof(callbackValue));
 
-			PpsColorTheme.RegisterColor(this);
+			RegisterColor(this);
 
 			colorKey = PpsTheme.CreateColorKey(this);
 			brushKey = PpsTheme.CreateBrushKey(this);
@@ -170,6 +170,30 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Empty color</summary>
 		public static Color Empty => Color.FromArgb(0, 0, 0, 0);
+
+		// -- Static ----------------------------------------------------------
+
+		private static readonly Dictionary<string, PpsColor> colors = new Dictionary<string, PpsColor>();
+
+		private static void RegisterColor(PpsColor color)
+			=> colors.Add(color.Name, color);
+
+		/// <summary>Get color by name</summary>
+		/// <param name="name"></param>
+		/// <param name="color"></param>
+		/// <returns></returns>
+		public static bool TryGet(string name, out PpsColor color)
+			=> colors.TryGetValue(name, out color);
+
+		/// <summary>Get color by name</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static PpsColor Get(string name)
+			=> TryGet(name, out var color) ? color : throw new ArgumentOutOfRangeException(nameof(name), name, $"Unknown color name: {name}");
+
+		/// <summary>Defined colors</summary>
+		public static IEnumerable<PpsColor> Defined
+			=> colors.Values;
 	} // class PpsColor
 
 	#endregion
@@ -220,23 +244,13 @@ namespace TecWare.PPSn.UI
 		/// <summary>Enumerates all color keys.</summary>
 		/// <returns></returns>
 		public IEnumerator<PpsColor> GetEnumerator()
-			=> colors.Values.GetEnumerator();
+			=> PpsColor.Defined.GetEnumerator();
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
 		/// <summary>Name of the theme</summary>
 		public string Name => name;
-
-		// -- Static ----------------------------------------------------------
-
-		private static readonly Dictionary<string, PpsColor> colors = new Dictionary<string, PpsColor>();
-
-		internal static void RegisterColor(PpsColor color)
-			=> colors.Add(color.Name, color);
-
-		internal static PpsColor GetColorByName(string name)
-			=> colors.TryGetValue(name, out var color) ? color : throw new ArgumentOutOfRangeException(nameof(name), name, $"Unknown color name: {name}");
 
 		/// <summary>Default color scheme.</summary>
 		public static PpsColorTheme Default { get; } = new PpsColorTheme(nameof(Default), null);
