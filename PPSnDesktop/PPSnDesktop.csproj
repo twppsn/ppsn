@@ -7,9 +7,10 @@
 		<UseWpf>True</UseWpf>
 		<UseWindowsForms>True</UseWindowsForms>
 		<OutputType>WinExe</OutputType>
-		<PackageId>PPSn.Desktop.Exe</PackageId>
+		<PackageId>TecWare.PPSn.DesktopExe</PackageId>
 		<Nullable>disable</Nullable>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<Description>Base module for the Data Exchange Server.</Description>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 	  <OutputPath></OutputPath>
