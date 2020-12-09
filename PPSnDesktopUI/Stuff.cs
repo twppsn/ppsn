@@ -50,11 +50,11 @@ namespace TecWare.PPSn
 		public static readonly XName xnCondition = "condition";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		/// <summary></summary>
-		/// <param name="owner"></param>
-		/// <returns></returns>
-		public static ImageSource TakePicture(DependencyObject owner)
-			=> PpsCameraDialog.TakePicture(owner);
+		///// <summary></summary>
+		///// <param name="owner"></param>
+		///// <returns></returns>
+		//public static ImageSource TakePicture(DependencyObject owner)
+		//	=> PpsCameraDialog.TakePicture(owner);
 
 		#region -- remove after update DES --
 

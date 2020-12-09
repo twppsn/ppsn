@@ -25,7 +25,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Microsoft.Scripting.Utils;
 using TecWare.DE.Data;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;

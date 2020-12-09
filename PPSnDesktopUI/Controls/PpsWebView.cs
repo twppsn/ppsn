@@ -282,7 +282,7 @@ namespace TecWare.PPSn.Controls
 
 			logicalChilds = new object[] { htmlView, xamlView };
 
-			htmlView.CoreWebView2Ready += HtmlView_CoreWebView2Ready;
+			htmlView.CoreWebView2InitializationCompleted += HtmlView_CoreWebView2Ready;
 
 			SetValue(historyPropertyKey, history);
 

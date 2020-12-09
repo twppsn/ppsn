@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?define SoftKeyPaths = "Software\TecWare\PPSnDesktop\Components" ?>
-<?define BinDirectory = "..\PPSnDesktop\bin\Release" ?>
+<?define BinDirectory = "..\PPSnDesktop\bin\Release\net48" ?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Fragment>
