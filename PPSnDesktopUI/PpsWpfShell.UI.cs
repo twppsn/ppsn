@@ -19,12 +19,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Resources;
-using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
+	#region -- class PpsColorThemeInfo ------------------------------------------------
+
+	/// <summary>Interface for the pane enumeration</summary>
+	public interface IPpsColorThemeInfo
+	{
+		/// <summary>Apply the theme.</summary>
+		/// <returns></returns>
+		void Apply();
+
+		/// <summary>Name of the theme.</summary>
+		string Name { get; }
+		/// <summary>DisplayName</summary>
+		string DisplayName { get; }
+	} // class IPpsColorThemeInfo
+
+	#endregion
+
 	#region -- interface IPpsWpfResources ---------------------------------------------
 
 	/// <summary>Resource helper</summary>
@@ -50,8 +68,15 @@ namespace TecWare.PPSn
 		T FindResource<T>(object resourceKey)
 			where T : class;
 
+		/// <summary>Enumearte all themes</summary>
+		/// <returns></returns>
+		IEnumerable<IPpsColorThemeInfo> GetThemes();
+
 		/// <summary>Return all main resources</summary>
 		ResourceDictionary Resources { get; }
+
+		/// <summary>Change the current theme</summary>
+		PpsColorTheme CurrentTheme { get; set; }
 	} // interface IPpsWpfResources
 
 	#endregion
@@ -96,12 +121,12 @@ namespace TecWare.PPSn
 		#endregion
 
 		/// <summary>Find resource by key in the resource dictionary</summary>
-		/// <typeparam name="TKEY"></typeparam>
-		/// <typeparam name="T"></typeparam>
+		/// <typeparam name="TKEY">Key of the resource.</typeparam>
+		/// <typeparam name="T">Type of the resource.</typeparam>
 		/// <param name="resourceDictionary"></param>
 		/// <param name="predicate"></param>
 		/// <returns></returns>
-		public static IEnumerable<T> FindResourceByKey<TKEY, T>(this ResourceDictionary resourceDictionary, Predicate<TKEY> predicate = null)
+		public static IEnumerable<(TKEY key, T resource)> FindResourceAndKeyByKey<TKEY, T>(this ResourceDictionary resourceDictionary, Predicate<TKEY> predicate = null)
 			where TKEY : ResourceKey
 		{
 			var dictionaryStack = new Stack<FindResourceStackItem>();
@@ -124,13 +149,17 @@ namespace TecWare.PPSn
 					if (!returnedKeys.Contains(key) && (predicate == null || predicate(key)) && current.Resources[key] is T v)
 					{
 						returnedKeys.Add(key);
-						yield return v;
+						yield return (key, v);
 					}
 				}
 				
 				current = dictionaryStack.Count > 0 ? dictionaryStack.Pop() : null;
 			}
-		} // func FindResourceByKey
+		} // func FindResourceAndKeyByKey
+
+		public static IEnumerable<T> FindResourceByKey<TKEY, T>(this ResourceDictionary resourceDictionary, Predicate<TKEY> predicate = null)
+			where TKEY : ResourceKey
+			=> FindResourceAndKeyByKey<TKEY, T>(resourceDictionary, predicate).Select(c => c.resource);
 
 		/// <summary>Find resource by key in the main resource dictionary</summary>
 		/// <typeparam name="TKEY"></typeparam>
@@ -198,6 +227,16 @@ namespace TecWare.PPSn
 
 			return uri != null;
 		} // func TryGetResourceUri
+
+		#endregion
+
+		#region -- Media/Drawing Color ------------------------------------------------
+
+		public static System.Drawing.Color ToDrawingColor(this Color color)
+			=> System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
+
+		public static Color ToMediaColor(this System.Drawing.Color color)
+			=> Color.FromArgb(color.A, color.R, color.G, color.B);
 
 		#endregion
 

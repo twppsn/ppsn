@@ -209,6 +209,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="..\PPSnDesktopUI\.editorconfig">
+      <Link>.editorconfig</Link>
+    </None>
     <None Include="..\PPSnDesktopUI\ppsn.licenseheader">
       <Link>ppsn.licenseheader</Link>
     </None>

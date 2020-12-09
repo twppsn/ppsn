@@ -249,7 +249,7 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style x:Key="{x:Static pps:PpsSideBarItemsBase.PpsSideBarSeparator}" TargetType="{x:Type Separator}">
-		<Setter Property="Foreground" Value="{DynamicResource PPSnSeparatorBrush}" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnSeperatorBrush}" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Separator}">

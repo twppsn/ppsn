@@ -30,8 +30,10 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Themes;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -75,7 +77,7 @@ namespace TecWare.PPSn
 				AddShellKey(); // register environment
 			} // ctor
 
-			public void AddShellKey() 
+			public void AddShellKey()
 				=> Add(DefaultShellKey, shell);
 
 			protected override void OnGettingValue(object key, ref object value, out bool canCache)
@@ -573,7 +575,7 @@ namespace TecWare.PPSn
 	[
 	PpsService(typeof(IPpsWpfResources))
 	]
-	internal sealed class PpsWpfShellService : IPpsWpfResources, IPpsShellService, IPpsShellServiceInit
+	internal sealed class PpsWpfShellService : ObservableObject, IPpsWpfResources, IPpsShellService, IPpsShellServiceInit
 	{
 		#region -- class PpsWebRequestCreate ------------------------------------------
 
@@ -598,9 +600,11 @@ namespace TecWare.PPSn
 		#endregion
 
 		private readonly IPpsShell shell;
-
 		private readonly ResourceDictionary mainResources;    // Application resources
 		private readonly ResourceDictionary defaultResources; // default resource, to register shell
+
+		private PpsColorTheme defaultTheme = PpsColorTheme.Default;
+		private PpsColorTheme currentTheme = PpsColorTheme.Default;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -622,6 +626,10 @@ namespace TecWare.PPSn
 			defaultResources.Source = shell.Http.CreateFullUri("wpf/styles.xaml");
 			PpsWpfShell.FixDefaultKey(defaultResources); // Source clears all keys
 
+			// initialize theme from server
+			defaultTheme = new PpsColorTheme(nameof(PpsColorTheme.Default), shell.Settings.GetProperties(themeSettingPrefix).Select(ConvertToThemeColor));
+			SetCurrentTheme(defaultTheme, true);
+			
 			return Task.CompletedTask;
 		} // proc IPpsShellServiceInit.InitAsync
 
@@ -669,6 +677,83 @@ namespace TecWare.PPSn
 			=> defaultResources[resourceKey] as T;
 
 		ResourceDictionary IPpsWpfResources.Resources => mainResources;
+
+		#endregion
+
+		#region -- Themes -------------------------------------------------------------
+
+		private const string themeSettingPrefix = "PPSn.DefaultTheme.";
+
+		#region -- class DefaultThemeInfo ---------------------------------------------
+
+		private sealed class PpsDefaultThemeInfo : IPpsColorThemeInfo
+		{
+			private readonly PpsWpfShellService wpfShell;
+			private readonly PpsColorTheme theme;
+
+			public PpsDefaultThemeInfo(PpsWpfShellService wpfShell, PpsColorTheme theme)
+			{
+				this.wpfShell = wpfShell ?? throw new ArgumentNullException(nameof(wpfShell));
+				this.theme = theme ?? throw new ArgumentNullException(nameof(theme));
+			} // ctor
+
+			public void Apply()
+				=> wpfShell.SetCurrentTheme(theme, false);
+
+			public string Name => theme.Name;
+			public string DisplayName => "Standard";
+		} // class PpsDefaultThemeInfo
+
+		#endregion
+
+		#region -- class ResourceColorThemeInfo ---------------------------------------
+
+		private sealed class ResourceColorThemeInfo : IPpsColorThemeInfo
+		{
+			private readonly PpsWpfShellService wpfShell;
+			private readonly string name;
+			private readonly PpsColorThemeFactory resource;
+
+			public ResourceColorThemeInfo(PpsWpfShellService wpfShell, string name, PpsColorThemeFactory resource)
+			{
+				this.wpfShell = wpfShell ?? throw new ArgumentNullException(nameof(name));
+				this.name = name ?? throw new ArgumentNullException(nameof(name));
+				this.resource = resource ?? throw new ArgumentNullException(nameof(name));
+			} // ctor
+
+			public void Apply()
+				=> wpfShell.SetCurrentTheme(new PpsColorTheme(Name, resource), false);
+
+			public string Name => name;
+			public string DisplayName => resource.DisplayName ?? name;
+		} // class ResourceColorThemeInfo
+
+		#endregion
+
+		private KeyValuePair<string, Color> ConvertToThemeColor(KeyValuePair<string, string> color)
+			=> new KeyValuePair<string, Color>(color.Key.Substring(themeSettingPrefix.Length), System.Drawing.ColorTranslator.FromHtml(color.Value).ToMediaColor());
+
+		private void SetCurrentTheme(PpsColorTheme theme, bool force)
+		{
+			if (force || theme != currentTheme)
+			{
+				currentTheme = theme ?? throw new ArgumentNullException(nameof(theme));
+				PpsTheme.UpdateThemedDictionary(mainResources.MergedDictionaries, currentTheme);
+				OnPropertyChanged(nameof(IPpsWpfResources.CurrentTheme));
+			}
+		} // proc SetCurrentTheme
+
+		IEnumerable<IPpsColorThemeInfo> IPpsWpfResources.GetThemes()
+		{
+			// return default theme
+			yield return new PpsDefaultThemeInfo(this, defaultTheme);
+
+			// return additional theme
+			foreach (var (key, resource) in mainResources.FindResourceAndKeyByKey<PpsColorThemeKey, PpsColorThemeFactory>(null))
+				yield return new ResourceColorThemeInfo(this, key.Name, resource);
+		} // IPpsWpfResources.GetThemes
+
+		PpsColorTheme IPpsWpfResources.CurrentTheme { get => currentTheme; set => SetCurrentTheme(value, false); }
 
 		#endregion
 

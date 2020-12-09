@@ -127,6 +127,10 @@
 		
 		<ui:PpsSideBarPanel x:Name="settingsPanel" Header="Eigenschaften">
 			<ui:PpsDataListBox x:Name="settingsList">
+				<ui:PpsDataListBox.ListCommands>
+					<ui:PpsUICommandButton DisplayText="Aktualisieren" />
+					<ui:PpsUICommandButton DisplayText="Neuladen" />
+				</ui:PpsDataListBox.ListCommands>
 				<ui:PpsDataListBox.ItemTemplate>
 					<DataTemplate>
 						<TextBlock>
@@ -140,26 +144,107 @@
 		</ui:PpsSideBarPanel>
 		
 		<ui:PpsSideBarPanel x:Name="resourcePanel" Header="Resources">
-			<!-- todo: Support nested Dictionaries -->
-			<TreeView x:Name="resourceTree">
-				<TreeView.ItemTemplate>
-					<HierarchicalDataTemplate DataType="{x:Type ResourceDictionary}" ItemsSource="{Binding Keys}">
-						<HierarchicalDataTemplate.ItemTemplate>
+			<ui:PpsDataListBox x:Name="resourceTree">
+				<ui:PpsDataListBox.GroupStyle>
+					<GroupStyle>
+						<GroupStyle.HeaderTemplate>
 							<DataTemplate>
-								<TextBlock Text="{Binding}" />
+								<Border BorderThickness="0,1,0,1" BorderBrush="Black">
+									<TextBlock Text="{Binding Name}" Margin="8" />
+								</Border>
 							</DataTemplate>
-						</HierarchicalDataTemplate.ItemTemplate>
-						
-						<!-- todo: type -->
-						<TextBlock Text="{Binding Source}" />
-					</HierarchicalDataTemplate>
-				</TreeView.ItemTemplate>
-			</TreeView>
-			<!-- todo: resolver -->
+						</GroupStyle.HeaderTemplate>
+					</GroupStyle>
+				</ui:PpsDataListBox.GroupStyle>
+				<ui:PpsDataListBox.ItemTemplate>
+					<DataTemplate>
+						<Grid>
+							<Grid.Resources>
+								<DataTemplate x:Key="{DataTemplateKey {x:Type Brush}}">
+									<StackPanel Orientation="Horizontal">
+										<Rectangle Width="16" Height="16" Fill="{Binding}" Stroke="Black" />
+										<TextBlock Text="{Binding}" />
+									</StackPanel>
+								</DataTemplate>
+								<DataTemplate x:Key="{DataTemplateKey {x:Type Color}}">
+									<StackPanel Orientation="Horizontal">
+										<!-- todo gibt binding error
+										<Rectangle Width="16" Height="16" Stroke="Black">
+											<Rectangle.Fill>
+												<SolidColorBrush Color="{Binding}" />
+											</Rectangle.Fill>
+										</Rectangle>-->
+										<TextBlock Text="{Binding}" />
+									</StackPanel>
+								</DataTemplate>
+								<DataTemplate x:Key="{DataTemplateKey {x:Type Geometry}}">
+									<ui:PpsGeometryImage Geometry="{Binding}" Width="16" Height="16" />
+								</DataTemplate>
+							</Grid.Resources>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="200" />
+								<ColumnDefinition Width="100" />
+								<ColumnDefinition Width="*" />
+								<ColumnDefinition Width="100" />
+							</Grid.ColumnDefinitions>
+							
+							<TextBlock Grid.Column="0" Text="{Binding KeyName}" Margin="4" />
+							<TextBlock Grid.Column="1" Text="{Binding KeyType}" Margin="4" />
+							<ContentControl Grid.Column="2" Content="{Binding Value}" HorizontalAlignment="Left" VerticalAlignment="Center" />
+							<TextBlock Grid.Column="3" Text="{Binding ValueType}" Margin="4" />
+						</Grid>
+					</DataTemplate>
+				</ui:PpsDataListBox.ItemTemplate>
+			</ui:PpsDataListBox>
 		</ui:PpsSideBarPanel>
 
 		<ui:PpsSideBarPanel x:Name="barcodePanel" Header="Barcodes">
-			<TextBlock Text="BARCODE TESTER" />
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="*" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+
+				<ListBox Grid.Row="0" x:Name="barcodeList">
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition />
+									<ColumnDefinition />
+									<ColumnDefinition />
+								</Grid.ColumnDefinitions>
+								
+								<TextBlock Grid.Column="0" Margin="4" Text="{Binding Provider,Mode=OneTime}" />
+								<TextBlock Grid.Column="1" Margin="4" Text="{Binding RawCode,Mode=OneTime}" />
+								<TextBlock Grid.Column="2" Margin="4" Text="{Binding Format,Mode=OneTime}" />
+							</Grid>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+				
+				<ItemsControl Grid.Row="1" x:Name="barcodeProvider">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition />
+									<ColumnDefinition />
+								</Grid.ColumnDefinitions>
+
+								<TextBlock Grid.Column="0" Margin="4" Text="{Binding Type,Mode=OneTime}" />
+								<TextBlock Grid.Column="1" Margin="4" Text="{Binding Description,Mode=OneTime}" />
+							</Grid>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+				
+				<StackPanel Grid.Row="2">
+					<TextBlock Text="Zuletzt gesehen:" />
+					<TextBlock Text="{Binding Path=LastSeenDevice,Mode=OneWay,Source={x:Static ui:KeyboardScanner.Default}}" />
+				</StackPanel>
+			</Grid>
 		</ui:PpsSideBarPanel>
 	</ui:PpsSideBarControl>
 </ui:PpsWindowPaneControl>

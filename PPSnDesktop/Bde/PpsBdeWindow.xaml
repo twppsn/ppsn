@@ -13,8 +13,8 @@
 	<ui:PpsWindow.Resources>
 		<PathGeometry x:Key="gotoBack">M21,11H6.83L10.41,7.41L9,6L3,12L9,18L10.41,16.58L6.83,13H21V11Z</PathGeometry>
 	</ui:PpsWindow.Resources>
-	
-	<Grid TextBlock.Foreground="{StaticResource PPSnWindowForegroundBrush}">
+
+	<Grid TextBlock.Foreground="{ui:PpsColor WindowForeground}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="40" />
 			<RowDefinition />
@@ -22,7 +22,7 @@
 		</Grid.RowDefinitions>
 
 		<!--ModulCaptionBar-->
-		<Grid Background="{StaticResource PPSnWindowActiveBrush}">
+		<Grid Background="{ui:PpsColor {x:Static ui:PpsTheme.WindowActive}}">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="46" />
 				<ColumnDefinition />

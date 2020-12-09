@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -642,6 +643,12 @@ namespace TecWare.PPSn.Server
 				{
 					Regex = new Regex(@"^.+\.Uri$", clientOptionHookRegexOptions),
 					Hook = UriClientOptionHook
+				},
+				// color hook
+				new ClientOptionHook
+				{
+					Regex = new Regex(@"^PPSn.DefaultTheme$", clientOptionHookRegexOptions),
+					Hook = ColorClientOptionHook
 				}
 			});
 
@@ -1614,6 +1621,9 @@ namespace TecWare.PPSn.Server
 			);
 		} // func UriClientOptionHook
 
+		private IEnumerable<(string key, object value)> ColorClientOptionHook(IDEWebScope r, Match keyMatch, string value)
+			=> GetColors(value).Select(c => new ValueTuple<string, object>(c.Name, ColorTranslator.ToHtml(c.Color)));
+				
 		private (int idx, Match) FindClientOptionHookForKey(string key, int startAt)
 		{
 			for (var i = startAt; i >= 0; i--)

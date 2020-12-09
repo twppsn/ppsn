@@ -254,7 +254,7 @@ namespace TecWare.PPSn.UI
 			var target = serviceProvider.GetService<IProvideValueTarget>(true);
 			var color = ProvideColor(serviceProvider);
 
-			return target.TargetProperty is System.Windows.DependencyProperty propertyInfo && propertyInfo.PropertyType == typeof(Brush)
+			return target.TargetProperty is DependencyProperty propertyInfo && propertyInfo.PropertyType == typeof(Brush)
 				? (object)new SolidColorBrush(color)
 				: color;
 		} // func ProvideValue 
@@ -271,23 +271,8 @@ namespace TecWare.PPSn.UI
 		/// <param name="serviceProvider"></param>
 		/// <returns></returns>
 		protected override Color ProvideColor(IServiceProvider serviceProvider)
-		{
-			var destinationPart = 1.0f - SourcePart;
-
-			if (SourcePart < 0.0f)
-				return Color.FromScRgb(Alpha, Source.ScR, Source.ScG, Source.ScB);
-			else if (SourcePart > 1.0f)
-				return Color.FromScRgb(Alpha, Destination.ScR, Destination.ScG, Destination.ScB);
-
-			// the scale 0.0 - 1.0 does not map linearly to 0 - 255
-			return Color.FromScRgb(
-				Alpha,
-				Source.ScR * SourcePart + Destination.ScR * destinationPart,
-				Source.ScG * SourcePart + Destination.ScG * destinationPart,
-				Source.ScB * SourcePart + Destination.ScB * destinationPart
-			);
-		} // func ProvideColor
-
+			=> GetColor(Source, Destination, SourcePart, Alpha);
+		
 		/// <summary>Source color</summary>
 		public Color Source { get; set; } = Colors.Black;
 		/// <summary>Destination color.</summary>
@@ -296,6 +281,29 @@ namespace TecWare.PPSn.UI
 		public float SourcePart { get; set; } = 0.5f;
 		/// <summary>Alpha value of the result.</summary>
 		public float Alpha { get; set; } = 1.0f;
+
+		/// <summary></summary>
+		/// <param name="source"></param>
+		/// <param name="destination"></param>
+		/// <param name="sourcePart"></param>
+		/// <param name="alpha"></param>
+		/// <returns></returns>
+		public static Color GetColor(Color source, Color destination, float sourcePart = 0.5f, float alpha = 1.0f)
+		{
+			var destinationPart = 1.0f - sourcePart;
+			if (sourcePart < 0.0f)
+				return Color.FromScRgb(alpha, source.ScR, source.ScG, source.ScB);
+			else if (sourcePart > 1.0f)
+				return Color.FromScRgb(alpha, destination.ScR, destination.ScG, destination.ScB);
+
+			// the scale 0.0 - 1.0 does not map linearly to 0 - 255
+			return Color.FromScRgb(
+				alpha,
+				source.ScR * sourcePart + destination.ScR * destinationPart,
+				source.ScG * sourcePart + destination.ScG * destinationPart,
+				source.ScB * sourcePart + destination.ScB * destinationPart
+			);
+		} // func GetColor
 	} // class AlphaBlendColor
 
 	#endregion
@@ -309,21 +317,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="serviceProvider"></param>
 		/// <returns></returns>
 		protected override Color ProvideColor(IServiceProvider serviceProvider)
-		{
-			var backgroundPart = 1.0f - Transparency;
-
-			if (Transparency < 0.0f)
-				return Color.FromScRgb(1f, BackColor.ScR, BackColor.ScG, BackColor.ScB);
-			else if (Transparency > 1.0f)
-				return Color.FromScRgb(1f, TransparentColor.ScR, TransparentColor.ScG, TransparentColor.ScB);
-
-			return Color.FromArgb(
-				255,
-				(byte)(BackColor.R * backgroundPart + TransparentColor.R * Transparency),
-				(byte)(BackColor.G * backgroundPart + TransparentColor.G * Transparency),
-				(byte)(BackColor.B * backgroundPart + TransparentColor.B * Transparency)
-			);
-		} // func ProvideColor
+			=> GetColor(BackColor, TransparentColor, Transparency);
 
 		/// <summary>Background color</summary>
 		public Color BackColor { get; set; } = Colors.Black;
@@ -331,6 +325,27 @@ namespace TecWare.PPSn.UI
 		public Color TransparentColor { get; set; } = Colors.White;
 		/// <summary>Transparency value</summary>
 		public float Transparency { get; set; } = 1.0f;
+
+		/// <summary>Mixes two colors to one color.</summary>
+		/// <param name="backColor"></param>
+		/// <param name="transparentColor"></param>
+		/// <param name="transparency"></param>
+		public static Color GetColor(Color backColor, Color transparentColor, float transparency)
+		{
+			var backgroundPart = 1.0f - transparency;
+
+			if (transparency < 0.0f)
+				return Color.FromScRgb(1f, backColor.ScR, backColor.ScG, backColor.ScB);
+			else if (transparency > 1.0f)
+				return Color.FromScRgb(1f, transparentColor.ScR, transparentColor.ScG, transparentColor.ScB);
+
+			return Color.FromArgb(
+				255,
+				(byte)(backColor.R * backgroundPart + transparentColor.R * transparency),
+				(byte)(backColor.G * backgroundPart + transparentColor.G * transparency),
+				(byte)(backColor.B * backgroundPart + transparentColor.B * transparency)
+			);
+		} // func GetColor
 	} // class TransparencyResultColor
 
 	#endregion
@@ -349,7 +364,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="source"></param>
 		public WeightColor(Color source)
 		{
-			this.Source = source;
+			Source = source;
 		} // ctor
 
 		/// <summary></summary>
@@ -399,7 +414,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="source"></param>
 		public GrayColor(Color source)
 		{
-			this.Source = source;
+			Source = source;
 		} // ctor
 
 		/// <summary></summary>

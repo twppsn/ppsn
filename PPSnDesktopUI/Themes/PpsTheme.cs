@@ -15,14 +15,16 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Collections.ObjectModel;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Themes
 {
+	#region -- class PpsTheme ---------------------------------------------------------
+
 	public static class PpsTheme
 	{
 		#region -- class PpsThemeKey --------------------------------------------------
@@ -52,7 +54,116 @@ namespace TecWare.PPSn.Themes
 
 		#endregion
 
+		#region -- enum PpsColorType --------------------------------------------------
+
+		private enum PpsColorType
+		{
+			Color,
+			Brush
+		} // enum PpsColorType
+
+		#endregion
+
+		#region -- class PpsColorTypeKey ----------------------------------------------
+
+		private sealed class PpsColorTypeKey
+		{
+			private readonly PpsColorType type;
+			private readonly PpsColor color;
+
+			public PpsColorTypeKey(PpsColorType type, PpsColor color)
+			{
+				this.type = type;
+				this.color = color ?? throw new ArgumentNullException(nameof(color));
+			} // ctor
+
+			public override string ToString()
+				=> "PPSn" + color.Name + type.ToString();
+
+			public override int GetHashCode()
+				=> type.GetHashCode() ^ color.GetHashCode();
+
+			public override bool Equals(object obj)
+				=> obj is PpsColorTypeKey k && k.type == type && k.color.Equals(color);
+
+			public PpsColorType Type => type;
+			public PpsColor Color => color;
+		} // class PpsColorType
+
+		#endregion
+
+		#region -- class PpsColorThemeDictionary --------------------------------------
+
+		private sealed class PpsColorThemeDictionary : ResourceDictionary
+		{
+			private readonly PpsColorTheme theme;
+
+			public PpsColorThemeDictionary(PpsColorTheme theme)
+			{
+				this.theme = theme ?? throw new ArgumentNullException(nameof(theme));
+
+				foreach (var c in theme)
+				{
+					Add(c.BrushKey, c);
+					Add(c.BrushKey.ToString(), c.BrushKey);
+					Add(c.ColorKey, c);
+					Add(c.ColorKey.ToString(), c.ColorKey);
+				}
+			} // ctor
+
+			protected override void OnGettingValue(object key, ref object value, out bool canCache)
+			{
+				if (key is string && value is PpsColorTypeKey valueColorType)
+				{
+					value = this[valueColorType];
+					canCache = true;
+				}
+				else if (key is PpsColorTypeKey colorType && value is PpsColor colorKey)
+				{
+					switch (colorType.Type)
+					{
+						case PpsColorType.Brush:
+							value = new SolidColorBrush(colorKey.GetColor(theme));
+							break;
+						default:
+							value = colorKey.GetColor(theme);
+							break;
+					}
+
+					// freeze value
+					if (value is Freezable f && f.CanFreeze)
+						f.Freeze();
+					canCache = true;
+				}
+				else
+					base.OnGettingValue(key, ref value, out canCache);
+			} // func OnGettingValue
+		} // class PpsColorThemeDictionary
+
+		#endregion
+
 		private static readonly Dictionary<string, PpsThemeKey> namedKeys = new Dictionary<string, PpsThemeKey>();
+
+		internal static object CreateColorKey(PpsColor color)
+			=> new PpsColorTypeKey(PpsColorType.Color, color);
+
+		internal static object CreateBrushKey(PpsColor color)
+			=> new PpsColorTypeKey(PpsColorType.Brush, color);
+
+		/// <summary>Update theme.</summary>
+		/// <param name="theme"></param>
+		public static void UpdateThemedDictionary(Collection<ResourceDictionary> resources, PpsColorTheme theme)
+		{
+			for (var i = 0; i < resources.Count; i++)
+			{
+				if (resources[i] is PpsColorThemeDictionary)
+				{
+					resources[i] = new PpsColorThemeDictionary(theme);
+					return;
+				}
+			}
+			resources.Add(new PpsColorThemeDictionary(theme));
+		} // proc UpdateThemedDictionary
 
 		/// <summary>Resolves the resource-key from a name.</summary>
 		/// <param name="name"></param>
@@ -72,6 +183,64 @@ namespace TecWare.PPSn.Themes
 			}
 		} // func TryGetNamedResourceKey
 
+		#region -- Colors -------------------------------------------------------------
+
+		/// <summary>Contrast color for light.</summary>
+		public static readonly PpsColor White = new PpsColor(nameof(White), theme => Color.FromArgb(255, 255, 255, 255));
+		/// <summary>Contrast color for dark.</summary>
+		public static readonly PpsColor Black = new PpsColor(nameof(Black), theme => Color.FromArgb(255, 0, 0, 0));
+
+		/// <summary>Application background color.</summary>
+		public static readonly PpsColor Desktop = new PpsColor(nameof(Desktop), theme => Color.FromArgb(255, 255, 250, 240));
+		/// <summary>Application foreground color.</summary>
+		public static readonly PpsColor Accent = new PpsColor(nameof(Accent), theme => Color.FromArgb(255, 0, 0, 0));
+		/// <summary>Application highlight color.</summary>
+		public static readonly PpsColor Marker = new PpsColor(nameof(Marker), theme => Color.FromArgb(255, 90, 124, 54));
+
+		/// <summary>Window title</summary>
+		public static readonly PpsColor WindowActive = new PpsColor(nameof(WindowActive), theme => Marker.GetColor(theme));
+		/// <summary>Window title bar background on active.</summary>
+		public static readonly PpsColor WindowActiveGlow = new PpsColor(nameof(WindowActiveGlow), theme => WindowActive.GetColor(theme));
+		/// <summary>Window title bar background on inactive.</summary>
+		public static readonly PpsColor WindowInActiveGlow = new PpsColor(nameof(WindowInActiveGlow), theme => Color.FromArgb(255, 170, 170, 170));
+		/// <summary>Window status bar.</summary>
+		public static readonly PpsColor WindowHeader = new PpsColor(nameof(WindowHeader), theme => theme.GetTransparencyColor(WindowBackground, Black, 0.17f));
+		/// <summary>Window foreground.</summary>
+		public static readonly PpsColor WindowForeground = new PpsColor(nameof(WindowForeground), theme => Accent.GetColor(theme));
+		/// <summary>Window  background.</summary>
+		public static readonly PpsColor WindowBackground = new PpsColor(nameof(WindowBackground), theme => Desktop.GetColor(theme));
+		/// <summary>Window status bar.</summary>
+		public static readonly PpsColor WindowFooter = new PpsColor(nameof(WindowFooter), theme => WindowActiveGlow.GetColor(theme));
+
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor Seperator = new PpsColor(nameof(Seperator), theme => theme.GetTransparencyColor(WindowBackground, WindowForeground, 0.1f));
+
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor ActionButton = new PpsColor(nameof(ActionButton), theme => Color.FromArgb(255, 40, 99, 37));
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor ControlBackground = new PpsColor(nameof(ControlBackground), theme => White.GetColor(theme));
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor ControlFocusedBorder = new PpsColor(nameof(ControlFocusedBorder), theme => Marker.GetColor(theme));
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor ControlNormalBorder = new PpsColor(nameof(ControlNormalBorder), theme => theme.GetTransparencyColor(Desktop, Accent, 0.25f));
+
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor SelectionBar = new PpsColor(nameof(SelectionBar), theme => theme.GetTransparencyColor(ControlBackground, Marker, 0.35f));
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor MouseOver = new PpsColor(nameof(MouseOver), theme => theme.GetTransparencyColor(ControlBackground, Marker, 0.35f));
+
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor PopupBackground = new PpsColor(nameof(PopupBackground), theme => theme.GetAlphaBlendColor(Desktop, Black, sourcePart: 0.9f));
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor PopupBorder = new PpsColor(nameof(PopupBorder), theme => theme.GetAlphaBlendColor(Desktop, Black, sourcePart: 0.5f));
+
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor SideBarBackground = new PpsColor(nameof(SideBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.03f));
+
+		#endregion
+
+		#region -- Images -------------------------------------------------------------
+
 		/// <summary>Close geometry</summary>
 		public static readonly ResourceKey WindowClosePathGeometry = new PpsThemeKey("windowClose");
 		/// <summary>Connecting geometry</summary>
@@ -85,5 +254,9 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey ScannerActivePathGeometry = new PpsThemeKey("scannerActive");
 		/// <summary>ScannerInActive geometry</summary>
 		public static readonly ResourceKey ScannerInActivePathGeometry = new PpsThemeKey("scannerInActive");
+
+		#endregion
 	} // class PpsTheme
+
+	#endregion
 }

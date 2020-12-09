@@ -16,31 +16,29 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-using Microsoft.Scripting.Debugging;
+using System.Windows.Media;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
-using TecWare.PPSn.Lua;
+using TecWare.PPSn.Themes;
 
 namespace TecWare.PPSn.UI
 {
 	#region -- class PpsTracePane -----------------------------------------------------
 
 	/// <summary>Pane to display trace messages.</summary>
-	internal sealed partial class PpsTracePane : PpsWindowPaneControl
+	internal sealed partial class PpsTracePane : PpsWindowPaneControl, IPpsBarcodeReceiver
 	{
 		public static readonly RoutedCommand ToggleDebugCommand = new RoutedCommand();
 
@@ -50,7 +48,6 @@ namespace TecWare.PPSn.UI
 		{
 			private readonly PpsTracePane pane;
 			private readonly IPpsLuaShell luaShell;
-
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -203,6 +200,19 @@ namespace TecWare.PPSn.UI
 
 			#endregion
 
+			#region -- Theme ----------------------------------------------------------
+
+			[LuaMember]
+			public void SetTheme(string name)
+			{
+				var theme = pane.wpfResources.GetThemes().FirstOrDefault(c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+				if (theme == null)
+					throw new ArgumentOutOfRangeException(nameof(name), name, "Theme not found.");
+				theme.Apply();
+			} // func SetTheme
+
+			#endregion
+
 			#region -- Help -----------------------------------------------------------
 
 			[LuaMember]
@@ -230,7 +240,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- class SettingsCollection -------------------------------------------
 
-		private sealed class SettingsCollection : IEnumerable
+		private sealed class SettingsCollection : IEnumerable, IEnumerable<PpsTraceSettingInfoItem>, ICollectionViewFactory
 		{
 			private readonly IPpsSettingsService settingsService;
 
@@ -239,17 +249,22 @@ namespace TecWare.PPSn.UI
 				this.settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 			}
 
-			public IEnumerator GetEnumerator()
-			{
-				foreach (var kv in settingsService.Query())
-					yield return kv;
-			} // proc GetEnumerator
+			public IEnumerator<PpsTraceSettingInfoItem> GetEnumerator()
+				=> settingsService.Query().Select(c => new PpsTraceSettingInfoItem(c.Key, c.Value)).GetEnumerator();
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+
+			ICollectionView ICollectionViewFactory.CreateView()
+				=> new PpsTypedListCollectionView<PpsTraceSettingInfoItem>(this.ToList());
 		} // class SettingsCollection
 
 		#endregion
 
 		private readonly IPpsUIService ui;
 		private readonly IPpsLogService log;
+		private readonly IPpsWpfResources wpfResources;
+		private readonly PpsBarcodeService barcodeService;
 		private readonly PpsDpcService dpcService;
 		private readonly PpsTraceTable traceTable;
 
@@ -264,6 +279,8 @@ namespace TecWare.PPSn.UI
 
 			ui = Shell.GetService<IPpsUIService>(true);
 			log = Shell.GetService<IPpsLogService>(false);
+			wpfResources = Shell.GetService<IPpsWpfResources>(true);
+			barcodeService = Shell.GetService<PpsBarcodeService>(false);
 			dpcService = Shell.GetService<PpsDpcService>(false);
 
 			eventPane.AddCommandBinding(
@@ -310,7 +327,11 @@ namespace TecWare.PPSn.UI
 			settingsList.ItemsSource = new SettingsCollection(Shell.GetService<IPpsSettingsService>(true));
 
 			// connect resource
-			resourceTree.ItemsSource = Shell.GetService<IPpsWpfResources>(true).Resources.MergedDictionaries;
+			InitResources();
+
+			// connect barcodes
+			if (barcodeService != null)
+				InitBarcodes();
 
 			UpdateLockedState();
 
@@ -321,7 +342,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (e.PropertyName == nameof(PpsDpcService.IsLocked))
 				UpdateLockedState();
-		}
+		} // event DpcService_PropertyChanged
 
 		private void UpdateLockedState()
 		{
@@ -422,7 +443,136 @@ namespace TecWare.PPSn.UI
 		} // proc CopyToClipboard
 
 		#endregion
+
+		#region -- Resources ----------------------------------------------------------
+
+		private void InitResources()
+		{
+			var resourceList = new List<PpsTraceResourceInfoItem>();
+			GetAllResources(wpfResources.Resources, resourceList);
+			resourceList.Sort();
+			var resourceView = new PpsTypedListCollectionView<PpsTraceResourceInfoItem>(resourceList);
+
+			// todo: fix scrolling
+			resourceView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PpsTraceResourceInfoItem.SourceName), null, StringComparison.OrdinalIgnoreCase));
+
+			resourceTree.ItemsSource = resourceView;
+		} // proc InitResources
+
+		private void GetAllResources(ResourceDictionary resources, List<PpsTraceResourceInfoItem> resourceList)
+		{
+			foreach (var k in resources.Keys)
+				resourceList.Add(new PpsTraceResourceInfoItem(resources, k));
+
+			foreach (var m in resources.MergedDictionaries)
+				GetAllResources(m, resourceList);
+		} // func GetAllResources
+
+		#endregion
+
+		#region -- Barcodes -----------------------------------------------------------
+
+		private readonly ObservableCollection<PpsTraceBarcodeItem> cachedBarcodes = new ObservableCollection<PpsTraceBarcodeItem>();
+
+		private void InitBarcodes()
+		{
+			barcodeProvider.ItemsSource = barcodeService;
+			barcodeList.ItemsSource = cachedBarcodes;
+		} // proc InitBarcodes
+
+		Task IPpsBarcodeReceiver.OnBarcodeAsync(IPpsBarcodeProvider provider, string code, string format)
+		{
+			while (cachedBarcodes.Count > 20)
+				cachedBarcodes.RemoveAt(0);
+
+			cachedBarcodes.Add(new PpsTraceBarcodeItem(provider, code, format));
+			return Task.CompletedTask;
+		} // event IPpsBarcodeReceiver.OnBarcodeAsync
+
+		/// <summary>Is the barcode receiver active.</summary>
+		bool IPpsBarcodeReceiver.IsActive => true;
+
+		#endregion
 	} // class PpsTracePane
+
+	#endregion
+
+	#region -- class PpsTraceSettingInfoItem ------------------------------------------
+
+	internal sealed class PpsTraceSettingInfoItem
+	{
+		private readonly string key;
+		private readonly string value;
+
+		public PpsTraceSettingInfoItem(string key, string value)
+		{
+			this.key = key ?? throw new ArgumentNullException(nameof(key));
+
+			if (key.EndsWith(".Password", StringComparison.OrdinalIgnoreCase))
+				this.value = "****";
+			else
+				this.value = value;
+		} // ctor
+
+		public string Key => key;
+		public string Value => value;
+	} // class PpsTraceSettingInfoItem
+
+	#endregion
+
+	#region -- class PpsTraceResourceInfoItem -----------------------------------------
+
+	internal sealed class PpsTraceResourceInfoItem : IComparable<PpsTraceResourceInfoItem>
+	{
+		private readonly ResourceDictionary origin;
+		private readonly object key;
+
+		public PpsTraceResourceInfoItem(ResourceDictionary origin, object key)
+		{
+			this.origin = origin ?? throw new ArgumentNullException(nameof(origin));
+			this.key = key ?? throw new ArgumentNullException(nameof(key));
+		} // ctor
+
+		public int CompareTo(PpsTraceResourceInfoItem other)
+		{
+			return origin == other.origin
+				? String.Compare(KeyName, other.KeyName, StringComparison.OrdinalIgnoreCase)
+				: String.Compare(SourceName, other.SourceName, StringComparison.OrdinalIgnoreCase);
+		} // func CompareTo
+
+		private static string GetTypeName(Type type) 
+			=> type == null ? "<null>" : LuaType.GetType(type).AliasName ?? type.Name;
+
+		public string SourceName => origin.Source == null ? origin.GetType().Name : origin.Source.ToString();
+
+		public string KeyName => key.ToString();
+		public string KeyType => GetTypeName(key.GetType());
+
+		public object Value => origin[key];
+		public string ValueType => GetTypeName(Value?.GetType());
+	} // class PpsTraceResourceInfoItem
+
+	#endregion
+
+	#region -- class PpsTraceBarcodeItem ----------------------------------------------
+
+	internal class PpsTraceBarcodeItem
+	{
+		private readonly IPpsBarcodeProvider provider;
+		private readonly string code;
+		private readonly string format;
+
+		public PpsTraceBarcodeItem(IPpsBarcodeProvider provider, string code, string format)
+		{
+			this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
+			this.code = code ?? throw new ArgumentNullException(nameof(code));
+			this.format = format;
+		} // ctor
+
+		public string Provider => "(" + provider.Type + ") " + provider.Description;
+		public string RawCode => code;
+		public string Format => format;
+	} // class PpsTraceBarcodeItem
 
 	#endregion
 }

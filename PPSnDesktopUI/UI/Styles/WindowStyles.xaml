@@ -72,19 +72,20 @@ specific language governing permissions and limitations under the Licence.
 	<sys:Single x:Key="Alternation1Transpareny">0.098</sys:Single>
 	<sys:Single x:Key="SideBarTranspareny">0.08</sys:Single>-->
 
-	<Color x:Key="PPSnDesktopColor">#FFFAF0</Color>
+	<!--<Color x:Key="PPSnDesktopColor">#FFFAF0</Color>
+	<Color x:Key="PPSnDesktopColor">#FF00F0</Color>
     <Color x:Key="PPSnAccentColor">#000000</Color>
     <Color x:Key="PPSnMarkerColor">#0078D7</Color>
     <Color x:Key="PPSnActionButtonColor">#286325</Color>
     <Color x:Key="PPSnControlBackgroundColor">#FFFFFF</Color>
     <Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
 	<Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
-    <Color x:Key="PPSnBlackColor">#000000</Color>
+    <Color x:Key="PPSnBlackColor">#000000</Color>-->
 
     <sys:String x:Key="PPSnApplicationTitle">PPSn</sys:String>
 
-    <SolidColorBrush x:Key="PPSnWindowActiveBrush" Color="#007ACC" />
-	<SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
+	<!--<SolidColorBrush x:Key="PPSnWindowActiveBrush" Color="#007ACC" />
+	<solidcolorbrush x:key="ppsnwindowforegroundbrush" color="{staticresource ppsnaccentcolor}" />
 	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
 
     <SolidColorBrush x:Key="PPSnWindowHeaderBrush">
@@ -119,11 +120,11 @@ specific language governing permissions and limitations under the Licence.
 	<SolidColorBrush x:Key="PPSnPopUpBorderBrush" Color="#BCB8B0"/>
     <SolidColorBrush x:Key="PPSnSideBarBackgroundBrush">
         <SolidColorBrush.Color>
-            <ui1:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnBlackColor}" Transparency="0.03" />
+            <ui1:TransparencyResultColor BackColor="{DynamicResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnBlackColor}" Transparency="0.03" />
         </SolidColorBrush.Color>
     </SolidColorBrush>
 
-    <SolidColorBrush x:Key="PPSnImageBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".85"/>
+    <SolidColorBrush x:Key="PPSnImageBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".85"/>-->
 
 	<sys:Double x:Key="PPSnSideBarIncreasedWidth">230</sys:Double>
 	<sys:Double x:Key="PPSnSideBarShrinkedWidth">50</sys:Double>

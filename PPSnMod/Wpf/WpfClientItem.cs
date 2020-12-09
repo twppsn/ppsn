@@ -1240,6 +1240,8 @@ namespace TecWare.PPSn.Server.Wpf
 				r.SetStatus(HttpStatusCode.OK, "Ok");
 			else
 			{
+				// todo: Combine with styles
+
 				await Task.Run(() =>
 				{
 					using (var xml = XmlWriter.Create(r.GetOutputTextWriter(GetXamlContentType(r)), Procs.XmlWriterSettings))

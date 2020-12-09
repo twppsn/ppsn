@@ -102,6 +102,28 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
+	#region -- class PpsColorInfo -----------------------------------------------------
+
+	/// <summary>Color description</summary>
+	public sealed class PpsColorInfo
+	{
+		private readonly string name;
+		private readonly Color color;
+
+		internal PpsColorInfo(string name, Color color)
+		{
+			this.name = name ?? throw new ArgumentNullException(nameof(name));
+			this.color = color;
+		} // ctor
+
+		/// <summary>Color name</summary>
+		public string Name => name;
+		/// <summary>Color</summary>
+		public Color Color => color;
+	} // class PpsColorInfo
+
+	#endregion
+
 	public partial class PpsApplication
 	{
 		#region -- enum ImageOuput ----------------------------------------------------
@@ -134,6 +156,56 @@ namespace TecWare.PPSn.Server
 				x.GetAttribute<string>("rect")
 			);
 		} // func CreateGeometryInfo
+
+		private PpsColorInfo CreateColorInfo(XConfigNode x)
+		{
+			var colorName = x.GetAttribute<string>("name");
+			return new PpsColorInfo(colorName, ColorTranslator.FromHtml(x.Value.ToString()));
+		} // func CreateColorInfo
+
+		#endregion
+
+		#region -- Colors -------------------------------------------------------------
+
+		private bool CheckColorPrefix(XConfigNode x, string prefix)
+		{
+			var colorName = x.GetAttribute<string>("name");
+			return colorName.Length > prefix.Length && colorName[prefix.Length] == '.' && colorName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+		} //func CheckColorPrefix
+
+		/// <summary>Return all colors</summary>
+		/// <returns></returns>
+		[LuaMember]
+		public IEnumerable<PpsColorInfo> GetColors(string prefix)
+		{
+			if (TryGetStyleNode(out var styles))
+			{
+				var r = styles.Elements(PpsStuff.xnStyleColor);
+				if (!String.IsNullOrEmpty(prefix))
+					r = r.Where(x => CheckColorPrefix(x, prefix));
+				return r.Select(CreateColorInfo);
+			}
+			else
+				return Array.Empty<PpsColorInfo>();
+		} // func GetColors
+
+		/// <summary>Return one color</summary>
+		/// <param name="colorName"></param>
+		/// <param name="defaultColor"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsColorInfo GetColor(string colorName, Color defaultColor)
+		{
+			if (TryGetStyleNode(out var styles))
+			{
+				return styles.Elements(PpsStuff.xnStyleGeometry)
+					.Where(x => String.Compare(x.GetAttribute<string>("name"), colorName, StringComparison.OrdinalIgnoreCase) == 0)
+					.Select(x => CreateColorInfo(x))
+					.FirstOrDefault();
+			}
+			else
+				return new PpsColorInfo(colorName, defaultColor);
+		} // func GetColor
 
 		#endregion
 
