@@ -61,11 +61,17 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnMeta = PpsNamespace + "meta";
 
 		public readonly static XName xnWpf = PpsNamespace + "wpf";
+		[Obsolete]
 		public readonly static XName xnWpfAction = PpsNamespace + "action";
+		[Obsolete]
 		public readonly static XName xnWpfTheme = PpsNamespace + "theme";
+		[Obsolete]
 		public readonly static XName xnWpfTemplate = PpsNamespace + "template";
+		[Obsolete]
 		public readonly static XName xnWpfWpfSource = PpsNamespace + "wpfSource";
+		[Obsolete]
 		public readonly static XName xnWpfCode = PpsNamespace + "code";
+		[Obsolete]
 		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
 
 		public readonly static XName xnStyle = PpsNamespace + "style";

@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -43,6 +44,7 @@ namespace TecWare.PPSn.Server.Wpf
 		private static readonly XNamespace MarkupNamespace = "http://schemas.openxmlformats.org/markup-compatibility/2006";
 		private static readonly XNamespace PresentationNamespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 		private static readonly XNamespace XamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
+		private static readonly XNamespace PpsnNamespace = "http://tecware-gmbh.de/ppsn/wpf/2015";
 
 		private static readonly XName xnXamlIgnorable = MarkupNamespace + "Ignorable";
 		private static readonly XName xnXamlResourceDictionary = PresentationNamespace + "ResourceDictionary";
@@ -72,16 +74,16 @@ namespace TecWare.PPSn.Server.Wpf
 
 			public ParsedXamlFile(WpfClientItem owner, ParsedXamlFile parentFile, XDocument xBasicFile, XElement xResources)
 			{
-				this.owner = owner;
+				this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
 				this.parentFile = parentFile;
-				this.cachedDocument = xBasicFile;
-				this.xResources = xResources;
+				cachedDocument = xBasicFile ?? throw new ArgumentNullException(nameof(xBasicFile));
+				this.xResources = xResources ?? throw new ArgumentNullException(nameof(xResources));
 
-				this.collectedNamespaces = new List<string>();
-				this.collectedFiles = new List<string>();
-				this.collectedKeys = new List<string>();
+				collectedNamespaces = new List<string>();
+				collectedFiles = new List<string>();
+				collectedKeys = new List<string>();
 
-				this.lastChanged = DateTime.MinValue;
+				lastChanged = DateTime.MinValue;
 			} // ctor
 
 			#endregion
@@ -215,6 +217,9 @@ namespace TecWare.PPSn.Server.Wpf
 				var xTmp = AddNode(xAddBefore, xSource);
 				return xFirstAdded ?? xTmp;
 			} // proc AddResource
+
+			public void AddResource(XElement xSource)
+				=> AddResource(xSource, null);
 
 			#endregion
 
@@ -364,7 +369,7 @@ namespace TecWare.PPSn.Server.Wpf
 						else if (AddKey(x, allowRedefine))
 						{
 							var xAdded = xResourceDictionary == xResources // do we need to copy the resources
-								? x 
+								? x
 								: AddResource(x, xAddBefore);
 							if (xMergedAddBefore == null)
 								xMergedAddBefore = xAdded;
@@ -404,12 +409,21 @@ namespace TecWare.PPSn.Server.Wpf
 			{
 				lock (lockFile)
 				{
+					var checkLastChanged = owner.Server.Configuration.ConfigurationStamp;
+
 					// check the file list
-					var checkLastChanged = collectedFiles.Max(c => File.GetLastWriteTimeUtc(c));
+					foreach (var f in collectedFiles)
+					{
+						var dt = File.GetLastWriteTimeUtc(f);
+						if (dt > checkLastChanged)
+							checkLastChanged = dt;
+					}
+
 					return lastChanged < checkLastChanged;
 				}
 			} // func IsUpToDate
 
+			public WpfClientItem Owner => owner;
 			public XDocument Document => cachedDocument;
 
 			public DateTime LastChanged => lastChanged;
@@ -421,7 +435,7 @@ namespace TecWare.PPSn.Server.Wpf
 		private readonly long offlineFileVersion;
 
 		private PpsDataSetServerDefinition masterDataSetDefinition;
-		private ParsedXamlFile defaultTheme = null;
+		private ParsedXamlFile globalStyles = null;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -542,21 +556,26 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- Wpf Xaml Parser ----------------------------------------------------
 
+		private const string defaultStyleName = "styles";
+
 		private void ClearXamlCache()
 		{
 		} // proc ClearXamlCache
 
-		private ParsedXamlFile GetDefaultTheme()
-			=> ParseXamlTheme("default");
+		private ParsedXamlFile GetDefaultStyles()
+			=> ParseXamlStyle(defaultStyleName, out _);
 
-		private ParsedXamlFile ParseXamlTheme(string theme)
+		private ParsedXamlFile ParseXamlStyle(string theme, out bool isCached)
 		{
-			var isDefaultTheme = String.Compare(theme, "default", StringComparison.OrdinalIgnoreCase) == 0;
-			if (isDefaultTheme)
+			var isDefaultStyle = String.Compare(theme, defaultStyleName, StringComparison.OrdinalIgnoreCase) == 0;
+			if (isDefaultStyle)
 			{
 				// is the default theme up to date
-				if (defaultTheme != null && !defaultTheme.IsUpToDate())
-					return defaultTheme;
+				if (globalStyles != null && !globalStyles.IsUpToDate())
+				{
+					isCached = true;
+					return globalStyles;
+				}
 				else
 					ClearXamlCache();
 			}
@@ -566,145 +585,147 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 
 			// load the document and parse the content
-			var xTargetResources = CreateResourcesNode();
-			var xTarget = new XDocument(
-				new XElement("theme",
-					new XAttribute(XNamespace.Xmlns + "s", PpsXmlPosition.XmlPositionNamespace.NamespaceName),
-					new XAttribute(XNamespace.Xmlns + "x", XamlNamespace.NamespaceName),
-					xTargetResources
-				)
+			var xResouurces = new XElement(xnXamlResourceDictionary,
+				new XAttribute(XNamespace.Xmlns + "x", XamlNamespace.NamespaceName),
+				new XAttribute(XNamespace.Xmlns + "mc", MarkupNamespace.NamespaceName),
+				new XAttribute(XNamespace.Xmlns + "s", PpsXmlPosition.XmlPositionNamespace.NamespaceName),
+				new XAttribute(XNamespace.Xmlns + "ui", PpsnNamespace.NamespaceName),
+				new XAttribute(xnXamlIgnorable, "s")
 			);
 
 			// create the resource file
-			var resourceFile = new ParsedXamlFile(this, isDefaultTheme ? null : GetDefaultTheme(), xTarget, xTargetResources);
-			foreach (var x in Config.Elements(PpsStuff.xnWpfTheme).Where(x => String.Compare(x.GetAttribute("id", String.Empty), theme, StringComparison.OrdinalIgnoreCase) == 0))
-			{
-				var fileName = x.GetAttribute("file", String.Empty);
-				if (String.IsNullOrEmpty(fileName))
-					throw new DEConfigurationException(x, "@file is missing.");
-				resourceFile.AddResourcesFromFile(fileName, true);
-			}
+			var resourceFile = new ParsedXamlFile(this, isDefaultStyle ? null : GetDefaultStyles(), new XDocument(xResouurces), xResouurces);
+
+			// todo: locate files
+			//foreach (var x in Config.Elements(PpsStuff.xnWpfTheme).Where(x => String.Compare(x.GetAttribute("id", String.Empty), theme, StringComparison.OrdinalIgnoreCase) == 0))
+			//{
+			//	var fileName = x.GetAttribute("file", String.Empty);
+			//	if (String.IsNullOrEmpty(fileName))
+			//		throw new DEConfigurationException(x, "@file is missing.");
+			//	resourceFile.AddResourcesFromFile(fileName, true);
+			//}
 
 			// cache
-			if (isDefaultTheme)
-				defaultTheme = resourceFile;
+			if (isDefaultStyle)
+				globalStyles = resourceFile;
 
+			isCached = false;
 			return resourceFile;
 		} // func ParseXamlTheme
 
-		private ParsedXamlFile ParseXamlTemplates()
-		{
-			// load the document and parse the content
-			var xTargetResources = CreateResourcesNode();
-			var xTarget = new XDocument(
-				new XElement("templates",
-					new XAttribute(XNamespace.Xmlns + "s", PpsXmlPosition.XmlPositionNamespace.NamespaceName),
-					new XAttribute(XNamespace.Xmlns + "x", XamlNamespace.NamespaceName),
-					xTargetResources
-				)
-			);
+		//private ParsedXamlFile ParseXamlTemplates()
+		//{
+		//	// load the document and parse the content
+		//	var xTargetResources = CreateResourcesNode();
+		//	var xTarget = new XDocument(
+		//		new XElement("templates",
+		//			new XAttribute(XNamespace.Xmlns + "s", PpsXmlPosition.XmlPositionNamespace.NamespaceName),
+		//			new XAttribute(XNamespace.Xmlns + "x", XamlNamespace.NamespaceName),
+		//			xTargetResources
+		//		)
+		//	);
 
-			// create the template
-			var currentTemplatePriority = 0;
-			var templateFile = new ParsedXamlFile(this, GetDefaultTheme(), xTarget, xTargetResources);
-			foreach (var x in Config.Elements(PpsStuff.xnWpfTemplate))
-			{
-				var fileName = x.GetAttribute("file", String.Empty);
-				if (String.IsNullOrEmpty(fileName))
-					throw new DEConfigurationException(x, "@file is missing.");
+		//	// create the template
+		//	var currentTemplatePriority = 0;
+		//	var templateFile = new ParsedXamlFile(this, GetDefaultTheme(), xTarget, xTargetResources);
+		//	foreach (var x in Config.Elements(PpsStuff.xnWpfTemplate))
+		//	{
+		//		var fileName = x.GetAttribute("file", String.Empty);
+		//		if (String.IsNullOrEmpty(fileName))
+		//			throw new DEConfigurationException(x, "@file is missing.");
 
-				templateFile.AddTemplatesFromFile(fileName, false, ref currentTemplatePriority);
-			}
+		//		templateFile.AddTemplatesFromFile(fileName, false, ref currentTemplatePriority);
+		//	}
 
-			return templateFile;
-		} // func ParseXamlTemplates
+		//	return templateFile;
+		//} // func ParseXamlTemplates
 
-		private bool ResolveXamlPath(string relativePath, out string fullPath)
-		{
-			// check for '..' and trailing slashes
-			if (relativePath.IndexOf("..") >= 0)
-				throw new ArgumentException(String.Format("Relative file names are not allowed ('{0}').", relativePath));
+		//private bool ResolveXamlPath(string relativePath, out string fullPath)
+		//{
+		//	// check for '..' and trailing slashes
+		//	if (relativePath.IndexOf("..") >= 0)
+		//		throw new ArgumentException(String.Format("Relative file names are not allowed ('{0}').", relativePath));
 
-			// find the file
-			foreach (var x in Config.Elements(PpsStuff.xnWpfWpfSource))
-			{
-				var directoryPath = x.GetAttribute("directory", String.Empty);
-				if (String.IsNullOrEmpty(directoryPath))
-					continue;
-				var virtualPath = x.GetAttribute("virtualPath", String.Empty) + "/";
+		//	// find the file
+		//	foreach (var x in Config.Elements(PpsStuff.xnWpfWpfSource))
+		//	{
+		//		var directoryPath = x.GetAttribute("directory", String.Empty);
+		//		if (String.IsNullOrEmpty(directoryPath))
+		//			continue;
+		//		var virtualPath = x.GetAttribute("virtualPath", String.Empty) + "/";
 
-				if (virtualPath == "/" || relativePath.StartsWith(virtualPath))
-				{
-					// replate the slashes
-					var relativeLocalPath = virtualPath == "/" ?
-						relativePath.Replace('/', '\\') :
-						relativePath.Substring(virtualPath.Length).Replace('/', '\\');
+		//		if (virtualPath == "/" || relativePath.StartsWith(virtualPath))
+		//		{
+		//			// replate the slashes
+		//			var relativeLocalPath = virtualPath == "/" ?
+		//				relativePath.Replace('/', '\\') :
+		//				relativePath.Substring(virtualPath.Length).Replace('/', '\\');
 
-					var tmp = Path.Combine(directoryPath, relativeLocalPath);
-					if (File.Exists(tmp))
-					{
-						fullPath = tmp;
-						return true;
-					}
-				}
-			}
+		//			var tmp = Path.Combine(directoryPath, relativeLocalPath);
+		//			if (File.Exists(tmp))
+		//			{
+		//				fullPath = tmp;
+		//				return true;
+		//			}
+		//		}
+		//	}
 
-			fullPath = null;
-			return false;
-		} // func ResolveXamlPath
+		//	fullPath = null;
+		//	return false;
+		//} // func ResolveXamlPath
 
-		private ParsedXamlFile ParseXaml(string relativePath)
-		{
-			// find the path
-			if (!ResolveXamlPath(relativePath, out var fullPath))
-				return null;
+		//private ParsedXamlFile ParseXaml(string relativePath)
+		//{
+		//	// find the path
+		//	if (!ResolveXamlPath(relativePath, out var fullPath))
+		//		return null;
 
-			// load the plain xml-document
-			var xTarget = LoadDocument(fullPath);
+		//	// load the plain xml-document
+		//	var xTarget = LoadDocument(fullPath);
 
-			// get the root element
-			var nameRootElement = xTarget.Root.Name;
-			var nameRootResources = XName.Get(nameRootElement.LocalName + ".Resources", nameRootElement.NamespaceName);
+		//	// get the root element
+		//	var nameRootElement = xTarget.Root.Name;
+		//	var nameRootResources = XName.Get(nameRootElement.LocalName + ".Resources", nameRootElement.NamespaceName);
 
-			// find root resource element and detach it
-			var xNodeBeforeResources = (XNode)null;
-			var xSourceResources = xTarget.Root.Element(nameRootResources);
-			if (xSourceResources != null)
-			{
-				xNodeBeforeResources = xSourceResources.PreviousNode;
-				Procs.XCopyAnnotations(xSourceResources, xSourceResources);
-				xSourceResources.Remove();
-			}
+		//	// find root resource element and detach it
+		//	var xNodeBeforeResources = (XNode)null;
+		//	var xSourceResources = xTarget.Root.Element(nameRootResources);
+		//	if (xSourceResources != null)
+		//	{
+		//		xNodeBeforeResources = xSourceResources.PreviousNode;
+		//		Procs.XCopyAnnotations(xSourceResources, xSourceResources);
+		//		xSourceResources.Remove();
+		//	}
 
-			// create the new dictionary
-			var xTargetResourceDictionary = new XElement(PresentationNamespace + "ResourceDictionary");
-			var xTargetResources = new XElement(nameRootResources, xTargetResourceDictionary);
+		//	// create the new dictionary
+		//	var xTargetResourceDictionary = new XElement(PresentationNamespace + "ResourceDictionary");
+		//	var xTargetResources = new XElement(nameRootResources, xTargetResourceDictionary);
 
-			// add the resources
-			if (xNodeBeforeResources != null)
-				xNodeBeforeResources.AddAfterSelf(xTargetResources); // add old position
-			else
-			{
-				// find code element
-				var xCode = xTarget.Root.Element(xnXamlCode);
-				if (xCode != null)
-					xCode.AddAfterSelf(xTargetResources); // after the code directive
-				else
-					xTarget.Root.AddFirst(xTargetResources); // as first elemenet
-			}
+		//	// add the resources
+		//	if (xNodeBeforeResources != null)
+		//		xNodeBeforeResources.AddAfterSelf(xTargetResources); // add old position
+		//	else
+		//	{
+		//		// find code element
+		//		var xCode = xTarget.Root.Element(xnXamlCode);
+		//		if (xCode != null)
+		//			xCode.AddAfterSelf(xTargetResources); // after the code directive
+		//		else
+		//			xTarget.Root.AddFirst(xTargetResources); // as first elemenet
+		//	}
 
-			// parse the file
-			var paneFile = new ParsedXamlFile(this, GetDefaultTheme(), xTarget, xTargetResourceDictionary);
-			paneFile.AddRootFile(fullPath);
+		//	// parse the file
+		//	var paneFile = new ParsedXamlFile(this, GetDefaultTheme(), xTarget, xTargetResourceDictionary);
+		//	paneFile.AddRootFile(fullPath);
 
-			// resolve merged resources
-			paneFile.CombineResourceDictionary(xSourceResources, null, false, false);
+		//	// resolve merged resources
+		//	paneFile.CombineResourceDictionary(xSourceResources, null, false, false);
 
-			return paneFile;
-		} // func ParseXaml
+		//	return paneFile;
+		//} // func ParseXaml
 
-		private static XElement CreateResourcesNode()
-			=> new XElement(PresentationNamespace + "resources"); // change default namespace
+		//private static XElement CreateResourcesNode()
+		//	=> new XElement(PresentationNamespace + "resources"); // change default namespace
 
 		#endregion
 
@@ -1216,6 +1237,80 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
+		#region -- GetColorThemeFactories ---------------------------------------------
+
+		private IEnumerable<XElement> GetColorThemeFactories()
+		{
+			var themes = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
+			foreach (var color in application.GetColors())
+			{
+				var prefix = color.GetPrefix();
+				string colorName;
+				if (prefix.Length == 0)
+				{
+					prefix = "Default";
+					colorName = color.Name;
+				}
+				else
+				{
+					colorName = color.Name.Substring(prefix.Length + 1);
+				}
+
+				if (!themes.TryGetValue(prefix, out var xTheme))
+				{
+					xTheme = new XElement(PpsnNamespace + "PpsColorThemeFactory",
+						new XAttribute(xnXamlKey, "{ui:PpsColorThemeKey \"" + prefix + "\"}")
+					);
+					themes.Add(prefix, xTheme);
+				}
+
+				xTheme.Add(
+					new XElement(PresentationNamespace + "Color",
+						new XAttribute(xnXamlKey, colorName),
+						new XText(ColorTranslator.ToHtml(color.Color))
+					)
+				);
+			}
+			return themes.Values;
+		} // func GetColorThemeFactories
+
+		#endregion
+
+		#region -- GetGeometries ------------------------------------------------------
+
+		private IEnumerable<XElement> GetGeometries()
+		{
+
+			foreach (var g in application.GetGeometries())
+			{
+				if (g.RawPath2 == null)
+				{
+					yield return new XElement(PresentationNamespace + "PathGeometry",
+						new XAttribute(xnXamlKey, g.Name + "PathGeometry"),
+						new XAttribute("Figures", g.RawPath)
+					);
+				}
+				else
+				{
+					yield return new XElement(PresentationNamespace + "CombinedGeometry",
+						new XAttribute(xnXamlKey, g.Name + "PathGeometry"),
+						new XElement(PresentationNamespace + "CombinedGeometry.Geometry1",
+							new XElement(PresentationNamespace + "PathGeometry",
+								new XAttribute("Figures", g.RawPath)
+							)
+						),
+						new XElement(PresentationNamespace + "CombinedGeometry.Geometry2",
+							new XElement(PresentationNamespace + "PathGeometry",
+								new XAttribute("Figures", g.RawPath2)
+							)
+						)
+					);
+				}
+			}
+		} // func GetGeometries
+
+		#endregion
+
 		private static string GetXamlContentType(IDEWebRequestScope r)
 		{
 			switch (r.GetProperty("_debug", String.Empty))
@@ -1229,64 +1324,37 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc GetXamlContentType
 
-		private async Task<bool> WriteStyleResourceDictionaryAsync(IDEWebRequestScope r)
+		private async Task<bool> WriteStyleResourceDictionaryAsync(IDEWebRequestScope r, string styleName)
 		{
 			// set time stamp
 			r.SetLastModified(Server.Configuration.ConfigurationStamp);
-			r.SetInlineFileName("styles.xaml");
+			r.SetInlineFileName(styleName + ".xaml");
 
 			// write content
 			if (r.InputMethod == HttpMethod.Head.Method)
 				r.SetStatus(HttpStatusCode.OK, "Ok");
 			else
 			{
-				// todo: Combine with styles
-
 				await Task.Run(() =>
 				{
-					using (var xml = XmlWriter.Create(r.GetOutputTextWriter(GetXamlContentType(r)), Procs.XmlWriterSettings))
+					var style = ParseXamlStyle(styleName,out var isCached);
+
+					if (!isCached)
 					{
-						xml.WriteStartDocument();
-						xml.WriteStartElement(xnXamlResourceDictionary.LocalName, xnXamlResourceDictionary.NamespaceName);
-						xml.WriteAttributeString("xmlns", String.Empty, null, xnXamlResourceDictionary.NamespaceName);
-						xml.WriteAttributeString("xmlns", "x", null, xnXamlKey.NamespaceName);
+						// add files
+						// todo:
 
+						// add theme factories
+						foreach (var x in GetColorThemeFactories())
+							style.AddResource(x);
 
-						foreach (var g in application.GetGeometries())
-						{
-							if (g.RawPath2 == null)
-							{
-								xml.WriteStartElement("PathGeometry");
-								xml.WriteAttributeString("x", xnXamlKey.LocalName, null, g.Name + "PathGeometry");
-								xml.WriteAttributeString("Figures", g.RawPath);
-								xml.WriteEndElement();
-							}
-							else
-							{
-								xml.WriteStartElement("CombinedGeometry");
-
-								xml.WriteStartElement("CombinedGeometry.Geometry1");
-								xml.WriteStartElement("PathGeometry");
-								xml.WriteAttributeString("Figures", g.RawPath);
-								xml.WriteEndElement();
-								xml.WriteEndElement();
-
-								xml.WriteStartElement("CombinedGeometry.Geometry2");
-								xml.WriteStartElement("PathGeometry");
-								xml.WriteAttributeString("Figures", g.RawPath2);
-								xml.WriteEndElement();
-								xml.WriteEndElement();
-
-								xml.WriteEndElement();
-							}
-						}
-
-						xml.WriteEndElement();
-						xml.WriteEndDocument();
-						xml.Flush();
+						// add geometries factories
+						foreach (var x in GetGeometries())
+							style.AddResource(x);
 					}
-				}
-				);
+
+					r.WriteXml(globalStyles.Document, GetXamlContentType(r));
+				});
 			}
 
 			return true;
@@ -1298,7 +1366,7 @@ namespace TecWare.PPSn.Server.Wpf
 		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			if (r.RelativeSubPath == "styles.xaml")
-				return await WriteStyleResourceDictionaryAsync(r);
+				return await WriteStyleResourceDictionaryAsync(r, defaultStyleName);
 			//else if (r.RelativeSubPath == "environment.xml")
 			//{
 			//	await Task.Run(() => ParseEnvironment(r));
