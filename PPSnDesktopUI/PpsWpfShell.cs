@@ -41,6 +41,7 @@ namespace TecWare.PPSn
 	#region -- class PpsWpfShell ------------------------------------------------------
 
 	/// <summary>Shell extensions für Wpf-applications</summary>
+	[PpsStaticService]
 	public static partial class PpsWpfShell
 	{
 		#region -- class InstanceKey --------------------------------------------------

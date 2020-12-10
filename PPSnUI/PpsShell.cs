@@ -24,6 +24,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -40,6 +41,16 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
+	#region -- class PpsStaticServiceAttribute ----------------------------------------
+
+	/// <summary>Enforce static ctor.</summary>
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
+	public sealed class PpsStaticServiceAttribute : Attribute
+	{
+	} // class PpsStaticServiceAttribute 
+
+	#endregion
+
 	#region -- class PpsServiceAttribute ----------------------------------------------
 
 	/// <summary>Mark a class as service</summary>
@@ -410,6 +421,7 @@ namespace TecWare.PPSn
 	#region -- class PpsShell ---------------------------------------------------------
 
 	/// <summary>Global environment to host multiple active environments.</summary>
+	[PpsStaticService]
 	public static partial class PpsShell
 	{
 		#region -- class TypeComparer -------------------------------------------------
@@ -1504,15 +1516,18 @@ namespace TecWare.PPSn
 		{
 			foreach (var t in assembly.GetTypes())
 			{
-				if (t.GetCustomAttributes<PpsServiceAttribute>().FirstOrDefault() == null)
-					continue;
-
-				if (typeof(IPpsShellService).IsAssignableFrom(t)) // is this service a shell service
-					shellServices.Add(t);
-				else if (t.GetCustomAttribute<PpsLazyServiceAttribute>() != null)// add a normal service
-					AddServices(global, t, new LazyServiceCreator(t).CreateService);
-				else
-					AddServices(global, t, Activator.CreateInstance(t));
+				if (t.GetCustomAttribute<PpsStaticServiceAttribute>() != null) // enforce static ctor
+					RuntimeHelpers.RunClassConstructor(t.TypeHandle);
+				
+				if (t.GetCustomAttributes<PpsServiceAttribute>().FirstOrDefault() != null)
+				{
+					if (typeof(IPpsShellService).IsAssignableFrom(t)) // is this service a shell service
+						shellServices.Add(t);
+					else if (t.GetCustomAttribute<PpsLazyServiceAttribute>() != null)// add a normal service
+						AddServices(global, t, new LazyServiceCreator(t).CreateService);
+					else
+						AddServices(global, t, Activator.CreateInstance(t));
+				}
 			}
 		} // proc Collect
 
