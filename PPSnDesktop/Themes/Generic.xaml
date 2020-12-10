@@ -530,38 +530,8 @@
 		</Setter>
 	</Style>
 
-	<!--<Style TargetType="uic:PpsBarcodeState">
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="uic:PpsBarcodeState">
-					<Grid Background="Transparent" ToolTip="{Binding LastSeenDevice}">
-						<ui:PpsGeometryImage GeometryName="scannerActive" Foreground="{DynamicResource PPSnWindowBackgroundBrush}">
-							<ui:PpsGeometryImage.Visibility>
-								<Binding Path="IsActive" Converter="{x:Static ui:PpsConverter.Visibility}">
-									<Binding.ConverterParameter>
-										<ui:VisibilityConverterParameter TrueValue="Visible" FalseValue="Hidden" />
-									</Binding.ConverterParameter>
-								</Binding>
-							</ui:PpsGeometryImage.Visibility>
-						</ui:PpsGeometryImage>
-						<ui:PpsGeometryImage GeometryName="scannerInActive" Foreground="{DynamicResource PPSnWindowBackgroundBrush}">
-							<ui:PpsGeometryImage.Visibility>
-								<Binding Path="IsActive" Converter="{x:Static ui:PpsConverter.Visibility}">
-									<Binding.ConverterParameter>
-										<ui:VisibilityConverterParameter TrueValue="Hidden" FalseValue="Visible" />
-									</Binding.ConverterParameter>
-								</Binding>
-							</ui:PpsGeometryImage.Visibility>
-						</ui:PpsGeometryImage>
-					</Grid>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>-->
-
     <Style TargetType="uic:PpsBarcodeState">
-        <Setter Property="Foreground" Value="{DynamicResource PPSnWindowBackgroundBrush}" />
-        <Setter Property="Padding" Value="0,0,0,0" />
+        <Setter Property="Focusable" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="uic:PpsBarcodeState">
@@ -582,8 +552,7 @@
     </Style>
 
     <Style TargetType="uic:PpsConnectionState">
-        <Setter Property="Foreground" Value="{DynamicResource PPSnWindowBackgroundBrush}" />
-        <Setter Property="Padding" Value="0,0,0,0" />
+        <Setter Property="Focusable" Value="False" />
         <Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="uic:PpsConnectionState">

@@ -83,7 +83,8 @@ specific language governing permissions and limitations under the Licence.
                         <Trigger Property="IsTransparent" Value="True">
                             <Setter Property="BorderBrush" Value="Transparent" />
 							<Setter Property="Background" Value="Transparent" />
-                        </Trigger>
+							<Setter Property="Focusable" Value="False" />
+						</Trigger>
 
                         <Trigger Property="HasContent" Value="False">
                             <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />

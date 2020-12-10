@@ -222,15 +222,8 @@ namespace TecWare.PPSn.Themes
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor ControlNormalBorder = new PpsColor(nameof(ControlNormalBorder), theme => theme.GetTransparencyColor(Desktop, Accent, 0.25f));
 
-		/// <summary>Background for button</summary>
+		/// <summary>Background for standard button</summary>
 		public static readonly PpsColor ButtonBackground = new PpsColor(nameof(ButtonBackground), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.11f));
-		/// <summary>Background when mouse is over button</summary>
-		public static readonly PpsColor ButtonMouseOver = new PpsColor(nameof(ButtonMouseOver), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.15f));
-		/// <summary>Background when button is clicked and hold, mouse is not over</summary>
-		public static readonly PpsColor ButtonInDeterminate = new PpsColor(nameof(ButtonInDeterminate), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.25f));
-		/// <summary>Background when button is pressed</summary>
-		public static readonly PpsColor ButtonPressed = new PpsColor(nameof(ButtonPressed), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.75f));
-
 
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor SelectionBar = new PpsColor(nameof(SelectionBar), theme => theme.GetTransparencyColor(ControlBackground, Marker, 0.35f));

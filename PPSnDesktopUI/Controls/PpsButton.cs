@@ -42,6 +42,58 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsButton : Button
 	{
+		#region -- TouchEvents --------------------------------------------------------
+
+		protected override void OnTouchDown(TouchEventArgs e)
+		{
+			if (e.TouchDevice.Capture(this))
+			{
+				IsPressed = true;
+				e.Handled = true;
+			}
+			base.OnTouchDown(e);
+		} // proc OnTouchDown
+
+		protected override void OnTouchMove(TouchEventArgs e)
+		{
+			if (e.TouchDevice.Captured == this)
+			{
+				IsPressed = IsHitTest(e.GetTouchPoint(this).Position);
+				e.Handled = true;
+			}
+			base.OnTouchMove(e);
+		} // proc OnTouchMove
+
+		protected override void OnTouchUp(TouchEventArgs e)
+		{
+			if (e.TouchDevice.Captured == this)
+			{
+				ReleaseTouchCapture(e.TouchDevice);
+				IsPressed = false;
+
+				if (IsHitTest(e.GetTouchPoint(this).Position))
+					RaiseOnClick();
+
+				e.Handled = true;
+			}
+			base.OnTouchUp(e);
+		} // proc OnTouchUp
+
+		private async void RaiseOnClick()
+		{
+			// Zeit für die Button-Animation
+			await System.Threading.Tasks.Task.Delay(300);
+			OnClick();
+		} // proc RaiseOnClick
+
+		private bool IsHitTest(Point point)
+		{
+			var hitTestResult = VisualTreeHelper.HitTest(this, point);
+			return hitTestResult != null && hitTestResult.VisualHit != null;
+		} // func IsHitTest
+
+		#endregion
+
 		#region -- DisplayMode - Property ---------------------------------------------
 
 		/// <summary>The type of representation</summary>
@@ -88,7 +140,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- IsTransparent - Property -------------------------------------------------
+		#region -- IsTransparent - Property -------------------------------------------
 
 		private static readonly DependencyPropertyKey isTransparentPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsTransparent), typeof(bool), typeof(PpsButton), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary>The property defines if element will be displayed like button</summary>

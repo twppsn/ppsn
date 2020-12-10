@@ -154,11 +154,11 @@
 						<Border x:Name="border" BorderThickness="0" Background="Transparent" SnapsToDevicePixels="true" Padding="16,0">
 							<ContentPresenter Focusable="False" HorizontalAlignment="Left" VerticalAlignment="Center"/>
 						</Border>
-						<ControlTemplate.Triggers>
+						<!--<ControlTemplate.Triggers>
 							<Trigger Property="IsPressed" Value="true">
 								<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
 							</Trigger>
-						</ControlTemplate.Triggers>
+						</ControlTemplate.Triggers>-->
 					</ControlTemplate>
 				</Button.Template>
 			</Button>
