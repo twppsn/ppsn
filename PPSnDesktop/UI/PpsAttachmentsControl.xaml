@@ -31,9 +31,9 @@ specific language governing permissions and limitations under the Licence.
 		</ui:PpsDataListBox.ListCommands>
 		<ui:PpsDataListBox.ItemCommands>
 			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.OpenCommand}" CommandParameter="{Binding}" Order="200,110"
-								   DisplayMode="Image" Image="openFolderOutline" DisplayText="Öffnen" Description="Anhang öffnen." />
+								   Image="openFolderOutline" DisplayText="Öffnen" Description="Anhang öffnen." />
 			<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.RemoveCommand}" CommandParameter="{Binding}" Order="200,120"
-								   DisplayMode="Image" Image="delete" DisplayText="Löschen" Description="Anhang entfernen." />
+								   Image="delete" DisplayText="Löschen" Description="Anhang entfernen." />
 		</ui:PpsDataListBox.ItemCommands>
 		<ui:PpsDataListBox.ItemsPanel>
 			<ItemsPanelTemplate>

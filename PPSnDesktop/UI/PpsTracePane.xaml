@@ -35,7 +35,7 @@
 				<ui:PpsDataListBox x:Name="logList">
 					<ui:PpsDataListBox.ListCommands>
 						<ui:PpsUICommandButton Order="100;100" DisplayText="Senden" Image="save" Description="Speichere alle Log in eine Datei." Command="{x:Static ApplicationCommands.SaveAs}" />
-						<ui:PpsUICommandButton Order="120;100" DisplayText="Debugmeldungen" Image="debug" DisplayMode="Image" Description="Zeigt Debugnachrichten an" Command="{x:Static local:PpsTracePane.ToggleDebugCommand}" />
+						<ui:PpsUICommandButton Order="120;100" DisplayText="Debugmeldungen" Image="debug" Description="Zeigt Debugnachrichten an" Command="{x:Static local:PpsTracePane.ToggleDebugCommand}" />
 					</ui:PpsDataListBox.ListCommands>
 					<ui:PpsDataListBox.ItemCommands>
 						<ui:PpsUICommandButton Order="110;100" DisplayText="Kopieren" Image="copy" Description="Kopiere markierte Einträge in die Zwischenablage." Command="{x:Static ApplicationCommands.Copy}" />

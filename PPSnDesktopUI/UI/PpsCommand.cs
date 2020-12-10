@@ -800,8 +800,6 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(string), typeof(PpsUICommandButton));
 		/// <summary>The Command the Button schould execute</summary>
 		public static readonly DependencyProperty CommandProperty = ButtonBase.CommandProperty.AddOwner(typeof(PpsUICommandButton));
-		/// <summary>The type how Button will be displayed</summary>
-		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Transparent));
 		/// <summary>The Command the Button schould execute</summary>
 		public static readonly DependencyProperty CommandParameterProperty = ButtonBase.CommandParameterProperty.AddOwner(typeof(PpsUICommandButton));
 		/// <summary>The Command the Button schould execute</summary>
@@ -813,8 +811,6 @@ namespace TecWare.PPSn.UI
 		public string Description { get => (string)GetValue(DescriptionProperty); set => SetValue(DescriptionProperty, value); }
 		/// <summary>Name of the Image for the Button</summary>
 		public string Image { get => (string)GetValue(ImageProperty); set => SetValue(ImageProperty, value); }
-		/// <summary>The type how Button will be displayed</summary>
-		public PpsButtonDisplayType DisplayMode { get => (PpsButtonDisplayType)GetValue(DisplayModeProperty); set => SetValue(DisplayModeProperty, value); }
 		/// <summary>The Command the Button schould execute</summary>
 		public ICommand Command { get => (ICommand)GetValue(CommandProperty); set => SetValue(CommandProperty, value); }
 		/// <summary></summary>
