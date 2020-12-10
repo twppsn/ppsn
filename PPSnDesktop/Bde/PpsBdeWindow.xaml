@@ -56,8 +56,8 @@
 						   Margin="16,0"
 						   Foreground="{StaticResource PPSnWindowBackgroundBrush}" />
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.TraceLogCommand}"
+							  DisplayMode="Transparent"
 							  ToolTip="System"
-							  DisplayMode="Image"
 							  GeometryName="appInfo"
 							  GeometrySize="24"
 							  ImageOpacity="1"
@@ -99,7 +99,7 @@
 				</ToggleButton>
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.MinimizeCommand}"
 							  ToolTip="Minimieren"
-							  DisplayMode="Image"
+							  DisplayMode="Transparent"
 							  GeometryName="windowMinimize"
 							  GeometrySize="24"
 							  ImageOpacity="1"
@@ -109,8 +109,8 @@
 							  VerticalAlignment="Top"
 							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.MaximizeCommand}"
+							  DisplayMode="Transparent"
 							  ToolTip="Maximieren"
-							  DisplayMode="Image"
 							  GeometryName="windowMaximize"
 							  GeometrySize="24"
 							  ImageOpacity="1"
@@ -120,8 +120,8 @@
 							  VerticalAlignment="Top"
 							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.CloseCommand}"
+							  DisplayMode="Transparent"
 							  ToolTip="Schließen"
-							  DisplayMode="Image"
 							  GeometryName="windowClose"
 							  GeometrySize="16"
 							  ImageOpacity="1"

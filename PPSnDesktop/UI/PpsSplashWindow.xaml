@@ -115,7 +115,7 @@
 			<!-- Close button -->
 			<ui:PpsButton Grid.Column="1" Command="{x:Static ApplicationCommands.Close}"
 						  ToolTip="Schließen"
-						  DisplayMode="Image"
+						  DisplayMode="Transparent"
 						  GeometryName="windowClose"
 						  GeometrySize="16"
 						  ImageOpacity="1"
@@ -137,7 +137,7 @@
 							</DataTrigger>
 						</Style.Triggers>
 					</Style>
-				</ui:PpsButton.Style>"
+				</ui:PpsButton.Style>
 			</ui:PpsButton>
 
 			<!-- Error State -->

@@ -83,7 +83,7 @@ specific language governing permissions and limitations under the Licence.
 										   Command="{x:Static pps:PpsTextBox.DropDownCommand}"
 										   Grid.Column="2"
 										   Width="23"
-										   DisplayMode="Image"
+										   DisplayMode="Transparent"
 										   GeometryName="comboxBoxChevron"
 										   GeometrySize="20"
 										   SnapsToDevicePixels="False"

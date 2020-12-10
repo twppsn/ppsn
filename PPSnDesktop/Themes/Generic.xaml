@@ -104,7 +104,7 @@
 													  Foreground="{DynamicResource PPSnActionButtonBrush}" Opacity=".65" />
 								<TextBlock Text="{Binding Text, Mode=OneWay}" VerticalAlignment="Center" Margin="32,0,16,0"
 										   FontSize="18" Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
-								<ui:PpsButton Command="{x:Static ApplicationCommands.Close}" DisplayMode="Image" GeometryName="nextPane" GeometrySize="24" 
+								<ui:PpsButton Command="{x:Static ApplicationCommands.Close}" DisplayMode="Transparent" GeometryName="nextPane" GeometrySize="24" 
 											   Foreground="{DynamicResource PPSnWindowForegroundBrush}" ImageOpacity="1"
 											   Grid.Column="1" Width="32" HorizontalAlignment="Left" ToolTip="Schließen" />
 
@@ -134,12 +134,12 @@
 								<DataTemplate DataType="ui:PpsWindowPaneObjectInfo">
 									<Border x:Name="border" Height="48" BorderThickness="0,0,4,0" BorderBrush="Transparent">
 										<ui:PpsButton Command="{x:Static ui:PpsWindowPaneCharmBarControl.ChangeContentCommand}"
+													  DisplayMode="Transparent"
 													   CommandParameter="{Binding}"
 													   ToolTip="{Binding Text, Mode=OneWay}"
 													   GeometryName="{Binding Image, Mode=OneWay}"
 													   GeometrySize="26"
-													   Foreground="{DynamicResource PPSnActionButtonBrush}"
-													   DisplayMode="Image" />
+													   Foreground="{DynamicResource PPSnActionButtonBrush}" />
 									</Border>
 									<DataTemplate.Triggers>
 										<DataTrigger Binding="{Binding IsActive}" Value="True">
@@ -191,7 +191,6 @@
 						<ui:PpsButton Content="Bearbeiten"
 									   Command="{x:Static ApplicationCommands.Open}"
 									   HorizontalAlignment="Left"
-									   DisplayMode="ImageAndText"
 									   Margin="24,0,0,0"
 									   FontSize="14" />
 						<FlowDocumentScrollViewer Grid.Row="1" Margin="0,6,0,0" Document="{TemplateBinding Document}" VerticalScrollBarVisibility="Auto" />
@@ -291,7 +290,7 @@
 
 						<ui:PpsButton Command="{x:Static ui:PpsWindow.MinimizeCommand}"
 									   ToolTip="Minimieren"
-									   DisplayMode="Image"
+									   DisplayMode="Transparent"
 									   GeometryName="windowMinimize"
 									   GeometrySize="24"
 									   ImageOpacity="1"
@@ -304,7 +303,7 @@
 						<ui:PpsButton x:Name="buttonMaximize"
 									   Command="{x:Static ui:PpsWindow.MaximizeCommand}"
 									   ToolTip="Maximieren"
-									   DisplayMode="Image"
+									   DisplayMode="Transparent"
 									   GeometryName="windowMaximize"
 									   GeometrySize="24"
 									   ImageOpacity="1"
@@ -316,7 +315,7 @@
 									   Margin="0,0,34,0" />
 						<ui:PpsButton Command="{x:Static ui:PpsWindow.CloseCommand}"
 									   ToolTip="Schließen"
-									   DisplayMode="Image"
+									   DisplayMode="Transparent"
 									   GeometryName="windowClose"
 									   GeometrySize="16"
 									   ImageOpacity="1"
@@ -397,7 +396,7 @@
 																	   Visibility="Hidden"
 																	   Foreground="{DynamicResource PPSnWindowForegroundBrush}"
 																	   GeometryName="closePane"
-																	   DisplayMode="Image"
+																	   DisplayMode="Transparent"
 																	   GeometrySize="24"
 																	   ImageOpacity="1">
 															<Button.Triggers>
@@ -460,7 +459,7 @@
 										   Visibility="Hidden"
 										   Foreground="{DynamicResource PPSnWindowForegroundBrush}"
 										   GeometryName="closePane"
-										   DisplayMode="Image"
+										   DisplayMode="Transparent"
 										   GeometrySize="24"
 										   ImageOpacity="1" />
 						</Grid>

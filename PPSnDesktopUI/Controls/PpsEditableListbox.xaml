@@ -54,12 +54,12 @@ specific language governing permissions and limitations under the Licence.
 										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
 										  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
 						<pps:PpsButton x:Name="appendButton" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6,0"
-									   DisplayMode="Circle" GeometrySize="32" GeometryName="plus"
+									   DisplayMode="Transparent" GeometrySize="32" GeometryName="plus"
 									   Command="{x:Static pps:PpsEditableListbox.AppendNewItemCommand}"
 									   CommandParameter="{Binding}"
 									   Visibility="Hidden" />
 						<pps:PpsButton x:Name="removeButton" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6,0"
-									   DisplayMode="Circle" GeometrySize="32" GeometryName="delete"
+									   DisplayMode="Transparent" GeometrySize="32" GeometryName="delete"
 									   Command="{x:Static pps:PpsEditableListbox.RemoveItemCommand}"
 									   CommandParameter="{Binding}"
 									   Visibility="Hidden" />

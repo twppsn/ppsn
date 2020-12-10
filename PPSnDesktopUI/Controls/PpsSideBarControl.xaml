@@ -46,7 +46,7 @@ specific language governing permissions and limitations under the Licence.
 								</Grid.RowDefinitions>
 								<pps:PpsButton x:Name="ShrinkButton"
 											   Command="{x:Static NavigationCommands.Zoom}"
-											   DisplayMode="Image"
+											   DisplayMode="Transparent"
 											   GeometryName="menu"
 											   GeometrySize="24"
 											   ImageOpacity="1"

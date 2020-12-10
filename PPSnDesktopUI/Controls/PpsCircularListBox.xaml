@@ -171,9 +171,9 @@ specific language governing permissions and limitations under the Licence.
 									<ColumnDefinition />
 								</Grid.ColumnDefinitions>
 								<pps:PpsButton Grid.Column="0" Command="{x:Static ApplicationCommands.Save}"
-											   DisplayMode="Image" GeometryName="checked" Foreground="{TemplateBinding Foreground}" />
+											   DisplayMode="Transparent" GeometryName="checked" Foreground="{TemplateBinding Foreground}" />
 								<pps:PpsButton Grid.Column="1" Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}"
-											   DisplayMode="Image" GeometryName="windowClose" Foreground="{TemplateBinding Foreground}" />
+											   DisplayMode="Transparent" GeometryName="windowClose" Foreground="{TemplateBinding Foreground}" />
 							</Grid>
 						</Border>
 						<Grid.InputBindings>

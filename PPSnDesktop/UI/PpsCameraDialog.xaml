@@ -28,7 +28,7 @@
 							   VerticalAlignment="Center"/>
 				<ui:PpsButton Command="{x:Static ApplicationCommands.Close}"
 								   ToolTip="Schließen"
-								   DisplayMode="Image"
+								   DisplayMode="Transparent"
 								   GeometryName="windowClose"
 								   GeometrySize="17"
 						           SnapsToDevicePixels="True"
@@ -97,7 +97,7 @@
 					<ui:PpsButton x:Name="buttonSettings"
 									   Command="{x:Static ApplicationCommands.Properties}"
 									   Visibility="Hidden"
-									   DisplayMode="Image"
+									   DisplayMode="Transparent"
 									   GeometryName="settingsOutline"
 									   GeometrySize="36"
 									   Foreground="White"
@@ -107,7 +107,6 @@
 				<Grid x:Name="gridTake" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" Visibility="Collapsed">
 					<Ellipse Width="78" Height="78" StrokeThickness="0" Fill="{StaticResource blackBackGround}" />
 					<ui:PpsButton Command="{x:Static ApplicationCommands.New}"
-									   DisplayMode="Circle"
 									   GeometryName="camera"
 									   GeometrySize="72"
 									   Foreground="White"
@@ -152,7 +151,7 @@
 							<ColumnDefinition />
 						</Grid.ColumnDefinitions>
 						<TextBlock Text="EINSTELLUNGEN" FontSize="18" Foreground="White" VerticalAlignment="Center" Margin="12,0,6,0" />
-						<ui:PpsButton Command="{x:Static ApplicationCommands.Properties}" DisplayMode="Image" GeometryName="nextPane" GeometrySize="30"
+						<ui:PpsButton Command="{x:Static ApplicationCommands.Properties}" DisplayMode="Transparent" GeometryName="nextPane" GeometrySize="30"
 										   Foreground="White" ImageOpacity="1" Grid.Column="1" Width="32" HorizontalAlignment="Left" ToolTip="Einstellungen schließen" />
 
 						<ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding CurrentDevice.Properties}">
