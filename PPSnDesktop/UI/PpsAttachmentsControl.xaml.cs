@@ -231,12 +231,12 @@ namespace TecWare.PPSn.UI
 
 		private async Task AddFromCameraAsync()
 		{
-			var bitmap = StuffUI.TakePicture(this);
-			if (bitmap != null)
-			{
-				using (var bar = this.CreateProgress(progressText: "Füge Bild von Kamera..."))
-					await AddFromBitmapSourceAsync((BitmapSource)bitmap);
-			}
+			//var bitmap = StuffUI.TakePicture(this);
+			//if (bitmap != null)
+			//{
+			//	using (var bar = this.CreateProgress(progressText: "Füge Bild von Kamera..."))
+			//		await AddFromBitmapSourceAsync((BitmapSource)bitmap);
+			//}
 		} // proc AddFromCameraAsync
 
 		private async Task AddFromBitmapSourceAsync(BitmapSource bmp)

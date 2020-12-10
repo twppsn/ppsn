@@ -40,6 +40,7 @@ using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
+using TecWare.PPSn.Themes;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -775,6 +776,10 @@ namespace TecWare.PPSn
 			PpsShell.Collect(typeof(StuffUI).Assembly);
 			PpsShell.Collect(typeof(App).Assembly);
 
+			// load default theme
+			PpsTheme.UpdateThemedDictionary(Resources.MergedDictionaries, PpsColorTheme.Default);
+
+			// override language
 			FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
 			isProcessProtected = e.Args.Contains("--run");

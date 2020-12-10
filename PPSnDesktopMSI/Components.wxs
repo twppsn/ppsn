@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?define SoftKeyPaths = "Software\TecWare\PPSnDesktop\Components" ?>
-<?define BinDirectory = "..\PPSnDesktop\bin\Release" ?>
+<?define BinDirectory = "..\PPSnDesktop\bin\Release\net48" ?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Fragment>
@@ -102,7 +102,7 @@
 		<ComponentGroup Id="NeoLua">
 			<Component Id="NeoLua" Guid="d3c18455-4127-4dc1-a40d-e9ef20ac50fa" Directory="INSTALLFOLDER">
 				<File Id="NeoLuaDll" Name="Neo.Lua.dll" Source="$(var.BinDirectory)\Neo.Lua.dll" Vital="yes" Checksum="yes" />
-				<File Id="NeoLuaPdb" Name="Neo.Lua.pdb" Source="$(var.BinDirectory)\Neo.Lua.pdb" />
+				<!--<File Id="NeoLuaPdb" Name="Neo.Lua.pdb" Source="$(var.BinDirectory)\Neo.Lua.pdb" />-->
 				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="NeoLua" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="NeoLuaDe" Guid="7d2edbf9-57f3-45c7-95b6-fb01b3a68f7e" Directory="BinDe">
@@ -113,7 +113,7 @@
 			</Component>
 			<Component Id="NeoLuaDbg" Guid="099ed5ca-016a-4a24-831d-e3709f54c520" Directory="INSTALLFOLDER">
 				<File Id="NeoLuaDbgDll" Name="Neo.Lua.Dbg.dll" Source="$(var.BinDirectory)\Neo.Lua.Dbg.dll" Vital="yes" Checksum="yes" />
-				<File Id="NeoLuaDbgPdb" Name="Neo.Lua.Dbg.pdb" Source="$(var.BinDirectory)\Neo.Lua.Dbg.pdb" />
+				<!--<File Id="NeoLuaDbgPdb" Name="Neo.Lua.Dbg.pdb" Source="$(var.BinDirectory)\Neo.Lua.Dbg.pdb" />-->
 				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="NeoLuaDbg" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="MicrosoftDynamic" Guid="60cc9566-5e85-4337-899c-668c77c0c1b5" Directory="INSTALLFOLDER">

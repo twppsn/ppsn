@@ -500,7 +500,7 @@ namespace TecWare.PPSn.UI
 				if (GetRawInputDeviceList(pData, ref numDevices, structSize) < 0)
 					return;
 
-				var offset = pData.ToInt32();
+				var offset = pData.ToInt64();
 				while (numDevices-- > 0)
 				{
 					var data = (RAWINPUTDEVICELIST)Marshal.PtrToStructure(new IntPtr(offset), typeof(RAWINPUTDEVICELIST));

@@ -70,11 +70,12 @@ specific language governing permissions and limitations under the Licence.
 									   RenderOptions.EdgeMode="Aliased"
 									   Height="1"
 									   Margin="0,0,0,6" />
+							
 							<ui:PpsScrollViewer Grid.Row="2"
 												Grid.ColumnSpan="2"
 												Margin="{TemplateBinding Padding}"
 												Focusable="False"
-												CanContentScroll="True"
+												CanContentScroll="False"
 												HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
 												VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
 								<ItemsPresenter KeyboardNavigation.TabNavigation="Once" KeyboardNavigation.DirectionalNavigation="Contained" />

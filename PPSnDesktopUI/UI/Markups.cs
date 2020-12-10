@@ -146,7 +146,7 @@ namespace TecWare.PPSn.UI
 			=> obj is PpsTypedResourceKey r ? r.name == name && r.GetType() == GetType() : base.Equals(obj);
 
 		/// <summary>Resource name.</summary>
-		public string Name => Name;
+		public string Name => name;
 		/// <summary>Assembly is <c>null</c>.</summary>
 		public sealed override Assembly Assembly => null;
 	} // class PpsTypedResourceKey

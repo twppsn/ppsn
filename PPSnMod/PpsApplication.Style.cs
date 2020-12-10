@@ -116,6 +116,14 @@ namespace TecWare.PPSn.Server
 			this.color = color;
 		} // ctor
 
+		/// <summary>Return the color prefix.</summary>
+		/// <returns></returns>
+		public string GetPrefix()
+		{
+			var p = name.IndexOf('.');
+			return p == -1 ? String.Empty : name.Substring(0, p);
+		} // func GetPrefix
+
 		/// <summary>Color name</summary>
 		public string Name => name;
 		/// <summary>Color</summary>
@@ -160,7 +168,7 @@ namespace TecWare.PPSn.Server
 		private PpsColorInfo CreateColorInfo(XConfigNode x)
 		{
 			var colorName = x.GetAttribute<string>("name");
-			return new PpsColorInfo(colorName, ColorTranslator.FromHtml(x.Value.ToString()));
+			return new PpsColorInfo(colorName, ColorTranslator.FromHtml(x.GetAttribute<string>("value")));
 		} // func CreateColorInfo
 
 		#endregion
@@ -176,7 +184,7 @@ namespace TecWare.PPSn.Server
 		/// <summary>Return all colors</summary>
 		/// <returns></returns>
 		[LuaMember]
-		public IEnumerable<PpsColorInfo> GetColors(string prefix)
+		public IEnumerable<PpsColorInfo> GetColors(string prefix = null)
 		{
 			if (TryGetStyleNode(out var styles))
 			{

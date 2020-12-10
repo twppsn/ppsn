@@ -1,11 +1,6 @@
-﻿using System.Reflection;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Markup;
-
-[assembly: AssemblyTitle("PPSnDesktop")]
-[assembly: AssemblyDescription("PPSnDesktop Shell Host")]
-[assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]
 
