@@ -9,12 +9,9 @@
 			  xmlns:uic="clr-namespace:TecWare.PPSn.UI"
               mc:Ignorable="d"
 			  DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
+              Background="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
 			  Title="PpsBdeWindow" Height="450" Width="800">
-	<ui:PpsWindow.Resources>
-		<PathGeometry x:Key="gotoBack">M21,11H6.83L10.41,7.41L9,6L3,12L9,18L10.41,16.58L6.83,13H21V11Z</PathGeometry>
-	</ui:PpsWindow.Resources>
-
-	<Grid TextBlock.Foreground="{ui:PpsColor WindowForeground}">
+	<Grid TextBlock.Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowForeground}}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="40" />
 			<RowDefinition />
@@ -29,8 +26,10 @@
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
 
-			<ui:PpsGeometryImage Geometry="{Binding TopPaneHost.Image,Converter={x:Static ui:PpsGeometryImage.GeometryConverter}}" Foreground="{StaticResource PPSnWindowBackgroundBrush}" Width="26" Height="26" Opacity=".85" GeometryCircled="False" />
-			<Label Grid.Column="1" FontSize="20" Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+			<ui:PpsGeometryImage Geometry="{Binding TopPaneHost.Image,Converter={x:Static ui:PpsGeometryImage.GeometryConverter}}"
+                                 Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
+                                 Width="26" Height="26" Opacity=".85" GeometryCircled="False" />
+            <Label Grid.Column="1" FontSize="20" Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
 				   VerticalContentAlignment="Center" Padding="0" Margin="0,0,12,0">
 				<Label.Tag>
 					<ui:PpsWindowHitTest HitTest="2" />
@@ -44,8 +43,8 @@
 				</Label.Content>
 			</Label>
 			<StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-				<uic:PpsBarcodeState Margin="16,0,0,0" Padding="8"/>
-				<uic:PpsConnectionState Margin="16,0,0,0" Padding="8" />
+                <uic:PpsBarcodeState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="16,0,0,0" Padding="8" />
+                <uic:PpsConnectionState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="16,0,0,0" Padding="8" />
 				<TextBlock Text="{Binding CurrentTimeString}"
 						   FontSize="14"
 						   LineStackingStrategy="BlockLineHeight"
@@ -54,78 +53,64 @@
 						   TextWrapping="Wrap"
 						   VerticalAlignment="Center"
 						   Margin="16,0"
-						   Foreground="{StaticResource PPSnWindowBackgroundBrush}" />
+						   Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" />
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.TraceLogCommand}"
 							  DisplayMode="Transparent"
 							  ToolTip="System"
 							  GeometryName="appInfo"
 							  GeometrySize="24"
 							  ImageOpacity="1"
-							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+							  Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
 							  Width="40"
 							  Margin="0,0,6,0"/>
-                <ToggleButton x:Name="barcodeButton"
-							  ToolTip="Barcode Simulator"
-							  Width="40"
-							  Margin="0,0,24,0"
-							  Focusable="False"
-							  Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}">
-					<ToggleButton.Style>
-						<Style TargetType="{x:Type ToggleButton}">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="Template">
-								<Setter.Value>
-									<ControlTemplate TargetType="{x:Type ToggleButton}">
-										<Border x:Name="border" Background="{TemplateBinding Background}">
-											<ui:PpsGeometryImage GeometryName="barcodeScan" Width="24" Height="24"
-                                                                 Foreground="{StaticResource PPSnWindowBackgroundBrush}" GeometryCircled="False" />
-										</Border>
-										<ControlTemplate.Triggers>
-											<Trigger Property="IsEnabled" Value="False">
-												<Setter Property="Opacity" Value="0.35" />
-											</Trigger>
-											<Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
-											</Trigger>
-                                            <Trigger Property="IsPressed" Value="True">
-                                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}" />
-                                            </Trigger>
-										</ControlTemplate.Triggers>
-									</ControlTemplate>
-								</Setter.Value>
-							</Setter>
-						</Style>
-					</ToggleButton.Style>
-				</ToggleButton>
+                <ui:PpsSplitButton Width="40" Margin="0,0,32,0"
+                                   Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
+                                   Mode="Dropdown" DisplayMode="Transparent" GeometryName="barcodeScan" GeometrySize="24" ImageOpacity="1"
+                                   Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}">
+                    <ui:PpsSplitButton.Popup>
+                        <uic:PpsBarcodePopup Placement="Bottom" />
+                    </ui:PpsSplitButton.Popup>
+                </ui:PpsSplitButton>
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.MinimizeCommand}"
 							  ToolTip="Minimieren"
 							  DisplayMode="Transparent"
 							  GeometryName="windowMinimize"
 							  GeometrySize="24"
 							  ImageOpacity="1"
-							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+							  Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
 							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
-				<ui:PpsButton Command="{x:Static ui:PpsWindow.MaximizeCommand}"
+                <ui:PpsButton Command="{x:Static ui:PpsWindow.MaximizeCommand}"
 							  DisplayMode="Transparent"
-							  ToolTip="Maximieren"
-							  GeometryName="windowMaximize"
 							  GeometrySize="24"
 							  ImageOpacity="1"
-							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+							  Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
-							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
+							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}">
+                    <ui:PpsButton.Style>
+                        <Style TargetType="{x:Type ui:PpsButton}">
+                            <Setter Property="GeometryName" Value="windowMaximize" />
+                            <Setter Property="ToolTip" Value="Maximieren" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
+                                    <Setter Property="GeometryName" Value="windowRestore" />
+                                    <Setter Property="ToolTip" Value="Verkleinern" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:PpsButton.Style>
+                </ui:PpsButton>
 				<ui:PpsButton Command="{x:Static ui:PpsWindow.CloseCommand}"
 							  DisplayMode="Transparent"
 							  ToolTip="Schließen"
 							  GeometryName="windowClose"
 							  GeometrySize="16"
 							  ImageOpacity="1"
-							  Foreground="{StaticResource PPSnWindowBackgroundBrush}"
+							  Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
@@ -133,28 +118,31 @@
 			</StackPanel>
 		</Grid>
 
-		<uic:PpsBarcodePopup IsOpen="{Binding IsChecked,ElementName=barcodeButton,Mode=TwoWay}" PlacementTarget="{Binding ElementName=barcodeButton}" Placement="Bottom" />
-
-		<ContentControl x:Name="paneContent" Grid.Row="1" Content="{Binding TopPaneHost}" />
+		<ContentControl x:Name="paneContent" Grid.Row="1" Content="{Binding TopPaneHost}" Focusable="False" />
 		<Grid x:Name="disconnectProgress" Grid.Row="1" Grid.RowSpan="2" Visibility="Hidden">
 			<ui:PpsProgressControl Width="64" Height="64" Visibility="Visible" />
 		</Grid>
 
-		<!--Separator-->
-		<Rectangle Grid.Row="2" Height="1" StrokeThickness="0" Fill="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Top" SnapsToDevicePixels="True" Opacity=".5"/>
-		
-		<!--Navigation-->
-		<ui:PpsButton Grid.Row="2" Command="{x:Static bde:PpsBdeWindow.BackCommand}" Width="72" HorizontalAlignment="Left"
-					   Foreground="{StaticResource PPSnWindowForegroundBrush}" Background="Transparent" >
-
-			<ui:PpsButton.Content>
-				<Viewbox>
-					<Canvas Width="24" Height="24">
-						<Path Data="{StaticResource gotoBack}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
-					</Canvas>
-				</Viewbox>
-			</ui:PpsButton.Content>
-		</ui:PpsButton>
-		<ui:PpsCommandBar Grid.Row="2" ExternalCommands="{Binding TopPaneHost.Commands}" Mode="Mixed" Margin="64,8,8,8" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        <Border Grid.Row="2"
+                Background="{ui:PpsColor {x:Static ui:PpsTheme.SideBarBackground}}"
+                BorderBrush="{ui:PpsColor {x:Static ui:PpsTheme.Seperator}}"
+                BorderThickness="0,1,0,0">
+            <Grid>
+                <ui:PpsButton
+                    Command="{x:Static bde:PpsBdeWindow.BackCommand}"
+                    DisplayMode="Transparent"
+                    GeometryName="prevPane"
+                    GeometrySize="40"
+                    ImageOpacity="1"
+                    Width="72"
+                    HorizontalAlignment="Left" />
+                <ui:PpsCommandBar
+                    ExternalCommands="{Binding TopPaneHost.Commands}"
+                    Mode="Mixed"
+                    Margin="64,0,16,0"
+                    ButtonHeight="40"
+                    HorizontalAlignment="Right" />
+            </Grid>
+        </Border>
 	</Grid>
 </ui:PpsWindow>
