@@ -122,7 +122,7 @@
 						  Foreground="Black"
 						  Width="34"
 						  Height="26"
-						  Margin="0,0,16,0"
+						  Margin="0,0,0,0"
 						  HorizontalAlignment="Right"
 						  VerticalAlignment="Top">
 				<ui:PpsButton.Style>
