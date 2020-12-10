@@ -30,13 +30,9 @@ namespace TecWare.PPSn.Controls
 	public enum PpsButtonDisplayType
 	{
 		/// <summary>Show as filled Rectangle with content and optional image.</summary>
-		Rectangle,
-		/// <summary>Image only, no visible content, no background.</summary>
-		Image,
-		/// <summary>Image (optional) and content, no background.</summary>
-		ImageAndText,
-		/// <summary>Image inside circle with optional content, no background.</summary>
-		Circle
+		Standard,
+		/// <summary>Show with transparent Background.</summary>
+		Transparent
 	} // enum PpsButtonDisplayType
 
 	#endregion
@@ -49,18 +45,15 @@ namespace TecWare.PPSn.Controls
 		#region -- DisplayMode - Property ---------------------------------------------
 
 		/// <summary>The type of representation</summary>
-		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Rectangle, new PropertyChangedCallback(DisplayModeChanged)));
+		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Standard, new PropertyChangedCallback(DisplayModeChanged)));
 
 		/// <summary>The property defines the type of presentation</summary>
 		public PpsButtonDisplayType DisplayMode { get => (PpsButtonDisplayType)GetValue(DisplayModeProperty); set => SetValue(DisplayModeProperty, value); }
 
 		private static void DisplayModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsButton)d).DisplayModeChanged((PpsButtonDisplayType)e.NewValue, (PpsButtonDisplayType)e.OldValue);
-
-		private void DisplayModeChanged(PpsButtonDisplayType newValue, PpsButtonDisplayType oldValue)
 		{
-			SetValue(hasBackgroundPropertyKey, BooleanBox.GetObject(newValue == PpsButtonDisplayType.Rectangle));
-			SetValue(isCircledPropertyKey, BooleanBox.GetObject(newValue == PpsButtonDisplayType.Circle));
+			var newValue = (PpsButtonDisplayType)e.NewValue;
+			d.SetValue(isTransparentPropertyKey, BooleanBox.GetObject(newValue == PpsButtonDisplayType.Transparent));
 		}
 
 		#endregion
@@ -85,16 +78,6 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- Fill - Property ----------------------------------------------------
-
-		/// <summary>The Brush to fill the circle</summary>
-		public static readonly DependencyProperty FillProperty = PpsGeometryImage.FillProperty.AddOwner(typeof(PpsButton));
-
-		/// <summary>The property defines the brush to fill the circle.</summary>
-		public Brush Fill { get => (Brush)GetValue(FillProperty); set => SetValue(FillProperty, value); }
-
-		#endregion
-
 		#region -- ImageOpacity - Property --------------------------------------------
 
 		/// <summary>The Opacity of the image</summary>
@@ -105,25 +88,14 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- DisplayBackground - Property ---------------------------------------
+		#region -- IsTransparent - Property -------------------------------------------------
 
-		private static readonly DependencyPropertyKey hasBackgroundPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasBackground), typeof(bool), typeof(PpsButton), new FrameworkPropertyMetadata(BooleanBox.True));
+		private static readonly DependencyPropertyKey isTransparentPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsTransparent), typeof(bool), typeof(PpsButton), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary>The property defines if element will be displayed like button</summary>
-		public static readonly DependencyProperty HasBackgroundProperty = hasBackgroundPropertyKey.DependencyProperty;
+		public static readonly DependencyProperty IsTransparentProperty = isTransparentPropertyKey.DependencyProperty;
 
 		/// <summary>Display retangular Background</summary>
-		public bool HasBackground => BooleanBox.GetBool(GetValue(HasBackgroundProperty));
-
-		#endregion
-
-		#region -- IsCircled - Property -----------------------------------------
-
-		private static readonly DependencyPropertyKey isCircledPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsCircled), typeof(bool), typeof(PpsButton), new FrameworkPropertyMetadata(BooleanBox.False));
-		/// <summary>The property defines if element will be displayed with circle</summary>
-		public static readonly DependencyProperty IsCircledProperty = isCircledPropertyKey.DependencyProperty;
-
-		/// <summary>Show with circle</summary>
-		public bool IsCircled => BooleanBox.GetBool(GetValue(IsCircledProperty));
+		public bool IsTransparent => BooleanBox.GetBool(GetValue(IsTransparentProperty));
 
 		#endregion
 

@@ -198,31 +198,39 @@ namespace TecWare.PPSn.Themes
 		public static readonly PpsColor Marker = new PpsColor(nameof(Marker), theme => Color.FromArgb(255, 90, 124, 54));
 
 		/// <summary>Window title</summary>
-		public static readonly PpsColor WindowActive = new PpsColor(nameof(WindowActive), theme => Marker.GetColor(theme));
+		public static readonly PpsColor WindowActive = new PpsColor(nameof(WindowActive), Marker.GetColor);
 		/// <summary>Window title bar background on active.</summary>
-		public static readonly PpsColor WindowActiveGlow = new PpsColor(nameof(WindowActiveGlow), theme => WindowActive.GetColor(theme));
+		public static readonly PpsColor WindowActiveGlow = new PpsColor(nameof(WindowActiveGlow), WindowActive.GetColor);
 		/// <summary>Window title bar background on inactive.</summary>
 		public static readonly PpsColor WindowInActiveGlow = new PpsColor(nameof(WindowInActiveGlow), theme => Color.FromArgb(255, 170, 170, 170));
 		/// <summary>Window status bar.</summary>
 		public static readonly PpsColor WindowHeader = new PpsColor(nameof(WindowHeader), theme => theme.GetTransparencyColor(WindowBackground, Black, 0.17f));
 		/// <summary>Window foreground.</summary>
-		public static readonly PpsColor WindowForeground = new PpsColor(nameof(WindowForeground), theme => Accent.GetColor(theme));
+		public static readonly PpsColor WindowForeground = new PpsColor(nameof(WindowForeground), Accent.GetColor);
 		/// <summary>Window  background.</summary>
-		public static readonly PpsColor WindowBackground = new PpsColor(nameof(WindowBackground), theme => Desktop.GetColor(theme));
+		public static readonly PpsColor WindowBackground = new PpsColor(nameof(WindowBackground), Desktop.GetColor);
 		/// <summary>Window status bar.</summary>
-		public static readonly PpsColor WindowFooter = new PpsColor(nameof(WindowFooter), theme => WindowActiveGlow.GetColor(theme));
+		public static readonly PpsColor WindowFooter = new PpsColor(nameof(WindowFooter), WindowActiveGlow.GetColor);
 
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor Seperator = new PpsColor(nameof(Seperator), theme => theme.GetTransparencyColor(WindowBackground, WindowForeground, 0.1f));
 
 		/// <summary>todo: using</summary>
-		public static readonly PpsColor ActionButton = new PpsColor(nameof(ActionButton), theme => Color.FromArgb(255, 40, 99, 37));
+		public static readonly PpsColor ControlBackground = new PpsColor(nameof(ControlBackground), White.GetColor);
 		/// <summary>todo: using</summary>
-		public static readonly PpsColor ControlBackground = new PpsColor(nameof(ControlBackground), theme => White.GetColor(theme));
-		/// <summary>todo: using</summary>
-		public static readonly PpsColor ControlFocusedBorder = new PpsColor(nameof(ControlFocusedBorder), theme => Marker.GetColor(theme));
+		public static readonly PpsColor ControlFocusedBorder = new PpsColor(nameof(ControlFocusedBorder), Marker.GetColor);
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor ControlNormalBorder = new PpsColor(nameof(ControlNormalBorder), theme => theme.GetTransparencyColor(Desktop, Accent, 0.25f));
+
+		/// <summary>Background for button</summary>
+		public static readonly PpsColor ButtonBackground = new PpsColor(nameof(ButtonBackground), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.11f));
+		/// <summary>Background when mouse is over button</summary>
+		public static readonly PpsColor ButtonMouseOver = new PpsColor(nameof(ButtonMouseOver), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.15f));
+		/// <summary>Background when button is clicked and hold, mouse is not over</summary>
+		public static readonly PpsColor ButtonInDeterminate = new PpsColor(nameof(ButtonInDeterminate), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.25f));
+		/// <summary>Background when button is pressed</summary>
+		public static readonly PpsColor ButtonPressed = new PpsColor(nameof(ButtonPressed), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.75f));
+
 
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor SelectionBar = new PpsColor(nameof(SelectionBar), theme => theme.GetTransparencyColor(ControlBackground, Marker, 0.35f));

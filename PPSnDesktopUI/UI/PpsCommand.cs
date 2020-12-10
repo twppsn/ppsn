@@ -801,7 +801,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>The Command the Button schould execute</summary>
 		public static readonly DependencyProperty CommandProperty = ButtonBase.CommandProperty.AddOwner(typeof(PpsUICommandButton));
 		/// <summary>The type how Button will be displayed</summary>
-		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.ImageAndText));
+		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Transparent));
 		/// <summary>The Command the Button schould execute</summary>
 		public static readonly DependencyProperty CommandParameterProperty = ButtonBase.CommandParameterProperty.AddOwner(typeof(PpsUICommandButton));
 		/// <summary>The Command the Button schould execute</summary>

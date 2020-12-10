@@ -15,245 +15,126 @@ specific language governing permissions and limitations under the Licence.
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
-	<SolidColorBrush x:Key="PpsButtonBackgroundBrush" Color="{DynamicResource PPSnAccentColor}" Opacity="0.11"/>
-
 	<Style TargetType="{x:Type pps:PpsButton}">
-		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
-		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
-		<Setter Property="Background" Value="{StaticResource PpsButtonBackgroundBrush}" />
-		<Setter Property="BorderThickness" Value="1" />
-		<Setter Property="BorderBrush" Value="{StaticResource PpsButtonBackgroundBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <!--Touch-And-Hold-Event wird sonst auf OnMouseLeftButtonDown gemapped. Pressed State wird nicht aktiv-->
+        <Setter Property="Stylus.IsPressAndHoldEnabled" Value="False" />
+        <Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Background" Value="{DynamicResource PPSnButtonBackgroundBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+		<Setter Property="BorderBrush" Value="{DynamicResource PPSnButtonBackgroundBrush}" />
 		<Setter Property="HorizontalContentAlignment" Value="Center" />
-		<Setter Property="VerticalContentAlignment" Value="Center" />
-		<Setter Property="Padding" Value="3,0,6,0" />
-		<Setter Property="GeometrySize" Value="18" />
-		<Setter Property="SnapsToDevicePixels" Value="True" />
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type pps:PpsButton}">
-					<Border>
-						<Border x:Name="InnerBorder"
-								Padding="2,0,2,0"
-								BorderThickness="{TemplateBinding BorderThickness}"
-								BorderBrush="{TemplateBinding BorderBrush}"
-								Background="{TemplateBinding Background}"
-								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-							<Grid>
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="Auto" />
-									<ColumnDefinition />
-								</Grid.ColumnDefinitions>
-								<Grid.RowDefinitions>
-									<RowDefinition />
-									<RowDefinition Height="Auto" />
-								</Grid.RowDefinitions>
-								<pps:PpsGeometryImage x:Name="ImageBox"
-													  GeometryName="{TemplateBinding GeometryName}"
-													  GeometryCircled="false"
-													  Width="{TemplateBinding GeometrySize}"
-													  Height="{TemplateBinding GeometrySize}"
-													  Margin="3,0,0,0"
-													  Fill="{TemplateBinding Fill}"
-													  Foreground="{TemplateBinding Foreground}"
-													  Opacity="{TemplateBinding ImageOpacity}">
-									<pps:PpsGeometryImage.RenderTransformOrigin>
-										<Point X="0.5" Y="0.5"/>
-									</pps:PpsGeometryImage.RenderTransformOrigin>
-									<pps:PpsGeometryImage.RenderTransform>
-										<ScaleTransform x:Name="ImageScaleTransform" ScaleX="1" ScaleY="1" />
-									</pps:PpsGeometryImage.RenderTransform>
-								</pps:PpsGeometryImage>
-								<ContentPresenter x:Name="ContentSite"
-												  Grid.Column="1"
-												  Focusable="False"
-												  RecognizesAccessKey="True"
-												  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-												  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-												  Margin="{TemplateBinding Padding}"
-												  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="6,0,6,0" />
+        <Setter Property="GeometrySize" Value="18" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type pps:PpsButton}">
+                    <Grid x:Name="RootGrid">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:.35" />
+								</VisualStateGroup.Transitions>
+								<VisualState Name="Normal" />
+                                <VisualState Name="MouseOver" />
+                                <VisualState Name="Pressed">
+                                    <Storyboard>
+										<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".40" />
+                                    </Storyboard>
+								</VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="OuterBorder"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <pps:PpsGeometryImage x:Name="ImageBox"
+                                                      GeometryName="{TemplateBinding GeometryName}"
+                                                      Width="{TemplateBinding GeometrySize}"
+                                                      Height="{TemplateBinding GeometrySize}"
+                                                      Foreground="{TemplateBinding Foreground}"
+                                                      Opacity="{TemplateBinding ImageOpacity}" />
+                                <ContentPresenter x:Name="ContentSite"
+                                                  Grid.Column="1"
+                                                  Focusable="False"
+                                                  RecognizesAccessKey="True"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
 							</Grid>
-						</Border>
-					</Border>
+                        </Border>
+						<Rectangle x:Name="StatusRectangle"
+								   StrokeThickness="0"
+								   Fill="{TemplateBinding Foreground}"
+								   IsHitTestVisible="False"
+								   Opacity="0" />
+					</Grid>
 
-					<ControlTemplate.Triggers>
-						<Trigger Property="HasBackground" Value="False">
-							<Setter Property="BorderBrush" Value="Transparent" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsTransparent" Value="True">
+                            <Setter Property="BorderBrush" Value="Transparent" />
 							<Setter Property="Background" Value="Transparent" />
-							<Setter TargetName="ImageBox" Property="Margin" Value="0,0,0,0" />
-						</Trigger>
+                        </Trigger>
 
-						<Trigger Property="DisplayMode" Value="Image">
-							<Setter Property="Focusable" Value="False" />
-							<Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
-							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
-							<Setter Property="Padding" Value="0" />
-						</Trigger>
+                        <Trigger Property="HasContent" Value="False">
+                            <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
+                        </Trigger>
 
-						<Trigger Property="DisplayMode" Value="ImageAndText">
-							<Setter Property="Focusable" Value="False" />
-						</Trigger>
+                        <Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
+                            <Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
 
-						<Trigger Property="IsCircled" Value="True">
-							<Setter Property="Focusable" Value="False" />
-							<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}"/>
-							<Setter Property="GeometrySize" Value="36" />
-							<Setter Property="Padding" Value="0" />
-							<Setter TargetName="InnerBorder" Property="Padding" Value="0,0,0,0" />
-							<Setter TargetName="ImageBox" Property="GeometryCircled" Value="True" />
-							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
-							<Setter TargetName="ContentSite" Property="Grid.Row" Value="1" />
-							<Setter TargetName="ContentSite" Property="Grid.ColumnSpan" Value="2" />
-						</Trigger>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsMouseOver" Value="True" />
+								<Condition Property="IsTransparent" Value="False" />
+							</MultiTrigger.Conditions>
+							<Setter Property="ImageOpacity" Value="1" />
+							<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+						</MultiTrigger>
 
-						<Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
-							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
-							<Setter Property="Padding" Value="6,0,6,0" />
-						</Trigger>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsMouseOver" Value="True" />
+								<Condition Property="IsTransparent" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter Property="ImageOpacity" Value="1" />
+							<Setter TargetName="StatusRectangle" Property="Opacity" Value=".16" />
+						</MultiTrigger>
 
-						<Trigger Property="HasContent" Value="False">
-							<Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
-							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
-							<Setter TargetName="ImageBox" Property="Margin" Value="0,0,0,0" />
-							<Setter Property="Padding" Value="0" />
+						<MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsKeyboardFocused" Value="True" />
+                                <Condition Property="IsMouseCaptured" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="OuterBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+                        </MultiTrigger>
+
+						<Trigger Property="IsMouseCaptured" Value="True">
+							<Setter Property="ImageOpacity" Value="1" />
+							<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" />
+							<Setter TargetName="StatusRectangle" Property="Opacity" Value=".16" />
 						</Trigger>
 
 						<Trigger Property="IsEnabled" Value="False">
-							<Setter Property="Background" Value="Transparent" />
-							<Setter Property="Opacity" Value="0.35" />
+							<Setter TargetName="RootGrid" Property="Opacity" Value=".35" />
 						</Trigger>
-
-						<!--display focus rectangle-->
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsKeyboardFocused" Value="True" />
-								<Condition Property="IsMouseCaptured" Value="False" />
-							</MultiTrigger.Conditions>
-							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
-						</MultiTrigger>
-
-						<!--mouse over regular button-->
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsMouseOver" Value="True" />
-								<Condition Property="HasBackground" Value="True" />
-							</MultiTrigger.Conditions>
-							<Setter Property="ImageOpacity" Value="1" />
-							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
-							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
-						</MultiTrigger>
-
-						<!--mouse over non circled button-->
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsMouseOver" Value="True" />
-								<Condition Property="IsCircled" Value="False" />
-								<Condition Property="HasBackground" Value="False" />
-							</MultiTrigger.Conditions>
-							<Setter Property="ImageOpacity" Value="1" />
-							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnMouseOverBrush}" />
-							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
-						</MultiTrigger>
-
-						<!--display pressed status for non circled-->
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsCircled" Value="False" />
-								<Condition Property="IsMouseCaptured" Value="True" />
-							</MultiTrigger.Conditions>
-							<Setter Property="ImageOpacity" Value="1" />
-							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnButtonPressedBrush}" />
-							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}" />
-						</MultiTrigger>
-
-						<!--animate press for non circled-->
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsCircled" Value="False" />
-								<Condition Property="IsPressed" Value="True" />
-							</MultiTrigger.Conditions>
-							<MultiTrigger.EnterActions>
-								<BeginStoryboard>
-									<Storyboard>
-										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
-																		  Storyboard.TargetProperty="Margin"
-																		  AccelerationRatio=".4"
-																		  Duration="0:0:0.15">
-											<SplineThicknessKeyFrame Value="2,1,2,1" />
-										</ThicknessAnimationUsingKeyFrames>
-										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
-																		  Storyboard.TargetProperty="Padding"
-																		  AccelerationRatio=".4"
-																		  Duration="0:0:0.15">
-											<SplineThicknessKeyFrame Value="0,0,0,0" />
-										</ThicknessAnimationUsingKeyFrames>
-										<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:00:0.15" />
-										<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:00:0.15" />
-									</Storyboard>
-								</BeginStoryboard>
-							</MultiTrigger.EnterActions>
-							<MultiTrigger.ExitActions>
-								<BeginStoryboard>
-									<Storyboard>
-										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
-																		  Storyboard.TargetProperty="Margin"
-																		  Duration="0:0:0.2"
-																		  AccelerationRatio=".4">
-											<SplineThicknessKeyFrame Value="0,0,0,0" />
-										</ThicknessAnimationUsingKeyFrames>
-										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
-																		  Storyboard.TargetProperty="Padding"
-																		  Duration="0:0:0.2"
-																		  AccelerationRatio=".4">
-											<SplineThicknessKeyFrame Value="2,0,2,0" />
-										</ThicknessAnimationUsingKeyFrames>
-										<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:00:0.2" />
-										<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:00:0.2" />
-									</Storyboard>
-								</BeginStoryboard>
-							</MultiTrigger.ExitActions>
-						</MultiTrigger>
-
-						<!--mouse over circled button-->
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="DisplayMode" Value="Circle" />
-								<Condition Property="IsMouseOver" Value="True" />
-							</MultiTrigger.Conditions>
-							<Setter Property="ImageOpacity" Value="1" />
-							<Setter TargetName="ImageBox" Property="Fill" Value="{DynamicResource PPSnMouseOverBrush}" />
-						</MultiTrigger>
-
-						<!--animate press for circled-->
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="DisplayMode" Value="Circle" />
-								<Condition Property="IsPressed" Value="True" />
-							</MultiTrigger.Conditions>
-							<Setter TargetName="ImageBox" Property="Fill" Value="{DynamicResource PPSnButtonPressedBrush}" />
-							<MultiTrigger.EnterActions>
-								<BeginStoryboard>
-									<Storyboard>
-										<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="0.95" Duration="0:00:0.1" />
-										<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="0.95" Duration="0:00:0.1" />
-									</Storyboard>
-								</BeginStoryboard>
-							</MultiTrigger.EnterActions>
-							<MultiTrigger.ExitActions>
-								<BeginStoryboard>
-									<Storyboard>
-										<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:00:0.15" />
-										<DoubleAnimation Storyboard.TargetName="ImageScaleTransform" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:00:0.15" />
-									</Storyboard>
-								</BeginStoryboard>
-							</MultiTrigger.ExitActions>
-						</MultiTrigger>
-
 					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
-	<Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
+    <Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
 
 </ResourceDictionary>
