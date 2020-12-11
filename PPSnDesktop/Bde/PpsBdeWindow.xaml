@@ -128,14 +128,24 @@
                 BorderBrush="{ui:PpsColor {x:Static ui:PpsTheme.Seperator}}"
                 BorderThickness="0,1,0,0">
             <Grid>
-                <ui:PpsButton
-                    Command="{x:Static bde:PpsBdeWindow.BackCommand}"
-                    DisplayMode="Transparent"
-                    GeometryName="prevPane"
-                    GeometrySize="40"
-                    ImageOpacity="1"
-                    Width="72"
-                    HorizontalAlignment="Left" />
+                <ui:PpsButton Command="{x:Static bde:PpsBdeWindow.BackCommand}"
+                              DisplayMode="Transparent"
+                              GeometryName="prevPane"
+                              GeometrySize="40"
+                              ImageOpacity="1"
+                              Width="72"
+                              HorizontalAlignment="Left">
+                    <ui:PpsButton.Style>
+                        <Style TargetType="{x:Type ui:PpsButton}">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Visibility" Value="Hidden" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:PpsButton.Style>
+                </ui:PpsButton>
                 <ui:PpsCommandBar
                     ExternalCommands="{Binding TopPaneHost.Commands}"
                     Mode="Mixed"
