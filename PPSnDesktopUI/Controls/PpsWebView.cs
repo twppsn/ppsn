@@ -282,6 +282,11 @@ namespace TecWare.PPSn.Controls
 
 			logicalChilds = new object[] { htmlView, xamlView };
 
+			// htmlView.CreationProperties.BrowserExecutableFolder;
+			htmlView.CreationProperties = new CoreWebView2CreationProperties
+			{
+				UserDataFolder = Path.Combine(PpsShell.Current.LocalPath.FullName, "$webcache")
+			};
 			htmlView.CoreWebView2InitializationCompleted += HtmlView_CoreWebView2Ready;
 
 			SetValue(historyPropertyKey, history);

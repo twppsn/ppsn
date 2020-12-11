@@ -11,9 +11,9 @@
                          mc:Ignorable="d" 
                          d:DesignHeight="450" d:DesignWidth="800">
 	<ui:PpsWindowPaneControl.Commands>
-		<ui:PpsUICommandButton x:Name="goBackButton" Order="200:100" Image="back" DisplayText="Zurück" Description="Eine Seite zurück" Command="{x:Static ui:PpsWebView.GoBackCommand}" />
-		<ui:PpsUICommandButton x:Name="goHomeButton" Order="200:200" Image="home" DisplayText="Home" Description="Gehe zur Hauptseite." Command="{x:Static ui:PpsWebView.GoHomeCommand}" />
-		<ui:PpsUICommandButton x:Name="goForwardButton" Order="200:300" Image="forward" DisplayText="Vorwärts" Description="Gehe wieder eine Seite vor." Command="{x:Static ui:PpsWebView.GoForwardCommand}" />
+		<ui:PpsUICommandButton x:Name="goBackButton" Order="200;100" Image="back" DisplayText="Zurück" Description="Eine Seite zurück" Command="{x:Static ui:PpsWebView.GoBackCommand}" />
+		<ui:PpsUICommandButton x:Name="goHomeButton" Order="200;200" Image="home" DisplayText="Home" Description="Gehe zur Hauptseite." Command="{x:Static ui:PpsWebView.GoHomeCommand}" />
+		<ui:PpsUICommandButton x:Name="goForwardButton" Order="200;300" Image="forward" DisplayText="Vorwärts" Description="Gehe wieder eine Seite vor." Command="{x:Static ui:PpsWebView.GoForwardCommand}" />
 	</ui:PpsWindowPaneControl.Commands>
 	
 	<ui:PpsWebView x:Name="webView" />
