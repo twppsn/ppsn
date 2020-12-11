@@ -282,6 +282,11 @@ namespace TecWare.PPSn.Controls
 
 			logicalChilds = new object[] { htmlView, xamlView };
 
+			// htmlView.CreationProperties.BrowserExecutableFolder;
+			htmlView.CreationProperties = new CoreWebView2CreationProperties
+			{
+				UserDataFolder = Path.Combine(PpsShell.Current.LocalPath.FullName, "$webcache")
+			};
 			htmlView.CoreWebView2InitializationCompleted += HtmlView_CoreWebView2Ready;
 
 			SetValue(historyPropertyKey, history);
@@ -651,26 +656,34 @@ namespace TecWare.PPSn.Controls
 			}
 		} // event HtmlView_WebResourceRequested
 
-		private void HtmlView_CoreWebView2Ready(object sender, EventArgs e)
+		private void HtmlView_CoreWebView2Ready(object sender, CoreWebView2InitializationCompletedEventArgs e)
 		{
-			var v = htmlView.CoreWebView2;
+			if (e.IsSuccess)
+			{
+				var v = htmlView.CoreWebView2;
 #if !DEBUG
-			v.Settings.AreDefaultContextMenusEnabled = false;
-			v.Settings.AreDevToolsEnabled = false;
+				v.Settings.AreDefaultContextMenusEnabled = false;
+				v.Settings.AreDevToolsEnabled = false;
 #endif
-			v.Settings.IsWebMessageEnabled = false;
-			v.Settings.IsZoomControlEnabled = false;
+				v.Settings.IsWebMessageEnabled = false;
+				v.Settings.IsZoomControlEnabled = false;
 
-			v.DocumentTitleChanged += HtmlView_DocumentTitleChanged;
-			// v.HistoryChanged += ;
-			v.NavigationStarting += HtmlView_NavigationStarting;
-			v.NavigationCompleted += HtmlView_NavigationCompleted;
-			v.NewWindowRequested += HtmlView_NewWindowRequested;
-			v.PermissionRequested += HtmlView_PermissionRequested;
-			v.WindowCloseRequested += HtmlView_WindowCloseRequested;
-			v.WebResourceRequested += HtmlView_WebResourceRequested;
+				v.DocumentTitleChanged += HtmlView_DocumentTitleChanged;
+				// v.HistoryChanged += ;
+				v.NavigationStarting += HtmlView_NavigationStarting;
+				v.NavigationCompleted += HtmlView_NavigationCompleted;
+				v.NewWindowRequested += HtmlView_NewWindowRequested;
+				v.PermissionRequested += HtmlView_PermissionRequested;
+				v.WindowCloseRequested += HtmlView_WindowCloseRequested;
+				v.WebResourceRequested += HtmlView_WebResourceRequested;
 
-			UpdateResourceRequest(shell.Value);
+				UpdateResourceRequest(shell.Value);
+			}
+			else
+			{
+				shell.Value.LogProxy().Except("WebView initialization failed.", e.InitializationException);
+				throw e.InitializationException;
+			}
 		} // event HtmlView_CoreWebView2Ready
 
 		private void ShowHtml()

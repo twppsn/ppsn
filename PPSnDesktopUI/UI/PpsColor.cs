@@ -36,16 +36,14 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Create the color binding by name.</summary>
 		/// <param name="colorName">Name of the color</param>
-		public PpsColorExtension(string colorName)
+		public PpsColorExtension(object color)
 		{
-			color = PpsColor.Get(colorName);
-		} // ctor
-
-		/// <summary>Create the binding by color key.</summary>
-		/// <param name="color"></param>
-		public PpsColorExtension(PpsColor color)
-		{
-			this.color = color ?? throw new ArgumentNullException(nameof(color));
+			if (color is string colorName)
+				this.color = PpsColor.Get(colorName);
+			else if (color is PpsColor tmp)
+				this.color = tmp;
+			else
+				throw new ArgumentException(nameof(color));
 		} // ctor
 
 		private Exception GetProvideException()
