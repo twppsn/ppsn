@@ -45,9 +45,10 @@ namespace TecWare.PPSn.UI
 		private enum StatePanes : int
 		{
 			Status = 0,
-			ShellList,
-			NewShell,
-			Login
+			ShellList = 1,
+			NewShell = 2,
+			Login = 3,
+			Runtime = 4
 		} // prop Panse
 
 		#endregion
@@ -90,14 +91,12 @@ namespace TecWare.PPSn.UI
 		{
 			public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-			private readonly PpsSplashWindow splashWindow;
 			private readonly TaskCompletionSource<IPpsShellInfo> returnShellInfo = null;
 
 			private ShellInfo[] shellInfos = Array.Empty<ShellInfo>();
 
-			public ShellInfoData(PpsSplashWindow splashWindow)
+			public ShellInfoData()
 			{
-				this.splashWindow = splashWindow ?? throw new ArgumentNullException(nameof(splashWindow));
 				returnShellInfo = new TaskCompletionSource<IPpsShellInfo>();
 
 				Refresh();
@@ -458,6 +457,38 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- class RuntimeInstallState ------------------------------------------
+
+		private sealed class RuntimeInstallState : IReturnState, IDisposable
+		{
+			private readonly TaskCompletionSource<bool> returnState = null;
+
+			public RuntimeInstallState()
+			{
+				returnState = new TaskCompletionSource<bool>();
+			} // ctor
+
+			public void Dispose()
+			{
+				returnState.TrySetResult(false);
+			} // proc Dispose
+
+			bool IReturnState.Finish(object parameter)
+			{
+				returnState.SetResult(true);
+				return true;
+			} // func IReturnState.Finish
+
+			bool IReturnState.CanFinish(object parameter)
+				=> true;
+
+			StatePanes IReturnState.State => StatePanes.Runtime;
+
+			public Task<bool> Result => returnState.Task;
+		} // class RuntimeInstallState
+
+		#endregion
+
 		public static readonly RoutedUICommand ShowErrorDetailsCommand = new RoutedUICommand("ShowErrorDetails", "ShowErrorDetails", typeof(PpsSplashWindow));
 
 		private readonly Stack<IReturnState> dialogStates = new Stack<IReturnState>();
@@ -651,7 +682,7 @@ namespace TecWare.PPSn.UI
 		public Task<IPpsShellInfo> ShowShellAsync(IPpsShellInfo shellInfo, bool enforceShellSelection)
 		{
 			// init shell data
-			var shell = new ShellInfoData(this);
+			var shell = new ShellInfoData();
 			if (!enforceShellSelection && shell.IsOnlyOne())
 				return shell.Result;
 
@@ -774,6 +805,21 @@ namespace TecWare.PPSn.UI
 
 		public ErrorStateData ErrorState => (ErrorStateData)GetValue(ErrorStateProperty);
 		public bool HasErrorState => BooleanBox.GetBool(GetValue(HasErrorStateProperty));
+
+		#endregion
+
+		#region -- Runtime - property -------------------------------------------------
+
+		public Task<bool> ShowRuntimeInstallAsync(IEnumerable<object> runtimeList, bool isAdmin)
+		{
+			var runtime = new RuntimeInstallState();
+
+			runtimeInstallList.ItemsSource = runtimeList;
+			runtimeAdminInfo.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+
+			PushState(runtime);
+			return runtime.Result;
+		} // proc ShowRuntimeInstallAsync
 
 		#endregion
 

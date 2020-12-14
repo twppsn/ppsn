@@ -156,8 +156,9 @@ namespace TecWare.PPSn
 				private readonly long expectedLength;
 				private readonly DateTime expectedLastWriteTime;
 				private readonly FileLoadFlag loadFlags;
+				private readonly string installArguments;
 
-				private FileVerifyInfo(string fileId, FileInfo fi, Uri uri, long expectedLength, DateTime expectedLastWriteTime, FileLoadFlag loadFlags)
+				private FileVerifyInfo(string fileId, FileInfo fi, Uri uri, long expectedLength, DateTime expectedLastWriteTime, FileLoadFlag loadFlags, string installArguments)
 				{
 					this.fileId = fileId;
 					this.fi = fi;
@@ -165,6 +166,7 @@ namespace TecWare.PPSn
 					this.expectedLength = expectedLength;
 					this.expectedLastWriteTime = expectedLastWriteTime;
 					this.loadFlags = loadFlags;
+					this.installArguments = installArguments;
 				} // ctor
 
 				public Process IsApplicationBlocked()
@@ -190,12 +192,76 @@ namespace TecWare.PPSn
 					};
 				} // func CreateRestartNotifier
 
+				private string GetRuntimeMessage(PpsShellSettings settings)
+					=> $"{settings.GetProperty(GetPropertyName(FileId, "Description"), FileId)} / Version {settings.GetProperty(GetPropertyName(FileId, "Version"), settings.GetProperty(GetPropertyName(FileId, "VersionTest"), null))}";
+
+				public bool IsRuntimeMissing(PpsShellSettings settings, out string message)
+				{
+					if (!IsRuntime)
+					{
+						message = null;
+						return false;
+					}
+
+					var registryKey = settings.GetProperty(GetPropertyName(fileId, "VersionKey"), null);
+					var testValue = settings.GetProperty(GetPropertyName(fileId, "VersionTest"), null);
+					if (String.IsNullOrEmpty(registryKey) || String.IsNullOrEmpty(testValue))
+					{
+						message = GetRuntimeMessage(settings);
+						return NeedsUpdate;
+					}
+
+					var p = registryKey.LastIndexOf('\\');
+					if (p == -1)
+						throw new ArgumentException("Invalid VersionKey");
+
+					var keyName = registryKey.Substring(0, p);
+					var valueName = registryKey.Substring(p + 1);
+
+					using (var reg = Registry.LocalMachine.OpenSubKey(keyName, false))
+					{
+						if (reg == null)
+						{
+							message = GetRuntimeMessage(settings);
+							return true;
+						}
+						var compareValue = reg.GetValue(valueName)?.ToString();
+						if(compareValue == null)
+						{
+							message = GetRuntimeMessage(settings);
+							return true;
+						}
+						else if (Int32.TryParse(compareValue, out var compareInt) && Int32.TryParse(testValue, out var testInt))
+						{
+							if (compareInt < testInt)
+							{
+								message = GetRuntimeMessage(settings);
+								return true;
+							}
+						}
+						else if(Version.TryParse(compareValue, out var compareVersion) && Version.TryParse(testValue, out var testVersion))
+						{
+							if (compareVersion < testVersion)
+							{
+								message = GetRuntimeMessage(settings);
+								return true;
+							}
+						}
+
+						message = null;
+						return false;
+					}
+				} // func IsRuntimeMissing
+
 				public string FileId => fileId;
 				public Uri Uri => uri;
 				public FileInfo FileInfo => fi;
 				public long Length => expectedLength;
 				public DateTime LastWriteTime => expectedLastWriteTime;
 				public FileLoadFlag Load => loadFlags;
+
+				public bool IsRuntime => !String.IsNullOrEmpty(installArguments);
+				public string RuntimeArguments => installArguments;
 
 				public bool NeedsUpdate => !fi.Exists || fi.Length != expectedLength || expectedLastWriteTime > fi.LastWriteTime;
 
@@ -204,7 +270,7 @@ namespace TecWare.PPSn
 				private static string GetPropertyName(string groupName, string name)
 					=> "PPSn.Application.Files." + groupName + "." + name;
 
-				public static FileVerifyInfo Create(string groupName, DirectoryInfo baseDirectory, string path, string source, long expectedLength, string expectedLastWriteTimeText, string loadFlags)
+				public static FileVerifyInfo Create(string groupName, DirectoryInfo baseDirectory, string path, string source, long expectedLength, string expectedLastWriteTimeText, string loadFlags, string installArguments)
 				{
 					if (groupName == null)
 						throw new ArgumentNullException(nameof(groupName));
@@ -237,9 +303,30 @@ namespace TecWare.PPSn
 							flags |= FileLoadFlag.Path;
 					}
 
-					return new FileVerifyInfo(groupName, new FileInfo(Path.Combine(baseDirectory.FullName, path)), uri, expectedLength, expectedLastWriteTime, flags);
+					return new FileVerifyInfo(groupName, new FileInfo(Path.Combine(baseDirectory.FullName, path)), uri, expectedLength, expectedLastWriteTime, flags, installArguments);
 				} // func Create
 			} // class FileVerifyInfo
+
+			#endregion
+
+			#region -- class MissingRuntime -------------------------------------------
+
+			private sealed class MissingRuntime
+			{
+				private readonly string installLine;
+				private readonly string message;
+
+				public MissingRuntime(string installLine, string message)
+				{
+					this.installLine = installLine ?? throw new ArgumentNullException(nameof(installLine));
+					this.message = message ?? throw new ArgumentNullException(nameof(message));
+				} // ctor
+
+				public override string ToString()
+					=> message;
+
+				public string InstallLine => installLine;
+			} // class MissingRuntime
 
 			#endregion
 
@@ -248,6 +335,7 @@ namespace TecWare.PPSn
 
 			private readonly List<Uri> themesToLoad = new List<Uri>();
 			private readonly List<IPpsSettingRestartCondition> restartNotifier = new List<IPpsSettingRestartCondition>();
+			private readonly List<MissingRuntime> missingRuntimes = new List<MissingRuntime>();
 
 			public ShellLoadNotify(PpsSplashWindow splashWindow, bool allowSync)
 			{
@@ -328,7 +416,7 @@ namespace TecWare.PPSn
 					var filesDirectoryInfo = shell.EnforceLocalPath("common$");
 
 					// check for extended files
-					var extendedFiles = shell.Settings.GetGroups("PPSn.Application.Files", true, "Uri", "Path", "Length", "LastWriteTime", "Load")
+					var extendedFiles = shell.Settings.GetGroups("PPSn.Application.Files", true, "Uri", "Path", "Length", "LastWriteTime", "Load", "InstallArguments")
 						.Select(g => FileVerifyInfo.Create(
 							g.GroupName,
 							filesDirectoryInfo,
@@ -336,7 +424,8 @@ namespace TecWare.PPSn
 							g.GetProperty("Uri", null),
 							g.GetProperty("Length", -1L),
 							g.GetProperty("LastWriteTime", null),
-							g.GetProperty("Load", null)
+							g.GetProperty("Load", null),
+							g.GetProperty("InstallArguments", null)
 						))
 						.ToArray();
 
@@ -358,6 +447,10 @@ namespace TecWare.PPSn
 							log.Debug($"Schedule {cur.FileInfo} for update: {cur.Uri}");
 							totalBytesToUpdate += cur.Length;
 						}
+
+						// check runtime dependency
+						if (cur.IsRuntimeMissing(shell.Settings, out var msg))
+							missingRuntimes.Add(new MissingRuntime("\"" + cur.FileInfo.FullName + "\" " + cur.RuntimeArguments, msg));
 
 						// add to restart notifier
 						restartNotifier.AddRange(cur.CreateRestartNotifier());
@@ -458,6 +551,40 @@ namespace TecWare.PPSn
 
 				return Task.CompletedTask;
 			} // func OnAfterInitServicesAsync
+
+			public async Task ExecuteMissingRuntimeBatchAsync(bool isAdministrator)
+			{
+				// generate batch file
+				var sb = new StringBuilder();
+				sb.AppendLine("@echo off");
+#if DEBUG
+				sb.AppendLine("pause");
+#endif
+				foreach (var cur in missingRuntimes)
+				{
+					sb.Append("echo Install ").Append(cur.ToString()).AppendLine();
+					// sb.Append("echo ").Append(cur.InstallLine).AppendLine();
+					sb.AppendLine(cur.InstallLine);
+				}
+
+				// write batch file
+				var fileName = Path.Combine(Path.GetTempPath(), "PPSnDesktopRuntimeInstall.bat");
+				File.WriteAllText(fileName, sb.ToString());
+
+				// execute batch file
+				var psi = new ProcessStartInfo
+				{
+					FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+					Arguments = "/c \"" + fileName + "\"",
+					UseShellExecute = true,
+					Verb = isAdministrator ? String.Empty : "runas"
+				};
+
+				using (var p = Process.Start(psi))
+					await Task.Run(new Action(p.WaitForExit));
+			} // proc ExecuteMissingRuntimeBatchAsync
+
+			public IReadOnlyList<object> MissingRuntimes => missingRuntimes;
 		} // class ShellLoadNotify
 
 		#endregion
@@ -497,6 +624,28 @@ namespace TecWare.PPSn
 				throw new ArgumentOutOfRangeException(nameof(applicationMode), applicationMode, "Invalid application mode.");
 		} // func GetMainWindowManager
 
+		private async Task<IPpsShell> StartRuntimeInstallationAsync(PpsSplashWindow splashWindow, IPpsShell shell, ShellLoadNotify notify)
+		{
+			if (notify.MissingRuntimes != null && notify.MissingRuntimes.Count > 0)
+			{
+				// check admin is needed
+				var isAdmin = PpsWpfShell.IsAdministrator();
+
+				// show information
+				if (!await splashWindow.ShowRuntimeInstallAsync(notify.MissingRuntimes, isAdmin))
+				{
+					shell.Dispose();
+					return null;
+				}
+
+				// start installation
+				splashWindow.SetProgressText("Abhängigkeiten Installieren...");
+				await notify.ExecuteMissingRuntimeBatchAsync(isAdmin);
+			}
+
+			return shell;
+		} // func StartRuntimeInstallationAsync
+
 		private async Task<IPpsShell> StartApplicationShellAsync(PpsSplashWindow splashWindow, IPpsShellInfo shellInfo, bool allowSync, bool enforceShellSelection)
 		{
 			object errorInfo = null;
@@ -521,7 +670,8 @@ namespace TecWare.PPSn
 				{
 					// create the application shell
 					splashWindow.SetProgressText("Starte Anwendung...");
-					return await PpsShell.StartAsync(shellInfo, isDefault: true, notify: new ShellLoadNotify(splashWindow, allowSync));
+					var notify = new ShellLoadNotify(splashWindow, allowSync);
+					return await StartRuntimeInstallationAsync(splashWindow, await PpsShell.StartAsync(shellInfo, isDefault: true, notify: notify), notify);
 				}
 				catch (Exception e)
 				{

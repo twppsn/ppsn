@@ -107,7 +107,7 @@ namespace TecWare.PPSn.Server
 		public PpsClientApplicationInfo(string name, long versionCode = 0, Version version = null, string displayName = null, string icon = null)
 		{
 			Name = name ?? throw new ArgumentNullException(nameof(name));
-			VersionCode = versionCode < 0 && version != null ? version.GetVersionCode() : 0;
+			VersionCode = versionCode < 0 && version != null ? version.GetVersionCode() : versionCode;
 			Version = version ?? Version0;
 			DisplayName = displayName ?? name;
 			Icon = icon;

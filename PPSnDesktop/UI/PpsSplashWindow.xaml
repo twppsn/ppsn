@@ -16,78 +16,41 @@
     </Window.InputBindings>
 
 	<Window.Resources>
-		<SolidColorBrush x:Key="SplashWindowControlForegroundBrush" Color="#000000" />
-		<SolidColorBrush x:Key="SplashWindowControlBackgroundBrush" Color="#FFFFFF" />
-		<SolidColorBrush x:Key="SplashWindowControlBorderBrushNormal" Color="#999999" />
-		<SolidColorBrush x:Key="SplashWindowControlBorderBrushFocused" Color="#666666" />
-
 		<Style TargetType="{x:Type TextBlock}">
-			<Setter Property="VerticalAlignment" Value="Bottom"/>
-			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
-			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="Margin" Value="0,6"/>
+			<Setter Property="VerticalAlignment" Value="Bottom" />
+			<Setter Property="FontSize" Value="14" />
+			<Setter Property="Margin" Value="0,6" />
 			<Style.Triggers>
 				<Trigger Property="IsEnabled" Value="false">
-					<Setter Property="Opacity" Value="0.4"/>
+					<Setter Property="Opacity" Value="0.4" />
 				</Trigger>
 			</Style.Triggers>
 		</Style>
 
-		<Style TargetType="{x:Type TextBox}">
-			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
-			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
-			<Setter Property="BorderThickness" Value="2"/>
-			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-			<Setter Property="SelectionBrush" Value="#000000"/>
-			<Setter Property="SelectionOpacity" Value=".25"/>
-			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Padding" Value="4,0,0,1"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type TextBox}">
-						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" 
-								Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-							<ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
-						</Border>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsKeyboardFocused" Value="True">
-								<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SplashWindowControlBorderBrushFocused}"/>
-							</Trigger>
-							<Trigger Property="IsEnabled" Value="false">
-								<Setter Property="Opacity" TargetName="border" Value="0.4"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-
 		<Style TargetType="{x:Type PasswordBox}">
-			<Setter Property="PasswordChar" Value="●"/>
-			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
-			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
-			<Setter Property="BorderThickness" Value="2"/>
-			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-			<Setter Property="SelectionBrush" Value="#000000"/>
-			<Setter Property="SelectionOpacity" Value=".25"/>
-			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Padding" Value="4,0"/>
+			<Setter Property="PasswordChar" Value="●" />
+			<Setter Property="Foreground" Value="{DynamicResource PPSnWinodwForegroundBrush}" />
+			<Setter Property="Background" Value="{DynamicResource PPSnWinodwBackgroundBrush}" />
+			<Setter Property="BorderThickness" Value="2" />
+			<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
+			<Setter Property="SelectionBrush" Value="{DynamicResource PPSnSelectionBarBrush}" />
+			<Setter Property="SelectionOpacity" Value=".25" />
+			<Setter Property="FontSize" Value="14" />
+			<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+			<Setter Property="VerticalContentAlignment" Value="Center" />
+			<Setter Property="Padding" Value="4,0" />
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type PasswordBox}">
 						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-							<ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+							<ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
 						</Border>
 						<ControlTemplate.Triggers>
 							<Trigger Property="IsKeyboardFocused" Value="true">
-								<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SplashWindowControlBorderBrushFocused}"/>
+								<Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 							</Trigger>
 							<Trigger Property="IsEnabled" Value="false">
-								<Setter Property="Opacity" TargetName="border" Value="0.4"/>
+								<Setter Property="Opacity" TargetName="border" Value="0.4" />
 							</Trigger>
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
@@ -96,7 +59,7 @@
 		</Style>
 	</Window.Resources>
 
-	<Border BorderThickness="1" BorderBrush="#000000" Background="#FFFFFF">
+	<Border BorderThickness="1" BorderBrush="{ui:PpsColor {x:Static ui:PpsTheme.WindowForeground}}" Background="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}">
 		<Grid>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="96"/>
@@ -106,7 +69,7 @@
 				<RowDefinition Height="*" />
 				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
-			<Border x:Name="leftBar" Grid.Column="0" Grid.RowSpan="2" Background="#F0F0F0">
+			<Border x:Name="leftBar" Grid.Column="0" Grid.RowSpan="2" Background="{ui:PpsColor {x:Static ui:PpsTheme.WindowActive}}">
 				<Viewbox Width="52" Height="48" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,16" Opacity=".5">
 					<Image Width="152" Height="151" Source="pack://application:,,,/PPSn.Desktop.UI;component/Themes/Images/SplashLogo.png"/>
 				</Viewbox>
@@ -119,7 +82,6 @@
 						  GeometryName="windowClose"
 						  GeometrySize="16"
 						  ImageOpacity="1"
-						  Foreground="Black"
 						  Width="34"
 						  Height="26"
 						  Margin="0,0,0,0"
@@ -176,7 +138,7 @@
 							<Setter Property="HorizontalAlignment" Value="Stretch" />
 							<Setter Property="HorizontalContentAlignment" Value="Left" />
 							<Setter Property="BorderBrush" Value="{x:Null}" />
-							<Setter Property="Background" Value="#F0F0F0" />
+							<Setter Property="Background" Value="{DynamicResource PPSnButtonBackgroundBrush}" />
 						</Style>
 					</Button.Style>
 				</Button>
@@ -202,7 +164,7 @@
 					<RowDefinition/>
 				</Grid.RowDefinitions>
 				<TextBlock Grid.Row="0" Text="Status" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0,8,0,0"/>
-				<TextBlock Grid.Row="1" Text="{Binding StatusText, Mode=OneWay}" TextWrapping="Wrap" Foreground="{StaticResource SplashWindowControlForegroundBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="20"/>
+				<TextBlock Grid.Row="1" Text="{Binding StatusText, Mode=OneWay}" TextWrapping="Wrap" Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowForeground}}" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="20"/>
 			</Grid>
 			
 			<!-- Select Shell -->
@@ -229,7 +191,7 @@
 
 				<TextBlock Grid.Row="0" Text="Mandant auswählen" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,4,0"/>
 
-				<ListBox Grid.Row="1" x:Name="shellInfoList" Margin="16,4,16,16" ItemsSource="{Binding ShellState}" IsSynchronizedWithCurrentItem="True" BorderBrush="{x:Null}">
+				<ListBox Grid.Row="1" x:Name="shellInfoList" Margin="16,4,16,16" ItemsSource="{Binding ShellState}" IsSynchronizedWithCurrentItem="True" BorderBrush="{x:Null}" Background="Transparent">
 					<ListBox.InputBindings>
 						<KeyBinding Key="Return" Command="{x:Static ApplicationCommands.Open}" />
 					</ListBox.InputBindings>
@@ -238,7 +200,7 @@
 							<Setter Property="Template">
 								<Setter.Value>
 									<ControlTemplate TargetType="ListBoxItem">
-										<Border x:Name="border" Background="#F0F0F0" Padding="3" Margin="0,3,3,3">
+										<Border x:Name="border" Background="{DynamicResource PPSnButtonBackgroundBrush}" Padding="3" Margin="0,3,3,3">
 											<Border.InputBindings>
 												<MouseBinding Gesture="LeftDoubleClick" Command="{x:Static ApplicationCommands.Open}" CommandParameter="{Binding ElementName=border,Path=DataContext,Mode=OneWay}" />
 											</Border.InputBindings>
@@ -246,7 +208,7 @@
 										</Border>
 										<ControlTemplate.Triggers>
 											<Trigger Property="IsSelected" Value="True" >
-												<Setter TargetName="border" Property="Background" Value="#A0A0F0" />
+												<Setter TargetName="border" Property="Background" Value="{DynamicResource PPSnSelectionBarBrush}" />
 											</Trigger>
 										</ControlTemplate.Triggers>
 									</ControlTemplate>
@@ -261,8 +223,8 @@
 									<RowDefinition />
 									<RowDefinition />
 								</Grid.RowDefinitions>
-								<TextBlock Grid.Row="0" Foreground="DarkGray" >
-									<Run Text="{Binding Name,Mode=OneTime}" Foreground="Black" />
+								<TextBlock Grid.Row="0" Foreground="{DynamicResource PPSnWindowActiveBrush}">
+									<Run Text="{Binding Name,Mode=OneTime}" Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
 									<Run Text="(" /><Run Text="{Binding DisplayName,Mode=OneTime}" /><Run Text=")" />
 								</TextBlock>
 								<TextBlock Grid.Row="1" Text="{Binding Uri,Mode=OneTime}" />
@@ -292,9 +254,9 @@
 				<Grid.RowDefinitions>
 					<RowDefinition/>
 					<RowDefinition Height="48"/>
-					<RowDefinition Height="30"/>
+					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="48"/>
-					<RowDefinition Height="30"/>
+					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 					<RowDefinition Height="64"/>
 				</Grid.RowDefinitions>
@@ -302,19 +264,19 @@
 				<TextBlock Grid.Row="0" Text="Neue Verbindung" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0,8,0,0"/>
 
 				<TextBlock Grid.Row="1" Text="Mandant:"/>
-				<TextBox Grid.Row="2" x:Name="mandantTextBox" Text="{Binding NewName,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
+				<ui:PpsTextBox Grid.Row="2" x:Name="mandantTextBox" Text="{Binding NewName,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"/>
 
 				<TextBlock Grid.Row="3" Text="URI:"/>
-				<TextBox Grid.Row="4" Text="{Binding NewUri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+				<ui:PpsTextBox Grid.Row="4" Text="{Binding NewUri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 				
 				<StackPanel Grid.Row="6" Orientation="Horizontal" Height="31" HorizontalAlignment="Right" TextElement.FontSize="14">
 					<ui:PpsButton Content="Anlegen"
-								   Command="{x:Static ApplicationCommands.Open}"
-								   Width="110" />
+								  Command="{x:Static ApplicationCommands.Open}"
+								  Width="110" />
 					<ui:PpsButton Content="Abbrechen"
-								   Command="{x:Static ApplicationCommands.Close}"
-								   Width="110"
-								   Margin="12,0,0,0" />
+								  Command="{x:Static ApplicationCommands.Close}"
+								  Width="110"
+								  Margin="12,0,0,0" />
 
 				</StackPanel>
 			</Grid>
@@ -339,9 +301,9 @@
 				<Grid.RowDefinitions>
 					<RowDefinition/>
 					<RowDefinition Height="40"/>
-					<RowDefinition Height="30"/>
+					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="48"/>
-					<RowDefinition Height="30"/>
+					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 					<RowDefinition Height="64"/>
 				</Grid.RowDefinitions>
@@ -352,11 +314,11 @@
 				</TextBlock>
 
 				<TextBlock Grid.Row="1" Text="Nutzer:" />
-				<TextBox Grid.Row="2" x:Name="userTextBox" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}">
-					<TextBox.InputBindings>
+				<ui:PpsTextBox Grid.Row="2" x:Name="userTextBox" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}">
+					<ui:PpsTextBox.InputBindings>
 						<KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
-					</TextBox.InputBindings>
-				</TextBox>
+					</ui:PpsTextBox.InputBindings>
+				</ui:PpsTextBox>
 
 				<TextBlock Grid.Row="3" Text="Password:" IsEnabled="{Binding IsPasswordEnabled}"/>
 				<PasswordBox Grid.Row="4" x:Name="passwordTextBox" PasswordChanged="PasswordChanged" IsEnabled="{Binding IsPasswordEnabled}">
@@ -374,6 +336,58 @@
 								   Command="{x:Static ApplicationCommands.Close}"
 								   Width="110"
 								   Margin="12,0,0,0"/>
+				</StackPanel>
+			</Grid>
+		
+			<!-- Runtime -->
+			<Grid Grid.Column="1" Margin="32,0">
+				<Grid.Style>
+					<Style TargetType="{x:Type Grid}">
+						<Setter Property="Visibility" Value="Hidden"/>
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ElementName=PPSnSplashWindow, Path=ActivePageNum, Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Int32>4</sys:Int32>
+								</DataTrigger.Value>
+								<Setter Property="Visibility" Value="Visible"/>
+								<Setter Property="FocusManager.FocusedElement" Value="{Binding ElementName=okButton}"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Grid.Style>
+
+				<Grid.RowDefinitions>
+					<RowDefinition/>
+					<RowDefinition Height="*"/>
+					<RowDefinition Height="Auto" />
+					<RowDefinition/>
+					<RowDefinition Height="64"/>
+				</Grid.RowDefinitions>
+
+				<TextBlock Grid.Row="0" Text="Fehlende Abhängigkeiten" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0,8,0,0"/>
+
+				<ItemsControl Grid.Row="1" x:Name="runtimeInstallList">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<StackPanel Orientation="Horizontal">
+								<ui:PpsGeometryImage GeometryName="marker" Height="16" Width="16" Margin="4" />
+								<TextBlock Text="{Binding}" Margin="4" VerticalAlignment="Center" />
+							</StackPanel>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+
+				<TextBlock x:Name="runtimeAdminInfo" Grid.Row="2" Text="Eingriff des Administrators notwendig." />
+
+				<StackPanel Grid.Row="4" Orientation="Horizontal" Height="31" HorizontalAlignment="Right" TextElement.FontSize="14">
+					<ui:PpsButton x:Name="okButton" 
+								  Content="Installieren"
+								  Command="{x:Static ApplicationCommands.Open}"
+								  Width="110" />
+					<ui:PpsButton Content="Abbrechen"
+								  Command="{x:Static ApplicationCommands.Close}"
+								  Width="110"
+								  Margin="12,0,0,0" />
 				</StackPanel>
 			</Grid>
 		</Grid>
