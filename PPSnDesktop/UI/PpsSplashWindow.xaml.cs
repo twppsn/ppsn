@@ -22,7 +22,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -31,6 +30,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
@@ -38,7 +38,7 @@ using TecWare.PPSn.Properties;
 namespace TecWare.PPSn.UI
 {
 	/// <summary>Login and loading dialog.</summary>
-	internal partial class PpsSplashWindow : Window, IPpsProgressFactory
+	internal partial class PpsSplashWindow : PpsWindow, IPpsProgressFactory
 	{
 		#region -- enum StatePanes ----------------------------------------------------
 
