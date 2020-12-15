@@ -64,7 +64,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Window</summary>
 		public PpsWindow()
-			: this(PpsShell.Current)
+			: this(PpsShell.Current ?? PpsShell.Global)
 		{
 		} // ctor
 		
@@ -72,7 +72,7 @@ namespace TecWare.PPSn.Controls
 		public PpsWindow(IServiceProvider service)
 		{
 			serviceContainer = new ServiceContainer(service ?? throw new ArgumentNullException(nameof(service)));
-			shell = serviceContainer.GetService<IPpsShell>(true);
+			shell = serviceContainer.GetService<IPpsShell>(false);
 			if (shell != null)
 				this.RegisterShell(shell);
 
