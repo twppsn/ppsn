@@ -193,7 +193,7 @@ namespace TecWare.PPSn
 				} // func CreateRestartNotifier
 
 				private string GetRuntimeMessage(PpsShellSettings settings)
-					=> $"{settings.GetProperty(GetPropertyName(FileId, "Description"), FileId)} / Version {settings.GetProperty(GetPropertyName(FileId, "Version"), settings.GetProperty(GetPropertyName(FileId, "VersionTest"), null))}";
+					=> $"{settings.GetProperty(GetPropertyName(FileId, "Description"), FileId)} / Version {settings.GetProperty(GetPropertyName(FileId, "VersionTest"), settings.GetProperty(GetPropertyName(FileId, "Version"), "Unknown"))}";
 
 				public bool IsRuntimeMissing(PpsShellSettings settings, out string message)
 				{

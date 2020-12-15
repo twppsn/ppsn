@@ -275,7 +275,10 @@ namespace TecWare.PPSn.Controls
 		public PpsWebView()
 		{
 			htmlView = new WebView2();
-			xamlView = new ContentControl();
+			xamlView = new ContentControl
+			{
+				Focusable = false
+			};
 
 			AddLogicalChild(htmlView);
 			AddLogicalChild(xamlView);

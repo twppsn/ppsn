@@ -185,58 +185,56 @@ namespace TecWare.PPSn.Themes
 
 		#region -- Colors -------------------------------------------------------------
 
-		/// <summary>Contrast color for light.</summary>
-		public static readonly PpsColor White = new PpsColor(nameof(White), theme => Color.FromArgb(255, 255, 255, 255));
-		/// <summary>Contrast color for dark.</summary>
+		/// <summary>Contrast color</summary>
 		public static readonly PpsColor Black = new PpsColor(nameof(Black), theme => Color.FromArgb(255, 0, 0, 0));
-
 		/// <summary>Application background color.</summary>
 		public static readonly PpsColor Desktop = new PpsColor(nameof(Desktop), theme => Color.FromArgb(255, 255, 250, 240));
 		/// <summary>Application foreground color.</summary>
 		public static readonly PpsColor Accent = new PpsColor(nameof(Accent), theme => Color.FromArgb(255, 0, 0, 0));
 		/// <summary>Application highlight color.</summary>
-		public static readonly PpsColor Marker = new PpsColor(nameof(Marker), theme => Color.FromArgb(255, 90, 124, 54));
-
-		/// <summary>Window title</summary>
-		public static readonly PpsColor WindowActive = new PpsColor(nameof(WindowActive), Marker.GetColor);
+		public static readonly PpsColor Marker = new PpsColor(nameof(Marker), theme => Color.FromArgb(255, 99, 124, 54));
+		/// <summary>Control background</summary>
+		public static readonly PpsColor ControlBackground = new PpsColor(nameof(ControlBackground), theme => Color.FromArgb(255, 255, 255, 255));
+		/// <summary>Window status bar</summary>
+		public static readonly PpsColor WindowFooter = new PpsColor(nameof(WindowFooter), theme => Color.FromArgb(255, 99, 124, 54));
 		/// <summary>Window title bar background on active.</summary>
-		public static readonly PpsColor WindowActiveGlow = new PpsColor(nameof(WindowActiveGlow), WindowActive.GetColor);
+		public static readonly PpsColor WindowActiveGlow = new PpsColor(nameof(WindowActiveGlow), theme => Color.FromArgb(255, 99, 124, 54));
 		/// <summary>Window title bar background on inactive.</summary>
 		public static readonly PpsColor WindowInActiveGlow = new PpsColor(nameof(WindowInActiveGlow), theme => Color.FromArgb(255, 170, 170, 170));
-		/// <summary>Window status bar.</summary>
-		public static readonly PpsColor WindowHeader = new PpsColor(nameof(WindowHeader), theme => theme.GetTransparencyColor(WindowBackground, Black, 0.17f));
-		/// <summary>Window foreground.</summary>
-		public static readonly PpsColor WindowForeground = new PpsColor(nameof(WindowForeground), Accent.GetColor);
+
+
 		/// <summary>Window  background.</summary>
 		public static readonly PpsColor WindowBackground = new PpsColor(nameof(WindowBackground), Desktop.GetColor);
-		/// <summary>Window status bar.</summary>
-		public static readonly PpsColor WindowFooter = new PpsColor(nameof(WindowFooter), WindowActiveGlow.GetColor);
-
-		/// <summary>todo: using</summary>
-		public static readonly PpsColor Seperator = new PpsColor(nameof(Seperator), theme => theme.GetTransparencyColor(WindowBackground, WindowForeground, 0.1f));
-
-		/// <summary>todo: using</summary>
-		public static readonly PpsColor ControlBackground = new PpsColor(nameof(ControlBackground), White.GetColor);
-		/// <summary>todo: using</summary>
-		public static readonly PpsColor ControlFocusedBorder = new PpsColor(nameof(ControlFocusedBorder), Marker.GetColor);
-		/// <summary>todo: using</summary>
+		/// <summary>Window foreground.</summary>
+		public static readonly PpsColor WindowForeground = new PpsColor(nameof(WindowForeground), Accent.GetColor);
+		/// <summary>Window foreground when disabled.</summary>
+		public static readonly PpsColor WindowDisabledForeground = new PpsColor(nameof(WindowDisabledForeground), theme => theme.GetTransparencyColor(Desktop, Accent, 0.33f));
+		/// <summary>Seperator color</summary>
+		public static readonly PpsColor Seperator = new PpsColor(nameof(Seperator), theme => theme.GetTransparencyColor(WindowBackground, WindowForeground, 0.12f));
+		/// <summary>Border for controls</summary>
 		public static readonly PpsColor ControlNormalBorder = new PpsColor(nameof(ControlNormalBorder), theme => theme.GetTransparencyColor(Desktop, Accent, 0.25f));
-
+		/// <summary>Border for controls when focused</summary>
+		public static readonly PpsColor ControlFocusedBorder = new PpsColor(nameof(ControlFocusedBorder), Marker.GetColor);
 		/// <summary>Background for standard button</summary>
-		public static readonly PpsColor ButtonBackground = new PpsColor(nameof(ButtonBackground), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.11f));
-
+		public static readonly PpsColor ButtonBackground = new PpsColor(nameof(ButtonBackground), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.12f));
 		/// <summary>todo: using</summary>
-		public static readonly PpsColor SelectionBar = new PpsColor(nameof(SelectionBar), theme => theme.GetTransparencyColor(ControlBackground, Marker, 0.35f));
+		public static readonly PpsColor SelectionBar = new PpsColor(nameof(SelectionBar), theme => theme.GetTransparencyColor(Desktop, Marker, 0.35f));
 		/// <summary>todo: using</summary>
-		public static readonly PpsColor MouseOver = new PpsColor(nameof(MouseOver), theme => theme.GetTransparencyColor(ControlBackground, Marker, 0.35f));
-
+		public static readonly PpsColor MouseOver = new PpsColor(nameof(MouseOver), theme => theme.GetTransparencyColor(Desktop, Black, 0.10f));
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor ButtonPressed = new PpsColor(nameof(ButtonPressed), theme => theme.GetTransparencyColor(Desktop, Black, 0.25f));
+		/// <summary>todo: using</summary>
+		public static readonly PpsColor ImageBrush = new PpsColor(nameof(ImageBrush), theme => theme.GetTransparencyColor(Desktop, Accent, 0.80f));
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor PopupBackground = new PpsColor(nameof(PopupBackground), theme => theme.GetAlphaBlendColor(Desktop, Black, sourcePart: 0.9f));
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor PopupBorder = new PpsColor(nameof(PopupBorder), theme => theme.GetAlphaBlendColor(Desktop, Black, sourcePart: 0.5f));
-
 		/// <summary>todo: using</summary>
-		public static readonly PpsColor SideBarBackground = new PpsColor(nameof(SideBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.03f));
+		public static readonly PpsColor SideBarBackground = new PpsColor(nameof(SideBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.05f));
+		/// <summary>Background for module, panes.</summary>
+		public static readonly PpsColor WindowHeader = new PpsColor(nameof(WindowHeader), theme => theme.GetTransparencyColor(Desktop, Black, 0.17f));
+		/// <summary>Window title</summary>
+		public static readonly PpsColor WindowActive = new PpsColor(nameof(WindowActive), Marker.GetColor);
 
 		#endregion
 
