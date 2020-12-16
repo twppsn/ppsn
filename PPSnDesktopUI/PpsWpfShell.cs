@@ -33,6 +33,7 @@ using System.Windows.Threading;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Themes;
 using TecWare.PPSn.UI;
 
@@ -628,7 +629,7 @@ namespace TecWare.PPSn
 			PpsWpfShell.FixDefaultKey(defaultResources); // Source clears all keys
 
 			// initialize theme from server
-			defaultTheme = new PpsColorTheme(nameof(PpsColorTheme.Default), shell.Settings.GetProperties(themeSettingPrefix).Select(ConvertToThemeColor));
+			defaultTheme = new PpsColorTheme(nameof(PpsColorTheme.Default), shell.Settings.GetProperties(themeSettingPrefix + "*").Select(ConvertToThemeColor));
 			SetCurrentTheme(defaultTheme, true);
 			
 			return Task.CompletedTask;
@@ -792,7 +793,7 @@ namespace TecWare.PPSn
 			var autoUserName = AutoLoginUser;
 			var autoPassword = AutoLoginPassword;
 
-			// check for saved password
+			// check for saved password, of the current credentials
 			var userName = PpsShell.GetUserNameFromCredentials(credentials);
 			if (String.Compare(autoUserName, userName, StringComparison.OrdinalIgnoreCase) == 0 && String.IsNullOrEmpty(autoPassword))
 				return credentials;

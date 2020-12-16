@@ -107,23 +107,32 @@ namespace TecWare.PPSn.Server
 	/// <summary>Color description</summary>
 	public sealed class PpsColorInfo
 	{
+		private readonly string prefix;
 		private readonly string name;
 		private readonly Color color;
 
 		internal PpsColorInfo(string name, Color color)
 		{
-			this.name = name ?? throw new ArgumentNullException(nameof(name));
+			if(String.IsNullOrEmpty(name))
+				 throw new ArgumentNullException(nameof(name));
+
+			var p = name.IndexOf('.');
+			if(p == -1)
+			{
+				prefix = String.Empty;
+				this.name = name;
+			}
+			else
+			{
+				prefix = name.Substring(0, p);
+				this.name = name.Substring(p + 1);
+			}
+
 			this.color = color;
 		} // ctor
-
-		/// <summary>Return the color prefix.</summary>
-		/// <returns></returns>
-		public string GetPrefix()
-		{
-			var p = name.IndexOf('.');
-			return p == -1 ? String.Empty : name.Substring(0, p);
-		} // func GetPrefix
-
+		
+		/// <summary>Color prefix</summary>
+		public string Prefix => prefix;
 		/// <summary>Color name</summary>
 		public string Name => name;
 		/// <summary>Color</summary>
@@ -206,7 +215,7 @@ namespace TecWare.PPSn.Server
 		{
 			if (TryGetStyleNode(out var styles))
 			{
-				return styles.Elements(PpsStuff.xnStyleGeometry)
+				return styles.Elements(PpsStuff.xnStyleColor)
 					.Where(x => String.Compare(x.GetAttribute<string>("name"), colorName, StringComparison.OrdinalIgnoreCase) == 0)
 					.Select(x => CreateColorInfo(x))
 					.FirstOrDefault();

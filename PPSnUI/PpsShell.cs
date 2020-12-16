@@ -182,6 +182,11 @@ namespace TecWare.PPSn
 		/// <param name="uri"></param>
 		/// <returns></returns>
 		DEHttpClient CreateHttp(Uri uri = null);
+
+		/// <summary>Returns the real uri.</summary>
+		/// <param name="http"></param>
+		/// <returns></returns>
+		Uri GetRemoteUri(DEHttpClient http);
 		/// <summary>Translate the uri to an remote uri.</summary>
 		/// <param name="uri"></param>
 		/// <param name="remoteUri"></param>
@@ -1164,9 +1169,9 @@ namespace TecWare.PPSn
 			} // proc SetConnectionState
 
 			private PpsMessageHandler GetMessageHandler(DEHttpClient http)
-				=> knownMessageHandler[http];
+				=> knownMessageHandler[http] ?? throw new ArgumentOutOfRangeException(nameof(http));
 
-			private Uri GetRemoteUri(DEHttpClient http)
+			public Uri GetRemoteUri(DEHttpClient http)
 				=> GetMessageHandler(http).RemoteUri;
 
 			public bool TryGetRemoteUri(Uri uri, out Uri remoteUri)

@@ -10,7 +10,20 @@
               mc:Ignorable="d"
 			  DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}"
               Background="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
-			  Title="PpsBdeWindow" Height="450" Width="800">
+			  Height="450" Width="800">
+	<ui:PpsWindow.Title>
+		<MultiBinding StringFormat="{}{0} / {1}" FallbackValue="BDE">
+			<Binding Path="TopPaneHost.Title" Mode="OneWay" />
+			<Binding Path="TopPaneHost.SubTitle" Mode="OneWay" />
+		</MultiBinding>
+	</ui:PpsWindow.Title>
+	<!--<ui:PpsWindow.Icon>
+		<DrawingImage>
+			<DrawingImage.Drawing>
+				<GeometryDrawing Brush="Blue" Geometry="{Binding TopPaneHost.Image,Converter={x:Static ui:PpsGeometryImage.GeometryConverter}}"/>
+			</DrawingImage.Drawing>
+		</DrawingImage>
+	</ui:PpsWindow.Icon>-->
 	<Grid TextBlock.Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowForeground}}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="40" />

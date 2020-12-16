@@ -1622,7 +1622,7 @@ namespace TecWare.PPSn.Server
 		} // func UriClientOptionHook
 
 		private IEnumerable<(string key, object value)> ColorClientOptionHook(IDEWebScope r, Match keyMatch, string value)
-			=> GetColors(value).Select(c => new ValueTuple<string, object>(c.Name, ColorTranslator.ToHtml(c.Color)));
+			=> GetColors(value).Select(c => new ValueTuple<string, object>(keyMatch.Value + "." + c.Name, ColorTranslator.ToHtml(c.Color)));
 				
 		private (int idx, Match) FindClientOptionHookForKey(string key, int startAt)
 		{

@@ -765,7 +765,7 @@ namespace TecWare.PPSn
 				var settings = newShell.GetSettings<PpsWpfShellSettings>();
 
 				// auto login for a user
-				var userInfo = args.UserInfo;
+				var userInfo = args.UserInfo ?? GetLastUserInfo(newShell.Info);
 				var autoLogin = args.DoAutoLogin;
 
 				// try find auto login
@@ -1040,13 +1040,16 @@ namespace TecWare.PPSn
 				r.DoAutoLogin = true;
 			}
 			else if (r.ShellInfo != null) // load user name from environment
-			{
-				using (var pcl = new PpsClientLogin("ppsn_env:" + r.ShellInfo.Uri.ToString(), r.ShellInfo.Name, false))
-					r.UserInfo = pcl.GetCredentials();
-			}
+				r.UserInfo = GetLastUserInfo(r.ShellInfo);
 
 			return r;
 		} // func ParseArguments
+
+		private static ICredentials GetLastUserInfo(IPpsShellInfo shell)
+		{
+			using (var pcl = new PpsClientLogin("ppsn_env:" + shell.Uri.ToString(), shell.Name, false))
+				return pcl.GetCredentials();
+		} // func GetLastUserInfo
 
 		private static void CoreExceptionHandler(Exception ex)
 		{
