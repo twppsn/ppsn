@@ -53,7 +53,7 @@ namespace TecWare.PPSn.Controls
 				var diff = MaxScaleFactor - newScaleFactor;
 				ScaleRelative(ref matrix, diff, origin);
 			}
-			
+
 			// update scale factor
 			ScaleFactor = matrix.M11;
 
@@ -72,6 +72,8 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		#region -- Mouse Transform ----------------------------------------------------
+
+		#region -- class MouseTransformInfo -------------------------------------------
 
 		private sealed class MouseTransformInfo
 		{
@@ -94,6 +96,8 @@ namespace TecWare.PPSn.Controls
 			public Point Origin { get; private set; }
 			public bool IsStarted;
 		} // class MouseTransformInfo
+
+		#endregion
 
 		private MouseTransformInfo mouseTransformInfo = null;
 
@@ -183,35 +187,48 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Touch Transform ----------------------------------------------------
 
-		private Matrix touchTransformMatrix;
+		private Matrix? touchTransformMatrix = null;
 
 		/// <summary>Overwrite panning and zoom implementation fo the scroll viewer.</summary>
 		/// <param name="e"></param>
 		protected override void OnManipulationStarting(ManipulationStartingEventArgs e)
 		{
-			e.ManipulationContainer = this;
+			var panningMode = PanningMode;
 
-			// set manipulation mopde
-			e.Mode = ManipulationModes.None;
-			switch (PanningMode)
+			if (panningMode == PanningMode.None)
+				return;
+
+			if (e.OriginalSource != this)
 			{
-				case PanningMode.Both:
-				case PanningMode.HorizontalFirst:
-				case PanningMode.VerticalFirst:
-					e.Mode |= ManipulationModes.Translate;
-					break;
-				case PanningMode.HorizontalOnly:
-					e.Mode |= ManipulationModes.TranslateX;
-					break;
-				case PanningMode.VerticalOnly:
-					e.Mode |= ManipulationModes.TranslateY;
-					break;
-			}
-			if (IsZoomAllowed)
-				e.Mode |= ManipulationModes.Scale;
+				e.ManipulationContainer = this;
 
-			// begin touch transform matrix
-			touchTransformMatrix = BeginContentTransform();
+				// set manipulation mopde
+				e.Mode = ManipulationModes.None;
+				switch (panningMode)
+				{
+					case PanningMode.Both:
+					case PanningMode.HorizontalFirst:
+					case PanningMode.VerticalFirst:
+						e.Mode |= ManipulationModes.Translate;
+						break;
+					case PanningMode.HorizontalOnly:
+						e.Mode |= ManipulationModes.TranslateX;
+						break;
+					case PanningMode.VerticalOnly:
+						e.Mode |= ManipulationModes.TranslateY;
+						break;
+				}
+				if (IsZoomAllowed)
+					e.Mode |= ManipulationModes.Scale;
+
+				// begin touch transform matrix
+				touchTransformMatrix = BeginContentTransform();
+			}
+			else
+			{
+				e.Cancel();
+				touchTransformMatrix = null;
+			}
 
 			e.Handled = true;
 		} // proc OnManipulationStarting
@@ -224,10 +241,13 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnManipulationDelta(ManipulationDeltaEventArgs e)
 		{
-			touchTransformMatrix.ScaleAt(e.DeltaManipulation.Scale.X, e.DeltaManipulation.Scale.Y, e.ManipulationOrigin.X, e.ManipulationOrigin.Y);
-			touchTransformMatrix.Translate(e.DeltaManipulation.Translation.X, e.DeltaManipulation.Translation.Y);
+			if (!touchTransformMatrix.HasValue)
+				return;
 
-			UpdateContentTransform(touchTransformMatrix, e.ManipulationOrigin);
+			touchTransformMatrix.Value.ScaleAt(e.DeltaManipulation.Scale.X, e.DeltaManipulation.Scale.Y, e.ManipulationOrigin.X, e.ManipulationOrigin.Y);
+			touchTransformMatrix.Value.Translate(e.DeltaManipulation.Translation.X, e.DeltaManipulation.Translation.Y);
+
+			UpdateContentTransform(touchTransformMatrix.Value, e.ManipulationOrigin);
 
 			if (e.IsInertial)
 				e.Complete();
@@ -239,6 +259,9 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnManipulationInertiaStarting(ManipulationInertiaStartingEventArgs e)
 		{
+			if (!touchTransformMatrix.HasValue)
+				return;
+
 			e.ExpansionBehavior.DesiredDeceleration = 100;
 			e.TranslationBehavior.DesiredDeceleration = 100;
 			e.Handled = true;
@@ -248,6 +271,9 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnManipulationCompleted(ManipulationCompletedEventArgs e)
 		{
+			if (!touchTransformMatrix.HasValue)
+				return;
+
 			touchTransformMatrix = Matrix.Identity;
 			e.Handled = true;
 		} // proc OnManipulationCompleted
