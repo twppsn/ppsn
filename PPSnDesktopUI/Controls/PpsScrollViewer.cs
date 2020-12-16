@@ -193,6 +193,12 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnManipulationStarting(ManipulationStartingEventArgs e)
 		{
+			if (!IsZoomAllowed)
+			{
+				base.OnManipulationStarting(e);
+				return;
+			}
+
 			var panningMode = PanningMode;
 
 			if (panningMode == PanningMode.None)
@@ -241,6 +247,11 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnManipulationDelta(ManipulationDeltaEventArgs e)
 		{
+			if (!IsZoomAllowed)
+			{
+				base.OnManipulationDelta(e);
+				return;
+			}
 			if (!touchTransformMatrix.HasValue)
 				return;
 
@@ -259,6 +270,11 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnManipulationInertiaStarting(ManipulationInertiaStartingEventArgs e)
 		{
+			if (!IsZoomAllowed)
+			{
+				base.OnManipulationInertiaStarting(e);
+				return;
+			}
 			if (!touchTransformMatrix.HasValue)
 				return;
 
@@ -271,6 +287,11 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnManipulationCompleted(ManipulationCompletedEventArgs e)
 		{
+			if (!IsZoomAllowed)
+			{
+				base.OnManipulationCompleted(e);
+				return;
+			}
 			if (!touchTransformMatrix.HasValue)
 				return;
 
