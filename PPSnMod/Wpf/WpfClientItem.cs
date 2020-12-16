@@ -1244,18 +1244,12 @@ namespace TecWare.PPSn.Server.Wpf
 			var themes = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
 			foreach (var color in application.GetColors())
 			{
-				var prefix = color.GetPrefix();
-				string colorName;
+				var prefix = color.Prefix;
+				var colorName = color.Name;
+				
 				if (prefix.Length == 0)
-				{
 					prefix = "Default";
-					colorName = color.Name;
-				}
-				else
-				{
-					colorName = color.Name.Substring(prefix.Length + 1);
-				}
-
+				
 				if (!themes.TryGetValue(prefix, out var xTheme))
 				{
 					xTheme = new XElement(PpsnNamespace + "PpsColorThemeFactory",

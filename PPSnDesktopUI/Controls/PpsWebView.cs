@@ -493,7 +493,7 @@ namespace TecWare.PPSn.Controls
 		} // event HtmlView_PermissionRequested
 
 		private static string GetFilterUri(Uri uri)
-			=> uri.Scheme + "://" + uri.Host + (uri.Port == 80 || uri.Port <= 0 ? String.Empty : ":" + uri.Port.ToString()) + "/*";
+			=> uri.Scheme + "://" + uri.Host + (uri.Port == 80 || uri.Port <= 0 ? String.Empty : ":" + uri.Port.ToString()) + "/";
 
 		private void UpdateResourceRequest(IPpsShell shell)
 		{
@@ -504,8 +504,8 @@ namespace TecWare.PPSn.Controls
 				if (currentFilterUri != null)
 					htmlView.CoreWebView2.RemoveWebResourceRequestedFilter(currentFilterUri, CoreWebView2WebResourceContext.All);
 
-				currentFilterUri = GetFilterUri(http.BaseAddress);
-				htmlView.CoreWebView2.AddWebResourceRequestedFilter(currentFilterUri, CoreWebView2WebResourceContext.All);
+				currentFilterUri = GetFilterUri(shell.GetRemoteUri(http));
+				htmlView.CoreWebView2.AddWebResourceRequestedFilter(currentFilterUri + "*", CoreWebView2WebResourceContext.All);
 			}
 		} // proc UpdateResourceRequest
 
@@ -597,7 +597,7 @@ namespace TecWare.PPSn.Controls
 		{
 			if (TryGetHttp(out var http))
 			{
-				var request = new HttpRequestMessage(new HttpMethod(e.Request.Method), uri)
+				var request = new HttpRequestMessage(new HttpMethod(e.Request.Method), new Uri(http.BaseAddress, uri))
 				{
 					Content = e.Request.Content != null ? new StreamContent(e.Request.Content) : null
 				};
@@ -628,10 +628,13 @@ namespace TecWare.PPSn.Controls
 #if DEBUG_NAV
 			Debug.WriteLine("WebView_WebResourceRequested[{1}]: {0}", e.Request.RequestUri, e.ResourceContext);
 #endif
-			// get request uri
-			var uri = new Uri(e.Request.Uri);
-			if (!uri.IsAbsoluteUri)
-				throw new ArgumentException("Only absolute uri's allowed.");
+			// test for filter
+			var absoluteUri = e.Request.Uri;
+			if (!absoluteUri.StartsWith(currentFilterUri))
+				throw new ArgumentException("Uri format is wrong.");
+
+			// create relative uri
+			var relativeUri = new Uri(absoluteUri.Substring(currentFilterUri.Length), UriKind.Relative);
 
 			using (var defer = e.GetDeferral())
 			{
@@ -640,22 +643,17 @@ namespace TecWare.PPSn.Controls
 				if (e.ResourceContext == CoreWebView2WebResourceContext.Document) // is this the main document
 					token = htmlTokens.Values.Where(c => c.IsActive).FirstOrDefault();
 
-				if (TryGetRelativePath(uri, out var relativeUri))
-				{
-					if (token == null)
-						await HtmlViewSetOtherResourceAsync(e, uri);
-					else
-					{
-						if (!cachedAppendToHistory)
-						{
-							token.NoHistory();
-							cachedAppendToHistory = true;
-						}
-						await HtmlViewSetMainResourceAsync(token, e, uri, relativeUri);
-					}
-				}
+				if (token == null)
+					await HtmlViewSetOtherResourceAsync(e, relativeUri);
 				else
-					throw new ArgumentException("Uri format is wrong.");
+				{
+					if (!cachedAppendToHistory)
+					{
+						token.NoHistory();
+						cachedAppendToHistory = true;
+					}
+					await HtmlViewSetMainResourceAsync(token, e, new Uri(e.Request.Uri), relativeUri);
+				}
 			}
 		} // event HtmlView_WebResourceRequested
 
