@@ -52,7 +52,7 @@ namespace TecWare.PPSn.Controls
 		#region -- SubTitle - Property ------------------------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsWindowPaneControl), new FrameworkPropertyMetadata("SubTitle", new PropertyChangedCallback(OnSubTitleChanged)));
+		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsWindowPaneControl), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(OnSubTitleChanged)));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private static void OnSubTitleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

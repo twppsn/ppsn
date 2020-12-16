@@ -22,7 +22,7 @@ specific language governing permissions and limitations under the Licence.
 		x:Name="notificationWindow"
 		Background="Transparent"
 		Height="Auto" Width="Auto" WindowStyle="None" SizeToContent="WidthAndHeight" 
-		AllowsTransparency="True" Opacity="95" ResizeMode="NoResize" ShowActivated="False" ShowInTaskbar="False" Topmost="True">
+		AllowsTransparency="True" Opacity="95" ResizeMode="NoResize" ShowActivated="False" ShowInTaskbar="False">
 	<Window.Resources>
 		<Storyboard x:Key="windowStoryboard" Completed="WindowStoryboard_Completed">
 			<DoubleAnimation Storyboard.TargetProperty="Opacity" Storyboard.TargetName="notificationWindow" From="0.0" To="0.95" Duration="0:0:0.3" />
@@ -31,9 +31,14 @@ specific language governing permissions and limitations under the Licence.
 
 		<DataTemplate x:Key="textTemplate">
 			<StackPanel Orientation="Horizontal">
-				<pps:PpsGeometryImage GeometryName="{Binding ImageName,Mode=OneWay}" Foreground="{DynamicResource {x:Static SystemColors.ControlLightLightBrushKey}}" Width="16" Height="16" Margin="0,0,4,0" />
+				<pps:PpsGeometryImage x:Name="image" GeometryName="{Binding ImageName,Mode=OneWay}" Foreground="{DynamicResource {x:Static SystemColors.ControlLightLightBrushKey}}" Width="16" Height="16" Margin="0,0,4,0" />
 				<TextBlock Text="{Binding Text,Mode=OneWay}" FontSize="16" Foreground="{DynamicResource {x:Static SystemColors.ControlLightLightBrushKey}}" />
 			</StackPanel>
+			<DataTemplate.Triggers>
+				<DataTrigger Binding="{Binding HasImage,Mode=OneWay}" Value="False">
+					<Setter TargetName="image" Property="Visibility" Value="Collapsed" />
+				</DataTrigger>
+			</DataTemplate.Triggers>
 		</DataTemplate>
 	</Window.Resources>
 	<Border Background="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}" CornerRadius="10" Padding="8">

@@ -36,6 +36,7 @@ namespace TecWare.PPSn.UI
 
 			public string Text { get; }
 			public string ImageName { get; }
+			public bool HasImage => !String.IsNullOrEmpty(ImageName);
 		} // class TextImageContent
 
 		#endregion
@@ -76,7 +77,16 @@ namespace TecWare.PPSn.UI
 			{
 				var wi = new WINDOWINFO();
 				NativeMethods.GetWindowInfo(new WindowInteropHelper(w).Handle, wi);
-				return new Rect(wi.rcWindow.Left, wi.rcWindow.Top, wi.rcWindow.Width, wi.rcWindow.Height);
+				var source = PresentationSource.FromVisual(w);
+				var pts = new Point[]
+				{
+					new Point(wi.rcWindow.Left, wi.rcWindow.Top),
+					new Point(wi.rcWindow.Width, wi.rcWindow.Height)
+				};
+
+				source.CompositionTarget.TransformFromDevice.Transform(pts);
+
+				return new Rect(pts[0], pts[1]);
 			}
 			else
 				return SystemParameters.WorkArea;
@@ -103,7 +113,7 @@ namespace TecWare.PPSn.UI
 		private void SetTextContent(string text, PpsImage image)
 		{
 			SetContent(
-				new TextImageContent(text, image != PpsImage.None ? image.ToGeometryName() : null), 
+				new TextImageContent(text, image != PpsImage.None ? image.ToGeometryName() : null),
 				textTemplate
 			);
 		} // proc SetTextContent
@@ -111,6 +121,16 @@ namespace TecWare.PPSn.UI
 		public Task ShowAsync(object hoverObject, object message, PpsImage image = PpsImage.None)
 		{
 			this.hoverObject = hoverObject;
+			if (hoverObject is Window w)
+			{
+				Owner = w;
+				Topmost = false;
+			}
+			else
+			{
+				Owner = null;
+				Topmost = true;
+			}
 
 			if (storyboardEnd != null)
 				storyboardEnd.TrySetResult(new NoneResult());
