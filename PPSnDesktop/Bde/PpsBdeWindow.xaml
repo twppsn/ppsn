@@ -28,6 +28,7 @@
 		<Grid.RowDefinitions>
 			<RowDefinition Height="40" />
 			<RowDefinition />
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="41" />
 		</Grid.RowDefinitions>
 
@@ -132,11 +133,13 @@
 		</Grid>
 
 		<ContentControl x:Name="paneContent" Grid.Row="1" Content="{Binding TopPaneHost}" Focusable="False" />
-		<Grid x:Name="disconnectProgress" Grid.Row="1" Grid.RowSpan="2" Visibility="Hidden">
+		<Grid x:Name="disconnectProgress" Grid.Row="1" Grid.RowSpan="3" Visibility="Hidden">
 			<ui:PpsProgressControl Width="64" Height="64" Visibility="Visible" />
 		</Grid>
 
-        <Border Grid.Row="2"
+		<ui:PpsVirtualKeyboard Grid.Row="2" x:Name="virtualKeyboard" />
+
+        <Border Grid.Row="3"
                 Background="{ui:PpsColor {x:Static ui:PpsTheme.SideBarBackground}}"
                 BorderBrush="{ui:PpsColor {x:Static ui:PpsTheme.Seperator}}"
                 BorderThickness="0,1,0,0">

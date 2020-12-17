@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -156,10 +157,77 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- struct MOUSEINPUT ------------------------------------------------------
+
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct MOUSEINPUT
+	{
+		public int dx;
+		public int dy;
+		public uint mouseData;
+		public uint dwFlags;
+		public uint time;
+		public IntPtr dwExtraInfo;
+	} // struct MOUSEINPUT
+
+	#endregion
+
+	#region -- struct KEYBDINPUT ------------------------------------------------------
+
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct KEYBDINPUT
+	{
+		public ushort wVk;
+		public ushort wScan;
+		public uint dwFlags;
+		public uint time;
+		public IntPtr dwExtraInfo;
+	} // struct KEYBDINPUT
+
+	#endregion
+
+	#region -- struct HARDWAREINPUT ---------------------------------------------------
+
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct HARDWAREINPUT
+	{
+		public int uMsg;
+		public short wParamL;
+		public short wParamH;
+	} // struct HARDWAREINPUT
+
+	#endregion
+
 	#region -- class NativeMethods ----------------------------------------------------
 
 	internal static partial class NativeMethods
 	{
+		public const int INPUT_MOUSE = 0;
+		public const int INPUT_KEYBOARD = 1;
+		public const int INPUT_HARDWARE = 2;
+
+		public const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
+		public const uint KEYEVENTF_KEYUP = 0x0002;
+		public const uint KEYEVENTF_UNICODE = 0x0004;
+		public const uint KEYEVENTF_SCANCODE = 0x0008;
+
+		public const uint XBUTTON1 = 0x0001;
+		public const uint XBUTTON2 = 0x0002;
+
+		public const uint MOUSEEVENTF_MOVE = 0x0001;
+		public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+		public const uint MOUSEEVENTF_LEFTUP = 0x0004;
+		public const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
+		public const uint MOUSEEVENTF_RIGHTUP = 0x0010;
+		public const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
+		public const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
+		public const uint MOUSEEVENTF_XDOWN = 0x0080;
+		public const uint MOUSEEVENTF_XUP = 0x0100;
+		public const uint MOUSEEVENTF_WHEEL = 0x0800;
+		public const uint MOUSEEVENTF_HWHEEL = 0x1000;
+		public const uint MOUSEEVENTF_VIRTUALDESK = 0x4000;
+		public const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
+
 		public const uint KLF_NOTELLSHELL = 0x00000080;
 
 		public const uint RIDI_DEVICENAME = 0x20000007;
@@ -184,6 +252,93 @@ namespace TecWare.PPSn
 		public static extern int ToUnicodeEx(uint uCode, uint uScanCode, byte[] lpKeyState, [Out, MarshalAs(UnmanagedType.LPWStr, SizeConst = 64)] StringBuilder sbBuf, int iBuf, uint uFlags, IntPtr hkl);
 		[DllImport(user32, SetLastError = true)]
 		public extern static uint MapVirtualKeyEx(uint dwCode, uint dwMapType, IntPtr hkl);
+
+		[DllImport(user32)]
+		public static extern IntPtr GetMessageExtraInfo();
+
+		#region -- SendInput ----------------------------------------------------------
+
+		#region -- struct INPUT -------------------------------------------------------
+
+		[StructLayout(LayoutKind.Explicit)]
+		private struct INPUT_64
+		{
+			[FieldOffset(0)]
+			public int type;
+
+			[FieldOffset(8)]
+			public MOUSEINPUT mi;
+			[FieldOffset(8)]
+			public KEYBDINPUT ki;
+			[FieldOffset(8)]
+			public HARDWAREINPUT hi;
+		} // struct INPUT_64
+
+		[StructLayout(LayoutKind.Explicit)]
+		private struct INPUT_32
+		{
+			[FieldOffset(0)]
+			public int type;
+
+			[FieldOffset(4)]
+			public MOUSEINPUT mi;
+			[FieldOffset(4)]
+			public KEYBDINPUT ki;
+			[FieldOffset(4)]
+			public HARDWAREINPUT hi;
+		} // struct INPUT_32
+
+		#endregion
+
+		[DllImport(user32, CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern uint SendInput(uint nInputs, IntPtr pInputs, int cbSize);
+
+		private static int GetInputType(object input)
+		{
+			if (input is MOUSEINPUT)
+				return INPUT_MOUSE;
+			else if (input is KEYBDINPUT)
+				return INPUT_KEYBOARD;
+			else if (input is HARDWAREINPUT)
+				return INPUT_HARDWARE;
+			else
+				throw new ArgumentException(nameof(input));
+		} // func GetInputType
+
+		public static void SendInput(object[] inputs, int count)
+		{
+			var is32Bit = IntPtr.Size == 4;
+			var structSize = is32Bit ? Marshal.SizeOf<INPUT_32>() : Marshal.SizeOf<INPUT_64>();
+
+			var hData = Marshal.AllocHGlobal(structSize * count);
+			try
+			{
+				var hCur = hData;
+
+				for (var i = 0; i < count; i++)
+				{
+					Marshal.WriteInt32(hCur, GetInputType(inputs[i]));
+					Marshal.StructureToPtr(inputs[i], hCur + IntPtr.Size, false);
+
+					hCur += structSize;
+				}
+
+				if (SendInput((uint)count, hData, structSize) == 0)
+					throw new Win32Exception();
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(hData);
+			}
+		} // proc SendInput
+
+		#endregion
+
+		[DllImport(user32, CharSet = CharSet.Unicode, SetLastError = true)]
+		public static extern ushort VkKeyScan(char ch);
+
+		[DllImport(user32, SetLastError = true)]
+		public static extern ushort GetKeyState(int nVirtKey);
 
 		[DllImport("shlwapi.dll", BestFitMapping = false, CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = false, ThrowOnUnmappableChar = true)]
 		public static extern int SHLoadIndirectString(string pszSource, StringBuilder pszOutBuf, int cchOutBuf, IntPtr ppvReserved);

@@ -21,6 +21,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using Neo.IronLua;
@@ -81,6 +82,8 @@ namespace TecWare.PPSn.Bde
 			Shell.GetService<IPpsIdleService>(true).Add(this);
 			
 			UpdateDateTimeFormat();
+
+			virtualKeyboard.Attach(this);
 		} // ctor
 
 		protected override void OnClosed(EventArgs e)
@@ -148,6 +151,8 @@ namespace TecWare.PPSn.Bde
 			// add host and activate it
 			panes.Add(host);
 			AddLogicalChild(host);
+			virtualKeyboard.Hide();
+
 			SetValue(topPaneHostPropertyKey, panes.LastOrDefault());
 
 			// load content
@@ -164,6 +169,7 @@ namespace TecWare.PPSn.Bde
 				RemoveLogicalChild(topPane);
 				panes.Remove(topPane);
 				SetValue(topPaneHostPropertyKey, panes.LastOrDefault());
+				virtualKeyboard.Hide();
 				return true;
 			}
 			else

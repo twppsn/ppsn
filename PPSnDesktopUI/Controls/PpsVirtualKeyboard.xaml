@@ -1,0 +1,240 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:uiC="clr-namespace:TecWare.PPSn.Controls">
+	<Style TargetType="uiC:PpsVirtualKeyboard">
+		<Style.Resources>
+			<Style x:Key="KeyButton" TargetType="{x:Type uiC:PpsButton}">
+				<Setter Property="Focusable" Value="False" />
+				<Setter Property="BorderThickness" Value="0" />
+				<Setter Property="Margin" Value="2" />
+			</Style>
+		</Style.Resources>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="uiC:PpsVirtualKeyboard">
+					<Grid HorizontalAlignment="Center">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+
+						<Grid x:Name="alphaBlock" Grid.Column="0" Margin="6" Visibility="Collapsed">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+							</Grid.RowDefinitions>
+
+							<uiC:PpsButton Grid.Row="0" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="q" uiC:PpsVirtualKeyboard.KeyShifted="Q" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="w" uiC:PpsVirtualKeyboard.KeyShifted="W" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="e" uiC:PpsVirtualKeyboard.KeyShifted="E" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="3" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="r" uiC:PpsVirtualKeyboard.KeyShifted="R" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="4" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="t" uiC:PpsVirtualKeyboard.KeyShifted="T" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="5" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="z" uiC:PpsVirtualKeyboard.KeyShifted="Z" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="6" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="u" uiC:PpsVirtualKeyboard.KeyShifted="U" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="7" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="i" uiC:PpsVirtualKeyboard.KeyShifted="I" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="8" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="o" uiC:PpsVirtualKeyboard.KeyShifted="O" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="9" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="p" uiC:PpsVirtualKeyboard.KeyShifted="P" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="10" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="ü" uiC:PpsVirtualKeyboard.KeyShifted="Ü" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="11" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Pos1" />
+
+							<uiC:PpsButton Grid.Row="1" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="a" uiC:PpsVirtualKeyboard.KeyShifted="A" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="s" uiC:PpsVirtualKeyboard.KeyShifted="S" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="d" uiC:PpsVirtualKeyboard.KeyShifted="D" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="3" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="f" uiC:PpsVirtualKeyboard.KeyShifted="F" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="4" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="g" uiC:PpsVirtualKeyboard.KeyShifted="G" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="5" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="h" uiC:PpsVirtualKeyboard.KeyShifted="H" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="6" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="j" uiC:PpsVirtualKeyboard.KeyShifted="J" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="7" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="k" uiC:PpsVirtualKeyboard.KeyShifted="K" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="8" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="l" uiC:PpsVirtualKeyboard.KeyShifted="L" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="9" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="ö" uiC:PpsVirtualKeyboard.KeyShifted="Ö" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="10" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="ä" uiC:PpsVirtualKeyboard.KeyShifted="Ä" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="11" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="End" />
+
+							<uiC:PpsButton Grid.Row="2" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Shift" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="y" uiC:PpsVirtualKeyboard.KeyShifted="Y" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="x" uiC:PpsVirtualKeyboard.KeyShifted="X" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="3" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="c" uiC:PpsVirtualKeyboard.KeyShifted="C" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="4" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="v" uiC:PpsVirtualKeyboard.KeyShifted="V" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="5" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="b" uiC:PpsVirtualKeyboard.KeyShifted="B" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="6" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="n" uiC:PpsVirtualKeyboard.KeyShifted="N" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="7" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="m" uiC:PpsVirtualKeyboard.KeyShifted="M" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="8" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="," uiC:PpsVirtualKeyboard.KeyShifted=";" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="9" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="." uiC:PpsVirtualKeyboard.KeyShifted=":" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="10" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="-" uiC:PpsVirtualKeyboard.KeyShifted="&quot;" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="11" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="?" uiC:PpsVirtualKeyboard.KeyShifted="!" />
+
+							<uiC:PpsButton Grid.Row="3" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Symbols" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="CapsLock" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="@" uiC:PpsVirtualKeyboard.KeyShifted="Ø" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="3" Grid.ColumnSpan="5" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Space" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="8" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="ß" uiC:PpsVirtualKeyboard.KeyShifted="\" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="9" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="&lt;" uiC:PpsVirtualKeyboard.KeyShifted="&gt;" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="10" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="+" uiC:PpsVirtualKeyboard.KeyShifted="*" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="11" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="=" uiC:PpsVirtualKeyboard.KeyShifted="/" />
+						</Grid>
+
+						<Grid x:Name="symbolsBlock" Grid.Column="1" Margin="6" Visibility="Collapsed">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+							</Grid.RowDefinitions>
+
+							<uiC:PpsButton Grid.Row="0" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Pos1" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="!" uiC:PpsVirtualKeyboard.KeyShifted="±" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="@" uiC:PpsVirtualKeyboard.KeyShifted="©" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="3" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="#" uiC:PpsVirtualKeyboard.KeyShifted="®" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="4" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="$" uiC:PpsVirtualKeyboard.KeyShifted="Ø" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="5" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="€" uiC:PpsVirtualKeyboard.KeyShifted="¢" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="6" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="%" uiC:PpsVirtualKeyboard.KeyShifted="µ" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="7" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="&amp;" uiC:PpsVirtualKeyboard.KeyShifted="½" />
+
+							<uiC:PpsButton Grid.Row="1" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="End" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="(" uiC:PpsVirtualKeyboard.KeyShifted="[" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key=")" uiC:PpsVirtualKeyboard.KeyShifted="]" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="3" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="&lt;">
+								<uiC:PpsVirtualKeyboard.KeyShifted>
+									<![CDATA[{]]>
+								</uiC:PpsVirtualKeyboard.KeyShifted>
+							</uiC:PpsButton>
+							<uiC:PpsButton Grid.Row="1" Grid.Column="4" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="&gt;" uiC:PpsVirtualKeyboard.KeyShifted="}" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="5" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="=" uiC:PpsVirtualKeyboard.KeyShifted="~" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="6" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="*" uiC:PpsVirtualKeyboard.KeyShifted="°" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="7" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="+" uiC:PpsVirtualKeyboard.KeyShifted="^" />
+
+							<uiC:PpsButton Grid.Row="2" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Shift" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="\" uiC:PpsVirtualKeyboard.KeyShifted="¿" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key=";" uiC:PpsVirtualKeyboard.KeyShifted="¡" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="3" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key=":" uiC:PpsVirtualKeyboard.KeyShifted="|" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="4" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="&quot;" uiC:PpsVirtualKeyboard.KeyShifted="'" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="5" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="_" uiC:PpsVirtualKeyboard.KeyShifted="¶" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="6" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="-" uiC:PpsVirtualKeyboard.KeyShifted="×" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="7" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="/" uiC:PpsVirtualKeyboard.KeyShifted="÷" />
+
+							<uiC:PpsButton Grid.Row="3" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Symbols" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="CapsLock" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="6" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Space" />
+						</Grid>
+
+						<Grid x:Name="numberBlock" Grid.Column="2" Margin="6" Visibility="Collapsed">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+							</Grid.ColumnDefinitions>
+
+							<Grid.RowDefinitions>
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+							</Grid.RowDefinitions>
+
+							<uiC:PpsButton Grid.Row="0" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="7" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="8" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="9" />
+
+							<uiC:PpsButton Grid.Row="1" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="4" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="5" />
+							<uiC:PpsButton Grid.Row="1" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="6" />
+
+							<uiC:PpsButton Grid.Row="2" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="1" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="2" />
+							<uiC:PpsButton Grid.Row="2" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="3" />
+
+							<uiC:PpsButton x:Name="largeZero" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="0" />
+							<uiC:PpsButton x:Name="numMinus" Grid.Row="3" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="-" Visibility="Hidden" />
+							<uiC:PpsButton x:Name="smallZero" Grid.Row="3" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="0" Visibility="Hidden" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.Key="," />
+						</Grid>
+
+						<Grid x:Name="commandBlock" Grid.Column="3" Margin="6" Visibility="Collapsed">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="40" />
+								<ColumnDefinition Width="40" />
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+								<RowDefinition Height="40" />
+							</Grid.RowDefinitions>
+
+							<uiC:PpsButton Grid.Row="0" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Delete" />
+							<uiC:PpsButton Grid.Row="0" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Back" />
+							<uiC:PpsButton Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Return" />
+							<uiC:PpsButton x:Name="shiftKey" Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Shift" />
+							<uiC:PpsButton x:Name="clearKey" Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Clear" Visibility="Hidden" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="0" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Left" />
+							<uiC:PpsButton Grid.Row="3" Grid.Column="1" Style="{StaticResource KeyButton}" uiC:PpsVirtualKeyboard.KeyName="Right" />
+						</Grid>
+					</Grid>
+					<ControlTemplate.Triggers>
+						<!--<Trigger Property="IsCapsLocked" Value="True">
+						</Trigger>
+						<Trigger Property="IsShifted" Value="True">
+						</Trigger>-->
+						<Trigger Property="Layout" Value="Alpha">
+							<Setter TargetName="alphaBlock" Property="Visibility" Value="Visible" />
+							<Setter TargetName="numberBlock" Property="Visibility" Value="Visible" />
+							<Setter TargetName="commandBlock" Property="Visibility" Value="Visible" />
+						</Trigger>
+						<Trigger Property="Layout" Value="Symbols">
+							<Setter TargetName="symbolsBlock" Property="Visibility" Value="Visible" />
+							<Setter TargetName="numberBlock" Property="Visibility" Value="Visible" />
+							<Setter TargetName="commandBlock" Property="Visibility" Value="Visible" />
+						</Trigger>
+						<Trigger Property="Layout" Value="NumberPositive">
+							<Setter TargetName="numberBlock" Property="Visibility" Value="Visible" />
+							<Setter TargetName="commandBlock" Property="Visibility" Value="Visible" />
+							
+							<Setter TargetName="shiftKey" Property="Visibility" Value="Hidden" />
+							<Setter TargetName="clearKey" Property="Visibility" Value="Visible" />
+						</Trigger>
+						<Trigger Property="Layout" Value="NumberNegative">
+							<Setter TargetName="numberBlock" Property="Visibility" Value="Visible" />
+							<Setter TargetName="commandBlock" Property="Visibility" Value="Visible" />
+
+							<Setter TargetName="numMinus" Property="Visibility" Value="Visible" />
+							<Setter TargetName="smallZero" Property="Visibility" Value="Visible" />
+							<Setter TargetName="largeZero" Property="Visibility" Value="Hidden" />
+							<Setter TargetName="shiftKey" Property="Visibility" Value="Hidden" />
+							<Setter TargetName="clearKey" Property="Visibility" Value="Visible" />
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+				
+			</Setter.Value>
+		</Setter>
+	</Style>
+</ResourceDictionary>

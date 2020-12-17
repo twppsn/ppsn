@@ -165,7 +165,7 @@ namespace TecWare.PPSn.UI
 					FileName = command,
 					WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
 				};
-				Process.Start(psi).Dispose();
+				Process.Start(psi)?.Dispose();
 			} // proc Exec
 
 			private string FindRemoteDebugger()
@@ -181,6 +181,8 @@ namespace TecWare.PPSn.UI
 					command = "cmd.exe";
 				else if (command == "rdbg")
 					command = FindRemoteDebugger();
+				else if (command == "settings")
+					command = "ms-settings:";
 
 				if (command != null)
 					PinProtected(() => Exec(command), pin, command + " ausgeführt.");

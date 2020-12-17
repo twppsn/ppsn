@@ -367,6 +367,31 @@ namespace TecWare.PPSn
 			return default;
 		} // func GetVisualChild
 
+		/// <summary>Find a children in the Visual tree.</summary>
+		/// <typeparam name="T">Type of the child</typeparam>
+		/// <param name="current">Current visual element.</param>
+		/// <returns>Child or <c>null</c>.</returns>
+		public static IEnumerable< T> GetVisualChildren<T>(this DependencyObject current)
+			where T : DependencyObject
+		{
+			var analyzeStack = new Queue<DependencyObject>();
+			analyzeStack.Enqueue(current);
+
+			while (analyzeStack.Count > 0)
+			{
+				var cur = analyzeStack.Dequeue();
+				var c = VisualTreeHelper.GetChildrenCount(cur);
+				for (var i = 0; i < c; i++)
+				{
+					var v = VisualTreeHelper.GetChild(cur, i);
+					if (v is T child)
+						yield return child;
+					else
+						analyzeStack.Enqueue(v);
+				}
+			}
+		} // func GetVisualChild
+
 		#endregion
 
 		#region -- Print Object Tree --------------------------------------------------
