@@ -92,17 +92,17 @@
 								<ContentControl Grid.Column="2">
 									<ContentControl.Template>
 										<ControlTemplate>
-                                            <ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,2,6,0" HorizontalScrollBarVisibility="Hidden" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
+											<ui:PpsScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,2,6,0" VerticalAlignment="Top" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled" >
                                                 <TextBlock x:Name="message" Text="{Binding Text,Mode=OneTime}" TextWrapping="NoWrap"/>
-                                                <!--<TextBlock x:Name="message" Text="AAAAAAAA" TextWrapping="NoWrap" />-->
-                                            </ScrollViewer>
+                                            </ui:PpsScrollViewer>
                                             <ControlTemplate.Triggers>
-												<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True">
+												<DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
 													<Setter TargetName="scrollPane" Property="MaxHeight" Value="{StaticResource maxScrollHeight}" />
 													<Setter TargetName="message" Property="TextWrapping" Value="WrapWithOverflow" />
 												</DataTrigger>
 												<DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="{StaticResource maxScrollHeight}">
 													<Setter TargetName="scrollPane" Property="VerticalScrollBarVisibility" Value="Auto" />
+													<Setter TargetName="scrollPane" Property="HorizontalScrollBarVisibility" Value="Auto" />
 												</DataTrigger>
 											</ControlTemplate.Triggers>
 										</ControlTemplate>
@@ -140,11 +140,13 @@
 				</ui:PpsDataListBox.ListCommands>
 				<ui:PpsDataListBox.ItemTemplate>
 					<DataTemplate>
-						<TextBlock>
-							<Run Text="{Binding Key,Mode=OneTime}" FontWeight="Bold" />
-							=
-							<Run Text="{Binding Value,Mode=OneWay}" />
-						</TextBlock>
+						<Border Height="24">
+							<TextBlock VerticalAlignment="Center">
+								<Run Text="{Binding Key,Mode=OneTime}" FontWeight="Bold" />
+								=
+								<Run Text="{Binding Value,Mode=OneWay}" />
+							</TextBlock>
+						</Border>
 					</DataTemplate>
 				</ui:PpsDataListBox.ItemTemplate>
 			</ui:PpsDataListBox>

@@ -110,7 +110,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="IsTransparent" Value="True" />
 							</MultiTrigger.Conditions>
 							<Setter Property="ImageOpacity" Value="1" />
-							<Setter TargetName="StatusRectangle" Property="Opacity" Value=".16" />
+							<Setter TargetName="StatusRectangle" Property="Opacity" Value=".15" />
 						</MultiTrigger>
 
 						<MultiTrigger>
@@ -124,7 +124,7 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="IsMouseCaptured" Value="True">
 							<Setter Property="ImageOpacity" Value="1" />
 							<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" />
-							<Setter TargetName="StatusRectangle" Property="Opacity" Value=".16" />
+							<Setter TargetName="StatusRectangle" Property="Opacity" Value=".15" />
 						</Trigger>
 
 						<Trigger Property="IsEnabled" Value="False">
