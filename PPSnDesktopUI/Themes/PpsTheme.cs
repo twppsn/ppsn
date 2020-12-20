@@ -236,23 +236,32 @@ namespace TecWare.PPSn.Themes
 		/// <summary>Window title</summary>
 		public static readonly PpsColor WindowActive = new PpsColor(nameof(WindowActive), Marker.GetColor);
 
-		/// <summary>Highlighted Background when over item or item is selected. Used in Menu, Combobox, Sidebar</summary>
+		/// <summary>Highlighted Background when over item or item is selected. Used in Menu, Combobox, Scrollbar, Sidebar</summary>
 		public static readonly PpsColor Highlighted = new PpsColor(nameof(Highlighted), theme => theme.GetAlphaBlendColor(Black, Black, sourcePart: 0.0f, alpha: 0.10f));
-		/// <summary>Background when Mouse is pressed on item. Used in Menu, Sidebar..</summary>
+		/// <summary>Background when Mouse is pressed on item. Used in Menu, Scrollbar..</summary>
 		public static readonly PpsColor Pressed = new PpsColor(nameof(Pressed), theme => theme.GetAlphaBlendColor(Black, Black, sourcePart: 0.0f, alpha: 0.30f));
 
+		/// <summary>Background for Scrollbar</summary>
+		public static readonly PpsColor ScrollBarBackground = new PpsColor(nameof(ScrollBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.10f));
+		/// <summary>Background for ScrollbarThumb</summary>
+		public static readonly PpsColor ThumbBackground = new PpsColor(nameof(ThumbBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.50f));
 
 		/// <summary>Temp Fix</summary>
 		public static readonly PpsColor Seperator = new PpsColor(nameof(Seperator), theme => theme.GetTransparencyColor(Desktop, Accent, 0.15f));
-
-
 
 		#endregion
 
 		#region -- Images -------------------------------------------------------------
 
-		/// <summary>Close geometry</summary>
+		/// <summary>Close window geometry</summary>
 		public static readonly ResourceKey WindowClosePathGeometry = new PpsThemeKey("windowClose");
+		/// <summary>Minimize window geometry</summary>
+		public static readonly ResourceKey WindowMinimizePathGeometry = new PpsThemeKey("windowMinimize");
+		/// <summary>Maximize window geometry</summary>
+		public static readonly ResourceKey WindowMaximizePathGeometry = new PpsThemeKey("windowMaximize");
+		/// <summary>Restore window geometry</summary>
+		public static readonly ResourceKey WindowRestorePathGeometry = new PpsThemeKey("windowRestore");
+
 		/// <summary>Connecting geometry</summary>
 		public static readonly ResourceKey ServerConnectingPathGeometry = new PpsThemeKey("serverConnecting");
 		/// <summary>UnConnecting geometry</summary>
