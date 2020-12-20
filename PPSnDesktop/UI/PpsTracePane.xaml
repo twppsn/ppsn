@@ -92,8 +92,8 @@
 								<ContentControl Grid.Column="2">
 									<ContentControl.Template>
 										<ControlTemplate>
-											<ui:PpsScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,2,6,0" VerticalAlignment="Top" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled" >
-                                                <TextBlock x:Name="message" Text="{Binding Text,Mode=OneTime}" TextWrapping="NoWrap"/>
+											<ui:PpsScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Margin="0,2,0,0" VerticalAlignment="Top" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled" >
+												<TextBlock x:Name="message" Text="{Binding Text,Mode=OneTime}" TextWrapping="NoWrap"/>
                                             </ui:PpsScrollViewer>
                                             <ControlTemplate.Triggers>
 												<DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
