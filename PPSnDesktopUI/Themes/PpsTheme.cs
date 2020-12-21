@@ -230,7 +230,7 @@ namespace TecWare.PPSn.Themes
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor PopupBorder = new PpsColor(nameof(PopupBorder), theme => theme.GetAlphaBlendColor(Desktop, Black, sourcePart: 0.5f));
 		/// <summary>todo: using</summary>
-		public static readonly PpsColor SideBarBackground = new PpsColor(nameof(SideBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.05f));
+		public static readonly PpsColor SideBarBackground = new PpsColor(nameof(SideBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.06f));
 		/// <summary>Background for module, panes.</summary>
 		public static readonly PpsColor WindowHeader = new PpsColor(nameof(WindowHeader), theme => theme.GetTransparencyColor(Desktop, Black, 0.17f));
 		/// <summary>Window title</summary>
@@ -242,9 +242,9 @@ namespace TecWare.PPSn.Themes
 		public static readonly PpsColor Pressed = new PpsColor(nameof(Pressed), theme => theme.GetAlphaBlendColor(Black, Black, sourcePart: 0.0f, alpha: 0.30f));
 
 		/// <summary>Background for Scrollbar</summary>
-		public static readonly PpsColor ScrollBarBackground = new PpsColor(nameof(ScrollBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.10f));
+		public static readonly PpsColor ScrollBarBackground = new PpsColor(nameof(ScrollBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.12f));
 		/// <summary>Background for ScrollbarThumb</summary>
-		public static readonly PpsColor ThumbBackground = new PpsColor(nameof(ThumbBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.50f));
+		public static readonly PpsColor ThumbBackground = new PpsColor(nameof(ThumbBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.55f));
 
 		/// <summary>Temp Fix</summary>
 		public static readonly PpsColor Seperator = new PpsColor(nameof(Seperator), theme => theme.GetTransparencyColor(Desktop, Accent, 0.15f));
