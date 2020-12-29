@@ -182,10 +182,19 @@ namespace TecWare.PPSn.Bde
 		/// <returns></returns>
 		public async Task<bool> PopPaneAsync(PpsBdePaneHost paneHost)
 		{
-			if (TopPaneHost != paneHost)
+			// find the index in stack
+			var idx = panes.IndexOf(paneHost);
+			if(idx == -1)
 				throw GetPaneStackException();
 
-			return await PopPaneAsync();
+			// pop complete stack to this pane
+			while (idx < panes.Count)
+			{
+				if (!await PopPaneAsync())
+					return false;
+			}
+
+			return true;
 		} // func PopPaneAsync
 
 		bool IPpsWindowPaneManager.ActivatePane(IPpsWindowPane pane)
