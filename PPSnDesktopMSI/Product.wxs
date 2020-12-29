@@ -22,6 +22,8 @@
 		<Property Id="ARPHELPLINK" Value="!(loc.ArpHelpLink)" />
 		<Property Id="ARPURLINFOABOUT" Value="!(loc.ArpUrlInfoAbout)" />
 		<Property Id="ALLUSERS" Secure="yes"/>
+		<Property Id="SHELLNAME" Secure="yes" />
+		<Property Id="SHELLURI" Secure="yes" />
 
 		<Media Id="1" Cabinet="data.cab" EmbedCab="yes" />
 
@@ -76,7 +78,7 @@
 			</Custom>
 			<LaunchConditions After="AppSearch"/>
 
-			<Custom Action="LaunchApplication" After="InstallFinalize"><![CDATA[UILevel < 5 and (&PPSnDesktop = 3 or !PPSnDesktop = 3) and not Installed and SHELLNAME]]></Custom>
+			<Custom Action="LaunchApplication" After="InstallFinalize"><![CDATA[UILevel < 5 and (&PPSnDesktop = 3 or !PPSnDesktop = 3) and SHELLNAME]]></Custom>
 		</InstallExecuteSequence>
 
 		<InstallUISequence>
