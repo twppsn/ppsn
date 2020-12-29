@@ -76,7 +76,7 @@
 			</Custom>
 			<LaunchConditions After="AppSearch"/>
 
-			<Custom Action="LaunchApplication" After="InstallFinalize"><![CDATA[UILevel < 5 and (&PPSnDesktop = 3 or !PPSnDesktop = 3) and SHELLNAME]]></Custom>
+			<Custom Action="LaunchApplication" After="InstallFinalize"><![CDATA[UILevel < 5 and (&PPSnDesktop = 3 or !PPSnDesktop = 3) and not Installed and SHELLNAME]]></Custom>
 		</InstallExecuteSequence>
 
 		<InstallUISequence>

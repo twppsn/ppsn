@@ -950,8 +950,6 @@ namespace TecWare.PPSn
 							Shutdown(0);
 							return;
 						}
-						else
-							MessageBox.Show($"Application exited with code: {p.ExitCode}. Restart in 10sec.");
 					}
 					Thread.Sleep(10000);
 				}
