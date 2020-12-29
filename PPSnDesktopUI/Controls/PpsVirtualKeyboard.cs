@@ -94,6 +94,8 @@ namespace TecWare.PPSn.Controls
 		public PpsKeyModifiers Modifiers;
 		public ushort VirtualKey;
 
+		public bool IsEmpty => VirtualKey == 0;
+
 		public static bool IsKey(char c)
 		{
 			var scan = VkKeyScan(c);
@@ -168,32 +170,11 @@ namespace TecWare.PPSn.Controls
 				keyShifted = GetKeyShifted(button);
 
 				// attach to mode
-				if (IsClickMode())
-					button.Click += Button_Click;
-				else
-				{
-					button.AddHandler(MouseLeftButtonDownEvent, new MouseButtonEventHandler(Button_MouseLeftButtonDown), true);
-					button.AddHandler(MouseLeftButtonUpEvent, new MouseButtonEventHandler(Button_MouseLeftButtonUp), true);
-					button.AddHandler(TouchDownEvent, new EventHandler<TouchEventArgs>(Button_TouchDown), true);
-					button.AddHandler(TouchUpEvent, new EventHandler<TouchEventArgs>(Button_TouchUp), true);
-				}
+				button.AddHandler(MouseLeftButtonDownEvent, new MouseButtonEventHandler(Button_MouseLeftButtonDown), true);
+				button.AddHandler(MouseLeftButtonUpEvent, new MouseButtonEventHandler(Button_MouseLeftButtonUp), true);
+				button.AddHandler(TouchDownEvent, new EventHandler<TouchEventArgs>(Button_TouchDown), true);
+				button.AddHandler(TouchUpEvent, new EventHandler<TouchEventArgs>(Button_TouchUp), true);
 			} // ctor
-
-			private bool IsClickMode()
-				=> vk.IsClickMode(this) ?? GetDefaultClickMode();
-
-			private bool GetDefaultClickMode()
-			{
-				if (key == null)
-					return true;
-
-				if (key.Length > 1 || !PpsKey.IsKey(key[0]))
-					return true;
-				else if (keyShifted == null)
-					return false;
-				else
-					return keyShifted.Length > 1 || !PpsKey.IsKey(keyShifted[0]);
-			} // func GetDefaultClickMode
 
 			public void UpdateButton()
 			{
@@ -206,21 +187,26 @@ namespace TecWare.PPSn.Controls
 				}
 			} // proc UpdateButton
 
-			private void Button_Click(object sender, RoutedEventArgs e)
-				=> vk.SendKeyString(this);
-
 			private void StartSendKey()
 			{
-				var k = vk.GetButtonKey(this);
-				if (!k.HasValue)
+				var k = vk.GetButtonKey(this); // get hard binded button for the key
+
+				if (!k.HasValue) // get default binding for the button
 				{
-					var t = vk.IsShifted ? (keyShifted ?? key) : key;
-					if (t != null && t.Length == 1)
-						k = PpsKey.Get(t[0]);
+					var keyString = vk.IsShifted ? (keyShifted ?? key) : key;
+					if (keyString == null || keyString.Length > 1 || !PpsKey.TryGet(keyString[0], out var singleKey))
+						vk.SendKeyString(this, keyString); // execute key on mouse down only
+					else
+						k = singleKey;
 				}
 
 				if (k.HasValue)
-					vk.StartSendKey(k.Value);
+				{
+					if (k.Value.IsEmpty)
+						vk.SendKeyString(this, null);
+					else
+						vk.StartSendKey(k.Value);
+				}
 				else
 					vk.StopSendKey();
 			} // proc StartSendKey
@@ -230,7 +216,7 @@ namespace TecWare.PPSn.Controls
 
 			private void Button_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
 			{
-				if (e.StylusDevice == null)
+				if (e.StylusDevice == null) // is not generate from an touch event
 					StartSendKey();
 			} // event Button_MouseLeftButtonDown
 
@@ -239,7 +225,7 @@ namespace TecWare.PPSn.Controls
 			
 			private void Button_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
 			{
-				if (e.StylusDevice == null)
+				if (e.StylusDevice == null) // is not generate from an touch event
 					vk.StopSendKey();
 			} // event Button_MouseLeftButtonUp
 
@@ -351,29 +337,6 @@ namespace TecWare.PPSn.Controls
 				b.UpdateButton();
 		} // proc OnKeyboardChanged
 
-		private bool? IsClickMode(KeyButton keyButton)
-		{
-			switch (keyButton.Name)
-			{
-				case PpsVirtualKeyName.Back:
-				case PpsVirtualKeyName.Delete:
-				case PpsVirtualKeyName.Space:
-				case PpsVirtualKeyName.Left:
-				case PpsVirtualKeyName.Right:
-					return false;
-				case PpsVirtualKeyName.Shift:
-				case PpsVirtualKeyName.CapsLock:
-				case PpsVirtualKeyName.Clear:
-				case PpsVirtualKeyName.Return:
-				case PpsVirtualKeyName.Symbols:
-				case PpsVirtualKeyName.Pos1:
-				case PpsVirtualKeyName.End:
-					return true;
-				default:
-					return null;
-			}
-		} // func UpdateButtonContent
-
 		private bool UpdateButtonContent(KeyButton keyButton)
 		{
 			switch (keyButton.Name)
@@ -433,6 +396,16 @@ namespace TecWare.PPSn.Controls
 					return PpsKey.Get(0x25);
 				case PpsVirtualKeyName.Right:
 					return PpsKey.Get(0x27);
+
+				case PpsVirtualKeyName.Shift:
+				case PpsVirtualKeyName.CapsLock:
+				case PpsVirtualKeyName.Clear:
+				case PpsVirtualKeyName.Return:
+				case PpsVirtualKeyName.Symbols:
+				case PpsVirtualKeyName.Pos1:
+				case PpsVirtualKeyName.End:
+					return PpsKey.Empty;
+
 				default:
 					return null;
 			}
@@ -451,7 +424,7 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Send Key -----------------------------------------------------------
 
-		private void SendKeyString(KeyButton button)
+		private void SendKeyString(KeyButton button, string keyString)
 		{
 			switch (button.Name)
 			{
@@ -491,11 +464,10 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case PpsVirtualKeyName.None:
-					var keys = IsShifted ? (button.KeyShifted ?? button.Key) : button.Key;
-					if (keys != null)
+					if (keyString != null)
 					{
 						var g = new PpsKeyInputGenerator();
-						foreach (var c in keys)
+						foreach (var c in keyString)
 							g.Append(c);
 						g.Send();
 					}
@@ -540,8 +512,8 @@ namespace TecWare.PPSn.Controls
 				g.AppendKey(currentKey.Value, PpsKeySend.Up);
 				g.Send();
 				currentKey = null;
+				ResetShiftState();
 			}
-			ResetShiftState();
 		} // proc StopSendKey
 
 		private void KeyDownTimer_Tick(object sender, EventArgs e)

@@ -311,7 +311,8 @@ namespace TecWare.PPSn
 		public const string PpsnSecurtiyKey = "PPSn.Security";
 		public const string PpsnVersionKey = "PPSn.Version";
 
-		public const string ClockFormatKey = "PPSn.ClockFormat";
+		public const string PpsnTouchKeyboard = "PPSn.Application.TouchKeyboard";
+		public const string PpsnClockFormatKey = "PPSn.Application.ClockFormat";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>Basic shell settings</summary>
@@ -351,9 +352,26 @@ namespace TecWare.PPSn
 		public string Security => this.GetProperty<string>(PpsnSecurtiyKey, null);
 		/// <summary>Server version of the application.</summary>
 		public string Version => this.GetProperty<string>(PpsnVersionKey, null);
+		/// <summary>Use touch keyboard</summary>
+		public bool? UseTouchKeyboard
+		{
+			get
+			{
+				var d = this.GetProperty<string>(PpsnTouchKeyboard, "default");
+				switch (d.ToLower())
+				{
+					case "t":
+						return true;
+					case "f":
+						return false;
+					default:
+						return null;
+				}
+			}
+		} // prop UseTouchKeyboard
 
 		/// <summary></summary>
-		public string ClockFormat => this.GetProperty(ClockFormatKey, "HH:mm\ndd.MM.yyyy");
+		public string ClockFormat => this.GetProperty(PpsnClockFormatKey, "HH:mm\ndd.MM.yyyy");
 	} // class PpsShellSettings
 
 	#endregion
