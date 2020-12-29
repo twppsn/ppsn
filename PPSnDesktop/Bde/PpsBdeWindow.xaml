@@ -141,7 +141,7 @@
 
         <Border Grid.Row="3"
                 Background="{ui:PpsColor {x:Static ui:PpsTheme.SideBarBackground}}"
-                BorderBrush="{ui:PpsColor {x:Static ui:PpsTheme.Seperator}}"
+                BorderBrush="{ui:PpsColor {x:Static ui:PpsTheme.Separator}}"
                 BorderThickness="0,1,0,0">
             <Grid>
                 <ui:PpsButton Command="{x:Static bde:PpsBdeWindow.BackCommand}"

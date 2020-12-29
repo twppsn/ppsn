@@ -17,7 +17,7 @@
 		<sys:Double x:Key="collapsedScrollHeight">19</sys:Double>
 	</UserControl.Resources>
 
-	<ui:PpsSideBarControl AllowToggleSelection="False">
+	<ui:PpsSideBarControl AllowToggleSelection="False" >
 		<ui:PpsSideBarPanel Header="Information">
 			<TextBlock Text="APPINFO" />
 		</ui:PpsSideBarPanel>
@@ -25,16 +25,15 @@
 		<Separator />
 		
 		<ui:PpsSideBarPanel Header="Ereignisse">
-			<Grid x:Name="eventPane" Margin="16,16,0,16">
+			<Grid x:Name="eventPane">
 				<Grid.RowDefinitions>
-					<RowDefinition/>
-					<RowDefinition Height="auto"/>
+					<RowDefinition />
 					<RowDefinition Height="auto" />
 				</Grid.RowDefinitions>
 
-				<ui:PpsDataListBox x:Name="logList">
+				<ui:PpsDataListBox x:Name="logList" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 					<ui:PpsDataListBox.ListCommands>
-						<ui:PpsUICommandButton Order="100;100" DisplayText="Senden" Image="save" Description="Speichere alle Log in eine Datei." Command="{x:Static ApplicationCommands.SaveAs}" />
+						<ui:PpsUICommandButton Order="100;100" DisplayText="Speichern" Image="save" Description="Speichere alle Log in eine Datei." Command="{x:Static ApplicationCommands.SaveAs}" />
 						<ui:PpsUICommandButton Order="120;100" DisplayText="Debugmeldungen" Image="debug" Description="Zeigt Debugnachrichten an" Command="{x:Static local:PpsTracePane.ToggleDebugCommand}" />
 					</ui:PpsDataListBox.ListCommands>
 					<ui:PpsDataListBox.ItemCommands>
@@ -45,9 +44,17 @@
 							<Grid Background="Transparent" TextBlock.FontSize="14">
 								<Grid.ContextMenu>
 									<ContextMenu>
-										<MenuItem Command="{x:Static ApplicationCommands.Copy}" CommandParameter="{Binding}"/>
+                                        <MenuItem Command="{x:Static ApplicationCommands.Copy}" CommandParameter="{Binding}">
+                                            <MenuItem.Icon>
+                                                <ui:PpsGeometryImage GeometryName="copy"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
 										<Separator />
-										<MenuItem Command="{x:Static ApplicationCommands.SaveAs}" />
+                                        <MenuItem Command="{x:Static ApplicationCommands.SaveAs}">
+                                            <MenuItem.Icon>
+                                                <ui:PpsGeometryImage GeometryName="save"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
 									</ContextMenu>
 								</Grid.ContextMenu>
 								<Grid.ColumnDefinitions>
@@ -56,14 +63,13 @@
 									<ColumnDefinition/>
 								</Grid.ColumnDefinitions>
 								<Grid.RowDefinitions>
-									<RowDefinition Height="Auto" MinHeight="26"/>
-									<RowDefinition/>
+									<RowDefinition Height="Auto" MinHeight="24" />
 								</Grid.RowDefinitions>
-								<Border ToolTip="{Binding Type,Mode=OneTime}">
+								<Border ToolTip="{Binding Type,Mode=OneTime}" Background="Transparent">
 									<ContentControl>
 										<ContentControl.Template>
 											<ControlTemplate>
-												<ui:PpsGeometryImage x:Name="image" GeometryName="information" Width="16" Height="16" />
+												<ui:PpsGeometryImage x:Name="image" GeometryName="information" Width="16" Height="16" Margin="0,4,0,0" VerticalAlignment="Top"/>
 												<ControlTemplate.Triggers>
 													<DataTrigger Binding="{Binding Type,Mode=OneTime}" Value="Debug">
 														<Setter TargetName="image" Property="GeometryName" Value="debug" />
@@ -82,20 +88,21 @@
 										</ContentControl.Template>
 									</ContentControl>
 								</Border>
-								<TextBlock Grid.Column="1" Text="{Binding Stamp,StringFormat=G,Mode=OneTime}" VerticalAlignment="Center" Margin="8,0"/>
+								<TextBlock Grid.Column="1" Text="{Binding Stamp,StringFormat=G,Mode=OneTime}" VerticalAlignment="Top" Margin="6,2,6,0"/>
 								<ContentControl Grid.Column="2">
 									<ContentControl.Template>
 										<ControlTemplate>
-											<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
+											<ui:PpsScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Margin="0,2,0,0" VerticalAlignment="Top" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled" >
 												<TextBlock x:Name="message" Text="{Binding Text,Mode=OneTime}" TextWrapping="NoWrap"/>
-											</ScrollViewer>
-											<ControlTemplate.Triggers>
-												<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True">
+                                            </ui:PpsScrollViewer>
+                                            <ControlTemplate.Triggers>
+												<DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
 													<Setter TargetName="scrollPane" Property="MaxHeight" Value="{StaticResource maxScrollHeight}" />
 													<Setter TargetName="message" Property="TextWrapping" Value="WrapWithOverflow" />
 												</DataTrigger>
 												<DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="{StaticResource maxScrollHeight}">
 													<Setter TargetName="scrollPane" Property="VerticalScrollBarVisibility" Value="Auto" />
+													<Setter TargetName="scrollPane" Property="HorizontalScrollBarVisibility" Value="Auto" />
 												</DataTrigger>
 											</ControlTemplate.Triggers>
 										</ControlTemplate>
@@ -133,11 +140,13 @@
 				</ui:PpsDataListBox.ListCommands>
 				<ui:PpsDataListBox.ItemTemplate>
 					<DataTemplate>
-						<TextBlock>
-							<Run Text="{Binding Key,Mode=OneTime}" FontWeight="Bold" />
-							=
-							<Run Text="{Binding Value,Mode=OneWay}" />
-						</TextBlock>
+						<Border Height="24">
+							<TextBlock VerticalAlignment="Center">
+								<Run Text="{Binding Key,Mode=OneTime}" FontWeight="Bold" />
+								=
+								<Run Text="{Binding Value,Mode=OneWay}" />
+							</TextBlock>
+						</Border>
 					</DataTemplate>
 				</ui:PpsDataListBox.ItemTemplate>
 			</ui:PpsDataListBox>

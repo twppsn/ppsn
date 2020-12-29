@@ -209,14 +209,14 @@ namespace TecWare.PPSn.Themes
 		public static readonly PpsColor WindowForeground = new PpsColor(nameof(WindowForeground), Accent.GetColor);
 		/// <summary>Window foreground when disabled.</summary>
 		public static readonly PpsColor WindowDisabledForeground = new PpsColor(nameof(WindowDisabledForeground), theme => theme.GetTransparencyColor(Desktop, Accent, 0.33f));
-		/// <summary>Seperator color</summary>
-		public static readonly PpsColor Seperator = new PpsColor(nameof(Seperator), theme => theme.GetTransparencyColor(WindowBackground, WindowForeground, 0.12f));
+		/// <summary>Separator color</summary>
+		public static readonly PpsColor Separator = new PpsColor(nameof(Separator), theme => theme.GetTransparencyColor(Desktop, Accent, 0.15f));
 		/// <summary>Border for controls</summary>
 		public static readonly PpsColor ControlNormalBorder = new PpsColor(nameof(ControlNormalBorder), theme => theme.GetTransparencyColor(Desktop, Accent, 0.25f));
 		/// <summary>Border for controls when focused</summary>
 		public static readonly PpsColor ControlFocusedBorder = new PpsColor(nameof(ControlFocusedBorder), Marker.GetColor);
 		/// <summary>Background for standard button</summary>
-		public static readonly PpsColor ButtonBackground = new PpsColor(nameof(ButtonBackground), theme => theme.GetTransparencyColor(WindowBackground, Accent, 0.12f));
+		public static readonly PpsColor ButtonBackground = new PpsColor(nameof(ButtonBackground), theme => theme.GetTransparencyColor(Desktop, Accent, 0.12f));
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor SelectionBar = new PpsColor(nameof(SelectionBar), theme => theme.GetTransparencyColor(Desktop, Marker, 0.35f));
 		/// <summary>todo: using</summary>
@@ -230,18 +230,38 @@ namespace TecWare.PPSn.Themes
 		/// <summary>todo: using</summary>
 		public static readonly PpsColor PopupBorder = new PpsColor(nameof(PopupBorder), theme => theme.GetAlphaBlendColor(Desktop, Black, sourcePart: 0.5f));
 		/// <summary>todo: using</summary>
-		public static readonly PpsColor SideBarBackground = new PpsColor(nameof(SideBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.05f));
+		public static readonly PpsColor SideBarBackground = new PpsColor(nameof(SideBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.06f));
 		/// <summary>Background for module, panes.</summary>
 		public static readonly PpsColor WindowHeader = new PpsColor(nameof(WindowHeader), theme => theme.GetTransparencyColor(Desktop, Black, 0.17f));
 		/// <summary>Window title</summary>
 		public static readonly PpsColor WindowActive = new PpsColor(nameof(WindowActive), Marker.GetColor);
 
+		/// <summary>Highlighted Background when over item or item is selected. Used in Menu, Combobox, Scrollbar, Sidebar</summary>
+		public static readonly PpsColor Highlighted = new PpsColor(nameof(Highlighted), theme => theme.GetAlphaBlendColor(Black, Black, sourcePart: 0.0f, alpha: 0.10f));
+		/// <summary>Background when Mouse is pressed on item. Used in Menu, Scrollbar..</summary>
+		public static readonly PpsColor Pressed = new PpsColor(nameof(Pressed), theme => theme.GetAlphaBlendColor(Black, Black, sourcePart: 0.0f, alpha: 0.30f));
+
+		/// <summary>Background for Scrollbar</summary>
+		public static readonly PpsColor ScrollBarBackground = new PpsColor(nameof(ScrollBarBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.12f));
+		/// <summary>Background for ScrollbarThumb</summary>
+		public static readonly PpsColor ThumbBackground = new PpsColor(nameof(ThumbBackground), theme => theme.GetTransparencyColor(Desktop, Black, 0.55f));
+
+		/// <summary>Temp Fix</summary>
+		public static readonly PpsColor Seperator = new PpsColor(nameof(Seperator), theme => theme.GetTransparencyColor(Desktop, Accent, 0.15f));
+
 		#endregion
 
 		#region -- Images -------------------------------------------------------------
 
-		/// <summary>Close geometry</summary>
+		/// <summary>Close window geometry</summary>
 		public static readonly ResourceKey WindowClosePathGeometry = new PpsThemeKey("windowClose");
+		/// <summary>Minimize window geometry</summary>
+		public static readonly ResourceKey WindowMinimizePathGeometry = new PpsThemeKey("windowMinimize");
+		/// <summary>Maximize window geometry</summary>
+		public static readonly ResourceKey WindowMaximizePathGeometry = new PpsThemeKey("windowMaximize");
+		/// <summary>Restore window geometry</summary>
+		public static readonly ResourceKey WindowRestorePathGeometry = new PpsThemeKey("windowRestore");
+
 		/// <summary>Connecting geometry</summary>
 		public static readonly ResourceKey ServerConnectingPathGeometry = new PpsThemeKey("serverConnecting");
 		/// <summary>UnConnecting geometry</summary>

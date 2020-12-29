@@ -59,7 +59,7 @@
 						</Canvas>
 					</Viewbox>
 				</Border>
-				<ContentPresenter x:Name="IconBox" ContentSource="Icon" Height="16" Width="16" />
+				<ContentPresenter x:Name="IconBox" ContentSource="Icon" Height="18" Width="18" />
 				<ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" Margin="0,4,0,4" />
 				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Margin="24,4,0,4" />
 			</Grid>
@@ -77,10 +77,10 @@
 				<Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
 			</Trigger>
 			<Trigger Property="IsHighlighted"  Value="true">
-				<Setter TargetName="Border" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+				<Setter TargetName="Border" Property="Background" Value="{DynamicResource PPSnHighlightedBrush}" />
 			</Trigger>
 			<Trigger Property="IsPressed" Value="True">
-				<Setter TargetName="Border" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}" />
+				<Setter TargetName="Border" Property="Background" Value="{DynamicResource PPSnPressedBrush}" />
 			</Trigger>
 			<Trigger Property="IsEnabled" Value="false">
 				<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
@@ -120,7 +120,7 @@
 				<Setter TargetName="IconBox" Property="Visibility" Value="Hidden" />
 			</Trigger>
 			<Trigger Property="IsHighlighted" Value="true">
-				<Setter TargetName="Border" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+				<Setter TargetName="Border" Property="Background" Value="{DynamicResource PPSnHighlightedBrush}" />
 			</Trigger>
 			<DataTrigger Binding="{Binding Path=HasDropShadow, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" Value="False">
 				<Setter TargetName="SubmenuBorder" Property="Margin" Value="0,0,0,0" />

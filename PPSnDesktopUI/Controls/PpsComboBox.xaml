@@ -200,7 +200,7 @@ specific language governing permissions and limitations under the Licence.
 					</Grid>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsHighlighted" Value="True">
-							<Setter TargetName="ContentBorder" Property="Background" Value="{DynamicResource PPSnSelectionBarBrush}" />
+							<Setter TargetName="ContentBorder" Property="Background" Value="{DynamicResource PPSnHighlightedBrush}" />
 						</Trigger>
 						<MultiDataTrigger>
 							<MultiDataTrigger.Conditions>
@@ -256,40 +256,5 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
-
-	<!--<ui:LuaValueConverter x:Key="CollapseInaktiveConverter">
-		<![CDATA[
-		if value ~= nil and value then
-			return true;
-		else
-			return false;
-		end;
-		]]>
-	</ui:LuaValueConverter>-->
-
-	<!--<Style x:Key="PpsComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
-		<Setter Property="SnapsToDevicePixels" Value="True"/>
-		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}"/>
-		<Setter Property="Control.Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type ComboBoxItem}">
-					<Border Name="ContentBorder" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Padding="4,0" MinHeight="29">
-						<ContentPresenter VerticalAlignment="Center" />
-					</Border>
-					<ControlTemplate.Triggers>
-						<Trigger Property="IsHighlighted" Value="True">
-							<Setter Property="Panel.Background" TargetName="ContentBorder" Value="{DynamicResource PPSnMouseOverBrush}"/>
-						</Trigger>
-						<DataTrigger Binding="{Binding IsActive, Converter={StaticResource CollapseInaktiveConverter}, Mode=OneWay}">
-							<DataTrigger.Value>
-								<sys:Boolean>false</sys:Boolean>
-							</DataTrigger.Value>
-							<Setter Property="Panel.Visibility" TargetName="ContentBorder" Value="Collapsed"/>
-						</DataTrigger>
-					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>-->
 
 </ResourceDictionary>

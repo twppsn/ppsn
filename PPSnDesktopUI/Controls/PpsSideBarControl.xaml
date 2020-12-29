@@ -140,7 +140,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="selectionMarker" Property="Visibility" Value="Visible" />
 						</Trigger>
 						<Trigger Property="IsMouseOver" SourceName="HeaderGrid" Value="True">
-							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnMouseOverBrush}" />
+							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnHighlightedBrush}" />
 						</Trigger>
 						<Trigger Property="IsFocused" Value="True">
 							<Setter TargetName="focusRect" Property="Opacity" Value="1" />
@@ -182,7 +182,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="selectionMarker" Property="Visibility" Value="Visible" />
 						</Trigger>
 						<Trigger Property="IsMouseOver" SourceName="HeaderGrid" Value="True">
-							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnMouseOverBrush}" />
+							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnHighlightedBrush}" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
@@ -233,7 +233,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="SelectionMarker" Property="Opacity" Value="1" />
 						</Trigger>
 						<Trigger SourceName="HeaderGrid" Property="IsMouseOver" Value="True">
-							<Setter TargetName="HeaderGrid" Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+							<Setter TargetName="HeaderGrid" Property="Background" Value="{DynamicResource PPSnHighlightedBrush}" />
 							<Setter TargetName="ImageBox" Property="Opacity" Value="1" />
 						</Trigger>
 						<Trigger Property="HasImage" Value="False">
@@ -249,7 +249,7 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style x:Key="{x:Static pps:PpsSideBarItemsBase.PpsSideBarSeparator}" TargetType="{x:Type Separator}">
-		<Setter Property="Foreground" Value="{DynamicResource PPSnSeperatorBrush}" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnSeparatorBrush}" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Separator}">

@@ -7,7 +7,7 @@
     xmlns:uic="clr-namespace:TecWare.PPSn.UI"
 	xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
-	<SolidColorBrush x:Key="ProgressBackGroundBrush" Color="{DynamicResource PPSnDesktopColor}" Opacity=".75" />
+	<SolidColorBrush x:Key="ProgressBackGroundBrush" Color="{DynamicResource PPSnDesktopColor}" Opacity=".5" />
 
 	<DataTemplate x:Key="PpsProgressTemplate">
 		<Grid Background="{StaticResource ProgressBackGroundBrush}">
@@ -17,8 +17,9 @@
 				<RowDefinition Height="Auto"/>
 				<RowDefinition/>
 			</Grid.RowDefinitions>
-			<ui:PpsProgressControl x:Name="ProgressRing" Grid.Row="1"  Width="64" Height="64" Visibility="Visible" />
-			<TextBlock Grid.Row="2" MaxWidth="400" HorizontalAlignment="Center" IsHitTestVisible="False" Text="{Binding CurrentText}" TextTrimming="CharacterEllipsis"  TextWrapping="WrapWithOverflow" />
+			<ui:PpsProgressControl x:Name="ProgressRing" Grid.Row="1" Width="64" Height="64" Visibility="Visible" />
+			<TextBlock Grid.Row="2" Text="{Binding CurrentText}" Foreground="{DynamicResource PPSnWindowForegroundBrush}" TextTrimming="CharacterEllipsis" TextWrapping="WrapWithOverflow"
+					   MaxWidth="400" HorizontalAlignment="Center" Margin="0,6,0,0" FontSize="14" IsHitTestVisible="False" />
 		</Grid>
 	</DataTemplate>
 
