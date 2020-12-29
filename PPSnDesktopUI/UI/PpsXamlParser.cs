@@ -727,12 +727,12 @@ namespace TecWare.PPSn.UI
 
 				if (reader is IXamlLineInfo lineInfo && lineInfo.HasLineInfo)
 				{
-					this.baseUri = baseUri ?? new Uri("unknown", UriKind.Relative);
+					baseUri = baseUri ?? new Uri("unknown", UriKind.Relative);
 					this.lineInfo = lineInfo;
 				}
 				else
 				{
-					this.baseUri = null;
+					baseUri = null;
 					this.lineInfo = null;
 				}
 			} // ctor
@@ -1159,7 +1159,7 @@ namespace TecWare.PPSn.UI
 			switch (reader.NodeType)
 			{
 				case XamlNodeType.StartMember:
-					if (reader.Member == XamlLanguage.Base && !(reader is PpsXamlMemberEmitter))// baseuri can only be set once
+					if (reader.Member == XamlLanguage.Base && !(reader is PpsXamlMemberEmitter)) // baseuri can only be set once
 					{
 						var value = ReadMemberValue(reader);
 						if (value != null)
@@ -1183,7 +1183,7 @@ namespace TecWare.PPSn.UI
 
 						var value = ReadMemberValue(reader);
 						if (value is string sourceCode)
-							settings.Code.CompileCode(currentEmitterStack.Peek().BaseUri, sourceCode);
+							settings.Code.CompileCode(currentEmitterStack.Peek().BaseUri ?? settings.BaseUri, sourceCode);
 						else if (value is Uri sourceFile)
 							settings.Code.CompileCode(sourceFile, null);
 						else

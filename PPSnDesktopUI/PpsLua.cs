@@ -133,6 +133,11 @@ namespace TecWare.PPSn
 
 		void IPpsXamlCode.CompileCode(Uri uri, string code)
 		{
+			if (String.IsNullOrEmpty(code))
+				return;
+			if (uri == null)
+				throw new ArgumentNullException(nameof(uri));
+
 			if (codeCompiledTask == null || codeCompiledTask.IsCompleted)
 				codeCompiledTask = PpsLuaShell.RequireCodeAsync(this, new StringReader(code), uri);
 			else
@@ -212,7 +217,7 @@ namespace TecWare.PPSn
 				throw new ArgumentNullException(nameof(self));
 			if (sourceUri == null)
 				throw new ArgumentNullException(nameof(sourceUri));
-
+			
 			// compile code
 			var chunk = await self.LuaShell.CompileAsync(tr, sourceUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
 
