@@ -208,6 +208,11 @@ namespace TecWare.PPSn
 		/// <returns>Result of the executed code.</returns>
 		public static async Task<LuaResult> RequireCodeAsync(this IPpsLuaCodeSource self, TextReader tr, Uri sourceUri)
 		{
+			if (self == null)
+				throw new ArgumentNullException(nameof(self));
+			if (sourceUri == null)
+				throw new ArgumentNullException(nameof(sourceUri));
+
 			// compile code
 			var chunk = await self.LuaShell.CompileAsync(tr, sourceUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
 
