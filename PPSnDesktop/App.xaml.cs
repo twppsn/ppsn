@@ -590,6 +590,7 @@ namespace TecWare.PPSn
 		#endregion
 
 		private IPpsShell shell = null;
+		private bool logoffUser = true;
 		private bool isProcessProtected = false;
 
 		/// <summary>Start application</summary>
@@ -818,6 +819,10 @@ namespace TecWare.PPSn
 			{
 				if (e.Restart)
 					InvokeRestartCore(e.ShellInfo, e.UserInfo);
+
+				if (isProcessProtected)
+					logoffUser = false;
+
 				return false;
 			}
 			catch (Exception e)
@@ -972,7 +977,7 @@ namespace TecWare.PPSn
 
 			if (isProcessProtected)
 			{
-				if (PpsDpcService.GetIsShellMode())
+				if (PpsDpcService.GetIsShellMode() && logoffUser)
 					PpsDpcService.LogoffOperationSystem();
 				e.ApplicationExitCode = 2682; // mark real shutdown -> no restart
 			}
