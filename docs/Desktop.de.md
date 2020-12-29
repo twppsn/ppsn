@@ -2,7 +2,9 @@
 
 ## Installation
 
-
+```
+msiexec /i http://host:port/ppsn/app/PPSnDesktop.msi SHELLNAME=name
+```
 
 ## LiveData
 
