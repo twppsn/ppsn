@@ -1244,7 +1244,7 @@ namespace TecWare.PPSn
 				{
 					logItems.Add(new PpsShellLogItem(type, message));
 
-					while (logItems.Count > 0xFFFF)
+					while (logItems.Count > 1000) // 0xFFFF seems to much for UI
 						logItems.RemoveAt(0);
 				}
 			} // proc LogMsgAppend

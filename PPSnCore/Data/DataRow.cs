@@ -128,7 +128,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class IPpsDataRow ------------------------------------------------------
+	#region -- class IDataValues2 -----------------------------------------------------
 
 	/// <summary>Support for related DataRow's.</summary>
 	public interface IDataValues2 : IDataValues

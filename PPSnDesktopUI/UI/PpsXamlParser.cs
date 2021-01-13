@@ -719,7 +719,7 @@ namespace TecWare.PPSn.UI
 			private readonly IXamlLineInfo lineInfo;
 			private readonly System.Xaml.XamlReader reader;
 
-			public PpsReaderStackItem(PpsReaderStackItem parent, System.Xaml.XamlReader reader)
+			public PpsReaderStackItem(PpsReaderStackItem parent, Uri baseUri, System.Xaml.XamlReader reader)
 			{
 				this.parent = parent;
 				this.reader = reader ?? throw new ArgumentNullException(nameof(reader));
@@ -727,12 +727,12 @@ namespace TecWare.PPSn.UI
 
 				if (reader is IXamlLineInfo lineInfo && lineInfo.HasLineInfo)
 				{
-					baseUri = baseUri ?? new Uri("unknown", UriKind.Relative);
+					this.baseUri = baseUri ?? new Uri("unknown", UriKind.Relative);
 					this.lineInfo = lineInfo;
 				}
 				else
 				{
-					baseUri = null;
+					this.baseUri = baseUri;
 					this.lineInfo = null;
 				}
 			} // ctor
@@ -769,7 +769,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="settings"></param>
 		public PpsXamlReader(System.Xaml.XamlReader sourceReader, PpsXamlReaderSettings settings)
 		{
-			this.schemaContext = sourceReader.SchemaContext;
+			schemaContext = sourceReader.SchemaContext;
 			this.settings = settings ?? new PpsXamlReaderSettings();
 
 			if (sourceReader is PpsXamlReader)
@@ -781,7 +781,7 @@ namespace TecWare.PPSn.UI
 					PushServiceProvider(sv);
 			}
 
-			currentEmitterStack.Push(new PpsReaderStackItem(null, sourceReader));
+			currentEmitterStack.Push(new PpsReaderStackItem(null, settings.BaseUri, sourceReader));
 		} // ctor
 
 		/// <summary></summary>
@@ -1128,7 +1128,7 @@ namespace TecWare.PPSn.UI
 
 		private bool PushEmitterIntern(System.Xaml.XamlReader emitter)
 		{
-			currentEmitterStack.Push(new PpsReaderStackItem(CurrentItem, emitter));
+			currentEmitterStack.Push(new PpsReaderStackItem(CurrentItem, null, emitter));
 			return Read();
 		} // func PushEmitterIntern
 
@@ -1183,7 +1183,7 @@ namespace TecWare.PPSn.UI
 
 						var value = ReadMemberValue(reader);
 						if (value is string sourceCode)
-							settings.Code.CompileCode(currentEmitterStack.Peek().BaseUri ?? settings.BaseUri, sourceCode);
+							settings.Code.CompileCode(currentEmitterStack.Peek().BaseUri, sourceCode);
 						else if (value is Uri sourceFile)
 							settings.Code.CompileCode(sourceFile, null);
 						else

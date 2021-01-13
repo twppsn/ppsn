@@ -944,7 +944,7 @@ namespace TecWare.PPSn.Controls
 				var ui = shell.Value.GetService<IPpsUIService>(false);
 				if (ui != null && severity.HasValue)
 				{
-					ui.ShowNotificationAsync(msg, severity.Value.ToPpsImage()).Silent();
+					ui.ShowNotificationAsync(msg, severity.Value.ToPpsImage()).Spawn();
 					return new HttpResponseMessage(HttpStatusCode.NoContent);
 				}
 				else
@@ -1322,7 +1322,7 @@ namespace TecWare.PPSn.Controls
 					SetUri(link.Location, true, appendToHistory);
 					break;
 				case Exception ex:
-					SetExceptionAsync(ex).Silent();
+					SetExceptionAsync(ex).Spawn();
 					break;
 				default:
 					throw new ArgumentException("Unsupported source type.", nameof(Source));

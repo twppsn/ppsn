@@ -110,19 +110,10 @@ namespace TecWare.PPSn
 			);
 		} // proc OnException
 
-		/// <summary>Spawn the task, an supress exceptions silent.</summary>
-		/// <param name="task"></param>
-		public static void Silent(this Task task)
-		{
-			task.ContinueWith(
-				t => Debug.Print(t.Exception.ToString()),
-				TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted
-			);
-		} // proc Silent
-
 		/// <summary>Invoke task a return <c>false</c> on exception.</summary>
 		/// <param name="task"></param>
 		/// <returns></returns>
+		[Obsolete("Use DES.Core Success variant.")]
 		public static Task<bool> Success(this Task task)
 		{
 			return task.ContinueWith(
@@ -147,6 +138,7 @@ namespace TecWare.PPSn
 		/// <param name="task"></param>
 		/// <param name="timeout"></param>
 		/// <returns></returns>
+		[Obsolete("Use DES.Core Timeout variant.")]
 		public static async Task<T> TaskTimeout<T>(this Task<T> task, int timeout)
 		{
 			var timeoutTask = Task.Delay(timeout);

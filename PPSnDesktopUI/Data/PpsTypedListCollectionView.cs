@@ -192,7 +192,7 @@ namespace TecWare.PPSn.Data
 		public PpsDataCollectionView(IPpsDataView dataTable)
 			: base(dataTable)
 		{
-			this.detachView = dataTable as IDisposable;
+			detachView = dataTable as IDisposable;
 		} // ctor
 
 		/// <summary>Detach view from CollectionView.</summary>

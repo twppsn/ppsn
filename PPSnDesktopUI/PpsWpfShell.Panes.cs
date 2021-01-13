@@ -172,7 +172,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- SetFullScreen ------------------------------------------------------
+		#region -- GetWindowFromOwner -------------------------------------------------
 
 		/// <summary>Get the window from an DependencyObject</summary>
 		/// <param name="paneHost"></param>
@@ -193,7 +193,6 @@ namespace TecWare.PPSn
 		#endregion
 
 		#region -- ShowModalDialog ----------------------------------------------------
-
 
 		/// <summary>Helper to show a system dialog static.</summary>
 		/// <param name="owner"></param>

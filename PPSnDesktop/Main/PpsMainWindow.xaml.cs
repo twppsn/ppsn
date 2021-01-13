@@ -70,6 +70,9 @@ namespace TecWare.PPSn.Main
 
 			InitializeComponent();
 
+			Services.AddService(typeof(IPpsMainWindow), this);
+			Services.AddService(typeof(IPpsWindowPaneManager), this);
+
 			SetValue(paneHostsPropertyKey, paneHosts);
 
 			paneHosts.CollectionChanged += PaneHosts_CollectionChanged;

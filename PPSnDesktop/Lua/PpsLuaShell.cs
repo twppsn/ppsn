@@ -212,7 +212,7 @@ namespace TecWare.PPSn.Lua
 
 		[LuaMember]
 		internal void ShowNotification(string message, PpsImage image = PpsImage.None)
-			=> ui.ShowNotificationAsync(message, image).Silent();
+			=> ui.ShowNotificationAsync(message, image).Spawn();
 
 		[LuaMember]
 		internal void ShowException(Exception exception, string alternateMessage = null)
