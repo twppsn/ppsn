@@ -305,7 +305,7 @@ namespace TecWare.PPSn.UI
 			else if (mimePaneTypes.TryGetValue(pane, out idx))
 				return paneTypes[idx];
 			else
-				return LuaType.GetType(pane).Type ?? ThrowPaneTypeException(pane, throwException);
+				return Type.GetType(pane, false) ?? LuaType.GetType(pane).Type ?? ThrowPaneTypeException(pane, throwException);
 		} // func IPpsKnownWindowPanes.GetPaneType
 
 		Type IPpsKnownWindowPanes.GetPaneTypeFromName(string paneName, bool throwException)

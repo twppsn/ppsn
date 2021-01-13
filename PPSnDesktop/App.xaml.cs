@@ -731,6 +731,33 @@ namespace TecWare.PPSn
 			await Task.Run(new Action(process.WaitForExit));
 		} // func WaitForProcessAsync
 
+		private static void GetApplicationModulParameter(IPpsShell shell, string applicationModul, out Type paneType, out LuaTable paneArguments)
+		{
+			if (!String.IsNullOrEmpty(applicationModul))
+			{
+				// split arguments
+				var argumentsStart = applicationModul.IndexOf('{');
+				string paneTypeName;
+				if (argumentsStart >= 0)
+				{
+					paneTypeName = applicationModul.Substring(0, argumentsStart);
+					paneArguments = LuaTable.FromLson(applicationModul.Substring(argumentsStart));
+				}
+				else
+				{
+					paneTypeName = applicationModul;
+					paneArguments = new LuaTable();
+				}
+
+				paneType = shell.GetService<IPpsKnownWindowPanes>(true).GetPaneType(paneTypeName, true);
+			}
+			else
+			{
+				paneType = null;
+				paneArguments = null;
+			}
+		} // proc GetApplicationModulParameter
+
 		private async Task<bool> StartApplicationAsync(AppStartArguments args)
 		{
 			// we will have no windows
@@ -794,8 +821,8 @@ namespace TecWare.PPSn
 						var mw = GetMainWindowPaneManager(newShell, settings.ApplicationMode);
 
 						// open first window
-						var paneType = String.IsNullOrEmpty(settings.ApplicationModul) ? null : Type.GetType(settings.ApplicationModul, true);
-						await mw.OpenPaneAsync(paneType);
+						GetApplicationModulParameter(newShell, settings.ApplicationModul, out var paneType, out var paneArguments);
+						await mw.OpenPaneAsync(paneType, arguments: paneArguments);
 
 						// set active shell
 						shell = newShell;
