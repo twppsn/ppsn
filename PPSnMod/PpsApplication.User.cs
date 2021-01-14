@@ -421,7 +421,7 @@ namespace TecWare.PPSn.Server
 					// commit changes
 					await sysContext.CommitAsync();
 				}
-			} // proc UpdateProperty
+			} // proc UpdatePropertiesAsync
 
 			#endregion
 
@@ -702,7 +702,6 @@ namespace TecWare.PPSn.Server
 			Task IPpsPrivateDataContext.UpdatePropertiesAsync(LuaTable properties)
 				=> privateUser.UpdatePropertiesAsync(properties);
 
-			[LuaMember]
 			public void UpdateProperties(LuaTable properties)
 				=> privateUser.UpdatePropertiesAsync(properties).AwaitTask();
 
@@ -749,6 +748,7 @@ namespace TecWare.PPSn.Server
 			userList = new DEList<PrivateUserData>(this, "tw_users", "User list");
 
 			PublishItem(new DEConfigItemPublicAction("refreshUsers") { DisplayName = "user-refresh" });
+			PublishItem(userList);
 		} // proc InitUser
 
 		private void BeginReadConfigurationUser(IDEConfigLoading config)
@@ -824,8 +824,8 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Force refresh of all users</summary>
 		[
-			LuaMember,
-			DEConfigHttpAction("refreshUsers", IsSafeCall = true, SecurityToken = "desSys")
+		LuaMember,
+		DEConfigHttpAction("refreshUsers", IsSafeCall = true, SecurityToken = "desSys")
 		]
 		public void RefreshUsers(bool force = true)
 			=> Task.Run(new Action(RefreshUserDataAsync(force).Wait)).Wait();

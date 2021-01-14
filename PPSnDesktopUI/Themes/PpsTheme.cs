@@ -192,16 +192,15 @@ namespace TecWare.PPSn.Themes
 		/// <summary>Application foreground color.</summary>
 		public static readonly PpsColor Accent = new PpsColor(nameof(Accent), theme => Color.FromArgb(255, 0, 0, 0));
 		/// <summary>Application highlight color.</summary>
-		public static readonly PpsColor Marker = new PpsColor(nameof(Marker), theme => Color.FromArgb(255, 99, 124, 54));
+		public static readonly PpsColor Marker = new PpsColor(nameof(Marker), theme => Color.FromArgb(255, 67, 132, 255));
 		/// <summary>Control background</summary>
 		public static readonly PpsColor ControlBackground = new PpsColor(nameof(ControlBackground), theme => Color.FromArgb(255, 255, 255, 255));
 		/// <summary>Window status bar</summary>
-		public static readonly PpsColor WindowFooter = new PpsColor(nameof(WindowFooter), theme => Color.FromArgb(255, 99, 124, 54));
+		public static readonly PpsColor WindowFooter = new PpsColor(nameof(WindowFooter), theme => Color.FromArgb(255, 46, 0, 173));
 		/// <summary>Window title bar background on active.</summary>
-		public static readonly PpsColor WindowActiveGlow = new PpsColor(nameof(WindowActiveGlow), theme => Color.FromArgb(255, 99, 124, 54));
+		public static readonly PpsColor WindowActiveGlow = new PpsColor(nameof(WindowActiveGlow), theme => Color.FromArgb(255, 46, 0, 173));
 		/// <summary>Window title bar background on inactive.</summary>
 		public static readonly PpsColor WindowInActiveGlow = new PpsColor(nameof(WindowInActiveGlow), theme => Color.FromArgb(255, 170, 170, 170));
-
 
 		/// <summary>Window  background.</summary>
 		public static readonly PpsColor WindowBackground = new PpsColor(nameof(WindowBackground), Desktop.GetColor);

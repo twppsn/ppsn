@@ -38,7 +38,7 @@ specific language governing permissions and limitations under the Licence.
 		<CollectionViewSource x:Key="thicknessTable" Source="{ui:PpsCollectTypedResources {x:Type ui:PpsThicknesResourceKey},ResourceType={x:Type Thickness}}" />
 	</uiC:PpsWindowPaneControl.Resources>
 	<uiC:PpsWindowPaneControl.Commands>
-		<ui:PpsUISplitCommandButton DisplayText="Neu" Image="plus" Mode="Dropdown">
+		<!--<ui:PpsUISplitCommandButton DisplayText="Neu" Image="plus" Mode="Dropdown">
 			<ui:PpsUISplitCommandButton.Popup>
 				<uiC:PpsPopup StaysOpen="False" RouteEvents="True">
 					<Grid Background="Gray">
@@ -98,7 +98,7 @@ specific language governing permissions and limitations under the Licence.
 					</Grid>
 				</uiC:PpsPopup>
 			</ui:PpsUISplitCommandButton.Popup>
-		</ui:PpsUISplitCommandButton>
+		</ui:PpsUISplitCommandButton>-->
 	</uiC:PpsWindowPaneControl.Commands>
 
 	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" PanningMode="Both" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsManipulationEnabled="True">

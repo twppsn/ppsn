@@ -784,7 +784,11 @@ namespace TecWare.PPSn.UI
 		{
 			var strSize = 0u;
 			if (GetRawInputDeviceInfo(hDevice, RIDI_DEVICENAME, IntPtr.Zero, ref strSize) < 0)
-				throw new Win32Exception();
+			{
+				Debug.Print("GetRawInputDeviceInfo failed: {0}", Marshal.GetLastWin32Error());
+				strSize = 0;
+			}
+				
 			if (strSize == 0)
 			{
 				deviceId = null;

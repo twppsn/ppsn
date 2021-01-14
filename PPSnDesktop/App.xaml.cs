@@ -875,28 +875,29 @@ namespace TecWare.PPSn
 			var sb = new StringBuilder();
 
 			// wait info
-			sb.Append("-w").Append(Process.GetCurrentProcess().Id).Append(' ');
+			sb.Append("-w").Append(Process.GetCurrentProcess().Id);
+			sb.Append(" --norestart"); // prevent restart loop
 
 			// shell info
 			if (shellInfo != null)
-				sb.Append("-a").Append(shellInfo.Name);
+				sb.Append(" -a").Append(shellInfo.Name);
 
 			// user info
 			if (userInfo != null)
 			{
 				if (userInfo == CredentialCache.DefaultCredentials)
-					sb.Append("-u.");
+					sb.Append(" -u.");
 				else
 				{
 					string GetUserName(string domain, string userName)
 						=> String.IsNullOrEmpty(domain) ? userName : domain + "\\" + userName;
 
 					var networkCredentials = userInfo.GetCredential(null, "basic");
-					sb.Append("-u").Append(GetUserName(networkCredentials.Domain, networkCredentials.UserName)).Append(' ');
+					sb.Append(" -u").Append(GetUserName(networkCredentials.Domain, networkCredentials.UserName));
 
 					var pwd = networkCredentials.Password;
 					if (!String.IsNullOrEmpty(pwd))
-						sb.Append("-p").Append(pwd).Append(' ');
+						sb.Append(" -p").Append(pwd);
 				}
 			}
 
@@ -975,6 +976,8 @@ namespace TecWare.PPSn
 			isProcessProtected = e.Args.Contains("--run");
 			if (!isProcessProtected && PpsDpcService.GetIsShellMode()) // protect process in shell mode
 			{
+				var logFileName = Path.Combine(Path.GetTempPath(), "PPSnDesktop.SafeGuard.txt");
+
 				while (true) // restart loop
 				{
 					using (var p = Process.Start(typeof(App).Assembly.Location, "--run " + String.Join(" ", e.Args.Select(c => EscapeArg(c)))))
@@ -982,10 +985,12 @@ namespace TecWare.PPSn
 						p.WaitForExit();
 						if (p.ExitCode == 2682)
 						{
+							File.WriteAllText(logFileName, $"Schutzprozess: STOP at {DateTime.Now:G}");
 							Shutdown(0);
 							return;
 						}
 					}
+					File.WriteAllText(logFileName, $"Schutzprozess: RESTART at {DateTime.Now:G} with {p.ExitCode}");
 					Thread.Sleep(10000);
 				}
 			}

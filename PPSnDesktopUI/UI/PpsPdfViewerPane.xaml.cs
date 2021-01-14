@@ -39,8 +39,8 @@ namespace TecWare.PPSn.UI
 		{
 			InitializeComponent();
 
-			// add commands
-			Commands.AddButton("100;100", "print", new PpsAsyncCommand(ctx => PrintAsync(ctx), ctx => CanPrint(ctx)), "Drucken", "Druckt die Pdf-Datei.");
+			//// add commands
+			//Commands.AddButton("100;100", "print", new PpsAsyncCommand(ctx => PrintAsync(ctx), ctx => CanPrint(ctx)), "Drucken", "Druckt die Pdf-Datei.");
 		} // ctor
 
 		#endregion
