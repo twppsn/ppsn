@@ -672,7 +672,14 @@ namespace TecWare.PPSn
 					// create the application shell
 					splashWindow.SetProgressText("Starte Anwendung...");
 					var notify = new ShellLoadNotify(splashWindow, allowSync);
-					return await StartRuntimeInstallationAsync(splashWindow, await PpsShell.StartAsync(shellInfo, isDefault: true, notify: notify), notify);
+					return await StartRuntimeInstallationAsync(splashWindow, 
+						await PpsShell.StartAsync(shellInfo, isDefault: true, notify: notify), 
+						notify
+					);
+				}
+				catch (ExitApplicationException)
+				{
+					throw;
 				}
 				catch (Exception e)
 				{
@@ -959,6 +966,7 @@ namespace TecWare.PPSn
 			PpsShell.Collect(typeof(App).Assembly);
 
 			// load default theme
+			System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(PpsTheme).TypeHandle); // static ctor is not called in release, enforce call
 			PpsTheme.UpdateThemedDictionary(Resources.MergedDictionaries, PpsColorTheme.Default);
 
 			// override language
