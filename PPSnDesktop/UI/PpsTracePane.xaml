@@ -215,8 +215,8 @@
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-				<ListBox Grid.Row="0" x:Name="barcodeList">
-					<ListBox.ItemTemplate>
+				<ui:PpsListBox Grid.Row="0" x:Name="barcodeList">
+					<ui:PpsListBox.ItemTemplate>
 						<DataTemplate>
 							<Grid>
 								<Grid.ColumnDefinitions>
@@ -230,8 +230,8 @@
 								<TextBlock Grid.Column="2" Margin="4" Text="{Binding Format,Mode=OneTime}" />
 							</Grid>
 						</DataTemplate>
-					</ListBox.ItemTemplate>
-				</ListBox>
+					</ui:PpsListBox.ItemTemplate>
+				</ui:PpsListBox>
 				
 				<ItemsControl Grid.Row="1" x:Name="barcodeProvider">
 					<ItemsControl.ItemTemplate>
@@ -249,7 +249,7 @@
 					</ItemsControl.ItemTemplate>
 				</ItemsControl>
 				
-				<StackPanel Grid.Row="2">
+				<StackPanel Grid.Row="2" Orientation="Horizontal">
 					<TextBlock Text="Zuletzt gesehen:" />
 					<TextBlock Text="{Binding Path=LastSeenDevice,Mode=OneWay,Source={x:Static ui:KeyboardScanner.Default}}" />
 				</StackPanel>

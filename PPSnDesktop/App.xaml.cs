@@ -989,8 +989,8 @@ namespace TecWare.PPSn
 							Shutdown(0);
 							return;
 						}
+						File.WriteAllText(logFileName, $"Schutzprozess: RESTART at {DateTime.Now:G} with {p.ExitCode}");
 					}
-					File.WriteAllText(logFileName, $"Schutzprozess: RESTART at {DateTime.Now:G} with {p.ExitCode}");
 					Thread.Sleep(10000);
 				}
 			}

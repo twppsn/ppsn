@@ -31,6 +31,8 @@ Bzw. gesperrt:
 Lock();
 ```
 
+Das Entsperren kann auch über einen Barcode erledigt werden: `DPC.UnlockCode`
+
 ## Shell Modus
 
 - Shell Modus ersetzt die Windows-Shell (Explorer) durch PPSnDesktop-Anwendung.
@@ -41,12 +43,12 @@ Lock();
 Aktiviert wird er Shell-Modus mittels des Befehls:
 
 ```Lua
-SetAsShell("<PIN>");
+SetAsShell(<PIN>);
 ```
 
 Deaktivierung via:
 ```Lua
-RemoveAsShell("<PIN>");
+RemoveAsShell(<PIN>);
 ```
 
 ## Ausführen/Befehle
@@ -64,12 +66,12 @@ Exec("<cmd>")
 
 Beenden von Windows:
 ```Lua
-ExecShutdown("<pin>")
+ExecShutdown(<pin>)
 ```
 
 Neustarten von Windows:
 ```Lua
-ExecRestart("<pin>")
+ExecRestart(<pin>)
 ```
 
 ## Themes
