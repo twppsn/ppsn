@@ -387,36 +387,34 @@ namespace TecWare.PPSn
 
 		public RECT(int left, int top, int right, int bottom)
 		{
-			this.Left = left;
-			this.Top = top;
-			this.Right = right;
-			this.Bottom = bottom;
+			Left = left;
+			Top = top;
+			Right = right;
+			Bottom = bottom;
 		}
 		public RECT(Rect rect)
 		{
-			this.Left = (int)rect.Left;
-			this.Top = (int)rect.Top;
-			this.Right = (int)rect.Right;
-			this.Bottom = (int)rect.Bottom;
+			Left = (int)rect.Left;
+			Top = (int)rect.Top;
+			Right = (int)rect.Right;
+			Bottom = (int)rect.Bottom;
 		}
 
 		public void Offset(int dx, int dy)
 		{
-			this.Left += dx;
-			this.Right += dx;
-			this.Top += dy;
-			this.Bottom += dy;
+			Left += dx;
+			Right += dx;
+			Top += dy;
+			Bottom += dy;
 		}
 
-		public Point Position { get { return new Point((double)this.Left, (double)this.Top); } }
-		public Size Size { get { return new Size((double)this.Width, (double)this.Height); } }
-		public int Height { get { return this.Bottom - this.Top; } set { this.Bottom = this.Top + value; } }
-		public int Width { get { return this.Right - this.Left; } set { this.Right = this.Left + value; } }
+		public Point Position => new Point(Left, Top);
+		public Size Size => new Size(Width, Height);
+		public int Height { get => Bottom - Top; set => Bottom = Top + value; }
+		public int Width { get => Right - Left; set => Right = Left + value; }
 
-		public Int32Rect ToInt32Rect()
-		{
-			return new Int32Rect(this.Left, this.Top, this.Width, this.Height);
-		}
+		public Int32Rect ToInt32Rect() 
+			=> new Int32Rect(Left, Top, Width, Height);
 	} // struct RECT
 
 	[StructLayout(LayoutKind.Sequential)]
