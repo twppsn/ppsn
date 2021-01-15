@@ -141,12 +141,19 @@ namespace TecWare.PPSn.UI
 				return Set(ref isLocked, true, nameof(IsLocked));
 		} // proc CheckIsLockedProperty
 
-		public bool Unlock(string pin)
+		public bool UnlockWithPin(string pin)
 		{
 			isUnlocked = IsDpcPin(pin);
 			CheckIsLockedProperty();
 			return isUnlocked;
-		} // proc Unlock
+		} // proc UnlockWithPin
+
+		public bool UnlockWithCode(string code)
+		{
+			isUnlocked = IsDpcUnlockCode(code);
+			CheckIsLockedProperty();
+			return isUnlocked;
+		} // proc UnlockWithCode
 
 		public bool Lock()
 		{
@@ -154,6 +161,18 @@ namespace TecWare.PPSn.UI
 			CheckIsLockedProperty();
 			return isUnlocked;
 		} // func Lock
+
+		public bool IsDpcUnlockCode(string code)
+		{
+			if (code == null)
+				return isUnlocked;
+
+			var unlockCode = shell.Settings.DpcUnlockCode;
+			if (unlockCode == null)
+				return isUnlocked;
+
+			return unlockCode == code; 
+		} // proc IsDpcUnlockCode
 
 		public bool IsDpcPin(string pin)
 		{

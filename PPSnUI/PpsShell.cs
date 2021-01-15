@@ -302,6 +302,7 @@ namespace TecWare.PPSn
 		public const string DpcUserKey = "DPC.User";
 		public const string DpcPasswordKey = "DPC.Password";
 		public const string DpcPinKey = "DPC.Pin";
+		public const string DpcUnlockCodeKey = "DPC.UnlockCode";
 		public const string DpcDebugModeKey = "DPC.Debug";
 
 		public const string DpcDeviceIdKey = "DPC.DeviceId";
@@ -339,6 +340,8 @@ namespace TecWare.PPSn
 		public Uri DpcUri => PpsShell.GetUriFromString(this.GetProperty(DpcUriKey, null), UriKind.Absolute);
 		/// <summary>Pin to unprotect the application.</summary>
 		public string DpcPin => this.GetProperty(DpcPinKey, "2682");
+		/// <summary>Unlockbarcode for trace pane.</summary>
+		public string DpcUnlockCode => this.GetProperty<string>(DpcUnlockCodeKey, null);
 		/// <summary>Is the application in debug mode.</summary>
 		public bool IsDebugMode => this.GetProperty(DpcDebugModeKey, false);
 		/// <summary>Id of the device.</summary>
@@ -361,8 +364,10 @@ namespace TecWare.PPSn
 				switch (d.ToLower())
 				{
 					case "t":
+					case "true":
 						return true;
 					case "f":
+					case "false":
 						return false;
 					default:
 						return null;

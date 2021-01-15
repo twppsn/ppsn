@@ -102,7 +102,7 @@ namespace TecWare.PPSn.UI
 
 			[LuaMember, LuaMember("Lock")]
 			public void Unlock(string pin)
-				=> UI.ShowNotificationAsync(Dpc.Unlock(pin ?? "\0") ? "Entsperrt" : "Gesperrt", PpsImage.Information).Await();
+				=> pane.ShowUnlockNotificationAsync(Dpc.UnlockWithPin(pin ?? "\0")) .Await();
 
 			[LuaMember]
 			public void SendLog()
@@ -354,6 +354,9 @@ namespace TecWare.PPSn.UI
 			settingsPanel.IsEnabled = !isLocked;
 		} // proc UpdateLockedState
 
+		private Task ShowUnlockNotificationAsync(bool isUnlocked)
+			=> ui.ShowNotificationAsync(isUnlocked ? "Entsperrt" : "Gesperrt", PpsImage.Information);
+
 		#endregion
 
 		#region -- Lua Execute Command ------------------------------------------------
@@ -487,7 +490,19 @@ namespace TecWare.PPSn.UI
 			while (cachedBarcodes.Count > 20)
 				cachedBarcodes.RemoveAt(0);
 
-			cachedBarcodes.Add(new PpsTraceBarcodeItem(provider, code, format));
+			var isLocked = dpcService.IsLocked;
+			if (dpcService.UnlockWithCode(code))
+			{
+				if (isLocked)
+				{
+					dpcService.Lock();
+					return ShowUnlockNotificationAsync(false);
+				}
+				else
+					return ShowUnlockNotificationAsync(true);
+			}
+			else
+				cachedBarcodes.Add(new PpsTraceBarcodeItem(provider, code, format));
 			return Task.CompletedTask;
 		} // event IPpsBarcodeReceiver.OnBarcodeAsync
 

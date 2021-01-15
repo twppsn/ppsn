@@ -43,7 +43,6 @@ namespace TecWare.PPSn.Bde
 		private readonly PpsDpcService dpcService;
 		private readonly PpsWindowApplicationSettings settings;
 
-		private readonly PpsBarcodeService barcodeService;
 		private readonly IDisposable barcodeReceiverToken;
 		private string currentDateTimeFormat = null;
 
@@ -58,7 +57,7 @@ namespace TecWare.PPSn.Bde
 			Services.AddService(typeof(IPpsWindowPaneManager), this);
 			Services.AddService(typeof(IPpsBdeManager), this);
 
-			barcodeService = services.GetService<PpsBarcodeService>(true);
+			var barcodeService = services.GetService<PpsBarcodeService>(true);
 			barcodeReceiverToken = barcodeService.RegisterReceiver(this);
 
 			this.AddCommandBinding(Shell, BackCommand, new PpsCommand(BackCommandExecuted, CanBackCommandExecute));
@@ -115,7 +114,7 @@ namespace TecWare.PPSn.Bde
 				else
 				{
 					paneContent.IsEnabled = false;
-					disconnectProgress.Visibility = Visibility.Hidden;
+					disconnectProgress.Visibility = Visibility.Visible;
 				}
 
 			}

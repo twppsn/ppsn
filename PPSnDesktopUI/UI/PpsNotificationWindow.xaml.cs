@@ -81,7 +81,7 @@ namespace TecWare.PPSn.UI
 				var pts = new Point[]
 				{
 					new Point(wi.rcWindow.Left, wi.rcWindow.Top),
-					new Point(wi.rcWindow.Width, wi.rcWindow.Height)
+					new Point(wi.rcWindow.Right, wi.rcWindow.Bottom)
 				};
 
 				source.CompositionTarget.TransformFromDevice.Transform(pts);
@@ -99,6 +99,7 @@ namespace TecWare.PPSn.UI
 				var rc = GetHoverArea();
 				Left = rc.Left + (rc.Width - ActualWidth) / 2;
 				Top = rc.Top + (rc.Height - ActualHeight) * 4 / 5;
+				System.Diagnostics.Debug.Print($"Left = {Left},TOp={Top}");
 			}
 		} // proc RecalcPosition
 

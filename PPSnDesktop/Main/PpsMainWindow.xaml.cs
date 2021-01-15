@@ -28,7 +28,7 @@ using TecWare.PPSn.UI;
 namespace TecWare.PPSn.Main
 {
 	/// <summary></summary>
-	internal partial class PpsMainWindow : PpsWindow, IPpsMainWindow
+	internal partial class PpsMainWindow : PpsWindow, IPpsMainWindow, IPpsBarcodeReceiver
 	{
 		/// <summary>Move to next pane.</summary>
 		public readonly static RoutedCommand NextPaneCommand = new RoutedUICommand("Nächstes", "NextPane", typeof(PpsMainWindow),
@@ -55,6 +55,8 @@ namespace TecWare.PPSn.Main
 		private readonly int windowIndex = -1;                                       // settings key
 		private readonly PpsWindowApplicationSettings settings;                      // current settings for the window
 
+		private readonly PpsDpcService dpcService;
+		private readonly IDisposable barcodeReceiverToken;
 		private Task<bool> unloadTask = null;
 
 		#region -- Ctor/Dtor -------------------------------------------------------------
@@ -80,6 +82,22 @@ namespace TecWare.PPSn.Main
 			
 			// initialize settings
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
+			
+			// init locking
+			dpcService = shell.GetService<PpsDpcService>(false);
+			if (dpcService != null)
+			{
+				dpcService.PropertyChanged += Shell_PropertyChanged;
+				SetValue(isLockedPropertyKey, dpcService.IsLocked);
+			}
+			else
+				SetValue(isLockedPropertyKey, false);
+			Shell.PropertyChanged += Shell_PropertyChanged;
+
+			// register barcode
+			var barcodeService = shell.GetService<PpsBarcodeService>(true);
+			barcodeReceiverToken = barcodeService.RegisterReceiver(this);
+
 
 			#region -- set basic command bindings --
 			this.AddCommandBinding(Shell, TraceLogCommand,
@@ -130,9 +148,6 @@ namespace TecWare.PPSn.Main
 
 			DataContext = this;
 
-			//// start navigator pane
-			//OpenPaneAsync(typeof(PpsNavigatorPane), PpsOpenPaneMode.NewPane).SpawnTask(Environment);
-
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 		} // ctor
 
@@ -151,14 +166,48 @@ namespace TecWare.PPSn.Main
 			}
 		} // func OnClosing
 
+		protected override void OnClosed(EventArgs e)
+		{
+			barcodeReceiverToken?.Dispose();
+			base.OnClosed(e);
+		} // proc OnClosed
+
 		private void FinishClosing(Task<bool> r)
 		{
 			if (r.Result)
 				Dispatcher.Invoke(Close);
 		} // proc FinishClosing
 
+		private void Shell_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (dpcService != null && e.PropertyName == nameof(PpsDpcService.IsLocked))
+				SetValue(isLockedPropertyKey, dpcService.IsLocked);
+			else if (e.PropertyName == nameof(PpsDpcService.IsRestartNeeded))
+			{
+				//App.InvokeRestartAsync(Shell).AwaitUI(this);
+			}
+		} // event Shell_PropertyChanged
+
 		#endregion
 
+		#region -- IPpsBarcodeReceiver - members --------------------------------------------
+
+		async Task IPpsBarcodeReceiver.OnBarcodeAsync(IPpsBarcodeProvider provider, string text, string format)
+		{
+			if (CurrentPaneHost.Pane is IPpsBarcodeReceiver receiver && receiver.IsActive)
+			{
+				try
+				{
+					await receiver.OnBarcodeAsync(provider, text, format);
+				}
+				catch (Exception e)
+				{
+					await Shell.ShowExceptionAsync(false, e, "Barcode nicht verarbeitet.");
+				}
+			}
+		} // proc IPpsBarcodeReceiver.OnBarcodeAsync
+
+		#endregion
 		private double CalculatePaneHostListMaxWidth(int items)
 		{
 			// ScreenWidth
@@ -232,10 +281,22 @@ namespace TecWare.PPSn.Main
 			base.OnPreviewKeyUp(e);
 		} // proc OnPreviewPopup
 
+		#region -- IsLocked - property ------------------------------------------------
+
+		private static readonly DependencyPropertyKey isLockedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsLocked), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty IsLockedProperty = isLockedPropertyKey.DependencyProperty;
+
+		public bool IsLocked => BooleanBox.GetBool(GetValue(IsLockedProperty));
+
+		#endregion
+
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>
 		public int WindowIndex => windowIndex;
+
+		/// <summary>Current user</summary>
+		public string CurrentUserName => Shell.GetUserName();
 
 		public bool IsPaneVisible
 		{
