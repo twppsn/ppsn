@@ -434,6 +434,9 @@ namespace TecWare.PPSn.Controls
 
 			private int WmNcHitTest(IntPtr lParam)
 			{
+				if (ownerWindow.ResizeMode == ResizeMode.NoResize)
+					return (int)HitTestValues.NoWhere;
+
 				NativeMethods.GetWindowRect(Handle, out var rect);
 				var value = lParam.ToInt32();
 				var xLParam = (int)((short)(value & 0xFFFF));
@@ -443,28 +446,28 @@ namespace TecWare.PPSn.Controls
 				{
 					case GlowDirection.West:
 						if (yLParam - offset < rect.Top)
-							return (int)HitTestValues.HTTOPLEFT;
+							return (int)HitTestValues.TopLeft;
 						if (yLParam + offset > rect.Bottom)
-							return (int)HitTestValues.HTBOTTOMLEFT;
-						return (int)HitTestValues.HTLEFT;
+							return (int)HitTestValues.BottomLeft;
+						return (int)HitTestValues.Left;
 					case GlowDirection.North:
 						if (xLParam - offset < rect.Left)
-							return (int)HitTestValues.HTTOPLEFT;
+							return (int)HitTestValues.TopLeft;
 						if (xLParam + offset > rect.Right)
-							return (int)HitTestValues.HTTOPRIGHT;
-						return (int)HitTestValues.HTTOP;
+							return (int)HitTestValues.TopRight;
+						return (int)HitTestValues.Top;
 					case GlowDirection.East:
 						if (yLParam - offset < rect.Top)
-							return (int)HitTestValues.HTTOPRIGHT;
+							return (int)HitTestValues.TopRight;
 						if (yLParam + offset > rect.Bottom)
-							return (int)HitTestValues.HTBOTTOMRIGHT;
-						return (int)HitTestValues.HTRIGHT;
+							return (int)HitTestValues.BottomRight;
+						return (int)HitTestValues.Right;
 					default:
 						if (xLParam - offset < rect.Left)
-							return (int)HitTestValues.HTBOTTOMLEFT;
+							return (int)HitTestValues.BottomLeft;
 						if (xLParam + offset > rect.Right)
-							return (int)HitTestValues.HTBOTTOMRIGHT;
-						return (int)HitTestValues.HTBOTTOM;
+							return (int)HitTestValues.BottomRight;
+						return (int)HitTestValues.Bottom;
 				}
 			} // func WmNcHitTest
 
@@ -912,39 +915,38 @@ namespace TecWare.PPSn.Controls
 			DependencyObject visualHit = null;
 			VisualTreeHelper.HitTest(
 				this,
-				delegate (DependencyObject target)
-				{
+				delegate (DependencyObject target) {
 					if (target is FrameworkElement f && (!f.IsVisible || !f.IsEnabled))
 						return HitTestFilterBehavior.ContinueSkipSelfAndChildren;
 					return HitTestFilterBehavior.Continue;
 				},
-				delegate (HitTestResult target)
-				{
+				delegate (HitTestResult target) {
 					visualHit = target.VisualHit;
 					return HitTestResultBehavior.Stop;
 				},
 				new PointHitTestParameters(point)
 			);
 
-			var num = (int)HitTestValues.HTCLIENT;
+			var ht = HitTestValues.Client;
 			while (visualHit != null)
 			{
 				if (visualHit is FrameworkElement f && f.IsVisible && f.Tag is PpsWindowHitTest t && t.HitTest != 0)
 				{
-					num = t.HitTest;
+					ht = (HitTestValues)t.HitTest;
 					break;
 				}
 				visualHit = VisualTreeHelper.GetParent(visualHit) ?? LogicalTreeHelper.GetParent(visualHit);
 			}
+			
 			handled = true;
-			return new IntPtr(num);
+			return new IntPtr((int)ht);
 		} // func WmNcHitTest
 
 		#endregion
 
 		/// <summary></summary>
-		public Color ActiveGlowColor { get => (Color)base.GetValue(ActiveGlowColorProperty); set => SetValue(ActiveGlowColorProperty, value); }
+		public Color ActiveGlowColor { get => (Color)GetValue(ActiveGlowColorProperty); set => SetValue(ActiveGlowColorProperty, value); }
 		/// <summary></summary>
-		public Color InactiveGlowColor { get => (Color)base.GetValue(InactiveGlowColorProperty); set => SetValue(InactiveGlowColorProperty, value); }
+		public Color InactiveGlowColor { get => (Color)GetValue(InactiveGlowColorProperty); set => SetValue(InactiveGlowColorProperty, value); }
 	} // class PpsWindow
 }

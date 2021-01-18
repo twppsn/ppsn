@@ -43,7 +43,7 @@
 			<ui:PpsGeometryImage Geometry="{Binding TopPaneHost.Image,Converter={x:Static ui:PpsGeometryImage.GeometryConverter}}"
                                  Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
                                  Width="26" Height="26" Opacity=".85" GeometryCircled="False" />
-            <Label Grid.Column="1" FontSize="20" Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
+            <Label Grid.Column="1" FontSize="20" x:Name="captionLabel" Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
 				   VerticalContentAlignment="Center" Padding="0" Margin="0,0,12,0">
 				<Label.Tag>
 					<ui:PpsWindowHitTest HitTest="2" />

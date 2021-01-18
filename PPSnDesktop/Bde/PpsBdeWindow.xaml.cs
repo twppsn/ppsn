@@ -71,8 +71,10 @@ namespace TecWare.PPSn.Bde
 
 			if (dpcService.IsShellMode)
 			{
+				ResizeMode = ResizeMode.NoResize;
 				WindowStyle = WindowStyle.None;
 				WindowState = WindowState.Maximized;
+				captionLabel.Tag = null;
 			}
 			// init window settings
 			if (WindowStyle != WindowStyle.None)
