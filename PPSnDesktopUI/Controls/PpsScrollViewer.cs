@@ -187,7 +187,8 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Touch Transform ----------------------------------------------------
 
-		private Matrix? touchTransformMatrix = null;
+		//private Matrix? touchTransformMatrix = null;
+		private Matrix touchTransformMatrix;
 
 		/// <summary>Overwrite panning and zoom implementation fo the scroll viewer.</summary>
 		/// <param name="e"></param>
@@ -198,46 +199,35 @@ namespace TecWare.PPSn.Controls
 				base.OnManipulationStarting(e);
 				return;
 			}
-
 			var panningMode = PanningMode;
-
 			if (panningMode == PanningMode.None)
 				return;
 
-			if (e.OriginalSource != this)
-			{
-				e.ManipulationContainer = this;
+			e.ManipulationContainer = this;
 
-				// set manipulation mopde
-				e.Mode = ManipulationModes.None;
-				switch (panningMode)
-				{
-					case PanningMode.Both:
-					case PanningMode.HorizontalFirst:
-					case PanningMode.VerticalFirst:
-						e.Mode |= ManipulationModes.Translate;
-						break;
-					case PanningMode.HorizontalOnly:
-						e.Mode |= ManipulationModes.TranslateX;
-						break;
-					case PanningMode.VerticalOnly:
-						e.Mode |= ManipulationModes.TranslateY;
-						break;
-				}
-				if (IsZoomAllowed)
-					e.Mode |= ManipulationModes.Scale;
-
-				// begin touch transform matrix
-				touchTransformMatrix = BeginContentTransform();
-			}
-			else
+			// set manipulation mopde
+			e.Mode = ManipulationModes.Scale;
+			switch (panningMode)
 			{
-				e.Cancel();
-				touchTransformMatrix = null;
+				case PanningMode.Both:
+				case PanningMode.HorizontalFirst:
+				case PanningMode.VerticalFirst:
+					e.Mode |= ManipulationModes.Translate;
+					break;
+				case PanningMode.HorizontalOnly:
+					e.Mode |= ManipulationModes.TranslateX;
+					break;
+				case PanningMode.VerticalOnly:
+					e.Mode |= ManipulationModes.TranslateY;
+					break;
 			}
+
+			// begin touch transform matrix
+			touchTransformMatrix = BeginContentTransform();
 
 			e.Handled = true;
 		} // proc OnManipulationStarting
+
 
 		/// <summary>Overwrite panning and zoom implementation fo the scroll viewer.</summary>
 		/// <param name="e"></param>
@@ -252,19 +242,20 @@ namespace TecWare.PPSn.Controls
 				base.OnManipulationDelta(e);
 				return;
 			}
-			if (!touchTransformMatrix.HasValue)
-				return;
+			//	if (!touchTransformMatrix.HasValue)
+			//		return;
 
-			touchTransformMatrix.Value.ScaleAt(e.DeltaManipulation.Scale.X, e.DeltaManipulation.Scale.Y, e.ManipulationOrigin.X, e.ManipulationOrigin.Y);
-			touchTransformMatrix.Value.Translate(e.DeltaManipulation.Translation.X, e.DeltaManipulation.Translation.Y);
+			touchTransformMatrix.ScaleAt(e.DeltaManipulation.Scale.X, e.DeltaManipulation.Scale.Y, e.ManipulationOrigin.X, e.ManipulationOrigin.Y);
+			touchTransformMatrix.Translate(e.DeltaManipulation.Translation.X, e.DeltaManipulation.Translation.Y);
 
-			UpdateContentTransform(touchTransformMatrix.Value, e.ManipulationOrigin);
+			UpdateContentTransform(touchTransformMatrix, e.ManipulationOrigin);
 
 			if (e.IsInertial)
 				e.Complete();
 
 			e.Handled = true;
 		} // proc OnManipulationDelta
+
 
 		/// <summary>Overwrite panning and zoom implementation fo the scroll viewer.</summary>
 		/// <param name="e"></param>
@@ -275,13 +266,14 @@ namespace TecWare.PPSn.Controls
 				base.OnManipulationInertiaStarting(e);
 				return;
 			}
-			if (!touchTransformMatrix.HasValue)
-				return;
+			//	if (!touchTransformMatrix.HasValue)
+			//		return;
 
 			e.ExpansionBehavior.DesiredDeceleration = 100;
 			e.TranslationBehavior.DesiredDeceleration = 100;
 			e.Handled = true;
 		} // proc OnManipulationInertiaStarting
+
 
 		/// <summary>Overwrite panning and zoom implementation fo the scroll viewer.</summary>
 		/// <param name="e"></param>
@@ -292,8 +284,8 @@ namespace TecWare.PPSn.Controls
 				base.OnManipulationCompleted(e);
 				return;
 			}
-			if (!touchTransformMatrix.HasValue)
-				return;
+			//	if (!touchTransformMatrix.HasValue)
+			//		return;
 
 			touchTransformMatrix = Matrix.Identity;
 			e.Handled = true;
