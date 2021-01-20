@@ -14,5 +14,11 @@
 	<PathGeometry x:Key="{x:Static ui:PpsTheme.WindowMaximizePathGeometry}" Figures="M7,17V7H17V10H8V17H7M8,17H17V10H16V16H8Z" />
 	<PathGeometry x:Key="{x:Static ui:PpsTheme.WindowRestorePathGeometry}" Figures="M7,17V9H15V11H8V17H7M8,17H15V11H14V16H8M10,7H17V16H16V8H10Z" />
 
+	<PathGeometry x:Key="{x:Static ui:PpsTheme.VirtKeybBackSpacePathGeometry}" Figures="M19,15.59L17.59,17L14,13.41L10.41,17L9,15.59L12.59,12L9,8.41L10.41,7L14,10.59L17.59,7L19,8.41L15.41,12L19,15.59M22,3A2,2 0 0,1 24,5V19A2,2 0 0,1 22,21H7C6.31,21 5.77,20.64 5.41,20.11L0,12L5.41,3.88C5.77,3.35 6.31,3 7,3H22M22,5H7L2.28,12L7,19H22V5Z" />
+	<PathGeometry x:Key="{x:Static ui:PpsTheme.VirtKeybCapsLockPathGeometry}" Figures="M6,18H18V16H6M12,8.41L16.59,13L18,11.58L12,5.58L6,11.58L7.41,13L12,8.41Z" />
+	<PathGeometry x:Key="{x:Static ui:PpsTheme.VirtKeybShiftPathGeometry}" Figures="M13,20H11V8L5.5,13.5L4.08,12.08L12,4.16L19.92,12.08L18.5,13.5L13,8V20Z" />
+	<PathGeometry x:Key="{x:Static ui:PpsTheme.VirtKeybReturnPathGeometry}" Figures="M19,7V11H5.83L9.41,7.41L8,6L2,12L8,18L9.41,16.58L5.83,13H21V7H19Z" />
+	<PathGeometry x:Key="{x:Static ui:PpsTheme.VirtKeybLeftPathGeometry}" Figures="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" />
+	<PathGeometry x:Key="{x:Static ui:PpsTheme.VirtKeybRightPathGeometry}" Figures="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" />
 
 </ResourceDictionary>

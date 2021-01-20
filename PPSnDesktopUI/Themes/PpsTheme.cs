@@ -273,6 +273,20 @@ namespace TecWare.PPSn.Themes
 		/// <summary>ScannerInActive geometry</summary>
 		public static readonly ResourceKey ScannerInActivePathGeometry = new PpsThemeKey("scannerInActive");
 
+
+		/// <summary>VirtualKeyboard BackSpace geometry</summary>
+		public static readonly ResourceKey VirtKeybBackSpacePathGeometry = new PpsThemeKey("virtKeybBackSpace");
+		/// <summary>VirtualKeyboard CapsLock geometry</summary>
+		public static readonly ResourceKey VirtKeybCapsLockPathGeometry = new PpsThemeKey("virtKeybCapsLock");
+		/// <summary>VirtualKeyboard Shift geometry</summary>
+		public static readonly ResourceKey VirtKeybShiftPathGeometry = new PpsThemeKey("virtKeybShift");
+		/// <summary>VirtualKeyboard Return geometry</summary>
+		public static readonly ResourceKey VirtKeybReturnPathGeometry = new PpsThemeKey("virtKeybReturn");
+		/// <summary>VirtualKeyboard Left geometry</summary>
+		public static readonly ResourceKey VirtKeybLeftPathGeometry = new PpsThemeKey("virtKeybLeft");
+		/// <summary>VirtualKeyboard Right geometry</summary>
+		public static readonly ResourceKey VirtKeybRightPathGeometry = new PpsThemeKey("virtKeybRight");
+
 		#endregion
 	} // class PpsTheme
 

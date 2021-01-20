@@ -341,11 +341,14 @@ namespace TecWare.PPSn.Controls
 		{
 			switch (keyButton.Name)
 			{
+				// using images
 				case PpsVirtualKeyName.Return:
-					keyButton.Button.Content = "Ent";
-					return true;
+				case PpsVirtualKeyName.CapsLock:
+				case PpsVirtualKeyName.Shift:
 				case PpsVirtualKeyName.Back:
-					keyButton.Button.Content = "BS";
+				case PpsVirtualKeyName.Left:
+				case PpsVirtualKeyName.Right:
+				case PpsVirtualKeyName.Space:
 					return true;
 				case PpsVirtualKeyName.Delete:
 					keyButton.Button.Content = "Del";
@@ -353,29 +356,14 @@ namespace TecWare.PPSn.Controls
 				case PpsVirtualKeyName.Clear:
 					keyButton.Button.Content = "Clear";
 					return true;
-				case PpsVirtualKeyName.Left:
-					keyButton.Button.Content = "<<";
-					return true;
-				case PpsVirtualKeyName.Right:
-					keyButton.Button.Content = ">>";
-					return true;
 				case PpsVirtualKeyName.Pos1:
 					keyButton.Button.Content = "Pos1";
 					return true;
 				case PpsVirtualKeyName.End:
 					keyButton.Button.Content = "End";
 					return true;
-				case PpsVirtualKeyName.Space:
-					keyButton.Button.Content = "[SPACE]";
-					return true;
 				case PpsVirtualKeyName.Symbols:
-					keyButton.Button.Content = "Sym";
-					return true;
-				case PpsVirtualKeyName.CapsLock:
-					keyButton.Button.Content = "Caps";
-					return true;
-				case PpsVirtualKeyName.Shift:
-					keyButton.Button.Content = "Shift";
+					keyButton.Button.Content = Layout == PpsVirtualKeyboardLayout.Alpha ? "&123" : "abc";
 					return true;
 				default:
 					return false;
@@ -446,6 +434,7 @@ namespace TecWare.PPSn.Controls
 						SetValue(layoutPropertyKey, PpsVirtualKeyboardLayout.Symbols);
 					else if(Layout == PpsVirtualKeyboardLayout.Symbols)
 						SetValue(layoutPropertyKey, PpsVirtualKeyboardLayout.Alpha);
+					UpdateButtonContent(button);
 					break;
 				case PpsVirtualKeyName.Pos1:
 					SendSingleKey(PpsKey.Get(0x24));
