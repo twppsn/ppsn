@@ -88,7 +88,7 @@
 								<uiC:PpsButton Grid.Row="2" Grid.Column="10" uiC:PpsVirtualKeyboard.Key="-" uiC:PpsVirtualKeyboard.KeyShifted="&quot;" />
 								<uiC:PpsButton Grid.Row="2" Grid.Column="11" uiC:PpsVirtualKeyboard.Key="?" uiC:PpsVirtualKeyboard.KeyShifted="!" />
 
-								<uiC:PpsButton Grid.Row="3" Grid.Column="0" uiC:PpsVirtualKeyboard.KeyName="Symbols" FontSize="12" />
+								<uiC:PpsButton Grid.Row="3" Grid.Column="0" Content="&amp;123" uiC:PpsVirtualKeyboard.KeyName="Symbols" FontSize="12" />
 								<uiC:PpsButton Grid.Row="3" Grid.Column="1" uiC:PpsVirtualKeyboard.KeyName="CapsLock" GeometryName="virtKeybCapsLock" />
 								<uiC:PpsButton Grid.Row="3" Grid.Column="2" uiC:PpsVirtualKeyboard.Key="@" uiC:PpsVirtualKeyboard.KeyShifted="Ø" />
 								<uiC:PpsButton Grid.Row="3" Grid.Column="3" Grid.ColumnSpan="5" uiC:PpsVirtualKeyboard.KeyName="Space" />
@@ -147,7 +147,7 @@
 								<uiC:PpsButton Grid.Row="2" Grid.Column="6" uiC:PpsVirtualKeyboard.Key="-" uiC:PpsVirtualKeyboard.KeyShifted="×" />
 								<uiC:PpsButton Grid.Row="2" Grid.Column="7" uiC:PpsVirtualKeyboard.Key="/" uiC:PpsVirtualKeyboard.KeyShifted="÷" />
 
-								<uiC:PpsButton Grid.Row="3" Grid.Column="0" uiC:PpsVirtualKeyboard.KeyName="Symbols" />
+								<uiC:PpsButton Grid.Row="3" Grid.Column="0" Content="abc" uiC:PpsVirtualKeyboard.KeyName="Symbols" />
 								<uiC:PpsButton Grid.Row="3" Grid.Column="1" uiC:PpsVirtualKeyboard.KeyName="CapsLock" GeometryName="virtKeybCapsLock" />
 								<uiC:PpsButton Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="6" uiC:PpsVirtualKeyboard.KeyName="Space" />
 							</Grid>

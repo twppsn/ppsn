@@ -349,6 +349,7 @@ namespace TecWare.PPSn.Controls
 				case PpsVirtualKeyName.Left:
 				case PpsVirtualKeyName.Right:
 				case PpsVirtualKeyName.Space:
+				case PpsVirtualKeyName.Symbols:
 					return true;
 				case PpsVirtualKeyName.Delete:
 					keyButton.Button.Content = "Del";
@@ -361,9 +362,6 @@ namespace TecWare.PPSn.Controls
 					return true;
 				case PpsVirtualKeyName.End:
 					keyButton.Button.Content = "End";
-					return true;
-				case PpsVirtualKeyName.Symbols:
-					keyButton.Button.Content = Layout == PpsVirtualKeyboardLayout.Alpha ? "&123" : "abc";
 					return true;
 				default:
 					return false;

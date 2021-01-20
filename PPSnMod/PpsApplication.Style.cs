@@ -215,13 +215,15 @@ namespace TecWare.PPSn.Server
 		{
 			if (TryGetStyleNode(out var styles))
 			{
-				return styles.Elements(PpsStuff.xnStyleColor)
+				var ret = styles.Elements(PpsStuff.xnStyleColor)
 					.Where(x => String.Compare(x.GetAttribute<string>("name"), colorName, StringComparison.OrdinalIgnoreCase) == 0)
 					.Select(x => CreateColorInfo(x))
 					.FirstOrDefault();
+				if (ret != null)
+					return ret;
 			}
-			else
-				return new PpsColorInfo(colorName, defaultColor);
+			
+			return new PpsColorInfo(colorName, defaultColor);
 		} // func GetColor
 
 		#endregion

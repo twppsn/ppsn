@@ -514,12 +514,12 @@ namespace TecWare.PPSn.UI
 			if (dpcService.UnlockWithCode(code))
 			{
 				if (isLocked)
+					return ShowUnlockNotificationAsync(true);
+				else
 				{
 					dpcService.Lock();
 					return ShowUnlockNotificationAsync(false);
 				}
-				else
-					return ShowUnlockNotificationAsync(true);
 			}
 			else
 				cachedBarcodes.Add(new PpsTraceBarcodeItem(provider, code, format));
