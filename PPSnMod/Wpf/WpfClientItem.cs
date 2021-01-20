@@ -41,10 +41,14 @@ namespace TecWare.PPSn.Server.Wpf
 	/// <summary></summary>
 	public class WpfClientItem : DEConfigItem
 	{
-		private static readonly XNamespace MarkupNamespace = "http://schemas.openxmlformats.org/markup-compatibility/2006";
-		private static readonly XNamespace PresentationNamespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
-		private static readonly XNamespace XamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
-		private static readonly XNamespace PpsnNamespace = "http://tecware-gmbh.de/ppsn/wpf/2015";
+		/// <summary>Markup namespace</summary>
+		public static readonly XNamespace MarkupNamespace = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+		/// <summary>Wpf namespace</summary>
+		public static readonly XNamespace PresentationNamespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+		/// <summary>Wpf namespace</summary>
+		public static readonly XNamespace XamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
+		/// <summary>pps namespace</summary>
+		public static readonly XNamespace PpsnNamespace = "http://tecware-gmbh.de/ppsn/wpf/2015";
 
 		private static readonly XName xnXamlIgnorable = MarkupNamespace + "Ignorable";
 		private static readonly XName xnXamlResourceDictionary = PresentationNamespace + "ResourceDictionary";
