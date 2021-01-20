@@ -777,11 +777,11 @@ namespace TecWare.PPSn.UI
 
 			if (this.settings.ParserServices != null)
 			{
-				foreach (var sv in settings.ParserServices)
+				foreach (var sv in this.settings.ParserServices)
 					PushServiceProvider(sv);
 			}
 
-			currentEmitterStack.Push(new PpsReaderStackItem(null, settings.BaseUri, sourceReader));
+			currentEmitterStack.Push(new PpsReaderStackItem(null, this.settings.BaseUri, sourceReader));
 		} // ctor
 
 		/// <summary></summary>

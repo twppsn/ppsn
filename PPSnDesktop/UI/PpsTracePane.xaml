@@ -19,7 +19,19 @@
 
 	<ui:PpsSideBarControl AllowToggleSelection="False" >
 		<ui:PpsSideBarPanel Header="Information">
-			<TextBlock Text="APPINFO" />
+			<Grid x:Name="appInfoPane">
+				<StackPanel Orientation="Vertical">
+					<TextBlock Text="{Binding AppName,Mode=OneTime}" />
+					<TextBlock>
+						<Run Text="Version: "/>
+						<Run Text="{Binding AssemblyVersion,Mode=OneTime}" />
+					</TextBlock>
+					<TextBlock>
+						<Run Text="Installiert: "/>
+						<Run Text="{Binding InstalledVersion,Mode=OneTime}" />
+					</TextBlock>
+				</StackPanel>
+			</Grid>
 		</ui:PpsSideBarPanel>
 		
 		<Separator />
