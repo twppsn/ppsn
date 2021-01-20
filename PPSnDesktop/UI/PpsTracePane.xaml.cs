@@ -263,6 +263,24 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- class AppInfoModel -------------------------------------------------
+
+		private sealed class AppInfoModel
+		{
+			private readonly IPpsShellApplication shellApplication;
+
+			public AppInfoModel(IPpsShell shell)
+			{
+				shellApplication = shell.GetService<IPpsShellApplication>(false);
+			} // ctor
+
+			public string AppName => shellApplication?.Name;
+			public Version AssemblyVersion => shellApplication?.AssenblyVersion;
+			public Version InstalledVersion => shellApplication?.InstalledVersion;
+		} // class AppInfoModel
+
+		#endregion
+
 		private readonly IPpsUIService ui;
 		private readonly IPpsLogService log;
 		private readonly IPpsWpfResources wpfResources;
@@ -318,6 +336,8 @@ namespace TecWare.PPSn.UI
 
 			if (dpcService != null)
 				dpcService.PropertyChanged += DpcService_PropertyChanged;
+
+			appInfoPane.DataContext = new AppInfoModel(Shell);
 
 			if (log != null)
 				InitLog();

@@ -187,7 +187,6 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Touch Transform ----------------------------------------------------
 
-		//private Matrix? touchTransformMatrix = null;
 		private Matrix touchTransformMatrix;
 
 		/// <summary>Overwrite panning and zoom implementation fo the scroll viewer.</summary>
@@ -242,8 +241,6 @@ namespace TecWare.PPSn.Controls
 				base.OnManipulationDelta(e);
 				return;
 			}
-			//	if (!touchTransformMatrix.HasValue)
-			//		return;
 
 			touchTransformMatrix.ScaleAt(e.DeltaManipulation.Scale.X, e.DeltaManipulation.Scale.Y, e.ManipulationOrigin.X, e.ManipulationOrigin.Y);
 			touchTransformMatrix.Translate(e.DeltaManipulation.Translation.X, e.DeltaManipulation.Translation.Y);
@@ -266,8 +263,6 @@ namespace TecWare.PPSn.Controls
 				base.OnManipulationInertiaStarting(e);
 				return;
 			}
-			//	if (!touchTransformMatrix.HasValue)
-			//		return;
 
 			e.ExpansionBehavior.DesiredDeceleration = 100;
 			e.TranslationBehavior.DesiredDeceleration = 100;
@@ -284,8 +279,6 @@ namespace TecWare.PPSn.Controls
 				base.OnManipulationCompleted(e);
 				return;
 			}
-			//	if (!touchTransformMatrix.HasValue)
-			//		return;
 
 			touchTransformMatrix = Matrix.Identity;
 			e.Handled = true;
