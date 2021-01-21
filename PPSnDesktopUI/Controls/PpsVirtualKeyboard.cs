@@ -432,7 +432,6 @@ namespace TecWare.PPSn.Controls
 						SetValue(layoutPropertyKey, PpsVirtualKeyboardLayout.Symbols);
 					else if(Layout == PpsVirtualKeyboardLayout.Symbols)
 						SetValue(layoutPropertyKey, PpsVirtualKeyboardLayout.Alpha);
-					UpdateButtonContent(button);
 					break;
 				case PpsVirtualKeyName.Pos1:
 					SendSingleKey(PpsKey.Get(0x24));
