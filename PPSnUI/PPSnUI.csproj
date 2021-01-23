@@ -19,7 +19,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TecWare.DES.Core" Version="3.4.66" />
+    <PackageReference Include="TecWare.DES.Core" Version="3.4.67-pre.473" />
   </ItemGroup>
 
   <ItemGroup>

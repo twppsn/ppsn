@@ -445,7 +445,7 @@ namespace TecWare.PPSn.UI
 		public PpsAsyncCommand(Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute = null)
 			: base(canExecute)
 		{
-			this.command = command;
+			this.command = command ?? throw new ArgumentNullException(nameof(command));
 		} // ctor
 
 		/// <summary></summary>
@@ -456,7 +456,7 @@ namespace TecWare.PPSn.UI
 		public PpsAsyncCommand(string name, Type ownerType, Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute) :
 			base(name, ownerType, canExecute)
 		{
-			this.command = command;
+			this.command = command ?? throw new ArgumentNullException(nameof(command));
 		} // ctor
 
 		/// <summary></summary>
@@ -468,7 +468,7 @@ namespace TecWare.PPSn.UI
 		public PpsAsyncCommand(string name, Type ownerType, InputGestureCollection inputGestures, Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute)
 			: base(name, ownerType, inputGestures, canExecute)
 		{
-			this.command = command;
+			this.command = command ?? throw new ArgumentNullException(nameof(command));
 		} // ctor
 
 		#endregion
@@ -1309,8 +1309,11 @@ namespace TecWare.PPSn.UI
 		private PpsRoutedCommand(Type declaredType, string id)
 		{
 			this.declaredType = declaredType ?? throw new ArgumentNullException(nameof(declaredType));
-			this.id = id ?? throw new ArgumentNullException(nameof(id));
+			this.id = ClearId(id ?? throw new ArgumentNullException(nameof(id)));
 		} // ctor
+
+		private static string ClearId(string id)
+			=> id.EndsWith("Command") ? id.Substring(0, id.Length - 7) : id;
 
 		/// <summary></summary>
 		/// <returns></returns>

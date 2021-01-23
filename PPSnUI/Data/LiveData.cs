@@ -3312,104 +3312,96 @@ namespace TecWare.PPSn.Data
 
 		private async Task RefreshLiveDataFromServerAsync()
 		{
-			Notify?.StartRefreshThread();
+			var com = shell.GetService<IPpsCommunicationService>(true);
+
+			var enforceCDC = Interlocked.Exchange(ref scheduledEnforce, 0) != 0;
+			var refreshTasks = GetNextRefreshTasks();
 			try
 			{
-				var com = shell.GetService<IPpsCommunicationService>(true);
+				// create sync request
+				var xRequest = new XElement("batch");
+				xRequest.SetAttributeValue("lastSyncTimeStamp", globalSyncId.ChangeType<string>());
+				if (enforceCDC)
+					xRequest.SetAttributeValue("enforceCDC", "true");
 
-				var enforceCDC = Interlocked.Exchange(ref scheduledEnforce, 0) != 0;
-				var refreshTasks = GetNextRefreshTasks();
-				try
+				var mergeList = new List<MergeItem>();
+				var tables = TableSnapShot();
+				foreach (var t in tables)
 				{
-					// create sync request
-					var xRequest = new XElement("batch");
-					xRequest.SetAttributeValue("lastSyncTimeStamp", globalSyncId.ChangeType<string>());
-					if (enforceCDC)
-						xRequest.SetAttributeValue("enforceCDC", "true");
 
-					var mergeList = new List<MergeItem>();
-					var tables = TableSnapShot();
-					foreach (var t in tables)
+					var customer = refreshTasks?.Any(c => c.Table == t) ?? false;
+					var isClientFullRefresh = customer   // is this table scheduled for refresh
+						|| t.SyncId > 0; // is this table initialized
+
+					var xSync = new XElement("sync");
+					xSync.SetAttributeValue("table", t.TableName);
+					xSync.SetAttributeValue("syncId", isClientFullRefresh ? -1L : t.SyncId);
+					xRequest.Add(xSync);
+
+					mergeList.Add(new MergeItem(t, isClientFullRefresh));
+				}
+
+				if (mergeList.Count > 0)
+				{
+					if (Notify != null)
 					{
-
-						var customer = refreshTasks?.Any(c => c.Table == t) ?? false;
-						var isClientFullRefresh = customer   // is this table scheduled for refresh
-							|| t.SyncId > 0; // is this table initialized
-
-						var xSync = new XElement("sync");
-						xSync.SetAttributeValue("table", t.TableName);
-						xSync.SetAttributeValue("syncId", isClientFullRefresh ? -1L : t.SyncId);
-						xRequest.Add(xSync);
-
-						mergeList.Add(new MergeItem(t, isClientFullRefresh));
+						var sb = new StringBuilder();
+						mergeList.ForEach(c => c.LogBefore(sb));
+						Notify?.ReportRefreshArgs(sb.ToString());
 					}
 
-					if (mergeList.Count > 0)
+					// do request and process result
+					var http = com.Http;
+					// todo: wirft eine ObjectDisposedException
+					using (var response = await http.PutResponseXmlAsync("?action=syncget", new XDocument(xRequest), MimeTypes.Text.Xml, MimeTypes.Text.Xml))
 					{
-						if (Notify != null)
-						{
-							var sb = new StringBuilder();
-							mergeList.ForEach(c => c.LogBefore(sb));
-							Notify?.ReportRefreshArgs(sb.ToString());
-						}
+						var xResult = await HttpStuff.GetXmlAsync(response);
 
-						// do request and process result
-						var http = com.Http;
-						// todo: wirft eine ObjectDisposedException
-						using (var response = await http.PutResponseXmlAsync("?action=syncget", new XDocument(xRequest), MimeTypes.Text.Xml, MimeTypes.Text.Xml))
+						// process result
+						foreach (var xTable in xResult.Elements())
 						{
-							var xResult = await HttpStuff.GetXmlAsync(response);
-
-							// process result
-							foreach (var xTable in xResult.Elements())
+							if (xTable.Name.LocalName == "table")
 							{
-								if (xTable.Name.LocalName == "table")
-								{
-									if (!TryFindMergeItem(mergeList, xTable, out var mergeItem))
-										continue;
+								if (!TryFindMergeItem(mergeList, xTable, out var mergeItem))
+									continue;
 
-									mergeItem.ParseMerge(xTable);
-								}
-								else if (xTable.Name.LocalName == "syncStamp") // update global stamp
-									globalSyncId = xTable.Value.ChangeType<long>();
+								mergeItem.ParseMerge(xTable);
 							}
+							else if (xTable.Name.LocalName == "syncStamp") // update global stamp
+								globalSyncId = xTable.Value.ChangeType<long>();
 						}
-
-						if (Notify != null)
-						{
-							var sb = new StringBuilder();
-							mergeList.ForEach(c => c.LogAfter(sb));
-							Notify?.ReportRefreshResult(sb.ToString());
-						}
-
-						// apply merge commands to tables
-						// use ui-thread for this
-						var uiExceptions = await await shell.GetService<IPpsUIService>(true).RunUI(new Func<Task<Exception[]>>(() => ApplyMergeAsync(mergeList, http)));
-
-						// notify finish
-						if (uiExceptions.Length > 0)
-						{
-							var aggEx = new AggregateException(uiExceptions);
-							FinishWaitForSync(refreshTasks, aggEx);
-							Notify?.UnexpectedBackgroundFailure(aggEx);
-						}
-
-						FinishWaitForSync(refreshTasks, null);
 					}
-					else
-						FinishWaitForSync(refreshTasks, null);
-				}
-				catch (Exception e)
-				{
-					Notify?.UnexpectedBackgroundFailure(e);
 
-					FinishWaitForSync(refreshTasks, e);
-					throw;
+					if (Notify != null)
+					{
+						var sb = new StringBuilder();
+						mergeList.ForEach(c => c.LogAfter(sb));
+						Notify?.ReportRefreshResult(sb.ToString());
+					}
+
+					// apply merge commands to tables
+					// use ui-thread for this
+					var uiExceptions = await await shell.GetService<IPpsUIService>(true).RunUI(new Func<Task<Exception[]>>(() => ApplyMergeAsync(mergeList, http)));
+
+					// notify finish
+					if (uiExceptions.Length > 0)
+					{
+						var aggEx = new AggregateException(uiExceptions);
+						FinishWaitForSync(refreshTasks, aggEx);
+						Notify?.UnexpectedBackgroundFailure(aggEx);
+					}
+
+					FinishWaitForSync(refreshTasks, null);
 				}
+				else
+					FinishWaitForSync(refreshTasks, null);
 			}
-			finally
+			catch (Exception e)
 			{
-				Notify?.StopRefreshThread();
+				Notify?.UnexpectedBackgroundFailure(e);
+
+				FinishWaitForSync(refreshTasks, e);
+				throw;
 			}
 		} // proc RefreshLiveDataFromServerAsync
 
@@ -3517,13 +3509,17 @@ namespace TecWare.PPSn.Data
 		private void InitBackgroundRefresh()
 		{
 			if (Interlocked.Increment(ref backgroundRefreshActive) == 1) // activate background refresh
+			{
+				Notify?.StartRefreshThread();
 				backgroundTask = shell.RegisterTask(RefreshLiveDataFromServerAsync, TimeSpan.FromSeconds(4));
+			}
 		} // proc InitBackgroundRefresh
 
 		private void DoneBackgroundRefresh()
 		{
 			if (Interlocked.Decrement(ref backgroundRefreshActive) == 0) // stop background refresh
 			{
+				Notify?.StopRefreshThread();
 				backgroundTask.Dispose();
 				backgroundTask = null;
 			}

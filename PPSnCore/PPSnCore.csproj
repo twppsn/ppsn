@@ -26,6 +26,6 @@
   <ItemGroup>
     <Reference Include="System.Web" Condition="'$(TargetFramework)' == 'net47'" />
     <PackageReference Include="NeoLua" Version="1.3.11" />
-    <PackageReference Include="TecWare.DES.Core" Version="3.4.66" />
+    <PackageReference Include="TecWare.DES.Core" Version="3.4.67-pre.473" />
   </ItemGroup>
 </Project>

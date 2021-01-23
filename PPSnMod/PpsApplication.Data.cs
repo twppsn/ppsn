@@ -768,19 +768,22 @@ namespace TecWare.PPSn.Server
 
 			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
 			{
-				var selectorAccess = selector as PpsDataSelector;
-
-				// create column export rights
-				rowAllowed = new bool[columns.Columns.Count];
-				for (var i = 0; i < rowAllowed.Length; i++)
+				if (columns != null)
 				{
-					var col = columns.Columns[i];
-					var fieldDescription = selectorAccess?.GetFieldDescription(col.Name);
+					var selectorAccess = selector as PpsDataSelector;
 
-					rowAllowed[i] = fieldDescription == null
-						|| ctx == null
-						|| !fieldDescription.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
-						|| ctx.TryDemandToken(securityToken);
+					// create column export rights
+					rowAllowed = new bool[columns.Columns.Count];
+					for (var i = 0; i < rowAllowed.Length; i++)
+					{
+						var col = columns.Columns[i];
+						var fieldDescription = selectorAccess?.GetFieldDescription(col.Name);
+
+						rowAllowed[i] = fieldDescription == null
+							|| ctx == null
+							|| !fieldDescription.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
+							|| ctx.TryDemandToken(securityToken);
+					}
 				}
 
 				// write output
@@ -898,6 +901,7 @@ namespace TecWare.PPSn.Server
 						? typeof(Nullable<>).MakeGenericType(fieldType)
 						: fieldType;
 				}
+
 				xml.WriteEndElement();
 			} // proc WriteColumns
 
@@ -909,7 +913,11 @@ namespace TecWare.PPSn.Server
 				if (columns != null)
 					WriteColumns(selector, columns, attributeSelector);
 				else
+				{
+					xml.WriteStartElement("fields");
+					xml.WriteEndElement();
 					columnNames = null;
+				}
 			} // proc Begin
 
 			private void WriteRowValue(string columnName, object v)
@@ -1062,6 +1070,9 @@ namespace TecWare.PPSn.Server
 
 			protected override void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
 			{
+				if (columns == null)
+					return;
+
 				var columnCount = columns.Columns.Count;
 
 				// generate bcd format file
