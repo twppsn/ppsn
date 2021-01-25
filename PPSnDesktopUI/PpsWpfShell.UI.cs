@@ -178,6 +178,28 @@ namespace TecWare.PPSn
 			where T : class
 			=> shell.GetService<IPpsWpfResources>(true).FindResource<T>(resourceKey);
 
+		private static bool TryFindResource(FrameworkElement fe, object resourceKey, out object resource)
+		{
+			resource = fe.TryFindResource(resourceKey);
+				return resource != null;
+		} // func TryFindResource
+
+		private static bool TryFindResource(FrameworkContentElement fce, object resourceKey, out object resource)
+		{
+			resource = fce.TryFindResource(resourceKey);
+			return resource != null;
+		} // func TryFindResource
+
+		public static T FindResource<T>(this DependencyObject d, object resourceKey)
+		{
+			if (d is FrameworkElement fe && TryFindResource(fe, resourceKey, out var resource))
+				return (T)resource;
+			else if (d is FrameworkContentElement fce && TryFindResource(fce, resourceKey, out resource))
+				return (T)resource;
+			else
+				return default;
+		} // func FindResource
+
 		/// <summary>Load a resource dictionary from a xaml-source.</summary>
 		/// <param name="type"></param>
 		/// <param name="relativePath"></param>
@@ -257,6 +279,27 @@ namespace TecWare.PPSn
 					return null;
 			}
 		} // proc ToGeometryName
+
+		#endregion
+
+		#region -- ToTitle -----------------------------------------------------
+
+		public static string ToTitle(this PpsImage image)
+		{
+			switch (image)
+			{
+				case PpsImage.Information:
+					return "Information";
+				case PpsImage.Question:
+					return "Frage";
+				case PpsImage.Error:
+					return "Fehler";
+				case PpsImage.Warning:
+					return "Warnung";
+				default:
+					return null;
+			}
+		} // proc ToTitle
 
 		#endregion
 	} // class PpsWpfShell

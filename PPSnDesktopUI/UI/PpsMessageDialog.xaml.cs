@@ -15,86 +15,180 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+using TecWare.DE.Data;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {
-	internal partial class PpsMessageDialog : Window
+	internal partial class PpsMessageDialog : PpsWindow
 	{
-		//public readonly static DependencyProperty MessageTypeProperty = DependencyProperty.Register(nameof(MessageType), typeof(PpsTraceItemType), typeof(PpsMessageDialog));
-		public readonly static DependencyProperty MessageTextProperty = DependencyProperty.Register(nameof(MessageText), typeof(object), typeof(PpsMessageDialog));
-		public readonly static DependencyProperty SkipVisibleProperty = DependencyProperty.Register(nameof(SkipVisible), typeof(bool), typeof(PpsMessageDialog));
-		public readonly static DependencyProperty SkipCheckedProperty = DependencyProperty.Register(nameof(SkipChecked), typeof(bool), typeof(PpsMessageDialog));
-		public readonly static DependencyProperty DetailsVisibleProperty = DependencyProperty.Register(nameof(DetailsVisible), typeof(bool), typeof(PpsMessageDialog));
+		private PpsMessageDialogButton[] dialogButtons = null;
+		private bool isDetailedVisible = false;
+		private int buttonIndex = -1;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsMessageDialog()
 		{
 			InitializeComponent();
 
-			CommandBindings.Add(new CommandBinding(
-				ApplicationCommands.Close,
-				(sender, e) => Close()
-			));
+			AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler(Button_Click));
 
-			CommandBindings.Add(new CommandBinding(
-				ApplicationCommands.Properties,
-				(sender, e) =>
-				{
-					DialogResult = true;
-					Close();
-				}
-			));
-
-			DetailsVisible = false;
-
-			DataContext = this;
+			buttonBar.ItemContainerGenerator.StatusChanged += ItemContainerGenerator_StatusChanged;
 		} // ctor
+
+		public PpsMessageDialog(params string[] buttons)
+			: this()
+		{
+			SetButtons(buttons);
+		} // ctor
+
+		public void SetButtons(string[] buttonInfo)
+		{
+			dialogButtons = new PpsMessageDialogButton[buttonInfo.Length];
+			for (var i = 0; i < dialogButtons.Length; i++)
+				dialogButtons[i] = new PpsMessageDialogButton(this, i, buttonInfo[i]);
+			SetValue(buttonsPropertyKey, dialogButtons);
+		} // proc SetButtons
+
+		private void SetDetailMode(bool isDetailMode)
+		{
+			if (isDetailedVisible != isDetailMode)
+			{
+				isDetailedVisible = isDetailMode;
+				if (dialogButtons != null)
+					Array.ForEach(dialogButtons, c => c.OnVisibleChanged());
+			}
+		} // proc SetDetailMode
 
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 		{
-			if (!DetailsVisible && Keyboard.IsKeyDown(Key.LeftCtrl) && Keyboard.IsKeyDown(Key.LeftAlt))
-				DetailsVisible = true;
+			if (Keyboard.IsKeyDown(Key.LeftCtrl) && Keyboard.IsKeyDown(Key.LeftAlt))
+				SetDetailMode(true);
 			base.OnPreviewKeyDown(e);
 		} // proc OnPreviewKeyDown
-		
-		//public PpsTraceItemType MessageType
-		//{
-		//	get { return (PpsTraceItemType)GetValue(MessageTypeProperty); }
-		//	set { SetValue(MessageTypeProperty, value); }
-		//} // prop MessageType
 
-		public object MessageText
+		private void ItemContainerGenerator_StatusChanged(object sender, EventArgs e)
 		{
-			get { return GetValue(MessageTextProperty); }
-			set { SetValue(MessageTextProperty, value); }
-		} // prop MessageText
+			if (buttonBar.ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+				UpdateFocus();
+		} // event ItemContainerGenerator_StatusChanged
 
-		public bool SkipVisible
+		private void UpdateFocus()
 		{
-			get { return (bool)GetValue(SkipVisibleProperty); }
-			set { SetValue(SkipVisibleProperty, value); }
-		} // prop MessageText
+			if (dialogButtons != null && buttonIndex >= 0 && buttonIndex < dialogButtons.Length
+				&& buttonBar.ItemContainerGenerator.ContainerFromItem(dialogButtons[buttonIndex]) is IInputElement ie)
+			{
+				if (ie.Focusable && !ie.IsKeyboardFocusWithin)
+					FocusManager.SetFocusedElement(this, ie);
+			}
+		} // proc UpdateFocus
 
-		public bool SkipChecked
+		private void Button_Click(object sender, RoutedEventArgs e)
 		{
-			get { return (bool)GetValue(SkipCheckedProperty); }
-			set { SetValue(SkipCheckedProperty, value); }
-		} // prop MessageText
+			if (e.OriginalSource is ButtonBase b && b.CommandParameter is int idx)
+			{
+				ButtonIndex = idx;
+				DialogResult = true;
+			}
+		} // event Button_Click
 
-		public bool DetailsVisible
+		public bool IsDetailedVisible => isDetailedVisible;
+
+		#endregion
+
+		#region -- Buttons - property -------------------------------------------------
+
+		private readonly static DependencyPropertyKey buttonsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Buttons), typeof(IReadOnlyList<PpsMessageDialogButton>), typeof(PpsMessageDialog), new FrameworkPropertyMetadata(null));
+		public readonly static DependencyProperty ButtonsProperty = buttonsPropertyKey.DependencyProperty;
+
+		public IReadOnlyList<PpsMessageDialogButton> Buttons => (IReadOnlyList<PpsMessageDialogButton>)GetValue(ButtonsProperty);
+
+		#endregion
+
+		#region -- Image - property ---------------------------------------------------
+
+		public readonly static DependencyProperty ImageNameProperty = DependencyProperty.Register(nameof(ImageName), typeof(string), typeof(PpsMessageDialog), new FrameworkPropertyMetadata(null));
+
+		public string ImageName { get => (string)GetValue(ImageNameProperty); set => SetValue(ImageNameProperty, value); }
+
+		#endregion
+
+		#region -- Message - property -------------------------------------------------
+
+		public readonly static DependencyProperty MessageProperty = DependencyProperty.Register(nameof(Message), typeof(object), typeof(PpsMessageDialog), new FrameworkPropertyMetadata(null));
+
+		public object Message { get => GetValue(MessageProperty); set => SetValue(MessageProperty, value); }
+
+		#endregion
+
+		#region -- class MessageTemplateSelectorImplementation ------------------------
+
+		private sealed class MessageTemplateSelectorImplementation : DataTemplateSelector
 		{
-			get { return (bool)GetValue(DetailsVisibleProperty); }
-			set { SetValue(DetailsVisibleProperty, value); }
-		} // prop MessageText
-	} // class ExceptionDialog
+			public override DataTemplate SelectTemplate(object item, DependencyObject container)
+			{
+				DataTemplate template = null;
+				if (item != null)
+					template = container.FindResource<DataTemplate>(item is string ? (object)"simpleText" : item.GetType());
+				if (template == null)
+					template = base.SelectTemplate(item, container);
+				return template;
+			} // func SelectTemplate
+		} // class MessageTemplateSelectorImplementation
+
+		#endregion
+
+		public int ButtonIndex
+		{
+			get => buttonIndex;
+			set 
+			{
+				if (buttonIndex != value)
+				{
+					buttonIndex = value;
+					UpdateFocus();
+				}
+			}
+		} // prop ButtonIndex
+
+		public static DataTemplateSelector MessageTemplateSelector { get; } = new MessageTemplateSelectorImplementation();
+	} // class PpsMessageDialog
+
+	#region -- class PpsMessageDialogButton -------------------------------------------
+
+	internal sealed class PpsMessageDialogButton : INotifyPropertyChanged
+	{
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		private readonly PpsMessageDialog owner;
+		private readonly int index;
+		private readonly string title;
+		private readonly bool isDetailed;
+
+		public PpsMessageDialogButton(PpsMessageDialog owner, int index, string title)
+		{
+			this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
+			this.index = index;
+			this.title = title ?? throw new ArgumentNullException(nameof(title));
+
+			isDetailed = this.title[0] == '.';
+			if (isDetailed)
+				this.title = this.title.Substring(1);
+		} // ctor
+
+		public void OnVisibleChanged()
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Visibility)));
+
+		public int Index => index;
+		public string Title => title;
+		public Visibility Visibility => isDetailed && !owner.IsDetailedVisible ? Visibility.Collapsed : Visibility.Visible;
+	} // class PpsMessageDialogButton
+
+	#endregion
 }

@@ -740,14 +740,15 @@ namespace TecWare.PPSn.Controls
 		/// <inheritdoc/>
 		protected override void OnActivated(EventArgs e)
 		{
-			UpdateGlowWindowActiveState();
+			UpdateGlowWindowActiveState(true);
+			UpdateGlowWindowZOrder();
 			base.OnActivated(e);
 		} // proc OnActivated
 
 		/// <inheritdoc/>
 		protected override void OnDeactivated(EventArgs e)
 		{
-			UpdateGlowWindowActiveState();
+			UpdateGlowWindowActiveState(false);
 			base.OnDeactivated(e);
 		} // proc OnDeactivated
 
@@ -789,7 +790,7 @@ namespace TecWare.PPSn.Controls
 
 		private void UpdateGlowWindowVisibility()
 		{
-			var showGlow = Visibility == Visibility.Visible && WindowState == System.Windows.WindowState.Normal;
+			var showGlow = Visibility == Visibility.Visible && WindowState == WindowState.Normal;
 			if (showGlow != isGlowVisible)
 			{
 				isGlowVisible = showGlow;
@@ -798,12 +799,12 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc UpdateGlowWindowVisibility
 
-		private void UpdateGlowWindowActiveState()
+		private void UpdateGlowWindowActiveState(bool isActive)
 		{
 			using (var gwc = new GlowWindowChanging(this))
 			{
 				for (var i = 0; i < 4; i++)
-					glowWindows[i].IsActive = IsActive;
+					glowWindows[i].IsActive = isActive;
 			}
 		} // proc UpdateGlowWindowActiveState
 

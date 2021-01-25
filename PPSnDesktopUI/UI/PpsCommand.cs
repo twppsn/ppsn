@@ -255,7 +255,7 @@ namespace TecWare.PPSn.UI
 			if (e.Command is PpsRoutedCommand)
 			{
 				var f = Keyboard.FocusedElement;
-				Debug.Print($"CanExecute: {e.Command} on {(f == null ? "<null>" : f.GetType().Name)}");
+				// Debug.Print($"CanExecute: {e.Command} on {(f == null ? "<null>" : f.GetType().Name)}");
 			}
 #endif
 

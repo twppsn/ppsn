@@ -502,10 +502,22 @@ namespace TecWare.PPSn
 			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
 			{
 				// show message simple
-				MsgBox(alternativeMessage ?? exception.GetInnerException().ToString(), PpsImage.Error, Ok);
+				var isShutdown = (flags & PpsExceptionShowFlags.Shutown) == PpsExceptionShowFlags.Shutown;
+				var msg = new PpsMessageDialog(".Details", isShutdown ? "Beenden" : "Schließen")
+				{
+					Title = PpsImage.Error.ToTitle(),
+					ImageName = PpsImage.Error.ToGeometryName(),
+					Message = alternativeMessage ?? exception.GetInnerException().ToString()
+				};
+
+				if (PpsWpfShell.ShowModalDialog(null, msg) == true)
+				{
+					if (msg.ButtonIndex == 0)
+						MsgBox("Show Details?");
+				}
 
 				// shutdown application
-				if ((flags & PpsExceptionShowFlags.Shutown) == PpsExceptionShowFlags.Shutown)
+				if (isShutdown)
 					Application.Current.Shutdown(1);
 			}
 		} // proc ShowException
@@ -526,24 +538,21 @@ namespace TecWare.PPSn
 
 		public int MsgBox(string text, PpsImage image = PpsImage.Information, params string[] buttons)
 		{
-			// PpsMessageDialog ausbauen
-			if (buttons == YesNo || buttons == OkCancel)
+			var msg = new PpsMessageDialog(buttons)
 			{
-				switch (MessageBox.Show(text, "Frage", MessageBoxButton.YesNo, MessageBoxImage.Question))
-				{
-					case MessageBoxResult.Yes:
-						return 0;
-					case MessageBoxResult.No:
-						return 1;
-					default:
-						return -1;
-				}
+				Title = image.ToTitle(),
+				ImageName = image.ToGeometryName(),
+				Message = text
+			};
+
+			if (PpsWpfShell.ShowModalDialog(null, msg) == true)
+			{
+				if (buttons[msg.ButtonIndex] == OkCancel[1]) // cancel always as -1
+					return -1;
+				return msg.ButtonIndex;
 			}
 			else
-			{
-				MessageBox.Show(text);
-				return 0;
-			}
+				return -1;
 		} // func MsgBox
 
 		public async Task RunUI(Action action)

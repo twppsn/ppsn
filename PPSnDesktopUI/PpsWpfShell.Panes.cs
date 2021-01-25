@@ -201,7 +201,10 @@ namespace TecWare.PPSn
 		public static bool ShowModalDialog(this DependencyObject owner, Window window)
 		{
 			var ownerWindow = GetWindowFromOwner(owner);
-			window.Owner = ownerWindow;
+			if (window == ownerWindow)
+				ownerWindow = null;
+			else
+				window.Owner = ownerWindow;
 			return ShowModalDialog(ownerWindow, window.ShowDialog);
 		} // proc ShowModalDialog
 
@@ -215,7 +218,8 @@ namespace TecWare.PPSn
 		private static bool ShowModalDialog(Window ownerWindow, Func<bool?> showDialog)
 		{
 			var oldWindow = Application.Current.MainWindow;
-			Application.Current.MainWindow = ownerWindow;
+			if (ownerWindow != null)
+				Application.Current.MainWindow = ownerWindow;
 			try
 			{
 				return showDialog() ?? false;
@@ -223,7 +227,7 @@ namespace TecWare.PPSn
 			finally
 			{
 #pragma warning disable CA2219 // Do not raise exceptions in finally clauses
-				if (Application.Current.MainWindow != ownerWindow)
+				if (ownerWindow != null && Application.Current.MainWindow != ownerWindow)
 					throw new InvalidOperationException();
 #pragma warning restore CA2219 // Do not raise exceptions in finally clauses
 				Application.Current.MainWindow = oldWindow;

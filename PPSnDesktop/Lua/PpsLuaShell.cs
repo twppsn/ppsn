@@ -64,15 +64,8 @@ namespace TecWare.PPSn.Lua
 		/// <returns></returns>
 		[LuaMember]
 		public object GetResource(object key, DependencyObject dependencyObject = null)
-		{
-			if (dependencyObject is FrameworkElement fe)
-				return fe.TryFindResource(key);
-			else if (dependencyObject is FrameworkContentElement fce)
-				return fce.TryFindResource(key);
-			else
-				return resources.FindResource<object>(key);
-		} // func GetResource
-
+			=> PpsWpfShell.FindResource<object>(dependencyObject, key) ?? resources.FindResource<object>(key);
+		
 		/// <summary>Create a PpsCommand object.</summary>
 		/// <param name="command"></param>
 		/// <param name="canExecute"></param>

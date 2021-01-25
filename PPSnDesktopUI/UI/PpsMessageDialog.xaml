@@ -1,61 +1,88 @@
-﻿<Window x:Class="TecWare.PPSn.UI.PpsMessageDialog" x:ClassModifier="internal"
-		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:ui="clr-namespace:TecWare.PPSn.UI"
-		xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
-        mc:Ignorable="d"
-		Height="200" Width="500" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
-	<Window.Resources>
-		<!--<ui:LuaValueConverter x:Key="CloseTextConverter">
-			<![CDATA[
-			if cast(int, value) == cast(int, clr.TecWare.PPSn.PpsTraceItemType.Fail) then
-				return 'Beenden';
-			else
-				return 'Schließen';
-			end;
-			]]>
-		</ui:LuaValueConverter>-->
-	</Window.Resources>
+﻿<pps:PpsWindow x:Class="TecWare.PPSn.UI.PpsMessageDialog"
+			   x:ClassModifier="internal"
+			   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			   xmlns:sys="clr-namespace:System;assembly=mscorlib"
+			   xmlns:ui="clr-namespace:TecWare.PPSn.UI"
+			   xmlns:uiT="clr-namespace:TecWare.PPSn.Themes"
+			   xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
+			   mc:Ignorable="d"
+			   WindowStartupLocation="CenterOwner" ResizeMode="NoResize" SizeToContent="WidthAndHeight" WindowStyle="None"
+			   ShowInTaskbar="False"
+			   MinHeight="160" MinWidth="400">
+	<pps:PpsWindow.Resources>
+		<DataTemplate x:Key="simpleText" DataType="{x:Type sys:String}">
+			<TextBlock TextWrapping="Wrap" Text="{Binding Mode=OneTime}" />
+		</DataTemplate>
+	</pps:PpsWindow.Resources>
 
-	<Grid>
+	<Grid TextBlock.Foreground="{ui:PpsColor {x:Static uiT:PpsTheme.WindowForeground}}" DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=pps:PpsWindow}}">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="64" />
 			<ColumnDefinition />
 		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
-			<RowDefinition/>
+			<RowDefinition Height="28" />
+			<RowDefinition />
 			<RowDefinition Height="41"/>
 		</Grid.RowDefinitions>
 
-		<TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding MessageText}" TextWrapping="Wrap" Margin="12"  />
-		<Separator Grid.Row="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0"/>
-		<CheckBox Grid.Column="1" Grid.Row="1" 
-				  Content="Diese Meldung nicht mehr anzeigen" 
-				  IsChecked="{Binding SkipChecked}" 
-				  Visibility="{Binding SkipVisible,Converter={x:Static ui:PpsConverter.Visibility}}"
-				  Style="{StaticResource PPSnSysCheckBoxStyle}" 
-				  HorizontalAlignment="Left" 
-				  VerticalAlignment="Center"/>
-		
-		<pps:PpsButton Grid.Column="1"
-					   Grid.Row="1" 
-					   Content="Details"
-					   Command="{x:Static ApplicationCommands.Properties}"
-					   Visibility="{Binding DetailsVisible,Converter={x:Static ui:PpsConverter.Visibility}}"
-					   Width="110"
-					   Height="23"
+		<!-- Title -->
+		<Border Grid.Row="0" Grid.ColumnSpan="2" 
+				Background="{ui:PpsColor {x:Static uiT:PpsTheme.WindowActive}}">
+			<TextBlock Foreground="{ui:PpsColor {x:Static uiT:PpsTheme.WindowBackground}}"
+					   VerticalAlignment="Center"
+					   Padding="12,0"
+					   Text="{Binding Title,Mode=OneWay}">
+			</TextBlock>
+			<Border.Tag>
+				<pps:PpsWindowHitTest HitTest="2" />
+			</Border.Tag>
+		</Border>
+		<pps:PpsButton Command="{x:Static pps:PpsWindow.CloseCommand}"
+					   Grid.Row="0" Grid.ColumnSpan="2" 
+					   Margin="0,0,12,0"
+					   DisplayMode="Transparent"
+					   ToolTip="Schließen"
+					   GeometryName="windowClose"
+					   GeometrySize="16"
+					   ImageOpacity="1"
+					   Foreground="{ui:PpsColor {x:Static uiT:PpsTheme.WindowBackground}}"
+					   Width="34"
+					   Height="26"
 					   HorizontalAlignment="Right"
-					   Margin="0,0,134,0" />
-		<pps:PpsButton Grid.Column="1" 
-					   Grid.Row="1"
-					   Content="Schließen"
-					   Command="{x:Static ApplicationCommands.Close}" 
-					   Width="110"
-					   Height="23"
-					   HorizontalAlignment="Right"
-					   Margin="0,0,12,0" />
-		<!-- Content="{Binding MessageType, Converter={StaticResource CloseTextConverter}}"-->
+					   VerticalAlignment="Top"
+					   Visibility="Visible" />
+
+		<!-- Content -->
+		<pps:PpsGeometryImage Grid.Row="1" Grid.Column="0" GeometryName="{Binding ImageName,Mode=OneWay}" Width="32" Height="32" VerticalAlignment="Top" Margin="12"/>
+
+		<ContentControl Grid.Row="1" Grid.Column="1" Focusable="False"
+						Margin="12"
+						Content="{Binding Message,Mode=OneWay}"
+						ContentTemplateSelector="{x:Static ui:PpsMessageDialog.MessageTemplateSelector}"/>
+
+		<!-- Buttons -->
+		<Separator Grid.Row="1" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0" />
+
+		<ItemsControl Grid.Row="2" Grid.Column="1" x:Name="buttonBar" HorizontalAlignment="Right" VerticalAlignment="Center" ItemsSource="{Binding Buttons,Mode=OneWay}" Focusable="False">
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<StackPanel Orientation="Horizontal" />
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
+			<ItemsControl.ItemTemplate>
+				<DataTemplate DataType="{x:Type ui:PpsMessageDialogButton}">
+					<pps:PpsButton Content="{Binding Title}"
+								   Visibility="{Binding Visibility}"
+								   CommandParameter="{Binding Index}"
+								   MinWidth="110"
+								   Height="23"
+								   Margin="0,0,12,0" />
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
 	</Grid>
-</Window>
+</pps:PpsWindow>
