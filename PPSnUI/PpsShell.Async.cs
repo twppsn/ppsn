@@ -86,7 +86,7 @@ namespace TecWare.PPSn
 		/// <param name="task"></param>
 		/// <param name="serviceProvider"></param>
 		public static void Spawn(this Task task, IServiceProvider serviceProvider = null)
-			=> task.ContinueWith(t => GetService<IPpsUIService>(serviceProvider, true).ShowException(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+			=> task.ContinueWith(t => GetService<IPpsUIService>(serviceProvider, true).ShowExceptionAsync(false, t.Exception).Await(), TaskContinuationOptions.OnlyOnFaulted);
 
 		/// <summary>Spawn the task, but check for exceptions.</summary>
 		/// <typeparam name="T"></typeparam>
@@ -105,7 +105,7 @@ namespace TecWare.PPSn
 		public static void OnException(this Task task, bool background = false)
 		{
 			task.ContinueWith(
-				t => GetService<IPpsUIService>(true).ShowExceptionAsync(background, t.Exception),
+				t => GetService<IPpsUIService>(true).ShowExceptionAsync(background, t.Exception).Await(),
 				TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted
 			);
 		} // proc OnException

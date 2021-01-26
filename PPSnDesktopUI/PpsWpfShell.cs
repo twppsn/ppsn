@@ -339,9 +339,11 @@ namespace TecWare.PPSn
 			where T : DependencyObject
 		{
 			var parent = GetVisualParent(current);
-			return parent is T r
-				? r
-				: GetVisualParent<T>(parent);
+			return parent is null ? null :
+				(parent is T r
+					? r
+					: GetVisualParent<T>(parent)
+			);
 		} // func GetVisualParent
 
 		/// <summary>Find a child in the Visual tree.</summary>

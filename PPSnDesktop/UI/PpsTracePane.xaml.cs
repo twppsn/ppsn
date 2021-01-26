@@ -477,8 +477,6 @@ namespace TecWare.PPSn.UI
 			GetAllResources(wpfResources.Resources, resourceList);
 			resourceList.Sort();
 			var resourceView = new PpsTypedListCollectionView<PpsTraceResourceInfoItem>(resourceList);
-
-			// todo: fix scrolling
 			resourceView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PpsTraceResourceInfoItem.SourceName), null, StringComparison.OrdinalIgnoreCase));
 
 			resourceTree.ItemsSource = resourceView;
@@ -487,7 +485,12 @@ namespace TecWare.PPSn.UI
 		private void GetAllResources(ResourceDictionary resources, List<PpsTraceResourceInfoItem> resourceList)
 		{
 			foreach (var k in resources.Keys)
+			{
+				if (k.GetType().Name == "PpsColorTypeKey")
+					continue;
+
 				resourceList.Add(new PpsTraceResourceInfoItem(resources, k));
+			}
 
 			foreach (var m in resources.MergedDictionaries)
 				GetAllResources(m, resourceList);

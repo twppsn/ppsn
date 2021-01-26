@@ -76,11 +76,15 @@ namespace TecWare.PPSn.UI
 			if (currentDraggedItem != null)
 				return;
 
-			currentDraggedItem = GetDragItem(sender, e);
 			var pt = e.GetPosition(element);
+			var sz = element.RenderSize;
+			if (pt.X < 0 || pt.Y < 0 || pt.X > sz.Width || pt.Y > sz.Height)
+				return;
+
+			currentDraggedItem = GetDragItem(sender, e);
 			var dx = SystemParameters.MinimumHorizontalDragDistance;
 			var dy = SystemParameters.MinimumVerticalDragDistance;
-			currentDragStartArea = new Rect(pt.X - dx, pt.Y - dy, pt.X + dx, pt.Y + dy);
+			currentDragStartArea = new Rect(pt.X - dx, pt.Y - dy, dx * 2, dy * 2);
 		} // event Element_PreviewMouseLeftButtonDown
 
 		private void Element_MouseMove(object sender, MouseEventArgs e)
@@ -156,16 +160,28 @@ namespace TecWare.PPSn.UI
 		protected abstract void OnDragEvent(PpsDragEventType eventType, DragEventArgs e);
 
 		private void Element_DragEnter(object sender, DragEventArgs e)
-			=> OnDragEvent(PpsDragEventType.Enter, e);
+		{
+			OnDragEvent(PpsDragEventType.Enter, e);
+			e.Handled = true;
+		} // event Element_DragEnter
 
 		private void Element_DragOver(object sender, DragEventArgs e)
-			=> OnDragEvent(PpsDragEventType.Move, e);
+		{
+			OnDragEvent(PpsDragEventType.Move, e);
+			e.Handled = true;
+		} // event Element_DragOver
 
 		private void Element_DragLeave(object sender, DragEventArgs e)
-			=> OnDragEvent(PpsDragEventType.Leave, e);
+		{
+			OnDragEvent(PpsDragEventType.Leave, e);
+			e.Handled = true;
+		} // event Element_DragLeave
 
 		private void Element_Drop(object sender, DragEventArgs e)
-			=> OnDragEvent(PpsDragEventType.Drop, e);
+		{
+			OnDragEvent(PpsDragEventType.Drop, e);
+			e.Handled = true;
+		} // event Element_Drop
 
 		public UIElement Element => element;
 
@@ -175,7 +191,7 @@ namespace TecWare.PPSn.UI
 		{
 			private PpsDragEventDelegate dragEventHandler;
 
-			public PpsGenericDropTarget(UIElement element, PpsDragEventDelegate dragEventHandler) 
+			public PpsGenericDropTarget(UIElement element, PpsDragEventDelegate dragEventHandler)
 				: base(element)
 			{
 				this.dragEventHandler = dragEventHandler ?? throw new ArgumentNullException(nameof(dragEventHandler));
@@ -209,7 +225,8 @@ namespace TecWare.PPSn.UI
 
 			protected override object GetDragItem(object sender, MouseEventArgs e)
 			{
-				if (ItemsControl.InputHitTest(e.GetPosition(ItemsControl)) is UIElement item)
+				var itemsControl = ItemsControl;
+				if (itemsControl.InputHitTest(e.GetPosition(itemsControl)) is UIElement item)
 				{
 					while (item != null)
 					{
