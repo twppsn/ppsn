@@ -283,6 +283,14 @@
 													<xs:union memberTypes="pps:viewSourceType xs:string" />
 												</xs:simpleType>
 											</xs:attribute>
+											<xs:attribute name="grantSelect" use="optional">
+												<xs:annotation>
+													<xs:documentation>Select rights for this view.</xs:documentation>
+												</xs:annotation>
+												<xs:simpleType>
+													<xs:list itemType="xs:string" />
+												</xs:simpleType>
+											</xs:attribute>
 											<xs:anyAttribute processContents="lax" />
 										</xs:extension>
 									</xs:simpleContent>

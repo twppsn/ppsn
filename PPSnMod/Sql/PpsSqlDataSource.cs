@@ -3494,14 +3494,48 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		protected abstract Task<string> CreateOrReplaceViewAsync(DbConnection connection, string name, DateTime? timeStamp, string selectStatement);
 
-		private async Task<IPpsSelectorToken> CreateCoreAsync(string name, Func<DbConnection, Task<string>> createView)
+		/// <summary>Set rights to an view.</summary>
+		/// <param name="connection"></param>
+		/// <param name="name"></param>
+		/// <param name="grantSelectTo"></param>
+		/// <returns></returns>
+		protected virtual async Task CreateSelectRightsAsync(DbConnection connection, string name, IEnumerable<string> grantSelectTo)
+		{
+			if (grantSelectTo == null)
+				return;
+
+			var sb = new StringBuilder();
+
+			// create grant batch
+			foreach (var user in grantSelectTo)
+				sb.Append("GRANT SELECT ON ").Append(name).Append(" TO [").Append(user).AppendLine( "];");
+
+			// execute grant
+			if (sb.Length > 0)
+			{
+				using (var cmd = connection.CreateCommand())
+				{
+					cmd.CommandType = CommandType.Text;
+					cmd.CommandText = sb.ToString();
+					await cmd.ExecuteNonQueryAsync();
+				}
+			}
+		} // proc CreateSelectRightsAsync
+
+		private async Task<IPpsSelectorToken> CreateCoreAsync(string name, IEnumerable<string> grantSelectTo, Func<DbConnection, Task<string>> createView)
 		{
 			IPpsColumnDescription[] columnDescriptions;
 
 			string viewName = null;
 			using (UseMasterConnection(out var connection))
 			{
+				// craete view
 				viewName = await createView(connection);
+
+				// set select rights
+				await CreateSelectRightsAsync(connection, viewName, grantSelectTo);
+
+				// test view
 				columnDescriptions = await ExecuteForResultSetAsync(connection, viewName);
 			}
 
@@ -3515,42 +3549,46 @@ namespace TecWare.PPSn.Server.Sql
 				return await sr.ReadToEndAsync();
 		} // func LoadSqlFileAsync
 
-		/// <summary></summary>
+		/// <summary>Create a view, that is defined by an select statement.</summary>
 		/// <param name="name"></param>
 		/// <param name="selectStatement"></param>
+		/// <param name="grantSelectTo"><c>null</c> for default set, an empty array, for no users.</param>
 		/// <returns></returns>
-		protected Task<IPpsSelectorToken> CreateSelectorTokenFromSelectAsync(string name, string selectStatement)
-			=> CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, null, selectStatement));
+		protected Task<IPpsSelectorToken> CreateSelectorTokenFromSelectAsync(string name, string selectStatement, IEnumerable<string> grantSelectTo = null)
+			=> CreateCoreAsync(name, grantSelectTo, (connection) => CreateOrReplaceViewAsync(connection, name, null, selectStatement));
 
-		/// <summary></summary>
+		/// <summary>Create a view, that is defined by a file on disk.</summary>
 		/// <param name="name"></param>
 		/// <param name="fileName"></param>
 		/// <param name="timeStamp">LastWriteTime of the file.</param>
+		/// <param name="grantSelectTo"><c>null</c> for default set, an empty array, for no users.</param>
 		/// <returns></returns>
-		protected async Task<IPpsSelectorToken> CreateSelectorTokenFromFileAsync(string name, string fileName, DateTime timeStamp)
+		protected async Task<IPpsSelectorToken> CreateSelectorTokenFromFileAsync(string name, string fileName, DateTime timeStamp, IEnumerable<string> grantSelectTo = null)
 		{
 			var content = await LoadSqlFileAsync(fileName);
-			return await CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, timeStamp, content));
+			return await CreateCoreAsync(name, grantSelectTo, (connection) => CreateOrReplaceViewAsync(connection, name, timeStamp, content));
 		} // func CreateSelectorTokenFromFileAsync
 
-		/// <summary></summary>
+		/// <summary>Create a view that is defined by a resource-file.</summary>
 		/// <param name="name"></param>
 		/// <param name="type"></param>
 		/// <param name="resourceScript"></param>
+		/// <param name="grantSelectTo"><c>null</c> for default set, an empty array, for no users.</param>
 		/// <returns></returns>
-		protected Task<IPpsSelectorToken> CreateSelectorTokenFromResourceAsync(string name, Type type, string resourceScript)
+		protected Task<IPpsSelectorToken> CreateSelectorTokenFromResourceAsync(string name, Type type, string resourceScript, IEnumerable<string> grantSelectTo = null)
 		{
 			var content = GetResourceScript(type, resourceScript);
 			var timeStamp = File.GetLastWriteTime(type.Assembly.Location);
-			return CreateCoreAsync(name, (connection) => CreateOrReplaceViewAsync(connection, name, timeStamp, content));
+			return CreateCoreAsync(name, grantSelectTo, (connection) => CreateOrReplaceViewAsync(connection, name, timeStamp, content));
 		} // func CreateSelectorTokenFromResourceAsync
 
-		/// <summary></summary>
+		/// <summary>Create a view that is predefined in the database.</summary>
 		/// <param name="name"></param>
 		/// <param name="viewName"></param>
+		/// <param name="grantSelectTo"><c>null</c> for default set, an empty array, for no users.</param>
 		/// <returns></returns>
-		protected Task<IPpsSelectorToken> CreateSelectorTokenFromViewNameAsync(string name, string viewName)
-			=> CreateCoreAsync(name, (connection) => Task.FromResult(viewName ?? name));
+		protected Task<IPpsSelectorToken> CreateSelectorTokenFromViewNameAsync(string name, string viewName, IEnumerable<string> grantSelectTo = null)
+			=> CreateCoreAsync(name, grantSelectTo, (connection) => Task.FromResult(viewName ?? name));
 
 		/// <summary>Create selector from </summary>
 		/// <param name="name"></param>
@@ -3565,20 +3603,22 @@ namespace TecWare.PPSn.Server.Sql
 			try
 			{
 				var sourceType = sourceDescription.GetAttribute("type", "file");
+				var sourceRights = sourceDescription.GetStrings("grantSelect", true);
 				if (sourceType == "select") // create view from sql
-					return await CreateSelectorTokenFromSelectAsync(name, sourceDescription.Value);
+					return await CreateSelectorTokenFromSelectAsync(name, sourceDescription.Value, sourceRights);
 				else if (sourceType == "file")
 				{
 					var fileName = ProcsDE.GetFileName(sourceDescription, sourceDescription.Value);
 					return await CreateSelectorTokenFromFileAsync(name,
 						fileName,
-						File.GetLastWriteTime(fileName)
+						File.GetLastWriteTime(fileName),
+						sourceRights
 					);
 				}
 				else if (sourceType == "resource")
-					return await CreateSelectorTokenFromResourceAsync(name, GetType(), sourceDescription.Value);
+					return await CreateSelectorTokenFromResourceAsync(name, GetType(), sourceDescription.Value, sourceRights);
 				else if (sourceType == "view")
-					return await CreateSelectorTokenFromViewNameAsync(name, sourceDescription?.Value);
+					return await CreateSelectorTokenFromViewNameAsync(name, sourceDescription?.Value, sourceRights);
 				else
 					throw new ArgumentOutOfRangeException("@type", sourceType);
 			}

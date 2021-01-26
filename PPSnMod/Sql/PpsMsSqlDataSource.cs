@@ -1544,26 +1544,21 @@ namespace TecWare.PPSn.Server.Sql
 				// create
 				cmd.CommandText = $"CREATE VIEW {name} AS {selectStatement}";
 				await cmd.ExecuteNonQueryAsync();
-
-				// rights
-				cmd.CommandText = $"GRANT SELECT ON {name} TO [public]";
-				await cmd.ExecuteNonQueryAsync();
 			} // using cmd
 
 			return name;
 		} // func CreateOrReplaceViewAsync
 
-		/// <summary></summary>
-		/// <param name="connection"></param>
-		/// <param name="selectList"></param>
-		/// <param name="from"></param>
-		/// <param name="whereCondition"></param>
-		/// <param name="whereNativeLookup"></param>
-		/// <param name="orderBy"></param>
-		/// <param name="orderByNativeLookup"></param>
-		/// <param name="start"></param>
-		/// <param name="count"></param>
-		/// <returns></returns>
+		/// <inherited/>
+		protected override Task CreateSelectRightsAsync(DbConnection connection, string name, IEnumerable<string> grantSelectTo)
+		{
+			if (grantSelectTo == null)
+				grantSelectTo = new string[] { "public" };
+
+			return base.CreateSelectRightsAsync(connection, name, grantSelectTo);
+		} // proc CreateSelectRightsAsync
+
+		/// <inherited/>
 		protected override DbCommand CreateViewCommand(IPpsSqlConnectionHandle connection, IEnumerable<IDataColumn> selectList, PpsSqlJoinExpression from, PpsDataFilterExpression whereCondition, Func<string, string> whereNativeLookup, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByNativeLookup, int start, int count)
 		{
 			SqlCommand cmd = null;

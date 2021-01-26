@@ -659,7 +659,7 @@ namespace TecWare.PPSn.Server.Sql
 			base.RefreshSchemaCore(log);
 
 			// Register Server logins
-			Application.RegisterView(CreateSelectorTokenFromResourceAsync("dbo.serverLogins", typeof(PpsSqlExDataSource), "tsql.ServerLogins.sql").AwaitTask());
+			Application.RegisterView(CreateSelectorTokenFromResourceAsync("dbo.serverLogins", typeof(PpsSqlExDataSource), "tsql.ServerLogins.sql", Array.Empty<string>()).AwaitTask());
 		} // proc InitializeSchemaCore
 
 		#endregion
