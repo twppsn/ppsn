@@ -1098,7 +1098,7 @@ namespace PPSnExcel
 
 				// update sort field
 				if (xlSort != null && sourceColumn.Ascending.HasValue)
-					xlList.Sort.SortFields.Add(targetColumn.Range, Order: sourceColumn.Ascending.Value ? Excel.XlSortOrder.xlAscending : Excel.XlSortOrder.xlDescending);
+					xlSort.SortFields.Add(targetColumn.Range, Order: sourceColumn.Ascending.Value ? Excel.XlSortOrder.xlAscending : Excel.XlSortOrder.xlDescending);
 			}
 
 			// check for columns to delete
@@ -1233,7 +1233,8 @@ namespace PPSnExcel
 			// get current column layout
 			// before the xml mapping is changed, because it will clear all mappings
 			var currentColumns = GetListColumnInfo().ToArray();
-			
+
+			var xlSort = xlList.Sort;
 			var (isOrderChanged, order) = CompareOrder(currentColumns, columns);
 
 			// remove filters if column set is changed
@@ -1252,15 +1253,10 @@ namespace PPSnExcel
 				var isChanged = result.PrepareMapping(xlList.InnerObject);
 				if (isChanged || isColumnSetChanged)
 				{
-					var xlSort = xlList.Sort;
-
-					if (isOrderChanged) // clear current order
-					{
-						// clear order
-						while (xlSort.SortFields.Count > 0)
-							xlSort.SortFields[1].Delete();
-					}
-
+					// clear current order
+					while (xlSort.SortFields.Count > 0)
+						xlSort.SortFields[1].Delete();
+					
 					RefreshLayout(result, columns, currentColumns, refreshLayout, xlSort, out showTotals);
 				}
 				else
@@ -1318,7 +1314,7 @@ namespace PPSnExcel
 			}
 
 			if (isOrderChanged)
-				xlList.Sort.Apply();
+				xlSort.Apply();
 		} // func RefreshAsync
 
 		#endregion
