@@ -2023,7 +2023,7 @@ namespace TecWare.PPSn.Server
 		/// <summary></summary>
 		/// <param name="database"></param>
 		public void FireDataChangedEvent(string database)
-			=> FireEvent("ppsn_database_changed", database);
+			=> FireSysEvent("ppsn_database_changed", database);
 
 		private XElement GetMimeTypesInfo()
 		{
