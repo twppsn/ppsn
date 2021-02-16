@@ -19,21 +19,23 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Net;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Office.Tools.Excel;
 using Microsoft.Win32;
-using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using TecWare.PPSn.Data;
 using Action = System.Action;
 using Excel = Microsoft.Office.Interop.Excel;
+
+/*
+ * To show load errors:
+ * set VSTO_SUPPRESSDISPLAYALERTS=0
+ */
 
 namespace PPSnExcel
 {
