@@ -158,11 +158,12 @@ namespace TecWare.PPSn.UI
 
 			#region -- Exec -----------------------------------------------------------
 
-			private void Exec(string command)
+			private void ExecCore(string command, string arguments)
 			{
 				var psi = new ProcessStartInfo
 				{
 					FileName = command,
+					Arguments = arguments,
 					WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
 				};
 				Process.Start(psi)?.Dispose();
@@ -185,7 +186,7 @@ namespace TecWare.PPSn.UI
 					command = "ms-settings:";
 
 				if (command != null)
-					PinProtected(() => Exec(command), pin, command + " ausgeführt.");
+					PinProtected(() => ExecCore(command, null), pin, command + " ausgeführt.");
 			} // proc Exec
 
 			#endregion
@@ -199,6 +200,65 @@ namespace TecWare.PPSn.UI
 			[LuaMember]
 			public void ExecRestart(string pin)
 				=> PinProtected(() => PpsDpcService.ShutdownOperationSystem(true), pin);
+
+			#endregion
+
+			#region -- Autologon ------------------------------------------------------
+
+			private void WriteRegistryValue(TextWriter tw, string key, string value)
+			{
+				tw.Write('"');
+				tw.Write(key);
+					tw.Write('"');
+					tw.Write('=');
+
+				if (value == null)
+					tw.Write('-');
+				else
+				{
+					tw.Write('"');
+					tw.Write(value.Replace("\"", "\"\""));
+					tw.Write('"');
+				}
+
+				tw.WriteLine();
+			} // proc WriteRegistryValue
+
+			private void ConfigAutoLogon(string password)
+			{
+				var fi = new FileInfo(Path.Combine(Path.GetTempPath(), "AutoLogon.5fffca5e885048428ea4b38694768f95.reg"));
+
+				// https://docs.microsoft.com/en-us/troubleshoot/windows-server/user-profiles-and-logon/turn-on-automatic-logon
+				// todo: https://docs.microsoft.com/en-us/windows/win32/secauthn/protecting-the-automatic-logon-password
+
+				string domainName = null;
+				string userName = null;
+
+				if (enable)
+				{
+					userName = Environment.UserName;
+					domainName = Environment.UserDomainName;
+					if (String.IsNullOrEmpty(domainName))
+						domainName = null;
+				}
+
+				using (var sw = new StreamWriter(fi.FullName))
+				{
+					sw.WriteLine("Windows Registry Editor Version 5.00");
+					sw.WriteLine();
+					sw.WriteLine(@"[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]");
+					WriteRegistryValue(sw, "AutoAdminLogon", password != null ? "1" : "0");
+					WriteRegistryValue(sw, "DefaultDomain", domainName);
+					WriteRegistryValue(sw, "DefaultUserName", userName);
+					WriteRegistryValue(sw, "DefaultPassword", password);
+				}
+
+				ExecCore(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName);
+			} // proc ConfigAutoLogon
+
+			[LuaMember]
+			public void AutoLogon(string password, string pin)
+				=> PinProtected(() => ConfigAutoLogon(password), pin, password != null ? "AutoLogon konfiguriert." : "AutoLogon deaktiviert.");
 
 			#endregion
 
