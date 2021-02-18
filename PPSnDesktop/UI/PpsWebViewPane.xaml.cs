@@ -49,6 +49,9 @@ namespace TecWare.PPSn.UI
 			webView.AddCommandBinding(shell, CommandBindings);
 		} // ctor
 
+		protected override PpsWindowPaneCompareResult CompareArguments(LuaTable args)
+			=> PpsWindowPaneCompareResult.Reload;
+
 		protected override async Task OnLoadAsync(LuaTable args)
 		{
 			await base.OnLoadAsync(args);

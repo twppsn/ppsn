@@ -234,7 +234,7 @@ namespace TecWare.PPSn.UI
 				string domainName = null;
 				string userName = null;
 
-				if (enable)
+				if (password != null)
 				{
 					userName = Environment.UserName;
 					domainName = Environment.UserDomainName;

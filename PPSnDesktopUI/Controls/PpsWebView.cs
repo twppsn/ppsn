@@ -62,18 +62,17 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsWebViewHistoryItem --------------------------------------------
 
 	/// <summary>History element</summary>
-	public class PpsWebViewHistoryItem : INotifyPropertyChanged
+	public sealed class PpsWebViewHistoryItem : INotifyPropertyChanged
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly Uri uri;
 		private string title;
 
-		public PpsWebViewHistoryItem(Uri uri)
+		internal PpsWebViewHistoryItem(Uri uri, string title = null)
 		{
 			this.uri = uri ?? throw new ArgumentNullException(nameof(uri));
-
-			title = uri.ToString();
+			this.title = title ?? uri.ToString();
 		} // ctor
 
 		/// <summary>Uri</summary>
@@ -412,8 +411,10 @@ namespace TecWare.PPSn.Controls
 
 		private void HtmlView_DocumentTitleChanged(object sender, object e)
 		{
-			if (sender is CoreWebView2 nWebView)
-				Title = nWebView.DocumentTitle;
+			if (sender is CoreWebView2 coreWebView)
+			{
+				Title = coreWebView.DocumentTitle;
+			}
 		} // event HtmlView_DocumentTitleChanged
 
 		private void HtmlView_NavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
@@ -421,7 +422,8 @@ namespace TecWare.PPSn.Controls
 #if DEBUG_NAV
 			Debug.WriteLine("WebView_NavigationStarting[{0}]: {1} (user={2}, redirect={3})", e.NavigationId, e.Uri, e.IsUserInitiated, e.IsRedirected);
 #endif
-			if (e.IsUserInitiated && TryGetNavigationToken(out var token))
+			var isUserInitiated = e.IsUserInitiated || e.Uri == htmlView.Source.ToString();
+			if (isUserInitiated && TryGetNavigationToken(out var token))
 			{
 				htmlTokens[e.NavigationId] = token;
 
@@ -478,8 +480,12 @@ namespace TecWare.PPSn.Controls
 
 		private void HtmlView_NewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs e)
 		{
-			throw new NotImplementedException("todo: implement new window");
-			// e.Handled = true;
+			if (Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri))
+			{
+				var target = (IInputElement)this.GetVisualParent().GetVisualParent(typeof(IInputElement));
+				LinkCommand.Execute(new PpsWebViewLink(uri) { NewWindow = false }, target);
+				e.Handled = true;
+			}
 		} // event HtmlView_NewWindowRequested
 
 		private void HtmlView_WindowCloseRequested(object sender, object e)
@@ -504,8 +510,8 @@ namespace TecWare.PPSn.Controls
 				if (currentFilterUri != null)
 					htmlView.CoreWebView2.RemoveWebResourceRequestedFilter(currentFilterUri, CoreWebView2WebResourceContext.All);
 
-				currentFilterUri = GetFilterUri(shell.GetRemoteUri(http));
-				htmlView.CoreWebView2.AddWebResourceRequestedFilter(currentFilterUri + "*", CoreWebView2WebResourceContext.All);
+				currentFilterUri = GetFilterUri(shell.GetRemoteUri(http)) + "*";
+				htmlView.CoreWebView2.AddWebResourceRequestedFilter(currentFilterUri, CoreWebView2WebResourceContext.All);
 			}
 		} // proc UpdateResourceRequest
 
@@ -688,9 +694,7 @@ namespace TecWare.PPSn.Controls
 		} // event HtmlView_CoreWebView2Ready
 
 		private void ShowHtml()
-		{
-			AddVisualChild(htmlView);
-		} // proc ShowHtml
+			=> AddVisualChild(htmlView);
 
 		private async Task SetHtmlAsync(Uri uri, bool appendToHistory, ViewResponseMessage message)
 		{
@@ -702,7 +706,10 @@ namespace TecWare.PPSn.Controls
 
 			cachedResponseMessage = message;
 			cachedAppendToHistory = appendToHistory;
-			htmlView.Source = uri;
+			if (htmlView.Source == uri)
+				htmlView.CoreWebView2.Reload();
+			else
+				htmlView.Source = uri;
 
 			SetValue(sourceUriPropertyKey, uri);
 		} // proc SetHtmlAsync
@@ -1035,7 +1042,7 @@ namespace TecWare.PPSn.Controls
 
 			public bool OnStarted(object uri, bool newWindow, bool appendHistory)
 			{
-				var e = new PpsWebViewNavigationStartedEventArgs(uri.ToString(), newWindow);
+				var e = new PpsWebViewNavigationStartedEventArgs(uri, newWindow);
 				if (IsActive)
 				{
 					webView.OnNavigationStarted(e);
@@ -1056,8 +1063,8 @@ namespace TecWare.PPSn.Controls
 			private void OnCompleted(bool isCanceled)
 			{
 				webView.OnNavigationCompleted(new PpsWebViewNavigationCompletedEventArgs(uri, isCanceled));
-				if (addToHistory)
-					webView.AppendHistory(uri);
+				if (addToHistory && !isCanceled && Uri.TryCreate(uri.ToString(), UriKind.Absolute, out var sourceUri))
+					webView.AppendHistory(sourceUri);
 			} // proc OnCompleted
 
 			public void Cancel()
@@ -1126,31 +1133,16 @@ namespace TecWare.PPSn.Controls
 			return http != null;
 		} // func TryGetHttp
 
-		private void AppendHistory(object source)
+		private void AppendHistory(Uri sourceUri)
 		{
-			Uri uri;
-
-			// convert to real uri
-			if (source is string tmp)
-			{
-				if (!Uri.TryCreate(tmp, UriKind.Absolute, out uri))
-					return;
-			}
-			else
-			{
-				uri = source as Uri;
-				if (uri == null)
-					return;
-			}
-
 			// cut history
 			var newHistoryIndex = CurrentHistoryIndex + 1;
 			while (newHistoryIndex < history.Count)
 				history.RemoveAt(newHistoryIndex);
 
 			// add new item
-			history.Add(new PpsWebViewHistoryItem(uri));
-			UpdateHistroyIndex(newHistoryIndex);
+			history.Add(new PpsWebViewHistoryItem(sourceUri));
+			UpdateHistroyIndex(newHistoryIndex, history[newHistoryIndex]);
 		} // proc AppendHistory
 
 		private void UpdateHistroyIndex(PpsWebViewHistoryItem item)
@@ -1158,49 +1150,55 @@ namespace TecWare.PPSn.Controls
 			var idx = history.IndexOf(item);
 			if (idx < 0)
 				idx = history.Count - 1;
-			UpdateHistroyIndex(idx);
+			UpdateHistroyIndex(idx, item);
 		} // proc UpdateHistroyIndex
 
-		private void UpdateHistroyIndex(int newIndex)
+		private void UpdateHistroyIndex(int newIndex, PpsWebViewHistoryItem historyItem)
 		{
 			SetValue(canGoForwardPropertyKey, BooleanBox.GetObject(newIndex < history.Count - 1));
 			SetValue(canGoBackPropertyKey, BooleanBox.GetObject(newIndex > 0));
 			SetValue(canGoHomePropertyKey, BooleanBox.GetObject(history.Count > 0));
 
 			SetValue(currentHistoryIndexPropertyKey, newIndex);
+			SetValue(currentHistoryItemPropertyKey, historyItem);
+
+			CommandManager.InvalidateRequerySuggested();
 		} // proc UpdateHistroyIndex
 
 		private void ClearHistory()
 		{
+			SetValue(currentHistoryItemPropertyKey, null);
 			SetValue(currentHistoryIndexPropertyKey, -1);
 			SetValue(canGoForwardPropertyKey, BooleanBox.False);
 			SetValue(canGoBackPropertyKey, BooleanBox.False);
 			SetValue(canGoHomePropertyKey, BooleanBox.False);
 
 			history.Clear();
+
+			CommandManager.InvalidateRequerySuggested();
 		} // proc ClearHistory
 
 		private PpsWebViewHistoryItem GetHistoryItem(int index)
 			=> index >= 0 && index < history.Count ? history[index] : null;
 
-		private Task GoHistoryAsync(int index)
+		private Task GoHistoryAsync(int index, bool setAsHome)
 		{
 			var his = GetHistoryItem(index);
 			if (his == null)
 				return Task.CompletedTask;
 
 			UpdateHistroyIndex(his);
-			return SetUriAsync(his.Uri, setAsHome: false, appendToHistory: false);
+			return SetUriAsync(his.Uri, setAsHome: setAsHome, appendToHistory: setAsHome);
 		} // proc GoHistoryAsync
 
 		public Task GoForwardAsync()
-			=> GoHistoryAsync(CurrentHistoryIndex + 1);
+			=> GoHistoryAsync(CurrentHistoryIndex + 1, false);
 
 		public Task GoHomeAsync()
-			=> GoHistoryAsync(0);
+			=> GoHistoryAsync(0, true);
 
 		public Task GoBackAsync()
-			=> GoHistoryAsync(CurrentHistoryIndex - 1);
+			=> GoHistoryAsync(CurrentHistoryIndex - 1, false);
 
 		private async Task SetExceptionCoreAsync(ViewNavigationToken token, Exception ex)
 		{
@@ -1212,11 +1210,14 @@ namespace TecWare.PPSn.Controls
 			shell.Value.LogProxy().LogMsg(LogMsgType.Error, ex);
 		} // proc SetExceptionAsync
 
+		/// <summary>Setzt eine Exception.</summary>
+		/// <param name="ex"></param>
+		/// <returns></returns>
 		public async Task SetExceptionAsync(Exception ex)
 		{
 			using (var token = EnforceNavigationToken())
 			{
-				if (!token.OnStarted("xaml:exception", false, false))
+				if (!token.OnStarted(new Uri("xaml://exception/", UriKind.Absolute), false, false))
 					return;
 
 				await SetExceptionCoreAsync(token, ex);
@@ -1236,10 +1237,7 @@ namespace TecWare.PPSn.Controls
 			{
 				using (var token = EnforceNavigationToken())
 				{
-					if (!appendToHistory)
-						token.NoHistory();
-
-					if (!token.OnStarted(newUri, false, true))
+					if (!token.OnStarted(newUri, false, appendToHistory))
 						return;
 
 					try
@@ -1319,7 +1317,7 @@ namespace TecWare.PPSn.Controls
 					SetSource(his.Uri, setAsHome: setAsHome, appendToHistory: false);
 					break;
 				case PpsWebViewLink link:
-					SetUri(link.Location, true, appendToHistory);
+					SetUri(link.Location, setAsHome, appendToHistory);
 					break;
 				case Exception ex:
 					SetExceptionAsync(ex).Spawn();
@@ -1409,9 +1407,9 @@ namespace TecWare.PPSn.Controls
 
 		private void OnTitleChanged(string newValue)
 		{
-			var his = GetHistoryItem(CurrentHistoryIndex);
-			if (his != null)
-				his.Title = newValue;
+			var currentHistory = CurrentHistoryItem;
+			if (currentHistory != null)
+				currentHistory.Title = newValue;
 		} // proc OnTitleChanged
 
 		/// <summary>Title of the current content.</summary>
@@ -1427,6 +1425,7 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey canGoForwardPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanGoForward), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty CanGoForwardProperty = canGoForwardPropertyKey.DependencyProperty;
 
+		/// <summary>Is it possible to navigate forward in the history.</summary>
 		public bool CanGoForward => BooleanBox.GetBool(GetValue(CanGoForwardProperty));
 
 		#endregion
@@ -1436,6 +1435,7 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey canGoHomePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanGoHome), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty CanGoHomeProperty = canGoHomePropertyKey.DependencyProperty;
 
+		/// <summary>Is there a home site, to jump.</summary>
 		public bool CanGoHome => BooleanBox.GetBool(GetValue(CanGoHomeProperty));
 
 		#endregion
@@ -1445,7 +1445,18 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey canGoBackPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanGoBack), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty CanGoBackProperty = canGoBackPropertyKey.DependencyProperty;
 
+		/// <summary>Kann zurück gegangen werden.</summary>
 		public bool CanGoBack => BooleanBox.GetBool(GetValue(CanGoBackProperty));
+
+		#endregion
+
+		#region -- CurrentHistoryItem - property --------------------------------------
+
+		private static readonly DependencyPropertyKey currentHistoryItemPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentHistoryItem), typeof(PpsWebViewHistoryItem), typeof(PpsWebView), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty CurrentHistoryItemProperty = currentHistoryItemPropertyKey.DependencyProperty;
+
+		/// <summary>Current active history item. This item is <c>null</c>, if the current page is not part of the history.</summary>
+		public PpsWebViewHistoryItem CurrentHistoryItem => (PpsWebViewHistoryItem)GetValue(CurrentHistoryItemProperty);
 
 		#endregion
 
@@ -1454,6 +1465,7 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey currentHistoryIndexPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentHistoryIndex), typeof(int), typeof(PpsWebView), new FrameworkPropertyMetadata(-1));
 		public static readonly DependencyProperty CurrentHistoryIndexProperty = currentHistoryIndexPropertyKey.DependencyProperty;
 
+		/// <summary>Index of the current or last used history index.</summary>
 		public int CurrentHistoryIndex => (int)GetValue(CurrentHistoryIndexProperty);
 
 		#endregion
@@ -1463,6 +1475,7 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey historyPropertyKey = DependencyProperty.RegisterReadOnly(nameof(History), typeof(IReadOnlyList<PpsWebViewHistoryItem>), typeof(PpsWebView), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty HistoryProperty = historyPropertyKey.DependencyProperty;
 
+		/// <summary>All user visible history items.</summary>
 		public IReadOnlyList<PpsWebViewHistoryItem> History => (IReadOnlyList<PpsWebViewHistoryItem>)GetValue(HistoryProperty);
 
 		#endregion
