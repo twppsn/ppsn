@@ -62,7 +62,7 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsCircularListBox}">
 					<ControlTemplate.Resources>
 						<Style TargetType="{x:Type RepeatButton}">
-							<Setter Property="Background" Value="LightGray" />
+							<Setter Property="Background" Value="{DynamicResource PPSnButtonBackgroundBrush}" />
 							<Setter Property="Height" Value="22" />
 							<Setter Property="Focusable" Value="False" />
 							<Setter Property="Template">
@@ -87,7 +87,7 @@ specific language governing permissions and limitations under the Licence.
 						</Style>
 					</ControlTemplate.Resources>
 					<Grid Background="Transparent">
-						<Border x:Name="ItemsBorder" BorderBrush="{DynamicResource PPSnPopUpBorderBrush}" BorderThickness="1" SnapsToDevicePixels="True">
+						<Border x:Name="ItemsBorder" BorderBrush="{DynamicResource PPSnPopupBorderBrush}" BorderThickness="1" SnapsToDevicePixels="True">
 							<ItemsPresenter x:Name="Items" VerticalAlignment="Center" /> 
 						</Border>
 						<RepeatButton x:Name="PreviousButton" Command="{x:Static ComponentCommands.MoveUp}" Margin="1,1,1,0" VerticalAlignment="Top" Visibility="Collapsed">
@@ -138,7 +138,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsMultiCircularListBox}">
-					<Grid Background="{DynamicResource PPSnPopUpBackgroundBrush}">
+					<Grid Background="{DynamicResource PPSnPopupBackgroundBrush}">
 						<Grid.RowDefinitions>
 							<RowDefinition />
 							<RowDefinition Height="40" />
@@ -164,7 +164,7 @@ specific language governing permissions and limitations under the Licence.
 						</ItemsControl>
 						<Border Height="{x:Static pps:PpsCircularListBox.ListViewItemHeight}" VerticalAlignment="Center"
 								Background="{TemplateBinding Foreground}" Opacity=".2" IsHitTestVisible="False" />
-						<Border Grid.Row="1" BorderThickness="1,0,1,1" BorderBrush="{DynamicResource PPSnPopUpBorderBrush}">
+						<Border Grid.Row="1" BorderThickness="1,0,1,1" BorderBrush="{DynamicResource PPSnPopupBorderBrush}">
 							<Grid>
 								<Grid.ColumnDefinitions>
 									<ColumnDefinition />

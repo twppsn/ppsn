@@ -43,7 +43,7 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey hasTwoItemsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasTwoItems), typeof(bool), typeof(PpsCircularListBox), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasTowItemsProperty = hasTwoItemsPropertyKey.DependencyProperty;
 
-		public static readonly DependencyProperty ListViewCountProperty = DependencyProperty.Register(nameof(ListViewCount), typeof(int), typeof(PpsCircularListBox), new FrameworkPropertyMetadata(15, new PropertyChangedCallback(OnListViewCountChanged)));
+		public static readonly DependencyProperty ListViewCountProperty = DependencyProperty.Register(nameof(ListViewCount), typeof(int), typeof(PpsCircularListBox), new FrameworkPropertyMetadata(11, new PropertyChangedCallback(OnListViewCountChanged)));
 		public static readonly DependencyProperty ListProperty = DependencyProperty.Register(nameof(List), typeof(IList), typeof(PpsCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnListChanged)));
 		public static readonly DependencyProperty SelectedItemProperty = Selector.SelectedItemProperty.AddOwner(typeof(PpsCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSelectedItemChanged)));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
@@ -279,7 +279,7 @@ namespace TecWare.PPSn.Controls
 	public class PpsMultiCircularListBox : ContentControl
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty ListViewCountProperty = PpsCircularListBox.ListViewCountProperty.AddOwner(typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(15));
+		public static readonly DependencyProperty ListViewCountProperty = PpsCircularListBox.ListViewCountProperty.AddOwner(typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(11));
 		public static readonly DependencyProperty ListSourceProperty = DependencyProperty.Register(nameof(ListSource), typeof(IEnumerable), typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnListSourceChanged)));
 		public static readonly DependencyProperty SelectedItemsProperty = DependencyProperty.Register(nameof(SelectedItems), typeof(object[]), typeof(PpsMultiCircularListBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSelectedItemsChanged), new CoerceValueCallback(OnCoerceValue)));
 
