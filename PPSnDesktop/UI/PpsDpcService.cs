@@ -124,7 +124,7 @@ namespace TecWare.PPSn.UI
 		{
 			using (var http = CreateDpcHttpClient())
 			using (var content = new StringContent(log, Encoding.UTF8, MimeTypes.Text.Plain))
-				await http.GetResponseAsync($"./?action=logcat&id={shell.DeviceId}", putContent: content);
+				await http.GetResponseAsync($"./?action=logpush&id={shell.DeviceId}", putContent: content);
 		} // func PushLogAsync
 
 		#endregion

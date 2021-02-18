@@ -20,6 +20,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -196,6 +197,9 @@ namespace TecWare.PPSn.Server
 	/// </summary>
 	public partial class PpsApplication : DEConfigLogItem, IPpsApplicationInitialization
 	{
+		/// <summary>Security token for dpc tasks</summary>
+		public const string SecurityDpc = "dpc.sec";
+		
 		private const RegexOptions clientOptionHookRegexOptions = RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled;
 		private const string propertyCategory = "Applications";
 		private const string refreshAppsAction = "refreshApp";
@@ -1667,7 +1671,7 @@ namespace TecWare.PPSn.Server
 		private int FindSeenClientIndex(string clientId)
 			=> seenClients.FindIndex(c => String.Compare(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase) == 0);
 
-		private PpsSeenClient GetLastSeenClient(IDEWebRequestScope r, bool throwException)
+		private PpsSeenClient GetSeenClient(IDEWebRequestScope r, bool throwException)
 		{
 			var clientId = r.GetProperty("id", null);
 
@@ -1915,7 +1919,7 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public LuaTable GetClientOptions(IDEWebRequestScope r)
 		{
-			var client = GetLastSeenClient(r, true);
+			var client = GetSeenClient(r, true);
 			var lastTick = r.GetProperty("last", -1L);
 			using (r.Use())
 			{
@@ -1926,6 +1930,113 @@ namespace TecWare.PPSn.Server
 				return options;
 			}
 		} // func GetClientOptions
+
+		#endregion
+
+		#region -- Dpc - actions ------------------------------------------------------
+
+		private static void GetReceiveLogParamater(IDEWebRequestScope r, string raw, out string extention, out bool readText)
+		{
+			if (MediaTypeHeaderValue.TryParse(r.InputContentType, out var mediaType))
+			{
+				extention = raw == "evtx" ? ".evtx" : MimeTypeMapping.GetExtensionFromMimeType(mediaType.MediaType);
+				readText = mediaType.MediaType.StartsWith("text/", StringComparison.OrdinalIgnoreCase);
+			}
+			else
+			{
+				extention = ".dat";
+				readText = false;
+			}
+		} // proc GetReceiveLogParamater
+
+		private string FilterClientId(string deviceId)
+		{
+			var invalidChars = Path.GetInvalidFileNameChars();
+			var sb = new StringBuilder(deviceId.Length);
+			var lastWasPoint = false;
+			foreach (var c in deviceId)
+			{
+				if (Array.IndexOf(invalidChars, c) == -1)
+				{
+					if (c == '.')
+					{
+						if (!lastWasPoint)
+						{
+							lastWasPoint = true;
+							sb.Append('.');
+						}
+					}
+					else
+					{
+						lastWasPoint = false;
+						sb.Append(c);
+					}
+				}
+			}
+			return sb.ToString();
+		} // func FilterClientId
+
+		[DEConfigHttpAction("logmsg", IsSafeCall = true, SecurityToken = SecurityDpc)]
+		internal void HttpClientReceiveLogMessage(IDEWebRequestScope r, string typ, string msg)
+		{
+			LogMsgType GetMsgType()
+			{
+				if (String.IsNullOrEmpty(typ))
+					return LogMsgType.Information;
+				switch (Char.ToLower(typ[0]))
+				{
+					case 'e':
+						return LogMsgType.Warning;
+					case 'd':
+						return LogMsgType.Debug;
+					case 'w':
+						return LogMsgType.Warning;
+					default:
+						return LogMsgType.Information;
+				}
+			} // func HttpReceiveLog
+
+			Log.LogMsg(GetMsgType(), $"[{GetSeenClient(r, true).ClientId}] {msg}");
+			r.SetStatus(HttpStatusCode.OK, "Message received.");
+		} // proc HttpClientReceiveLogMessage
+
+		[DEConfigHttpAction("logpush", IsSafeCall = true, SecurityToken = SecurityDpc)]
+		internal void HttpClientReceiveLogFile(IDEWebRequestScope r, string raw = null)
+		{
+			var client = GetSeenClient(r, true);
+
+			GetReceiveLogParamater(r, raw, out var extention, out var readText);
+
+			// create target file
+			var currentLogDirectory = Path.GetDirectoryName(LogFileName);
+			var targetFile = new FileInfo(Path.Combine(currentLogDirectory, $"log-{FilterClientId(client.ClientId)}{extention}"));
+
+			// always overwrite
+			if (readText)
+			{
+				using (var dst = targetFile.OpenWrite())
+				{
+					using (var sw = new StreamWriter(dst, Encoding.UTF8, 4096, true))
+					using (var sr = r.GetInputTextReader())
+					{
+						string line;
+						while ((line = sr.ReadLine()) != null)
+							sw.WriteLine(line);
+					}
+					dst.SetLength(dst.Position);
+				}
+			}
+			else
+			{
+				using (var dst = targetFile.OpenWrite())
+				using (var src = r.GetInputStream())
+					src.CopyTo(dst);
+			}
+
+			Log.Info("{0}: Log received.", client.ClientId);
+
+			r.SetStatus(HttpStatusCode.OK, "Log received.");
+		} // proc HttpClientReceiveLogFile
 
 		#endregion
 
