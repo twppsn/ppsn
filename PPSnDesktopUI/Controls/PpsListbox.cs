@@ -131,6 +131,7 @@ namespace TecWare.PPSn.Controls
 
 	#region -- class PpsListGridViewColumn --------------------------------------------
 
+	[RuntimeNameProperty("Name")]
 	public class PpsListGridViewColumn : GridViewColumn
 	{
 		PpsListGridView gridView;
@@ -163,6 +164,14 @@ namespace TecWare.PPSn.Controls
 		}
 
 		// public GridLength Size { get; set; }
+
+		#region -- Name - property ----------------------------------------------------
+
+		public static readonly DependencyProperty NameProperty = FrameworkElement.NameProperty.AddOwner(typeof(PpsListGridViewColumn));
+
+		public string Name { get => (string)GetValue(NameProperty); set => SetValue(NameProperty, value); }
+
+		#endregion
 	} // class PpsListGridViewColumn
 
 	#endregion
