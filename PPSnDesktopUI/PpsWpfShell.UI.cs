@@ -152,7 +152,7 @@ namespace TecWare.PPSn
 						yield return (key, v);
 					}
 				}
-				
+
 				current = dictionaryStack.Count > 0 ? dictionaryStack.Pop() : null;
 			}
 		} // func FindResourceAndKeyByKey
@@ -181,7 +181,7 @@ namespace TecWare.PPSn
 		private static bool TryFindResource(FrameworkElement fe, object resourceKey, out object resource)
 		{
 			resource = fe.TryFindResource(resourceKey);
-				return resource != null;
+			return resource != null;
 		} // func TryFindResource
 
 		private static bool TryFindResource(FrameworkContentElement fce, object resourceKey, out object resource)
@@ -266,7 +266,7 @@ namespace TecWare.PPSn
 
 		public static string ToGeometryName(this PpsImage image)
 		{
-			switch(image)
+			switch (image)
 			{
 				case PpsImage.Information:
 				case PpsImage.Question:

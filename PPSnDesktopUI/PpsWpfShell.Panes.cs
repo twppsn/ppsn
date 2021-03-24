@@ -252,7 +252,14 @@ namespace TecWare.PPSn
 			// wait for unload
 			var paneClosedTask = new TaskCompletionSource<T>();
 			pane.PaneHost.PaneUnloaded += (sender, e) => paneClosedTask.SetResult(pane);
-			return await paneClosedTask.Task;
+			try
+			{
+				return await paneClosedTask.Task;
+			}
+			catch (TaskCanceledException)
+			{
+				return default;
+			}
 		} // func ShowModalPaneAsync
 
 		#endregion

@@ -89,4 +89,63 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style x:Key="{x:Type uiC:PpsListGridViewColumn}" TargetType="{x:Type GridViewColumnHeader}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="GridViewColumnHeader">
+					<Border BorderBrush="{DynamicResource PPSnSeperatorBrush}" BorderThickness="1,0,0,1" Padding="7,1,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+						<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+						<!-- <Thumb x:Name="PART_HeaderGripper" DockPanel.Dock="Right" /> -->
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="{x:Type uiC:PpsListGridViewColumns}" TargetType="{x:Type ListViewItem}">
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="SnapsToDevicePixels" Value="True" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ListViewItem}">
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition />
+							<RowDefinition Height="2" />
+						</Grid.RowDefinitions>
+						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+							<GridViewRowPresenter Margin="6,1" VerticalAlignment="Center" />
+						</Border>
+						<!--custom visual focus-->
+						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" RenderOptions.EdgeMode="Aliased" Opacity="0" />
+						<!--ItemSeparator-->
+						<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="Transparent" />
+					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsFocused" Value="True">
+							<Setter TargetName="focusRect" Property="Opacity" Value="1" />
+						</Trigger>
+						<MultiDataTrigger>
+							<MultiDataTrigger.Conditions>
+								<Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
+								<Condition Binding="{Binding ShowSelectionMode, RelativeSource={RelativeSource AncestorType={x:Type uiC:PpsListBox}}}" Value="Always" />
+							</MultiDataTrigger.Conditions>
+							<Setter Property="Background" Value="{DynamicResource PPSnSelectionBarBrush}" />
+						</MultiDataTrigger>
+						<MultiDataTrigger>
+							<MultiDataTrigger.Conditions>
+								<Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
+								<Condition Binding="{Binding IsFocused, RelativeSource={RelativeSource Self}}" Value="True" />
+								<Condition Binding="{Binding ShowSelectionMode, RelativeSource={RelativeSource AncestorType={x:Type uiC:PpsListBox}}}" Value="WhenFocused" />
+							</MultiDataTrigger.Conditions>
+							<Setter Property="Background" Value="{DynamicResource PPSnSelectionBarBrush}" />
+						</MultiDataTrigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>

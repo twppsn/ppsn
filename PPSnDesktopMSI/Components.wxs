@@ -89,12 +89,16 @@
 				<File Id="MicrosoftWebWebView2WpfDll" Name="Microsoft.Web.WebView2.Wpf.dll" Source="$(var.BinDirectory)\Microsoft.Web.WebView2.Wpf.dll" Vital="yes" Checksum="yes" />
 				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="MicrosoftWebWebView2Wpf" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
+			<Component Id="MicrosoftWebWebView2WinForms" Guid="ae1de6df-d5b6-4718-adc0-0c9da4780d43" Directory="INSTALLFOLDER">
+				<File Id="MicrosoftWebWebView2WinFormsDll" Name="Microsoft.Web.WebView2.WinForms.dll" Source="$(var.BinDirectory)\Microsoft.Web.WebView2.WinForms.dll" Vital="yes" Checksum="yes" />
+				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="MicrosoftWebWebView2WinForms" Value="1" Type="integer" KeyPath="yes" />
+			</Component>
 			<Component Id="WebView2LoaderX86" Guid="0e0cd469-aa85-4379-90f4-b007b3690405" Directory="BinX86">
-				<File Id="WebView2LoaderX86Dll" Name="WebView2Loader.dll" Source="$(var.BinDirectory)\x86\WebView2Loader.dll" Vital="yes" Checksum="yes" />
+				<File Id="WebView2LoaderX86Dll" Name="WebView2Loader.dll" Source="$(var.BinDirectory)\WebView2Loader.dll" Vital="yes" Checksum="yes" />
 				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="WebView2LoaderX86" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="WebView2LoaderX64" Guid="d426e6fc-64eb-486a-88e7-1eb0a8b41418" Directory="BinX64">
-				<File Id="WebView2LoaderX64Dll" Name="WebView2Loader.dll" Source="$(var.BinDirectory)\x64\WebView2Loader.dll" Vital="yes" Checksum="yes" />
+				<File Id="WebView2LoaderX64Dll" Name="WebView2Loader.dll" Source="$(var.BinDirectory)\runtimes\win-x64\native\WebView2Loader.dll" Vital="yes" Checksum="yes" />
 				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="WebView2LoaderX64" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
