@@ -131,45 +131,84 @@ namespace TecWare.PPSn.Controls
 
 	#region -- class PpsListGridViewColumn --------------------------------------------
 
-	[RuntimeNameProperty("Name")]
-	public class PpsListGridViewColumn : GridViewColumn
+	public class PpsListGridViewColumn : FrameworkContentElement
 	{
-		PpsListGridView gridView;
+		#region -- class PpsGridViewColumn --------------------------------------------
 
-		internal void PrepareColumn(PpsListGridView gridView, ListViewItem item)
+		private sealed class PpsGridViewColumn : GridViewColumn
 		{
-			this.gridView = gridView;
-			if (Double.IsNaN(Width)) // use star!
+			private readonly PpsListGridViewColumn column;
+
+			public PpsGridViewColumn(PpsListGridViewColumn column)
 			{
-				item.SizeChanged += Item_SizeChanged;
-			}
+				this.column = column ?? throw new ArgumentNullException(nameof(column));
+
+				Header = column.Header;
+				CellTemplate = column.CellTemplate;
+				DisplayMemberBinding = column.DisplayMemberBinding;
+				Width = column.Width.Value;
+			} // ctor
+		} // class PpsGridViewColumn
+
+		#endregion
+
+		internal GridViewColumn CreateGridViewColumn(PpsListGridView gridView, ListViewItem item)
+		{
+			return new PpsGridViewColumn(this);
+			//this.gridView = gridView;
+			//if (Double.IsNaN(Width)) // use star!
+			//{
+			//	item.SizeChanged += Item_SizeChanged;
+			//}
 		} // proc PrepareColumn
 
 		private void Item_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
-			var item = (ListViewItem)sender;
+			//var item = (ListViewItem)sender;
 			//var lvi = (ListView)ItemsControl.GetItemsOwner(item);
-			var view = gridView; // (GridView) lvi.View;
+			//var view = gridView; // (GridView) lvi.View;
 
 			// wird für jede zeile und spalte ausgeführt!
 
-			var totalColumnWidth = 0.0;
-			for (var i = 0; i < view.Columns.Count; i++)
-				if( view.Columns[i] != this)
-					totalColumnWidth += view.Columns[i].ActualWidth;
+			//var totalColumnWidth = 0.0;
+			//for (var i = 0; i < view.Columns.Count; i++)
+			//	if( view.Columns[i] != this)
+			//		totalColumnWidth += view.Columns[i].ActualWidth;
 
-			var newWidth = item.ActualWidth - totalColumnWidth;
-			if (newWidth > 0)
-				Width = newWidth;
+			//var newWidth = item.ActualWidth - totalColumnWidth;
+			//if (newWidth > 0)
+			//	Width = newWidth;
 		}
 
-		// public GridLength Size { get; set; }
+		#region -- Header - property --------------------------------------------------
 
-		#region -- Name - property ----------------------------------------------------
+		public static readonly DependencyProperty HeaderProperty = DependencyProperty.Register(nameof(Header), typeof(object), typeof(PpsListGridViewColumn), new FrameworkPropertyMetadata(null));
 
-		public static readonly DependencyProperty NameProperty = FrameworkElement.NameProperty.AddOwner(typeof(PpsListGridViewColumn));
+		public object Header { get => GetValue(HeaderProperty); set => SetValue(HeaderProperty, value); }
 
-		public string Name { get => (string)GetValue(NameProperty); set => SetValue(NameProperty, value); }
+		#endregion
+
+		#region -- CellTemplate - property --------------------------------------------
+
+		public static readonly DependencyProperty CellTemplateProperty = DependencyProperty.Register(nameof(CellTemplate), typeof(DataTemplate), typeof(PpsListGridViewColumn), new FrameworkPropertyMetadata(null));
+
+		public DataTemplate CellTemplate { get => (DataTemplate)GetValue(CellTemplateProperty); set => SetValue(CellTemplateProperty, value); }
+
+		#endregion
+
+		#region -- Width - property ---------------------------------------------------
+
+		public static readonly DependencyProperty WidthProperty = DependencyProperty.Register(nameof(Width), typeof(GridLength), typeof(PpsListGridViewColumn), new FrameworkPropertyMetadata(new GridLength(100.0, GridUnitType.Pixel)));
+
+		public GridLength Width { get => (GridLength)GetValue(WidthProperty); set => SetValue(WidthProperty, value); }
+
+		#endregion
+
+		#region -- DisplayMemberBinding - property ------------------------------------
+
+		public static readonly DependencyProperty DisplayMemberBindingProperty = DependencyProperty.Register(nameof(DisplayMemberBinding), typeof(BindingBase), typeof(PpsListGridViewColumn), new FrameworkPropertyMetadata(null));
+
+		public BindingBase DisplayMemberBinding { get => (BindingBase)GetValue(DisplayMemberBindingProperty); set => SetValue(DisplayMemberBindingProperty, value); }
 
 		#endregion
 	} // class PpsListGridViewColumn
@@ -179,7 +218,7 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsListGridViewColumns -------------------------------------------
 
 	[ContentProperty("Columns")]
-	public class PpsListGridViewColumns : FrameworkElement, IAddChild
+	public class PpsListGridViewColumns : FrameworkContentElement, IAddChild
 	{
 		private readonly List<PpsListGridViewColumn> columns = new List<PpsListGridViewColumn>();
 
@@ -193,13 +232,31 @@ namespace TecWare.PPSn.Controls
 		{
 			foreach (var c in columns)
 			{
-				c.PrepareColumn(gridView, item);
-				gridView.Columns.Add(c);
+				gridView.Columns.Add(c.CreateGridViewColumn(gridView, item));
+				//new GridViewColumn
+				//{
+				//	CellTemplate = null,
+				//	CellTemplateSelector = null,
+				//	DisplayMemberBinding = null,
+				//	HeaderTemplate = null,
+				//	HeaderTemplateSelector = null,
+				//	Width = 100
+				//};
+				//gridView.Columns.Add(c);
 			}
 		} // proc PrepareColumns
 
 		public List<PpsListGridViewColumn> Columns => columns;
 	} // class PpsListGridViewColumns
+
+	#endregion
+
+	#region -- class PpsListGridViewTemplate ------------------------------------------
+
+	/// <summary>List grid view template.</summary>
+	public class PpsListGridViewTemplate : DataTemplate
+	{
+	} // class PpsListGridViewTemplate
 
 	#endregion
 
@@ -247,15 +304,6 @@ namespace TecWare.PPSn.Controls
 			AllowsColumnReorderProperty.OverrideMetadata(typeof(PpsListGridView), new FrameworkPropertyMetadata(BooleanBox.False));
 		}
 	} // class PpsListGridView
-
-	#endregion
-
-	#region -- class PpsListGridViewTemplate ------------------------------------------
-
-	/// <summary>List grid view template.</summary>
-	public class PpsListGridViewTemplate : DataTemplate
-	{
-	} // class PpsListGridViewTemplate
 
 	#endregion
 }
