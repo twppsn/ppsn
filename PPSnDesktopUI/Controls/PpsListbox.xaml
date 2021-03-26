@@ -95,8 +95,10 @@ specific language governing permissions and limitations under the Licence.
 			<Setter.Value>
 				<ControlTemplate TargetType="GridViewColumnHeader">
 					<Border BorderBrush="{DynamicResource PPSnSeperatorBrush}" BorderThickness="1,0,0,1" Padding="7,1,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-						<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
-						<!-- <Thumb x:Name="PART_HeaderGripper" DockPanel.Dock="Right" /> -->
+						<!--<DockPanel LastChildFill="True">
+							 <Thumb x:Name="PART_HeaderGripper" DockPanel.Dock="Right" />--> 
+							<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+						<!--</DockPanel>-->
 					</Border>
 				</ControlTemplate>
 			</Setter.Value>
@@ -117,7 +119,7 @@ specific language governing permissions and limitations under the Licence.
 							<RowDefinition Height="2" />
 						</Grid.RowDefinitions>
 						<Border Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-							<GridViewRowPresenter Margin="6,1" VerticalAlignment="Center" />
+							<GridViewRowPresenter Margin="6,1" />
 						</Border>
 						<!--custom visual focus-->
 						<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" RenderOptions.EdgeMode="Aliased" Opacity="0" />

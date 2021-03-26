@@ -16,12 +16,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
@@ -46,6 +49,18 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsListBox : ListView
 	{
+		public PpsListBox()
+		{
+		} // ctor
+
+		protected override Size ArrangeOverride(Size arrangeBounds)
+		{
+			var sz = base.ArrangeOverride(arrangeBounds);
+			if (View is PpsListGridView v)
+				v.ArrangeColumns(sz.Width);
+			return sz;
+		} // proc ArrangeOverride
+
 		private bool TryGetViewTemplate(IEnumerable newValue, out DataTemplate template)
 		{
 			template = null;
@@ -84,7 +99,7 @@ namespace TecWare.PPSn.Controls
 		protected override void OnItemTemplateChanged(DataTemplate oldItemTemplate, DataTemplate newItemTemplate)
 		{
 			if (newItemTemplate is PpsListGridViewTemplate gridViewTemplate) // is the template a column based template create a view
-				View = new PpsListGridView(this, (PpsListGridViewColumns)gridViewTemplate.LoadContent());
+				View = new PpsListGridView(this, gridViewTemplate);
 
 			base.OnItemTemplateChanged(oldItemTemplate, newItemTemplate);
 		} // proc OnItemTemplateChanged
@@ -129,56 +144,84 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
+	#region -- class PpsGridViewColumn ------------------------------------------------
+
+	internal sealed class PpsGridViewColumn : GridViewColumn
+	{
+		private readonly PpsListGridView gridView;
+		private readonly PpsListGridViewColumn column;
+
+		public PpsGridViewColumn(PpsListGridView gridView, PpsListGridViewColumn column)
+		{
+			this.gridView = gridView ?? throw new ArgumentNullException(nameof(gridView));
+			this.column = column ?? throw new ArgumentNullException(nameof(column));
+
+			Header = column.Header;
+			CellTemplate = column.CellTemplate;
+			DisplayMemberBinding = column.DisplayMemberBinding;
+			UpdateActualWidth(Double.NaN);
+
+			column.PropertyChanged += Column_PropertyChanged;
+		} // ctor
+
+		private void Column_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			switch (e.PropertyName)
+			{
+				case nameof(PpsListGridViewColumn.Header):
+					Header = column.Header;
+					break;
+				case nameof(PpsListGridViewColumn.Width):
+					UpdateActualWidth(Double.NaN);
+					break;
+				case nameof(PpsListGridViewColumn.DisplayMemberBinding):
+					DisplayMemberBinding = column.DisplayMemberBinding;
+					break;
+				case nameof(PpsListGridViewColumn.CellTemplate):
+					CellTemplate = column.CellTemplate;
+					break;
+			}
+		} // proc Column_PropertyChanged
+
+		public void UpdateActualWidth(double actualWidth)
+		{
+			if (column.Width.IsAbsolute)
+				Width = column.Width.Value;
+			else
+			{
+				if (Double.IsNaN(actualWidth))
+				{
+					actualWidth = column.Width.Value * 100;
+					gridView.InvalidateColumnsArrange();
+				}
+
+				if (Width != actualWidth)
+					Width = actualWidth;
+			}
+		} // proc UpdateActualWidth
+	} // class PpsGridViewColumn
+
+	#endregion
+
 	#region -- class PpsListGridViewColumn --------------------------------------------
 
-	public class PpsListGridViewColumn : FrameworkContentElement
+	public class PpsListGridViewColumn : FrameworkContentElement, INotifyPropertyChanged
 	{
-		#region -- class PpsGridViewColumn --------------------------------------------
+		public event PropertyChangedEventHandler PropertyChanged;
 
-		private sealed class PpsGridViewColumn : GridViewColumn
+		private void InvokePropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
 		{
-			private readonly PpsListGridViewColumn column;
+			// Debug.Print("{0}: {1} -> {2}", e.Property.Name, e.OldValue, e.NewValue);
+			base.OnPropertyChanged(e);
+			if (e.Property == WidthProperty || e.Property == HeaderProperty || e.Property == CellTemplateProperty)
+				InvokePropertyChanged(e.Property.Name);
+		} // proc OnPropertyChanged
 
-			public PpsGridViewColumn(PpsListGridViewColumn column)
-			{
-				this.column = column ?? throw new ArgumentNullException(nameof(column));
-
-				Header = column.Header;
-				CellTemplate = column.CellTemplate;
-				DisplayMemberBinding = column.DisplayMemberBinding;
-				Width = column.Width.Value;
-			} // ctor
-		} // class PpsGridViewColumn
-
-		#endregion
-
-		internal GridViewColumn CreateGridViewColumn(PpsListGridView gridView, ListViewItem item)
-		{
-			return new PpsGridViewColumn(this);
-			//this.gridView = gridView;
-			//if (Double.IsNaN(Width)) // use star!
-			//{
-			//	item.SizeChanged += Item_SizeChanged;
-			//}
-		} // proc PrepareColumn
-
-		private void Item_SizeChanged(object sender, SizeChangedEventArgs e)
-		{
-			//var item = (ListViewItem)sender;
-			//var lvi = (ListView)ItemsControl.GetItemsOwner(item);
-			//var view = gridView; // (GridView) lvi.View;
-
-			// wird für jede zeile und spalte ausgeführt!
-
-			//var totalColumnWidth = 0.0;
-			//for (var i = 0; i < view.Columns.Count; i++)
-			//	if( view.Columns[i] != this)
-			//		totalColumnWidth += view.Columns[i].ActualWidth;
-
-			//var newWidth = item.ActualWidth - totalColumnWidth;
-			//if (newWidth > 0)
-			//	Width = newWidth;
-		}
+		internal GridViewColumn CreateGridViewColumn(PpsListGridView gridView)
+			=> new PpsGridViewColumn(gridView, this);
 
 		#region -- Header - property --------------------------------------------------
 
@@ -198,7 +241,7 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Width - property ---------------------------------------------------
 
-		public static readonly DependencyProperty WidthProperty = DependencyProperty.Register(nameof(Width), typeof(GridLength), typeof(PpsListGridViewColumn), new FrameworkPropertyMetadata(new GridLength(100.0, GridUnitType.Pixel)));
+		public static readonly DependencyProperty WidthProperty = DependencyProperty.Register(nameof(Width), typeof(GridLength), typeof(PpsListGridViewColumn), new FrameworkPropertyMetadata(new GridLength(1.0, GridUnitType.Star)));
 
 		public GridLength Width { get => (GridLength)GetValue(WidthProperty); set => SetValue(WidthProperty, value); }
 
@@ -206,9 +249,20 @@ namespace TecWare.PPSn.Controls
 
 		#region -- DisplayMemberBinding - property ------------------------------------
 
-		public static readonly DependencyProperty DisplayMemberBindingProperty = DependencyProperty.Register(nameof(DisplayMemberBinding), typeof(BindingBase), typeof(PpsListGridViewColumn), new FrameworkPropertyMetadata(null));
+		private BindingBase displayMemberBinding = null; // no dependency property for markups
 
-		public BindingBase DisplayMemberBinding { get => (BindingBase)GetValue(DisplayMemberBindingProperty); set => SetValue(DisplayMemberBindingProperty, value); }
+		public BindingBase DisplayMemberBinding
+		{
+			get => displayMemberBinding;
+			set 
+			{
+				if (displayMemberBinding != value)
+				{
+					displayMemberBinding = value;
+					InvokePropertyChanged(nameof(DisplayMemberBinding));
+				}
+			}
+		} // prop DisplayMemberBinding
 
 		#endregion
 	} // class PpsListGridViewColumn
@@ -222,29 +276,15 @@ namespace TecWare.PPSn.Controls
 	{
 		private readonly List<PpsListGridViewColumn> columns = new List<PpsListGridViewColumn>();
 
+		public PpsListGridViewColumns()
+		{
+		} // ctor
+
 		public void AddChild(object value)
 			=> Columns.Add((PpsListGridViewColumn)value);
 
 		public void AddText(string text)
 			=> throw new NotImplementedException();
-
-		internal void PrepareColumns(PpsListGridView gridView, ListViewItem item)
-		{
-			foreach (var c in columns)
-			{
-				gridView.Columns.Add(c.CreateGridViewColumn(gridView, item));
-				//new GridViewColumn
-				//{
-				//	CellTemplate = null,
-				//	CellTemplateSelector = null,
-				//	DisplayMemberBinding = null,
-				//	HeaderTemplate = null,
-				//	HeaderTemplateSelector = null,
-				//	Width = 100
-				//};
-				//gridView.Columns.Add(c);
-			}
-		} // proc PrepareColumns
 
 		public List<PpsListGridViewColumn> Columns => columns;
 	} // class PpsListGridViewColumns
@@ -264,27 +304,76 @@ namespace TecWare.PPSn.Controls
 
 	public class PpsListGridView : GridView
 	{
-		private readonly PpsListGridViewColumns baseColumns = null;
-
-		public PpsListGridView()
-		{
-		} // ctor
+		private readonly PpsListGridViewColumns columns = null;
+		private readonly PpsListBox attachedListBox = null;
 
 		public PpsListGridView(PpsListBox listBox, PpsListGridViewColumns columns)
 		{
-			baseColumns = columns;
+			attachedListBox = listBox;
+			this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
+			Init(listBox);
+		} // ctor
 
+		public PpsListGridView(PpsListBox listBox, PpsListGridViewTemplate template)
+		{
+			attachedListBox = listBox;
+			columns = (PpsListGridViewColumns)template.LoadContent();
+			Init(listBox);
+		} // ctor
+
+		private void Init(PpsListBox listBox)
+		{
+			// set default container style
 			var res = listBox.TryFindResource(typeof(PpsListGridViewColumn));
 			if (res is Style gridViewHeaderStyle)
 				ColumnHeaderContainerStyle = gridViewHeaderStyle;
-		} // ctor
 
-		protected override void PrepareItem(ListViewItem item)
+			// prepare columns
+			if (columns != null)
+			{
+				foreach (var col in columns.Columns)
+					Columns.Add(col.CreateGridViewColumn(this));
+				InvalidateColumnsArrange();
+			}
+		} // proc Init
+
+		internal void InvalidateColumnsArrange()
 		{
-			if (baseColumns != null && Columns.Count == 0 && baseColumns.Columns.Count > 0)
-				baseColumns.PrepareColumns(this, item);
-			base.PrepareItem(item);
-		} // proc PrepareItem
+			if (attachedListBox == null)
+				attachedListBox.InvalidateArrange();
+		} // proc InvalidateColumnsArrange
+
+		internal void ArrangeColumns(double actualWidth)
+		{
+			if (columns == null || columns.Columns.Count == 0 )
+				return;
+
+			var totalWidth = actualWidth;
+			var absoluteWidth = 0.0;
+			var starWidth = 0.0;
+
+			foreach (var c in columns.Columns)
+			{
+				if (c.Width.IsAbsolute)
+					absoluteWidth += c.Width.Value;
+				else if (c.Width.IsStar)
+					starWidth += c.Width.Value;
+			}
+
+			var restWidth = totalWidth - absoluteWidth;
+			if (restWidth > 0)
+			{
+				for (var i = 0; i < columns.Columns.Count; i++)
+				{
+					var width = columns.Columns[i].Width;
+					if (width.IsStar)
+						((PpsGridViewColumn)Columns[i]).UpdateActualWidth(width.Value * restWidth / starWidth);
+				}
+			}
+		} // proc ArrangeColumns
+
+		protected override object DefaultStyleKey 
+			=> base.DefaultStyleKey;
 
 		protected override object ItemContainerDefaultStyleKey 
 			=> typeof(PpsListGridViewColumns);
