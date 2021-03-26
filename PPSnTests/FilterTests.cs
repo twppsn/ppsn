@@ -220,6 +220,20 @@ namespace TecWare.PPSn
 			var f2 = PpsDataFilterExpression.Parse("or(or(Int64:=1 Int64:=2 Int64:=3 Int64:=4 Int64:=2) Int64:=5)").Reduce();
 		}
 
+		[TestMethod]
+		public void TestInExpr2()
+		{
+			var f = PpsDataFilterExpression.Parse("Nr:(01 02 13 24 35)");
+
+			var t = new TextSqlVisitor(new Tuple<string, Type>("Nr", typeof(string)));
+			var r = t.CreateFilter(f);
+			Assert.AreEqual("Nr IN ('01','02','13','24','35')", r);
+
+			var t2 = new TextSqlVisitor(new Tuple<string, Type>("Nr", typeof(long)));
+			var r2 = t2.CreateFilter(f);
+			Assert.AreEqual("Nr IN (1,2,13,24,35)", r2);
+		}
+
 		private sealed class TextSqlVisitor : PpsDataFilterVisitorSql
 		{
 			private readonly Tuple<string, Type>[] columns;

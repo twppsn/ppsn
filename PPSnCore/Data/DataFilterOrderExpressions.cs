@@ -204,7 +204,7 @@ namespace TecWare.PPSn.Data
 				return false;
 
 			for (var i = 1; i < count; i++)
-		{
+			{
 				if (!IsLetterOrDigit(expression[i + offset]))
 					return false;
 			}
@@ -213,7 +213,7 @@ namespace TecWare.PPSn.Data
 		} // func IsIdentifier
 
 		private static PpsDataFilterValue ParseSingleValue(string expression, ref int offset, int expressionLength, IFormatProvider formatProvider, PpsDataFilterParseOption options)
-			{
+		{
 			PpsDataFilterValue value;
 
 			if (offset >= expressionLength || Char.IsWhiteSpace(expression[offset]))
@@ -251,9 +251,9 @@ namespace TecWare.PPSn.Data
 
 				if (offset == startAt2)
 					value = PpsDataFilterNullValue.Default;
-					else
+				else
 					value = new PpsDataFilterVariableValue(expression.Substring(startAt2, offset - startAt2));
-					}
+			}
 			else
 			{
 				var startAt2 = offset;
@@ -270,19 +270,20 @@ namespace TecWare.PPSn.Data
 							&& IsIdentifier(expression, startAt2, offset - startAt2))
 						{
 							value = new PpsDataFilterFieldValue(expression.Substring(startAt2, offset - startAt2));
-					}
+						}
 						else
 						{
 							var textValue = expression.Substring(startAt2, offset - startAt2);
 
 							// test for numeric
-							if (Int64.TryParse(textValue, NumberStyles.None, formatProvider, out var i64))
+							var hasLeadingZero = textValue.Length > 0 && textValue[0] == '0';
+							if (!hasLeadingZero && Int64.TryParse(textValue, NumberStyles.None, formatProvider, out var i64))
 								value = new PpsDataFilterIntegerValue(i64);
-							else if (Decimal.TryParse(textValue, NumberStyles.None, formatProvider, out var d))
+							else if (!hasLeadingZero && Decimal.TryParse(textValue, NumberStyles.None, formatProvider, out var d))
 								value = new PpsDataFilterDecimalValue(d);
 							else
 								value = new PpsDataFilterTextValue(textValue);
-				}
+						}
 					}
 				}
 				else
@@ -575,7 +576,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="options"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static PpsDataFilterExpression Parse(object filterExpression, IFormatProvider formatProvider = null, PpsDataFilterParseOption options =  PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.ReturnTrue, bool throwException = true)
+		public static PpsDataFilterExpression Parse(object filterExpression, IFormatProvider formatProvider = null, PpsDataFilterParseOption options = PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.ReturnTrue, bool throwException = true)
 		{
 			switch (filterExpression)
 			{
@@ -1369,7 +1370,7 @@ namespace TecWare.PPSn.Data
 					{
 						myDatePattern.Append(c);
 						isEmpty = true;
-			}
+					}
 				}
 				else if (allowedPatterns.IndexOf(c) >= 0)
 				{
@@ -1459,7 +1460,7 @@ namespace TecWare.PPSn.Data
 			{
 				var dtf = GetDateTimeFormatInfo(formatProvider);
 				AppendDateFormat(sb, From, dtf.ShortDatePattern + "THH:mm:ss,fff", dtf);
-		}
+			}
 			else if (WithTime) // do we have a time component
 			{
 				var timePattern = from.Second != 0 || to.Second != 0 ? 'T' : 't';
@@ -1507,7 +1508,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- Parse --------------------------------------------------------------
 
-		private static DateTimeFormatInfo GetDateTimeFormatInfo(IFormatProvider formatProvider) 
+		private static DateTimeFormatInfo GetDateTimeFormatInfo(IFormatProvider formatProvider)
 			=> (DateTimeFormatInfo)formatProvider.GetFormat(typeof(DateTimeFormatInfo)) ?? throw new ArgumentNullException(nameof(DateTimeFormatInfo), "Format information is missing.");
 
 		private static bool HasTime(DateTime dt)
@@ -1544,7 +1545,7 @@ namespace TecWare.PPSn.Data
 				if (digits.Length == 0) // read after end
 					return -1;
 			}
-			else 
+			else
 			{
 				digits = inputDate.Substring(inputPos, symbolPos - inputPos);
 				inputPos = symbolPos + 1;
@@ -1579,7 +1580,7 @@ namespace TecWare.PPSn.Data
 			=> hour < 0 ? 0 : hour % 24;
 
 		private static void GetValidDate(DateTime resultDateTime, ref int year, ref int month, ref int day)
-			{
+		{
 			if (year < 1)
 				year = resultDateTime.Year;
 
@@ -1690,8 +1691,8 @@ namespace TecWare.PPSn.Data
 				{
 					resultDateTime = dt;
 					return 'F';
-			}
-			else
+				}
+				else
 					return 'E';
 			}
 			else
@@ -1724,17 +1725,17 @@ namespace TecWare.PPSn.Data
 					}
 				}
 				else
-					{
+				{
 					GetValidDate(resultDateTime, ref year, ref month, ref day);
 
 					resultDateTime = new DateTime(year, month, day, GetValidHour(hour), GetValidMinute(minute), GetValidSecond(second));
 					return second < 0 ? 't' : 'T';
-					}
+				}
 			}
 		} // func TryParseDateTime
 
 		internal static PpsDataFilterDateTimeValue ParseDateTime(string expression, int offset, int count, IFormatProvider formatProvider)
-					{
+		{
 			var dtf = GetDateTimeFormatInfo(formatProvider);
 
 			// remove fence
@@ -1742,7 +1743,7 @@ namespace TecWare.PPSn.Data
 			{
 				offset++;
 				count--;
-					}
+			}
 			if (offset + count < expression.Length && expression[offset + count] == '#')
 				count--;
 
@@ -1844,7 +1845,7 @@ namespace TecWare.PPSn.Data
 				return new PpsDataFilterDateTimeValue(dt, dt);
 		} // func Create
 
-	#endregion
+		#endregion
 
 		/// <summary>Stores none valid time range.</summary>
 		public static PpsDataFilterDateTimeValue NoneValid { get; } = new PpsDataFilterDateTimeValue(DateTime.MaxValue, DateTime.MinValue);
