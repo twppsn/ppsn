@@ -1603,9 +1603,9 @@ namespace TecWare.PPSn.Server.Sql
 				if (start >= 0 && count < Int32.MaxValue)
 				{
 					if (orderByEmitted)
-						sb.Append("ORDER BY ");
-					else
 						sb.Append(' ');
+					else
+						sb.Append("ORDER BY 1 ");
 					sb.Append("OFFSET ").Append(start).Append(" ROWS ");
 					if (count >= 0)
 						sb.Append("FETCH NEXT ").Append(count).Append(" ROWS ONLY ");
