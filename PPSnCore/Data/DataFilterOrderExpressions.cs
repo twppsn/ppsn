@@ -1744,7 +1744,7 @@ namespace TecWare.PPSn.Data
 				offset++;
 				count--;
 			}
-			if (offset + count < expression.Length && expression[offset + count] == '#')
+			if (offset + count < expression.Length && expression[offset + count - 1] == '#')
 				count--;
 
 			// parse date expression
