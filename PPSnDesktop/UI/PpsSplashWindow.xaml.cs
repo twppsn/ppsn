@@ -736,7 +736,7 @@ namespace TecWare.PPSn.UI
 		{
 			var login = new LoginStateData(this, shell.Info, userInfo);
 			SetValue(loginStatePropertyKey, login);
-			PasswordChanged(null, null);
+			LoginState?.Validate(false);
 
 			PushState(login);
 			return login.Result;
@@ -749,16 +749,18 @@ namespace TecWare.PPSn.UI
 		{
 			if (e.OriginalSource is TextBox || e.OriginalSource is PasswordBox)
 			{
-				dynamic textBox = e.OriginalSource;
+				var textBox = (Control)e.OriginalSource;
 				var bindingExpression = textBox.GetBindingExpression(TextBox.TextProperty);
 
 				if (bindingExpression == null)
 					ApplicationCommands.Open.Execute(null, null);
 				else if (bindingExpression.ResolvedSourcePropertyName == "UserName")
+				{
 					if (LoginState.IsValid)
 						ApplicationCommands.Open.Execute(null, null);
 					else
 						textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+				}
 			}
 		} // proc EnterKey
 

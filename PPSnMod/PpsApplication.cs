@@ -2366,8 +2366,8 @@ namespace TecWare.PPSn.Server
 			using (clientApplicationInfos.EnterReadLock())
 			{
 				var package = clientApplicationInfos.List.Cast<KeyValuePair<string, PpsClientApplicationFile>>()
-					.Where(c => c.Value.Type == "msi" && c.Key == packageName)
 					.Select(c => c.Value)
+					.Where(c => c.Type == "msi" && c.Name == packageName)
 					.FirstOrDefault();
 
 				return await WriteClientApplicationSourceAsync(r, package);

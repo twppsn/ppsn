@@ -3747,7 +3747,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns>Returns <c>true</c>, if no elements appended.</returns>
 		protected static bool FormatOrderList(StringBuilder sb, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByNativeLookup, SqlColumnFinder columnLookup)
 		{
-			var first = false;
+			var first = true;
 
 			if (orderBy != null)
 			{

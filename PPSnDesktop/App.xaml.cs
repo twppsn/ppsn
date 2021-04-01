@@ -381,7 +381,7 @@ namespace TecWare.PPSn
 						// update progress
 						var percent = (int)(progressMin + Math.Min(totalReaded, expectedLength) * progressCount / expectedLength);
 						progress.Value = percent;
-						progress.Text = String.Format("Kopiere {0} ({1:N1}%)...", fileInfo.Name, percent / 10.0f);
+						progress.Text = String.Format("Kopiere {0} ({1:N0}%)...", fileInfo.Name, percent / 10.0f);
 
 						// copy data
 						var buf = new byte[0x4000];

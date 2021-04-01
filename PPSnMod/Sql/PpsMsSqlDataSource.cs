@@ -1595,7 +1595,7 @@ namespace TecWare.PPSn.Server.Sql
 					sb.Append("WHERE ").Append(FormatWhereExpression(whereCondition, whereNativeLookup, columnHelper)).Append(' ');
 
 				// add the orderBy
-				var orderByEmitted = FormatOrderList(sb, orderBy, orderByNativeLookup, columnHelper);
+				var orderByEmitted = !FormatOrderList(sb, orderBy, orderByNativeLookup, columnHelper);
 
 				// build the range, without order fetch is not possible
 				if (count >= 0 && start < 0)
