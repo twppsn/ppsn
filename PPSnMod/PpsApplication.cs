@@ -2328,26 +2328,51 @@ namespace TecWare.PPSn.Server
 				await Task.Run(() => r.WriteResource(typeof(PpsApplication), "Resources.info.html", MimeTypes.Text.Html));
 		} // proc WriteInfoPageAsync
 
+		private static async Task<bool> WriteClientApplicationSourceAsync(IDEWebRequestScope r, PpsClientApplicationFile appFile)
+		{
+			if (appFile != null && appFile.TryGetActiveSource(out var source) && source.Info.Exists)
+			{
+				var fi = source.Info;
+				r.SetInlineFileName(fi.Name);
+				r.SetLastModified(fi.LastWriteTimeUtc);
+
+				// ignore cache, easy write through
+				using (var src = await Task.Run(() => fi.OpenRead()))
+					await r.WriteStreamAsync(src, source.MimeType ?? r.Http.GetContentType(fi.Extension) ?? MimeTypes.Application.OctetStream);
+				return true;
+			}
+			else
+				return false;
+		} // proc WriteClientApplicationSourceAsync
+
 		private async Task<bool> WriteExternalClientApplicationFileAsync(IDEWebRequestScope r)
 		{
 			using (clientApplicationInfos.EnterReadLock())
 			{
-				var appFile = clientApplicationInfos.List.Cast<KeyValuePair<string, PpsClientApplicationFile>>().Where(c => c.Value.Source != null && c.Value.Source == r.RelativeSubPath).FirstOrDefault().Value;
-				if (appFile != null && appFile.TryGetActiveSource(out var source) && source.Info.Exists)
-				{
-					var fi = source.Info;
-					r.SetInlineFileName(fi.Name);
-					r.SetLastModified(fi.LastWriteTimeUtc);
-
-					// ignore cache!
-					using (var src = await Task.Run(() => fi.OpenRead()))
-						await r.WriteStreamAsync(src,  source.MimeType ?? r.Http.GetContentType(fi.Extension) ?? MimeTypes.Application.OctetStream);
-					return true;
-				}
-
-				return false;
+				var appFile = clientApplicationInfos.List.Cast<KeyValuePair<string, PpsClientApplicationFile>>()
+					.Select(c => c.Value)
+					.Where(c => c.Source != null && c.Source == r.RelativeSubPath).FirstOrDefault();
+				return await WriteClientApplicationSourceAsync(r, appFile);
 			}
 		} // func WriteExternalClientApplicationFileAsync
+
+		private async Task<bool> WriteMsiClientApplicationFileAsync(IDEWebRequestScope r)
+		{
+			var path = r.RelativeSubPath;
+			if (!path.StartsWith("app/") || !path.EndsWith(".msi"))
+				return false;
+
+			var packageName = path.Substring(4, path.Length - 8);
+			using (clientApplicationInfos.EnterReadLock())
+			{
+				var package = clientApplicationInfos.List.Cast<KeyValuePair<string, PpsClientApplicationFile>>()
+					.Where(c => c.Value.Type == "msi" && c.Key == packageName)
+					.Select(c => c.Value)
+					.FirstOrDefault();
+
+				return await WriteClientApplicationSourceAsync(r, package);
+			}
+		} // proc WriteMsiClientApplicationFileAsync
 
 		/// <summary></summary>
 		/// <param name="r"></param>
@@ -2360,14 +2385,14 @@ namespace TecWare.PPSn.Server
 					// additional options
 					// id={clientId}
 					// last=
-					await Task.Run(() => WriteApplicationInfo(r, 
-						r.GetProperty("app", null), 
+					await Task.Run(() => WriteApplicationInfo(r,
+						r.GetProperty("app", null),
 						r.GetProperty("all", false)
 					));
 					return true;
 				case "login.xml":
 					r.DemandToken(SecurityUser);
-					
+
 					var ctx = r.GetUser<IPpsPrivateDataContext>();
 					await Task.Run(() => WriteUserInfo(r, GetLoginData(ctx)));
 					return true;
@@ -2394,11 +2419,14 @@ namespace TecWare.PPSn.Server
 							r.ExitSubPath(this);
 						}
 					}
-			
+
 					var ret = await base.OnProcessRequestAsync(r);
 
+					if (!ret)
+						ret = await WriteMsiClientApplicationFileAsync(r);
 					if (!ret && resolveExternals)
 						return await WriteExternalClientApplicationFileAsync(r);
+
 					return ret;
 			}
 		} // proc OnProcessRequest
