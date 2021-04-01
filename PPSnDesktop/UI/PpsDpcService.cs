@@ -268,7 +268,7 @@ namespace TecWare.PPSn.UI
 		{
 			shell.LogProxy("Shutdown").LogMsg(LogMsgType.Information, reason);
 
-			Set(ref isRestartNeeded, true, nameof(isRestartNeeded));
+			Set(ref isRestartNeeded, true, nameof(IsRestartNeeded));
 		} // proc ScheduleRestart
 
 		#endregion
