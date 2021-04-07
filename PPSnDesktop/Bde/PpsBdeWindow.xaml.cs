@@ -85,7 +85,10 @@ namespace TecWare.PPSn.Bde
 			UpdateDateTimeFormat();
 
 			if (Shell.Settings.UseTouchKeyboard ?? PpsDpcService.GetIsShellMode())
+			{
 				virtualKeyboard.Attach(this);
+				Services.AddService(typeof(IPpsVirtualKeyboard), virtualKeyboard);
+			}
 		} // ctor
 
 		protected override void OnClosed(EventArgs e)

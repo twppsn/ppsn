@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -143,9 +144,30 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
+	#region -- class IPpsVirtualKeyboard ----------------------------------------------
+
+	/// <summary>Interface to virtual keyboard.</summary>
+	public interface IPpsVirtualKeyboard : INotifyPropertyChanged
+	{
+		/// <summary>Explicit show keyboard.</summary>
+		void Show();
+		/// <summary>Explicit show keyboard.</summary>
+		/// <param name="layout"></param>
+		void Show(PpsVirtualKeyboardLayout layout);
+		/// <summary>Hide keyboard</summary>
+		void Hide();
+
+		/// <summary>Is keyboard active.</summary>
+		bool IsAttached { get; }
+		/// <summary>Is keyboard visible.</summary>
+		bool IsVisible { get; }
+	} // interface IPpsVirtualKeyboard
+
+	#endregion
+
 	#region -- class PpsVirtualKeyboard -----------------------------------------------
 
-	public class PpsVirtualKeyboard : Control
+	public class PpsVirtualKeyboard : Control, IPpsVirtualKeyboard
 	{
 		#region -- class KeyButton ----------------------------------------------------
 
@@ -240,6 +262,8 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		public event PropertyChangedEventHandler PropertyChanged;
+
 		private readonly RoutedEventHandler onControlGotFocusDelegate;
 		private readonly RoutedEventHandler onControlLostFocusDelegate;
 
@@ -275,6 +299,14 @@ namespace TecWare.PPSn.Controls
 			OnKeyboardChanged();
 		} // proc OnApplyTemplate
 
+		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+		{
+			base.OnPropertyChanged(e);
+
+			if (e.Property.Name == nameof(IsVisible))
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(e.Property.Name));
+		} // proc OnPropertyChanged
+
 		#endregion
 
 		#region -- Attach - focus -----------------------------------------------------
@@ -297,29 +329,7 @@ namespace TecWare.PPSn.Controls
 		} // proc Attach
 
 		private void OnControlGotFocus(object sender, RoutedEventArgs e)
-		{
-			if (e.OriginalSource is PpsTextBox ppsText)
-			{
-				switch (ppsText.InputType)
-				{
-					case PpsTextBoxInputType.Decimal:
-					case PpsTextBoxInputType.Integer:
-						Show(PpsVirtualKeyboardLayout.NumberPositive);
-						break;
-					case PpsTextBoxInputType.DecimalNegative:
-					case PpsTextBoxInputType.IntegerNegative:
-						Show(PpsVirtualKeyboardLayout.NumberNegative);
-						break;
-					default:
-						Show(PpsVirtualKeyboardLayout.Alpha);
-						break;
-				}
-			}
-			else if (e.OriginalSource is TextBoxBase)
-			{
-				Show(PpsVirtualKeyboardLayout.Alpha);
-			}
-		} // event OnControlGotFocus
+			=> Show(e.OriginalSource, false);
 
 		private void OnControlLostFocus(object sender, RoutedEventArgs e)
 			=> Hide();
@@ -396,6 +406,38 @@ namespace TecWare.PPSn.Controls
 					return null;
 			}
 		} // func GetButtonKey
+
+		public void Show()
+			=> Show(Keyboard.FocusedElement, true);
+
+		public void Show(object target, bool enforce)
+		{
+			if (target is PpsTextBox ppsText)
+			{
+				switch (ppsText.InputType)
+				{
+					case PpsTextBoxInputType.Decimal:
+					case PpsTextBoxInputType.Integer:
+						Show(PpsVirtualKeyboardLayout.NumberPositive);
+						break;
+					case PpsTextBoxInputType.DecimalNegative:
+					case PpsTextBoxInputType.IntegerNegative:
+						Show(PpsVirtualKeyboardLayout.NumberNegative);
+						break;
+					default:
+						Show(PpsVirtualKeyboardLayout.Alpha);
+						break;
+				}
+			}
+			else if (target is TextBoxBase)
+			{
+				Show(PpsVirtualKeyboardLayout.Alpha);
+			}
+			else if(enforce)
+			{
+				Show(PpsVirtualKeyboardLayout.Alpha);
+			}
+		} // proc Show
 
 		public void Show(PpsVirtualKeyboardLayout layout)
 		{
@@ -588,6 +630,9 @@ namespace TecWare.PPSn.Controls
 			=> (string)dp.GetValue(KeyShiftedProperty);
 
 		#endregion
+
+		/// <summary>Is the keyboard attached to an control.</summary>
+		bool IPpsVirtualKeyboard.IsAttached => controlAttached != null;
 
 		static PpsVirtualKeyboard()
 		{

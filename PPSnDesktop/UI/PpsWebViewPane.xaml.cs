@@ -14,26 +14,17 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {
 	internal partial class PpsWebViewPane : PpsWindowPaneControl, IPpsWindowPaneBack
 	{
+		private readonly IPpsVirtualKeyboard virtualKeyboard;
+
 		public PpsWebViewPane(IPpsWindowPaneHost paneHost)
 			: base(paneHost)
 		{
@@ -47,6 +38,11 @@ namespace TecWare.PPSn.UI
 
 			var shell = paneHost.PaneManager.Shell;
 			webView.AddCommandBinding(shell, CommandBindings);
+
+			virtualKeyboard = paneHost.GetService<IPpsVirtualKeyboard>(false);
+
+			if (virtualKeyboard != null)
+				Commands.AddButton("-100;100", "keyboard", new PpsCommand(ToggleKeyboard), null, " Zeigt die virtuelle Tastatur an.");
 		} // ctor
 
 		protected override PpsWindowPaneCompareResult CompareArguments(LuaTable args)
@@ -61,6 +57,14 @@ namespace TecWare.PPSn.UI
 
 		public void InvokeBackButton()
 			=> webView.GoBackAsync().OnException();
+
+		private void ToggleKeyboard(PpsCommandContext obj)
+		{
+			if (virtualKeyboard.IsVisible)
+				virtualKeyboard.Show();
+			else
+				virtualKeyboard.Hide();
+		} // proc ToggleKeyboard
 
 		public bool? CanBackButton => webView.CanGoBack ? (bool?)true : null;
 	} // class PpsWebViewPane

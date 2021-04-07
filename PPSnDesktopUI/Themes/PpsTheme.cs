@@ -286,6 +286,9 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey VirtKeybLeftPathGeometry = new PpsThemeKey("virtKeybLeft");
 		/// <summary>VirtualKeyboard Right geometry</summary>
 		public static readonly ResourceKey VirtKeybRightPathGeometry = new PpsThemeKey("virtKeybRight");
+		
+		/// <summary>Keyboard</summary>
+		public static readonly ResourceKey KeyboardPathGeometry = new PpsThemeKey("keyboard");
 
 		#endregion
 	} // class PpsTheme
