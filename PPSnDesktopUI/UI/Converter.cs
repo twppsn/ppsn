@@ -41,16 +41,16 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter DateValue => DateValueConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static IValueConverter Visibility => VisibilityConverter.Default;
-		/// <summary>Convert Visibility.</summary>
+		/// <summary>Convert decimal values to an visibility.</summary>
 		public static IValueConverter VisibilityMark => VisibilityMarkConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static VisibilityConverterParameter VisibilityCollapsedParameter { get; } = new VisibilityConverterParameter() { FalseValue = System.Windows.Visibility.Collapsed };
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static VisibilityConverterParameter VisibilityNotCollapsedParameter { get; } = new VisibilityConverterParameter() { TrueValue = System.Windows.Visibility.Collapsed, FalseValue = System.Windows.Visibility.Visible };
 		/// <summary>Convert between Visibility and bool.</summary>
-		public static VisibilityConverterParameter VisibilityOnNullParameter { get; } = new VisibilityConverterParameter() { TrueValue = System.Windows.Visibility.Hidden, FalseValue = System.Windows.Visibility.Visible };
+		public static VisibilityConverterParameter VisibilityOnNullParameter { get; } = new VisibilityConverterParameter() { HasValue = true, TrueValue = System.Windows.Visibility.Hidden, FalseValue = System.Windows.Visibility.Visible };
 		/// <summary>Convert between Visibility and bool.</summary>
-		public static VisibilityConverterParameter VisibilityNotNullParameter { get; } = new VisibilityConverterParameter() { TrueValue = System.Windows.Visibility.Visible, FalseValue = System.Windows.Visibility.Hidden };
+		public static VisibilityConverterParameter VisibilityNotNullParameter { get; } = new VisibilityConverterParameter() { HasValue = true, TrueValue = System.Windows.Visibility.Visible, FalseValue = System.Windows.Visibility.Hidden };
 		/// <summary>Removes all new lines.</summary>
 		public static IValueConverter MultiToSingleLine => MultiToSingleLineConverter.Default;
 		/// <summary>Creates a array of objects.</summary>
@@ -397,6 +397,8 @@ namespace TecWare.PPSn.UI
 	/// <summary>Parameter for the Visibility Convert.</summary>
 	public sealed class VisibilityConverterParameter
 	{
+		/// <summary>Check only is there value unequal <c>null</c>.</summary>
+		public bool HasValue { get; set; } = false;
 		/// <summary>Convert value for <c>true</c>.</summary>
 		public Visibility TrueValue { get; set; } = Visibility.Visible;
 		/// <summary>Convert value for <c>false</c>.</summary>
@@ -415,13 +417,13 @@ namespace TecWare.PPSn.UI
 		private static VisibilityConverterParameter GetParameter(object parameter)
 			=> parameter is VisibilityConverterParameter p ? p : VisibilityConverterParameter.Default;
 
-		private static bool GetBoolValue(object value)
+		private static bool GetBoolValue(object value, bool hasValue)
 		{
 			switch (value)
 			{
 				case bool b:
 					return b;
-				case string s:
+				case string s when !hasValue:
 					return String.Compare(s, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0;
 				default:
 					return value != null;
@@ -431,7 +433,7 @@ namespace TecWare.PPSn.UI
 		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			var p = GetParameter(parameter);
-			return GetBoolValue(value) ? p.TrueValue : p.FalseValue;
+			return GetBoolValue(value, p.HasValue) ? p.TrueValue : p.FalseValue;
 		} // func Convert
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

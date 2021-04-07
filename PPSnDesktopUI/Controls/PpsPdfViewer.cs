@@ -832,7 +832,7 @@ namespace TecWare.PPSn.Controls
 
 				if (zoom == PdfGotoMode.ZoomXorY)
 				{
-					if (aspectX * RenderSize.Height > RenderSize.Width)
+					if (aspectX * RenderSize.Height < RenderSize.Width)
 						zoom = PdfGotoMode.ZoomY;
 					else
 						zoom = PdfGotoMode.ZoomX;

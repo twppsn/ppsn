@@ -3331,7 +3331,7 @@ namespace TecWare.PPSn.Data
 
 					var customer = refreshTasks?.Any(c => c.Table == t) ?? false;
 					var isClientFullRefresh = customer   // is this table scheduled for refresh
-						|| t.SyncId > 0; // is this table initialized
+						|| t.SyncId < 0; // is this table initialized
 
 					var xSync = new XElement("sync");
 					xSync.SetAttributeValue("table", t.TableName);

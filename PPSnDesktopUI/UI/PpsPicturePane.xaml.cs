@@ -169,6 +169,7 @@ namespace TecWare.PPSn.UI
 				CurrentImage = BitmapFrame.Create(new MemoryStream(bytes));
 				SubTitle = "Bild";
 				CanEdit = false;
+				scheduleFitToImage = true;
 			}
 			else
 				await OpenPictureAsync(args["Object"] as IPpsDataInfo);

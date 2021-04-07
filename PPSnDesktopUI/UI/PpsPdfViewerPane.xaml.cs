@@ -16,6 +16,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
@@ -30,6 +31,7 @@ namespace TecWare.PPSn.UI
 		private PdfReader loadedDocument = null;
 		private IPpsDataInfo dataInfo = null;
 		private IPpsDataObject dataAccess = null;
+		private bool zoomScheduled = false;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -42,6 +44,16 @@ namespace TecWare.PPSn.UI
 			//// add commands
 			//Commands.AddButton("100;100", "print", new PpsAsyncCommand(ctx => PrintAsync(ctx), ctx => CanPrint(ctx)), "Drucken", "Druckt die Pdf-Datei.");
 		} // ctor
+
+		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+		{
+			base.OnRenderSizeChanged(sizeInfo);
+			if (zoomScheduled)
+			{
+				zoomScheduled = false;
+				pdfViewer.GotoPage(0, PdfGotoMode.ZoomXorY);
+			}
+		} // proc OnRenderSizeChanged
 
 		#endregion
 
@@ -115,6 +127,11 @@ namespace TecWare.PPSn.UI
 			// set new pdf
 			loadedDocument = pdf;
 			pdfViewer.Document = pdf;
+
+			if (RenderSize.Width > 0)
+				pdfViewer.GotoPage(0, PdfGotoMode.ZoomXorY);
+			else
+				zoomScheduled = true;
 
 			SubTitle = pdf.Name;
 		} // proc SetLoadedDocument
