@@ -919,8 +919,13 @@ namespace TecWare.PPSn
 			await shell.GetService<PpsDpcService>(true).WriteLogToTempAsync();
 
 			// restart application
-			InvokeRestartCore(shell.Info, shell.Http.Credentials);
-			Current.Shutdown();
+			await Current.Dispatcher.InvokeAsync(
+				() =>
+				{
+					InvokeRestartCore(shell.Info, shell.Http.Credentials);
+					Current.Shutdown();
+				}
+			);
 		} // proc InvokeRestartAsync
 
 		private async Task<bool> CloseApplicationAsync()
