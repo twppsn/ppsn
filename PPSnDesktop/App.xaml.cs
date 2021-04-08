@@ -852,7 +852,7 @@ namespace TecWare.PPSn
 			catch (ExitApplicationException e)
 			{
 				if (e.Restart)
-					InvokeRestartCore(e.ShellInfo, e.UserInfo);
+					InvokeRestartCore(e.ShellInfo, e.UserInfo, true);
 
 				if (isProcessProtected)
 					logoffUser = false;
@@ -870,13 +870,14 @@ namespace TecWare.PPSn
 			}
 		} // proc StartApplicationAsync
 
-		private static void InvokeRestartCore(IPpsShellInfo shellInfo, ICredentials userInfo)
+		private static void InvokeRestartCore(IPpsShellInfo shellInfo, ICredentials userInfo, bool noRestart)
 		{
 			var sb = new StringBuilder();
 
 			// wait info
 			sb.Append("-w").Append(Process.GetCurrentProcess().Id);
-			sb.Append(" --norestart"); // prevent restart loop
+			if (noRestart)
+				sb.Append(" --norestart"); // prevent restart loop
 
 			// shell info
 			if (shellInfo != null)
@@ -922,8 +923,12 @@ namespace TecWare.PPSn
 			await Current.Dispatcher.InvokeAsync(
 				() =>
 				{
-					InvokeRestartCore(shell.Info, shell.Http.Credentials);
-					Current.Shutdown();
+					InvokeRestartCore(shell.Info, shell.Http.Credentials, false);
+
+					var app = (App)Current;
+					if (app.isProcessProtected)
+						app.logoffUser = false;
+					app.Shutdown();
 				}
 			);
 		} // proc InvokeRestartAsync

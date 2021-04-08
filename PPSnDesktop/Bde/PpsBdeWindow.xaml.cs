@@ -107,7 +107,7 @@ namespace TecWare.PPSn.Bde
 		{
 			if (e.PropertyName == nameof(PpsDpcService.IsLocked))
 				SetValue(isLockedPropertyKey, dpcService.IsLocked);
-			else if (e.PropertyName == nameof(PpsDpcService.IsRestartNeeded))
+			else if (e.PropertyName == nameof(PpsDpcService.IsRestartNeeded)) // background thread
 				App.InvokeRestartAsync(Shell).AwaitUI(this);
 			else if (e.PropertyName == nameof(IPpsCommunicationService.ConnectionState))
 			{
