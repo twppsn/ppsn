@@ -551,10 +551,9 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public static PpsDataFilterExpression Parse(string filterExpression, IFormatProvider formatProvider = null, PpsDataFilterParseOption options = PpsDataFilterParseOption.AllowFields)
 		{
-			if (String.IsNullOrEmpty(filterExpression))
-				return PpsDataFilterTrueExpression.Default;
-
-			return Parse(filterExpression, 0, filterExpression.Length, formatProvider, options);
+			return String.IsNullOrEmpty(filterExpression)
+				? PpsDataFilterTrueExpression.Default
+				: Parse(filterExpression, 0, filterExpression.Length, formatProvider, options);
 		} // func Parse
 
 		/// <summary>Parse a filter expression</summary>

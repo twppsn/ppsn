@@ -97,6 +97,12 @@ http://server/ppsn/?action=viewget&v=views.Artikel%20t&f=or%28t.TEILBEST%3A%3C10
 - `r`: Spaltendefinition
 - `a`: Selectiert die Attribute
 
+### Filter Bedingungen
+
+Es wird der Text-Filter syntax verwendet.
+
+[Syntax](View.Filter.de.md)
+
 ### Attribute Selektion
 
 - `,` lädt keine Attribute
