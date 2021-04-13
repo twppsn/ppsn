@@ -802,13 +802,20 @@ namespace TecWare.PPSn.Server
 								}
 								else
 								{
-									var user = new PrivateUserData(this, userId, PrivateUserData.CreateUserIdentity(u));
-									if (UpdateUserData(user, u))
-										userList.Add(user);
+									try
+									{
+										var user = new PrivateUserData(this, userId, PrivateUserData.CreateUserIdentity(u));
+										if (UpdateUserData(user, u))
+											userList.Add(user);
+									}
+									catch (SystemException e)
+									{
+										Log.Warn($"User (id={userId}): {e.Message}");
+									}
 								}
 							}
 							else
-								Log.Warn("User ignored (id={userId}).");
+								Log.Warn($"User ignored (id={userId}).");
 
 						} // foreach
 					} // using
