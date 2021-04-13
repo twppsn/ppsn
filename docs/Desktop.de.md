@@ -6,6 +6,8 @@
 msiexec /i http://host:port/ppsn/app/PPSnDesktop.msi SHELLNAME=name
 ```
 
+Optional `SHELLURI`
+
 ## LiveData
 
 Ausgabe des Status:

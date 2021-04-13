@@ -2338,7 +2338,7 @@ namespace TecWare.PPSn.Server
 
 				// ignore cache, easy write through
 				using (var src = await Task.Run(() => fi.OpenRead()))
-					await r.WriteStreamAsync(src, source.MimeType ?? r.Http.GetContentType(fi.Extension) ?? MimeTypes.Application.OctetStream);
+					await r.WriteStreamAsync(src, source.MimeType ?? MimeTypes.Application.OctetStream);
 				return true;
 			}
 			else
@@ -2356,11 +2356,11 @@ namespace TecWare.PPSn.Server
 			}
 		} // func WriteExternalClientApplicationFileAsync
 
-		private async Task<bool> WriteMsiClientApplicationFileAsync(IDEWebRequestScope r)
+		private Task<bool> WriteMsiClientApplicationFileAsync(IDEWebRequestScope r)
 		{
 			var path = r.RelativeSubPath;
 			if (!path.StartsWith("app/") || !path.EndsWith(".msi"))
-				return false;
+				return Task.FromResult(false);
 
 			var packageName = path.Substring(4, path.Length - 8);
 			using (clientApplicationInfos.EnterReadLock())
@@ -2370,7 +2370,8 @@ namespace TecWare.PPSn.Server
 					.Where(c => c.Type == "msi" && c.Name == packageName)
 					.FirstOrDefault();
 
-				return await WriteClientApplicationSourceAsync(r, package);
+				r.Redirect("/ppsn/" + package.Source); // relative to root
+				return Task.FromResult(true);
 			}
 		} // proc WriteMsiClientApplicationFileAsync
 
