@@ -39,7 +39,7 @@ namespace TecWare.PPSn.Core.Data
 			sb.Append(ViewId);
 
 			if (Filter != null && Filter != PpsDataFilterExpression.True)
-				sb.Append("&f=").Append(Uri.EscapeDataString(Filter.ToString(formatProvider)));
+				sb.Append("&f=").Append(Uri.EscapeDataString(Filter.ToString(formatProvider ?? CultureInfo.CurrentUICulture)));
 			if (Columns != null && Columns.Length > 0)
 				sb.Append("&r=").Append(PpsDataColumnExpression.ToString(Columns));
 			if (Order != null && Order.Length > 0)

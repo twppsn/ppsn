@@ -201,7 +201,7 @@ namespace PPSnExcel
 				Excel.XmlMap newXlMap;
 				Excel.XmlMap removeXlMap = null;
 				bool isChanged;
-				
+
 				if (xlMap == null) // no schema exists, create a new one
 				{
 					newXlMap = map.CreateNewXmlMap(((Excel.Worksheet)list.Parent).Parent, this);
@@ -307,7 +307,7 @@ namespace PPSnExcel
 		private readonly IPpsShell shell;    // attached environment
 		private readonly string viewId;                 // view or views
 		private readonly string filterExpr;             // uses placeholder for cells
-		private PpsListColumnInfo[] columns;			// columns information
+		private PpsListColumnInfo[] columns;            // columns information
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -337,6 +337,94 @@ namespace PPSnExcel
 				this.worksheet = worksheet ?? throw new ArgumentNullException(nameof(worksheet));
 			} // ctor
 
+			private int GetActiveDateParts(string fmt)
+			{
+				var p = 0;
+				if (!String.IsNullOrEmpty(fmt))
+				{
+					if (fmt.IndexOf("yyyy", StringComparison.OrdinalIgnoreCase) >= 0)
+						p |= 1;
+					if (fmt.IndexOf("mm", StringComparison.OrdinalIgnoreCase) >= 0)
+						p |= 2;
+					if (fmt.IndexOf("dd", StringComparison.OrdinalIgnoreCase) >= 0)
+						p |= 4;
+				}
+				return p;
+			} // func GetActiveDateParts
+
+			private bool IsKeyPattern(long value, string fmt, out string key)
+			{
+				if (fmt != null && fmt.All(c => c == '0'))
+				{
+					key = value.ToString(fmt);
+					return true;
+				}
+				else
+				{
+					key = null;
+					return false;
+				}
+			} // func IsKeyPattern
+
+			private PpsDataFilterValue GetRangeValue(Excel.Range range)
+			{
+				if (range.Row > 1)
+				{
+					var values = new List<PpsDataFilterValue>();
+					for (var i = 1; i <= range.Row; i++)
+					{
+						var c = GetRangeValue(range.Cells[i, 1]);
+						if (c is PpsDataFilterValue & c != PpsDataFilterNullValue.Default)
+							values.Add(c);
+					}
+					return new PpsDataFilterArrayValue(values.ToArray());
+				}
+				else
+				{
+					var v = range.Value;
+					if (v == null)
+						return PpsDataFilterNullValue.Default;
+
+					if (v is DateTime dt) // datetime detected
+					{
+						var p = GetActiveDateParts(range.NumberFormat as string);
+						if ((p & 4) != 0) // full date
+						{
+							var d = new DateTime(dt.Year, dt.Month, dt.Day);
+							return new PpsDataFilterDateTimeValue(d, d.AddDays(1));
+						}
+						else if ((p & 2) != 0) // month and year
+						{
+							var d = new DateTime(dt.Year, dt.Month, 1);
+							return new PpsDataFilterDateTimeValue(d, d.AddMonths(1));
+						}
+						else if ((p & 1) != 0) // only year
+						{
+							var d = new DateTime(dt.Year, 1, 1);
+							return new PpsDataFilterDateTimeValue(d, d.AddYears(1));
+						}
+						return PpsDataFilterDateTimeValue.Create(dt);
+					}
+					else if (v is double f)
+					{
+						if (Math.Abs(f % 1) <= Double.Epsilon)
+						{
+							var id = Convert.ToInt64(f);
+
+							var fmt = range.NumberFormat as string; // check for formatted number
+							if (IsKeyPattern(id, fmt, out var key))
+								return new PpsDataFilterTextKeyValue(key);
+
+							return new PpsDataFilterIntegerValue(id);
+						}
+						else
+							return new PpsDataFilterDecimalValue(Convert.ToDecimal(f));
+					}
+					else
+						return new PpsDataFilterTextValue(Convert.ToString(v));
+				}
+			} // func GetRangeValue
+
 			private bool TryGetName(Excel.Workbook workbook, string name, out object value)
 			{
 				for (var i = 1; i <= workbook.Names.Count; i++)
@@ -346,7 +434,7 @@ namespace PPSnExcel
 					{
 						try
 						{
-							value = n.RefersToRange.Value;
+							value = GetRangeValue(n.RefersToRange);
 							return true;
 						}
 						catch (COMException)
@@ -379,7 +467,7 @@ namespace PPSnExcel
 			{
 				try
 				{
-					value = (object)worksheet.Range[cell].Value;
+					value = GetRangeValue(worksheet.Range[cell]);
 					return true;
 				}
 				catch (COMException)
@@ -393,7 +481,7 @@ namespace PPSnExcel
 			{
 				try
 				{
-					value = (object)worksheet.Cells[row, col].Value;
+					value = GetRangeValue(worksheet.Cells[row, col]);
 					return true;
 				}
 				catch (COMException)
@@ -444,7 +532,7 @@ namespace PPSnExcel
 			var request = new PpsDataQuery(viewId)
 			{
 				Columns = columns.Select(c => c.ToColumnExpression()).Where(c => c != null).ToArray(),
-				Filter = PpsDataFilterExpression.Parse(filterExpr, CultureInfo.InvariantCulture, PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.AllowVariables).Reduce(GetVariables(current, context)),
+				Filter = PpsDataFilterExpression.Parse(filterExpr, CultureInfo.CurrentUICulture, PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.AllowVariables).Reduce(GetVariables(current, context)),
 				Order = order,
 				AttributeSelector = "*,V.*,Xl.*"
 			};
@@ -889,7 +977,7 @@ namespace PPSnExcel
 
 				// set name and sort information
 				ascendingValue = new Lazy<bool?>(() => this.parent.IsListColumnSortedAscending(this.column));
-				
+
 				// read field expression
 				var xPath = column.XPath?.Value;
 				if (!String.IsNullOrEmpty(xPath)) // check data field
@@ -916,10 +1004,10 @@ namespace PPSnExcel
 				=> a.Type == b.Type && a.Expression == b.Expression;
 
 			public string Name => column.Name;
-			
+
 			public PpsTableColumnType Type { get; }
 			public string Expression { get; }
-			
+
 			public bool? Ascending => ascendingValue.Value;
 
 			public Excel.ListColumn Column => column;
@@ -1215,7 +1303,7 @@ namespace PPSnExcel
 			else // get arguments from the current columns
 			{
 				return (
-					false, 
+					false,
 					currentColumns
 						.Where(c => c.Type == PpsTableColumnType.Data && c.Ascending.HasValue)
 						.Select(c => new PpsDataOrderExpression(!c.Ascending.Value, c.Expression))
@@ -1256,7 +1344,7 @@ namespace PPSnExcel
 					// clear current order
 					while (xlSort.SortFields.Count > 0)
 						xlSort.SortFields[1].Delete();
-					
+
 					RefreshLayout(result, columns, currentColumns, refreshLayout, xlSort, out showTotals);
 				}
 				else
@@ -1422,7 +1510,7 @@ namespace PPSnExcel
 
 		public static bool TryGetFromSelection(out PpsListObject ppsList)
 		{
-			if (Globals.ThisAddIn.Application.Selection is Excel.Range range  && TryGetFromListObject(range.ListObject, out ppsList))
+			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && TryGetFromListObject(range.ListObject, out ppsList))
 				return true;
 			else
 			{

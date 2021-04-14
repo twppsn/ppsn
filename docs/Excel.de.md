@@ -43,3 +43,27 @@ Neben Konstanten und anderen Felder können auch Excel-Zellen referenziert werde
 Sind die Namen der Spalten durchgestrichen, so ist diese Bedingung irrelevant für
 die Rückgabe und wird beim Aktualisieren entfernt.
 :::
+
+Die Formatierung des Wertes der Variable hat einfluss darauf, wie der Wert vom System interpretiert wird.
+Grundlegend gibt es in Excel 3 Datentypen.
+
+- Text
+:   Text werden als Zeichenkette weitergegeben.
+
+- Zahl
+:   Bei Zahlen wird grundlegend in Gleitkomma und Ganzzahlen unterschieden. 
+    Gleitkommazahlen werden als Dezimalwert weitergegeben. Bei Ganzzahlen werden
+    als 64-bit Integer weitegegeben. Existiert ein Format mit einer `0+` Schablone 
+    so wird angenommen, dass es sich im einen Key handelt mit signifikanten führenden
+    Nullen.
+
+- Datum
+:   Daten werden immer in von-bis Bereiche aufgespalten. Welche Bereiche verwendet
+    werden sollen, wird anhand des Formates ermittelt. Enthält das Format
+    - `JJJJ` wird das Jahr verwendet
+    - `MMM` oder `MM`, aktiviert den Monat
+    - `dd` setzt den Tag
+
+- Auflistungen
+:   Benannte Felder (Namensmanager) können auch Bereiche umfassen. Einem Bereich wird 
+    die erste Spalte in ein Array umgewandelt, welches für die Variable eingesetzt wird.
