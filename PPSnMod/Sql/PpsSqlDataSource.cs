@@ -1526,7 +1526,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="count"></param>
 			/// <returns></returns>
 			protected sealed override IEnumerator<IDataRow> GetEnumeratorCore(int start, int count)
-				=> new DbRowEnumerator(((PpsSqlDataSource)DataSource).CreateViewCommand(SqlConnection, Columns, from, whereCondition.Expression, whereCondition.NativeLookup, orderBy.Expression, orderBy.NativeLookup, start, count));
+				=> new DbRowEnumerator(((PpsSqlDataSource)DataSource).CreateViewCommandCore(SqlConnection, Columns, from, whereCondition.Expression, whereCondition.NativeLookup, orderBy.Expression, orderBy.NativeLookup, start, count));
 
 			/// <summary>Access sql connection handle.</summary>
 			private IPpsSqlConnectionHandle SqlConnection => (IPpsSqlConnectionHandle)Connection;
@@ -3087,6 +3087,8 @@ namespace TecWare.PPSn.Server.Sql
 			tablesListController = new TablesListController(this);
 			columnsListController = new ColumnsListController(this);
 			proceduresListController = new ProceduresListController(this);
+
+			PublishDebugInterface();
 		} // ctor
 
 		/// <summary></summary>
@@ -3472,6 +3474,14 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // using cmd
 		} // pro ExecuteForResultSet
+
+		private DbCommand CreateViewCommandCore(IPpsSqlConnectionHandle connection, IEnumerable<IDataColumn> selectList, PpsSqlJoinExpression from, PpsDataFilterExpression whereCondition, Func<string, string> whereConditionLookup, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByLookup, int start, int count)
+		{
+			var cmd =  CreateViewCommand(connection, selectList, from, whereCondition, whereConditionLookup, orderBy, orderByLookup, start, count);
+			if (IsDebug)
+				Log.Debug(cmd.CommandText);
+			return cmd;
+		} // func CreateViewCommandCore
 
 		/// <summary></summary>
 		/// <param name="connection"></param>

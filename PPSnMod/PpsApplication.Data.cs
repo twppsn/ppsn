@@ -1626,7 +1626,8 @@ namespace TecWare.PPSn.Server
 				r.GetProperty<string>("r", null),
 				r.GetProperty<string>("f", null),
 				r.GetProperty<string>("o", null),
-				true
+				true,
+				r.CultureInfo
 			).AwaitTask();
 
 			var attributeSelector = r.GetProperty("a", "*");

@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -792,14 +793,15 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="columns"></param>
 		/// <param name="filter"></param>
 		/// <param name="order"></param>
+		/// <param name="formatProvider"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string select, string columns = null, string filter = null, string order = null, bool throwException = true)
+		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string select, string columns = null, string filter = null, string order = null, bool throwException = true, CultureInfo formatProvider = null)
 		{
 			return ctx.CreateSelectorAsync(
 				select,
 				PpsDataColumnExpression.Parse(columns).ToArray(),
-				PpsDataFilterExpression.Parse(filter),
+				PpsDataFilterExpression.Parse(filter, formatProvider: formatProvider),
 				PpsDataOrderExpression.Parse(order).ToArray(),
 				throwException
 			);
@@ -808,14 +810,15 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Create a selector.</summary>
 		/// <param name="ctx"></param>
 		/// <param name="table"></param>
+		/// <param name="formatProvider"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true)
+		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true, CultureInfo formatProvider = null)
 		{
 			return ctx.CreateSelectorAsync(
 				table.GetOptionalValue("select", table.GetOptionalValue("name", (string)null)),
 				PpsDataColumnExpression.Parse(table.GetMemberValue("columns")).ToArray(),
-				PpsDataFilterExpression.Parse(table.GetMemberValue("filter")),
+				PpsDataFilterExpression.Parse(table.GetMemberValue("filter"), formatProvider: formatProvider),
 				PpsDataOrderExpression.Parse(table.GetMemberValue("order")).ToArray(),
 				throwException
 			);

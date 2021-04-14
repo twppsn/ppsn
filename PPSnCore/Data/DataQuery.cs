@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Web;
@@ -32,13 +33,13 @@ namespace TecWare.PPSn.Core.Data
 			Count = copy.Count;
 		} // ctor
 
-		private StringBuilder ToString(StringBuilder sb)
+		private StringBuilder ToString(StringBuilder sb, IFormatProvider formatProvider = null)
 		{
 			sb.Append("v=");
 			sb.Append(ViewId);
 
 			if (Filter != null && Filter != PpsDataFilterExpression.True)
-				sb.Append("&f=").Append(Uri.EscapeDataString(Filter.ToString()));
+				sb.Append("&f=").Append(Uri.EscapeDataString(Filter.ToString(formatProvider)));
 			if (Columns != null && Columns.Length > 0)
 				sb.Append("&r=").Append(PpsDataColumnExpression.ToString(Columns));
 			if (Order != null && Order.Length > 0)
@@ -60,9 +61,10 @@ namespace TecWare.PPSn.Core.Data
 
 		/// <summary>Create request path.</summary>
 		/// <param name="path"></param>
+		/// <param name="formatProvider"></param>
 		/// <returns></returns>
-		public string ToQuery(string path = null)
-			=> ToString(new StringBuilder((path ?? String.Empty) + "?action=viewget&")).ToString();
+		public string ToQuery(string path = null, IFormatProvider formatProvider = null)
+			=> ToString(new StringBuilder((path ?? String.Empty) + "?action=viewget&"), formatProvider).ToString();
 
 		/// <summary>View to select.</summary>
 		public string ViewId { get; }
@@ -87,6 +89,14 @@ namespace TecWare.PPSn.Core.Data
 		/// <param name="list"></param>
 		/// <returns></returns>
 		public static bool TryParse(string data, out PpsDataQuery list)
+			=> TryParse(data, null, out list);
+
+		/// <summary>Parse string representation from ToString.</summary>
+		/// <param name="data"></param>
+		/// <param name="formatProvider"></param>
+		/// <param name="list"></param>
+		/// <returns></returns>
+		public static bool TryParse(string data, IFormatProvider formatProvider, out PpsDataQuery list)
 		{
 			var arguments = HttpUtility.ParseQueryString(data, Encoding.UTF8);
 			var viewId = arguments["v"];
@@ -100,7 +110,7 @@ namespace TecWare.PPSn.Core.Data
 
 			var f = arguments["f"];
 			if (!String.IsNullOrEmpty(f))
-				list.Filter = PpsDataFilterExpression.Parse(f);
+				list.Filter = PpsDataFilterExpression.Parse(f, formatProvider: formatProvider);
 
 			var l = arguments["l"];
 			if (!String.IsNullOrEmpty(l))
@@ -126,9 +136,10 @@ namespace TecWare.PPSn.Core.Data
 
 		/// <summary>Parse string representation from ToString.</summary>
 		/// <param name="data"></param>
+		/// <param name="formatProvider"></param>
 		/// <returns></returns>
-		public static PpsDataQuery Parse(string data)
-			=> TryParse(data, out var t) ? t : throw new FormatException();
+		public static PpsDataQuery Parse(string data, IFormatProvider formatProvider = null)
+			=> TryParse(data, formatProvider, out var t) ? t : throw new FormatException();
 
 		/// <summary>Representation of an empty selector.</summary>
 		public static PpsDataQuery Empty { get; } = new PpsDataQuery((string)null);

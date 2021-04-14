@@ -1139,6 +1139,10 @@ namespace TecWare.PPSn.Data
 				{
 					case null:
 						return PpsDataFilterNullValue.Default;
+
+					case PpsDataFilterValue vv:
+						return vv;
+
 					case DateTime dt:
 						return PpsDataFilterDateTimeValue.Create(dt.Date);
 
@@ -1988,6 +1992,7 @@ namespace TecWare.PPSn.Data
 			{
 				case PpsDataFilterValueType.Field:
 				case PpsDataFilterValueType.Integer:
+				case PpsDataFilterValueType.Number:
 				case PpsDataFilterValueType.Text:
 					return true;
 				default:
