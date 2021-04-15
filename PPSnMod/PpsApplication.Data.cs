@@ -1757,7 +1757,7 @@ namespace TecWare.PPSn.Server
 		{
 			foreach (var col in view.Columns)
 			{
-				if (col.Attributes.TryGetProperty("SyncTableRowId", out tableName))
+				if (col.Attributes.TryGetProperty("SyncTableId", out tableName))
 				{
 					rowIdColumn = col;
 					return true;
@@ -1880,7 +1880,7 @@ namespace TecWare.PPSn.Server
 							xml.WriteEndElement();
 							openElements--;
 						}
-					} 
+					}
 				}
 				else
 				{

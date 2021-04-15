@@ -27,6 +27,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
@@ -2718,6 +2719,39 @@ namespace TecWare.PPSn.Data
 				return isModified;
 			} // proc UpdateRow
 
+			public bool UpdateRow(int primaryKeyIndex, object[] values)
+			{
+				var isModified = false;
+
+				// create key to search row
+				var idx = rows.BinarySearch(LiveKeyBase.CreateValueKey(values[primaryKeyIndex]), LiveKeyBase.Comparer);
+				if (idx >= 0)
+				{
+					var r = (RowDataKey)rows[idx];
+					var row = r.Row;
+
+					row.ResetModified();
+					for (var i = 0; i < values.Length; i++)
+					{
+						var v = values[i];
+						if (v != null)
+						{
+							if (v == DBNull.Value)
+								v = null;
+							row[i] = v;
+							if (row.IsModified(i))
+								isModified = true;
+						}
+					}
+
+					if (isModified)
+						NotifyRowEvent(r, ViewMapping.NotifyRowChanged);
+					return isModified;
+				}
+				else
+					return false;
+			} // func UpdateRow
+
 			public PpsDataFilterExpression GetCurrentViewFilter()
 			{
 				var filterList = new List<PpsDataFilterExpression>();
@@ -2802,16 +2836,19 @@ namespace TecWare.PPSn.Data
 				return isModified;
 			} // proc RefreshRowsAsync
 
-			public void DeleteRow(long primaryKey)
+			public bool DeleteRow(object primaryKeyValue)
 			{
 				// create key to search row
-				var idx = rows.BinarySearch(LiveKeyBase.CreateValueKey(primaryKey), LiveKeyBase.Comparer);
+				var idx = rows.BinarySearch(LiveKeyBase.CreateValueKey(primaryKeyValue), LiveKeyBase.Comparer);
 				if (idx >= 0)
 				{
 					var r = (RowDataKey)rows[idx];
 					NotifyRowEvent(r, ViewMapping.NotifyRowRemoved);
 					rows.RemoveAt(idx);
+					return true;
 				}
+				else
+					return false;
 			} // proc DeleteRow
 
 			/// <summary>Execute in background refresh Task only.</summary>
@@ -2867,12 +2904,16 @@ namespace TecWare.PPSn.Data
 			public string GetFieldName(int fieldIndex)
 				=> fields[fieldIndex].Name;
 
+			public int GetFieldIndex(string columnName)
+				=> fields.FindIndex(c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+
 			string IPpsLiveDataTableInfo.Name => TableName;
 
 			public PpsLiveData Data => data;
 			public string TableName => name;
 			public long SyncId => syncId;
 
+			public int FieldCount => fields.Count;
 			public int[] PrimaryKey => primaryKey;
 		} // class Table
 
@@ -2995,15 +3036,39 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class MergeUpdateItem ----------------------------------------------
+
+		private sealed class MergeUpdateItem
+		{
+			private readonly Table table;
+			
+			private readonly int primaryKeyIndex;
+			private readonly object[] values;
+
+			public MergeUpdateItem(Table table, int primaryKeyIndex, object[] values)
+			{
+				this.table = table ?? throw new ArgumentNullException(nameof(table));
+				this.primaryKeyIndex = primaryKeyIndex;
+				this.values = values ?? throw new ArgumentNullException(nameof(values));
+			} // ctor
+
+			public bool Apply()
+				=> table.UpdateRow(primaryKeyIndex, values);
+		} // class MergeUpdateItem
+
+		#endregion
+
 		#region -- class MergeItem ----------------------------------------------------
 
+		[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
 		private sealed class MergeItem
 		{
 			private readonly Table table;
 
 			private bool refreshAll;
-			private readonly List<long> refreshIds = new List<long>();
-			private readonly List<long> deleteIds = new List<long>();
+			private readonly List<object> refreshIds = new List<object>();
+			private readonly List<MergeUpdateItem> updates = new List<MergeUpdateItem>();
+			private readonly List<object> deleteIds = new List<object>();
 			private long nextSyncId = -1L;
 
 			public MergeItem(Table table, bool refreshAll)
@@ -3012,7 +3077,10 @@ namespace TecWare.PPSn.Data
 				this.refreshAll = refreshAll;
 			} // ctor
 
-			private static void AppendIds(StringBuilder sb, string prefix, List<long> ids)
+			private string GetDebuggerDisplay()
+				=> $"{table.TableName}: next {nextSyncId}";
+
+			private static void AppendIds(StringBuilder sb, string prefix, IReadOnlyList<object> ids)
 			{
 				if (ids.Count > 0)
 				{
@@ -3056,41 +3124,89 @@ namespace TecWare.PPSn.Data
 
 			public void ParseMerge(XElement xTable)
 			{
-				if (IsPrimaryMatching(xTable.GetAttribute("rowId", String.Empty)))
+				if (!IsPrimaryMatching(xTable.GetAttribute("rowId", String.Empty)))
 					SetRefreshAll(); // no primary key mapping, set to full refresh
+
+				int primaryKeyIndex = -1;
+				Tuple<XName, Type>[] mapping = null;
+
+				object GetValue(XElement x, Type type)
+				{
+					if (x == null || x.IsEmpty || x.Value == null)
+						return null;
+					return Procs.ChangeType(x.Value, type);
+				} // func GetValue
+
+				object GetPrimaryKey(XElement x)
+					=> GetValue(x.Element(mapping[primaryKeyIndex].Item1), mapping[primaryKeyIndex].Item2);
 
 				foreach (var xItem in xTable.Elements())
 				{
 					switch (xItem.Name.LocalName)
 					{
 						case "full":
-							UpdateNextSyncId(xItem.GetAttribute("id", -1L));
+							UpdateNextSyncId(xItem.GetAttribute("id", 0L));
 							SetRefreshAll();
 							break; // nothing else to read
 						case "columns":
 							if (!refreshAll) // we will refresh all anyway, so only collect id's
 							{
-								SetRefreshAll(); // todo: wir schalten erstmal in den full mode, später wird das detail gemacht
+								mapping = new Tuple<XName, Type>[table.FieldCount];
+
+								// search for the primary column tag
+								foreach (var x in xItem.Elements())
+								{
+									var targetIndex = table.GetFieldIndex(x.GetAttribute("name", String.Empty));
+									if (targetIndex == -1)
+										continue; // column not used
+
+									var sourceType = LuaType.GetType(x.GetAttribute("type", "string"), lateAllowed: false).Type;
+
+									// create mapping
+									mapping[targetIndex] = new Tuple<XName, Type>(x.Name, sourceType);
+
+									if (x.GetAttribute("isPrimary", false))
+									{
+										if (primaryKeyIndex >= 0) // multiple primary keys are not supported, refresh all
+										{
+											primaryKeyIndex = -1;
+											break;
+										}
+										else
+											primaryKeyIndex = targetIndex;
+									}
+								}
+								if (primaryKeyIndex < 0) // primary column is not in result, refresh all
+									SetRefreshAll();
 							}
 							break;
 						case "u":
-							if (refreshAll)
-								UpdateNextSyncId(xItem.GetAttribute("id", -1L));
-							//else
-							//	updates.Add(); // todo: read attributes???
+							UpdateNextSyncId(xItem.GetAttribute("id", 0L));
+							if (!refreshAll)
+							{
+								var values = new object[table.FieldCount];
+
+								foreach (var x in xItem.Elements())
+								{
+									var idx = Array.FindIndex(mapping, m => m != null && m.Item1 == x.Name);
+									if (idx >= 0)
+										values[idx] = GetValue(x, mapping[idx].Item2) ?? DBNull.Value;
+								}
+
+								updates.Add(new MergeUpdateItem(table, primaryKeyIndex, values));
+							}
 							break;
 						case "i":
 						case "r":
-							if (refreshAll)
-								UpdateNextSyncId(xItem.GetAttribute("id", -1L));
-							//else
-							//	refreshIds.Add();
+							UpdateNextSyncId(xItem.GetAttribute("id", 0L));
+							if (!refreshAll)
+								refreshIds.Add(GetPrimaryKey(xItem));
 							break;
 						case "d":
-							if (refreshAll)
-								UpdateNextSyncId(xItem.GetAttribute("id", -1L));
-							//else
-							//	deleteIds.Add();
+							if (!refreshAll)
+								deleteIds.Add(GetPrimaryKey(xItem));
+
+							UpdateNextSyncId(xItem.GetAttribute("id", 0L));
 							break;
 					}
 				}
@@ -3109,11 +3225,17 @@ namespace TecWare.PPSn.Data
 					{
 						// remove rows
 						for (var i = 0; i < deleteIds.Count; i++)
-							table.DeleteRow(deleteIds[i]);
+						{
+							if (table.DeleteRow(deleteIds[i]))
+								isModified = true;
+						}
 
 						// update rows
-						//for (var i = 0; i < updates.Count; i++)
-						//	;
+						for (var i = 0; i < updates.Count; i++)
+						{
+							if (updates[i].Apply())
+								isModified = true;
+						}
 
 						// refresh rows
 						if (refreshIds.Count > 0)
@@ -3121,11 +3243,12 @@ namespace TecWare.PPSn.Data
 							// build view filter
 							var viewFilter = table.GetCurrentViewFilter();
 							// build in filter for refresh rows
-							var refreshFilter = PpsDataFilterExpression.CompareIn(table.GetFieldName(table.PrimaryKey[0]), refreshIds.Select(c => c));
+							var refreshFilter = PpsDataFilterExpression.CompareIn(table.GetFieldName(table.PrimaryKey[0]), refreshIds.ToArray());
 							// create row filter
 							var rowFilter = PpsDataFilterExpression.Combine(viewFilter, refreshFilter);
 							// fetch rows from server
-							isModified = await table.RefreshRowsAsync(client, false, rowFilter);
+							if (await table.RefreshRowsAsync(client, false, rowFilter))
+								isModified = true;
 						}
 					}
 
@@ -3140,13 +3263,15 @@ namespace TecWare.PPSn.Data
 					// update sync id
 					if (nextSyncId > 0)
 						table.SetSyncId(nextSyncId);
-					else
+					else if (nextSyncId == 0)
 						table.SetSyncId(table.Data.globalSyncId);
 				}
 			} // proc ApplyMergeAsync
 
 			public Table Table => table;
 			public bool IsRefreshAll => refreshAll;
+
+			public bool IsSyncNeeded => nextSyncId >= 0;
 		} // class MergeItem
 
 		#endregion
@@ -3297,11 +3422,14 @@ namespace TecWare.PPSn.Data
 			var exceptions = new List<Exception>();
 			foreach (var m in mergeList)
 			{
-				var r = await m.ApplyMergeAsync(client);
-				if (r.ex != null)
-					exceptions.Add(r.ex.GetInnerException());
+				if (m.IsSyncNeeded)
+				{
+					var r = await m.ApplyMergeAsync(client);
+					if (r.ex != null)
+						exceptions.Add(r.ex.GetInnerException());
 
-				isModified |= r.isModified;
+					isModified |= r.isModified;
+				}
 			}
 
 			if (isModified)
