@@ -1942,6 +1942,8 @@ namespace TecWare.PPSn.Server.Sql
 				private DBDATAREADER ExecuteReaderCommand<DBDATAREADER>(DbCommand cmd, PpsDataTransactionExecuteBehavior behavior)
 					where DBDATAREADER : DbDataReader
 				{
+					((PpsSqlDataSource)Transaction.DataSource).DebugCommand(cmd);
+
 					switch (behavior)
 					{
 						case PpsDataTransactionExecuteBehavior.NoResult:
@@ -3476,12 +3478,27 @@ namespace TecWare.PPSn.Server.Sql
 		} // pro ExecuteForResultSet
 
 		private DbCommand CreateViewCommandCore(IPpsSqlConnectionHandle connection, IEnumerable<IDataColumn> selectList, PpsSqlJoinExpression from, PpsDataFilterExpression whereCondition, Func<string, string> whereConditionLookup, IEnumerable<PpsDataOrderExpression> orderBy, Func<string, string> orderByLookup, int start, int count)
+			=> DebugCommand(CreateViewCommand(connection, selectList, from, whereCondition, whereConditionLookup, orderBy, orderByLookup, start, count));
+
+		/// <summary></summary>
+		/// <param name="cmd"></param>
+		/// <returns></returns>
+		protected DbCommand DebugCommand(DbCommand cmd)
 		{
-			var cmd =  CreateViewCommand(connection, selectList, from, whereCondition, whereConditionLookup, orderBy, orderByLookup, start, count);
 			if (IsDebug)
-				Log.Debug(cmd.CommandText);
+			{
+				var sb = new StringBuilder();
+				sb.AppendLine(cmd.CommandText);
+				if (cmd.Transaction != null)
+					sb.AppendLine("InTransaction");
+				sb.AppendLine();
+				foreach (var p in cmd.Parameters.Cast<DbParameter>())
+					sb.AppendLine($"- {p.ParameterName}: {p.DbType} = {p.Value}");
+
+				Log.Debug(sb.ToString());
+			}
 			return cmd;
-		} // func CreateViewCommandCore
+		} // func DebugCommand
 
 		/// <summary></summary>
 		/// <param name="connection"></param>

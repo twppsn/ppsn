@@ -3328,7 +3328,6 @@ namespace TecWare.PPSn.Data
 				var tables = TableSnapShot();
 				foreach (var t in tables)
 				{
-
 					var customer = refreshTasks?.Any(c => c.Table == t) ?? false;
 					var isClientFullRefresh = customer   // is this table scheduled for refresh
 						|| t.SyncId < 0; // is this table initialized

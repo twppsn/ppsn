@@ -801,6 +801,8 @@ namespace TecWare.PPSn.Server
 				=> EndCore();
 
 			protected virtual void EndCore() { }
+
+			public virtual void WriteException(Exception e) { }
 		} // class ViewWriter
 
 		#endregion
@@ -838,15 +840,19 @@ namespace TecWare.PPSn.Server
 			private static void WriteAttributeForViewGet(XmlWriter xml, PropertyValue attr)
 			{
 				xml.WriteStartElement("attribute");
+				try
+				{
+					xml.WriteAttributeString("name", attr.Name);
+					xml.WriteAttributeString("dataType", LuaType.GetType(attr.Type).AliasOrFullName);
 
-				xml.WriteAttributeString("name", attr.Name);
-				xml.WriteAttributeString("dataType", LuaType.GetType(attr.Type).AliasOrFullName);
-
-				var value = attr.Value;
-				if (value != null)
-					xml.WriteValue(Procs.RemoveInvalidXmlChars(Procs.ChangeType<string>(value)));
-
-				xml.WriteEndElement();
+					var value = attr.Value;
+					if (value != null)
+						xml.WriteValue(Procs.RemoveInvalidXmlChars(Procs.ChangeType<string>(value)));
+				}
+				finally
+				{
+					xml.WriteEndElement();
+				}
 			} // proc WriteAttributeForViewGet
 
 			private void WriteColumns(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
@@ -858,51 +864,58 @@ namespace TecWare.PPSn.Server
 				columnTypes = new Type[columnNames.Length];
 
 				xml.WriteStartElement("fields");
-				for (var i = 0; i < columnNames.Length; i++)
+				try
 				{
-					var nativeColumnName = columns.Columns[i].Name;
-					var fieldDefinition = selectorFields?.GetFieldDescription(nativeColumnName); // get the field description for the native column
-					var isNullable = false;
-
-					xml.WriteStartElement(nativeColumnName);
-
-					columnNames[i] = nativeColumnName;
-
-					var fieldType = fieldDefinition?.DataType ?? columns.Columns[i].DataType;
-
-					if (fieldDefinition == null)
+					for (var i = 0; i < columnNames.Length; i++)
 					{
-						xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
-						xml.WriteAttributeString("field", nativeColumnName);
+						var nativeColumnName = columns.Columns[i].Name;
+						var fieldDefinition = selectorFields?.GetFieldDescription(nativeColumnName); // get the field description for the native column
+						var isNullable = false;
+						var fieldType = fieldDefinition?.DataType ?? columns.Columns[i].DataType;
 
-						WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
-						isNullable = true;
-					}
-					else
-					{
-						xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
-
-						foreach (var c in fieldDefinition.GetAttributes(attributeSelector))
+						columnNames[i] = nativeColumnName;
+						xml.WriteStartElement(nativeColumnName);
+						try
 						{
-							if (String.Compare(c.Name, "Nullable", true) == 0)
+							if (fieldDefinition == null)
 							{
-								isNullable = fieldType == typeof(string) // always nullable
-									|| c.Value.ChangeType<bool>();
-								WriteAttributeForViewGet(xml, new PropertyValue(c.Name, typeof(bool), isNullable));
+								xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
+								xml.WriteAttributeString("field", nativeColumnName);
+
+								WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
+								isNullable = true;
 							}
 							else
-								WriteAttributeForViewGet(xml, c);
+							{
+								xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
+
+								foreach (var c in fieldDefinition.GetAttributes(attributeSelector))
+								{
+									if (String.Compare(c.Name, "Nullable", true) == 0)
+									{
+										isNullable = fieldType == typeof(string) // always nullable
+											|| c.Value.ChangeType<bool>();
+										WriteAttributeForViewGet(xml, new PropertyValue(c.Name, typeof(bool), isNullable));
+									}
+									else
+										WriteAttributeForViewGet(xml, c);
+								}
+							}
 						}
+						finally
+						{
+							xml.WriteEndElement();
+						}
+
+						columnTypes[i] = isNullable && fieldType.IsValueType
+							? typeof(Nullable<>).MakeGenericType(fieldType)
+							: fieldType;
 					}
-
-					xml.WriteEndElement();
-
-					columnTypes[i] = isNullable && fieldType.IsValueType
-						? typeof(Nullable<>).MakeGenericType(fieldType)
-						: fieldType;
 				}
-
-				xml.WriteEndElement();
+				finally
+				{
+					xml.WriteEndElement();
+				}
 			} // proc WriteColumns
 
 			protected override void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
@@ -935,30 +948,36 @@ namespace TecWare.PPSn.Server
 				}
 
 				xml.WriteStartElement("r");
-				if (columnNames == null)
+				try
 				{
-					for (var i = 0; i < row.Columns.Count; i++)
+					if (columnNames == null)
 					{
-						if (IsColumnAllowedFast(i))
-							WriteRowValue(row.Columns[i].Name, row[i]);
-						else if (columnTypes[i].IsValueType)
-							WriteRowValue(columnNames[i], Activator.CreateInstance(columnTypes[i]));
-					}
-				}
-				else
-				{
-					for (var i = 0; i < columnNames.Length; i++)
-					{
-						if (columnNames[i] != null)
+						for (var i = 0; i < row.Columns.Count; i++)
 						{
 							if (IsColumnAllowedFast(i))
-								WriteRowValue(columnNames[i], row[i]);
+								WriteRowValue(row.Columns[i].Name, row[i]);
 							else if (columnTypes[i].IsValueType)
 								WriteRowValue(columnNames[i], Activator.CreateInstance(columnTypes[i]));
 						}
 					}
+					else
+					{
+						for (var i = 0; i < columnNames.Length; i++)
+						{
+							if (columnNames[i] != null)
+							{
+								if (IsColumnAllowedFast(i))
+									WriteRowValue(columnNames[i], row[i]);
+								else if (columnTypes[i].IsValueType)
+									WriteRowValue(columnNames[i], Activator.CreateInstance(columnTypes[i]));
+							}
+						}
+					}
 				}
-				xml.WriteEndElement();
+				finally
+				{
+					xml.WriteEndElement();
+				}
 			} // proc WriteRow
 
 			protected override void EndCore()
@@ -973,7 +992,21 @@ namespace TecWare.PPSn.Server
 
 				xml.WriteEndElement();
 				xml.WriteEndDocument();
-			} // proc End
+			} // proc EndCore
+
+			public override void WriteException(Exception e)
+			{
+				base.WriteException(e);
+
+				xml.WriteStartElement("exception");
+				xml.WriteAttributeString("text", e.Message);
+				xml.WriteEndElement();
+
+				if (!firstRow)
+					xml.WriteEndElement();
+				xml.WriteEndElement();
+				xml.WriteEndDocument();
+			} // proc WriteException
 		} // class ViewXmlWriter
 
 		#endregion
@@ -1637,8 +1670,16 @@ namespace TecWare.PPSn.Server
 			{
 				r.OutputHeaders["x-ppsn-source"] = selector.DataSource.Name;
 				r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
-
-				ExportViewCore(viewWriter, selector, startAt, count, ctx, attributeSelector);
+				try
+				{
+					ExportViewCore(viewWriter, selector, startAt, count, ctx, attributeSelector);
+				}
+				catch (Exception e)
+				{
+					try { viewWriter.WriteException(e.GetInnerException()); }
+					catch { }
+					throw;
+				}
 			}
 		} // func HttpViewGetAction
 
