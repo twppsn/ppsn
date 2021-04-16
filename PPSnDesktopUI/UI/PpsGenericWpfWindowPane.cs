@@ -36,20 +36,6 @@ using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.UI
 {
-	//	#region -- class WpfPaneHelper ----------------------------------------------------
-
-	//	internal static class WpfPaneHelper
-	//	{
-	//		/// <summary>Find a control by name.</summary>
-	//		/// <param name="control"></param>
-	//		/// <param name="key"></param>
-	//		/// <returns><c>null</c> if there is no control or the current thread is not in the correct ui-thread.</returns>
-	//		public static object GetXamlElement(FrameworkElement control, object key)
-	//			=> key is string && control != null && control.Dispatcher.CheckAccess() ? control.FindName((string)key) : null;
-	//	} // class WpfPaneHelper
-
-	//	#endregion
-
 	//	#region -- class PpsGenericWpfChildPane -------------------------------------------
 
 	//	/// <summary>Sub pane implementation</summary>

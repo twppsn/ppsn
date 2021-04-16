@@ -117,6 +117,7 @@ namespace TecWare.PPSn
 		private readonly IPpsLuaShell shell;
 		private readonly Uri sourceUri;
 
+		private FrameworkElement control = null;
 		private Task codeCompiledTask = Task.CompletedTask;
 
 		public PpsLuaCodeBehind(IPpsLuaShell shell, Uri sourceUri)
@@ -129,7 +130,7 @@ namespace TecWare.PPSn
 			=> $"Code: {sourceUri}";
 
 		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? shell.Global.GetValue(key);
+			=> base.OnIndex(key) ?? PpsLuaShell.GetXamlElement(control, key) ?? shell.Global.GetValue(key);
 
 		void IPpsXamlCode.CompileCode(Uri uri, string code)
 		{
@@ -152,11 +153,16 @@ namespace TecWare.PPSn
 			codeCompiledTask.Await();
 
 			// execute method
+			this.control = control;
 			CallMemberDirect("OnCreated", new object[] { control, arguments }, ignoreNilFunction: true);
 		} // proc IPpsLuaCodeBehind.OnControlCreated
 
 		public Uri SourceUri => sourceUri;
 		public IPpsLuaShell LuaShell => shell;
+
+		/// <summary>Control that is bound to the code</summary>
+		[LuaMember]
+		public FrameworkElement Control => control;
 	} // class PpsLuaCodeBehind
 
 	#endregion
@@ -227,6 +233,13 @@ namespace TecWare.PPSn
 				new PpsLuaCodeScope(self.LuaShell, self.Target, new Uri(sourceUri.GetComponents(UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.UriEscaped), UriKind.Absolute)) // source for functions
 			);
 		} // proc RequireCodeAsync
+
+		/// <summary>Find a control by name for lua.</summary>
+		/// <param name="control"></param>
+		/// <param name="key"></param>
+		/// <returns><c>null</c> if there is no control or the current thread is not in the correct ui-thread.</returns>
+		public static object GetXamlElement(FrameworkElement control, object key)
+			=> key is string controlName && control != null && control.Dispatcher.CheckAccess() ? control.FindName(controlName) : null;
 	} // class PpsLuaShell
 
 	#endregion

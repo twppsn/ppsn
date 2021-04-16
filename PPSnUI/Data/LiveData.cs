@@ -3127,7 +3127,7 @@ namespace TecWare.PPSn.Data
 				if (!IsPrimaryMatching(xTable.GetAttribute("rowId", String.Empty)))
 					SetRefreshAll(); // no primary key mapping, set to full refresh
 
-				int primaryKeyIndex = -1;
+				var primaryKeyIndex = -1;
 				Tuple<XName, Type>[] mapping = null;
 
 				object GetValue(XElement x, Type type)
