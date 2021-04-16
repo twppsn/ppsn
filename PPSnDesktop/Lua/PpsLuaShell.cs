@@ -29,6 +29,7 @@ using System.Windows.Data;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 using LLua = Neo.IronLua.Lua;
 
@@ -438,6 +439,13 @@ namespace TecWare.PPSn.Lua
 			=> CompileCoreAsync(code, source, throwException, arguments);
 
 		#endregion
+
+		/// <summary>Create a better bindable object for an lua table.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsLuaTableView CreateTableView(LuaTable table, LuaTable metaTable = null)
+			=> new PpsLuaTableView(table, metaTable);
 
 		protected override void OnPrint(string text)
 			=> shell.LogProxy().Debug(text);
