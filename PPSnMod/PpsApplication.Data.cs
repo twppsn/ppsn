@@ -814,6 +814,7 @@ namespace TecWare.PPSn.Server
 			private readonly TextWriter tw;
 			private readonly XmlWriter xml;
 
+			private bool startIsWritten = false;
 			private bool firstRow = true;
 			private string[] columnNames = null;
 			private Type[] columnTypes = null;
@@ -922,6 +923,7 @@ namespace TecWare.PPSn.Server
 			{
 				xml.WriteStartDocument();
 				xml.WriteStartElement("view");
+				startIsWritten = true;
 
 				if (columns != null)
 					WriteColumns(selector, columns, attributeSelector);
@@ -997,6 +999,12 @@ namespace TecWare.PPSn.Server
 			public override void WriteException(Exception e)
 			{
 				base.WriteException(e);
+
+				if (!startIsWritten)
+				{
+					xml.WriteStartDocument();
+					xml.WriteStartElement("view");
+				}
 
 				xml.WriteStartElement("exception");
 				xml.WriteAttributeString("text", e.Message);

@@ -631,10 +631,10 @@ namespace PPSnExcel
 				=> typeToXsdType.TryGetValue(netType, out var tmp) && tmp == xsdType;
 
 			// test base params
-			if (!TryParse(map, out _, out var shelltUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
+			if (!TryParse(map, out _, out var shellUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
 				return (false, null);
 
-			if (Uri.Compare(shelltUri, shell.Http.BaseAddress, UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) != 0)
+			if (Uri.Compare(shellUri, shell.Info.Uri, UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) != 0)
 				return (true, null);
 
 			if (viewId != currentViewId)
@@ -946,7 +946,8 @@ namespace PPSnExcel
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && !(range.ListObject is null))
 			{
 				var xlList = Globals.Factory.GetVstoObject(range.ListObject);
-				return xlList.XmlMap.Schemas.Count >= 1;
+				var xlSchemas = xlList?.XmlMap?.Schemas;
+				return xlSchemas != null && xlSchemas.Count >= 1;
 			}
 			else
 				return false;
@@ -988,7 +989,7 @@ namespace PPSnExcel
 				else if (column.DataBodyRange != null && column.DataBodyRange.HasFormula)
 				{
 					Type = PpsTableColumnType.Formula;
-					Expression = column.Name + "=" + column.DataBodyRange.Cells[1, 1].Formula;
+					Expression = column.Name + column.DataBodyRange.Cells[1, 1].Formula;
 				}
 				else
 				{
