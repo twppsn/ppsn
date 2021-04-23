@@ -91,7 +91,8 @@ specific language governing permissions and limitations under the Licence.
 							   Content="{Binding DisplayText}"
 							   ToolTip="{Binding Description}"
 							   GeometryName="{Binding Image}"
-							   GeometrySize="24"
+							   GeometrySize="{Binding ImageSize,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsCommandBar}}}"
+							   IsEnabled="{Binding IsEnabled}"
 							   Height="{Binding MinHeight,ElementName=PART_ItemsControl}"
 							   MinWidth="36"
 							   DisplayMode="Transparent"
@@ -102,15 +103,17 @@ specific language governing permissions and limitations under the Licence.
 									CommandParameter="{Binding CommandParameter}"
 									CommandTarget="{Binding CommandTarget}"
 									Content="{Binding DisplayText}"
+									ToolTip="{Binding Description}"
+									GeometryName="{Binding Image}"
+									GeometrySize="{Binding ImageSize,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsCommandBar}}}"
 									IsEnabled="{Binding IsEnabled}"
 									Popup="{Binding Popup}"
 									Mode="{Binding Mode}"
-									ToolTip="{Binding Description}"
-									GeometryName="{Binding Image}"
-									GeometrySize="24"
 									Height="{Binding MinHeight,ElementName=PART_ItemsControl}"
 									MinWidth="36"
-									Focusable="True" />
+									DisplayMode="Transparent"
+									Focusable="{Binding Focusable}" />
+
 			</DataTemplate>
 		</Style.Resources>
 	</Style>

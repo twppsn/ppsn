@@ -51,9 +51,10 @@ specific language governing permissions and limitations under the Licence.
 											  BasicCommands="{TemplateBinding ListCommands}"
 											  ExternalCommands="{TemplateBinding SelectedItemCommands}"
 											  Mode="Mixed"
-											  MinHeight="34"
+											  ButtonHeight="34"
+											  ImageSize="20"
 											  Margin="0,0,0,1" />
-							<!--sum(Height, Margin.Top, Margin.Bottom) = commandBar.MinHeight + commandBar.Margin.Bottom-->
+							<!--sum(Height, Margin.Top, Margin.Bottom) = commandBar.ButtonHeight + commandBar.Margin.Top + commandBar.Margin.Bottom-->
 							<ui:PpsTextBox x:Name="PART_FilterBox"
 										   Grid.Column="1"
 										   Text="{Binding UserFilterText,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay,UpdateSourceTrigger=PropertyChanged,Delay=300}"
