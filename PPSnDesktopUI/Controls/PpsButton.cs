@@ -122,10 +122,10 @@ namespace TecWare.PPSn.Controls
 
 		#region -- GeometrySize - Property --------------------------------------------
 
-		/// <summary>The diameter of the circle</summary>
-		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.Register(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(36.0));
+		/// <summary>The width and height of the image</summary>
+		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.Register(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(18.0));
 
-		/// <summary>The property defines the diameter of the circle</summary>
+		/// <summary>The property defines the width and height of the image</summary>
 		public double GeometrySize { get => (double)GetValue(GeometrySizeProperty); set => SetValue(GeometrySizeProperty, value); }
 
 		#endregion

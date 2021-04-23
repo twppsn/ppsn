@@ -61,6 +61,7 @@ specific language governing permissions and limitations under the Licence.
                                                       GeometryName="{TemplateBinding GeometryName}"
                                                       Width="{TemplateBinding GeometrySize}"
                                                       Height="{TemplateBinding GeometrySize}"
+													  Margin="0,0,2,0"
                                                       Foreground="{TemplateBinding Foreground}"
                                                       Opacity="{TemplateBinding ImageOpacity}" />
                                 <ContentPresenter x:Name="ContentSite"
@@ -89,7 +90,8 @@ specific language governing permissions and limitations under the Licence.
                         <Trigger Property="HasContent" Value="False">
                             <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
                             <Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
-                        </Trigger>
+							<Setter TargetName="ImageBox" Property="Margin" Value="0" />
+						</Trigger>
 
                         <Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
                             <Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
