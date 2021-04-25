@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -77,34 +78,55 @@ namespace PPSnExcel
 		private static readonly XName xsdComplexTypeName = namespaceName + "complexType";
 		private static readonly XName xsdSequenceName = namespaceName + "sequence";
 
-		private static readonly Dictionary<Type, string> typeToXsdType = new Dictionary<Type, string>
+		private static readonly KeyValuePair<Type, string>[] xsdTypeMapping = new KeyValuePair<Type, string>[]
 		{
-			{ typeof(byte), "unsignedByte" },
-			{ typeof(sbyte), "byte" },
-			{ typeof(ushort), "unsignedShort" },
-			{ typeof(short), "short" },
-			{ typeof(uint), "unsignedInt" },
-			{ typeof(int), "int" },
-			{ typeof(ulong), "unsignedLong" },
-			{ typeof(long), "long" },
+			new KeyValuePair<Type, string>(typeof(byte), "unsignedByte"),
+			new KeyValuePair<Type, string>(typeof(sbyte), "byte"),
+			new KeyValuePair<Type, string>(typeof(ushort), "unsignedShort"),
+			new KeyValuePair<Type, string>(typeof(short), "short"),
+			new KeyValuePair<Type, string>(typeof(uint), "unsignedInt"),
+			new KeyValuePair<Type, string>(typeof(int), "int"),
+			new KeyValuePair<Type, string>(typeof(ulong), "unsignedLong"),
+			new KeyValuePair<Type, string>(typeof(long), "long"),
 			// todo: Check functionality.
-			{ typeof(float), "float" },
-			{ typeof(double), "double" },
-			{ typeof(decimal), "decimal" },
+			new KeyValuePair<Type, string>(typeof(float), "float"),
+			new KeyValuePair<Type, string>(typeof(double), "double"),
+			new KeyValuePair<Type, string>(typeof(decimal), "decimal"),
 			// todo: Check functionality. Try to find better type match.
-			{ typeof(DateTime), "dateTime" },
-			{ typeof(DateTimeOffset), "dateTime" },
+			new KeyValuePair<Type, string>(typeof(DateTime), "dateTime"),
+			new KeyValuePair<Type, string>(typeof(DateTimeOffset), "dateTime"),
+			new KeyValuePair<Type, string>(typeof(string), "string"),
+
 			// todo: Check functionality. Try to find better type match.
-			{ typeof(char), "string" },
-			{ typeof(string), "string" },
-			{ typeof(bool), "boolean" },
+			new KeyValuePair<Type, string>(typeof(char), "string"),
+			new KeyValuePair<Type, string>(typeof(bool), "boolean"),
 			// todo: Check functionality. Try to find better type match.
-			{ typeof(Guid), "string" },
+			new KeyValuePair<Type, string>(typeof(Guid), "string"),
 			// todo: Check functionality. Try to find better type match.
-			{ typeof(XDocument), "string" },
+			new KeyValuePair<Type, string>(typeof(XDocument), "string"),
 			// todo: Check functionality. Try to find better type match.
-			{ typeof(byte[]), "string" }
+			new KeyValuePair<Type, string>(typeof(byte[]), "string")
 		};
+
+		private static string GetTypeToXsd(Type dataType)
+		{
+			for (var i = 0; i < xsdTypeMapping.Length; i++)
+			{
+				if (xsdTypeMapping[i].Key == dataType)
+					return xsdTypeMapping[i].Value;
+			}
+			return "string";
+		} // func GetTypeToXsd
+
+		private static Type GetTypeFromXsd(string xmlType)
+		{
+			for (var i = 0; i < xsdTypeMapping.Length; i++)
+			{
+				if (xsdTypeMapping[i].Value == xmlType)
+					return xsdTypeMapping[i].Key;
+			}
+			return typeof(string);
+		} // func GetTypeFromXsd
 
 		#endregion
 
@@ -112,6 +134,8 @@ namespace PPSnExcel
 
 		private sealed class PpsListColumnInfo
 		{
+			private static readonly IPropertyEnumerableDictionary nullableProperty = new PropertyDictionary(new PropertyValue("Nullable", true));
+
 			private readonly string selectColumnName;
 			private readonly string resultColumnName;
 			private readonly string xmlType;
@@ -127,6 +151,9 @@ namespace PPSnExcel
 
 			public PpsDataColumnExpression ToColumnExpression()
 				=> selectColumnName == null ? null : new PpsDataColumnExpression(selectColumnName);
+
+			public IDataColumn ToDataColumn()
+				=> new SimpleDataColumn(resultColumnName, GetTypeFromXsd(xmlType.Substring(3)), isNullable ? nullableProperty : null);
 
 			internal XElement GetXsd(XName elementName)
 			{
@@ -162,6 +189,7 @@ namespace PPSnExcel
 
 			private Excel.XmlMap xlMap = null;
 			private int[] resultToXml = null;
+			private bool firstRow = true;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -175,7 +203,10 @@ namespace PPSnExcel
 				enumerator = enumerable.GetEnumerator();
 				try
 				{
-					resultColumns = ((IDataColumns)enumerator).Columns;
+					if (enumerable is IDataColumns dc1)
+						resultColumns = dc1.Columns;
+					else
+						resultColumns = ((IDataColumns)enumerator).Columns;
 
 					if (resultColumns.Count == 0)
 						throw new ExcelException("Ergebnismenge hat keine Spalten.");
@@ -235,6 +266,25 @@ namespace PPSnExcel
 
 			#region -- GetNextBlockAsync ----------------------------------------------
 
+			private void WriteRow(XmlWriter x, IDataValues r)
+			{
+				x.WriteStartElement("r");
+
+				var count = map.columns.Length;
+				for (var i = 0; i < count; i++)
+				{
+					var v = r[resultToXml?[i] ?? i];
+					if (v != null)
+					{
+						x.WriteStartElement(map.columns[i].ResultColumnName);
+						x.WriteValue(v);
+						x.WriteEndElement();
+					}
+				}
+
+				x.WriteEndElement();
+			} // func WriteRow
+
 			public async Task<(bool, string)> GetNextBlockAsync(int blockSize)
 			{
 				if (xlMap == null)
@@ -252,23 +302,14 @@ namespace PPSnExcel
 						x.WriteStartElement(xlMap.RootElementName);
 						while ((moveNext = enumerator.MoveNext()) && blockSize-- > 0)
 						{
-							var r = enumerator.Current;
-							x.WriteStartElement("r");
+							if (firstRow)
+								firstRow = false;
 
-							var count = map.columns.Length;
-							for (var i = 0; i < count; i++)
-							{
-								var v = r[resultToXml?[i] ?? i];
-								if (v != null)
-								{
-									x.WriteStartElement(map.columns[i].ResultColumnName);
-									x.WriteValue(v);
-									x.WriteEndElement();
-								}
-							}
-
-							x.WriteEndElement();
+							WriteRow(x, enumerator.Current);
 						}
+
+						if (firstRow) // no rows returned, add a dummy row
+							WriteRow(x, DataRowHelper.GetDefaultValues(resultColumns));
 
 						x.WriteEndElement();
 					});
@@ -294,6 +335,35 @@ namespace PPSnExcel
 			public IReadOnlyList<IDataColumn> Columns => resultColumns;
 			public Excel.XmlMap XlMapping => xlMap;
 		} // class PpsViewResult
+
+		#endregion
+
+		#region -- class PpsEmptyResult ------------------------------------------------
+
+		private sealed class PpsEmptyResult : IEnumerable<IDataRow>, IDataColumns
+		{
+			private readonly PpsListMapping map;
+			private readonly IDataColumn[] columns;
+
+			#region -- Ctor/Dtor ------------------------------------------------------
+
+			internal PpsEmptyResult(PpsListMapping map)
+			{
+				this.map = map ?? throw new ArgumentNullException(nameof(map));
+
+				columns = map.columns.Select(c => c.ToDataColumn()).ToArray();
+			} // ctor
+
+			#endregion
+
+			public IEnumerator<IDataRow> GetEnumerator()
+				=> ((IEnumerable<IDataRow>)Array.Empty<IDataRow>()).GetEnumerator();
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+
+			public IReadOnlyList<IDataColumn> Columns => columns;
+		} // class PpsEmptyResult
 
 		#endregion
 
@@ -540,6 +610,9 @@ namespace PPSnExcel
 			return new PpsViewResult(this, shell.GetViewData(request));
 		} // func GetViewData
 
+		internal IPpsViewResult GetEmptyData()
+			=> new PpsViewResult(this, new PpsEmptyResult(this));
+
 		#endregion
 
 		#region -- Excel Xml Map ------------------------------------------------------
@@ -596,7 +669,7 @@ namespace PPSnExcel
 			for (var i = 0; i < newColumns.Length; i++)
 			{
 				var col = columnInfo.Columns[i]; // result
-				var xsdType = namespaceShortcut + ":" + typeToXsdType[col.DataType];
+				var xsdType = namespaceShortcut + ":" + GetTypeToXsd(col.DataType);
 				var isNullable = col.GetIsNullable();
 
 				// try find source column
@@ -628,7 +701,7 @@ namespace PPSnExcel
 			var mapping = new int[columnInfo.Columns.Count];
 
 			bool TestXsdType(string xsdType, Type netType)
-				=> typeToXsdType.TryGetValue(netType, out var tmp) && tmp == xsdType;
+				=> GetTypeToXsd(netType) == xsdType;
 
 			// test base params
 			if (!TryParse(map, out _, out var shellUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
@@ -1227,10 +1300,14 @@ namespace PPSnExcel
 
 		#region -- ClearData ----------------------------------------------------------
 
-		public void ClearData()
+		public async Task ClearDataAsync()
 		{
-			xlList.DataBodyRange.Clear();
-		} // proc ClearData
+			using (var result = map.GetEmptyData())
+			{
+				result.PrepareMapping(xlList.InnerObject);
+				await ImportDataAsync(false, result);
+			}
+		} // proc ClearDataAsync
 
 		#endregion
 
@@ -1313,6 +1390,39 @@ namespace PPSnExcel
 			}
 		} // proc CompareOrder
 
+		private async Task ImportDataAsync(bool singleLineMode, IPpsViewResult result)
+		{
+			var errorCheckingOptions = xlList.Application.ErrorCheckingOptions;
+			var oldNumberAsTextValue = errorCheckingOptions.NumberAsText;
+			var oldTextDateValue = errorCheckingOptions.TextDate;
+			errorCheckingOptions.NumberAsText = false;
+			errorCheckingOptions.TextDate = false;
+			try
+			{
+				var blockSize = singleLineMode ? 1 : (64 << 10);
+				var blockIndex = 0;
+				var moveNext = true;
+				while (moveNext)
+				{
+					string xmlData;
+					(moveNext, xmlData) = await result.GetNextBlockAsync(blockSize);
+					switch (result.XlMapping.ImportXml(xmlData, blockIndex == 0))
+					{
+						case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:
+							throw new ExcelException("Zu viele Element, nicht alle Zeilen wurden geladen.");
+						case Excel.XlXmlImportResult.xlXmlImportValidationFailed:
+							throw new ExcelException("Validierung der Rohdaten fehlgeschlagen.");
+					}
+					blockIndex++;
+				}
+			}
+			finally
+			{
+				errorCheckingOptions.NumberAsText = oldNumberAsTextValue;
+				errorCheckingOptions.TextDate = oldTextDateValue;
+			}
+		} // func ImportDataAsync
+
 		public async Task RefreshAsync(PpsXlRefreshList refreshLayout, bool singleLineMode, IPpsTableColumn[] columns)
 		{
 			var showTotals = false;
@@ -1355,35 +1465,7 @@ namespace PPSnExcel
 				}
 
 				// import data
-				var errorCheckingOptions = xlList.Application.ErrorCheckingOptions;
-				var oldNumberAsTextValue = errorCheckingOptions.NumberAsText;
-				var oldTextDateValue = errorCheckingOptions.TextDate;
-				errorCheckingOptions.NumberAsText = false;
-				errorCheckingOptions.TextDate = false;
-				try
-				{
-					var blockSize = singleLineMode ? 1 : (64 << 10);
-					var blockIndex = 0;
-					var moveNext = true;
-					while (moveNext)
-					{
-						string xmlData;
-						(moveNext, xmlData) = await result.GetNextBlockAsync(blockSize);
-						switch (result.XlMapping.ImportXml(xmlData, blockIndex == 0))
-						{
-							case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:
-								throw new ExcelException("Zu viele Element, nicht alle Zeilen wurden geladen.");
-							case Excel.XlXmlImportResult.xlXmlImportValidationFailed:
-								throw new ExcelException("Validierung der Rohdaten fehlgeschlagen.");
-						}
-						blockIndex++;
-					}
-				}
-				finally
-				{
-					errorCheckingOptions.NumberAsText = oldNumberAsTextValue;
-					errorCheckingOptions.TextDate = oldTextDateValue;
-				}
+				await ImportDataAsync(singleLineMode, result);
 
 				//// disable alerts
 				//	var dataRange = xlList.DataBodyRange;
