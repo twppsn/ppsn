@@ -216,7 +216,7 @@ namespace PPSnExcel
 		private static async Task<bool> LoginShellAsync(IWin32Window parent, IPpsShell shell)
 		{
 			// open trust stroe
-			using (var login = new PpsClientLogin("ppsn_env:" + shell.Info.Uri.ToString(), shell.Info.Name, false))
+			using (var login = new PpsClientLogin(shell.Info.GetCredentialTarget(), shell.Info.Name, false))
 			{
 				var loginCounter = 0; // first time, do not show login dialog
 				while (true)

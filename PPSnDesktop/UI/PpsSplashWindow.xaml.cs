@@ -328,7 +328,7 @@ namespace TecWare.PPSn.UI
 				login?.Dispose();
 
 				// create new login
-				login = new PpsClientLogin("ppsn_env:" + shellInfo.Uri.ToString(), shellInfo.Name, false);
+				login = new PpsClientLogin(shellInfo.GetCredentialTarget(), shellInfo.Name, false);
 
 				// currect save options
 				if (login.SaveOptions == PpsClientLoginSaveOptions.None)
