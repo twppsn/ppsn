@@ -30,7 +30,7 @@ namespace TecWare.PPSn.Controls
 	public class PpsPopup : Popup
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		public static readonly DependencyProperty PreserveFocusProperty = DependencyProperty.Register(nameof(PreserveFocus), typeof(bool), typeof(PpsPopup), new FrameworkPropertyMetadata(BooleanBox.True));
+		public static readonly DependencyProperty PreserveFocusProperty = DependencyProperty.Register(nameof(PreserveFocus), typeof(bool), typeof(PpsPopup), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty RouteEventsProperty = DependencyProperty.Register(nameof(RouteEvents), typeof(bool), typeof(PpsPopup), new FrameworkPropertyMetadata(BooleanBox.False));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 

@@ -157,7 +157,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Sets the Style for the UI</summary>
 		public static readonly DependencyProperty ModeProperty = DependencyProperty.Register(nameof(Mode), typeof(PpsCommandBarMode), typeof(PpsCommandBar), 
 			new FrameworkPropertyMetadata(
-				PpsCommandBarMode.Circle, 
+				PpsCommandBarMode.Mixed, 
 				FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender, 
 				new PropertyChangedCallback(OnModeChanged)
 			)
@@ -184,6 +184,16 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>The property defines the height of the buttons in mixed- and rectangle Mode</summary>
 		public double ButtonHeight { get => (double)GetValue(ButtonHeightProperty); set => SetValue(ButtonHeightProperty, value); }
+
+		#endregion
+
+		#region -- ImageSize - Property -----------------------------------------------
+
+		/// <summary>Size of Images when Mode in mixed or rectangle</summary>
+		public static readonly DependencyProperty ImageSizeProperty = DependencyProperty.Register(nameof(ImageSize), typeof(double), typeof(PpsCommandBar), new FrameworkPropertyMetadata(24.0));
+
+		/// <summary>The property defines the Size of the Images in mixed- and rectangle Mode</summary>
+		public double ImageSize { get => (double)GetValue(ImageSizeProperty); set => SetValue(ImageSizeProperty, value); }
 
 		#endregion
 
