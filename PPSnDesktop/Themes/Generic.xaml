@@ -258,7 +258,7 @@
 											<Setter.Value>
 												<ControlTemplate TargetType="{x:Type ToggleButton}">
 													<Grid Background="{TemplateBinding Background}">
-														<ui:PpsGeometryImage GeometryName="chevronDownThin" GeometryCircled="False"
+														<ui:PpsGeometryImage GeometryName="chevronDownThin"
 																			  Width="20" Height="20"
 																			  Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
 													</Grid>
@@ -326,7 +326,7 @@
 									   HorizontalAlignment="Right"
 									   VerticalAlignment="Top" />
 
-						<Popup PlacementTarget="{Binding ElementName=showPaneListToggleButton}" Placement="Left" HorizontalOffset="-32" VerticalOffset="38"
+						<Popup PlacementTarget="{Binding ElementName=showPaneListToggleButton}" Placement="Left" HorizontalOffset="32" VerticalOffset="38"
 							   IsOpen="{Binding IsChecked, ElementName=showPaneListToggleButton}" MaxHeight="600" StaysOpen="False">
 							<Popup.Resources>
 								<Storyboard x:Key="ClosePopupStoryboard">
