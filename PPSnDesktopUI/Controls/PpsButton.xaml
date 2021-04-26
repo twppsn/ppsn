@@ -61,12 +61,12 @@ specific language governing permissions and limitations under the Licence.
                                                       GeometryName="{TemplateBinding GeometryName}"
                                                       Width="{TemplateBinding GeometrySize}"
                                                       Height="{TemplateBinding GeometrySize}"
-													  Margin="0,0,2,0"
                                                       Foreground="{TemplateBinding Foreground}"
                                                       Opacity="{TemplateBinding ImageOpacity}" />
                                 <ContentPresenter x:Name="ContentSite"
                                                   Grid.Column="1"
                                                   Focusable="False"
+												  Margin="2,0,0,0"
                                                   RecognizesAccessKey="True"
                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -79,7 +79,6 @@ specific language governing permissions and limitations under the Licence.
 								   IsHitTestVisible="False"
 								   Opacity="0" />
 					</Grid>
-
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsTransparent" Value="True">
                             <Setter Property="BorderBrush" Value="Transparent" />
@@ -89,8 +88,8 @@ specific language governing permissions and limitations under the Licence.
 
                         <Trigger Property="HasContent" Value="False">
                             <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
-                            <Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
-							<Setter TargetName="ImageBox" Property="Margin" Value="0" />
+							<Setter Property="Padding" Value="0" />
+							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
 						</Trigger>
 
                         <Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
