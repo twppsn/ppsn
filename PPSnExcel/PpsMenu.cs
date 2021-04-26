@@ -165,10 +165,7 @@ namespace PPSnExcel
 				return;
 
 			if (MessageBox.Show(String.Format("Remove Xml-Data of {0} ({1})?", list.List.DisplayName, list.List.XmlMap.Name), "Question", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-			{
-				var x = new XElement(list.List.XmlMap.RootElementName).ToString();
-				list.List.XmlMap.ImportXml(x.ToString(), true);
-			}
+				list.ClearDataAsync().Await();
 		} // proc RemoveTableData
 
 		private static void InsertTableCore(bool extendedEdit)

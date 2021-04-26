@@ -1785,6 +1785,12 @@ namespace TecWare.PPSn
 			return fileVersion == null ? new Version(1, 0, 0, 0) : new Version(fileVersion.Version);
 		} // func GetDefaultAssemblyVersion
 
+		/// <summary>Get unique identifier for the credential manager.</summary>
+		/// <param name="shellInfo"></param>
+		/// <returns></returns>
+		public static string GetCredentialTarget(this IPpsShellInfo shellInfo)
+			=> "ppsn_env:" + shellInfo.Name;
+
 		#endregion
 
 		#region -- Log ----------------------------------------------------------------

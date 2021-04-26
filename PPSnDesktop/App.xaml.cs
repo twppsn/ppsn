@@ -1102,7 +1102,7 @@ namespace TecWare.PPSn
 
 		private static ICredentials GetLastUserInfo(IPpsShellInfo shell)
 		{
-			using (var pcl = new PpsClientLogin("ppsn_env:" + shell.Uri.ToString(), shell.Name, false))
+			using (var pcl = new PpsClientLogin(shell.GetCredentialTarget(), shell.Name, false))
 				return pcl.GetCredentials();
 		} // func GetLastUserInfo
 

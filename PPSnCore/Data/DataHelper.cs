@@ -168,7 +168,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private static Dictionary<Type, string[]> publicMembers = new Dictionary<Type, string[]>();
+		private static readonly Dictionary<Type, string[]> publicMembers = new Dictionary<Type, string[]>();
 
 		private static string[] GetPublicMemberList(Type type)
 		{
