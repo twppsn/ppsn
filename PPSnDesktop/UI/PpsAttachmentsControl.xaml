@@ -102,30 +102,6 @@ specific language governing permissions and limitations under the Licence.
 								</Border>
 
 								<Rectangle x:Name="focusRect" Stroke="{DynamicResource PPSnMarkerBrush}" StrokeThickness="1" SnapsToDevicePixels="True" RenderOptions.EdgeMode="Aliased" Opacity="0" />
-
-								<Grid.ContextMenu>
-									<ContextMenu ItemsSource="{TemplateBinding Commands}" UsesItemContainerTemplate="True">
-										<ContextMenu.Resources>
-											<ItemContainerTemplate DataType="{x:Type uiO:PpsUICommandButton}">
-												<MenuItem Header="{Binding DisplayText}"
-														  Command="{Binding Command}"
-														  CommandParameter="{Binding CommandParameter}"
-														  CommandTarget="{Binding CommandTarget}">
-													<MenuItem.Icon>
-														<ui:PpsGeometryImage GeometryName="{Binding Image}" GeometryCircled="False" Foreground="{DynamicResource PPSnImageBrush}" Opacity=".75" />
-													</MenuItem.Icon>
-												</MenuItem>
-											</ItemContainerTemplate>
-											<ItemContainerTemplate DataType="{x:Type uiO:PpsUICommandSeperator}">
-												<Separator>
-													<Separator.Style>
-														<Style TargetType="{x:Type Separator}" BasedOn="{StaticResource ResourceKey={x:Static MenuItem.SeparatorStyleKey}}" />
-													</Separator.Style>
-												</Separator>
-											</ItemContainerTemplate>
-										</ContextMenu.Resources>
-									</ContextMenu>
-								</Grid.ContextMenu>
 							</Grid>
 							<ControlTemplate.Triggers>
 								<Trigger Property="IsSelected" Value="True">

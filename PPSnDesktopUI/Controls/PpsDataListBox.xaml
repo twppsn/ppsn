@@ -133,7 +133,9 @@ specific language governing permissions and limitations under the Licence.
 						<Grid.ContextMenu>
 							<ContextMenu ItemsSource="{TemplateBinding Commands}" UsesItemContainerTemplate="True">
 								<ContextMenu.Resources>
-									<ItemContainerTemplate DataType="{x:Type uiO:PpsUICommandButton}">
+									<ItemContainerTemplate x:Key="{ItemContainerTemplateKey {x:Type uiO:PpsUICommandButton}}">
+										<!-- Bug: https://github.com/dotnet/wpf/issues/2404 -->
+										<!-- DataType="{x:Type uiO:PpsUICommandButton}" -->
 										<MenuItem Header="{Binding DisplayText}"
 												  Command="{Binding Command}"
 												  CommandParameter="{Binding CommandParameter}"
@@ -143,7 +145,8 @@ specific language governing permissions and limitations under the Licence.
 											</MenuItem.Icon>
 										</MenuItem>
 									</ItemContainerTemplate>
-									<ItemContainerTemplate DataType="{x:Type uiO:PpsUICommandSeperator}">
+									<ItemContainerTemplate x:Key="{ItemContainerTemplateKey {x:Type uiO:PpsUICommandSeperator}}">
+										<!-- DataType="{x:Type uiO:PpsUICommandSeperator}" -->
 										<Separator>
 											<Separator.Style>
 												<Style TargetType="{x:Type Separator}" BasedOn="{StaticResource ResourceKey={x:Static MenuItem.SeparatorStyleKey}}" />
