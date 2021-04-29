@@ -139,4 +139,6 @@ specific language governing permissions and limitations under the Licence.
 
     <Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
 
+	<Style TargetType="{x:Type pps:PpsToggleButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
+
 </ResourceDictionary>

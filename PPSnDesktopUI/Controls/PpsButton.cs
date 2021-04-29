@@ -306,6 +306,44 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
+	#region -- class PpsToggleButton --------------------------------------------------
+
+	/// <summary></summary>
+	public class PpsToggleButton : PpsButton
+	{
+		#region -- IsChecked - Property -----------------------------------------------
+
+		/// <summary></summary>
+		public static readonly DependencyProperty IsCheckedProperty = DependencyProperty.Register(nameof(IsChecked), typeof(bool), typeof(PpsToggleButton), new FrameworkPropertyMetadata(BooleanBox.False, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+		/// <summary></summary>
+		public bool IsChecked { get => BooleanBox.GetBool(GetValue(IsCheckedProperty)); set => SetValue(IsCheckedProperty, BooleanBox.GetObject(value)); }
+
+		#endregion
+
+		protected override void OnClick()
+		{
+			OnToggle();
+			base.OnClick();
+		} // proc OnClick
+
+		protected internal virtual void OnToggle()
+		{
+			var isChecked = IsChecked;
+			if (isChecked)
+				SetCurrentValue(IsCheckedProperty, BooleanBox.GetObject(false));
+			else // false or null
+				SetCurrentValue(IsCheckedProperty, BooleanBox.GetObject(true));
+		} // proc OnToggle
+
+		static PpsToggleButton()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsToggleButton), new FrameworkPropertyMetadata(typeof(PpsToggleButton)));
+		} // ctor static
+	} // class PpsToggleButton
+
+	#endregion
+
 	#region -- class PpsCheckBox ------------------------------------------------------
 
 	/// <summary></summary>
@@ -318,5 +356,4 @@ namespace TecWare.PPSn.Controls
 	} // class PpsCheckBox
 
 	#endregion
-
 }
