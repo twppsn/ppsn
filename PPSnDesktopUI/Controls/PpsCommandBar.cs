@@ -189,11 +189,24 @@ namespace TecWare.PPSn.Controls
 
 		#region -- ImageSize - Property -----------------------------------------------
 
-		/// <summary>Size of Images when Mode in mixed or rectangle</summary>
-		public static readonly DependencyProperty ImageSizeProperty = DependencyProperty.Register(nameof(ImageSize), typeof(double), typeof(PpsCommandBar), new FrameworkPropertyMetadata(24.0));
+		///// <summary>Size of Images when Mode in mixed or rectangle</summary>
+		//public static readonly DependencyProperty ImageSizeProperty = DependencyProperty.Register(nameof(ImageSize), typeof(double), typeof(PpsCommandBar), new FrameworkPropertyMetadata(24.0));
 
-		/// <summary>The property defines the Size of the Images in mixed- and rectangle Mode</summary>
-		public double ImageSize { get => (double)GetValue(ImageSizeProperty); set => SetValue(ImageSizeProperty, value); }
+		///// <summary>The property defines the Size of the Images in mixed- and rectangle Mode</summary>
+		//public double ImageSize { get => (double)GetValue(ImageSizeProperty); set => SetValue(ImageSizeProperty, value); }
+
+		/// <summary>The width and height of the image</summary>
+		public static readonly DependencyProperty ImageSizeProperty = DependencyProperty.RegisterAttached(
+			"ImageSize",
+			typeof(double),
+			typeof(PpsCommandBar),
+			new FrameworkPropertyMetadata(20.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+			);
+
+		public static void SetImageSize(DependencyObject element, double value)
+			=> element.SetValue(ImageSizeProperty, value);
+		public static double GetImageSize(DependencyObject element)
+			=> (double)element.GetValue(ImageSizeProperty);
 
 		#endregion
 

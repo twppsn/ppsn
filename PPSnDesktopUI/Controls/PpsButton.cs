@@ -123,10 +123,22 @@ namespace TecWare.PPSn.Controls
 		#region -- GeometrySize - Property --------------------------------------------
 
 		/// <summary>The width and height of the image</summary>
-		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.Register(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(18.0));
+		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.RegisterAttached(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(18.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
 
 		/// <summary>The property defines the width and height of the image</summary>
 		public double GeometrySize { get => (double)GetValue(GeometrySizeProperty); set => SetValue(GeometrySizeProperty, value); }
+
+		/// <summary>The width and height of the image</summary>
+		//public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.RegisterAttached(
+		//	"GeometrySize",
+		//	typeof(double),
+		//	typeof(PpsButton),
+		//	new FrameworkPropertyMetadata(8.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+		//);
+		//public static void SetGeometrySize(DependencyObject element, double value)
+		//	=> element.SetValue(GeometrySizeProperty, value);
+		//public static double GetGeometrySize(DependencyObject element)
+		//	=> (double)element.GetValue(GeometrySizeProperty);
 
 		#endregion
 
