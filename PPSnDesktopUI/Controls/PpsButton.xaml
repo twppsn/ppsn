@@ -26,7 +26,6 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Padding" Value="6,0,6,0" />
-        <Setter Property="GeometrySize" Value="18" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
@@ -138,5 +137,7 @@ specific language governing permissions and limitations under the Licence.
     </Style>
 
     <Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
+
+	<Style TargetType="{x:Type pps:PpsToggleButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
 
 </ResourceDictionary>
