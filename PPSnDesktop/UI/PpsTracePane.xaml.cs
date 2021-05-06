@@ -25,13 +25,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Media;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
-using TecWare.PPSn.Themes;
 
 namespace TecWare.PPSn.UI
 {

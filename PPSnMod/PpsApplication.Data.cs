@@ -1876,7 +1876,12 @@ namespace TecWare.PPSn.Server
 									for (var i = 0; i < batch.Columns.Count; i++)
 									{
 										var v = batch.Current[i];
-										if (v != null)
+										if (v == DBNull.Value)
+										{
+											xml.WriteStartElement(cn[i]);
+											xml.WriteEndElement();
+										}
+										else if (v != null)
 											xml.WriteElementString(cn[i], v.ChangeType<string>());
 									}
 

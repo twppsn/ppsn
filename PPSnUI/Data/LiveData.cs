@@ -2719,7 +2719,7 @@ namespace TecWare.PPSn.Data
 				return isModified;
 			} // proc UpdateRow
 
-			public bool UpdateRow(int primaryKeyIndex, object[] values)
+			internal object UpdateRow(int primaryKeyIndex, object[] values)
 			{
 				var isModified = false;
 
@@ -2746,10 +2746,16 @@ namespace TecWare.PPSn.Data
 
 					if (isModified)
 						NotifyRowEvent(r, ViewMapping.NotifyRowChanged);
-					return isModified;
+
+					return isModified ? null : DBNull.Value;
 				}
-				else
-					return false;
+				else // row is not in resultset, check for filter change
+				{
+
+					return values[primaryKeyIndex];
+					// todo: check filter and return if not touched
+					// return DBNull.Value;
+				}
 			} // func UpdateRow
 
 			public PpsDataFilterExpression GetCurrentViewFilter()
@@ -3052,7 +3058,7 @@ namespace TecWare.PPSn.Data
 				this.values = values ?? throw new ArgumentNullException(nameof(values));
 			} // ctor
 
-			public bool Apply()
+			public object Apply()
 				=> table.UpdateRow(primaryKeyIndex, values);
 		} // class MergeUpdateItem
 
@@ -3233,7 +3239,10 @@ namespace TecWare.PPSn.Data
 						// update rows
 						for (var i = 0; i < updates.Count; i++)
 						{
-							if (updates[i].Apply())
+							var refreshId = updates[i].Apply();
+							if (refreshId != null && refreshId != DBNull.Value)
+								refreshIds.Add(refreshId);
+							else if (refreshId == null)
 								isModified = true;
 						}
 
