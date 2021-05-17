@@ -1,0 +1,325 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
+
+	<ControlTemplate x:Key="PpsTabControlTemplate" TargetType="{x:Type pps:PpsTabControl}">
+		<Grid KeyboardNavigation.TabNavigation="Local">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition />
+			</Grid.RowDefinitions>
+			<StackPanel Orientation="Horizontal" IsItemsHost="True" Panel.ZIndex="1"
+						KeyboardNavigation.TabIndex="2"
+						KeyboardNavigation.DirectionalNavigation="Cycle"
+						KeyboardNavigation.TabNavigation="Once"
+						Margin="0,0,0,-1" />
+			<Border Grid.Row="1"
+					Background="{TemplateBinding Background}"
+					BorderBrush="{TemplateBinding BorderBrush}"
+					BorderThickness="{TemplateBinding BorderThickness}"
+					KeyboardNavigation.TabNavigation="Local" 
+					KeyboardNavigation.DirectionalNavigation="Contained"
+					KeyboardNavigation.TabIndex="1" SnapsToDevicePixels="True">
+				<ContentPresenter x:Name="PART_SelectedContentHost"
+								  ContentSource="SelectedContent"
+								  Margin="{TemplateBinding Padding}" />
+			</Border>
+			<Rectangle x:Name="PART_SelectionMarker"
+					   Grid.Row="1"
+					   Fill="{DynamicResource PPSnMarkerBrush}"
+					   Width="0"
+					   Height="3"
+					   HorizontalAlignment="Left"
+					   VerticalAlignment="Top"
+					   SnapsToDevicePixels="True">
+				<Rectangle.RenderTransform>
+					<TranslateTransform Y="-2" />
+				</Rectangle.RenderTransform>
+
+			</Rectangle>
+		</Grid>
+	</ControlTemplate>
+
+	<Style TargetType="{x:Type pps:PpsTabControl}">
+		<Setter Property="Template" Value="{StaticResource PpsTabControlTemplate}" />
+		<Setter Property="Padding" Value="0,16,0,0" />
+		<Setter Property="BorderThickness" Value="0,1,0,0" />
+		<Setter Property="BorderBrush" Value="{DynamicResource PPSnSeparatorBrush}" />
+		<Setter Property="Background" Value="Transparent" />
+	</Style>
+
+	<ControlTemplate x:Key="PpsTabItemTemplate" TargetType="{x:Type pps:PpsTabItem}">
+		<Grid Margin="{Binding ItemSpacing,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsTabControl}},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='1,0,0,0'}">
+			<VisualStateManager.VisualStateGroups>
+				<VisualStateGroup x:Name="PressedStates">
+					<VisualState Name="Pressed">
+						<Storyboard FillBehavior="HoldEnd">
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
+											 Storyboard.TargetProperty="Opacity"
+											 To=".40" Duration="0:0:.35"/>
+						</Storyboard>
+					</VisualState>
+					<VisualState Name="Unpressed">
+						<Storyboard FillBehavior="Stop">
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
+											 Storyboard.TargetProperty="Opacity"
+											 From=".40" Duration="0:0:.35"/>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+			</VisualStateManager.VisualStateGroups>
+			<Border x:Name="PART_OuterBorder"
+					Background="Transparent"
+					BorderThickness="1,1,1,1"
+					BorderBrush="Transparent"
+					MinHeight="29"
+					Padding="3,0,3,0" SnapsToDevicePixels="True">
+				<Grid x:Name="ContentSite" IsHitTestVisible="False" Background="{x:Null}">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition />
+					</Grid.ColumnDefinitions>
+					<!--Thin-Geometrien sind für eine Canvas 24x24 aber benutzen nur 16x16 (centered) -->
+					<Border x:Name="ImageBox" Width="24">
+						<pps:PpsGeometryImage x:Name="GeometryImage"
+											  GeometryName="{TemplateBinding GeometryName}"
+											  Width="24"
+											  Height="24"
+											  Foreground="{DynamicResource PPSnWindowForegroundBrush}">
+							<pps:PpsGeometryImage.RenderTransform>
+								<TranslateTransform X="-4" />
+							</pps:PpsGeometryImage.RenderTransform>
+						</pps:PpsGeometryImage>
+					</Border>
+					<ContentPresenter ContentSource="Header"
+									  RecognizesAccessKey="True"
+									  Grid.Column="1"
+									  VerticalAlignment="Center"
+									  TextBlock.FontSize="14"
+									  TextBlock.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
+					</ContentPresenter>
+				</Grid>
+			</Border>
+			<Rectangle x:Name="StatusRectangle"
+					   StrokeThickness="0"
+					   Fill="{DynamicResource PPSnWindowForegroundBrush}"
+					   IsHitTestVisible="False"
+					   SnapsToDevicePixels="True"
+					   Opacity="0"/>
+		</Grid>
+		<ControlTemplate.Triggers>
+			<Trigger SourceName="GeometryImage" Property="HasGeometry" Value="False">
+				<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
+			</Trigger>
+
+			<Trigger Property="IsEnabled" Value="False">
+				<Setter TargetName="ContentSite" Property="Opacity" Value=".35" />
+			</Trigger>
+
+			<MultiTrigger>
+				<MultiTrigger.Conditions>
+					<Condition Property="IsKeyboardFocused" Value="True" />
+					<Condition SourceName="PART_OuterBorder" Property="IsMouseCaptured" Value="False" />
+				</MultiTrigger.Conditions>
+				<Setter TargetName="PART_OuterBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+			</MultiTrigger>
+
+			<Trigger SourceName="PART_OuterBorder" Property="IsMouseCaptured" Value="True">
+				<Setter TargetName="PART_OuterBorder" Property="BorderBrush" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" />
+				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
+			</Trigger>
+
+			<EventTrigger SourceName="PART_OuterBorder" RoutedEvent="MouseEnter">
+				<EventTrigger.Actions>
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".10" Duration="0:0:0"/>
+						</Storyboard>
+					</BeginStoryboard>
+				</EventTrigger.Actions>
+			</EventTrigger>
+
+			<EventTrigger SourceName="PART_OuterBorder" RoutedEvent="MouseLeave">
+				<EventTrigger.Actions>
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".0" Duration="0:0:0"/>
+						</Storyboard>
+					</BeginStoryboard>
+				</EventTrigger.Actions>
+			</EventTrigger>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
+
+	<Style TargetType="{x:Type pps:PpsTabItem}">
+		<Setter Property="Template" Value="{StaticResource PpsTabItemTemplate}" />
+		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="Stylus.IsPressAndHoldEnabled" Value="False" />
+		<Style.Triggers>
+			<!--Bring to front-->
+			<Trigger Property="IsSelected" Value="True">
+				<Setter Property="Panel.ZIndex"	Value="100" />
+			</Trigger>
+		</Style.Triggers>
+	</Style>
+
+	<!--<ControlTemplate x:Key="PpsTabControlTemplate2" TargetType="{x:Type pps:PpsTabControl}">
+		<Grid KeyboardNavigation.TabNavigation="Local">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition />
+			</Grid.RowDefinitions>
+			<TabPanel IsItemsHost="True" Panel.ZIndex="1" KeyboardNavigation.TabIndex="2" Margin="0,0,0,-1"  />
+			<Border Grid.Row="1"
+					Background="{TemplateBinding Background}"
+					BorderBrush="{TemplateBinding BorderBrush}"
+					BorderThickness="{TemplateBinding BorderThickness}"
+					KeyboardNavigation.TabNavigation="Local" 
+					KeyboardNavigation.DirectionalNavigation="Contained"
+					KeyboardNavigation.TabIndex="1"
+					SnapsToDevicePixels="True">
+				<ContentPresenter x:Name="PART_SelectedContentHost"
+								  ContentSource="SelectedContent"
+								  Margin="{TemplateBinding Padding}" />
+			</Border>
+		</Grid>
+	</ControlTemplate>-->
+
+	<!--<ControlTemplate x:Key="PpsTabItemTemplate2" TargetType="{x:Type pps:PpsTabItem}">
+		<Grid Margin="{Binding ItemSpacing,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsTabControl}},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='1,0,0,0'}">
+			<VisualStateManager.VisualStateGroups>
+				<VisualStateGroup x:Name="SelectionStates">
+					<VisualState x:Name="Selected">
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="SelectedBorderScaleTransform"
+											 Storyboard.TargetProperty="ScaleX"
+											 From="0" To="1.0" Duration="0:0:0.2">
+								<DoubleAnimation.EasingFunction>
+									<ExponentialEase EasingMode="EaseOut" />
+								</DoubleAnimation.EasingFunction>
+							</DoubleAnimation>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Unselected">
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="SelectedBorderScaleTransform"
+											 Storyboard.TargetProperty="ScaleX"
+											 From="1.0" To="0" Duration="0:0:0.1">
+								<DoubleAnimation.EasingFunction>
+									<ExponentialEase EasingMode="EaseOut" />
+								</DoubleAnimation.EasingFunction>
+							</DoubleAnimation>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+				<VisualStateGroup x:Name="PressedStates">
+					<VisualState Name="Pressed">
+						<Storyboard FillBehavior="HoldEnd">
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
+											 Storyboard.TargetProperty="Opacity"
+											 To=".40" Duration="0:0:.35"/>
+						</Storyboard>
+					</VisualState>
+					<VisualState Name="Unpressed">
+						<Storyboard FillBehavior="Stop">
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
+											 Storyboard.TargetProperty="Opacity"
+											 From=".40" Duration="0:0:.35"/>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+			</VisualStateManager.VisualStateGroups>
+			<Border x:Name="PART_OuterBorder"
+					Background="Transparent"
+					BorderThickness="1,1,1,1"
+					BorderBrush="Transparent"
+					MinHeight="29"
+					Padding="3,0,3,0"
+					SnapsToDevicePixels="True">
+				<Grid x:Name="ContentSite" IsHitTestVisible="False" Background="{x:Null}">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition />
+					</Grid.ColumnDefinitions>
+					<Border x:Name="ImageBox" Width="24">
+						<pps:PpsGeometryImage x:Name="GeometryImage"
+											  GeometryName="{TemplateBinding GeometryName}"
+											  Width="24"
+											  Height="24"
+											  Foreground="{DynamicResource PPSnWindowForegroundBrush}">
+							<pps:PpsGeometryImage.RenderTransform>
+								<TranslateTransform X="-4" />
+							</pps:PpsGeometryImage.RenderTransform>
+						</pps:PpsGeometryImage>
+					</Border>
+					<ContentPresenter ContentSource="Header"
+									  RecognizesAccessKey="True"
+									  Grid.Column="1"
+									  VerticalAlignment="Center"
+									  TextBlock.FontSize="14"
+									  TextBlock.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
+					</ContentPresenter>
+				</Grid>
+			</Border>
+			<Border BorderThickness="0,0,0,3"
+					BorderBrush="{DynamicResource PPSnMarkerBrush}"
+					RenderTransformOrigin="0.5,0.5"
+					IsHitTestVisible="False"
+					SnapsToDevicePixels="True">
+				<Border.RenderTransform>
+					<ScaleTransform x:Name="SelectedBorderScaleTransform" ScaleX="1" />
+				</Border.RenderTransform>
+			</Border>
+			<Rectangle x:Name="StatusRectangle"
+					   StrokeThickness="0"
+					   Fill="{DynamicResource PPSnWindowForegroundBrush}"
+					   IsHitTestVisible="False"
+					   SnapsToDevicePixels="True"					   
+					   Opacity="0"/>
+		</Grid>
+		<ControlTemplate.Triggers>
+			<Trigger SourceName="GeometryImage" Property="HasGeometry" Value="False">
+				<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
+			</Trigger>
+
+			<Trigger Property="IsEnabled" Value="False">
+				<Setter TargetName="ContentSite" Property="Opacity" Value=".35" />
+			</Trigger>
+
+			<MultiTrigger>
+				<MultiTrigger.Conditions>
+					<Condition Property="IsKeyboardFocused" Value="True" />
+					<Condition SourceName="PART_OuterBorder" Property="IsMouseCaptured" Value="False" />
+				</MultiTrigger.Conditions>
+				<Setter TargetName="PART_OuterBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+			</MultiTrigger>
+
+			<Trigger SourceName="PART_OuterBorder" Property="IsMouseCaptured" Value="True">
+				<Setter TargetName="PART_OuterBorder" Property="BorderBrush" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" />
+				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
+			</Trigger>
+
+			<EventTrigger SourceName="PART_OuterBorder" RoutedEvent="MouseEnter">
+				<EventTrigger.Actions>
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".10" Duration="0:0:0"/>
+						</Storyboard>
+					</BeginStoryboard>
+				</EventTrigger.Actions>
+			</EventTrigger>
+
+			<EventTrigger SourceName="PART_OuterBorder" RoutedEvent="MouseLeave">
+				<EventTrigger.Actions>
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".0" Duration="0:0:0"/>
+						</Storyboard>
+					</BeginStoryboard>
+				</EventTrigger.Actions>
+			</EventTrigger>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>-->
+
+</ResourceDictionary>

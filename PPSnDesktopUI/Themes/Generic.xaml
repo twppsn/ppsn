@@ -23,6 +23,7 @@
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsShapeCanvas.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsListbox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsPanel.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsTabControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsVirtualKeyboard.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>
