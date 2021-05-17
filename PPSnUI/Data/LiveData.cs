@@ -3250,13 +3250,12 @@ namespace TecWare.PPSn.Data
 						if (refreshIds.Count > 0)
 						{
 							// build view filter
-							var viewFilter = table.GetCurrentViewFilter();
-							// build in filter for refresh rows
-							var refreshFilter = PpsDataFilterExpression.CompareIn(table.GetFieldName(table.PrimaryKey[0]), refreshIds.ToArray());
-							// create row filter
-							var rowFilter = PpsDataFilterExpression.Combine(viewFilter, refreshFilter);
+							var viewVilter = refreshIds.Count < 100
+								? PpsDataFilterExpression.CompareIn(table.GetFieldName(table.PrimaryKey[0]), refreshIds.ToArray()).Reduce() // use filter id's
+								: table.GetCurrentViewFilter(); // get complete rows
+
 							// fetch rows from server
-							if (await table.RefreshRowsAsync(client, false, rowFilter))
+							if (await table.RefreshRowsAsync(client, false, viewVilter))
 								isModified = true;
 						}
 					}
