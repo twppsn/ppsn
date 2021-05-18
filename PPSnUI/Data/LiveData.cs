@@ -2932,23 +2932,32 @@ namespace TecWare.PPSn.Data
 			private readonly Table table;
 			private readonly List<TaskCompletionSource<int>> waitTasks = new List<TaskCompletionSource<int>>();
 
+			private SynchronizationContext ctx = null; // todo: fix sync Task await
+
 			public EnforceRefreshTableTask(Table table)
 			{
 				this.table = table ?? throw new ArgumentNullException(nameof(table));
 			} // ctor
 
-			public void FinishTasks(Exception e = null)
+			public void FinishTasks(Exception e = null, bool useSync = true)
 			{
-				lock (waitTasks)
+				if (useSync && ctx != null)
 				{
-					for (var i = 0; i < waitTasks.Count; i++)
+					ctx.Post(new SendOrPostCallback(s => FinishTasks((Exception)s, false)), e);
+				}
+				else
+				{
+					lock (waitTasks)
 					{
-						if (e == null)
-							waitTasks[i].TrySetResult(0);
-						else
-							waitTasks[i].TrySetException(e);
+						for (var i = 0; i < waitTasks.Count; i++)
+						{
+							if (e == null)
+								waitTasks[i].TrySetResult(0);
+							else
+								waitTasks[i].TrySetException(e);
+						}
+						waitTasks.Clear();
 					}
-					waitTasks.Clear();
 				}
 			} // proc FinishTasks
 
@@ -2958,6 +2967,7 @@ namespace TecWare.PPSn.Data
 				{
 					var t = new TaskCompletionSource<int>();
 					waitTasks.Add(t);
+					ctx = SynchronizationContext.Current;
 					return t.Task;
 				}
 			} // func WaitForAsync
