@@ -50,6 +50,7 @@ specific language governing permissions and limitations under the Licence.
 							   Margin="12,0,0,0"
 							   DisplayMode="Transparent" />
 			</DataTemplate>
+			
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUISplitCommandButton}}">
 				<pps:PpsSplitButton Command="{Binding Command}"
 									CommandParameter="{Binding CommandParameter}"

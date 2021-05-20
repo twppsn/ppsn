@@ -57,14 +57,22 @@
 						<Storyboard FillBehavior="HoldEnd">
 							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
 											 Storyboard.TargetProperty="Opacity"
-											 To=".40" Duration="0:0:.35"/>
+											 To=".40" Duration="0:0:.35">
+								<DoubleAnimation.EasingFunction>
+									<ExponentialEase EasingMode="EaseOut" />
+								</DoubleAnimation.EasingFunction>
+							</DoubleAnimation>
 						</Storyboard>
 					</VisualState>
 					<VisualState Name="Unpressed">
 						<Storyboard FillBehavior="Stop">
 							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
 											 Storyboard.TargetProperty="Opacity"
-											 From=".40" Duration="0:0:.35"/>
+											 From=".40" Duration="0:0:.35">
+								<DoubleAnimation.EasingFunction>
+									<ExponentialEase EasingMode="EaseOut" />
+								</DoubleAnimation.EasingFunction>
+							</DoubleAnimation>
 						</Storyboard>
 					</VisualState>
 				</VisualStateGroup>
@@ -144,7 +152,7 @@
 				<EventTrigger.Actions>
 					<BeginStoryboard>
 						<Storyboard>
-							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".0" Duration="0:0:0"/>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/>
 						</Storyboard>
 					</BeginStoryboard>
 				</EventTrigger.Actions>
@@ -314,7 +322,7 @@
 				<EventTrigger.Actions>
 					<BeginStoryboard>
 						<Storyboard>
-							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".0" Duration="0:0:0"/>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/>
 						</Storyboard>
 					</BeginStoryboard>
 				</EventTrigger.Actions>

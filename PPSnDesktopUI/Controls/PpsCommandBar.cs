@@ -200,7 +200,7 @@ namespace TecWare.PPSn.Controls
 			"ImageSize",
 			typeof(double),
 			typeof(PpsCommandBar),
-			new FrameworkPropertyMetadata(20.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+			new FrameworkPropertyMetadata(24.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
 			);
 
 		public static void SetImageSize(DependencyObject element, double value)
