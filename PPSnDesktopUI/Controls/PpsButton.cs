@@ -24,7 +24,7 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
-	#region -- class PpsButtonDisplayType ---------------------------------------------
+	#region -- enum PpsButtonDisplayType ----------------------------------------------
 
 	/// <summary></summary>
 	public enum PpsButtonDisplayType
@@ -123,7 +123,7 @@ namespace TecWare.PPSn.Controls
 		#region -- GeometrySize - Property --------------------------------------------
 
 		/// <summary>The width and height of the image</summary>
-		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.RegisterAttached(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(18.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
+		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.RegisterAttached(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(24.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
 
 		/// <summary>The property defines the width and height of the image</summary>
 		public double GeometrySize { get => (double)GetValue(GeometrySizeProperty); set => SetValue(GeometrySizeProperty, value); }

@@ -14,129 +14,136 @@ specific language governing permissions and limitations under the Licence.
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
+	<ControlTemplate x:Key="PpsButtonControlTemplate" TargetType="{x:Type pps:PpsButton}">
+		<Grid x:Name="RootGrid">
+			<VisualStateManager.VisualStateGroups>
+				<VisualStateGroup x:Name="CommonStates">
+					<VisualStateGroup.Transitions>
+						<VisualTransition GeneratedDuration="0:0:.35" />
+					</VisualStateGroup.Transitions>
+					<VisualState Name="Normal" />
+					<VisualState Name="MouseOver" />
+					<VisualState Name="Pressed">
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".40">
+								<DoubleAnimation.EasingFunction>
+									<ExponentialEase EasingMode="EaseOut" />
+								</DoubleAnimation.EasingFunction>
+							</DoubleAnimation>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+			</VisualStateManager.VisualStateGroups>
+			<Border x:Name="OuterBorder"
+					BorderThickness="{TemplateBinding BorderThickness}"
+					BorderBrush="{TemplateBinding BorderBrush}"
+					Background="{TemplateBinding Background}"
+					Padding="4,0,8,0"
+					SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+				<Grid Margin="{TemplateBinding Padding}">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition />
+					</Grid.ColumnDefinitions>
+					<pps:PpsGeometryImage x:Name="ImageBox"
+										  GeometryName="{TemplateBinding GeometryName}"
+										  Width="{TemplateBinding GeometrySize}"
+										  Height="{TemplateBinding GeometrySize}"
+										  Margin="0,0,4,0"
+										  Foreground="{TemplateBinding Foreground}" />
+					<ContentPresenter x:Name="ContentSite"
+									  Grid.Column="1"
+									  RecognizesAccessKey="True"
+									  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+									  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+									  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+				</Grid>
+			</Border>
+			<Rectangle x:Name="StatusRectangle"
+					   StrokeThickness="0"
+					   Fill="{TemplateBinding Foreground}"
+					   IsHitTestVisible="False"
+					   Opacity="0" />
+		</Grid>
+		<ControlTemplate.Triggers>
+			<Trigger Property="IsTransparent" Value="True">
+				<Setter Property="BorderBrush" Value="Transparent" />
+				<Setter Property="Background" Value="Transparent" />
+			</Trigger>
+
+			<Trigger Property="HasContent" Value="False">
+				<Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
+				<Setter TargetName="OuterBorder" Property="Padding" Value="0" />
+				<Setter TargetName="ImageBox" Property="Margin" Value="0" />
+				<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
+			</Trigger>
+
+			<Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
+				<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
+				<Setter TargetName="OuterBorder" Property="Padding" Value="8,0,8,0" />
+			</Trigger>
+
+			<Trigger Property="IsEnabled" Value="False">
+				<Setter TargetName="RootGrid" Property="Opacity" Value=".35" />
+			</Trigger>
+
+			<MultiTrigger>
+				<MultiTrigger.Conditions>
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsTransparent" Value="True" />
+				</MultiTrigger.Conditions>
+				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
+			</MultiTrigger>
+
+			<MultiTrigger>
+				<MultiTrigger.Conditions>
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsTransparent" Value="False" />
+					<Condition Property="IsKeyboardFocused" Value="False" />
+				</MultiTrigger.Conditions>
+				<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+			</MultiTrigger>
+
+			<MultiTrigger>
+				<MultiTrigger.Conditions>
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsTransparent" Value="False" />
+					<Condition Property="IsKeyboardFocused" Value="True" />
+				</MultiTrigger.Conditions>
+				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
+			</MultiTrigger>
+
+			<MultiTrigger>
+				<MultiTrigger.Conditions>
+					<Condition Property="IsKeyboardFocused" Value="True" />
+					<Condition Property="IsMouseCaptured" Value="False" />
+				</MultiTrigger.Conditions>
+				<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+			</MultiTrigger>
+
+			<Trigger Property="IsMouseCaptured" Value="True">
+				<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" />
+				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
+			</Trigger>
+
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
 
 	<Style TargetType="{x:Type pps:PpsButton}">
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-        <!--Touch-And-Hold-Event wird sonst auf OnMouseLeftButtonDown gemapped. Pressed State wird nicht aktiv-->
-        <Setter Property="Stylus.IsPressAndHoldEnabled" Value="False" />
-        <Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Template" Value="{StaticResource PpsButtonControlTemplate}" />
+		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<!--Touch-And-Hold-Event wird sonst auf OnMouseLeftButtonDown gemapped. Pressed State wird nicht aktiv-->
+		<Setter Property="Stylus.IsPressAndHoldEnabled" Value="False" />
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 		<Setter Property="Background" Value="{DynamicResource PPSnButtonBackgroundBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+		<Setter Property="BorderThickness" Value="1,1,1,1" />
 		<Setter Property="BorderBrush" Value="{DynamicResource PPSnButtonBackgroundBrush}" />
 		<Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Padding" Value="6,0,6,0" />
-        <Setter Property="SnapsToDevicePixels" Value="True" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type pps:PpsButton}">
-                    <Grid x:Name="RootGrid">
-                        <VisualStateManager.VisualStateGroups>
-                            <VisualStateGroup x:Name="CommonStates">
-								<VisualStateGroup.Transitions>
-									<VisualTransition GeneratedDuration="0:0:.35" />
-								</VisualStateGroup.Transitions>
-								<VisualState Name="Normal" />
-                                <VisualState Name="MouseOver" />
-                                <VisualState Name="Pressed">
-                                    <Storyboard>
-										<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".40" />
-                                    </Storyboard>
-								</VisualState>
-                            </VisualStateGroup>
-                        </VisualStateManager.VisualStateGroups>
-                        <Border x:Name="OuterBorder"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition />
-                                </Grid.ColumnDefinitions>
-                                <pps:PpsGeometryImage x:Name="ImageBox"
-                                                      GeometryName="{TemplateBinding GeometryName}"
-                                                      Width="{TemplateBinding GeometrySize}"
-                                                      Height="{TemplateBinding GeometrySize}"
-                                                      Foreground="{TemplateBinding Foreground}"
-                                                      Opacity="{TemplateBinding ImageOpacity}" />
-                                <ContentPresenter x:Name="ContentSite"
-                                                  Grid.Column="1"
-                                                  Focusable="False"
-												  Margin="2,0,0,0"
-                                                  RecognizesAccessKey="True"
-                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-							</Grid>
-                        </Border>
-						<Rectangle x:Name="StatusRectangle"
-								   StrokeThickness="0"
-								   Fill="{TemplateBinding Foreground}"
-								   IsHitTestVisible="False"
-								   Opacity="0" />
-					</Grid>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsTransparent" Value="True">
-                            <Setter Property="BorderBrush" Value="Transparent" />
-							<Setter Property="Background" Value="Transparent" />
-							<Setter Property="Focusable" Value="False" />
-						</Trigger>
+		<Setter Property="VerticalContentAlignment" Value="Center" />
+		<Setter Property="SnapsToDevicePixels" Value="True" />
+	</Style>
 
-                        <Trigger Property="HasContent" Value="False">
-                            <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
-							<Setter Property="Padding" Value="0" />
-							<Setter TargetName="ImageBox" Property="Grid.ColumnSpan" Value="2" />
-						</Trigger>
-
-                        <Trigger SourceName="ImageBox" Property="HasGeometry" Value="False">
-                            <Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
-                        </Trigger>
-
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsMouseOver" Value="True" />
-								<Condition Property="IsTransparent" Value="False" />
-							</MultiTrigger.Conditions>
-							<Setter Property="ImageOpacity" Value="1" />
-							<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
-						</MultiTrigger>
-
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsMouseOver" Value="True" />
-								<Condition Property="IsTransparent" Value="True" />
-							</MultiTrigger.Conditions>
-							<Setter Property="ImageOpacity" Value="1" />
-							<Setter TargetName="StatusRectangle" Property="Opacity" Value=".15" />
-						</MultiTrigger>
-
-						<MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsKeyboardFocused" Value="True" />
-                                <Condition Property="IsMouseCaptured" Value="False" />
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="OuterBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
-                        </MultiTrigger>
-
-						<Trigger Property="IsMouseCaptured" Value="True">
-							<Setter Property="ImageOpacity" Value="1" />
-							<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" />
-							<Setter TargetName="StatusRectangle" Property="Opacity" Value=".15" />
-						</Trigger>
-
-						<Trigger Property="IsEnabled" Value="False">
-							<Setter TargetName="RootGrid" Property="Opacity" Value=".35" />
-						</Trigger>
-					</ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
+	<Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
 
 	<Style TargetType="{x:Type pps:PpsToggleButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
 
