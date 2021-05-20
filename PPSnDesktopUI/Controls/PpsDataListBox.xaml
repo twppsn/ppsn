@@ -141,7 +141,7 @@ specific language governing permissions and limitations under the Licence.
 												  CommandParameter="{Binding CommandParameter}"
 												  CommandTarget="{Binding CommandTarget}">
 											<MenuItem.Icon>
-												<ui:PpsGeometryImage GeometryName="{Binding Image}" GeometryCircled="False" Foreground="{DynamicResource PPSnImageBrush}" Opacity=".75" />
+												<ui:PpsGeometryImage GeometryName="{Binding Image}" Width="24" Height="24" GeometryCircled="False" Foreground="{DynamicResource PPSnImageBrush}" Opacity=".75" />
 											</MenuItem.Icon>
 										</MenuItem>
 									</ItemContainerTemplate>
