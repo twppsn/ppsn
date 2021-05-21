@@ -53,7 +53,22 @@
 		<Grid Margin="{Binding ItemSpacing,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsTabControl}},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='1,0,0,0'}">
 			<VisualStateManager.VisualStateGroups>
 				<VisualStateGroup x:Name="PressedStates">
+					<VisualStateGroup.Transitions>
+						<VisualTransition GeneratedDuration="0:0:.35" />
+					</VisualStateGroup.Transitions>
+
+					<VisualState Name="Unpressed" />
 					<VisualState Name="Pressed">
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".40">
+								<DoubleAnimation.EasingFunction>
+									<ExponentialEase EasingMode="EaseOut" />
+								</DoubleAnimation.EasingFunction>
+							</DoubleAnimation>
+						</Storyboard>
+					</VisualState>
+
+					<!--<VisualState Name="Pressed">
 						<Storyboard FillBehavior="HoldEnd">
 							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
 											 Storyboard.TargetProperty="Opacity"
@@ -63,8 +78,9 @@
 								</DoubleAnimation.EasingFunction>
 							</DoubleAnimation>
 						</Storyboard>
-					</VisualState>
-					<VisualState Name="Unpressed">
+					</VisualState>-->
+
+					<!--<VisualState Name="Unpressed">
 						<Storyboard FillBehavior="Stop">
 							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
 											 Storyboard.TargetProperty="Opacity"
@@ -74,7 +90,7 @@
 								</DoubleAnimation.EasingFunction>
 							</DoubleAnimation>
 						</Storyboard>
-					</VisualState>
+					</VisualState>-->
 				</VisualStateGroup>
 			</VisualStateManager.VisualStateGroups>
 			<Border x:Name="PART_OuterBorder"
