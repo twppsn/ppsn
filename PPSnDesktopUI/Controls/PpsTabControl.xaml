@@ -56,7 +56,6 @@
 					<VisualStateGroup.Transitions>
 						<VisualTransition GeneratedDuration="0:0:.35" />
 					</VisualStateGroup.Transitions>
-
 					<VisualState Name="Unpressed" />
 					<VisualState Name="Pressed">
 						<Storyboard>
@@ -67,30 +66,6 @@
 							</DoubleAnimation>
 						</Storyboard>
 					</VisualState>
-
-					<!--<VisualState Name="Pressed">
-						<Storyboard FillBehavior="HoldEnd">
-							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
-											 Storyboard.TargetProperty="Opacity"
-											 To=".40" Duration="0:0:.35">
-								<DoubleAnimation.EasingFunction>
-									<ExponentialEase EasingMode="EaseOut" />
-								</DoubleAnimation.EasingFunction>
-							</DoubleAnimation>
-						</Storyboard>
-					</VisualState>-->
-
-					<!--<VisualState Name="Unpressed">
-						<Storyboard FillBehavior="Stop">
-							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
-											 Storyboard.TargetProperty="Opacity"
-											 From=".40" Duration="0:0:.35">
-								<DoubleAnimation.EasingFunction>
-									<ExponentialEase EasingMode="EaseOut" />
-								</DoubleAnimation.EasingFunction>
-							</DoubleAnimation>
-						</Storyboard>
-					</VisualState>-->
 				</VisualStateGroup>
 			</VisualStateManager.VisualStateGroups>
 			<Border x:Name="PART_OuterBorder"
