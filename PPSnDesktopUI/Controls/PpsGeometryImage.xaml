@@ -30,7 +30,7 @@ specific language governing permissions and limitations under the Licence.
 						<Viewbox x:Name="ImageBox"
 								 Margin="{TemplateBinding GeometrySpacing}">
 							
-							<Canvas Width="24" Height="24" Margin="{TemplateBinding Padding}">
+							<Canvas Width="24" Height="24" Margin="{TemplateBinding Padding}" UseLayoutRounding="True">
 								<Path x:Name="Geometry1"
 									  Data="{TemplateBinding ForegroundGeometry}"
 									  Fill="{TemplateBinding Foreground,Converter={x:Static ui:PpsConverter.DefaultBrush},ConverterParameter=PPSnForegroundBrush}" />
