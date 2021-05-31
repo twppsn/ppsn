@@ -1263,7 +1263,7 @@ namespace TecWare.PPSn
 				return Task.CompletedTask;
 #else
 				Process.Start(psi);
-				throw new ExitApplicationException(false, null, null); // means quit application
+				throw new ExitApplicationException("MsiExec", false, null, null); // means quit application
 #endif
 			}
 			else
