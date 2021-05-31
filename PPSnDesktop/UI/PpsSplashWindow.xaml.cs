@@ -683,7 +683,7 @@ namespace TecWare.PPSn.UI
 		{
 			// init shell data
 			var shell = new ShellInfoData();
-			if (!enforceShellSelection && shell.IsOnlyOne())
+			if (!HasErrorState && !enforceShellSelection && shell.IsOnlyOne())
 				return shell.Result;
 
 			SetValue(shellStatePropertyKey, shell);

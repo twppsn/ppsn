@@ -1272,6 +1272,7 @@ namespace TecWare.PPSn.Server.Sql
 			using (var cmd = ((SqlConnection)connection).CreateCommand())
 			{
 				cmd.CommandType = CommandType.Text;
+				cmd.CommandTimeout = 1200;
 				cmd.CommandText = GetResourceScript(typeof(PpsSqlExDataSource), "tsql.ConnectionInitScript.sql");
 
 				// read all tables
@@ -1477,8 +1478,8 @@ namespace TecWare.PPSn.Server.Sql
 				}
 				finally
 				{
-					// delay at least 1 Sekunde
-					await Task.Delay(Math.Max(1000 - Math.Abs(Environment.TickCount - executeStartTick), 0));
+					// delay at least 5 Sekunde
+					await Task.Delay(Math.Max(5000 - Math.Abs(Environment.TickCount - executeStartTick), 0));
 				}
 			}
 		} // proc ExecuteDatabaseAsync

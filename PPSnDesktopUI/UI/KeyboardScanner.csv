@@ -1,6 +1,9 @@
 ﻿VID;PID;LC;Name
 0xE851;0x1000;;Aibecy Generic
 0x11FA;0x0200;;Code CR1400
+0x11FA;0x0208;;Code CR2600
+0x03F0;0x034A;;DataLogic Gryphon GPT 4400
+0x0581;0x0107;;Inateck
 0x05F9;0x220C;;DataLogic Gryphon IGD
 0x05F9;0x220A;;DataLogic Gryphon GPT 4400
 0x05F9;0x2210;;DataLogic PN9500
@@ -21,8 +24,7 @@
 0x0C2E;0x0961;;Elimicron ES 8023
 0x060E;0x16C1;;Generic Handheld 2D QR USB
 0x065A;0xA001;;Generic LX-51X
-0x08FF;0x0009;;Generic RFID-Reader (125kHz)
-0x09D8;0x0310;;Generic RFID-Reader
+0x08FF;0x0009;;Generic Generic RFID-Reader (125kHz)
 0x0D3D;0x0001;;Generic LS 300
 0x0D6C;0x0802;;Generic Long Range CCD
 0x1241;0xE000;;Generic Generic RFID
@@ -44,3 +46,4 @@
 0x1447;0x8047;;Cognex DM8600
 0x00010111;1;;Opticon OPN (Bluetooth)
 0x000123A1;1234;;DataLogic QuickScan QBT 2400 (Bluetooth)
+0x6352;0x681B;;EloRFID

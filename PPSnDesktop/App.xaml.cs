@@ -87,8 +87,8 @@ namespace TecWare.PPSn
 			private readonly IPpsShellInfo shellInfo;
 			private readonly ICredentials userInfo;
 
-			public ExitApplicationException(bool restart, IPpsShellInfo shellInfo, ICredentials userInfo)
-				: base("Restart application")
+			public ExitApplicationException(string reason, bool restart, IPpsShellInfo shellInfo, ICredentials userInfo)
+				: base("Restart application: " + reason)
 			{
 				this.restart = restart;
 				this.shellInfo = shellInfo;
@@ -264,6 +264,7 @@ namespace TecWare.PPSn
 				public string RuntimeArguments => installArguments;
 
 				public bool NeedsUpdate => !fi.Exists || fi.Length != expectedLength || expectedLastWriteTime > fi.LastWriteTime;
+				// bei .config stimmt die länge nie?
 
 				// -- Static --------------------------------------------------
 
@@ -665,7 +666,7 @@ namespace TecWare.PPSn
 
 				// try start shell
 				if (errorInfo != null) // previous shell loaded with error -> restart to load
-					throw new ExitApplicationException(true, shellInfo, null);
+					throw new ExitApplicationException("Restart on error", true, shellInfo, null);
 
 				try
 				{
@@ -701,7 +702,7 @@ namespace TecWare.PPSn
 				else if (newLoginShellInfo != null && !newLoginShellInfo.Equals(newShell.Info))
 				{
 					await newShell.ShutdownAsync();  // shutdown partly loaded shell
-					throw new ExitApplicationException(true, newShell.Info, newUserInfo);
+					throw new ExitApplicationException("partly loaded shell", true, newShell.Info, newUserInfo);
 				}
 
 				return newUserInfo;
@@ -852,7 +853,7 @@ namespace TecWare.PPSn
 			catch (ExitApplicationException e)
 			{
 				if (e.Restart)
-					InvokeRestartCore(e.ShellInfo, e.UserInfo, true);
+					InvokeRestartCore(e.ShellInfo, e.Message, e.UserInfo, true);
 
 				if (isProcessProtected)
 					logoffUser = false;
@@ -870,7 +871,7 @@ namespace TecWare.PPSn
 			}
 		} // proc StartApplicationAsync
 
-		private static void InvokeRestartCore(IPpsShellInfo shellInfo, ICredentials userInfo, bool noRestart)
+		private static void InvokeRestartCore(IPpsShellInfo shellInfo, string reason, ICredentials userInfo, bool noRestart)
 		{
 			var sb = new StringBuilder();
 
@@ -906,15 +907,16 @@ namespace TecWare.PPSn
 			var fileName = typeof(App).Assembly.Location;
 			var arguments = sb.ToString();
 #if DEBUG
-			MessageBox.Show($"Restart:\n{fileName}\n{arguments}");
+			MessageBox.Show($"Restart: {reason}\n{fileName}\n{arguments}");
 #endif
 			Process.Start(fileName, arguments);
 		} // proc InvokeRestartCore
 
 		/// <summary>Invoke restart</summary>
 		/// <param name="shell"></param>
+		/// <param name="reason"></param>
 		/// <returns></returns>
-		public static async Task InvokeRestartAsync(IPpsShell shell)
+		public static async Task InvokeRestartAsync(IPpsShell shell, string reason)
 		{
 			// write log, before restart
 			await shell.GetService<PpsDpcService>(true).WriteLogToTempAsync();
@@ -923,7 +925,7 @@ namespace TecWare.PPSn
 			await Current.Dispatcher.InvokeAsync(
 				() =>
 				{
-					InvokeRestartCore(shell.Info, shell.Http.Credentials, false);
+					InvokeRestartCore(shell.Info, reason, shell.Http.Credentials, false);
 
 					var app = (App)Current;
 					if (app.isProcessProtected)
@@ -1278,7 +1280,7 @@ namespace TecWare.PPSn
 
 			var dpc = shell.GetService<PpsDpcService>(false);
 			if (dpc == null)
-				throw new ExitApplicationException(true, shell.Info, shell.Http.Credentials);
+				throw new ExitApplicationException("DpcRequest", true, shell.Info, shell.Http.Credentials);
 			else
 			{
 				dpc.ScheduleRestart("Missmatch of application version.");
