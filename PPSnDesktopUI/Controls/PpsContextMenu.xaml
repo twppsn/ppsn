@@ -44,7 +44,7 @@
 
 	<ControlTemplate x:Key="{x:Static MenuItem.SubmenuItemTemplateKey}" TargetType="{x:Type MenuItem}">
 		<Border x:Name="Border" Background="Transparent">
-			<Grid>
+			<Grid MinHeight="29">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="32" />
 					<ColumnDefinition Width="*" />
@@ -52,16 +52,16 @@
 					<ColumnDefinition Width="16" />
 				</Grid.ColumnDefinitions>
 
-				<Border x:Name="CheckBox" Width="18" Height="18" Visibility="Hidden" Background="{DynamicResource PPSnSeparatorBrush}">
+				<Border x:Name="CheckBox" Width="24" Height="24" Visibility="Hidden" Background="{DynamicResource PPSnSeparatorBrush}">
 					<Viewbox x:Name="CheckMark" Visibility="Hidden">
 						<Canvas Width="24" Height="24">
 							<Path Data="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" Fill="{DynamicResource PPSnWindowForegroundBrush}" />
 						</Canvas>
 					</Viewbox>
 				</Border>
-				<ContentPresenter x:Name="IconBox" ContentSource="Icon" Height="18" Width="18" />
-				<ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" Margin="0,4,0,4" />
-				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Margin="0,4,0,4" />
+				<ContentPresenter x:Name="IconBox" ContentSource="Icon" VerticalAlignment="Center" Height="24" Width="24" Margin="0,0,0,1"/>
+				<ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True" />
+				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" VerticalAlignment="Center" />
 			</Grid>
 		</Border>
 		<ControlTemplate.Triggers>
@@ -91,16 +91,16 @@
 
 	<ControlTemplate x:Key="{x:Static MenuItem.SubmenuHeaderTemplateKey}" TargetType="{x:Type MenuItem}">
 		<Border x:Name="Border" Background="Transparent">
-			<Grid>
+			<Grid MinHeight="29">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="32" />
 					<ColumnDefinition Width="*" />
 					<ColumnDefinition Width="Auto" SharedSizeGroup="Shortcut" />
 					<ColumnDefinition Width="16" />
 				</Grid.ColumnDefinitions>
-				<ContentPresenter x:Name="IconBox" ContentSource="Icon" Height="16" Width="16" />
-				<ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" Margin="0,4,0,4" />
-				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Margin="24,4,0,4" />
+				<ContentPresenter x:Name="IconBox" ContentSource="Icon" VerticalAlignment="Center" Height="24" Width="24" Margin="0,0,0,1"/>
+				<ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" />
+				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" VerticalAlignment="Center" Margin="24,0,0,0" />
 				<Path Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 0 7 L 4 3.5 Z" Fill="{DynamicResource PPSnWindowForegroundBrush}" />
 				<Popup x:Name="Popup" IsOpen="{TemplateBinding IsSubmenuOpen}" PopupAnimation="Fade" Placement="Left" HorizontalOffset="4" Focusable="False" AllowsTransparency="True">
 					<Border x:Name="SubmenuBorder" SnapsToDevicePixels="True" MinWidth="132" Padding="2,2,2,2" Margin="0,0,6,6"

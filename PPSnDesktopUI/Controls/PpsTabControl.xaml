@@ -53,18 +53,17 @@
 		<Grid Margin="{Binding ItemSpacing,RelativeSource={RelativeSource AncestorType={x:Type pps:PpsTabControl}},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='1,0,0,0'}">
 			<VisualStateManager.VisualStateGroups>
 				<VisualStateGroup x:Name="PressedStates">
+					<VisualStateGroup.Transitions>
+						<VisualTransition GeneratedDuration="0:0:.35" />
+					</VisualStateGroup.Transitions>
+					<VisualState Name="Unpressed" />
 					<VisualState Name="Pressed">
-						<Storyboard FillBehavior="HoldEnd">
-							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
-											 Storyboard.TargetProperty="Opacity"
-											 To=".40" Duration="0:0:.35"/>
-						</Storyboard>
-					</VisualState>
-					<VisualState Name="Unpressed">
-						<Storyboard FillBehavior="Stop">
-							<DoubleAnimation Storyboard.TargetName="StatusRectangle"
-											 Storyboard.TargetProperty="Opacity"
-											 From=".40" Duration="0:0:.35"/>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".40">
+								<DoubleAnimation.EasingFunction>
+									<ExponentialEase EasingMode="EaseOut" />
+								</DoubleAnimation.EasingFunction>
+							</DoubleAnimation>
 						</Storyboard>
 					</VisualState>
 				</VisualStateGroup>
@@ -144,7 +143,7 @@
 				<EventTrigger.Actions>
 					<BeginStoryboard>
 						<Storyboard>
-							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".0" Duration="0:0:0"/>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/>
 						</Storyboard>
 					</BeginStoryboard>
 				</EventTrigger.Actions>
@@ -314,7 +313,7 @@
 				<EventTrigger.Actions>
 					<BeginStoryboard>
 						<Storyboard>
-							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To=".0" Duration="0:0:0"/>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/>
 						</Storyboard>
 					</BeginStoryboard>
 				</EventTrigger.Actions>

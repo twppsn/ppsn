@@ -147,7 +147,7 @@ namespace TecWare.PPSn.Controls
 			=> ((PpsTabItem)d).OnPressedStateChanged((bool)e.NewValue);
 
 		private void OnPressedStateChanged(bool newValue)
-			=> VisualStateManager.GoToState(this, newValue ? "Pressed" : "Unpressed", false);
+			=> VisualStateManager.GoToState(this, newValue ? "Pressed" : "Unpressed", true);
 
 		private void UpdatePressedState(bool isPressed)
 			=> SetValue(isPressedPropertyKey, BooleanBox.GetObject(isPressed));
