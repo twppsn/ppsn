@@ -2690,7 +2690,7 @@ namespace TecWare.PPSn.Data
 			var column = LookupColumn(columnToken);
 			return column == null
 				? CreateColumnErrorFilter(columnToken)
-				: CreateDefaultCompareValue(column.Item1, op, value.ChangeType<string>(), false);
+				: CreateDefaultCompareValue(column.Item1, op, CreateParsableValue(value.ChangeType<string>(), column.Item2), false);
 		} // func CreateCompareFilterText
 
 		private string CreateCompareFilterDecimal(string columnToken, PpsDataFilterCompareOperator op, decimal value)
@@ -2698,7 +2698,7 @@ namespace TecWare.PPSn.Data
 			var column = LookupColumn(columnToken);
 			return column == null
 				? CreateColumnErrorFilter(columnToken)
-				: CreateDefaultCompareValue(column.Item1, op, value.ChangeType<string>(), false);
+				: CreateDefaultCompareValue(column.Item1, op, CreateParsableValue(value.ChangeType<string>(), column.Item2), false);
 		} // func CreateCompareFilterDecimal
 
 		private string CreateCompareFilterNumber(string columnToken, PpsDataFilterCompareOperator op, string text)

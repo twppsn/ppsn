@@ -82,7 +82,7 @@ namespace TecWare.PPSn
 			TestDateFilter("#30.04.2010#", new DateTime(2010, 4, 30), new DateTime(2010, 5, 1), "31.04.2010", cultureInfo);
 			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "2010~2012", cultureInfo);
 			TestDateFilter("#2010~2012#", new DateTime(2010, 1, 1), new DateTime(2013, 1, 1), "01.01.2010~31.12.2012", cultureInfo);
-			
+
 			TestDateFilter("#02.2010~12.2012#", new DateTime(2010, 2, 1), new DateTime(2013, 1, 1), "02.2010~12.2012", cultureInfo);
 			TestDateFilter("#01.01.2010~30.11.2010#", new DateTime(2010, 1, 1), new DateTime(2010, 12, 1), "01.01.2010~31.11.2010", cultureInfo);
 
@@ -163,17 +163,17 @@ namespace TecWare.PPSn
 		[TestMethod]
 		public void TestFilter07()
 			=> TestFilter("Name:(A)", "Name:(A)");
-		
+
 		private static Tuple<bool, string, int, int, string> SplitRegEx(string line)
 		{
-			var  regAttributeLine = new Regex(@"(?<r>[\+\-])(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*))?)?\=(?<v>.*)", RegexOptions.Singleline | RegexOptions.Compiled);
+			var regAttributeLine = new Regex(@"(?<r>[\+\-])(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*))?)?\=(?<v>.*)", RegexOptions.Singleline | RegexOptions.Compiled);
 			var m = regAttributeLine.Match(line);
 			if (!m.Success)
 				return null;
 
 			var isRemoved = m.Groups["r"].Value[0] != '-';
 			var tagName = m.Groups["n"].Value;
-			var classification = String.IsNullOrEmpty(m.Groups["c"].Value) ? -1 :Int32.Parse(m.Groups["c"].Value) ;
+			var classification = String.IsNullOrEmpty(m.Groups["c"].Value) ? -1 : Int32.Parse(m.Groups["c"].Value);
 			var userId = String.IsNullOrEmpty(m.Groups["u"].Value) ? -1 : Int32.Parse(m.Groups["u"].Value);
 			var value = m.Groups["v"].Value;
 
@@ -196,14 +196,14 @@ namespace TecWare.PPSn
 			Assert.AreEqual(1, t1.Item3);
 			Assert.AreEqual(2, t1.Item4);
 			Assert.AreEqual("v1", t1.Item5);
-			
+
 			t1 = SplitRegEx("-tag1:3=");
 			Assert.AreEqual(false, t1.Item1);
 			Assert.AreEqual("tag1", t1.Item2);
 			Assert.AreEqual(3, t1.Item3);
 			Assert.AreEqual(-1, t1.Item4);
 			Assert.AreEqual(String.Empty, t1.Item5);
-			
+
 			t1 = SplitRegEx("-tag1::4=v2.");
 			Assert.AreEqual(false, t1.Item1);
 			Assert.AreEqual("tag1", t1.Item2);
@@ -250,16 +250,31 @@ namespace TecWare.PPSn
 				=> null;
 		}
 
+		private void TestSqlFilter(string expectedFilter, PpsDataFilterExpression filterExpression)
+		{
+			var t = new TextSqlVisitor(
+				new Tuple<string, Type>("DATE", typeof(DateTime)),
+				new Tuple<string, Type>("STR", typeof(string)),
+				new Tuple<string, Type>("INT", typeof(int))
+			).CreateFilter(filterExpression);
+
+			Assert.AreEqual(expectedFilter, t);
+		} // proc TestSqlFilter
+
 		[TestMethod]
 		public void TestSqlVisitor()
 		{
-			var t = new TextSqlVisitor(
-				new Tuple<string, Type>("DD", typeof(DateTime))
-			).CreateFilter(PpsDataFilterExpression.Combine(
-				PpsDataFilterExpression.Compare("DD", PpsDataFilterCompareOperator.Equal, new DateTime(2010, 5, 26))
-			));
+			TestSqlFilter("DATE BETWEEN '26.05.2010 00:00:00' AND '26.05.2010 23:59:59'",
+				PpsDataFilterExpression.Combine(
+					PpsDataFilterExpression.Compare("DD", PpsDataFilterCompareOperator.Equal, new DateTime(2010, 5, 26))
+				)
+			);
+		}
 
-			Assert.AreEqual("DD BETWEEN '26.05.2010 00:00:00' AND '26.05.2010 23:59:59'", t);
+		[TestMethod]
+		public void TestSqlVisitor02()
+		{
+			TestSqlFilter("STR = '233'", PpsDataFilterExpression.Compare("STR", PpsDataFilterCompareOperator.Equal, 233));
 		}
 	}
 }
