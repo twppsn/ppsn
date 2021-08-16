@@ -40,7 +40,7 @@ namespace TecWare.PPSn.Tests
 				items[i] = new TestItem { Nr = i, Name = $"Eintrag {i}", Text = $"Todo for a nice text {i}", Wert = r.NextDouble() };
 
 			listBox.ItemsSource = new PpsTypedListCollectionView<TestItem>(items);
-			listBox.ItemCommands.Add(new PpsUICommandButton { Description = "Item3", Command = new PpsCommand(CopyExecuted) });
+			//listBox.ItemCommands.Add(new PpsUICommandButton { Description = "Item3", Command = new PpsCommand(CopyExecuted) });
 
 			CommandBindings.Add(PpsCommandBase.CreateBinding(null, ApplicationCommands.Copy, new PpsCommand(CopyExecuted)));
 			CommandBindings.Add(new CommandBinding(ApplicationCommands.Paste, FindExecuted));

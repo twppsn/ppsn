@@ -78,12 +78,23 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type uiC:PpsListBox}">
 					<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-						<uiC:PpsScrollViewer CanContentScroll="True"
-											 HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
-											 VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
-											 Focusable="False">
-							<ItemsPresenter />
-						</uiC:PpsScrollViewer>
+						<Grid>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="Auto" />
+								<RowDefinition Height="*" />
+							</Grid.RowDefinitions>
+							<Border x:Name="PART_Header" Grid.Row="0" BorderThickness="1" BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}" Visibility="Collapsed">
+								<uiC:PpsListColumnHeader Margin="4,0" />
+							</Border>
+							
+							<uiC:PpsScrollViewer Grid.Row="1"
+												 CanContentScroll="True"
+												 HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+												 VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
+												 Focusable="False">
+								<ItemsPresenter />
+							</uiC:PpsScrollViewer>
+						</Grid>
 					</Border>
 				</ControlTemplate>
 			</Setter.Value>
@@ -93,4 +104,23 @@ specific language governing permissions and limitations under the Licence.
 	<DataTemplate x:Key="{x:Type uiC:PpsListColumns}">
 		<uiC:PpsListColumnRow />
 	</DataTemplate>
+
+	<Style TargetType="{x:Type uiC:PpsListColumnHeaderCell}">
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
+		<Setter Property="Padding" Value="2" />
+		<Setter Property="Focusable" Value="False" />
+		<Setter Property="SnapsToDevicePixels" Value="True" />
+
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type uiC:PpsListColumnHeaderCell}">
+					<Border x:Name="border" BorderThickness="0,0,1,0" BorderBrush="{TemplateBinding BorderBrush}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+						<ContentPresenter Content="{Binding Header}" HorizontalAlignment="{Binding DataContext.HorizontalAlignment,ElementName=border}" VerticalAlignment="{Binding DataContext.VerticalAlignment,ElementName=border}" />
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>

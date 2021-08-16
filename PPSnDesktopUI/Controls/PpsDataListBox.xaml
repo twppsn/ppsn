@@ -41,6 +41,7 @@ specific language governing permissions and limitations under the Licence.
 							<Grid.RowDefinitions>
 								<RowDefinition Height="Auto" />
 								<RowDefinition Height="Auto" />
+								<RowDefinition Height="Auto" />
 								<RowDefinition />
 							</Grid.RowDefinitions>
 							<Grid.ColumnDefinitions>
@@ -72,7 +73,10 @@ specific language governing permissions and limitations under the Licence.
 									   Height="1"
 									   Margin="0,0,0,6" />
 
-							<ui:PpsScrollViewer Grid.Row="2"
+							<Border x:Name="PART_Header" Grid.Row="2" Grid.ColumnSpan="2" BorderThickness="1" BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}" Visibility="Collapsed">
+								<ui:PpsListColumnHeader Margin="6,0" />
+							</Border>
+							<ui:PpsScrollViewer Grid.Row="3"
 												Grid.ColumnSpan="2"
 												Margin="{TemplateBinding Padding}"
 												Focusable="False"

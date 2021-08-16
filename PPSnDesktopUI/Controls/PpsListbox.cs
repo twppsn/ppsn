@@ -48,9 +48,19 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsListBox : ListView
 	{
+		private FrameworkElement headerControl = null;
+
 		public PpsListBox()
 		{
 		} // ctor
+
+		public override void OnApplyTemplate()
+		{
+			headerControl = GetTemplateChild("PART_Header") as FrameworkElement;
+			base.OnApplyTemplate();
+
+			UpdateHeaderControl();
+		} // proc OnApplyTemplate 
 
 		protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
 		{
@@ -65,6 +75,12 @@ namespace TecWare.PPSn.Controls
 				//	View = new PpsListGridView(this, GenerateGridViewColumns(columns));
 			}
 		} // proc OnItemsSourceChanged
+
+		internal void UpdateHeaderControl()
+		{
+			if (headerControl != null)
+				headerControl.Visibility = PpsListColumns.GetColumns(this) == null ? Visibility.Collapsed : Visibility.Visible;
+		} // proc UpdateHeaderControl
 
 		#region -- ShowSelectionMode - Property ---------------------------------------
 
@@ -242,6 +258,8 @@ namespace TecWare.PPSn.Controls
 			if (e.NewValue is PpsListColumns columns)
 			{
 				itemsControl.ItemTemplate = columns.RowTemplate ?? GetDefaultTemplate(itemsControl);
+				if (itemsControl is PpsListBox l)
+					l.UpdateHeaderControl();
 
 				SetColumnsGenerator(itemsControl, new PpsListColumnGenerator(itemsControl, columns));
 			}
@@ -596,15 +614,14 @@ namespace TecWare.PPSn.Controls
 		private UIElement AppendElement(UIElement element, PpsListColumn column)
 		{
 			if (element is FrameworkElement fe)
-			{
-				fe.SetBinding(HorizontalAlignmentProperty, new Binding(nameof(PpsListColumn.HorizontalAlignment)) { Source = column });
-				fe.SetBinding(VerticalAlignmentProperty, new Binding(nameof(PpsListColumn.VerticalAlignment)) { Source = column });
-			}
+				SetStyleForCell(column, fe);
 
 			visuals.Add(element);
 			AddLogicalChild(element);
 			return element;
 		} // proc AppendElement
+
+		protected virtual void SetStyleForCell(PpsListColumn column, FrameworkElement fe) { }
 
 		private void ClearElement(int i)
 		{
@@ -646,6 +663,7 @@ namespace TecWare.PPSn.Controls
 			}
 
 			InvalidateMeasure();
+			InvalidateArrange();
 		} // proc IPpsListCellGenerator.UpdateCells
 
 		private Size MeasureElement(int index, Size availableSize)
@@ -667,7 +685,7 @@ namespace TecWare.PPSn.Controls
 				element.Arrange(new Rect(actualOffset, 0, actualWidth, finalSize.Height));
 		} // proc Arrange
 
-		protected sealed override Size MeasureOverride(Size availableSize)
+		protected override Size MeasureOverride(Size availableSize)
 		{
 			var height = 0.0;
 			var width = 0.0;
@@ -736,6 +754,7 @@ namespace TecWare.PPSn.Controls
 			else if (column.DisplayMemberBinding != null)
 			{
 				var text = new TextBlock();
+				text.Padding = new Thickness(2);
 				text.SetBinding(TextBlock.TextProperty, column.DisplayMemberBinding);
 				return text;
 			}
@@ -743,8 +762,23 @@ namespace TecWare.PPSn.Controls
 				return null;
 		} // func CreateElement
 
+		protected override void SetStyleForCell(PpsListColumn column, FrameworkElement fe)
+		{
+			base.SetStyleForCell(column, fe);
+			fe.SetBinding(HorizontalAlignmentProperty, new Binding(nameof(PpsListColumn.HorizontalAlignment)) { Source = column });
+			fe.SetBinding(VerticalAlignmentProperty, new Binding(nameof(PpsListColumn.VerticalAlignment)) { Source = column });
+		} // proc SetStyleForCell
+
 		protected override void InvalidateArrangeFromCellGenerator()
-			=> InvalidateArrange();
+			=> InvalidateMeasure();
+
+		protected override Size MeasureOverride(Size availableSize)
+		{
+			if (!Double.IsInfinity(availableSize.Width) && ColumnGenerator != null)
+				ColumnGenerator.InvalidateColumnWidths(availableSize.Width);
+
+			return base.MeasureOverride(availableSize);
+		} // func MeasureOverride
 
 		protected override Size ArrangeOverride(Size finalSize)
 		{
@@ -763,14 +797,18 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Column header cell.</summary>
 	public sealed class PpsListColumnHeaderCell : ContentControl
 	{
-		private PpsListColumn column;
-
 		public PpsListColumnHeaderCell(PpsListColumn column)
 		{
-			this.column = column ?? throw new ArgumentNullException(nameof(column));
+			// this.column = column ?? throw new ArgumentNullException(nameof(column));
 
-			SetBinding(ContentProperty, new Binding(nameof(PpsListColumn.Header)) { Source = column });
+			DataContext = column;
+			SetBinding(ContentProperty, new Binding(nameof(PpsListColumn.Header)));
 		} // ctor
+
+		static PpsListColumnHeaderCell()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsListColumnHeaderCell), new FrameworkPropertyMetadata(typeof(PpsListColumnHeaderCell)));
+		}
 	} // class PpsListColumnHeaderCell
 
 	#endregion
@@ -782,6 +820,14 @@ namespace TecWare.PPSn.Controls
 	{
 		protected override UIElement CreateElement(int i, PpsListColumn column)
 			=> new PpsListColumnHeaderCell(column);
+
+		protected override void SetStyleForCell(PpsListColumn column, FrameworkElement fe)
+		{
+			base.SetStyleForCell(column, fe);
+
+			fe.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
+			fe.SetValue(VerticalAlignmentProperty, VerticalAlignment.Stretch);
+		} // proc SetStyleForCell
 
 		protected override void InvalidateArrangeFromCellGenerator()
 			=> InvalidateMeasure();
