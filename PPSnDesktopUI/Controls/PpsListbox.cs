@@ -251,7 +251,7 @@ namespace TecWare.PPSn.Controls
 
 		private static DataTemplate GetDefaultTemplate(FrameworkElement fe)
 			=> fe.TryFindResource(typeof(PpsListColumns)) as DataTemplate;
-		
+
 		private static void OnColumnsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			var itemsControl = (ItemsControl)d;
@@ -293,7 +293,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Recalc offset and withs of the columns.</summary>
 		/// <param name="availableWidth"></param>
-		void InvalidateColumnWidths(double availableWidth);
+		void InvalidateColumnWidths(double availableWidth, bool fromHeader);
 		/// <summary></summary>
 		/// <param name="index"></param>
 		/// <param name="offset"></param>
@@ -440,13 +440,21 @@ namespace TecWare.PPSn.Controls
 
 			// update offset and withs
 			if (lastColumnWidth > 0)
-				InvalidateColumnWidths(lastColumnWidth);
+				InvalidateColumnWidths(lastColumnWidth, false);
 		} // proc InvalidateColumns
 
-		public void InvalidateColumnWidths(double availableWidth)
+		public void InvalidateColumnWidths(double availableWidth, bool fromHeader)
 		{
 			if (lastColumnWidth != availableWidth)
-				invalidColumnWidths = availableWidth;
+			{
+				if (invalidColumnWidths.HasValue)
+				{
+					if (!fromHeader)
+						invalidColumnWidths = availableWidth;
+				}
+				else
+					invalidColumnWidths = availableWidth;
+			}
 		} // proc InvalidateColumnWidths
 
 		private void UpdateColumnWidths(double actualWidth)
@@ -587,7 +595,7 @@ namespace TecWare.PPSn.Controls
 			if (columnGenerator != null)
 			{
 				columnGenerator.RegisterCellGenerator(this);
-				columnGenerator.InvalidateColumnWidths(ActualWidth);
+				columnGenerator.InvalidateColumnWidths(ActualWidth, IsHeader);
 			}
 		} // proc SetColumnGenerator
 
@@ -685,8 +693,11 @@ namespace TecWare.PPSn.Controls
 				element.Arrange(new Rect(actualOffset, 0, actualWidth, finalSize.Height));
 		} // proc Arrange
 
-		protected override Size MeasureOverride(Size availableSize)
+		protected sealed override Size MeasureOverride(Size availableSize)
 		{
+			if (!Double.IsInfinity(availableSize.Width) && ColumnGenerator != null)
+				ColumnGenerator.InvalidateColumnWidths(availableSize.Width, IsHeader);
+
 			var height = 0.0;
 			var width = 0.0;
 
@@ -730,6 +741,7 @@ namespace TecWare.PPSn.Controls
 
 		IPpsListColumnGenerator IPpsListCellGenerator.Generator => columnGenerator;
 
+		protected abstract bool IsHeader { get; }
 		protected IPpsListColumnGenerator ColumnGenerator => columnGenerator;
 	} // class PpsListColumnCells
 
@@ -772,22 +784,16 @@ namespace TecWare.PPSn.Controls
 		protected override void InvalidateArrangeFromCellGenerator()
 			=> InvalidateMeasure();
 
-		protected override Size MeasureOverride(Size availableSize)
-		{
-			if (!Double.IsInfinity(availableSize.Width) && ColumnGenerator != null)
-				ColumnGenerator.InvalidateColumnWidths(availableSize.Width);
-
-			return base.MeasureOverride(availableSize);
-		} // func MeasureOverride
-
 		protected override Size ArrangeOverride(Size finalSize)
 		{
 			// invalidate size
 			if (ColumnGenerator != null)
-				ColumnGenerator.InvalidateColumnWidths(finalSize.Width);
+				ColumnGenerator.InvalidateColumnWidths(finalSize.Width, false);
 
 			return base.ArrangeOverride(finalSize);
 		} // func ArrangeOverride
+
+		protected override bool IsHeader => false;
 	} // class PpsListColumnRow
 
 	#endregion
@@ -831,6 +837,8 @@ namespace TecWare.PPSn.Controls
 
 		protected override void InvalidateArrangeFromCellGenerator()
 			=> InvalidateMeasure();
+
+		protected override bool IsHeader => true;
 	} // class PpsListColumnHeader
 
 	#endregion

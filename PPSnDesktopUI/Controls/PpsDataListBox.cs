@@ -384,10 +384,13 @@ namespace TecWare.PPSn.Controls
 		{
 			var commands = SelectedItemCommands;
 
-			foreach (var cmd in commands.OfType<PpsUICommandButton>())
+			if (commands != null)
 			{
-				if (cmd.Command == command)
-					return true;
+				foreach (var cmd in commands.OfType<PpsUICommandButton>())
+				{
+					if (cmd.Command == command)
+						return true;
+				}
 			}
 			return false;
 		} // func IsItemCommand
