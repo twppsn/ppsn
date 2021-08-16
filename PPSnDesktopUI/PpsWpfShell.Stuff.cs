@@ -79,6 +79,7 @@ namespace TecWare.PPSn
 		/// <param name="shell"></param>
 		/// <param name="target"></param>
 		/// <param name="command"></param>
+		[Obsolete("Sollte nicht mehr verwendet werden.")]
 		public static void AddCommandBinding(this UIElement ui, IPpsShell shell, object target, PpsCommandBase command)
 			=> ui.CommandBindings.Add(PpsCommandBase.CreateBinding(shell, target, command));
 

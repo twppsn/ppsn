@@ -14,6 +14,7 @@
 //
 #endregion
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
@@ -69,12 +70,8 @@ namespace TecWare.PPSn.Controls
 
 			if (commands == null || commands.Count == 0)
 				SetValue(hasCommandsPropertyKey, false);
-			else 
-			{
+			else
 				SetValue(hasCommandsPropertyKey, true);
-				foreach (var cmd in Commands.OfType<PpsUICommandButton>())
-					cmd.CommandParameter = DataContext;
-			}
 		} // func UpdateHasCommands
 
 		private PpsUICommandButton GetDefaultCommand()
@@ -94,12 +91,8 @@ namespace TecWare.PPSn.Controls
 			if (!e.Handled)
 			{
 				var defaultCommand = GetDefaultCommand();
-				if (defaultCommand != null)
-				{
-					defaultCommand.CommandParameter = DataContext;
-					if (defaultCommand.Execute(this))
-						e.Handled = true;
-				}
+				if (defaultCommand != null && defaultCommand.Execute(this))
+					e.Handled = true;
 			}
 			base.OnMouseDoubleClick(e);
 		} // proc OnMouseDoubleClick
@@ -109,6 +102,66 @@ namespace TecWare.PPSn.Controls
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataListItem), new FrameworkPropertyMetadata(typeof(PpsDataListItem)));
 		} // sctor
 	} // class PpsDataListItem
+
+	#endregion
+
+	#region -- class PpsDataListSelectedItems -----------------------------------------
+
+	public sealed class PpsDataListParameter : IReadOnlyList<object>
+	{
+		private readonly object parameter;
+		private readonly int selectedItemIndex;
+		private readonly object[] selectedArray;
+
+		private PpsDataListParameter(object parameter, object selectedItem, IList selectedItems)
+		{
+			this.parameter = parameter;
+
+			var arrayCount = selectedItems.Count;
+			if (arrayCount == 0 && selectedItem != null)
+			{
+				selectedArray = new object[] { selectedItem };
+				selectedItemIndex = 0;
+			}
+			else if (arrayCount > 0)
+			{
+				selectedArray = new object[arrayCount];
+				for (var i = 0; i < arrayCount; i++)
+				{
+					selectedArray[i] = selectedItems[i];
+					if (Equals(selectedArray[i], selectedItem))
+						selectedItemIndex = i;
+				}
+			}
+		} // ctor
+
+		public IEnumerator<object> GetEnumerator()
+			=> selectedArray.OfType<object>().GetEnumerator();
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+
+		public object this[int index] => selectedArray[index];
+
+		public object Parameter => parameter;
+		public object SelectedItem => selectedItemIndex >= 0 ? selectedArray[selectedItemIndex] : null;
+		public int Count => selectedArray.Length;
+
+		private static PpsDataListParameter Get(object parameter, object originalSource)
+		{
+			if (parameter is PpsDataListParameter p)
+				return p;
+			else if (originalSource is ListBox lb)
+				return new PpsDataListParameter(parameter, lb.SelectedItem, lb.SelectedItems);
+			else
+				return null;
+		} // func Get
+
+		public static PpsDataListParameter Get(CanExecuteRoutedEventArgs e)
+			=> Get(e.Parameter, e.OriginalSource);
+		public static PpsDataListParameter Get(ExecutedRoutedEventArgs e)
+			=> Get(e.Parameter, e.OriginalSource);
+	} // class PpsDataListParameter
 
 	#endregion
 
@@ -296,11 +349,6 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Access filter box.</summary>
 		protected PpsTextBox Filterbox => filterBox;
 
-		static PpsDataListBox()
-		{
-			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataListBox), new FrameworkPropertyMetadata(typeof(PpsDataListBox)));
-		} // sctor
-
 		#endregion
 
 		/// <summary></summary>
@@ -326,20 +374,23 @@ namespace TecWare.PPSn.Controls
 			base.OnSelectionChanged(e);
 
 			var selectedItem = SelectedItem;
-
-			if (selectedItem == null)
-				SetValue(selectedItemCommandsPropertyKey, null);
-			else
-			{
-				var cmds = GetItemCommands(this, selectedItem);
-				foreach (var c in cmds.OfType<PpsUICommandButton>())
-					c.CommandParameter = selectedItem;
-				SetValue(selectedItemCommandsPropertyKey, cmds);
-			}
+			SetValue(selectedItemCommandsPropertyKey, selectedItem == null ? null : GetItemCommands(this, selectedItem));
 		} // proc OnSelectionChanged
 
 		private PpsUICommandCollection GetItemCommands(DependencyObject element, object item)
 			=> ItemCommandsSelector?.SelectCommands(item, element) ?? ItemCommands;
+
+		private bool IsItemCommand(ICommand command)
+		{
+			var commands = SelectedItemCommands;
+
+			foreach (var cmd in commands.OfType<PpsUICommandButton>())
+			{
+				if (cmd.Command == command)
+					return true;
+			}
+			return false;
+		} // func IsItemCommand
 
 		/// <summary></summary>
 		/// <param name="e"></param>
@@ -347,8 +398,8 @@ namespace TecWare.PPSn.Controls
 		{
 			if (filterBox != null && IsFilterable)
 			{
-				if (e.Key >= Key.A && e.Key <= Key.Z
-					|| e.Key >= Key.D0 && e.Key <= Key.D9)
+				if ((e.Key >= Key.A && e.Key <= Key.Z)
+					|| (e.Key >= Key.D0 && e.Key <= Key.D9))
 				{
 					if (!filterBox.IsKeyboardFocusWithin
 						&& IsKeyboardFocusWithin) // move focus to textbox
@@ -416,6 +467,32 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		protected override IEnumerator LogicalChildren
 			=> Procs.CombineEnumerator(base.LogicalChildren, ListCommands.GetEnumerator(), ItemCommands.GetEnumerator());
+
+		static PpsDataListBox()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataListBox), new FrameworkPropertyMetadata(typeof(PpsDataListBox)));
+
+			EventManager.RegisterClassHandler(typeof(PpsDataListBox), CommandManager.ExecutedEvent, new ExecutedRoutedEventHandler(ExecutedCommandHandlerImpl), false);
+			EventManager.RegisterClassHandler(typeof(PpsDataListBox), CommandManager.CanExecuteEvent, new CanExecuteRoutedEventHandler(CanExecuteCommandHandlerImpl), false);
+		} // ctor
+
+		private static void CanExecuteCommandHandlerImpl(object sender, CanExecuteRoutedEventArgs e)
+		{
+			if (!e.Handled && !(e.Parameter is PpsDataListParameter) && sender is PpsDataListBox l && e.Command is RoutedCommand rc && l.IsItemCommand(rc))
+			{
+				e.CanExecute = rc.CanExecute(PpsDataListParameter.Get(e), (IInputElement)sender);
+				e.Handled = true;
+			}
+		} // func CanExecuteCommandHandlerImpl
+
+		private static void ExecutedCommandHandlerImpl(object sender, ExecutedRoutedEventArgs e)
+		{
+			if (!e.Handled && !(e.Parameter is PpsDataListParameter) && sender is PpsDataListBox l && e.Command is RoutedCommand rc && l.IsItemCommand(rc))
+			{
+				rc.Execute(PpsDataListParameter.Get(e), (IInputElement)sender);
+				e.Handled = true;
+			}
+		}
 	} // class PpsDataListBox
 
 	#endregion

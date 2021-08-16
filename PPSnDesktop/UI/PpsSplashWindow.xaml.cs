@@ -647,17 +647,8 @@ namespace TecWare.PPSn.UI
 
 		#region -- StatusText, StatusValue - property ---------------------------------
 
-		public static readonly DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnStatusTextChanged)));
-		public static readonly DependencyProperty StatusValueProperty = DependencyProperty.Register(nameof(StatusValue), typeof(int), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(-1, new PropertyChangedCallback(OnStatusValueChanged)));
-
-		private string statusText = null;
-		private int statusValue = -1;
-
-		private static void OnStatusTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsSplashWindow)d).statusText = (string)e.NewValue;
-
-		private static void OnStatusValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsSplashWindow)d).statusValue = (int)e.NewValue;
+		public static readonly DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty StatusValueProperty = DependencyProperty.Register(nameof(StatusValue), typeof(int), typeof(PpsSplashWindow), new FrameworkPropertyMetadata(-1));
 
 		private void ProgressStack_PropertyChanged(object sender, PropertyChangedEventArgs e)
 		{

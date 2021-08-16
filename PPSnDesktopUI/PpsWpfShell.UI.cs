@@ -282,7 +282,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- ToTitle -----------------------------------------------------
+		#region -- ToTitle ------------------------------------------------------------
 
 		public static string ToTitle(this PpsImage image)
 		{

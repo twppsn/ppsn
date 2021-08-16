@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -51,7 +50,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="parameter">Command parameter</param>
 		public PpsCommandContext(IPpsShell shell, object target, object source, object parameter)
 		{
-			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+			this.shell = shell;
 			this.target = target ?? throw new ArgumentNullException(nameof(target));
 			this.source = source ?? throw new ArgumentNullException(nameof(source));
 			this.getDataContext = new Lazy<object>(GetDataContext);
@@ -89,7 +88,7 @@ namespace TecWare.PPSn.UI
 			if (r == null && target != source && source is DependencyObject dc2)
 				r = PpsWpfShell.GetControlService(dc2, serviceType, false);
 
-			return r ?? shell.GetService(serviceType);
+			return r ?? shell?.GetService(serviceType);
 		} // func GetService
 
 		/// <summary>Shell</summary>
@@ -208,6 +207,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="target"></param>
 		/// <param name="command"></param>
 		/// <returns></returns>
+		[Obsolete("Sollte nicht mehr verwendet werden.")]
 		public static CommandBinding CreateBinding(IPpsShell shell, object target, PpsCommandBase command)
 		{
 			return new CommandBinding(command,
@@ -254,7 +254,7 @@ namespace TecWare.PPSn.UI
 #if DEBUG
 			if (e.Command is PpsRoutedCommand)
 			{
-				var f = Keyboard.FocusedElement;
+				// var f = Keyboard.FocusedElement;
 				// Debug.Print($"CanExecute: {e.Command} on {(f == null ? "<null>" : f.GetType().Name)}");
 			}
 #endif
@@ -374,7 +374,7 @@ namespace TecWare.PPSn.UI
 		public PpsCommand(Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			: base(canExecute)
 		{
-			this.command = command;
+			this.command = command ?? throw new ArgumentNullException(nameof(command));
 		} // ctor
 
 		/// <summary></summary>
@@ -385,7 +385,7 @@ namespace TecWare.PPSn.UI
 		public PpsCommand(string name, Type ownerType, Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			: base(name, ownerType, canExecute)
 		{
-			this.command = command;
+			this.command = command ?? throw new ArgumentNullException(nameof(command));
 		} // ctor
 
 		/// <summary></summary>
@@ -397,7 +397,7 @@ namespace TecWare.PPSn.UI
 		public PpsCommand(string name, Type ownerType, InputGestureCollection inputGestures, Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			: base(name, ownerType, inputGestures, canExecute)
 		{
-			this.command = command;
+			this.command = command ?? throw new ArgumentNullException(nameof(command));
 		} // ctor
 
 		#endregion

@@ -31,26 +31,26 @@ namespace TecWare.PPSn.Main
 	internal partial class PpsMainWindow : PpsWindow, IPpsMainWindow, IPpsBarcodeReceiver
 	{
 		/// <summary>Move to next pane.</summary>
-		public readonly static RoutedCommand NextPaneCommand = new RoutedUICommand("Nächstes", "NextPane", typeof(PpsMainWindow),
+		public static readonly RoutedCommand NextPaneCommand = new RoutedUICommand("Nächstes", "NextPane", typeof(PpsMainWindow),
 			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.Right, ModifierKeys.Control | ModifierKeys.Alt) })
 		);
 		/// <summary>Move to previous pane.</summary>
-		public readonly static RoutedCommand PrevPaneCommand = new RoutedUICommand("Vorheriges", "PrevPane", typeof(PpsMainWindow),
+		public static readonly RoutedCommand PrevPaneCommand = new RoutedUICommand("Vorheriges", "PrevPane", typeof(PpsMainWindow),
 			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.Left, ModifierKeys.Control | ModifierKeys.Alt) })
 		);
 		/// <summary>Go to a secific pane.</summary>
-		public readonly static RoutedCommand GoToPaneCommand = new RoutedUICommand("Gehe zu", "GoToPane", typeof(PpsMainWindow));
+		public static readonly RoutedCommand GoToPaneCommand = new RoutedUICommand("Gehe zu", "GoToPane", typeof(PpsMainWindow));
 		/// <summary>Create the pane in a single pane window.</summary>
-		public readonly static RoutedCommand UndockPaneCommand = new RoutedUICommand("InFenster", "UndockPane", typeof(PpsMainWindow), 
+		public static readonly RoutedCommand UndockPaneCommand = new RoutedUICommand("InFenster", "UndockPane", typeof(PpsMainWindow), 
 			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.F5, ModifierKeys.Control) })
 		);
 		/// <summary>Close a pane.</summary>
-		public readonly static RoutedCommand ClosePaneCommand = new RoutedUICommand("Schließen", "ClosePane", typeof(PpsMainWindow), 
+		public static readonly RoutedCommand ClosePaneCommand = new RoutedUICommand("Schließen", "ClosePane", typeof(PpsMainWindow), 
 			new InputGestureCollection(new InputGesture[] { new KeyGesture(Key.F4, ModifierKeys.Control) })
 		);
 
 		/// <summary>Is the a pane visible</summary>
-		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
+		public static readonly DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
 		
 		private readonly int windowIndex = -1;                                       // settings key
 		private readonly PpsWindowApplicationSettings settings;                      // current settings for the window
@@ -97,7 +97,6 @@ namespace TecWare.PPSn.Main
 			// register barcode
 			var barcodeService = shell.GetService<PpsBarcodeService>(true);
 			barcodeReceiverToken = barcodeService.RegisterReceiver(this);
-
 
 			#region -- set basic command bindings --
 			this.AddCommandBinding(Shell, TraceLogCommand,
@@ -208,6 +207,7 @@ namespace TecWare.PPSn.Main
 		} // proc IPpsBarcodeReceiver.OnBarcodeAsync
 
 		#endregion
+
 		private double CalculatePaneHostListMaxWidth(int items)
 		{
 			// ScreenWidth
@@ -228,6 +228,7 @@ namespace TecWare.PPSn.Main
 					columns = items / 3 + (items % 3 > 0 ? 1 : 0);
 				else
 					columns = items / 4 + (items % 4 > 0 ? 1 : 0);
+
 				if (columns < maxColumns)
 					maxColumns = columns;
 			}
