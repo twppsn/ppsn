@@ -567,9 +567,9 @@ namespace TecWare.PPSn
 			return await dispatcher.InvokeAsync(func);
 		} // func IPpsUIService
 
-		public string[] Ok { get; } = new string[] { "Ok" };
-		public string[] YesNo { get; } = new string[] { "Ja", "Nein" };
-		public string[] OkCancel { get; } = new string[] { "Ok", "Abbrechen" };
+		public string[] Ok => PpsMessageDialog.OkButton;
+		public string[] YesNo => PpsMessageDialog.YesNoButtons;
+		public string[] OkCancel => PpsMessageDialog.OkCancelButtons;
 
 		#endregion
 

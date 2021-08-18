@@ -7,7 +7,7 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Core.Data
 {
-	#region -- struct PpsDataQuery ----------------------------------------------------
+	#region -- class PpsDataQuery -----------------------------------------------------
 
 	/// <summary>Define all parameter of the ppsn viewget command.</summary>
 	public sealed class PpsDataQuery

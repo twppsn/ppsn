@@ -50,6 +50,9 @@ namespace TecWare.PPSn.UI
 
 		public void SetButtons(string[] buttonInfo)
 		{
+			if (buttonInfo == null && buttonInfo.Length == 0)
+				buttonInfo = OkButton;
+
 			dialogButtons = new PpsMessageDialogButton[buttonInfo.Length];
 			for (var i = 0; i < dialogButtons.Length; i++)
 				dialogButtons[i] = new PpsMessageDialogButton(this, i, buttonInfo[i]);
@@ -158,6 +161,10 @@ namespace TecWare.PPSn.UI
 		} // prop ButtonIndex
 
 		public static DataTemplateSelector MessageTemplateSelector { get; } = new MessageTemplateSelectorImplementation();
+
+		public static string[] OkButton { get; } = new string[] { "Ok" };
+		public static string[] YesNoButtons { get; } = new string[] { "Ja", "Nein" };
+		public static string[] OkCancelButtons { get; } = new string[] { "Ok", "Abbrechen" };
 	} // class PpsMessageDialog
 
 	#region -- class PpsMessageDialogButton -------------------------------------------
