@@ -142,6 +142,13 @@ namespace TecWare.PPSn.Server.Data
 		public IEnumerable<IEnumerable<IDataRow>> ExecuteMultipleResult(object args)
 			=> ExecuteResult(args, PpsDataTransactionExecuteBehavior.MutliResult);
 
+		/// <summary></summary>
+		/// <param name="args"></param>
+		/// <param name="func"></param>
+		/// <returns></returns>
+		public LuaTable ParseMultipleResult(object args, Func<IEnumerable<IDataRow>, string, LuaTable> func)
+			=> PpsDataTransaction.ParseMultipleResultCore(ExecuteMultipleResult(args), func);
+		
 		#endregion
 
 		/// <summary></summary>
@@ -247,7 +254,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="parameter"></param>
 		/// <param name="firstArgs"></param>
 		/// <returns></returns>
-		public PpsDataCommand Prepare(LuaTable parameter, LuaTable firstArgs)
+		public PpsDataCommand Prepare(LuaTable parameter, LuaTable firstArgs = null)
 		{
 			if (parameter.GetMemberValue("rows") != null)
 				throw new ArgumentNullException("rows", "Prepare does not support 'rows'.");
@@ -378,6 +385,13 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // func ExecuteMultipleResult
 
+		/// <summary></summary>
+		/// <param name="parameter"></param>
+		/// <param name="func"></param>
+		/// <returns></returns>
+		public LuaTable ParseMultipleResult(LuaTable parameter, Func<IEnumerable<IDataRow>, string, LuaTable> func)
+			=> ParseMultipleResultCore(ExecuteMultipleResult(parameter), func);
+
 		#endregion
 
 		/// <summary>Create a selector for a view or table.</summary>
@@ -407,6 +421,20 @@ namespace TecWare.PPSn.Server.Data
 			using (var session = DataSource.CreateSynchronizationSession(connection, globalLastSyncId, leaveConnectionOpen: true))
 				return session.GetChanges(tableName, lastSyncId);
 		} // func 
+
+		internal static LuaTable ParseMultipleResultCore(IEnumerable<IEnumerable<IDataRow>> multiResult, Func<IEnumerable<IDataRow>, string, LuaTable> func)
+		{
+			var table = new LuaTable();
+			foreach(var mr in multiResult)
+			{
+				var firstCol = mr is IDataColumns columns && columns.Columns.Count > 0 ? columns.Columns[0].Name : null;
+				var t = func(mr, firstCol); ;
+				if (t == null)
+					throw new ArgumentException("No result for");
+				LuaTable.merge(table, t, true);
+			}
+			return table;
+		} // func ParseMultipleResultCore
 
 		/// <summary>DataSource of the transaction.</summary>
 		public PpsDataSource DataSource => dataSource;
