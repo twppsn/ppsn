@@ -95,6 +95,18 @@ namespace TecWare.PPSn.Server
 				throw new ArgumentException($"First argument must be a {nameof(IDataRow)} or {nameof(IEnumerable<IDataRow>)}", nameof(value));
 		} // func GetTable
 
+		/// <summary>Create a copy of all <see cref="IDataRow"/>s</summary>
+		/// <param name="rows"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public static LuaTable GetTableWithRows(IEnumerable<IDataRow> rows)
+		{
+			var t = new LuaTable();
+			foreach(var r in rows)
+				t.ArrayList.Add(GetTableCore(r));
+			return t;
+		} // func GetTableWithRows
+
 		/// <summary>Get a structured property.</summary>
 		/// <param name="table"></param>
 		/// <param name="propertyPath"></param>
