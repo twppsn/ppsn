@@ -420,18 +420,32 @@ namespace TecWare.PPSn.Server.Data
 		{
 			using (var session = DataSource.CreateSynchronizationSession(connection, globalLastSyncId, leaveConnectionOpen: true))
 				return session.GetChanges(tableName, lastSyncId);
-		} // func 
+		} // func CreateSynchronizationBatch
+
+		private static IEnumerable<IDataRow> EnumerateRows(IEnumerator<IDataRow> e)
+		{
+			while (e.MoveNext())
+				yield return e.Current;
+		} // func EnumerateRows
 
 		internal static LuaTable ParseMultipleResultCore(IEnumerable<IEnumerable<IDataRow>> multiResult, Func<IEnumerable<IDataRow>, string, LuaTable> func)
 		{
 			var table = new LuaTable();
-			foreach(var mr in multiResult)
+			foreach (var mr in multiResult)
 			{
-				var firstCol = mr is IDataColumns columns && columns.Columns.Count > 0 ? columns.Columns[0].Name : null;
-				var t = func(mr, firstCol); ;
-				if (t == null)
-					throw new ArgumentException("No result for");
-				LuaTable.merge(table, t, true);
+				using (var e = mr.GetEnumerator())
+				{
+					// get column description
+					var firstCol = e is IDataColumns columns2 && columns2.Columns.Count > 0 ? columns2.Columns[0].Name : null;
+
+					// process result
+					var t = func(EnumerateRows(e), firstCol);
+					if (t == null)
+						throw new ArgumentException($"No result for '{firstCol}'.");
+
+					// merge result
+					LuaTable.merge(table, t, true);
+				}
 			}
 			return table;
 		} // func ParseMultipleResultCore
