@@ -45,9 +45,9 @@ namespace TecWare.PPSn.Data
 		/// <param name="metaTable"></param>
 		public PpsLuaTableView(LuaTable table, LuaTable metaTable = null)
 		{
-			this.table = new LuaTable();
+			this.table = table ?? new LuaTable();
 
-			this.metaTable = metaTable ?? table.MetaTable.GetMemberValue("Types", rawGet: true) as LuaTable;
+			this.metaTable = metaTable ?? table?.MetaTable.GetMemberValue("Types", rawGet: true) as LuaTable;
 		} // ctor
 
 		/// <summary></summary>
@@ -66,7 +66,7 @@ namespace TecWare.PPSn.Data
 				return t;
 			else if (type is string s)
 				return LuaType.GetType(s, lateAllowed: false).Type;
-			else if (type is LuaTable tt)
+			else if (type is LuaTable)
 				return typeof(LuaTable);
 			else
 				throw new ArgumentException(nameof(type));
@@ -136,10 +136,9 @@ namespace TecWare.PPSn.Data
 			var v = table.GetMemberValue(name);
 			if (TryGetType(name, out var type, out var childMetaTable))
 			{
-				if (type == typeof(LuaTable))
-					return GetTableView(name, (LuaTable)v, childMetaTable);
-				else
-					return GetTypedValue(v, type);
+				return type == typeof(LuaTable) 
+					? GetTableView(name, (LuaTable)v, childMetaTable) 
+					: GetTypedValue(v, type);
 			}
 			else if (v is LuaTable t)
 				return GetTableView(name, t, null);
