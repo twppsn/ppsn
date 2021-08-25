@@ -27,8 +27,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 using LLua = Neo.IronLua.Lua;
@@ -446,6 +448,21 @@ namespace TecWare.PPSn.Lua
 		[LuaMember]
 		public PpsLuaTableView CreateTableView(LuaTable table, LuaTable metaTable = null)
 			=> new PpsLuaTableView(table, metaTable);
+
+		/// <summary>Holt synchron view information</summary>
+		/// <param name="viewId"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public IEnumerable<IDataRow> GetViewAsTable(string viewId)
+		{
+			var r = new List<IDataRow>();
+			Task.Run(() =>
+			{
+				foreach (var row in shell.GetViewData(new PpsDataQuery(viewId)))
+					r.Add(row.ToMyData());
+			}).Await();
+			return r;
+		} // func GetViewAsTable
 
 		protected override void OnPrint(string text)
 			=> shell.LogProxy().Debug(text);
