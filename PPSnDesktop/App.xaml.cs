@@ -226,7 +226,7 @@ namespace TecWare.PPSn
 							return true;
 						}
 						var compareValue = reg.GetValue(valueName)?.ToString();
-						if(compareValue == null)
+						if (compareValue == null)
 						{
 							message = GetRuntimeMessage(settings);
 							return true;
@@ -239,7 +239,7 @@ namespace TecWare.PPSn
 								return true;
 							}
 						}
-						else if(Version.TryParse(compareValue, out var compareVersion) && Version.TryParse(testValue, out var testVersion))
+						else if (Version.TryParse(compareValue, out var compareVersion) && Version.TryParse(testValue, out var testVersion))
 						{
 							if (compareVersion < testVersion)
 							{
@@ -491,7 +491,7 @@ namespace TecWare.PPSn
 					foreach (var c in shell.Settings.GetProperties("PPSn.Application.Debug.Path.*"))
 					{
 						log.Debug($"Path {c.Key}: {c.Value}");
-						AddToDirectoryList(i++, pathAdditions, c.Value);
+						AddToDirectoryList(i++, pathAdditions, c.Value); // add first
 					}
 
 					// set environment to extended files
@@ -673,8 +673,8 @@ namespace TecWare.PPSn
 					// create the application shell
 					splashWindow.SetProgressText("Starte Anwendung...");
 					var notify = new ShellLoadNotify(splashWindow, allowSync);
-					return await StartRuntimeInstallationAsync(splashWindow, 
-						await PpsShell.StartAsync(shellInfo, isDefault: true, notify: notify), 
+					return await StartRuntimeInstallationAsync(splashWindow,
+						await PpsShell.StartAsync(shellInfo, isDefault: true, notify: notify),
 						notify
 					);
 				}
@@ -1143,7 +1143,7 @@ namespace TecWare.PPSn
 			if (idx != -1)
 				directoryList.RemoveAt(idx);
 
-			if (index == -1)
+			if (index == -1 || index >= directoryList.Count)
 				directoryList.Add(directoryName);
 			else
 				directoryList.Insert(index, directoryName);
@@ -1360,11 +1360,10 @@ namespace TecWare.PPSn
 
 		private static void DefaultNavigationStarted(object sender, PpsWebViewNavigationStartedEventArgs e)
 		{
-			if (e.Uri is Uri uri 
-				&& e.OriginalSource is DependencyObject d 
+			if (e.Uri is Uri uri
+				&& e.OriginalSource is DependencyObject d
 				&& uri.IsAbsoluteUri && uri.Scheme == "panemanager")
 			{
-				
 				ProcessPaneManager(d.GetControlService<IPpsWindowPaneManager>(true), new PpsWebViewLink(uri) { NewWindow = e.NewWindow });
 				e.Cancel = true;
 			}

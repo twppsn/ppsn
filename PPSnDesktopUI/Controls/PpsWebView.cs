@@ -503,7 +503,7 @@ namespace TecWare.PPSn.Controls
 
 		private void UpdateResourceRequest(IPpsShell shell)
 		{
-			if (shell.Http != null && htmlView.CoreWebView2 != null)
+			if (shell != null && shell.Http != null && htmlView.CoreWebView2 != null)
 			{
 				var http = shell.Http;
 

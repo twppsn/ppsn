@@ -47,7 +47,7 @@ namespace TecWare.PPSn.Data
 		{
 			this.table = table ?? new LuaTable();
 
-			this.metaTable = metaTable ?? table?.MetaTable.GetMemberValue("Types", rawGet: true) as LuaTable;
+			this.metaTable = metaTable ?? table?.MetaTable?.GetMemberValue("Types", rawGet: true) as LuaTable;
 		} // ctor
 
 		/// <summary></summary>
@@ -136,8 +136,8 @@ namespace TecWare.PPSn.Data
 			var v = table.GetMemberValue(name);
 			if (TryGetType(name, out var type, out var childMetaTable))
 			{
-				return type == typeof(LuaTable) 
-					? GetTableView(name, (LuaTable)v, childMetaTable) 
+				return type == typeof(LuaTable)
+					? GetTableView(name, (LuaTable)v, childMetaTable)
 					: GetTypedValue(v, type);
 			}
 			else if (v is LuaTable t)
