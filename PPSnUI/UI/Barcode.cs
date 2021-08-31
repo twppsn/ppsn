@@ -68,12 +68,12 @@ namespace TecWare.PPSn.UI
 	#region -- interface IPpsBarcodeReceiver ------------------------------------------
 
 	/// <summary>Implemented event by an barcode receiver.</summary>
-	public interface IPpsBarcodeReceiver //: INotifyPropertyChanged
+	public interface IPpsBarcodeReceiver
 	{
 		/// <summary>Callback in UI-Thread with the scanned barcode.</summary>
 		/// <param name="code"></param>
 		/// <returns><c>true</c>, if barcode is processed.</returns>
-		Task OnBarcodeAsync(PpsBarcodeInfo code);
+		Task<bool> OnBarcodeAsync(PpsBarcodeInfo code);
 
 		/// <summary>Is the barcode receiver active.</summary>
 		bool IsActive { get; }
@@ -93,28 +93,6 @@ namespace TecWare.PPSn.UI
 		public abstract string CodeName { get; }
 		/// <summary>Return the code as data.</summary>
 		public abstract string Code { get; }
-	} // class PpsBarcode
-
-	#endregion
-
-	#region -- class PpsGenericBarcode ------------------------------------------------
-
-	/// <summary>Fallback implementation for unknown codes.</summary>
-	public sealed class PpsGenericBarcode : PpsBarcode
-	{
-		private readonly string code;
-
-		internal PpsGenericBarcode(string code)
-		{
-			this.code = code;
-		} // ctor
-
-		/// <summary>Test if there is a code.</summary>
-		public override bool IsCodeValid => !String.IsNullOrEmpty(code);
-		/// <summary>Name of the code.</summary>
-		public override string CodeName => String.Empty;
-		/// <summary>Plain code</summary>
-		public override string Code => code;
 	} // class PpsBarcode
 
 	#endregion
@@ -163,53 +141,147 @@ namespace TecWare.PPSn.UI
 	[PpsService(typeof(PpsBarcodeService)), PpsLazyService]
 	public sealed class PpsBarcodeService : IEnumerable<IPpsBarcodeProvider>, INotifyCollectionChanged
 	{
-		#region -- class BarcodeToken -------------------------------------------------
+		#region -- class BarcodeTokenBase ---------------------------------------------
 
-		private sealed class BarcodeToken<T> : IEquatable<T>, IDisposable
+		private abstract class BarcodeTokenBase<T> : IDisposable
 			where T : class
 		{
-			private readonly WeakReference<T> reference;
+			protected readonly WeakReference<T> reference;
 			private int refCount = 0;
 
-			public BarcodeToken(T receiver)
+			public BarcodeTokenBase(T receiver)
 			{
 				reference = new WeakReference<T>(receiver);
 				AddRef();
 			} // ctor
 
-			public bool Equals(T other)
-			{
-				if (reference.TryGetTarget(out var r))
-					return ReferenceEquals(r, other);
-				else
-				{
-					refCount = 0;
-					return false;
-				}
-			} // func Equals
-
 			public void AddRef()
 				=> refCount++;
 
 			public void Dispose()
-			{
-				refCount--;
-			} // proc Dispose
+				=> refCount--;
 
-			public bool TryGetTarget(out T target)
+
+			protected bool TryGetTargetCore(out T target)
 			{
-				if (IsAlive && reference.TryGetTarget(out target))
-					return true;
-				else
+				if (reference.TryGetTarget(out target))
 				{
 					target = null;
 					refCount = 0;
 					return false;
 				}
+				else
+					return true;
+			} // func TryGetTargetCore
+
+			public bool TryGetTarget(out T target)
+			{
+				if (IsAlive && TryGetTargetCore(out target))
+					return true;
+				else
+				{
+					target = null;
+					return false;
+				}
 			} // func TryGetTarget
 
 			public bool IsAlive => refCount > 0;
+		} // class BarcodeTokenBase
+
+		#endregion
+
+		#region -- class BarcodeToken -------------------------------------------------
+
+		private sealed class BarcodeToken<T> : BarcodeTokenBase<T>, IEquatable<T>
+			where T : class
+		{
+			public BarcodeToken(T receiver)
+				: base(receiver)
+			{
+			} // ctor
+
+			public bool Equals(T other)
+				=> TryGetTarget(out var r) && ReferenceEquals(r, other);
 		} // class BarcodeToken
+
+		#endregion
+
+		#region -- class BarcodeTokenPriority -----------------------------------------
+
+		private sealed class BarcodeTokenPriority<T> : BarcodeTokenBase<T>, IComparable<BarcodeTokenPriority<T>>
+			where T : class
+		{
+			private readonly int priority;
+
+			public BarcodeTokenPriority(int priority, T receiver)
+				: base(receiver)
+			{
+				this.priority = priority;
+			} // ctor
+
+			public int CompareTo(BarcodeTokenPriority<T> other)
+			{
+				if (priority == other.priority)
+				{
+					var exists = TryGetTargetCore(out var target);
+					var otherExists = TryGetTargetCore(out var otherTarget);
+					if (exists && otherExists)
+					{
+						if (Equals(target, otherTarget))
+							return 0;
+						else
+							return target.GetHashCode() - other.GetHashCode();
+					}
+					else if (exists && !otherExists)
+						return -1;
+					else if (!exists && otherExists)
+						return 1;
+					else
+						return 0;
+				}
+				else
+					return priority - other.priority;
+			} // func Equals
+
+			public int Priority => priority;
+		} // class BarcodeToken
+
+		#endregion
+
+		#region -- class BarcodeFactory -----------------------------------------------
+
+		private sealed class BarcodeFactory : IComparable<BarcodeFactory>
+		{
+			private readonly int priority;
+			private readonly Func<string, PpsBarcode> decode;
+			
+			public BarcodeFactory(int priority, Func<string, PpsBarcode> decode)
+			{
+				this.priority = priority;
+				this.decode = decode ?? throw new ArgumentNullException(nameof(decode));
+			} // ctor
+
+			public int CompareTo(BarcodeFactory other)
+			{
+				if (priority == other.priority)
+				{
+					if (decode == other.decode)
+						return 0;
+					else
+						return decode.GetHashCode() - other.decode.GetHashCode();
+				}
+				else
+					return priority - other.priority;
+			} // func CompareTo
+
+			public bool TryParse(string text, out PpsBarcode code)
+			{
+				code = decode(text);
+				return code != null && code.IsCodeValid;
+			} // func TryParse
+
+			public int Priority => priority;
+		} // class BarcodeFactory
 
 		#endregion
 
@@ -218,9 +290,13 @@ namespace TecWare.PPSn.UI
 
 		private readonly List<BarcodeToken<IPpsBarcodeProvider>> providers = new List<BarcodeToken<IPpsBarcodeProvider>>();
 		private readonly List<BarcodeToken<IPpsBarcodeReceiver>> receivers = new List<BarcodeToken<IPpsBarcodeReceiver>>();
+		private readonly List<BarcodeTokenPriority<IPpsBarcodeReceiver>> defaultReceivers = new List<BarcodeTokenPriority<IPpsBarcodeReceiver>>();
+		private readonly List<BarcodeFactory> decoders = new List<BarcodeFactory>();
 		private readonly AsyncQueue barcodeProcessQueue = new AsyncQueue();
 
 		private readonly SynchronizationContext synchronizationContext;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
 		public PpsBarcodeService()
@@ -231,6 +307,10 @@ namespace TecWare.PPSn.UI
 		/// <summary>Fire collection reset.</summary>
 		private void FireProvidersChanged()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+
+		#endregion
+
+		#region -- RegisterReceiver, RegisterProvider, RegisterDecoder ----------------
 
 		private static IDisposable Register<T>(List<BarcodeToken<T>> tokens, T item)
 			where T : class
@@ -259,11 +339,53 @@ namespace TecWare.PPSn.UI
 		public IDisposable RegisterReceiver(IPpsBarcodeReceiver receiver)
 			=> Register(receivers, receiver);
 
+		/// <summary>Sets the new active receiver for barcodes.</summary>
+		/// <param name="priority"></param>
+		/// <param name="receiver"></param>
+		/// <returns></returns>
+		public IDisposable RegisterDefaultReceiver(int priority, IPpsBarcodeReceiver receiver)
+		{
+			lock (defaultReceivers)
+			{
+				var token = new BarcodeTokenPriority<IPpsBarcodeReceiver>(priority, receiver);
+				var idx = defaultReceivers.BinarySearch(token);
+				if (idx < 0)
+					defaultReceivers.Insert(~idx, token);
+				else
+					throw new ArgumentException("Already registered.");
+				return token;
+			}
+		} // func RegisterDefaultReceiver
+
 		/// <summary>Register a new barcode provider.</summary>
 		/// <param name="provider"></param>
 		/// <returns></returns>
 		public IDisposable RegisterProvider(IPpsBarcodeProvider provider)
 			=> Register(providers, provider);
+
+		/// <summary>Register a new barcode decoder.</summary>
+		/// <param name="decoder"></param>
+		/// <param name="priority"></param>
+		/// <returns></returns>
+		public bool RegisterDecoder(int priority, Func<string, PpsBarcode> decoder)
+		{
+			lock (decoders)
+			{
+				var f = new BarcodeFactory(priority, decoder);
+				var idx = decoders.BinarySearch(f);
+				if (idx < 0)
+				{
+					decoders.Insert(~idx, f);
+					return true;
+				}
+				else
+					return false;
+			}
+		} // func RegisterDecoder
+
+		#endregion
+
+		#region -- DispatchBarcode ----------------------------------------------------
 
 		/// <summary>Dispatch a barcode to an receiver.</summary>
 		/// <param name="provider">Barcode source.</param>
@@ -293,20 +415,62 @@ namespace TecWare.PPSn.UI
 						}
 
 						// debug message
-						if (receiver != null)
-						{
-							await receiver.OnBarcodeAsync(new PpsBarcodeInfo(this, provider, text, format));
-							Debug.Print($"Barcode dispatched [{provider.Type}/{format}]: {text}");
-						}
-						else
-							Debug.Print($"Barcode not dispatched [{provider.Type}/{format}]: {text}");
+						var info = new PpsBarcodeInfo(this, provider, text, format);
+						if (receiver == null || !await receiver.OnBarcodeAsync(info))
+							await OnDefaultBarcodeAsync(info);
 					}
 				);
 			}, null);
 		} // proc DispatchBarcode
 
+		/// <summary></summary>
+		/// <param name="info"></param>
+		/// <returns></returns>
+		public async Task<bool> OnDefaultBarcodeAsync(PpsBarcodeInfo info)
+		{
+			var activeReseivers = new List<IPpsBarcodeReceiver>();
+			lock (defaultReceivers)
+			{
+				var i = 0;
+				while (i < defaultReceivers.Count)
+				{
+					if (defaultReceivers[i].TryGetTarget(out var r))
+					{
+						activeReseivers.Add(r);
+						i++;
+					}
+					else
+						defaultReceivers.RemoveAt(i);
+				}
+			}
+
+			foreach (var r in activeReseivers)
+			{
+				if (await r.OnBarcodeAsync(info))
+					return true;
+			}
+
+			return false;
+		} // proc OnDefaultBarcodeAsync
+
+		#endregion
+
+		#region -- ParseCode ----------------------------------------------------------
+
 		internal PpsBarcode ParseCode(string rawCode)
-			=> new PpsGenericBarcode(rawCode);
+		{
+			lock (decoders)
+			{
+				for (var i = 0; i < decoders.Count; i++)
+				{
+					if (decoders[i].TryParse(rawCode, out var code))
+						return code;
+				}
+			}
+			return new Barcodes.GenericCode(rawCode);
+		} // func ParseCode
+
+		#endregion
 
 		/// <summary>Enumerate all barcode provider.</summary>
 		/// <returns></returns>

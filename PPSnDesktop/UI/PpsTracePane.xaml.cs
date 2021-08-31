@@ -566,7 +566,7 @@ namespace TecWare.PPSn.UI
 			barcodeList.ItemsSource = cachedBarcodes;
 		} // proc InitBarcodes
 
-		Task IPpsBarcodeReceiver.OnBarcodeAsync(PpsBarcodeInfo code)
+		async Task<bool> IPpsBarcodeReceiver.OnBarcodeAsync(PpsBarcodeInfo code)
 		{
 			while (cachedBarcodes.Count > 20)
 				cachedBarcodes.RemoveAt(0);
@@ -575,16 +575,17 @@ namespace TecWare.PPSn.UI
 			if (dpcService.UnlockWithCode(code.RawCode))
 			{
 				if (isLocked)
-					return ShowUnlockNotificationAsync(true);
+					await ShowUnlockNotificationAsync(true);
 				else
 				{
 					dpcService.Lock();
-					return ShowUnlockNotificationAsync(false);
+					await ShowUnlockNotificationAsync(false);
 				}
 			}
 			else
 				cachedBarcodes.Add(new PpsTraceBarcodeItem(code));
-			return Task.CompletedTask;
+
+			return true;
 		} // event IPpsBarcodeReceiver.OnBarcodeAsync
 
 		/// <summary>Is the barcode receiver active.</summary>

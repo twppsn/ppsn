@@ -191,19 +191,22 @@ namespace TecWare.PPSn.Main
 
 		#region -- IPpsBarcodeReceiver - members --------------------------------------------
 
-		async Task IPpsBarcodeReceiver.OnBarcodeAsync(PpsBarcodeInfo code)
+		async Task<bool> IPpsBarcodeReceiver.OnBarcodeAsync(PpsBarcodeInfo code)
 		{
 			if (CurrentPaneHost.Pane is IPpsBarcodeReceiver receiver && receiver.IsActive)
 			{
 				try
 				{
-					await receiver.OnBarcodeAsync(code);
+					return await receiver.OnBarcodeAsync(code);
 				}
 				catch (Exception e)
 				{
 					await Shell.ShowExceptionAsync(false, e, "Barcode nicht verarbeitet.");
+					return true;
 				}
 			}
+			else
+				return false;
 		} // proc IPpsBarcodeReceiver.OnBarcodeAsync
 
 		#endregion
