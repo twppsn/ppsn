@@ -71,15 +71,89 @@ namespace TecWare.PPSn.UI
 	public interface IPpsBarcodeReceiver //: INotifyPropertyChanged
 	{
 		/// <summary>Callback in UI-Thread with the scanned barcode.</summary>
-		/// <param name="provider"></param>
 		/// <param name="code"></param>
-		/// <param name="format"></param>
 		/// <returns><c>true</c>, if barcode is processed.</returns>
-		Task OnBarcodeAsync(IPpsBarcodeProvider provider, string code, string format);
+		Task OnBarcodeAsync(PpsBarcodeInfo code);
 
 		/// <summary>Is the barcode receiver active.</summary>
 		bool IsActive { get; }
 	} // interface IPpsBarcodeReceiver
+
+	#endregion
+
+	#region -- class PpsBarcode -------------------------------------------------------
+
+	/// <summary>Abstract base of the code.</summary>
+	public abstract class PpsBarcode
+	{
+		/// <summary>Is the current code valid, in this implementation always <c>true</c></summary>
+		public virtual bool IsCodeValid => true;
+
+		/// <summary>Name of the parsed code.</summary>
+		public abstract string CodeName { get; }
+		/// <summary>Return the code as data.</summary>
+		public abstract string Code { get; }
+	} // class PpsBarcode
+
+	#endregion
+
+	#region -- class PpsGenericBarcode ------------------------------------------------
+
+	/// <summary>Fallback implementation for unknown codes.</summary>
+	public sealed class PpsGenericBarcode : PpsBarcode
+	{
+		private readonly string code;
+
+		internal PpsGenericBarcode(string code)
+		{
+			this.code = code;
+		} // ctor
+
+		/// <summary>Test if there is a code.</summary>
+		public override bool IsCodeValid => !String.IsNullOrEmpty(code);
+		/// <summary>Name of the code.</summary>
+		public override string CodeName => String.Empty;
+		/// <summary>Plain code</summary>
+		public override string Code => code;
+	} // class PpsBarcode
+
+	#endregion
+
+	#region -- class PpsBarcodeInfo ---------------------------------------------------
+
+	/// <summary>Event parameter during read</summary>
+	public sealed class PpsBarcodeInfo
+	{
+		private readonly IPpsBarcodeProvider provider;
+		private readonly string rawCode;
+		private readonly string format;
+		private readonly Lazy<PpsBarcode> parseCode;
+
+		internal PpsBarcodeInfo(PpsBarcodeService service, IPpsBarcodeProvider provider, string rawCode, string format)
+		{
+			this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
+			this.rawCode = rawCode ?? throw new ArgumentNullException(nameof(rawCode));
+			this.format = format;
+
+			parseCode = new Lazy<PpsBarcode>(() => service.ParseCode(rawCode));
+		} // ctor
+
+		/// <summary>Return parse code.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		public T Parse<T>()
+			where T : PpsBarcode
+			=> parseCode.Value as T;
+
+		/// <summary>Provider of this code.</summary>
+		public IPpsBarcodeProvider Provider => provider;
+		/// <summary>Raw data of the code.</summary>
+		public string RawCode => rawCode;
+		/// <summary>Optional barcode format, the format of 'picture'.</summary>
+		public string Format => format;
+		/// <summary>Parsed barcode.</summary>
+		public PpsBarcode Code => parseCode.Value;
+	} // class PpsBarcodeInfo
 
 	#endregion
 
@@ -221,7 +295,7 @@ namespace TecWare.PPSn.UI
 						// debug message
 						if (receiver != null)
 						{
-							await receiver.OnBarcodeAsync(provider, text, format);
+							await receiver.OnBarcodeAsync(new PpsBarcodeInfo(this, provider, text, format));
 							Debug.Print($"Barcode dispatched [{provider.Type}/{format}]: {text}");
 						}
 						else
@@ -230,6 +304,9 @@ namespace TecWare.PPSn.UI
 				);
 			}, null);
 		} // proc DispatchBarcode
+
+		internal PpsBarcode ParseCode(string rawCode)
+			=> new PpsGenericBarcode(rawCode);
 
 		/// <summary>Enumerate all barcode provider.</summary>
 		/// <returns></returns>

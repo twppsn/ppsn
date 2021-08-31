@@ -125,13 +125,13 @@ namespace TecWare.PPSn.Bde
 			}
 		} // event Shell_PropertyChanged
 
-		async Task IPpsBarcodeReceiver.OnBarcodeAsync(IPpsBarcodeProvider provider, string text, string format)
+		async Task IPpsBarcodeReceiver.OnBarcodeAsync(PpsBarcodeInfo code)
 		{
 			if (TopPaneHost.Pane is IPpsBarcodeReceiver receiver && receiver.IsActive)
 			{
 				try
 				{
-					await receiver.OnBarcodeAsync(provider, text, format);
+					await receiver.OnBarcodeAsync(code);
 				}
 				catch (Exception e)
 				{

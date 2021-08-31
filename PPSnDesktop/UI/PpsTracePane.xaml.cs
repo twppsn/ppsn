@@ -566,13 +566,13 @@ namespace TecWare.PPSn.UI
 			barcodeList.ItemsSource = cachedBarcodes;
 		} // proc InitBarcodes
 
-		Task IPpsBarcodeReceiver.OnBarcodeAsync(IPpsBarcodeProvider provider, string code, string format)
+		Task IPpsBarcodeReceiver.OnBarcodeAsync(PpsBarcodeInfo code)
 		{
 			while (cachedBarcodes.Count > 20)
 				cachedBarcodes.RemoveAt(0);
 
 			var isLocked = dpcService.IsLocked;
-			if (dpcService.UnlockWithCode(code))
+			if (dpcService.UnlockWithCode(code.RawCode))
 			{
 				if (isLocked)
 					return ShowUnlockNotificationAsync(true);
@@ -583,7 +583,7 @@ namespace TecWare.PPSn.UI
 				}
 			}
 			else
-				cachedBarcodes.Add(new PpsTraceBarcodeItem(provider, code, format));
+				cachedBarcodes.Add(new PpsTraceBarcodeItem(code));
 			return Task.CompletedTask;
 		} // event IPpsBarcodeReceiver.OnBarcodeAsync
 
@@ -656,20 +656,16 @@ namespace TecWare.PPSn.UI
 
 	internal class PpsTraceBarcodeItem
 	{
-		private readonly IPpsBarcodeProvider provider;
-		private readonly string code;
-		private readonly string format;
+		private readonly PpsBarcodeInfo code;
 
-		public PpsTraceBarcodeItem(IPpsBarcodeProvider provider, string code, string format)
+		public PpsTraceBarcodeItem(PpsBarcodeInfo code)
 		{
-			this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
 			this.code = code ?? throw new ArgumentNullException(nameof(code));
-			this.format = format;
 		} // ctor
 
-		public string Provider => "(" + provider.Type + ") " + provider.Description;
-		public string RawCode => code;
-		public string Format => format;
+		public string Provider => "(" + code.Provider.Type + ") " + code.Provider.Description;
+		public string RawCode => code.RawCode;
+		public string Format => code.Format;
 	} // class PpsTraceBarcodeItem
 
 	#endregion

@@ -191,13 +191,13 @@ namespace TecWare.PPSn.Main
 
 		#region -- IPpsBarcodeReceiver - members --------------------------------------------
 
-		async Task IPpsBarcodeReceiver.OnBarcodeAsync(IPpsBarcodeProvider provider, string text, string format)
+		async Task IPpsBarcodeReceiver.OnBarcodeAsync(PpsBarcodeInfo code)
 		{
 			if (CurrentPaneHost.Pane is IPpsBarcodeReceiver receiver && receiver.IsActive)
 			{
 				try
 				{
-					await receiver.OnBarcodeAsync(provider, text, format);
+					await receiver.OnBarcodeAsync(code);
 				}
 				catch (Exception e)
 				{
