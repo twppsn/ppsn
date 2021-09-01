@@ -165,13 +165,13 @@ namespace TecWare.PPSn.UI
 			protected bool TryGetTargetCore(out T target)
 			{
 				if (reference.TryGetTarget(out target))
+					return true;
+				else
 				{
 					target = null;
 					refCount = 0;
 					return false;
 				}
-				else
-					return true;
 			} // func TryGetTargetCore
 
 			public bool TryGetTarget(out T target)
