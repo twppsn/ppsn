@@ -665,6 +665,8 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		public string Provider => "(" + code.Provider.Type + ") " + code.Provider.Description;
+		public string CodeName => code.Code.CodeName;
+		public string Code => code.Code.ToString();
 		public string RawCode => code.RawCode;
 		public string Format => code.Format;
 	} // class PpsTraceBarcodeItem

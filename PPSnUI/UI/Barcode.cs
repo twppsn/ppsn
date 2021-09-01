@@ -302,6 +302,8 @@ namespace TecWare.PPSn.UI
 		public PpsBarcodeService()
 		{
 			synchronizationContext = SynchronizationContext.Current ?? throw new ArgumentNullException(nameof(SynchronizationContext));
+
+			RegisterDecoder(2000, Barcodes.GS1.TryParse);
 		} // ctor
 
 		/// <summary>Fire collection reset.</summary>
@@ -387,41 +389,36 @@ namespace TecWare.PPSn.UI
 
 		#region -- DispatchBarcode ----------------------------------------------------
 
+		private async Task DisposeBarcodeUIAsync(IPpsBarcodeProvider provider, string text, string format)
+		{
+			IPpsBarcodeReceiver receiver = null;
+
+			lock (receivers)
+			{
+				for (var i = receivers.Count - 1; i >= 0; i--)
+				{
+					if (receivers[i].TryGetTarget(out var r))
+					{
+						if (r != null && r.IsActive)
+							receiver = r;
+					}
+					else
+						receivers.RemoveAt(i);
+				}
+			}
+
+			// debug message
+			var info = new PpsBarcodeInfo(this, provider, text, format);
+			if (receiver == null || !await receiver.OnBarcodeAsync(info))
+				await OnDefaultBarcodeAsync(info);
+		} // proc DisposeBarcodeUIAsync
+
 		/// <summary>Dispatch a barcode to an receiver.</summary>
 		/// <param name="provider">Barcode source.</param>
 		/// <param name="text">Barcode text</param>
 		/// <param name="format">Optional barcode format.</param>
 		public void DispatchBarcode(IPpsBarcodeProvider provider, string text, string format = null)
-		{
-			synchronizationContext.Post(state =>
-			{
-				barcodeProcessQueue.Enqueue(
-					async () =>
-					{
-						IPpsBarcodeReceiver receiver = null;
-
-						lock (receivers)
-						{
-							for (var i = receivers.Count - 1; i >= 0; i--)
-							{
-								if (receivers[i].TryGetTarget(out var r))
-								{
-									if (r != null && r.IsActive)
-										receiver = r;
-								}
-								else
-									receivers.RemoveAt(i);
-							}
-						}
-
-						// debug message
-						var info = new PpsBarcodeInfo(this, provider, text, format);
-						if (receiver == null || !await receiver.OnBarcodeAsync(info))
-							await OnDefaultBarcodeAsync(info);
-					}
-				);
-			}, null);
-		} // proc DispatchBarcode
+			=> synchronizationContext.Post(state => barcodeProcessQueue.Enqueue(() => DisposeBarcodeUIAsync(provider, text, format)), null);
 
 		/// <summary></summary>
 		/// <param name="info"></param>

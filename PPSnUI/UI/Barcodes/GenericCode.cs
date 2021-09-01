@@ -29,6 +29,9 @@ namespace TecWare.PPSn.UI.Barcodes
 			this.code = code;
 		} // ctor
 
+		public override string ToString()
+			=> code;
+
 		/// <summary>Test if there is a code.</summary>
 		public override bool IsCodeValid => !String.IsNullOrEmpty(code);
 		/// <summary>Name of the code.</summary>

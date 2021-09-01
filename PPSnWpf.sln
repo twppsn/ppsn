@@ -29,6 +29,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnDesktopMsiExtension", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnDesktopTest", "PPSnDesktopTest\PPSnDesktopTest.csproj", "{8B35EFBD-46D9-4E24-A491-ACC5EC4E89F5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FD0E727A-B660-4EA4-B631-6992FFBE08BC}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		PPSnClient\PPSnClient.projitems*{f2dbcbc9-91be-4964-ad72-d51d2d9f73c0}*SharedItemsImports = 13
@@ -121,7 +126,7 @@ Global
 		{8B35EFBD-46D9-4E24-A491-ACC5EC4E89F5} = {050DF902-A07C-4FDB-9242-E93841CA4036}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {F0AFC2F2-0A01-4CAB-8B21-44C224AFF0A0}
 		RESX_NeutralResourcesLanguage = de-DE
+		SolutionGuid = {F0AFC2F2-0A01-4CAB-8B21-44C224AFF0A0}
 	EndGlobalSection
 EndGlobal

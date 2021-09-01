@@ -150,9 +150,14 @@ namespace TecWare.PPSn.UI
 
 		public bool UnlockWithCode(string code)
 		{
-			isUnlocked = IsDpcUnlockCode(code);
-			CheckIsLockedProperty();
-			return isUnlocked;
+			if (IsDpcUnlockCode(code))
+			{
+				isUnlocked = !isUnlocked;
+				CheckIsLockedProperty();
+				return true;
+			}
+			else
+				return false;
 		} // proc UnlockWithCode
 
 		public bool Lock()

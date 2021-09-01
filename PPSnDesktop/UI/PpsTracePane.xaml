@@ -232,14 +232,17 @@
 						<DataTemplate>
 							<Grid>
 								<Grid.ColumnDefinitions>
-									<ColumnDefinition />
-									<ColumnDefinition />
-									<ColumnDefinition />
+									<ColumnDefinition Width="100" />
+									<ColumnDefinition Width="100" />
+									<ColumnDefinition Width="*" />
 								</Grid.ColumnDefinitions>
 								
 								<TextBlock Grid.Column="0" Margin="4" Text="{Binding Provider,Mode=OneTime}" />
-								<TextBlock Grid.Column="1" Margin="4" Text="{Binding RawCode,Mode=OneTime}" />
-								<TextBlock Grid.Column="2" Margin="4" Text="{Binding Format,Mode=OneTime}" />
+								<TextBlock Grid.Column="1" Margin="4">
+									<Run Text="{Binding CodeName,Mode=OneTime}" /> /
+									<Run Text="{Binding Format,Mode=OneTime}" />
+								</TextBlock>
+								<TextBlock Grid.Column="2" Margin="4" Text="{Binding Code,Mode=OneTime}" />
 							</Grid>
 						</DataTemplate>
 					</ui:PpsListBox.ItemTemplate>
