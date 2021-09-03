@@ -169,7 +169,7 @@
 				<uic:PpsConnectionState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="0,3,8,3" />
 				<ui:PpsSplitButton Margin="0,3,8,3"
                                    Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
-                                   Mode="Dropdown" DisplayMode="Transparent" GeometryName="barcodeScan" ImageOpacity="1"
+                                   Mode="Dropdown" DisplayMode="Transparent" GeometryName="barcodeScan" GeometrySize="18" ImageOpacity="1"
                                    Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}">
 					<ui:PpsSplitButton.Popup>
 						<uic:PpsBarcodePopup Placement="Top" />
