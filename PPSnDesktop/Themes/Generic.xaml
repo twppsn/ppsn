@@ -105,9 +105,9 @@
 													  Foreground="{DynamicResource PPSnActionButtonBrush}" Opacity=".65" />
 								<TextBlock Text="{Binding Text, Mode=OneWay}" VerticalAlignment="Center" Margin="32,0,16,0"
 										   FontSize="18" Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
-								<ui:PpsButton Command="{x:Static ApplicationCommands.Close}" DisplayMode="Transparent" GeometryName="nextPane" GeometrySize="24" 
-											   Foreground="{DynamicResource PPSnWindowForegroundBrush}" ImageOpacity="1"
-											   Grid.Column="1" Width="32" HorizontalAlignment="Left" ToolTip="Schließen" />
+								<ui:PpsButton Command="{x:Static ApplicationCommands.Close}" DisplayMode="Transparent" GeometryName="nextPane" GeometrySize="24"
+											  Foreground="{DynamicResource PPSnWindowForegroundBrush}" ImageOpacity="1" Focusable="False"
+											  Grid.Column="1" Width="32" HorizontalAlignment="Left" ToolTip="Schließen" />
 
 								<ContentPresenter Grid.Row="1" Grid.ColumnSpan="2" Content="{Binding Content, Mode=OneWay}" />
 							</Grid>
@@ -136,11 +136,12 @@
 									<Border x:Name="border" Height="48" BorderThickness="0,0,4,0" BorderBrush="Transparent">
 										<ui:PpsButton Command="{x:Static ui:PpsWindowPaneCharmBarControl.ChangeContentCommand}"
 													  DisplayMode="Transparent"
-													   CommandParameter="{Binding}"
-													   ToolTip="{Binding Text, Mode=OneWay}"
-													   GeometryName="{Binding Image, Mode=OneWay}"
-													   GeometrySize="26"
-													   Foreground="{DynamicResource PPSnActionButtonBrush}" />
+													  CommandParameter="{Binding}"
+													  ToolTip="{Binding Text, Mode=OneWay}"
+													  GeometryName="{Binding Image, Mode=OneWay}"
+													  GeometrySize="26"
+													  Focusable="False"
+													  Foreground="{DynamicResource PPSnActionButtonBrush}" />
 									</Border>
 									<DataTemplate.Triggers>
 										<DataTrigger Binding="{Binding IsActive}" Value="True">
@@ -255,7 +256,8 @@
                                                 DockPanel.Dock="Left" Width="29" Height="29" Margin="-29,0,0,0" 
                                                 DisplayMode="Transparent"
                                                 GeometryName="chevronDownThin"
-                                                GeometrySize="20" />
+                                                GeometrySize="20"
+												Focusable="False" />
 
                             <Rectangle Fill="Transparent">
 								<Rectangle.Tag>
@@ -271,42 +273,44 @@
 						</Rectangle>
 
 						<ui:PpsButton Command="{x:Static ui:PpsWindow.MinimizeCommand}"
-									   ToolTip="Minimieren"
-									   DisplayMode="Transparent"
-									   GeometryName="windowMinimize"
-									   GeometrySize="24"
-									   ImageOpacity="1"
-									   Grid.Column="2"
-									   Width="34"
-									   Height="26"
-									   HorizontalAlignment="Right"
-									   VerticalAlignment="Top"
-									   Margin="0,0,68,0" />
+									  ToolTip="Minimieren"
+									  DisplayMode="Transparent"
+									  GeometryName="windowMinimize"
+									  GeometrySize="24"
+									  ImageOpacity="1"
+									  Grid.Column="2"
+									  Width="34"
+									  Height="26"
+									  HorizontalAlignment="Right"
+									  VerticalAlignment="Top"
+									  Margin="0,0,68,0"
+									  Focusable="False" />
 						<ui:PpsButton x:Name="buttonMaximize"
-									   Command="{x:Static ui:PpsWindow.MaximizeCommand}"
-									   ToolTip="Maximieren"
-									   DisplayMode="Transparent"
-									   GeometryName="windowMaximize"
-									   GeometrySize="24"
-									   ImageOpacity="1"
-									   Grid.Column="2"
-									   Width="34"
-									   Height="26"
-									   HorizontalAlignment="Right"
-									   VerticalAlignment="Top"
-									   Margin="0,0,34,0" />
+									  Command="{x:Static ui:PpsWindow.MaximizeCommand}"
+									  ToolTip="Maximieren"
+									  DisplayMode="Transparent"
+									  GeometryName="windowMaximize"
+									  GeometrySize="24"
+									  ImageOpacity="1"
+									  Grid.Column="2"
+									  Width="34"
+									  Height="26"
+									  HorizontalAlignment="Right"
+									  VerticalAlignment="Top"
+									  Margin="0,0,34,0"
+									  Focusable="False" />
 						<ui:PpsButton Command="{x:Static ui:PpsWindow.CloseCommand}"
-									   ToolTip="Schließen"
-									   DisplayMode="Transparent"
-									   GeometryName="windowClose"
-									   GeometrySize="16"
-									   ImageOpacity="1"
-									   Grid.Column="2"
-									   Width="34"
-									   Height="26"
-									   HorizontalAlignment="Right"
-									   VerticalAlignment="Top" />
-
+									  ToolTip="Schließen"
+									  DisplayMode="Transparent"
+									  GeometryName="windowClose"
+									  GeometrySize="16"
+									  ImageOpacity="1"
+									  Grid.Column="2"
+									  Width="34"
+									  Height="26"
+									  HorizontalAlignment="Right"
+									  VerticalAlignment="Top"
+									  Focusable="False" />
 						<Popup PlacementTarget="{Binding ElementName=showPaneListToggleButton}" Placement="Left" HorizontalOffset="32" VerticalOffset="38"
 							   IsOpen="{Binding IsChecked, ElementName=showPaneListToggleButton}" MaxHeight="600" StaysOpen="False">
 							<Popup.Resources>
@@ -380,7 +384,8 @@
                                                                       GeometryName="closePane"
                                                                       DisplayMode="Transparent"
                                                                       GeometrySize="24"
-                                                                      ImageOpacity="1">
+                                                                      ImageOpacity="1"
+																	  Focusable="False">
 															<Button.Triggers>
 																<EventTrigger RoutedEvent="Button.Click">
 																	<BeginStoryboard Storyboard="{StaticResource ClosePopupStoryboard}" />
@@ -445,7 +450,8 @@
                                           GeometryName="closePane"
                                           DisplayMode="Transparent"
                                           GeometrySize="24"
-                                          ImageOpacity="1" />
+                                          ImageOpacity="1"
+										  Focusable="False" />
 						</Grid>
 					</Border>
 					<ControlTemplate.Triggers>
