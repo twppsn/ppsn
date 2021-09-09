@@ -517,6 +517,14 @@ namespace TecWare.PPSn.UI
 		public int MaxLines { get; set; } = Int32.MaxValue;
 		/// <summary><c>true</c>: Is the resulting string longer the MaxStringLength, ... is added.</summary>
 		public bool EndEllipse { get; set; } = false;
+		/// <summary>Separator between lines.</summary>
+		public string Separator { get; set; } = " ";
+		/// <summary>Separator between lines.</summary>
+		public bool UseNewLine
+		{
+			get => Separator == Environment.NewLine;
+			set => Separator = value ? Environment.NewLine : " ";
+		} // prop UseNewLine
 
 		/// <summary></summary>
 		public static MultiToSingleLineConverterParameter Default { get; } = new MultiToSingleLineConverterParameter();
@@ -562,7 +570,7 @@ namespace TecWare.PPSn.UI
 			else if (value is string s)
 			{
 				var p = GetParameter(parameter);
-				var r = String.Join(" ", GetLines(s, p));
+				var r = String.Join(p.Separator, GetLines(s, p));
 				if (p.EndEllipse && r.Length > p.MaxStringLength && p.MaxStringLength > 3)
 					r = r.Substring(0, p.MaxStringLength - 3) + "...";
 				return r;

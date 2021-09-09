@@ -23,6 +23,8 @@
 					KeyboardNavigation.TabIndex="1" SnapsToDevicePixels="True">
 				<ContentPresenter x:Name="PART_SelectedContentHost"
 								  ContentSource="SelectedContent"
+								  HorizontalAlignment="Stretch"
+								  VerticalAlignment="Stretch"
 								  Margin="{TemplateBinding Padding}" />
 			</Border>
 			<Rectangle x:Name="PART_SelectionMarker"

@@ -154,6 +154,7 @@ namespace TecWare.PPSn
 
 			// execute method
 			this.control = control;
+
 			CallMemberDirect("OnCreated", new object[] { control, arguments }, ignoreNilFunction: true);
 		} // proc IPpsLuaCodeBehind.OnControlCreated
 
@@ -163,6 +164,9 @@ namespace TecWare.PPSn
 		/// <summary>Control that is bound to the code</summary>
 		[LuaMember]
 		public FrameworkElement Control => control;
+		/// <summary></summary>
+		[LuaMember]
+		public LuaTable Self => this;
 	} // class PpsLuaCodeBehind
 
 	#endregion

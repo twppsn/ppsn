@@ -791,7 +791,10 @@ namespace TecWare.PPSn.Data
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 			private void Row_ColumnChanged(object sender, PpsLiveDataColumnChangedEventArgs e)
-				=> OnPropertyChanged(Columns[e.Index].Name);
+			{
+				if (Columns[e.Index] is PpsLiveDataColumn col && col.HasProperty)
+					OnPropertyChanged(col.PropertyName);
+			} // proc Row_ColumnChanged
 
 			#endregion
 

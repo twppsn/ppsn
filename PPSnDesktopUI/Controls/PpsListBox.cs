@@ -836,7 +836,7 @@ namespace TecWare.PPSn.Controls
 		} // proc SetStyleForCell
 
 		protected override void InvalidateArrangeFromCellGenerator()
-			=> InvalidateMeasure();
+			=> InvalidateArrange();
 
 		protected override bool IsHeader => true;
 	} // class PpsListColumnHeader

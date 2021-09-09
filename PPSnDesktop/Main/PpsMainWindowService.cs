@@ -54,7 +54,7 @@ namespace TecWare.PPSn.Main
 		IEnumerable<IPpsMainWindow> MainWindows { get; }
 		/// <summary>Get all child pane manager</summary>
 		IEnumerable<IPpsWindowPaneManager> PaneManagers { get; }
-	} // interface IPpsGlobalWindowPaneManager
+	} // interface IPpsMainWindowService
 
 	#endregion
 
