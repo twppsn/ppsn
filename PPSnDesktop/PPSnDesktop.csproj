@@ -22,10 +22,10 @@
 	<ItemGroup>
 	  <PackageReference Include="AForge.Video" Version="2.2.5" />
 	  <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
-	  <PackageReference Include="Neo.Markdig.Xaml" Version="1.0.9" />
+	  <PackageReference Include="Neo.Markdig.Xaml" Version="1.0.10" />
 	  <PackageReference Include="NeoLua" Version="1.3.13" />
 	  <PackageReference Include="NeoLuaDebug" Version="1.3.13" />
-	  <PackageReference Include="TecWare.DES.Core" Version="3.4.75" />
+	  <PackageReference Include="TecWare.DES.Core" Version="3.4.78" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\PPSnCore\PPSnCore.csproj" />
