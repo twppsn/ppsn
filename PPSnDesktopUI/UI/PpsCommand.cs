@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -758,8 +759,17 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register(nameof(IsVisible), typeof(bool), typeof(PpsUICommand), new FrameworkPropertyMetadata(BooleanBox.True));
 		/// <summary></summary>
 		public event EventHandler OrderChanged;
+		/// <summary></summary>
+		public event EventHandler IsVisibleChanged;
 
 		private PpsCommandOrder order = PpsCommandOrder.Empty;
+
+		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+		{
+			if (e.Property == IsVisibleProperty)
+				IsVisibleChanged?.Invoke(this, EventArgs.Empty);
+			base.OnPropertyChanged(e);
+		} // proc OnPropertyChanged
 
 		/// <summary>Position of the command.</summary>
 		public PpsCommandOrder Order
@@ -978,12 +988,12 @@ namespace TecWare.PPSn.UI
 		} // event CommandIsVisibleChanged
 
 		private void AddIsVisibleHandler(PpsUICommand command)
-			=> isVisiblePropertyDescriptor.AddValueChanged(command, CommandIsVisibleChanged);
+			=> WeakEventManager<PpsUICommand, EventArgs>.AddHandler(command, nameof(PpsUICommand.IsVisibleChanged), CommandIsVisibleChanged);
 
 		private void RemoveIsVisibleHandler(PpsUICommand command)
 		{
 			if (command != null)
-				isVisiblePropertyDescriptor.RemoveValueChanged(command, CommandIsVisibleChanged);
+				WeakEventManager<PpsUICommand, EventArgs>.RemoveHandler(command, nameof(PpsUICommand.IsVisibleChanged), CommandIsVisibleChanged);
 		} // proc RemoveIsVisibleHandler
 
 		private int AppendCommandCore(PpsUICommand cmd)
@@ -1091,8 +1101,6 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Number of rows in this view.</summary>
 		public sealed override int Count => viewCommands.Count;
-
-		private static readonly DependencyPropertyDescriptor isVisiblePropertyDescriptor = DependencyPropertyDescriptor.FromProperty(PpsUICommand.IsVisibleProperty, typeof(PpsUICommand));
 	} // class PpsUICommandsView
 
 	#endregion

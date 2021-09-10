@@ -81,7 +81,7 @@ namespace TecWare.PPSn.Bde
 				settings = new PpsWindowApplicationSettings(this, "bde");
 
 			Shell.GetService<IPpsIdleService>(true).Add(this);
-			
+
 			UpdateDateTimeFormat();
 
 			if (Shell.Settings.UseTouchKeyboard ?? PpsDpcService.GetIsShellMode())
@@ -114,7 +114,7 @@ namespace TecWare.PPSn.Bde
 				if (Shell.ConnectionState == PpsCommunicationState.Connected)
 				{
 					paneContent.IsEnabled = true;
-					disconnectProgress.Visibility = Visibility.Hidden; 
+					disconnectProgress.Visibility = Visibility.Hidden;
 				}
 				else
 				{
@@ -178,6 +178,11 @@ namespace TecWare.PPSn.Bde
 				panes.Remove(topPane);
 				SetValue(topPaneHostPropertyKey, panes.LastOrDefault());
 				virtualKeyboard.Hide();
+#if DEBUG
+				GC.Collect();
+				GC.WaitForPendingFinalizers();
+				GC.Collect();
+#endif
 				return true;
 			}
 			else
@@ -191,7 +196,7 @@ namespace TecWare.PPSn.Bde
 		{
 			// find the index in stack
 			var idx = panes.IndexOf(paneHost);
-			if(idx == -1)
+			if (idx == -1)
 				throw GetPaneStackException();
 
 			// pop complete stack to this pane

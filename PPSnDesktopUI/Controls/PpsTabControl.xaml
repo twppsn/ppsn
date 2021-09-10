@@ -23,8 +23,6 @@
 					KeyboardNavigation.TabIndex="1" SnapsToDevicePixels="True">
 				<ContentPresenter x:Name="PART_SelectedContentHost"
 								  ContentSource="SelectedContent"
-								  HorizontalAlignment="Stretch"
-								  VerticalAlignment="Stretch"
 								  Margin="{TemplateBinding Padding}" />
 			</Border>
 			<Rectangle x:Name="PART_SelectionMarker"
@@ -38,7 +36,6 @@
 				<Rectangle.RenderTransform>
 					<TranslateTransform Y="-2" />
 				</Rectangle.RenderTransform>
-
 			</Rectangle>
 		</Grid>
 	</ControlTemplate>
@@ -156,6 +153,8 @@
 	<Style TargetType="{x:Type pps:PpsTabItem}">
 		<Setter Property="Template" Value="{StaticResource PpsTabItemTemplate}" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="HorizontalContentAlignment" Value="Stretch" />
+		<Setter Property="VerticalContentAlignment" Value="Stretch" />
 		<Setter Property="Stylus.IsPressAndHoldEnabled" Value="False" />
 		<Style.Triggers>
 			<!--Bring to front-->

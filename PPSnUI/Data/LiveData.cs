@@ -1221,7 +1221,7 @@ namespace TecWare.PPSn.Data
 
 			public override PpsDataFilterExpression CreateCompareFilter(PpsDataFilterCompareExpression expression)
 				=> new PpsDataFilterCompareExpression(TranslateOperand(expression.Operand), expression.Operator, expression.Value);
-			
+
 			public override PpsDataFilterExpression CreateCompareIn(string operand, PpsDataFilterArrayValue values)
 				=> new PpsDataFilterCompareExpression(TranslateOperand(operand), PpsDataFilterCompareOperator.Contains, values);
 
@@ -1891,7 +1891,7 @@ namespace TecWare.PPSn.Data
 	#endregion
 
 	#region -- class PpsLiveDataColumnChangedEventArgs --------------------------------
-	
+
 	/// <summary>Change event for rows</summary>
 	public sealed class PpsLiveDataColumnChangedEventArgs : EventArgs
 	{
@@ -3011,7 +3011,7 @@ namespace TecWare.PPSn.Data
 
 			public void ViewCreated(string tableName, string typeName)
 				=> WriteLine($"Create view: {tableName} [{typeName}]");
-			
+
 			public void ViewRefresh(string tableName, string filter)
 				=> WriteLine($"Refresh view: {tableName} > {filter}");
 
@@ -3060,7 +3060,7 @@ namespace TecWare.PPSn.Data
 		private sealed class MergeUpdateItem
 		{
 			private readonly Table table;
-			
+
 			private readonly int primaryKeyIndex;
 			private readonly object[] values;
 
@@ -3297,7 +3297,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private struct VoidResult {  }
+		private struct VoidResult { }
 
 		/// <summary>Some data changed.</summary>
 		public event EventHandler DataChanged;
@@ -3632,7 +3632,7 @@ namespace TecWare.PPSn.Data
 
 			if (enforceServerSync)
 				Interlocked.CompareExchange(ref scheduledEnforce, 1, 0);
-			
+
 			var t = backgroundTask.RunAsync();
 			return Notify == null ? t : DebugWaitForSync(t);
 		} // proc WaitForSync

@@ -162,12 +162,11 @@
                         </Style>
                     </ui:PpsButton.Style>
                 </ui:PpsButton>
-                <ui:PpsCommandBar
-                    ExternalCommands="{Binding TopPaneHost.Commands}"
-                    Mode="Mixed"
-                    Margin="64,0,16,0"
-                    ButtonHeight="40"
-                    HorizontalAlignment="Right" />
+                <ui:PpsCommandBar ExternalCommands="{Binding TopPaneHost.Commands}"
+								  Mode="Mixed"
+								  Margin="64,0,16,0"
+								  ButtonHeight="40"
+								  HorizontalAlignment="Right" />
             </Grid>
         </Border>
 	</Grid>

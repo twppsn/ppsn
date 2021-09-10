@@ -66,7 +66,7 @@ namespace TecWare.PPSn.Controls
 		public override string ToString()
 			=> $"{mode}:{commandBarItemType?.Name ?? "Separator"}";
 
-		public override object ProvideValue(IServiceProvider serviceProvider) 
+		public override object ProvideValue(IServiceProvider serviceProvider)
 			=> this;
 
 		public PpsCommandBarMode Mode => mode;
@@ -155,10 +155,10 @@ namespace TecWare.PPSn.Controls
 		#region -- Mode - Property ----------------------------------------------------
 
 		/// <summary>Sets the Style for the UI</summary>
-		public static readonly DependencyProperty ModeProperty = DependencyProperty.Register(nameof(Mode), typeof(PpsCommandBarMode), typeof(PpsCommandBar), 
+		public static readonly DependencyProperty ModeProperty = DependencyProperty.Register(nameof(Mode), typeof(PpsCommandBarMode), typeof(PpsCommandBar),
 			new FrameworkPropertyMetadata(
-				PpsCommandBarMode.Mixed, 
-				FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender, 
+				PpsCommandBarMode.Mixed,
+				FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender,
 				new PropertyChangedCallback(OnModeChanged)
 			)
 		);
