@@ -26,6 +26,7 @@ using Microsoft.Win32;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Stuff;
 using static TecWare.PPSn.NativeMethods;
 
 namespace TecWare.PPSn.UI
@@ -46,8 +47,10 @@ namespace TecWare.PPSn.UI
 	[
 	PpsService(typeof(PpsDpcService))
 	]
-	internal class PpsDpcService : ObservableObject, IPpsShellService
+	internal class PpsDpcService : IPpsShellService, INotifyPropertyChanged
 	{
+		private readonly WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs> propertyChangedList = new WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs>();
+
 		private readonly IPpsShell shell;
 		private bool isUnlocked = false;
 		private bool isLocked;
@@ -74,6 +77,28 @@ namespace TecWare.PPSn.UI
 			else if (conditions.TryGetValue(e.PropertyName, out var condition) && condition.IsChanged(shell.Settings))
 				ScheduleRestart(condition.ToString());
 		} // event Settings_PropertyChanged
+
+		#endregion
+
+		#region -- Property Changed ---------------------------------------------------
+
+		public event PropertyChangedEventHandler PropertyChanged
+		{
+			add => propertyChangedList.Add(value);
+			remove => propertyChangedList.Remove(value);
+		} // event PropertyChanged
+
+		private bool Set<T>(ref T field, T value, string propertyName)
+		{
+			if (!Equals(field, value))
+			{
+				field = value;
+				propertyChangedList.Invoke(this, new PropertyChangedEventArgs(propertyName));
+				return true;
+			}
+			else
+				return false;
+		} // func Set
 
 		#endregion
 

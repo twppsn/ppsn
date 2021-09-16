@@ -88,5 +88,5 @@ namespace TecWare.PPSn.UI
 		} // proc OnUnloadAsync
 
 		#endregion
-	} // class PpsLuaWindowPaneControl
+	} // class PpsLuaWindowPane
 }

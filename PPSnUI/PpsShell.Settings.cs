@@ -22,6 +22,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Threading.Tasks;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
@@ -179,8 +180,14 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		private readonly WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs> propertyChangedList = new WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs>();
+
 		/// <summary>A setting is changed.</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler PropertyChanged
+		{
+			add => propertyChangedList.Add(value);
+			remove => propertyChangedList.Remove(value);
+		} // event PropertyChanged
 
 		private readonly IPpsSettingsService settingsService;
 		private readonly Dictionary<string, string> cachedSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -242,7 +249,7 @@ namespace TecWare.PPSn
 
 			// invoke property changed
 			foreach (var cur in dirtyProperties)
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(cur));
+				propertyChangedList.Invoke(this, new PropertyChangedEventArgs(cur));
 		} // proc OnPropertyChanged
 
 		#endregion
@@ -542,8 +549,14 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		private readonly WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs> propertyChangedList = new WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs>();
+
 		/// <summary>Is a property changed.</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler PropertyChanged
+		{
+			add => propertyChangedList.Add(value);
+			remove => propertyChangedList.Remove(value);
+		} // event PropertyChanged
 
 		private readonly Dictionary<string, SettingBase> knownSettings = new Dictionary<string, SettingBase>(StringComparer.OrdinalIgnoreCase);
 		private bool isDisposed = false;
@@ -697,7 +710,7 @@ namespace TecWare.PPSn
 		/// <param name="key"></param>
 		/// <param name="value"></param>
 		protected virtual void OnSettingChanged(string key, string value)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(key));
+			=> propertyChangedList.Invoke(this, new PropertyChangedEventArgs(key));
 
 		/// <summary>Override to support a update scope.</summary>
 		/// <returns></returns>

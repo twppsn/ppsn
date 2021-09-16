@@ -810,8 +810,20 @@ namespace TecWare.PPSn
 
 		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, ILogger, IPpsLogService, IDisposable
 		{
-			public event PropertyChangedEventHandler PropertyChanged;
-			public event EventHandler Disposed;
+			private readonly WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs> propertyChangedList = new WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs>();
+			private readonly WeakEventList<EventHandler, EventArgs> disposedList = new WeakEventList<EventHandler, EventArgs>();
+
+			public event PropertyChangedEventHandler PropertyChanged
+			{
+				add => propertyChangedList.Add(value);
+				remove => propertyChangedList.Remove(value);
+			} // event PropertyChanged
+
+			public event EventHandler Disposed
+			{
+				add => disposedList.Add(value);
+				remove => disposedList.Remove(value);
+			} // event Disposed
 
 			private readonly IServiceProvider parentProvider;
 			private readonly IPpsShellInfo info;
@@ -854,7 +866,7 @@ namespace TecWare.PPSn
 				if (currentShell == this)
 					SetCurrent(null);
 
-				Disposed?.Invoke(this, EventArgs.Empty);
+				disposedList.Invoke(this, EventArgs.Empty);
 
 				// stop background worker
 				serverSettingsTask?.Dispose();
@@ -958,7 +970,7 @@ namespace TecWare.PPSn
 			} // event Info_PropertyChanged
 
 			private void OnPropertyChanged(string propertyName)
-				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+				=> propertyChangedList.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 			IPpsShellBackgroundTask IPpsShell.RegisterTask(Func<Task> taskAction, TimeSpan waitTime)
 				=> backgroundWorker.RegisterTask(taskAction, waitTime);
@@ -1328,7 +1340,13 @@ namespace TecWare.PPSn
 
 		private sealed class PpsSettingsProxy : ProxyImplementation, IPpsSettingsService
 		{
-			public event PropertyChangedEventHandler PropertyChanged;
+			private readonly WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs> propertyChangedList = new WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs>();
+
+			public event PropertyChangedEventHandler PropertyChanged
+			{
+				add => propertyChangedList.Add(value);
+				remove => propertyChangedList.Add(value);
+			} // event PropertyChanged
 
 			private IPpsSettingsService currentSettingsService = null;
 
@@ -1364,7 +1382,7 @@ namespace TecWare.PPSn
 			} // proc OnCurrentPropertyChanged
 
 			private void CurrentSettingsService_PropertyChanged(object sender, PropertyChangedEventArgs e)
-				=> PropertyChanged.Invoke(this, e);
+				=> propertyChangedList.Invoke(this, e);
 
 			IEnumerable<KeyValuePair<string, string>> IPpsSettingsService.Query(params string[] filter)
 				=> currentSettingsService?.Query(filter) ?? Array.Empty<KeyValuePair<string, string>>();
@@ -1382,7 +1400,13 @@ namespace TecWare.PPSn
 
 		private sealed class PpsCommunicationProxy : ProxyImplementation, IPpsCommunicationService
 		{
-			public event PropertyChangedEventHandler PropertyChanged;
+			private readonly WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs> propertyChangedList = new WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs>();
+
+			public event PropertyChangedEventHandler PropertyChanged
+			{
+				add => propertyChangedList.Add(value);
+				remove => propertyChangedList.Remove(value);
+			} // event PropertyChanged
 
 			public PpsCommunicationProxy()
 			{
@@ -1413,7 +1437,7 @@ namespace TecWare.PPSn
 			} // proc OnCurrentPropertyChanged
 
 			private void OnPropertyChanged(PropertyChangedEventArgs e)
-				=> PropertyChanged?.Invoke(this, e);
+				=> propertyChangedList.Invoke(this, e);
 
 			public DEHttpClient Http => currentShell?.Http;
 
@@ -1469,9 +1493,15 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		/// <summary>Is the current shell changed.</summary>
-		public static event EventHandler CurrentChanged;
+		private static readonly WeakEventList<EventHandler, EventArgs> currentChangedList = new WeakEventList<EventHandler, EventArgs>();
 
+		/// <summary>Is the current shell changed.</summary>
+		public static event EventHandler CurrentChanged
+		{
+			add => currentChangedList.Add(value);
+			remove => currentChangedList.Remove(value);
+		} // event CurrentChanged
+		
 		private static readonly ServiceContainer global = new ServiceContainer();
 		private static readonly Lazy<Version> appVersion = new Lazy<Version>(GetAppVersion);
 		private static readonly List<Type> shellServices = new List<Type>();
@@ -1568,7 +1598,7 @@ namespace TecWare.PPSn
 			if (currentShell != value)
 			{
 				currentShell = value;
-				CurrentChanged?.Invoke(null, EventArgs.Empty);
+				currentChangedList.Invoke(null, EventArgs.Empty);
 			}
 		} // proc SetCurrent
 

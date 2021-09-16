@@ -321,7 +321,7 @@ namespace TecWare.PPSn.Lua
 			{
 				var luaFrames = new List<LuaStackFrame>();
 				var offsetForRecalc = 0;
-				LuaExceptionData currentData = null;
+				LuaExceptionData currentData;
 
 				// get default exception data
 				if (e.Exception.Data[LuaRuntimeException.ExceptionDataKey] is LuaExceptionData)
@@ -348,8 +348,8 @@ namespace TecWare.PPSn.Lua
 		#endregion
 
 		private readonly IPpsShell shell;
-		private readonly LuaCompileOptions scriptCompileOptions;
-		private readonly LuaCompileOptions commandCompileOptions;
+		//private readonly LuaCompileOptions scriptCompileOptions;
+		//private readonly LuaCompileOptions commandCompileOptions;
 
 		private readonly PpsLuaHttp http;
 		private readonly PpsLuaUI ui;
@@ -362,8 +362,8 @@ namespace TecWare.PPSn.Lua
 			http = new PpsLuaHttp(this);
 			ui = new PpsLuaUI(this);
 
-			scriptCompileOptions = new LuaCompileOptions { DebugEngine = new PpsLuaDebugger() };
-			commandCompileOptions = new LuaCompileOptions { DebugEngine = LuaStackTraceDebugger.Default };
+			//scriptCompileOptions = new LuaCompileOptions { DebugEngine = new PpsLuaDebugger() };
+			//commandCompileOptions = new LuaCompileOptions { DebugEngine = LuaStackTraceDebugger.Default };
 		} // ctor
 
 		#region -- Require ------------------------------------------------------------
@@ -422,8 +422,10 @@ namespace TecWare.PPSn.Lua
 			var name = source ?? "cmd.lua";
 			try
 			{
-				var compileOptions = String.IsNullOrEmpty(source) ? commandCompileOptions : scriptCompileOptions;
-				return await Task.Run(() => Lua.CompileChunk(code, name, compileOptions, arguments));
+				var compileOptions = String.IsNullOrEmpty(source)
+					? new LuaCompileOptions { }
+					: new LuaCompileOptions { DebugEngine = new PpsLuaDebugger() };
+				return await Task.Run(() => Lua.CompileChunk(code, name, null, arguments));
 			}
 			catch (LuaParseException e)
 			{

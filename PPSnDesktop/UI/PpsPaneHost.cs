@@ -147,7 +147,7 @@ namespace TecWare.PPSn.UI
 		} // proc LoadAsync
 
 		protected virtual Task<bool> OnUnloadPaneAsync(IPpsWindowPane pane, bool? commit)
-			=> pane?.UnloadAsync(commit);
+			=> pane?.UnloadAsync(commit) ?? Task.FromResult(true);
 
 		/// <summary>Unload pane content.</summary>
 		/// <param name="commit"></param>
@@ -165,7 +165,6 @@ namespace TecWare.PPSn.UI
 				if (pane is IDisposable d)
 					d.Dispose();
 			}
-
 			return r;
 		} // func UnloadPaneAsync
 
