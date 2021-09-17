@@ -1123,6 +1123,11 @@ namespace TecWare.PPSn.Controls
 			return token;
 		} // func EnforceNavigationToken
 
+		/// <summary>Reload the last request.</summary>
+		/// <returns></returns>
+		public Task ReloadAsync()
+			=> CurrentHistoryItem != null ? SetUriAsync(CurrentHistoryItem.Uri, false, false) : Task.CompletedTask;
+
 		#endregion
 
 		#region -- Source, History - management ---------------------------------------
