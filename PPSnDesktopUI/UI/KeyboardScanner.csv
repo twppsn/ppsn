@@ -1,9 +1,12 @@
 ﻿VID;PID;LC;Name
 0xE851;0x1000;;Aibecy Generic
+0x0145;0x0012;;Tera Barcode
 0x11FA;0x0200;;Code CR1400
 0x11FA;0x0208;;Code CR2600
 0x03F0;0x034A;;DataLogic Gryphon GPT 4400
-0x0581;0x0107;;Inateck
+0x0581;0x0107;;InaTech
+0x0581;0x011A;00020409;InaTech BCST-52
+0x0581;0x011C;;Alacrity
 0x05F9;0x220C;;DataLogic Gryphon IGD
 0x05F9;0x220A;;DataLogic Gryphon GPT 4400
 0x05F9;0x2210;;DataLogic PN9500
@@ -45,5 +48,5 @@
 0x1D57;0x001C;;TaoTronics TT-BS003
 0x1447;0x8047;;Cognex DM8600
 0x00010111;1;;Opticon OPN (Bluetooth)
-0x000123A1;1234;;DataLogic QuickScan QBT 2400 (Bluetooth)
+0x000123A1;0x00001234;;DataLogic QuickScan QBT 2400 (Bluetooth)
 0x6352;0x681B;;EloRFID
