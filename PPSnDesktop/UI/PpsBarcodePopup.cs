@@ -46,7 +46,12 @@ namespace TecWare.PPSn.UI
 			if (provider != null)
 				provider.AddCommandBinding(this);
 
-			DataContext = provider;
+			var popupTemplate = this.FindResource<DataTemplate>("popupTemplate");
+			Child = new ContentControl
+			{
+				ContentTemplate = popupTemplate,
+				Content = provider
+			};
 		} // proc OnInitialized
 
 		private void Button_Click(object sender, RoutedEventArgs e)

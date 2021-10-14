@@ -483,9 +483,8 @@
 	</Style>
 
 	<Style TargetType="uic:PpsBarcodePopup">
-		<Setter Property="StaysOpen" Value="False" />
-		<Setter Property="Child">
-			<Setter.Value>
+		<Style.Resources>
+			<DataTemplate x:Key="popupTemplate">
 				<ui:PpsPopupContent GeometryName="barcodeScan" Header="Barcode">
 					<Grid Margin="16" IsSharedSizeScope="True">
 						<Grid.RowDefinitions>
@@ -500,7 +499,7 @@
 											<ColumnDefinition SharedSizeGroup="column1" />
 											<ColumnDefinition SharedSizeGroup="column2" />
 										</Grid.ColumnDefinitions>
-										<ui:PpsButton x:Name="sendBarcodeButton" Grid.Column="0" Margin="0,0,6,6" Content="{Binding}" Command="{x:Static uic:PpsBarcodePopup.SendBarcodeCommand}" CommandParameter="{Binding}" />
+										<ui:PpsButton Grid.Column="0" Margin="0,0,6,6" Content="{Binding}" Command="{x:Static uic:PpsBarcodePopup.SendBarcodeCommand}" CommandParameter="{Binding}" />
 										<ui:PpsButton Grid.Column="1" Margin="0,0,0,6" Content="x" Command="{x:Static uic:PpsBarcodePopup.RemoveBarcodeCommand}" CommandParameter="{Binding}" />
 									</Grid>
 								</DataTemplate>
@@ -512,12 +511,13 @@
 								<ColumnDefinition Width="60" SharedSizeGroup="column2" />
 							</Grid.ColumnDefinitions>
 							<ui:PpsTextBox x:Name="barcodeText" MinWidth="150" Margin="0,0,6,0" />
-							<ui:PpsButton x:Name="sendBarcodeButton" Grid.Column="1" Content="Send" Command="{x:Static uic:PpsBarcodePopup.SendBarcodeCommand}" CommandParameter="{Binding Source={x:Reference barcodeText}}" />
+							<ui:PpsButton Grid.Column="1" Content="Send" Command="{x:Static uic:PpsBarcodePopup.SendBarcodeCommand}" CommandParameter="{Binding ElementName=barcodeText}" />
 						</Grid>
 					</Grid>
 				</ui:PpsPopupContent>
-			</Setter.Value>
-		</Setter>
+			</DataTemplate>
+		</Style.Resources>
+		<Setter Property="StaysOpen" Value="False" />
 	</Style>
 
     <Style TargetType="uic:PpsBarcodeState">
