@@ -787,7 +787,7 @@ namespace TecWare.PPSn.Data
 				type.GetDataTable(data).Register(this);
 			} // ctor
 
-			private void OnPropertyChanged(string propertyName)
+			protected void OnPropertyChanged(string propertyName)
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 			private void Row_ColumnChanged(object sender, PpsLiveDataColumnChangedEventArgs e)
@@ -923,6 +923,7 @@ namespace TecWare.PPSn.Data
 				{
 					key = newKey;
 					FireLiveKeyChanged();
+					OnPropertyChanged(nameof(Key));
 				}
 			} // proc SetValueKey
 

@@ -284,6 +284,24 @@ namespace TecWare.PPSn
 			}
 		} // func GetProperties
 
+		/// <summary>Group keys relative to a baseKey</summary>
+		/// <param name="baseKey"></param>
+		/// <param name="groupName"></param>
+		/// <param name="subKeys"></param>
+		/// <returns></returns>
+		public PpsSettingsGroup GetGroup(string baseKey, string groupName, params string[] subKeys)
+		{
+			if (subKeys.Length == 0)
+				throw new ArgumentNullException(nameof(subKeys));
+
+			// create full keys
+			var fullKeys = new string[subKeys.Length];
+			for (var i = 0; i < fullKeys.Length; i++)
+				fullKeys[i] = baseKey + "." + subKeys[i];
+
+			return new PpsSettingsGroup(this, groupName, fullKeys);
+		} // func GetGroup
+
 		/// <summary>Get grouped keys.</summary>
 		/// <param name="baseKey"></param>
 		/// <param name="requestAllSubKeys"></param>
