@@ -339,7 +339,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="message"></param>
 		/// <param name="innerException"></param>
-		public PpsUserException(string message, Exception innerException)
+		public PpsUserException(string message, Exception innerException = null)
 			: base(message, innerException)
 		{
 		}

@@ -438,7 +438,7 @@ namespace PPSnExcel
 
 			private PpsDataFilterValue GetRangeValue(Excel.Range range)
 			{
-				if (range.Row > 1)
+				if (range.Rows.Count > 1)
 				{
 					var values = new List<PpsDataFilterValue>();
 					for (var i = 1; i <= range.Row; i++)
