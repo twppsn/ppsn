@@ -416,8 +416,8 @@ namespace TecWare.PPSn.Server
 			{
 				FillMode = pathFill == "nonzero" ? FillMode.Winding : FillMode.Alternate
 			};
-			
-			foreach (var seg in SvgPathBuilder.Parse(path))
+
+			foreach (var seg in SvgPathBuilder.Parse(new ReadOnlySpan<char>(path.ToCharArray())))
 				seg.AddToPath(graphicsPath);
 
 			g.FillPath(brush, graphicsPath);

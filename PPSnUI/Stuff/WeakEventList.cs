@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace TecWare.PPSn.Stuff
@@ -26,29 +27,72 @@ namespace TecWare.PPSn.Stuff
 		where TEVENT : Delegate
 		where TEVENTARGS : EventArgs
 	{
-		private readonly List<WeakReference<TEVENT>> handler = new List<WeakReference<TEVENT>>();
+		#region -- class WeakEventSlot ------------------------------------------------
+
+		private sealed class WeakEventSlot
+		{
+			private WeakReference targetReference;
+			private MethodInfo method;
+
+			public WeakEventSlot(TEVENT ev)
+			{
+				Set(ev);
+			} // ctor
+
+			public bool IsEqual(TEVENT ev)
+				=> IsAlive && ReferenceEquals(ev.Target, targetReference.Target) && ev.Method == method;
+
+			public bool Set(TEVENT ev)
+			{
+				if (ev == null)
+				{
+					targetReference = null;
+					method = null;
+				}
+				else
+				{
+					targetReference = ev.Target != null ? new WeakReference(ev.Target) : null;
+					method = ev.Method;
+				}
+				return true;
+			} // proc Set
+
+			public bool TryGet(out Delegate ev)
+			{
+				if (IsAlive)
+				{
+					if (targetReference == null)
+						ev = Delegate.CreateDelegate(typeof(TEVENT), method);
+					else
+						ev = Delegate.CreateDelegate(typeof(TEVENT), targetReference.Target, method);
+					return true;
+				}
+				else
+				{
+					ev = null;
+					return false;
+				}
+			} // func TryGet
+
+			public bool IsAlive => targetReference == null || targetReference.IsAlive;
+		} // class WeakEventSlot
+
+		#endregion
+
+		private readonly List<WeakEventSlot> slots = new List<WeakEventSlot>();
 
 		/// <summary></summary>
 		public WeakEventList()
 		{
 		} // ctor
 
-		private bool Enumerate<T>(Func<int, TEVENT, T, bool> action, T arg)
+		private bool Enumerate(Func<WeakEventSlot, bool> action)
 		{
 			var ret = false;
-			for (var i = handler.Count - 1; i >= 0; i--)
+			for (var i = slots.Count - 1; i >= 0; i--)
 			{
-				if (handler[i] != null && handler[i].TryGetTarget(out var ev))
-				{
-					if (!ret)
-						ret = action(i, ev, arg);
-				}
-				else
-				{
-					if (!ret)
-						ret = action(i, null, arg);
-					handler[i] = null;
-				}
+				if (!ret)
+					ret = action(slots[i]);
 			}
 			return ret;
 		} // proc Enumerate
@@ -58,39 +102,23 @@ namespace TecWare.PPSn.Stuff
 		public void Add(TEVENT handler)
 		{
 			if (!Enumerate(
-				(idx, ev, arg) =>
+				slot =>
 				{
-					if (ev == null)
-					{
-						this.handler[idx] = new WeakReference<TEVENT>(arg);
-						return true;
-					}
+					if (!slot.IsAlive)
+						return slot.Set(handler);
 					else
 						return false;
-				},
-				handler
+				}
 			))
-				this.handler.Add(new WeakReference<TEVENT>(handler));
+			{
+				slots.Add(new WeakEventSlot(handler));
+			}
 		} // proc Add
 
 		/// <summary></summary>
 		/// <param name="handler"></param>
 		public void Remove(TEVENT handler)
-		{
-			Enumerate(
-				(idx, ev, arg) =>
-				{
-					if (ev != null && ev == arg)
-					{
-						this.handler[idx] = null;
-						return true;
-					}
-					else
-						return false;
-				},
-				handler
-			);
-		} // proc Remove
+			=> Enumerate(slot => slot.IsEqual(handler) && slot.Set(null));
 
 		/// <summary></summary>
 		/// <param name="sender"></param>
@@ -98,13 +126,12 @@ namespace TecWare.PPSn.Stuff
 		public void Invoke(object sender, TEVENTARGS e)
 		{
 			Enumerate(
-				(idx, ev, a) =>
+				slot =>
 				{
-					if (ev != null)
-						ev.DynamicInvoke(sender, a);
+					if(slot.TryGet(out var ev))
+						ev.DynamicInvoke(sender, e);
 					return false;
-				},
-				e
+				}
 			);
 		} // proc Invoke
 	} // class WeakEventList
