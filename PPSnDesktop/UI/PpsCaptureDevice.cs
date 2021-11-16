@@ -10,7 +10,7 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsCaptureService ------------------------------------------------
 
 	[
-	PpsService(typeof(PpsDpcService))
+	PpsService(typeof(IPpsCaptureService))
 	]
 	internal class PpsCaptureService : IPpsCaptureService
 	{
