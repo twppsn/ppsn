@@ -584,6 +584,30 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- enum PpsCaptureDevice --------------------------------------------------
+
+	/// <summary>Generic image sources.</summary>
+	public enum PpsCaptureDevice
+	{
+		Camera
+	} // enum PpsCaptureDevice
+
+	#endregion
+
+	#region -- interface IPpsCaptureService -------------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsCaptureService
+	{
+		/// <summary></summary>
+		/// <param name="device"></param>
+		/// <returns></returns>
+		Task<object> CaputureAsync(object owner, PpsCaptureDevice device);
+		// bool IsSupported(PpsImageDevice device);
+	} // interface IPpsCaptureService
+
+	#endregion
+
 	#region -- class PpsShell ---------------------------------------------------------
 
 	public static partial class PpsShell
