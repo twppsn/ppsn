@@ -87,18 +87,31 @@ specific language governing permissions and limitations under the Licence.
 				<Setter TargetName="RootGrid" Property="Opacity" Value=".35" />
 			</Trigger>
 
-			<MultiTrigger>
-				<MultiTrigger.Conditions>
-					<Condition Property="IsMouseOver" Value="True" />
-					<Condition Property="IsTransparent" Value="True" />
-				</MultiTrigger.Conditions>
-				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
-			</MultiTrigger>
+			<!--<EventTrigger RoutedEvent="MouseEnter">
+				<EventTrigger.Actions>
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" BeginTime="0:0:0" From="0" To=".10" Duration="0:0:0"/>
+						</Storyboard>
+					</BeginStoryboard>
+				</EventTrigger.Actions>
+			</EventTrigger>-->
+
+			<!--<EventTrigger RoutedEvent="MouseLeave">
+				<EventTrigger.Actions>
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetName="StatusRectangle" Storyboard.TargetProperty="Opacity" BeginTime="0:0:0" From=".10" To="0" Duration="0:0:0"/>
+						</Storyboard>
+					</BeginStoryboard>
+				</EventTrigger.Actions>
+			</EventTrigger>-->
 
 			<MultiTrigger>
 				<MultiTrigger.Conditions>
-					<Condition Property="IsMouseOver" Value="True" />
 					<Condition Property="IsTransparent" Value="False" />
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsStylusOver" Value="False" />
 					<Condition Property="IsKeyboardFocused" Value="False" />
 				</MultiTrigger.Conditions>
 				<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
@@ -106,9 +119,19 @@ specific language governing permissions and limitations under the Licence.
 
 			<MultiTrigger>
 				<MultiTrigger.Conditions>
-					<Condition Property="IsMouseOver" Value="True" />
 					<Condition Property="IsTransparent" Value="False" />
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsStylusOver" Value="False" />
 					<Condition Property="IsKeyboardFocused" Value="True" />
+				</MultiTrigger.Conditions>
+				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".04" />
+			</MultiTrigger>
+
+			<MultiTrigger>
+				<MultiTrigger.Conditions>
+					<Condition Property="IsTransparent" Value="True" />
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsStylusOver" Value="False" />
 				</MultiTrigger.Conditions>
 				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
 			</MultiTrigger>
