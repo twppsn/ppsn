@@ -22,36 +22,37 @@
 					<RowDefinition />
 				</Grid.RowDefinitions>
 				<TextBlock Text="{Binding Title}"
-							   Foreground="White"
-							   Grid.ColumnSpan="2"
-							   Margin="24,0,0,0"
-							   VerticalAlignment="Center"/>
+						   Foreground="White"
+						   Grid.ColumnSpan="2"
+						   Margin="24,0,0,0"
+						   VerticalAlignment="Center"/>
 				<ui:PpsButton Command="{x:Static ApplicationCommands.Close}"
-								   ToolTip="Schließen"
-								   DisplayMode="Transparent"
-								   GeometryName="windowClose"
-								   GeometrySize="17"
-						           SnapsToDevicePixels="True"
-								   Foreground="White"
-								   ImageOpacity="1"
-								   Grid.Column="1"
-								   Width="34"
-								   Height="26"
-								   HorizontalAlignment="Right"
-								   VerticalAlignment="Top" />
+							  ToolTip="Schließen"
+							  DisplayMode="Transparent"
+							  GeometryName="windowClose"
+							  GeometrySize="17"
+							  SnapsToDevicePixels="True"
+							  Foreground="White"
+							  ImageOpacity="1"
+							  Grid.Column="1"
+							  Width="34"
+							  Height="26"
+							  HorizontalAlignment="Right"
+							  VerticalAlignment="Top" />
 				<ui:PpsGeometryImage x:Name="idleImage"
-										  GeometryName="cameraOutline"
-										  GeometryCircled="False"
-										  Foreground="White"
-										  Grid.Row="1"
-										  Grid.ColumnSpan="2"
-										  Width="72"
-										  Opacity=".75"
-										  HorizontalAlignment="Center"
-										  VerticalAlignment="Center"
-										  Visibility="Collapsed" />
+									 GeometryName="cameraOutline"
+									 GeometryCircled="False"
+									 Foreground="White"
+									 Background="Transparent"
+									 Grid.Row="1"
+									 Grid.ColumnSpan="2"
+									 Width="72"
+									 Opacity=".75"
+									 HorizontalAlignment="Center"
+									 VerticalAlignment="Center"
+									 Visibility="Collapsed" />
 				<ListBox x:Name="listDevices" ItemsSource="{Binding Devices}" IsSynchronizedWithCurrentItem="True"
-							 Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="16,16,16,16" Visibility="Collapsed" >
+						 Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="16,16,16,16" Visibility="Collapsed" >
 					<ListBox.ItemTemplate>
 						<DataTemplate>
 							<Grid Width="100">
@@ -95,23 +96,25 @@
 				<Grid x:Name="gridSettings" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,38,6,0" Visibility="Collapsed">
 					<Ellipse x:Name="ellipseSettings" Width="39" Height="39" StrokeThickness="0" Fill="{StaticResource blackBackGround}" Visibility="{Binding Visibility, ElementName=buttonSettings}" />
 					<ui:PpsButton x:Name="buttonSettings"
-									   Command="{x:Static ApplicationCommands.Properties}"
-									   Visibility="Hidden"
-									   DisplayMode="Transparent"
-									   GeometryName="settingsOutline"
-									   GeometrySize="36"
-									   Foreground="White"
-									   ImageOpacity="1"
-									   ToolTip="Kameraeinstellungen" />
+								  Command="{x:Static ApplicationCommands.Properties}"
+								  Visibility="Hidden"
+								  DisplayMode="Transparent"
+								  GeometryName="settingsOutline"
+								  GeometrySize="36"
+								  Foreground="White"
+								  ImageOpacity="1"
+								  ToolTip="Kameraeinstellungen" />
 				</Grid>
 				<Grid x:Name="gridTake" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" Visibility="Collapsed">
 					<Ellipse Width="78" Height="78" StrokeThickness="0" Fill="{StaticResource blackBackGround}" />
 					<ui:PpsButton Command="{x:Static ApplicationCommands.New}"
-									   GeometryName="camera"
-									   GeometrySize="72"
-									   Foreground="White"
-									   ImageOpacity="1"
-									   ToolTip="Foto aufnehmen" />
+								  DisplayMode="Transparent"
+								  Foreground="White"
+								  GeometryName="camera"
+								  GeometrySize="72"
+								  ImageOpacity="1"
+								  Focusable="False"
+								  ToolTip="Foto aufnehmen" />
 				</Grid>
 				<Image x:Name="currentImage"
 						   Source="{Binding CurrentImage}"
@@ -128,16 +131,16 @@
 				</Image>
 				<StackPanel x:Name="imageCmdPanel" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0" Visibility="Collapsed">
 					<Border Background="{StaticResource blackBackGround}" Padding="1">
-						<ui:PpsButton Command="{x:Static ApplicationCommands.Save}" Content="Übernehmen" GeometryName="launch" ImageOpacity="1" GeometrySize="24"
-										   Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Bild übernehmen"/>
+						<ui:PpsButton Command="{x:Static ApplicationCommands.Save}" Content="Übernehmen" GeometryName="launch" ImageOpacity="1" DisplayMode="Transparent" Focusable="False" 
+									  Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Bild übernehmen"/>
 					</Border>
 					<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,24,0,0">
-						<ui:PpsButton Command="{x:Static ApplicationCommands.Redo}" Content="Neues Foto" GeometryName="camera" ImageOpacity="1" GeometrySize="24"
-										   Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Neues Bild aufnehmen"/>
+						<ui:PpsButton Command="{x:Static ApplicationCommands.Redo}" Content="Neues Foto" GeometryName="camera" ImageOpacity="1" DisplayMode="Transparent" Focusable="False" 
+									  Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Neues Bild aufnehmen"/>
 					</Border>
 					<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,48,0,0">
-						<ui:PpsButton Command="{x:Static ApplicationCommands.Close}" Content="Abbrechen" GeometryName="closeCircle" ImageOpacity="1" GeometrySize="24"
-										   Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Modul schließen"/>
+						<ui:PpsButton Command="{x:Static ApplicationCommands.Close}" Content="Abbrechen" GeometryName="closeCircle" ImageOpacity="1" DisplayMode="Transparent" Focusable="False" 
+									  Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Modul schließen"/>
 					</Border>
 				</StackPanel>
 				<Border x:Name="PART_SettingsBox" Grid.Column="1" Grid.Row="1" Width="400" Background="#525252" HorizontalAlignment="Right" Visibility="Collapsed" >
