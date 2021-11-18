@@ -75,11 +75,12 @@
 							  GeometrySize="24"
 							  ImageOpacity="1"
 							  Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
+							  Focusable="False"
 							  Width="40"
 							  Margin="0,0,6,0"/>
                 <ui:PpsSplitButton Width="40" Margin="0,0,32,0"
                                    Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
-                                   Mode="Dropdown" DisplayMode="Transparent" GeometryName="barcodeScan" GeometrySize="24" ImageOpacity="1"
+                                   Mode="Dropdown" DisplayMode="Transparent" GeometryName="barcodeScan" GeometrySize="24" ImageOpacity="1" Focusable="False"
                                    Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}">
                     <ui:PpsSplitButton.Popup>
                         <uic:PpsBarcodePopup Placement="Bottom" />
@@ -95,6 +96,7 @@
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
+							  Focusable="False"
 							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
                 <ui:PpsButton Command="{x:Static ui:PpsWindow.MaximizeCommand}"
 							  DisplayMode="Transparent"
@@ -104,6 +106,7 @@
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
+							  Focusable="False"
 							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}">
                     <ui:PpsButton.Style>
                         <Style TargetType="{x:Type ui:PpsButton}">
@@ -128,6 +131,7 @@
 							  Width="34"
 							  Height="26"
 							  VerticalAlignment="Top"
+							  Focusable="False"
 							  Visibility="{Binding WindowStyle,Converter={x:Static bde:PpsBdeWindow.WindowStyleConverter}}" />
 			</StackPanel>
 		</Grid>
@@ -146,9 +150,10 @@
             <Grid>
                 <ui:PpsButton Command="{x:Static bde:PpsBdeWindow.BackCommand}"
                               DisplayMode="Transparent"
-                              GeometryName="prevPane"
-                              GeometrySize="40"
+                              GeometryName="back"
+                              GeometrySize="32"
                               ImageOpacity="1"
+							  Focusable="False"
                               Width="72"
                               HorizontalAlignment="Left">
                     <ui:PpsButton.Style>
@@ -166,6 +171,7 @@
 								  Mode="Mixed"
 								  Margin="64,0,16,0"
 								  ButtonHeight="40"
+								  FontSize="14"
 								  HorizontalAlignment="Right" />
             </Grid>
         </Border>
