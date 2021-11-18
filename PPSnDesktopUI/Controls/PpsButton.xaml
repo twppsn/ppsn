@@ -89,16 +89,18 @@ specific language governing permissions and limitations under the Licence.
 
 			<MultiTrigger>
 				<MultiTrigger.Conditions>
-					<Condition Property="IsMouseOver" Value="True" />
 					<Condition Property="IsTransparent" Value="True" />
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsStylusOver" Value="False" />
 				</MultiTrigger.Conditions>
 				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
 			</MultiTrigger>
 
 			<MultiTrigger>
 				<MultiTrigger.Conditions>
-					<Condition Property="IsMouseOver" Value="True" />
 					<Condition Property="IsTransparent" Value="False" />
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsStylusOver" Value="False" />
 					<Condition Property="IsKeyboardFocused" Value="False" />
 				</MultiTrigger.Conditions>
 				<Setter TargetName="OuterBorder" Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
@@ -106,11 +108,12 @@ specific language governing permissions and limitations under the Licence.
 
 			<MultiTrigger>
 				<MultiTrigger.Conditions>
-					<Condition Property="IsMouseOver" Value="True" />
 					<Condition Property="IsTransparent" Value="False" />
+					<Condition Property="IsMouseOver" Value="True" />
+					<Condition Property="IsStylusOver" Value="False" />
 					<Condition Property="IsKeyboardFocused" Value="True" />
 				</MultiTrigger.Conditions>
-				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".10" />
+				<Setter TargetName="StatusRectangle" Property="Opacity" Value=".035" />
 			</MultiTrigger>
 
 			<MultiTrigger>
