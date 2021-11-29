@@ -21,10 +21,14 @@ using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
+using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -36,6 +40,13 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary></summary>
 	public sealed class PpsSqlExDataSource : PpsMsSqlDataSource
 	{
+		/// <summary>User context optional wellknown property: Full name of the contact or user.</summary>
+		public const string UserContextFullName = "FullName";
+		/// <summary>User context optional wellknown property: Initals of the contact or user.</summary>
+		public const string UserContextInitials = "Initials";
+		/// <summary>User context optional wellknown property: User symbol</summary>
+		public const string UserContextIdenticon = "Identicon";
+
 		#region -- class SqlDataTransaction -------------------------------------------
 
 		/// <summary></summary>
@@ -118,15 +129,14 @@ namespace TecWare.PPSn.Server.Sql
 				// read first block
 				var buf = new byte[0x80000];
 				var readed = ReadStreamData(srcStream, buf);
-				var integratedUser = Credentials as PpsIntegratedCredentials;
 				var useFileStream = readed >= buf.Length;
 
 				if (useFileStream) // inline data in revision
 				{
-					if (integratedUser != null)
+					if (AuthentificatedUser.TryImpersonate(out var impersonationContext))
 					{
 						#region -- insert into objf --
-						using (integratedUser.Impersonate())
+						using (impersonationContext)
 						using (var cmd = CreateCommand(CommandType.Text, false))
 						{
 							cmd.CommandText = "INSERT INTO dbo.[ObjF] ([HashAlgo], [Hash], [Data]) "
@@ -282,10 +292,10 @@ namespace TecWare.PPSn.Server.Sql
 					&& objkId <= 0)
 					throw new ArgumentException("Invalid arguments.", "revId|objkId");
 
+				var useFileStream = AuthentificatedUser.TryImpersonate(out var impersonationContext); // only integrated credentials can use filestream
+				using (impersonationContext)
 				using (var cmd = CreateCommand(CommandType.Text, false))
 				{
-					var useFileStream = Credentials is PpsIntegratedCredentials; // only integrated credentials can use filestream
-
 					cmd.CommandText = "SELECT [IsDocumentText], [IsDocumentDeflate], [Document], [DocumentId], [DocumentLink], [HashAlgo], [Hash], " + (useFileStream ? "[Data].PathName(), GET_FILESTREAM_TRANSACTION_CONTEXT() " : "[Data] ")
 						+ (revId > 0
 							? "FROM dbo.[ObjR] r LEFT OUTER JOIN dbo.[ObjF] f ON (r.[DocumentId] = f.[Id]) WHERE r.[Id] = @Id;"
@@ -308,10 +318,7 @@ namespace TecWare.PPSn.Server.Sql
 						if (!r.IsDBNull(7)) // file stream or bytes
 						{
 							if (useFileStream)
-							{
-								using (((PpsIntegratedCredentials)Credentials).Impersonate())
-									src = new SqlFileStream(r.GetString(7), r.GetSqlBytes(8).Buffer, FileAccess.Read);
-							}
+								src = new SqlFileStream(r.GetString(7), r.GetSqlBytes(8).Buffer, FileAccess.Read);
 							else
 								src = r.GetSqlBytes(7).Stream;
 						}
@@ -357,33 +364,6 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			#region -- UpdateUserCfg --------------------------------------------------
-
-			private IEnumerable<IEnumerable<IDataRow>> UpdateUserCfg(object _args, PpsDataTransactionExecuteBehavior behavior)
-			{
-				// function to update user configuration
-				// UpdateUserCfg(long Id oder long Cfg)
-
-				var args = (LuaTable)_args;
-				var userId = args.GetOptionalValue("Id", -1L);
-				var cfgTable = args.GetOptionalValue("Cfg", new LuaTable());
-
-				if (userId < 0)
-					throw new ArgumentException("Invalid arguments.", "userId");
-
-				using (var cmd = CreateCommand(CommandType.Text, false))
-				{
-					cmd.CommandText = "UPDATE dbo.[User] SET [Cfg] = @Cfg WHERE Id = @Id";
-					cmd.Parameters.Add("@Id", SqlDbType.BigInt).Value = userId;
-					cmd.Parameters.Add("@Cfg", SqlDbType.NVarChar).Value = LuaTable.ToLson(cfgTable, prettyFormatting: false);
-					cmd.ExecuteNonQuery();
-				}
-
-				yield break;
-			} // func UpdateUserCfg
-
-			#endregion
-
 			#region -- PrepareCore ----------------------------------------------------
 
 			protected override PpsDataCommand PrepareCore(LuaTable parameter, LuaTable firstArgs)
@@ -397,8 +377,6 @@ namespace TecWare.PPSn.Server.Sql
 							return new PpsInvokeDataCommand(UpdateRevisionData);
 						case "sys.GetRevisionData":
 							return new PpsInvokeDataCommand(GetRevisionData);
-						case "sys.UpdateUserCfg":
-							return new PpsInvokeDataCommand(UpdateUserCfg);
 					}
 				}
 				return base.PrepareCore(parameter, firstArgs);
@@ -643,6 +621,310 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class SqlAuthentificatedUser ---------------------------------------
+
+		private sealed class SqlAuthentificatedUser : IDEAuthentificatedUser
+		{
+			private readonly SqlUser user;
+			private readonly IIdentity loginIdentity;
+
+			public SqlAuthentificatedUser(SqlUser user, IIdentity loginIdentity)
+			{
+				this.user = user ?? throw new ArgumentNullException(nameof(user));
+				this.loginIdentity = loginIdentity ?? throw new ArgumentNullException(nameof(loginIdentity));
+			} // ctor
+
+			public void Dispose()
+			{
+				if (loginIdentity is IDisposable d)
+					d.Dispose();
+			} // proc Dispose
+
+			public bool IsInRole(string role)
+				=> user.TryDemandToken(role);
+
+			public bool TryImpersonate(out WindowsImpersonationContext impersonationContext)
+			{
+				if (loginIdentity is WindowsIdentity windowsIdentity)
+				{
+					impersonationContext = windowsIdentity.Impersonate();
+					return true;
+				}
+				else
+				{
+					impersonationContext = null;
+					return false;
+				}
+			} // func TryImpersonate
+
+			public bool TryGetCredential(out UserCredential userCredential)
+			{
+				if (loginIdentity is HttpListenerBasicIdentity basicIdentity)
+				{
+					userCredential = UserCredential.Create(basicIdentity.Name, basicIdentity.Password);
+					return true;
+				}
+				else
+				{
+					userCredential = null;
+					return false;
+				}
+			} // func TryGetCredential
+
+			public bool TryGetProperty(string name, out object value)
+				=> user.TryGetProperty(name, out value);
+
+			public IDEUser Info => user;
+			public IIdentity Identity => loginIdentity;
+			public bool CanImpersonate => loginIdentity is WindowsIdentity && loginIdentity.IsAuthenticated;
+		} // class SqlAuthentificatedUser
+
+		#endregion
+
+		#region -- class SqlUser ------------------------------------------------------
+
+		[DEUserProperty(UserContextFullName, typeof(uint), "fullname")]
+		[DEUserProperty(UserContextInitials, typeof(uint), "initials")]
+		[DEUserProperty(UserContextIdenticon, typeof(uint), "identicon")]
+		private sealed class SqlUser : IDEUser
+		{
+			private static readonly string[] WellKnownUserOptionKeys = new string[] {
+				"userId",
+				"displayName",
+				UserContextFullName,
+				UserContextInitials,
+				UserContextIdenticon
+			};
+
+			private readonly PpsSqlDataSource dataSource;
+			private readonly long userId;
+			private PpsUserIdentity userIdentity = null;	// user identity for the authentification
+			private int currentVersion = -1;				// version of the user data
+			private string[] securityTokens = null;			// access rights
+
+			private readonly object[] wellKnownUserOptionValues = new object[WellKnownUserOptionKeys.Length - 2];
+			private LoggerProxy log = null;					// current log interface for the user
+			private LuaTable databaseConfig = null;
+
+			#region -- Ctor/Dtor ------------------------------------------------------
+
+			public SqlUser(PpsSqlDataSource dataSource, long userId)
+			{
+				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+				this.userId = userId;
+			} // ctor
+
+			public void Dispose()
+			{
+				// unregister the user
+				SetUserIdentity(null);
+
+				// identity is not disposed, because is might used by pending contexts
+			} // proc Dispose
+
+			bool IEquatable<IDEUser>.Equals(IDEUser other)
+				=> other is SqlUser otherUser && otherUser.userId == userId;
+
+			#endregion
+
+			#region -- UpdateData -----------------------------------------------------
+
+			private void SetUserIdentity(PpsUserIdentity userIdentity)
+			{
+				if (userIdentity == null)
+				{
+					dataSource.Server.UnregisterUser(this);
+					this.userIdentity = userIdentity;
+				}
+				else
+				{
+					this.userIdentity = userIdentity;
+					log = LoggerProxy.Create(dataSource.Log, userIdentity.Name);
+					dataSource.Server.RegisterUser(this); // register the user in http-server
+				}
+			} // proc SetUserIdentity
+
+			internal void UpdateData(IDataRow r, bool force)
+			{
+				// check if we need a reload
+				var loginVersion = r.GetProperty("LoginVersion", 0);
+				if (!force && loginVersion == currentVersion)
+					return;
+				currentVersion = loginVersion;
+
+				// update user identity
+				var newUserIdentity = CreateUserIdentity(r);
+				if (userIdentity == null || !userIdentity.Equals(newUserIdentity))
+					SetUserIdentity(newUserIdentity);
+
+				// update optional values
+				wellKnownUserOptionValues[0] = r.GetProperty("Name", userIdentity.Name);
+				for (var i = 3; i < WellKnownUserOptionKeys.Length; i++)
+					wellKnownUserOptionValues[i - 2] = r.TryGetProperty(WellKnownUserOptionKeys[i], out var value) ? value : null;
+
+				// update parameter-set from database, use only members
+				databaseConfig = FromLson(r.GetProperty("Cfg", "{}"));
+
+				securityTokens = dataSource.Server.BuildSecurityTokens(r.GetProperty("Security", String.Empty), SecurityUser);
+			} // proc UpdateData
+
+			public static PpsUserIdentity CreateUserIdentity(IDataRow r)
+			{
+				string GetString(string fieldName)
+					=> r.GetProperty(fieldName, null) ?? throw new ArgumentNullException($"{fieldName} is null.");
+
+				// create the user
+				var userType = r.GetProperty("LoginType", (string)null);
+				if (userType == "U") // windows login
+					return PpsUserIdentity.CreateIntegratedIdentity(GetString("Login"));
+				else if (userType == "S") // sql login
+				{
+					return PpsUserIdentity.CreateBasicIdentity(
+						GetString("Login"),
+						(byte[])r["LoginHash", true]
+					);
+				}
+				else
+					throw new ArgumentException($"Unsupported login type '{userType}'.");
+			} // func CreateUserIdentity
+
+			#endregion
+
+			#region -- AuthentificateAsync --------------------------------------------
+
+			public async Task<IDEAuthentificatedUser> AuthentificateAsync(IIdentity identity)
+			{
+				if (userIdentity == null) // is there a identity
+					return null;
+				if (!userIdentity.Equals(identity)) // check if that the identity matches
+					return null;
+
+				// check the user information agains the main user
+				var context = new SqlAuthentificatedUser(this, identity);  // create new context for this identity
+				try
+				{
+					var newConnection = dataSource.Application.GetOrCreatePooledConnection(dataSource, context, false);
+					try
+					{
+						// ensure the database connection to the main database
+						if (await newConnection.EnsureConnectionAsync(true))
+							return context;
+						else
+						{
+							context.Dispose();
+							return null;
+						}
+					}
+					catch (Exception e)
+					{
+						log.Except(e);
+						newConnection?.Dispose();
+						return null;
+					}
+				}
+				catch (Exception e)
+				{
+					log.Except(e);
+					context.Dispose();
+					return null;
+				}
+			} // proc AuthentificateAsync
+
+			public bool TryDemandToken(string securityToken)
+			{
+				if (String.IsNullOrEmpty(securityToken))
+					return true;
+
+				return Array.BinarySearch(securityTokens, securityToken.ToLower()) >= 0;
+			} // func TryDemandToken
+
+			#endregion
+
+			#region -- TryGetProperty -------------------------------------------------
+
+			private bool TryGetPropertyIndex(string name, out int index)
+			{
+				index = Array.FindIndex(WellKnownUserOptionKeys, c => String.Compare(c, name, StringComparison.OrdinalIgnoreCase) == 0);
+				return index >= 0;
+			} // func TryGetPropertyIndex
+
+			//private void SetProperty(string name, object value)
+			//{
+			//	if (TryGetPropertyIndex(name, out var idx))
+			//	{
+			//		if (idx >= 2)
+			//			wellKnownUserOptionValues[idx - 2] = value;
+			//		else
+			//			throw new NotSupportedException("Readonly properties");
+			//	}
+			//} // proc SetProperty
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				// fix defined configuration
+				if (TryGetPropertyIndex(name, out var idx))
+				{
+					switch (idx)
+					{
+						case 0:
+							value = userId;
+							break;
+						case 1:
+							value = DisplayName;
+							break;
+						default:
+							value = wellKnownUserOptionValues[idx - 2];
+							break;
+					}
+
+					if (value != null)
+						return true;
+				}
+
+				// database configuration
+				value = databaseConfig?.GetMemberValue(name);
+				if (value != null)
+					return true;
+
+				value = null;
+				return false;
+			} // func TryGetProperty
+
+			public IEnumerator<PropertyValue> GetEnumerator()
+			{
+				// fixed values
+				yield return new PropertyValue(WellKnownUserOptionKeys[0], typeof(long), userId);
+				yield return new PropertyValue(WellKnownUserOptionKeys[1], typeof(string), DisplayName);
+
+				// optional values
+				for (var i = 2; i < WellKnownUserOptionKeys.Length; i++)
+				{
+					if (wellKnownUserOptionValues[i - 2] != null)
+						yield return new PropertyValue(WellKnownUserOptionKeys[i], wellKnownUserOptionValues[i - 2]);
+				}
+
+				// database configuration
+				foreach (var m in databaseConfig.Members)
+					yield return new PropertyValue(m.Key, m.Value);
+			} // func GetEnumerator
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+
+			#endregion
+
+			public long UserId => userId;
+			public long CurrentVersion => currentVersion;
+			public string DisplayName => userIdentity.Name;
+			public IIdentity Identity => userIdentity;
+			public LoggerProxy Log => log;
+			public IReadOnlyList<string> SecurityTokens => securityTokens;
+		} // class SqlUser
+
+		#endregion
+
+		private readonly DEList<SqlUser> users;
+
 		#region -- Ctor/Dtor/Config ---------------------------------------------------
 
 		/// <summary></summary>
@@ -651,7 +933,22 @@ namespace TecWare.PPSn.Server.Sql
 		public PpsSqlExDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
+			users = new DEList<SqlUser>(this, "tw_ppsn_users", "Users");
+
+			Application.RegisterInitializationTask(11000, "Register users", () => RefreshUserAsync(true));
+
+			PublishItem(new DEConfigItemPublicAction("refreshUsers") { DisplayName = "user-refresh" });
+			PublishItem(users);
 		} // ctor
+
+		/// <inherited/>
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+				users.Dispose();
+
+			base.Dispose(disposing);
+		} // proc Dispose
 
 		/// <summary>Initialize server logins view</summary>
 		protected override void RefreshSchemaCore(IPpsSqlSchemaUpdate log)
@@ -661,6 +958,73 @@ namespace TecWare.PPSn.Server.Sql
 			// Register Server logins
 			Application.RegisterView(CreateSelectorTokenFromResourceAsync("dbo.serverLogins", typeof(PpsSqlExDataSource), "tsql.ServerLogins.sql", Array.Empty<string>()).AwaitTask());
 		} // proc InitializeSchemaCore
+
+		private async Task RefreshUserAsync(bool force)
+		{
+			bool UpdateUserData(SqlUser sqlUser, IDataRow r)
+			{
+				try
+				{
+					sqlUser.UpdateData(r, force);
+					return true;
+				}
+				catch (Exception e)
+				{
+					(sqlUser.Log ?? Log).Except(e);
+					sqlUser.Dispose();
+					return false;
+				}
+			} // func UpdateUserData
+
+			using (var ctx = Application.CreateSystemContext())
+			{
+				var userList = await Application.Database.CreateSelectorAsync(ctx, "dbo.serverlogins", throwException: false);
+				if (userList != null)
+				{
+					using (users.EnterWriteLock())
+					{
+						foreach (var u in userList) // fetch user list
+						{
+							var userId = u.GetProperty("ID", 0L);
+							if (userId > 0)
+							{
+								var idx = users.FindIndex(c => c.UserId == userId);
+								if (idx >= 0)
+								{
+									if (!UpdateUserData(users[idx], u))
+										users.RemoveAt(idx);
+								}
+								else
+								{
+									try
+									{
+										var user = new SqlUser(this, userId);
+										if (UpdateUserData(user, u))
+											users.Add(user);
+									}
+									catch (SystemException e)
+									{
+										Log.Warn($"User (id={userId}): {e.Message}");
+									}
+								}
+							}
+							else
+								Log.Warn($"User ignored (id={userId}).");
+						} // foreach
+					} // using
+				} // userList != nu	
+
+				await ctx.RollbackAsync();
+			}
+		} // proc RefreshUserAsync
+
+		/// <summary>Force refresh of all users</summary>
+		[
+		LuaMember,
+		DEConfigHttpAction("refreshUsers", IsSafeCall = true, SecurityToken = "desSys")
+		]
+		public void RefreshUsers(bool force = true)
+			=> Task.Run(new Action(RefreshUserAsync(force).Wait)).Wait();
 
 		#endregion
 

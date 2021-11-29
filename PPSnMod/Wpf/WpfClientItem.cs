@@ -832,7 +832,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		private void ParseEnvironment(IDEWebRequestScope r)
 		{
-			var user = r.GetUser<IPpsPrivateDataContext>();
+			r.DemandUser();
 
 			using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
 			{
@@ -1020,7 +1020,7 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc PrepareMasterDataSyncArguments
 
-		private static void ExecuteMasterDataTableSync(LogMessageScopeProxy msg, IPpsPrivateDataContext user, Dictionary<PpsDataSource, SynchronizationSession> synchronisationSessions, XmlWriter xml, PpsDataTableDefinition table, long lastSyncId, DateTime lastSynchronization)
+		private static void ExecuteMasterDataTableSync(LogMessageScopeProxy msg, IDEAuthentificatedUser user, Dictionary<PpsDataSource, SynchronizationSession> synchronisationSessions, XmlWriter xml, PpsDataTableDefinition table, long lastSyncId, DateTime lastSynchronization)
 		{
 			msg.WriteLine("Sync: {0}", table.Name);
 			using (msg.Indent())
@@ -1148,7 +1148,7 @@ namespace TecWare.PPSn.Server.Wpf
 		[DEConfigHttpAction("mdata", SecurityToken = SecurityUser, IsSafeCall = false)]
 		public void HttpMasterDataSyncAction(IDEWebRequestScope r, string tableName = null, long syncId = -1, long syncStamp = -1)
 		{
-			var user = r.GetUser<IPpsPrivateDataContext>();
+			var user = r.DemandUser();
 
 			if (masterDataSetDefinition == null || !masterDataSetDefinition.IsInitialized)
 				throw new ArgumentException("Masterdata schema not initialized.");
@@ -1170,7 +1170,7 @@ namespace TecWare.PPSn.Server.Wpf
 			// update tags
 			if (updateTags.ArrayList.Count > 0)
 			{
-				using (var trans = user.CreateTransactionAsync(application.MainDataSource).AwaitTask())
+				using (var trans = application.Database.GetDatabaseAsync(r, application.MainDataSource, true).AwaitTask())
 				{
 					trans.ExecuteNoneResult(updateTags);
 					trans.Commit();

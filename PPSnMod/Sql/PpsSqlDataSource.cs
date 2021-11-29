@@ -24,6 +24,7 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -599,12 +600,14 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary></summary>
 	public interface IPpsSqlConnectionHandle : IPpsConnectionHandle
 	{
-		/// <summary>Create a new connection.</summary>
+		/// <summary>Create a new connection for write operations.</summary>
 		/// <returns></returns>
 		DbConnection ForkConnection();
 
 		/// <summary>Access the database connection.</summary>
 		DbConnection Connection { get; }
+		/// <summary>Referenz to user context, that created the connection.</summary>
+		IDEAuthentificatedUser AuthentificatedUser { get; }
 	} // interface IPpsSqlConnectionHandle
 
 	#endregion
@@ -815,7 +818,7 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly PpsSqlDataSource dataSource;
 			private readonly DBCONNECTION connection;
 			private readonly DBCONNECTIONSTRINGBUILDER connectionString;
-			private readonly PpsCredentials credentials;
+			private readonly IDEAuthentificatedUser authentificatedUser;
 
 			private bool isDisposed = false;
 
@@ -823,11 +826,11 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="dataSource"></param>
-			/// <param name="credentials"></param>
-			protected PpsSqlConnectionHandle(PpsSqlDataSource dataSource, PpsCredentials credentials)
+			/// <param name="authentificatedUser"></param>
+			protected PpsSqlConnectionHandle(PpsSqlDataSource dataSource, IDEAuthentificatedUser authentificatedUser)
 			{
 				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-				this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+				this.authentificatedUser = authentificatedUser ?? throw new ArgumentNullException(nameof(authentificatedUser));
 
 				connection = CreateConnection();
 				connectionString = CreateConnectionStringBuilder(false);
@@ -857,11 +860,11 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // proc Dispose
 
-			/// <summary></summary>
+			/// <summary>Create a empty ado.net connection-object.</summary>
 			/// <returns></returns>
 			protected abstract DBCONNECTION CreateConnection();
 
-			/// <summary></summary>
+			/// <summary>Create the ado.net ConnectionStringBuilder with the basic connection information.</summary>
 			/// <param name="forWrite"></param>
 			/// <returns></returns>
 			protected virtual DBCONNECTIONSTRINGBUILDER CreateConnectionStringBuilder(bool forWrite)
@@ -871,16 +874,16 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- Connect --------------------------------------------------------
 
-			/// <summary></summary>
+			/// <summary>Override to open the ado.net connection.</summary>
 			/// <returns></returns>
-			protected abstract Task ConnectCoreAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString);
+			protected abstract Task ConnectCoreAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, IDEAuthentificatedUser authentificatedUser);
 
 			private async Task<bool> ConnectAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, bool throwException)
 			{
 				// create the connection
 				try
 				{
-					await ConnectCoreAsync(connection, connectionString);
+					await ConnectCoreAsync(connection, connectionString, authentificatedUser);
 					return true;
 				}
 				catch (Exception)
@@ -894,7 +897,7 @@ namespace TecWare.PPSn.Server.Sql
 			DbConnection IPpsSqlConnectionHandle.ForkConnection()
 				=> ForkConnectionAsync().AwaitTask();
 
-			/// <summary></summary>
+			/// <summary>Create a new ado.net connection-object for this connection.</summary>
 			/// <returns></returns>
 			public async Task<DBCONNECTION> ForkConnectionAsync()
 			{
@@ -907,7 +910,7 @@ namespace TecWare.PPSn.Server.Sql
 				return con;
 			} // func ForkConnection
 
-			/// <summary></summary>
+			/// <summary>Ensure that this connection is active.</summary>
 			/// <param name="throwException"></param>
 			/// <returns></returns>
 			public Task<bool> EnsureConnectionAsync(bool throwException)
@@ -920,17 +923,19 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			/// <summary></summary>
+			/// <summary>DataSource of this connection</summary>
 			public PpsSqlDataSource DataSource => dataSource;
 			PpsDataSource IPpsConnectionHandle.DataSource => dataSource;
 
-			/// <summary></summary>
+			/// <summary>ADO.NET connection object.</summary>
 			public DBCONNECTION Connection => connection;
 			DbConnection IPpsSqlConnectionHandle.Connection => connection;
-			/// <summary></summary>
-			public PpsCredentials Credentials => credentials;
+			/// <summary>User for this connection.</summary>
+			public IDEUser User => authentificatedUser.Info;
+			/// <summary>User for this connection.</summary>
+			public IDEAuthentificatedUser AuthentificatedUser => authentificatedUser;
 
-			/// <summary></summary>
+			/// <summary>Is the connection still active</summary>
 			public abstract bool IsConnected { get; }
 		} // class PpsSqlConnectionHandle
 
@@ -2026,6 +2031,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			private readonly DBCONNECTION connection;
 			private DBTRANSACTION transaction;
+			private readonly IDEAuthentificatedUser authentificatedUser;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -2036,7 +2042,9 @@ namespace TecWare.PPSn.Server.Sql
 				: base(dataSource, connection)
 			{
 				// create a connection for the transaction
-				this.connection = (DBCONNECTION)((IPpsSqlConnectionHandle)connection).ForkConnection();
+				var sqlCon = (IPpsSqlConnectionHandle)connection;
+				this.connection = (DBCONNECTION)sqlCon.ForkConnection();
+				authentificatedUser = sqlCon.AuthentificatedUser;
 
 				// create the sql transaction
 				transaction = CreateTransaction();
@@ -2058,7 +2066,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary>Overwrite to create a new transaction.</summary>
 			/// <returns></returns>
 			protected DBTRANSACTION CreateTransaction()
-				=> (DBTRANSACTION)this.connection.BeginTransaction(IsolationLevel.ReadUncommitted);
+				=> (DBTRANSACTION)connection.BeginTransaction(IsolationLevel.ReadUncommitted);
 
 			private DBTRANSACTION GetTransaction()
 			{
@@ -2705,6 +2713,8 @@ namespace TecWare.PPSn.Server.Sql
 			public PpsDataSelector CreateSelector(string viewOrTableName, string alias)
 				=> ((PpsSqlDataSource)DataSource).CreateSelector(Connection, viewOrTableName, alias);
 
+			/// <summary>Authentificated user.</summary>
+			public IDEAuthentificatedUser AuthentificatedUser => authentificatedUser;
 			/// <summary>Connection for the data manipulation</summary>
 			public DBCONNECTION DbConnection => connection;
 			/// <summary>Access the transaction</summary>

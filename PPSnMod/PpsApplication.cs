@@ -1,4 +1,4 @@
-#region -- copyright --
+﻿#region -- copyright --
 //
 // Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
 // European Commission - subsequent versions of the EUPL(the "Licence"); You may
@@ -667,7 +667,10 @@ namespace TecWare.PPSn.Server
 
 			RegisterApplicationType("msi", TryGetMsiApplicationInfo);
 
-			InitUser();
+			systemUser = new SystemUser(this);
+			userPool = new DEList<UserConnectionPool>(this, "tw_connection_pool", "User connection pool");
+			PublishItem(userPool);
+			PublishDebugInterface();
 		} // ctor
 
 		/// <summary>Add resource extension.</summary>
@@ -707,7 +710,6 @@ namespace TecWare.PPSn.Server
 
 			// parse the configuration
 			BeginReadConfigurationData(config);
-			BeginReadConfigurationUser(config);
 			BeginReadConfigurationReport(config);
 		} // proc OnBeginReadConfiguration
 
@@ -719,7 +721,6 @@ namespace TecWare.PPSn.Server
 
 			// set the configuration
 			BeginEndConfigurationData(config);
-			BeginEndConfigurationUser(config);
 
 			lastConfigurationTimeStamp = config.LastWrite;
 
@@ -742,8 +743,6 @@ namespace TecWare.PPSn.Server
 			try
 			{
 				UpdateInitializationState("Shuting down");
-
-				DoneUser();
 
 				lastAppChangeProperty.Dispose();
 				lastAppScanProperty.Dispose();
@@ -1170,8 +1169,7 @@ namespace TecWare.PPSn.Server
 			if (reportName == null)
 				throw new ArgumentNullException("name", "Report name is missing.");
 			// enforce user context
-			var user = r.GetUser<IPpsPrivateDataContext>();
-
+			r.DemandUser();
 			try
 			{
 				// collection arguments
@@ -2296,15 +2294,7 @@ namespace TecWare.PPSn.Server
 			using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Http.DefaultEncoding, -1L), Procs.XmlWriterSettings))
 			{
 				xml.WriteStartElement("user");
-
-				// header information
-				foreach(var key in PrivateUserData.WellKnownUserOptionKeys)
-				{
-					var v = userOptions.GetMemberValue(key, rawGet: false);
-					if (v != null)
-						xml.WriteAttributeString(key, v.ChangeType<string>());
-				}
-
+				
 				// write additional attribues, ignore single value items, only tables are emitted
 				foreach (var kv in userOptions.Members)
 				{
@@ -2367,7 +2357,7 @@ namespace TecWare.PPSn.Server
 			{
 				var package = clientApplicationInfos.List.Cast<KeyValuePair<string, PpsClientApplicationFile>>()
 					.Select(c => c.Value)
-					.Where(c => c.Type == "msi" && c.Name == packageName)
+					.Where(c => c != null && c.Type == "msi" && c.Name == packageName)
 					.FirstOrDefault();
 
 				r.Redirect("/ppsn/" + package.Source); // relative to root
@@ -2394,8 +2384,8 @@ namespace TecWare.PPSn.Server
 				case "login.xml":
 					r.DemandToken(SecurityUser);
 
-					var ctx = r.GetUser<IPpsPrivateDataContext>();
-					await Task.Run(() => WriteUserInfo(r, GetLoginData(ctx)));
+					var user = r.DemandUser();
+					await Task.Run(() => WriteUserInfo(r, GetLoginData(user.Info)));
 					return true;
 				case "geometries.xml":
 					await WriteXmlGeometriesAsync(r);

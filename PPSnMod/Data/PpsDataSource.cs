@@ -34,12 +34,12 @@ namespace TecWare.PPSn.Server.Data
 		{
 			Application = sp.GetService<PpsApplication>(true);
 		} // ctor
-		
+
 		/// <summary>Create a connection for the current active user.</summary>
-		/// <param name="userContext">User context of the current active user (to not create any reference on it).</param>
+		/// <param name="authentificatedUser">User context of the current active user.</param>
 		/// <param name="throwException">If the connection could not created it throws an exception.</param>
 		/// <returns></returns>
-		public abstract IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userContext, bool throwException = true);
+		public abstract IPpsConnectionHandle CreateConnection(IDEAuthentificatedUser authentificatedUser, bool throwException = true);
 
 		/// <summary>Create a selector token for the view name.</summary>
 		/// <param name="name">Name of the selector.</param>

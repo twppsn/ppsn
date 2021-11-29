@@ -766,7 +766,7 @@ namespace TecWare.PPSn.Server
 			protected bool IsColumnAllowed(int columnIndex)
 				=> rowAllowed != null && columnIndex >= 0 && columnIndex < rowAllowed.Length && rowAllowed[columnIndex];
 
-			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
+			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IDECommonScope scope = null, string attributeSelector = null)
 			{
 				if (columns != null)
 				{
@@ -780,9 +780,9 @@ namespace TecWare.PPSn.Server
 						var fieldDescription = selectorAccess?.GetFieldDescription(col.Name);
 
 						rowAllowed[i] = fieldDescription == null
-							|| ctx == null
+							|| scope == null
 							|| !fieldDescription.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
-							|| ctx.TryDemandToken(securityToken);
+							|| scope.TryDemandToken(securityToken);
 					}
 				}
 
@@ -1445,21 +1445,6 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		/// <summary>Find a data source by name.</summary>
-		/// <param name="name"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public PpsDataSource GetDataSource(string name, bool throwException = true)
-		{
-			if (name == null)
-				throw new ArgumentNullException(nameof(name));
-
-			using (EnterReadLock())
-				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
-					?? (throwException ? throw new ArgumentOutOfRangeException(nameof(name), name, $"Data source is not defined ('{name}').") : (PpsDataSource)null);
-		} // func GetDataSource
-
 		/// <summary>Find a field description.</summary>
 		/// <param name="name"></param>
 		/// <param name="throwException"></param>
@@ -1587,12 +1572,12 @@ namespace TecWare.PPSn.Server
 			{
 				if (table.GetMemberValue("selector") is PpsDataSelector selector) // selector is givven, export
 				{
-					ExportViewCore(viewWriter, selector, 0, Int32.MaxValue, DEScope.GetScopeService<IPpsPrivateDataContext>(false));
+					ExportViewCore(viewWriter, selector, 0, Int32.MaxValue, DEScope.GetScopeService<IDECommonScope>(false));
 				}
 				else if (table.Members.ContainsKey("select") || table.Members.ContainsKey("name")) // try create a selector
 				{
-					var ctx = DEScope.GetScopeService<IPpsPrivateDataContext>(true);
-					ExportViewCore(viewWriter, ctx.CreateSelectorAsync(table).AwaitTask(), 0, Int32.MaxValue, ctx, null);
+					var scope = DEScope.GetScopeService<IDECommonScope>(true);
+					ExportViewCore(viewWriter, Database.CreateSelectorAsync(table, scope: scope).AwaitTask(), 0, Int32.MaxValue, scope, null);
 				}
 				else if (table.GetMemberValue("rows") is IEnumerable<IDataRow> rows)
 				{
@@ -1603,7 +1588,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc Export
 
-		private void ExportViewCore(ViewWriter viewWriter, IEnumerable<IDataRow> selector, int startAt, int count, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
+		private void ExportViewCore(ViewWriter viewWriter, IEnumerable<IDataRow> selector, int startAt, int count, IDECommonScope scope = null, string attributeSelector = null)
 		{
 			// execute the complete statement
 			using (var enumerator = selector is IDERangeEnumerable<IDataRow> rangeSelector
@@ -1627,7 +1612,7 @@ namespace TecWare.PPSn.Server
 				}
 
 				// write header
-				viewWriter.Begin(selector, columnDefinition, ctx, attributeSelector);
+				viewWriter.Begin(selector, columnDefinition, scope, attributeSelector);
 
 				// emit first row
 				if (emitCurrentRow)
@@ -1660,15 +1645,14 @@ namespace TecWare.PPSn.Server
 			var startAt = r.GetProperty("s", 0);
 			var count = r.GetProperty("c", Int32.MaxValue);
 
-			var ctx = r.GetUser<IPpsPrivateDataContext>();
-
-			var selector = ctx.CreateSelectorAsync(
+			var selector = Database.CreateSelectorAsync(
 				r.GetProperty<string>("v", null),
 				r.GetProperty<string>("r", null),
 				r.GetProperty<string>("f", null),
 				r.GetProperty<string>("o", null),
-				true,
-				r.CultureInfo
+				scope: r,
+				throwException: true,
+				formatProvider: r.CultureInfo
 			).AwaitTask();
 
 			var attributeSelector = r.GetProperty("a", "*");
@@ -1680,7 +1664,7 @@ namespace TecWare.PPSn.Server
 				r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
 				try
 				{
-					ExportViewCore(viewWriter, selector, startAt, count, ctx, attributeSelector);
+					ExportViewCore(viewWriter, selector, startAt, count, r, attributeSelector);
 				}
 				catch (Exception e)
 				{
@@ -1814,7 +1798,7 @@ namespace TecWare.PPSn.Server
 					// create synchronization session for the table expression
 					if (!sessions.TryGetValue(dataSource, out var syncSession))
 					{
-						var connection = dataSource.CreateConnection(r.GetUser<IPpsPrivateDataContext>());
+						var connection = dataSource.CreateConnection(r.DemandUser());
 						syncSession = dataSource.CreateSynchronizationSession(connection, globalLastSyncId, false);
 						if (enforceCDC)
 							syncSession.RefreshChanges();
