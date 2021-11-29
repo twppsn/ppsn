@@ -139,7 +139,8 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
-		private PpsUserIdentity()
+		/// <summary></summary>
+		protected PpsUserIdentity()
 		{
 		} // ctor
 
@@ -189,10 +190,17 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Singleton</summary>
 		public static PpsUserIdentity System { get; } = new PpsSystemIdentity();
 
-		internal static PpsUserIdentity CreateBasicIdentity(string userName, byte[] passwordHash)
+		/// <summary></summary>
+		/// <param name="userName"></param>
+		/// <param name="passwordHash"></param>
+		/// <returns></returns>
+		public static PpsUserIdentity CreateBasicIdentity(string userName, byte[] passwordHash)
 			=> new PpsBasicIdentity(userName, passwordHash);
 
-		internal static PpsUserIdentity CreateIntegratedIdentity(string userName)
+		/// <summary></summary>
+		/// <param name="userName"></param>
+		/// <returns></returns>
+		public static PpsUserIdentity CreateIntegratedIdentity(string userName)
 		{
 			var p = userName.IndexOf('\\');
 			return p == -1
@@ -213,7 +221,7 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary>Enforces the connection.</summary>
 		/// <returns></returns>
-		Task<bool> EnsureConnectionAsync(bool throwException = true);
+		Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser authentificatedUser, bool throwException = true);
 
 		/// <summary>Is the connection still active.</summary>
 		bool IsConnected { get; }

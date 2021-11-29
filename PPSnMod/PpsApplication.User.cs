@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using Neo.IronLua;
@@ -26,6 +27,86 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
 {
+	#region -- class PpsAuthentificatedUser -------------------------------------------
+
+	/// <summary></summary>
+	/// <typeparam name="T"></typeparam>
+	public abstract class PpsAuthentificatedUser<T> : IDEAuthentificatedUser
+		where T : class, IDEUser
+	{
+		private readonly T user;
+		private readonly IIdentity loginIdentity;
+
+		/// <summary></summary>
+		/// <param name="user"></param>
+		/// <param name="loginIdentity"></param>
+		protected PpsAuthentificatedUser(T user, IIdentity loginIdentity)
+		{
+			this.user = user ?? throw new ArgumentNullException(nameof(user));
+			this.loginIdentity = loginIdentity ?? throw new ArgumentNullException(nameof(loginIdentity));
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="impersonationContext"></param>
+		/// <returns></returns>
+		public virtual bool TryImpersonate(out WindowsImpersonationContext impersonationContext)
+		{
+			if (loginIdentity is WindowsIdentity windowsIdentity)
+			{
+				impersonationContext = windowsIdentity.Impersonate();
+				return true;
+			}
+			else
+			{
+				impersonationContext = null;
+				return false;
+			}
+		} // func TryImpersonate
+
+		/// <summary></summary>
+		/// <param name="userCredential"></param>
+		/// <returns></returns>
+		public virtual bool TryGetCredential(out UserCredential userCredential)
+		{
+			if (loginIdentity is HttpListenerBasicIdentity basicIdentity)
+			{
+				userCredential = UserCredential.Create(basicIdentity.Name, basicIdentity.Password);
+				return true;
+			}
+			else
+			{
+				userCredential = null;
+				return false;
+			}
+		} // func TryGetCredential
+
+		/// <summary></summary>
+		/// <param name="role"></param>
+		/// <returns></returns>
+		public abstract bool IsInRole(string role);
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public bool TryGetProperty(string name, out object value)
+			=> user.TryGetProperty(name, out value);
+
+		/// <summary></summary>
+		protected T User => user;
+
+		/// <summary></summary>
+		public IDEUser Info => user;
+		/// <summary></summary>
+		public IIdentity Identity => loginIdentity;
+		/// <summary></summary>
+		public bool CanImpersonate => loginIdentity is WindowsIdentity && loginIdentity.IsAuthenticated;
+	} // class PpsAuthentificatedUser
+
+	#endregion
+
+	#region -- class PpsApplication ---------------------------------------------------
+
 	public partial class PpsApplication
 	{
 		/// <summary>Extension for the login command</summary>
@@ -306,7 +387,7 @@ namespace TecWare.PPSn.Server
 			if (c == null)
 				c = dataSource.CreateConnection(authentificatedUser, throwException);
 
-			return c != null && await c.EnsureConnectionAsync(throwException) ? c : null;
+			return c != null && await c.EnsureConnectionAsync(authentificatedUser, throwException) ? c : null;
 		} // func EnsurePooledConnectionAsync
 
 		/// <summary>Create user scope for the system user</summary>
@@ -353,4 +434,6 @@ namespace TecWare.PPSn.Server
 		/// <summary>Time in ms after a good connection is recreated in the pool.</summary>
 		public int ConnectionLease => 1 * 3600 * 1000; // 1h
 	} // class PpsApplication
+
+	#endregion
 }

@@ -818,7 +818,7 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly PpsSqlDataSource dataSource;
 			private readonly DBCONNECTION connection;
 			private readonly DBCONNECTIONSTRINGBUILDER connectionString;
-			private readonly IDEAuthentificatedUser authentificatedUser;
+			private IDEAuthentificatedUser authentificatedUser;
 
 			private bool isDisposed = false;
 
@@ -878,7 +878,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <returns></returns>
 			protected abstract Task ConnectCoreAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, IDEAuthentificatedUser authentificatedUser);
 
-			private async Task<bool> ConnectAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, bool throwException)
+			private async Task<bool> ConnectAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, IDEAuthentificatedUser authentificatedUser, bool throwException)
 			{
 				// create the connection
 				try
@@ -905,20 +905,48 @@ namespace TecWare.PPSn.Server.Sql
 				var con = CreateConnection();
 
 				// ensure connection
-				await ConnectAsync(con, CreateConnectionStringBuilder(true), true);
+				await ConnectAsync(con, CreateConnectionStringBuilder(true), authentificatedUser, true);
 
 				return con;
 			} // func ForkConnection
 
+			/// <summary>Verify identity, e.g. Passwort</summary>
+			/// <param name="testUser"></param>
+			/// <returns></returns>
+			protected virtual Task<bool> VerifyPasswordAsync(IDEAuthentificatedUser testUser)
+				=> Task.FromResult(authentificatedUser.Info.Identity.Equals(testUser.Info.Identity));
+
 			/// <summary>Ensure that this connection is active.</summary>
+			/// <param name="testUser"></param>
 			/// <param name="throwException"></param>
 			/// <returns></returns>
-			public Task<bool> EnsureConnectionAsync(bool throwException)
+			public async Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser testUser, bool throwException)
 			{
 				if (IsConnected)
-					return Task.FromResult(true);
-
-				return ConnectAsync(connection, connectionString, throwException);
+				{
+					if (testUser != null)
+					{
+						if (ReferenceEquals(authentificatedUser.Identity, testUser.Identity))
+							return true;
+						else if (await VerifyPasswordAsync(testUser))
+						{
+							authentificatedUser = testUser;
+							return true;
+						}
+						else
+							return false;
+					}
+					else
+						return true;
+				}
+				else if (await ConnectAsync(connection, connectionString, testUser ?? authentificatedUser, throwException))
+				{
+					if (testUser != null)
+						authentificatedUser = testUser;
+					return true;
+				}
+				else
+					return false;
 			} // func EnsureConnection
 
 			#endregion

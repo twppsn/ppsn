@@ -54,7 +54,7 @@ namespace TecWare.PPSn.Server
 			Disposed?.Invoke(this, EventArgs.Empty);
 		} // proc Dispose
 
-		public Task<bool> EnsureConnectionAsync(bool throwException = true)
+		public Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser authentificatedUser, bool throwException = true)
 			=> Task.FromResult(true);
 
 		public PpsDataSource DataSource => dataSource;

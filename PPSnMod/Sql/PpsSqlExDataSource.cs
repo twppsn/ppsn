@@ -453,7 +453,7 @@ namespace TecWare.PPSn.Server.Sql
 			public SqlSynchronizationTransaction(PpsApplication application, IPpsSqlConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen)
 				: base(application, connection, leaveConnectionOpen)
 			{
-				Connection.EnsureConnectionAsync(true).AwaitTask();
+				Connection.EnsureConnectionAsync(null, true).AwaitTask();
 
 				// create transaction
 				transaction = SqlConnection.BeginTransaction(IsolationLevel.ReadCommitted);
@@ -623,60 +623,15 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlAuthentificatedUser ---------------------------------------
 
-		private sealed class SqlAuthentificatedUser : IDEAuthentificatedUser
+		private sealed class SqlAuthentificatedUser : PpsAuthentificatedUser<SqlUser>
 		{
-			private readonly SqlUser user;
-			private readonly IIdentity loginIdentity;
-
 			public SqlAuthentificatedUser(SqlUser user, IIdentity loginIdentity)
+				: base(user, loginIdentity)
 			{
-				this.user = user ?? throw new ArgumentNullException(nameof(user));
-				this.loginIdentity = loginIdentity ?? throw new ArgumentNullException(nameof(loginIdentity));
 			} // ctor
 
-			public void Dispose()
-			{
-				if (loginIdentity is IDisposable d)
-					d.Dispose();
-			} // proc Dispose
-
-			public bool IsInRole(string role)
-				=> user.TryDemandToken(role);
-
-			public bool TryImpersonate(out WindowsImpersonationContext impersonationContext)
-			{
-				if (loginIdentity is WindowsIdentity windowsIdentity)
-				{
-					impersonationContext = windowsIdentity.Impersonate();
-					return true;
-				}
-				else
-				{
-					impersonationContext = null;
-					return false;
-				}
-			} // func TryImpersonate
-
-			public bool TryGetCredential(out UserCredential userCredential)
-			{
-				if (loginIdentity is HttpListenerBasicIdentity basicIdentity)
-				{
-					userCredential = UserCredential.Create(basicIdentity.Name, basicIdentity.Password);
-					return true;
-				}
-				else
-				{
-					userCredential = null;
-					return false;
-				}
-			} // func TryGetCredential
-
-			public bool TryGetProperty(string name, out object value)
-				=> user.TryGetProperty(name, out value);
-
-			public IDEUser Info => user;
-			public IIdentity Identity => loginIdentity;
-			public bool CanImpersonate => loginIdentity is WindowsIdentity && loginIdentity.IsAuthenticated;
+			public override bool IsInRole(string role)
+				=> User.TryDemandToken(role);
 		} // class SqlAuthentificatedUser
 
 		#endregion
@@ -803,17 +758,14 @@ namespace TecWare.PPSn.Server.Sql
 				var context = new SqlAuthentificatedUser(this, identity);  // create new context for this identity
 				try
 				{
-					var newConnection = dataSource.Application.GetOrCreatePooledConnection(dataSource, context, false);
+					var newConnection = dataSource.Application.GetOrCreatePooledConnection(dataSource, context, true);
 					try
 					{
 						// ensure the database connection to the main database
-						if (await newConnection.EnsureConnectionAsync(true))
+						if (await newConnection.EnsureConnectionAsync(context, true))
 							return context;
 						else
-						{
-							context.Dispose();
 							return null;
-						}
 					}
 					catch (Exception e)
 					{
@@ -825,7 +777,6 @@ namespace TecWare.PPSn.Server.Sql
 				catch (Exception e)
 				{
 					log.Except(e);
-					context.Dispose();
 					return null;
 				}
 			} // proc AuthentificateAsync
@@ -834,9 +785,8 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				if (String.IsNullOrEmpty(securityToken))
 					return true;
-
 				return Array.BinarySearch(securityTokens, securityToken.ToLower()) >= 0;
-			} // func TryDemandToken
+			} // func HasRole
 
 			#endregion
 
