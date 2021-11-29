@@ -27,84 +27,6 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsAuthentificatedUser -------------------------------------------
-
-	/// <summary></summary>
-	/// <typeparam name="T"></typeparam>
-	public abstract class PpsAuthentificatedUser<T> : IDEAuthentificatedUser
-		where T : class, IDEUser
-	{
-		private readonly T user;
-		private readonly IIdentity loginIdentity;
-
-		/// <summary></summary>
-		/// <param name="user"></param>
-		/// <param name="loginIdentity"></param>
-		protected PpsAuthentificatedUser(T user, IIdentity loginIdentity)
-		{
-			this.user = user ?? throw new ArgumentNullException(nameof(user));
-			this.loginIdentity = loginIdentity ?? throw new ArgumentNullException(nameof(loginIdentity));
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="impersonationContext"></param>
-		/// <returns></returns>
-		public virtual bool TryImpersonate(out WindowsImpersonationContext impersonationContext)
-		{
-			if (loginIdentity is WindowsIdentity windowsIdentity)
-			{
-				impersonationContext = windowsIdentity.Impersonate();
-				return true;
-			}
-			else
-			{
-				impersonationContext = null;
-				return false;
-			}
-		} // func TryImpersonate
-
-		/// <summary></summary>
-		/// <param name="userCredential"></param>
-		/// <returns></returns>
-		public virtual bool TryGetCredential(out UserCredential userCredential)
-		{
-			if (loginIdentity is HttpListenerBasicIdentity basicIdentity)
-			{
-				userCredential = UserCredential.Create(basicIdentity.Name, basicIdentity.Password);
-				return true;
-			}
-			else
-			{
-				userCredential = null;
-				return false;
-			}
-		} // func TryGetCredential
-
-		/// <summary></summary>
-		/// <param name="role"></param>
-		/// <returns></returns>
-		public abstract bool IsInRole(string role);
-
-		/// <summary></summary>
-		/// <param name="name"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		public bool TryGetProperty(string name, out object value)
-			=> user.TryGetProperty(name, out value);
-
-		/// <summary></summary>
-		protected T User => user;
-
-		/// <summary></summary>
-		public IDEUser Info => user;
-		/// <summary></summary>
-		public IIdentity Identity => loginIdentity;
-		/// <summary></summary>
-		public bool CanImpersonate => loginIdentity is WindowsIdentity && loginIdentity.IsAuthenticated;
-	} // class PpsAuthentificatedUser
-
-	#endregion
-
 	#region -- class PpsApplication ---------------------------------------------------
 
 	public partial class PpsApplication
@@ -401,6 +323,18 @@ namespace TecWare.PPSn.Server
 			return context;
 		} // func ImpersonateSystemContext
 
+		/// <summary></summary>
+		/// <param name="userName"></param>
+		/// <param name="password"></param>
+		/// <returns></returns>
+		[LuaMember("ImpersonateUser")]
+		public IDECommonScope ImpersonateUserContext(string userName, string password)
+		{
+			var context = CreateUserContextAsync(userName, password).AwaitTask();
+			context.RegisterDispose(context.Use());
+			return context;
+		} // func ImpersonateUser
+
 		/// <summary>Get the authentificated system user.</summary>
 		/// <returns></returns>
 		public IDEAuthentificatedUser GetSystemUser()
@@ -410,6 +344,25 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public IDECommonScope CreateSystemContext()
 			=> new DECommonScope(this, GetSystemUser());
+
+		/// <summary>Create a user context with username and password.</summary>
+		/// <param name="userName"></param>
+		/// <param name="password"></param>
+		/// <returns></returns>
+		public async Task<IDECommonScope> CreateUserContextAsync(string userName, string password)
+		{
+			var scope = new DECommonScope(this, true, null);
+			try
+			{
+				await scope.AuthentificateUserAsync(new HttpListenerBasicIdentity(userName, password));
+				return scope;
+			}
+			catch
+			{
+				scope.Dispose();
+				throw;
+			}
+		} // func CreateUserContextAsync
 
 		/// <summary>Returns the login data for the given context.</summary>
 		/// <param name="userInfo"></param>

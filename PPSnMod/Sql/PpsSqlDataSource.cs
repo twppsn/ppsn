@@ -910,11 +910,27 @@ namespace TecWare.PPSn.Server.Sql
 				return con;
 			} // func ForkConnection
 
+			private bool VerifyIdentity(IDEAuthentificatedUser testUser)
+			{
+				if (authentificatedUser.Info.Identity is PpsUserIdentity userIdentity)
+					return userIdentity.Equals(testUser.Identity);
+				else if (authentificatedUser.Identity is WindowsIdentity currentWindowsIdentity && testUser.Identity is WindowsIdentity testWindowsIdentity)
+					return currentWindowsIdentity.User == testWindowsIdentity.User;
+				else if (authentificatedUser.TryGetCredential(out var currentCredential) && testUser.TryGetCredential(out var testCredential))
+				{
+					return String.Compare(currentCredential.Domain, testCredential.Domain, StringComparison.OrdinalIgnoreCase) == 0
+						&& String.Compare(currentCredential.UserName, testCredential.UserName, StringComparison.OrdinalIgnoreCase) == 0
+						&& ProcsDE.Compare(currentCredential.Password, testCredential.Password);
+				}
+				else
+					return false;
+			} // func VerifyIdentity
+
 			/// <summary>Verify identity, e.g. Passwort</summary>
 			/// <param name="testUser"></param>
 			/// <returns></returns>
-			protected virtual Task<bool> VerifyPasswordAsync(IDEAuthentificatedUser testUser)
-				=> Task.FromResult(authentificatedUser.Info.Identity.Equals(testUser.Info.Identity));
+			protected virtual Task<bool> VerifyIdentityAsync(IDEAuthentificatedUser testUser, bool throwException)
+				=> Task.FromResult(VerifyIdentity(testUser));
 
 			/// <summary>Ensure that this connection is active.</summary>
 			/// <param name="testUser"></param>
@@ -928,7 +944,7 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						if (ReferenceEquals(authentificatedUser.Identity, testUser.Identity))
 							return true;
-						else if (await VerifyPasswordAsync(testUser))
+						else if (await VerifyIdentityAsync(testUser, throwException))
 						{
 							authentificatedUser = testUser;
 							return true;

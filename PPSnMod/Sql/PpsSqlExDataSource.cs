@@ -623,7 +623,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlAuthentificatedUser ---------------------------------------
 
-		private sealed class SqlAuthentificatedUser : PpsAuthentificatedUser<SqlUser>
+		private sealed class SqlAuthentificatedUser : DEAuthentificatedUser<SqlUser>
 		{
 			public SqlAuthentificatedUser(SqlUser user, IIdentity loginIdentity)
 				: base(user, loginIdentity)
