@@ -632,8 +632,8 @@ namespace TecWare.PPSn.Server.Sql
 		#region -- class SqlUser ------------------------------------------------------
 
 		[DEUserProperty(PpsApplication.UserContextDataSource, typeof(string), "source")]
-		[DEUserProperty(PpsApplication.UserContextFullName, typeof(uint), "fullname")]
-		[DEUserProperty(PpsApplication.UserContextInitials, typeof(uint), "initials")]
+		[DEUserProperty(PpsApplication.UserContextFullName, typeof(string), "fullname")]
+		[DEUserProperty(PpsApplication.UserContextInitials, typeof(string), "initials")]
 		[DEUserProperty(PpsApplication.UserContextIdenticon, typeof(uint), "identicon")]
 		private sealed class SqlUser : IDEUser
 		{
@@ -756,7 +756,7 @@ namespace TecWare.PPSn.Server.Sql
 				var context = new SqlAuthentificatedUser(this, identity);  // create new context for this identity
 
 				// get a pooled connection with this context
-				var newConnection = dataSource.Application.GetOrCreatePooledConnection(dataSource, context.Info, true);
+				var newConnection = dataSource.Application.GetOrCreatePooledConnection(dataSource, this, true);
 
 				// ensure the database connection to the main database
 				if (await newConnection.EnsureConnectionAsync(context, true))

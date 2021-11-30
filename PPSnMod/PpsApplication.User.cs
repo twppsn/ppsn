@@ -216,7 +216,12 @@ namespace TecWare.PPSn.Server
 			#region -- IDEAuthentificatedUser - members -------------------------------
 
 			bool IPrincipal.IsInRole(string role)
-				=> true;
+			{
+				if (role == SecurityUser)
+					return false; // no login allowed
+				else
+					return true;
+			} // func IPrincipal.IsInRole
 
 			bool IDEAuthentificatedUser.TryGetCredential(out UserCredential userCredential)
 			{
