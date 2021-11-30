@@ -31,6 +31,15 @@ namespace TecWare.PPSn.Server
 
 	public partial class PpsApplication
 	{
+		/// <summary>User context optional wellknown property: Full name of the contact or user.</summary>
+		public const string UserContextFullName = "FullName";
+		/// <summary>User context optional wellknown property: Initals of the contact or user.</summary>
+		public const string UserContextInitials = "Initials";
+		/// <summary>User context optional wellknown property: User symbol</summary>
+		public const string UserContextIdenticon = "Identicon";
+		/// <summary>User context optional wellknown property: DataSource name</summary>
+		public const string UserContextDataSource = "DataSource";
+
 		/// <summary>Extension for the login command</summary>
 		public const string ExtendLoginMethods = "ExtendLogin";
 
@@ -130,27 +139,21 @@ namespace TecWare.PPSn.Server
 				}
 			} // func FindPooledConnection
 
-			public IPpsConnectionHandle GetOrCreatePooledConnection(PpsDataSource dataSource, IDEAuthentificatedUser authentificatedUser, bool throwException)
+			public IPpsConnectionHandle GetOrCreatePooledConnection(PpsDataSource dataSource, bool throwException)
 			{
-				if (!userToken.TryGetTarget(out var user))
+				if (!userToken.TryGetTarget(out var _))
 				{
 					if (throwException)
 						throw new InvalidOperationException("User is not active anymore");
 					return null;
 				}
-				else if (!authentificatedUser.Info.Equals(user))
-				{
-					if (throwException)
-						throw new InvalidOperationException("User does not match.");
-					return null;
-				}
-
+				
 				lock (pooledConnections)
 				{
 					var pooled = FindPooledConnection(dataSource);
 					if (pooled == null)
 					{
-						var handle = dataSource.CreateConnection(authentificatedUser, throwException);
+						var handle = dataSource.CreateConnection(throwException);
 						if (handle == null)
 							return null;
 
@@ -172,6 +175,8 @@ namespace TecWare.PPSn.Server
 
 			[DEListTypeProperty("@user")]
 			public string UserId => User?.Identity.Name;
+			[DEListTypeProperty("@type")]
+			public string UserType => User?.GetType().Name;
 			[DEListTypeProperty("@active")]
 			public bool IsActive => userToken.TryGetTarget(out _);
 			[DEListTypeProperty("@cons")]
@@ -191,6 +196,7 @@ namespace TecWare.PPSn.Server
 
 		#region -- class SystemUser ---------------------------------------------------
 
+		[DEUserProperty(UserContextDataSource, typeof(string), "source")]
 		private sealed class SystemUser : IDEUser, IDEAuthentificatedUser
 		{
 			private readonly PpsApplication application;
@@ -238,13 +244,20 @@ namespace TecWare.PPSn.Server
 
 			public bool TryGetProperty(string name, out object value)
 			{
-				value = null;
-				return false;
+				switch (name)
+				{
+					case UserContextDataSource:
+						value = "sys";
+						return true;
+					default:
+						value = null;
+						return false;
+				}
 			} // func TryGetProperty
 
 			public IEnumerator<PropertyValue> GetEnumerator()
 			{
-				yield break;
+				yield return new PropertyValue(UserContextDataSource, "sys");
 			} // func GetEnumerator
 
 			IEnumerator IEnumerable.GetEnumerator()
@@ -253,7 +266,7 @@ namespace TecWare.PPSn.Server
 			#endregion
 
 			public IIdentity Identity => PpsUserIdentity.System;
-			public string DisplayName => Environment.UserName;
+			public string DisplayName => Environment.UserDomainName + "\\" + Environment.UserName;
 
 			public IReadOnlyList<string> SecurityTokens { get; } = Array.Empty<string>();
 		} // class SystemUser
@@ -265,15 +278,15 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Get a pooled connection for a user.</summary>
 		/// <param name="dataSource"></param>
-		/// <param name="authentificatedUser"></param>
+		/// <param name="user"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public IPpsConnectionHandle GetOrCreatePooledConnection(PpsDataSource dataSource, IDEAuthentificatedUser authentificatedUser, bool throwException = true)
+		public IPpsConnectionHandle GetOrCreatePooledConnection(PpsDataSource dataSource, IDEUser user, bool throwException = true)
 		{
-			if (authentificatedUser == null)
+			if (user == null)
 			{
 				if (throwException)
-					throw new ArgumentNullException(nameof(authentificatedUser));
+					throw new ArgumentNullException(nameof(user));
 				else
 					return null;
 			}
@@ -282,19 +295,19 @@ namespace TecWare.PPSn.Server
 			{
 				UserConnectionPool p = null;
 
-				for (var i = userPool.Count - 1; i >= 0; i++)
+				for (var i = userPool.Count - 1; i >= 0; i--)
 				{
 					var u = userPool[i].User;
 					if (u == null)
 						userPool.RemoveAt(i);
-					else if (u.Equals(authentificatedUser.Info))
+					else if (u.Equals(user))
 						p = userPool[i];
 				}
 
 				if (p == null)
-					userPool.Add(p = new UserConnectionPool(this, authentificatedUser.Info));
+					userPool.Add(p = new UserConnectionPool(this, user));
 
-				return p.GetOrCreatePooledConnection(dataSource, authentificatedUser, throwException);
+				return p.GetOrCreatePooledConnection(dataSource, throwException);
 			}
 		} // func GetOrCreatePooledConnection
 
@@ -305,9 +318,9 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public async Task<IPpsConnectionHandle> EnsurePooledConnectionAsync(PpsDataSource dataSource, IDEAuthentificatedUser authentificatedUser, bool throwException = true)
 		{
-			var c = GetOrCreatePooledConnection(dataSource, authentificatedUser, throwException);
+			var c = GetOrCreatePooledConnection(dataSource, authentificatedUser.Info, throwException);
 			if (c == null)
-				c = dataSource.CreateConnection(authentificatedUser, throwException);
+				c = dataSource.CreateConnection(throwException);
 
 			return c != null && await c.EnsureConnectionAsync(authentificatedUser, throwException) ? c : null;
 		} // func EnsurePooledConnectionAsync

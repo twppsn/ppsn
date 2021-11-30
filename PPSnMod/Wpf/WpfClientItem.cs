@@ -1043,7 +1043,8 @@ namespace TecWare.PPSn.Server.Wpf
 				// start a session
 				if (!synchronisationSessions.TryGetValue(dataSource, out var session))
 				{
-					var connection = dataSource.CreateConnection(user);
+					var connection = dataSource.CreateConnection();
+					connection.EnsureConnectionAsync(user).AwaitTask();
 					session = new SynchronizationSession(connection, dataSource.CreateSynchronizationSession(connection, lastSynchronization.ToFileTimeUtc(), true));
 					synchronisationSessions[dataSource] = session;
 				}

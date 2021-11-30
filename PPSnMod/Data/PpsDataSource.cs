@@ -35,11 +35,10 @@ namespace TecWare.PPSn.Server.Data
 			Application = sp.GetService<PpsApplication>(true);
 		} // ctor
 
-		/// <summary>Create a connection for the current active user.</summary>
-		/// <param name="authentificatedUser">User context of the current active user.</param>
+		/// <summary>Create a connection.</summary>
 		/// <param name="throwException">If the connection could not created it throws an exception.</param>
 		/// <returns></returns>
-		public abstract IPpsConnectionHandle CreateConnection(IDEAuthentificatedUser authentificatedUser, bool throwException = true);
+		public abstract IPpsConnectionHandle CreateConnection(bool throwException = true);
 
 		/// <summary>Create a selector token for the view name.</summary>
 		/// <param name="name">Name of the selector.</param>
@@ -104,6 +103,23 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary>Application object.</summary>
 		public PpsApplication Application { get; }
+
+		/// <summary></summary>
+		/// <param name="authentificatedUser"></param>
+		/// <param name="testUser"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		public static bool EnsureEqualUser(IDEAuthentificatedUser authentificatedUser, IDEAuthentificatedUser testUser, bool throwException)
+		{
+			if (testUser != null && authentificatedUser != null && !authentificatedUser.Info.Equals(testUser.Info))
+			{
+				if (throwException)
+					throw new ArgumentException("Authentificated user does not match.");
+				return false;
+			}
+			else
+				return true;
+		} // proc EnsureEqualUser
 	} // class PpsDataSource
 
 	#endregion

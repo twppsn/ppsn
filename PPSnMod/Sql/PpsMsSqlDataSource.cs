@@ -39,8 +39,8 @@ namespace TecWare.PPSn.Server.Sql
 
 		private sealed class SqlConnectionHandle : PpsSqlConnectionHandle<SqlConnection, SqlConnectionStringBuilder>
 		{
-			public SqlConnectionHandle(PpsMsSqlDataSource dataSource, IDEAuthentificatedUser authentificatedUser)
-				: base(dataSource, authentificatedUser)
+			public SqlConnectionHandle(PpsMsSqlDataSource dataSource)
+				: base(dataSource)
 			{
 			} // ctor
 
@@ -1419,11 +1419,10 @@ namespace TecWare.PPSn.Server.Sql
 			=> Procs.FreeAndNil(ref databaseMainThread);
 
 		/// <summary></summary>
-		/// <param name="authentificatedUser"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public override IPpsConnectionHandle CreateConnection(IDEAuthentificatedUser authentificatedUser, bool throwException = true)
-			=> new SqlConnectionHandle(this, authentificatedUser);
+		public override IPpsConnectionHandle CreateConnection(bool throwException = true)
+			=> new SqlConnectionHandle(this);
 
 		#endregion
 

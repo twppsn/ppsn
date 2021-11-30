@@ -36,13 +36,12 @@ namespace TecWare.PPSn.Server
 		public event EventHandler Disposed;
 
 		private readonly PpsSysDataSource dataSource;
-		private readonly IDEAuthentificatedUser authentificatedUser;
+		private IDEAuthentificatedUser authentificatedUser = null;
 		private bool isDisposed = false;
 
-		internal PpsSysConnectionHandle(PpsSysDataSource dataSource, IDEAuthentificatedUser authentificatedUser)
+		internal PpsSysConnectionHandle(PpsSysDataSource dataSource)
 		{
 			this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-			this.authentificatedUser = authentificatedUser ?? throw new ArgumentNullException(nameof(authentificatedUser));
 		} // ctor
 
 		public void Dispose()
@@ -54,12 +53,21 @@ namespace TecWare.PPSn.Server
 			Disposed?.Invoke(this, EventArgs.Empty);
 		} // proc Dispose
 
-		public Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser authentificatedUser, bool throwException = true)
-			=> Task.FromResult(true);
+		public Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser testUser, bool throwException = true)
+		{
+			// first check identity, and than try connect
+			if (!PpsDataSource.EnsureEqualUser(authentificatedUser, testUser, throwException))
+				return Task.FromResult(false);
+
+			// update user, do not check password!
+			if (testUser != null)
+				authentificatedUser = testUser;
+			return Task.FromResult(true);
+		} // func EnsureConnectionAsync
 
 		public PpsDataSource DataSource => dataSource;
 		public IDEUser User => authentificatedUser.Info;
-		public bool IsConnected => !isDisposed;
+		public bool IsConnected => !isDisposed && authentificatedUser != null;
 	} // class PpsSysConnectionHandle
 
 	#endregion
@@ -173,12 +181,12 @@ namespace TecWare.PPSn.Server
 			: base(sp, name)
 		{
 			application = sp.GetService<PpsApplication>(true);
-			systemConnection = (PpsSysConnectionHandle)application.GetOrCreatePooledConnection(this, application.GetSystemUser(), true);
+			systemConnection = (PpsSysConnectionHandle)application.GetOrCreatePooledConnection(this, application.GetSystemUser().Info, true);
 		} // ctor
 
 		/// <inherited/>
-		public override IPpsConnectionHandle CreateConnection(IDEAuthentificatedUser authentificatedUser, bool throwException = true)
-			=> new PpsSysConnectionHandle(this, authentificatedUser);
+		public override IPpsConnectionHandle CreateConnection(bool throwException = true)
+			=> new PpsSysConnectionHandle(this);
 
 		/// <summary></summary>
 		/// <param name="name"></param>

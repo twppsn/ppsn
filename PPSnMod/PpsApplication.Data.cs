@@ -1798,7 +1798,9 @@ namespace TecWare.PPSn.Server
 					// create synchronization session for the table expression
 					if (!sessions.TryGetValue(dataSource, out var syncSession))
 					{
-						var connection = dataSource.CreateConnection(r.DemandUser());
+						var connection = dataSource.CreateConnection();
+						connection.EnsureConnectionAsync(r.DemandUser()).AwaitTask();
+
 						syncSession = dataSource.CreateSynchronizationSession(connection, globalLastSyncId, false);
 						if (enforceCDC)
 							syncSession.RefreshChanges();

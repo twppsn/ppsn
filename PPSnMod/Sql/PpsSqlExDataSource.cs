@@ -40,13 +40,6 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary></summary>
 	public sealed class PpsSqlExDataSource : PpsMsSqlDataSource
 	{
-		/// <summary>User context optional wellknown property: Full name of the contact or user.</summary>
-		public const string UserContextFullName = "FullName";
-		/// <summary>User context optional wellknown property: Initals of the contact or user.</summary>
-		public const string UserContextInitials = "Initials";
-		/// <summary>User context optional wellknown property: User symbol</summary>
-		public const string UserContextIdenticon = "Identicon";
-
 		#region -- class SqlDataTransaction -------------------------------------------
 
 		/// <summary></summary>
@@ -638,18 +631,22 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlUser ------------------------------------------------------
 
-		[DEUserProperty(UserContextFullName, typeof(uint), "fullname")]
-		[DEUserProperty(UserContextInitials, typeof(uint), "initials")]
-		[DEUserProperty(UserContextIdenticon, typeof(uint), "identicon")]
+		[DEUserProperty(PpsApplication.UserContextDataSource, typeof(string), "source")]
+		[DEUserProperty(PpsApplication.UserContextFullName, typeof(uint), "fullname")]
+		[DEUserProperty(PpsApplication.UserContextInitials, typeof(uint), "initials")]
+		[DEUserProperty(PpsApplication.UserContextIdenticon, typeof(uint), "identicon")]
 		private sealed class SqlUser : IDEUser
 		{
 			private static readonly string[] WellKnownUserOptionKeys = new string[] {
 				"userId",
 				"displayName",
-				UserContextFullName,
-				UserContextInitials,
-				UserContextIdenticon
+				PpsApplication.UserContextDataSource,
+				PpsApplication.UserContextFullName,
+				PpsApplication.UserContextInitials,
+				PpsApplication.UserContextIdenticon
 			};
+
+			private const int definedWellKnownUserKeys = 3;
 
 			private readonly PpsSqlDataSource dataSource;
 			private readonly long userId;
@@ -657,7 +654,7 @@ namespace TecWare.PPSn.Server.Sql
 			private int currentVersion = -1;				// version of the user data
 			private string[] securityTokens = null;			// access rights
 
-			private readonly object[] wellKnownUserOptionValues = new object[WellKnownUserOptionKeys.Length - 2];
+			private readonly object[] wellKnownUserOptionValues = new object[WellKnownUserOptionKeys.Length - definedWellKnownUserKeys];
 			private LoggerProxy log = null;					// current log interface for the user
 			private LuaTable databaseConfig = null;
 
@@ -688,7 +685,8 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				if (userIdentity == null)
 				{
-					dataSource.Server.UnregisterUser(this);
+					if(this.userIdentity != null)
+						dataSource.Server.UnregisterUser(this);
 					this.userIdentity = userIdentity;
 				}
 				else
@@ -714,8 +712,8 @@ namespace TecWare.PPSn.Server.Sql
 
 				// update optional values
 				wellKnownUserOptionValues[0] = r.GetProperty("Name", userIdentity.Name);
-				for (var i = 3; i < WellKnownUserOptionKeys.Length; i++)
-					wellKnownUserOptionValues[i - 2] = r.TryGetProperty(WellKnownUserOptionKeys[i], out var value) ? value : null;
+				for (var i = definedWellKnownUserKeys; i < WellKnownUserOptionKeys.Length; i++)
+					wellKnownUserOptionValues[i - definedWellKnownUserKeys] = r.TryGetProperty(WellKnownUserOptionKeys[i], out var value) ? value : null;
 
 				// update parameter-set from database, use only members
 				databaseConfig = FromLson(r.GetProperty("Cfg", "{}"));
@@ -756,29 +754,15 @@ namespace TecWare.PPSn.Server.Sql
 
 				// check the user information agains the main user
 				var context = new SqlAuthentificatedUser(this, identity);  // create new context for this identity
-				try
-				{
-					var newConnection = dataSource.Application.GetOrCreatePooledConnection(dataSource, context, true);
-					try
-					{
-						// ensure the database connection to the main database
-						if (await newConnection.EnsureConnectionAsync(context, true))
-							return context;
-						else
-							return null;
-					}
-					catch (Exception e)
-					{
-						log.Except(e);
-						newConnection?.Dispose();
-						return null;
-					}
-				}
-				catch (Exception e)
-				{
-					log.Except(e);
+
+				// get a pooled connection with this context
+				var newConnection = dataSource.Application.GetOrCreatePooledConnection(dataSource, context.Info, true);
+
+				// ensure the database connection to the main database
+				if (await newConnection.EnsureConnectionAsync(context, true))
+					return context;
+				else
 					return null;
-				}
 			} // proc AuthentificateAsync
 
 			public bool TryDemandToken(string securityToken)
@@ -818,12 +802,15 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						case 0:
 							value = userId;
-							break;
+							return true;
 						case 1:
 							value = DisplayName;
-							break;
+							return true;
+						case 2:
+							value = dataSource.Name;
+							return true;
 						default:
-							value = wellKnownUserOptionValues[idx - 2];
+							value = wellKnownUserOptionValues[idx - definedWellKnownUserKeys];
 							break;
 					}
 
@@ -845,12 +832,13 @@ namespace TecWare.PPSn.Server.Sql
 				// fixed values
 				yield return new PropertyValue(WellKnownUserOptionKeys[0], typeof(long), userId);
 				yield return new PropertyValue(WellKnownUserOptionKeys[1], typeof(string), DisplayName);
+				yield return new PropertyValue(WellKnownUserOptionKeys[2], typeof(string), dataSource.Name);
 
 				// optional values
-				for (var i = 2; i < WellKnownUserOptionKeys.Length; i++)
+				for (var i = definedWellKnownUserKeys; i < WellKnownUserOptionKeys.Length; i++)
 				{
-					if (wellKnownUserOptionValues[i - 2] != null)
-						yield return new PropertyValue(WellKnownUserOptionKeys[i], wellKnownUserOptionValues[i - 2]);
+					if (wellKnownUserOptionValues[i - definedWellKnownUserKeys] != null)
+						yield return new PropertyValue(WellKnownUserOptionKeys[i], wellKnownUserOptionValues[i - definedWellKnownUserKeys]);
 				}
 
 				// database configuration
@@ -946,16 +934,11 @@ namespace TecWare.PPSn.Server.Sql
 								}
 								else
 								{
-									try
-									{
-										var user = new SqlUser(this, userId);
-										if (UpdateUserData(user, u))
-											users.Add(user);
-									}
-									catch (SystemException e)
-									{
-										Log.Warn($"User (id={userId}): {e.Message}");
-									}
+									var user = new SqlUser(this, userId);
+									if (UpdateUserData(user, u))
+										users.Add(user);
+									else
+										user.Dispose();
 								}
 							}
 							else

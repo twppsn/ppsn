@@ -818,7 +818,7 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly PpsSqlDataSource dataSource;
 			private readonly DBCONNECTION connection;
 			private readonly DBCONNECTIONSTRINGBUILDER connectionString;
-			private IDEAuthentificatedUser authentificatedUser;
+			private IDEAuthentificatedUser authentificatedUser = null;
 
 			private bool isDisposed = false;
 
@@ -826,11 +826,9 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="dataSource"></param>
-			/// <param name="authentificatedUser"></param>
-			protected PpsSqlConnectionHandle(PpsSqlDataSource dataSource, IDEAuthentificatedUser authentificatedUser)
+			protected PpsSqlConnectionHandle(PpsSqlDataSource dataSource)
 			{
 				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-				this.authentificatedUser = authentificatedUser ?? throw new ArgumentNullException(nameof(authentificatedUser));
 
 				connection = CreateConnection();
 				connectionString = CreateConnectionStringBuilder(false);
@@ -912,9 +910,14 @@ namespace TecWare.PPSn.Server.Sql
 
 			private bool VerifyIdentity(IDEAuthentificatedUser testUser)
 			{
-				if (authentificatedUser.Info.Identity is PpsUserIdentity userIdentity)
+				if (authentificatedUser == null)
+					return false;
+
+				var currentIdentity = authentificatedUser.Info.Identity;
+
+				if (currentIdentity is PpsUserIdentity userIdentity)
 					return userIdentity.Equals(testUser.Identity);
-				else if (authentificatedUser.Identity is WindowsIdentity currentWindowsIdentity && testUser.Identity is WindowsIdentity testWindowsIdentity)
+				else if (currentIdentity is WindowsIdentity currentWindowsIdentity && testUser.Identity is WindowsIdentity testWindowsIdentity)
 					return currentWindowsIdentity.User == testWindowsIdentity.User;
 				else if (authentificatedUser.TryGetCredential(out var currentCredential) && testUser.TryGetCredential(out var testCredential))
 				{
@@ -928,6 +931,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary>Verify identity, e.g. Passwort</summary>
 			/// <param name="testUser"></param>
+			/// <param name="throwException"></param>
 			/// <returns></returns>
 			protected virtual Task<bool> VerifyIdentityAsync(IDEAuthentificatedUser testUser, bool throwException)
 				=> Task.FromResult(VerifyIdentity(testUser));
@@ -938,7 +942,14 @@ namespace TecWare.PPSn.Server.Sql
 			/// <returns></returns>
 			public async Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser testUser, bool throwException)
 			{
-				if (IsConnected)
+				if (testUser == null && authentificatedUser == null)
+					throw new ArgumentNullException(nameof(testUser));
+
+				// first check identity, and than try connect
+				if (!EnsureEqualUser(authentificatedUser, testUser, throwException))
+					return false;
+				
+				if (IsConnected) // check identity and password
 				{
 					if (testUser != null)
 					{
@@ -955,14 +966,18 @@ namespace TecWare.PPSn.Server.Sql
 					else
 						return true;
 				}
-				else if (await ConnectAsync(connection, connectionString, testUser ?? authentificatedUser, throwException))
+				else 
 				{
-					if (testUser != null)
-						authentificatedUser = testUser;
-					return true;
+					// connect with new authentification information
+					if (await ConnectAsync(connection, connectionString, testUser ?? authentificatedUser, throwException))
+					{
+						if (testUser != null)
+							authentificatedUser = testUser;
+						return true;
+					}
+					else
+						return false;
 				}
-				else
-					return false;
 			} // func EnsureConnection
 
 			#endregion
