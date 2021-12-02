@@ -908,7 +908,7 @@ namespace TecWare.PPSn.Server.Sql
 				return con;
 			} // func ForkConnection
 
-			private bool VerifyIdentity(IDEAuthentificatedUser testUser)
+			private static bool VerifyIdentity(IDEAuthentificatedUser authentificatedUser, IDEAuthentificatedUser testUser)
 			{
 				if (authentificatedUser == null)
 					return false;
@@ -933,8 +933,8 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="testUser"></param>
 			/// <param name="throwException"></param>
 			/// <returns></returns>
-			protected virtual Task<bool> VerifyIdentityAsync(IDEAuthentificatedUser testUser, bool throwException)
-				=> Task.FromResult(VerifyIdentity(testUser));
+			protected virtual Task<bool> VerifyIdentityAsync(IDEAuthentificatedUser authentificatedUser, IDEAuthentificatedUser testUser, bool throwException)
+				=> Task.FromResult(VerifyIdentity(authentificatedUser, testUser));
 
 			/// <summary>Ensure that this connection is active.</summary>
 			/// <param name="testUser"></param>
@@ -955,7 +955,7 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						if (ReferenceEquals(authentificatedUser.Identity, testUser.Identity))
 							return true;
-						else if (await VerifyIdentityAsync(testUser, throwException))
+						else if (await VerifyIdentityAsync(authentificatedUser, testUser, throwException))
 						{
 							authentificatedUser = testUser;
 							return true;

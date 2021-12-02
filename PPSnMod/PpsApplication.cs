@@ -2361,6 +2361,9 @@ namespace TecWare.PPSn.Server
 					.Where(c => c != null && c.Type == "msi" && c.Name == packageName)
 					.FirstOrDefault();
 
+				if (package == null)
+					return Task.FromResult(false);
+
 				r.Redirect("/ppsn/" + package.Source); // relative to root
 				return Task.FromResult(true);
 			}
