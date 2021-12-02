@@ -668,7 +668,7 @@ namespace TecWare.PPSn.Server
 			RegisterApplicationType("msi", TryGetMsiApplicationInfo);
 
 			systemUser = new SystemUser(this);
-			userPool = new DEList<UserConnectionPool>(this, "tw_connection_pool", "User connection pool");
+			userPool = new DEList<UserConnectionPool>(this, "tw_ppsn_connection_pool", "User connection pool");
 			PublishItem(userPool);
 			PublishDebugInterface();
 		} // ctor
@@ -685,6 +685,7 @@ namespace TecWare.PPSn.Server
 
 			xHttpInfo = new XElement(DEConfigurationConstants.xnResources,
 				new XAttribute("name", "httpInfo"),
+				new XAttribute("displayname", "PPSn-Self-HttpInfo"),
 				new XAttribute("assembly", typeof(PpsApplication).Assembly.FullName),
 				new XAttribute("namespace", "TecWare.PPSn.Server.Resources"),
 				new XElement(DEConfigurationConstants.xnSecurityDef, SecuritySys)

@@ -851,12 +851,20 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
+			[DEListTypeProperty("@id")]
 			public long UserId => userId;
+			[DEListTypeProperty("@version")]
 			public long CurrentVersion => currentVersion;
+			[DEListTypeProperty("@name")]
 			public string DisplayName => userIdentity.Name;
+
 			public IIdentity Identity => userIdentity;
 			public LoggerProxy Log => log;
+
 			public IReadOnlyList<string> SecurityTokens => securityTokens;
+
+			[DEListTypeProperty("@security")]
+			public string SecurityTokensList => String.Join(";", securityTokens);
 		} // class SqlUser
 
 		#endregion
