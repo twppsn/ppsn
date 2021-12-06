@@ -35,6 +35,8 @@ namespace TecWare.PPSn.UI
 
 		private readonly PpsProgressStack progressStack;
 		private IPpsWindowPaneManager paneManager;
+		private bool isLoading = false;
+		private bool isUnloading = false;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -136,11 +138,24 @@ namespace TecWare.PPSn.UI
 
 			using (var p = PpsShell.CreateProgress(this, progressText: "Lade..."))
 			{
-				// create the pane
-				var pane = CreatePaneBindings(PpsWpfShell.CreateEmptyPane(paneManager, this, paneType));
+				IPpsWindowPane pane;
+				isLoading = true;
+				try
+				{
+					// create the pane
+					pane = CreatePaneBindings(PpsWpfShell.CreateEmptyPane(paneManager, this, paneType));
 
-				// load content
-				await OnLoadPaneAsync(pane, arguments);
+					// load content
+					await OnLoadPaneAsync(pane, arguments);
+				}
+				finally
+				{
+					isLoading = false;
+				}
+
+				// call activate
+				if (IsActive)
+					pane.Activate();
 
 				return pane;
 			}
@@ -152,8 +167,9 @@ namespace TecWare.PPSn.UI
 		/// <summary>Unload pane content.</summary>
 		/// <param name="commit"></param>
 		/// <returns></returns>
-		public  async Task<bool> UnloadAsync(bool? commit = null)
+		public async Task<bool> UnloadAsync(bool? commit = null)
 		{
+			isUnloading = true;
 			var pane = Pane;
 			var r = await OnUnloadPaneAsync(pane, commit);
 			if (r)
@@ -165,6 +181,8 @@ namespace TecWare.PPSn.UI
 				if (pane is IDisposable d)
 					d.Dispose();
 			}
+			else
+				isUnloading = false;
 			return r;
 		} // func UnloadPaneAsync
 
@@ -220,6 +238,24 @@ namespace TecWare.PPSn.UI
 					break;
 			}
 		} // proc OnPanePropertyChanged
+
+		public virtual void OnActivated()
+		{
+			var pane = Pane;
+
+			SetValue(isActivePropertyKey, BooleanBox.True);
+			if (pane != null && !isLoading && !isUnloading)
+				pane.Activate();
+		} // proc OnActivated
+
+		public virtual void OnDeactivated()
+		{
+			var pane = Pane;
+
+			SetValue(isActivePropertyKey, BooleanBox.False);
+			if (pane != null && !isLoading && !isUnloading)
+				pane.Deactivate();
+		} // proc OnDeactivated
 
 		object IServiceProvider.GetService(Type serviceType)
 		{
@@ -293,7 +329,7 @@ namespace TecWare.PPSn.UI
 
 		private static readonly DependencyPropertyKey panePropertyKey = DependencyProperty.RegisterReadOnly(nameof(Pane), typeof(IPpsWindowPane), typeof(PpsPaneHost), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty PaneProperty = panePropertyKey.DependencyProperty;
-				
+
 		public IPpsWindowPane Pane => (IPpsWindowPane)GetValue(PaneProperty);
 
 		#endregion
@@ -338,6 +374,15 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- IsActive - property -------------------------------------------------
+
+		private static readonly DependencyPropertyKey isActivePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsActive), typeof(bool), typeof(PpsPaneHost), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty IsActiveProperty = isActivePropertyKey.DependencyProperty;
+
+		/// <summary>Current commands of the pane</summary>
+		public bool IsActive => BooleanBox.GetBool(GetValue(IsActiveProperty));
+
+		#endregion
 		#region -- ProgressStack - property -------------------------------------------
 
 		/// <summary>Access the progress stack</summary>

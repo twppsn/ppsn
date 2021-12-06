@@ -29,6 +29,8 @@ namespace TecWare.PPSn.UI.Barcodes
 			this.code = code;
 		} // ctor
 
+		/// <summary>Return raw barcode</summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> code;
 

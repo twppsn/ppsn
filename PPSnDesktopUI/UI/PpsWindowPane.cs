@@ -66,6 +66,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Close this pane.</summary>
 		Task<bool> ClosePaneAsync();
 
+		/// <summary>Is this pane host within the pane-manager active.</summary>
+		bool IsActive { get; }
 		/// <summary>Dispatcher of the host.</summary>
 		Dispatcher Dispatcher { get; }
 		/// <summary>Progress bar of the host.</summary>
@@ -98,6 +100,11 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		PpsWindowPaneCompareResult CompareArguments(LuaTable args);
 
+		/// <summary>Pane is activated</summary>
+		void Activate();
+		/// <summary>Pane is deactivated</summary>
+		void Deactivate();
+
 		/// <summary>Title of the content.</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		string Title { get; }
@@ -124,7 +131,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
 		bool IsDirty { get; }
-		
+
 		/// <summary>Help key for the current pane.</summary>
 		string HelpKey { get; }
 	} // interface IPpsWindowPane
@@ -259,7 +266,9 @@ namespace TecWare.PPSn.UI
 		private readonly Dictionary<string, int> mimePaneTypes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
 		public PpsKnownWindowPanes(IPpsShell shell)
-			=> this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+		{
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+		} // ctor
 
 		private int RegisterPaneType(Type paneType)
 		{

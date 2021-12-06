@@ -97,6 +97,29 @@ namespace TecWare.PPSn
 			return paneManager.Shell.GetSettings<PpsWindowPaneSettings>().NewPaneMode ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
 		} // func GetDefaultPaneMode
 
+		/// <summary>Get the active pane, of the pane-manager</summary>
+		/// <param name="paneManager"></param>
+		/// <returns></returns>
+		public static IPpsWindowPane GetActivePane(this IPpsWindowPaneManager paneManager)
+			=> paneManager.Panes.Where(p => ReferenceEquals(paneManager, p.PaneHost.PaneManager) ||  p.PaneHost.PaneManager.IsActive && p.PaneHost.IsActive).FirstOrDefault();
+
+		public static IPpsWindowPane GetActivePane(this IPpsShell shell)
+			=> shell.GetService<IPpsWindowPaneManager>(false)?.GetActivePane();
+
+		/// <summary></summary>
+		/// <param name="paneManager"></param>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		public static Task<IPpsWindowPane> OpenPaneAsync(this IPpsWindowPaneManager paneManager, LuaTable table)
+		{
+			var openType = table.GetMemberValue("open") as string ?? throw new ArgumentNullException("open");
+			var paneType = paneManager.Shell.GetService<IPpsKnownWindowPanes>(false)?.GetPaneType(openType) ?? Type.GetType(openType);
+			if (paneType == null)
+				throw new ArgumentOutOfRangeException("open", String.Format("PaneType unknown: {0}", openType));
+
+			return paneManager.OpenPaneAsync(paneType, GetDefaultPaneMode(paneManager, table), (table[1] as LuaTable) ?? table);
+		} // func OpenPaneAsync
+
 		#endregion
 
 		#region -- EqualPane ----------------------------------------------------------
