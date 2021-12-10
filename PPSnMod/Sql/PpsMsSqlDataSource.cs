@@ -85,10 +85,22 @@ namespace TecWare.PPSn.Server.Sql
 						await OpenConnectionIntegratedAsync(connection, connectionString);
 				}
 				else if (authentificatedUser.TryGetCredential(out var uc)) // use user credentials
-					await OpenConnectionAsync(connection, connectionString, new SqlCredential(uc.UserName, uc.Password));
+					await OpenConnectionAsync(connection, connectionString, new SqlCredential(uc.UserName, ReadOnlyPassword(uc.Password)));
 				else
 					throw new ArgumentOutOfRangeException(nameof(authentificatedUser));
 			} // func ConnectCoreAsync
+
+			private static SecureString ReadOnlyPassword(SecureString password)
+			{
+				if (password.IsReadOnly())
+					return password;
+				else
+				{
+					var copy = password.Copy();
+					copy.MakeReadOnly();
+					return copy;
+				}
+			} // proc ReadOnlyPassword
 
 			/// <summary>Is connection alive.</summary>
 			public override bool IsConnected => IsConnectionOpen(Connection);
