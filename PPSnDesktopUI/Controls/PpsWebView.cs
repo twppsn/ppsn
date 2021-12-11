@@ -49,7 +49,7 @@ namespace TecWare.PPSn.Controls
 		private readonly Uri uri;
 
 		public PpsWebViewLink(Uri uri)
-			=> this.uri = uri;
+			=> this.uri = uri ?? throw new ArgumentNullException(nameof(uri));
 
 		/// <summary>Open a new window.</summary>
 		public bool NewWindow { get; set; } = false;
@@ -1092,6 +1092,7 @@ namespace TecWare.PPSn.Controls
 		private void OnNavigationStarted(PpsWebViewNavigationStartedEventArgs e)
 		{
 			RaiseEvent(e);
+			SetValue(isNavigatingPropertyKey, BooleanBox.True);
 
 			if (!e.Handled && TryRedirectToPaneDefault(e.Uri, null))
 				e.Cancel = true;
@@ -1105,7 +1106,10 @@ namespace TecWare.PPSn.Controls
 		} // proc OnRedirectNavigationContent
 
 		private void OnNavigationCompleted(PpsWebViewNavigationCompletedEventArgs e)
-			=> RaiseEvent(e);
+		{
+			RaiseEvent(e);
+			SetValue(isNavigatingPropertyKey, BooleanBox.False);
+		} // proc OnNavigationCompleted
 
 		private bool TryGetNavigationToken(out ViewNavigationToken token)
 		{
@@ -1422,6 +1426,17 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Title of the current content.</summary>
 		public string Title { get => (string)GetValue(TitleProperty); private set => SetValue(titlePropertyKey, value); }
+
+		#endregion
+
+		#region -- IsNavigating - property ---------------------------------------------------
+
+		private static readonly DependencyPropertyKey isNavigatingPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsNavigating), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
+		/// <summary>Navigation in process.</summary>
+		public static readonly DependencyProperty IsNavigatingProperty = isNavigatingPropertyKey.DependencyProperty;
+
+		/// <summary>Navigation in process.</summary>
+		public bool IsNavigating => BooleanBox.GetBool(GetValue(IsNavigatingProperty));
 
 		#endregion
 

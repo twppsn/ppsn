@@ -1311,7 +1311,7 @@ namespace TecWare.PPSn
 
 			// open pane
 			paneManager.OpenPaneAsync(paneType, GetOpenPaneModeFromLink(paneManager, link), link.Location.GetArgumentsAsTable()).OnException();
-		} // event LinkCommandExecuted
+		} // event ProcessPaneManager
 
 		private static void ProcessDefaultLink(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
 		{
