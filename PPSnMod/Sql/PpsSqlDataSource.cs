@@ -930,6 +930,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // func VerifyIdentity
 
 			/// <summary>Verify identity, e.g. Passwort</summary>
+			/// <param name="authentificatedUser"></param>
 			/// <param name="testUser"></param>
 			/// <param name="throwException"></param>
 			/// <returns></returns>
@@ -949,7 +950,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (!EnsureEqualUser(authentificatedUser, testUser, throwException))
 					return false;
 				
-				if (IsConnected) // check identity and password
+				if (IsConnected && authentificatedUser != null) // check identity and password
 				{
 					if (testUser != null)
 					{
@@ -961,7 +962,11 @@ namespace TecWare.PPSn.Server.Sql
 							return true;
 						}
 						else
+						{
+							if (throwException)
+								throw new ArgumentException($"Verification failed for {testUser.Identity.Name}.");
 							return false;
+						}
 					}
 					else
 						return true;
