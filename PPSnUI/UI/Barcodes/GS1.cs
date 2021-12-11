@@ -132,8 +132,8 @@ namespace TecWare.PPSn.UI.Barcodes
 				if (c < 48 || c > 57)
 				{
 					if (throwException)
-						throw new ArgumentOutOfRangeException(nameof(code), "Only numbers are valid.");
-					return 'E';
+						throw new ArgumentOutOfRangeException(nameof(code), (int)c, $"Numer expected, ({c} at {i}).");
+					return '\0';
 				}
 
 				if (multiply)
@@ -153,7 +153,10 @@ namespace TecWare.PPSn.UI.Barcodes
 		} // func CalculateCheckSum
 
 		private static bool VerifyCheckDigit(string code, int offset, int length)
-			=> code[offset + length - 1] == CalculateCheckSum(code, offset, length - 1, false);
+		{
+			var cs = CalculateCheckSum(code, offset, length - 1, false);
+			return cs != '\0' && code[offset + length - 1] == cs;
+		} // func VerifyCheckDigit
 
 		#endregion
 
@@ -258,7 +261,7 @@ namespace TecWare.PPSn.UI.Barcodes
 			return true;
 		} // proc DecodeDate
 
-		private static bool VerifyEan(string code, int offset, int length, GS1CodeType type, out string prodNr)
+		private static bool VerifyEan(string code, int offset, int length, out string prodNr)
 		{
 			if (VerifyCheckDigit(code, offset, length))
 			{
@@ -274,7 +277,7 @@ namespace TecWare.PPSn.UI.Barcodes
 
 		private static GS1 CreateEan(string code, int offset, int length, GS1CodeType type)
 		{
-			return VerifyEan(code, offset, length, type, out var prodNr)
+			return VerifyEan(code, offset, length, out var prodNr)
 				? new GS1(type, prodNr, null, null, null, null, null)
 				: null;
 		} // proc CreateEan
@@ -296,7 +299,7 @@ namespace TecWare.PPSn.UI.Barcodes
 			else if (rawCode.Length == 14) // EAN14 mit Prüfsumme
 				return CreateEan(rawCode, 0, 14, GS1CodeType.EAN14);
 
-			else if (IsGS1Core(rawCode) && VerifyEan(rawCode, 2, 14, GS1CodeType.GS1, out var prodNr))  // Global Trade Item Number, grundsätzlich 13 (EAN14) stellig (ggf. vorangestellte 0en) plus Prüfziffer
+			else if (IsGS1Core(rawCode) && VerifyEan(rawCode, 2, 14, out var prodNr))  // Global Trade Item Number, grundsätzlich 13 (EAN14) stellig (ggf. vorangestellte 0en) plus Prüfziffer
 			{
 				string lotNumber = null;
 				string serialNumber = null;
@@ -347,7 +350,7 @@ namespace TecWare.PPSn.UI.Barcodes
 				if (menge.HasValue)
 					sb.Append("30").Append(menge);
 			}
-			else// Charge
+			else // Charge
 			{
 				sb.Append("10").Append(lotNumber);
 				if (menge.HasValue)
