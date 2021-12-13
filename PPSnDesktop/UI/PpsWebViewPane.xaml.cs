@@ -63,9 +63,9 @@ namespace TecWare.PPSn.UI
 		private void ToggleKeyboard(PpsCommandContext obj)
 		{
 			if (virtualKeyboard.IsVisible)
-				virtualKeyboard.Show();
-			else
 				virtualKeyboard.Hide();
+			else
+				virtualKeyboard.Show();
 		} // proc ToggleKeyboard
 
 		public bool? CanBackButton => webView.CanGoBack ? (bool?)true : null;

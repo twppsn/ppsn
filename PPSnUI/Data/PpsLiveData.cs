@@ -33,7 +33,6 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Networking;
-using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Data
 {
