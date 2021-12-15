@@ -51,6 +51,7 @@ namespace TecWare.PPSn
 		WM_SYSKEYUP = 0x0105,
 		WM_KEYFIRST = 0x0100,
 		WM_KEYLAST = 0x0108,
+		WM_TIMER = 0x0113,
 	} // enum WinMsg
 
 	#endregion
@@ -655,6 +656,13 @@ namespace TecWare.PPSn
 		[DllImport(user32)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		public static extern bool GetCursorPos(ref POINT pt);
+
+		[DllImport(user32, ExactSpelling = true)]
+		public static extern IntPtr SetTimer(IntPtr hWnd, IntPtr nIDEvent, uint uElapse, IntPtr lpTimerFunc);
+
+		[DllImport(user32, ExactSpelling = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool KillTimer(IntPtr hWnd, IntPtr uIDEvent);
 
 		[DllImport(gdi32, SetLastError = true)]
 		internal static extern IntPtr CreateDIBSection(IntPtr hdc, ref BITMAPINFO pbmi, uint iUsage, out IntPtr ppvBits, IntPtr hSection, uint dwOffset);
