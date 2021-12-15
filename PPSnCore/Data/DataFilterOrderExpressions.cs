@@ -57,25 +57,34 @@ namespace TecWare.PPSn.Data
 
 	#region -- enum PpsDataFilterCompareOperator --------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Compare operations for expressions</summary>
+	[Flags]
 	public enum PpsDataFilterCompareOperator
 	{
-		/// <summary></summary>
-		Contains,
-		/// <summary></summary>
-		NotContains,
-		/// <summary></summary>
-		Equal,
-		/// <summary></summary>
-		NotEqual,
-		/// <summary></summary>
-		Greater,
-		/// <summary></summary>
-		GreaterOrEqual,
-		/// <summary></summary>
-		Lower,
-		/// <summary></summary>
-		LowerOrEqual
+		/// <summary>Starts with operator</summary>
+		StartWith = 1,
+		/// <summary>Ends with operator</summary>
+		EndWith = 2,
+		/// <summary>Contains with operator</summary>
+		Contains = 3,
+		/// <summary>Not starts with operator</summary>
+		NotStartWith = 4,
+		/// <summary>Not ends with operator</summary>
+		NotEndWith = 8,
+		/// <summary>Not contains with operator</summary>
+		NotContains = 12,
+		/// <summary>Equal with operator</summary>
+		Equal = 16,
+		/// <summary>Not equal with operator</summary>
+		NotEqual = 32,
+		/// <summary>Greator with operator</summary>
+		Greater = 64,
+		/// <summary>Greator or equal with operator</summary>
+		GreaterOrEqual = 128,
+		/// <summary>Lower with operator</summary>
+		Lower = 256,
+		/// <summary>Lower or equal with operator</summary>
+		LowerOrEqual = 512
 	} // enum PpsDataFilterCompareOperator
 
 	#endregion
@@ -257,6 +266,7 @@ namespace TecWare.PPSn.Data
 			else
 			{
 				var startAt2 = offset;
+				SkipWhiteSpaces(expression, ref offset);
 				while (offset < expressionLength && !(Char.IsWhiteSpace(expression[offset]) || expression[offset] == ')' || expression[offset] == '\'' || expression[offset] == '"'))
 					offset++;
 
@@ -273,16 +283,7 @@ namespace TecWare.PPSn.Data
 						}
 						else
 						{
-							var textValue = expression.Substring(startAt2, offset - startAt2);
-
-							// test for numeric
-							var hasLeadingZero = textValue.Length > 0 && textValue[0] == '0';
-							if (!hasLeadingZero && Int64.TryParse(textValue, NumberStyles.None, formatProvider, out var i64))
-								value = new PpsDataFilterIntegerValue(i64);
-							else if (!hasLeadingZero && Decimal.TryParse(textValue, NumberStyles.None, formatProvider, out var d))
-								value = new PpsDataFilterDecimalValue(d);
-							else
-								value = new PpsDataFilterTextValue(textValue);
+							value = new PpsDataFilterTextValue(expression.Substring(startAt2, offset - startAt2));
 						}
 					}
 				}
@@ -345,21 +346,52 @@ namespace TecWare.PPSn.Data
 							? PpsDataFilterCompareOperator.LowerOrEqual
 							: PpsDataFilterCompareOperator.Lower;
 						break;
+
 					case '>':
 						offset++;
 						op = EatExpressionCharacter(expression, ref offset, '=')
 							? PpsDataFilterCompareOperator.GreaterOrEqual
 							: PpsDataFilterCompareOperator.Greater;
 						break;
+
+					case ']':
+						offset++;
+						op = PpsDataFilterCompareOperator.EndWith;
+						break;
+
+					case '[':
+						offset++;
+						op = EatExpressionCharacter(expression, ref offset, ']')
+							? PpsDataFilterCompareOperator.Contains
+							: PpsDataFilterCompareOperator.StartWith;
+						break;
+
 					case '=':
 						offset++;
 						op = PpsDataFilterCompareOperator.Equal;
 						break;
+
 					case '!':
 						offset++;
-						op = EatExpressionCharacter(expression, ref offset, '=')
-							? PpsDataFilterCompareOperator.NotEqual
-							: PpsDataFilterCompareOperator.NotContains;
+						if (EatExpressionCharacter(expression, ref offset, '='))
+						{
+							op = PpsDataFilterCompareOperator.NotEqual;
+						}
+						else if (EatExpressionCharacter(expression, ref offset, ']'))
+						{
+							op = PpsDataFilterCompareOperator.NotEndWith;
+						}
+						else if (EatExpressionCharacter(expression, ref offset, '['))
+						{
+							if (EatExpressionCharacter(expression, ref offset, ']'))
+							{
+								op = PpsDataFilterCompareOperator.NotContains;
+							}
+							else
+							{
+								op = PpsDataFilterCompareOperator.NotStartWith;
+							}
+						}
 						break;
 				}
 			}
@@ -439,7 +471,7 @@ namespace TecWare.PPSn.Data
 		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, ref int offset, int expressionLength, IFormatProvider formatProvider, PpsDataFilterParseOption options)
 		{
 			/*  expr ::=
-			 *		[ identifier ] ( ':' [ '<' | '>' | '<=' | '>=' | '!' | '!=' ) [ '(' ] value [ ')' ]
+			 *		[ identifier ] ( ':' [ '<' | '>' | '[' | ']' | '[]' | '<=' | '>=' | '!' | '!=' | '![' | '!]' | '![]') [ '(' ] value [ ')' ]
 			 *		[ 'and' | 'or' | 'nand' | 'nor' ] '(' expr { SP ... } [ ')' ]
 			 *		':' native ':'
 			 *		value
@@ -964,7 +996,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>A unescaped text, will be parsed as an field.</summary>
 		FieldsFirst = 4,
 		/// <summary>Returns at least a <c>true</c> instead of <c>null</c>.</summary>
-		ReturnTrue
+		ReturnTrue = 8
 	} // enum PpsDataFilterValueParseOption
 
 	#endregion
@@ -1327,6 +1359,8 @@ namespace TecWare.PPSn.Data
 	/// </remarks>
 	public sealed class PpsDataFilterDateTimeValue : PpsDataFilterValue
 	{
+		private static readonly char[] dateTimePartsSeparators = new[] { 'T', 't', ' ' };
+
 		private readonly DateTime from;
 		private readonly DateTime to;
 
@@ -1535,7 +1569,7 @@ namespace TecWare.PPSn.Data
 				return '\0';
 		} // func JumpPattern
 
-		private static int ReadDigits(char splitSymbol, string inputDate, IFormatProvider formatProvider, ref int inputPos)
+		private static int ReadDigits(string inputDate, IFormatProvider formatProvider, ref int inputPos, char splitSymbol)
 		{
 			string digits;
 
@@ -1612,95 +1646,44 @@ namespace TecWare.PPSn.Data
 			//   dd.
 			//   null
 
-			if (String.IsNullOrEmpty(inputDate))
+			if (String.IsNullOrWhiteSpace(inputDate))
 				return '0';
 
-			var datePattern = dtf.ShortDatePattern + "T" + dtf.LongTimePattern;
+			inputDate = inputDate.Trim();
 
-			var year = -1;
-			var month = -1;
-			var day = -1;
+			string datePart = null;
+			string timePart = null;
 
-			var hour = -1;
-			var minute = -1;
-			var second = -1;
-
-			var patterPos = 0;
-			var inputPos = 0;
-			var error = false;
-
-			while (patterPos < datePattern.Length && !error)
+			if (inputDate.IndexOfAny(dateTimePartsSeparators) > -1)
 			{
-				// read complete pattern
-				var patternSymbol = datePattern[patterPos];
-				var splitSymbol = JumpPattern(patternSymbol, datePattern, ref patterPos); // returns the date part separator
-
-				// read digits until the symbol
-				var startAt = inputPos;
-				var t = ReadDigits(splitSymbol, inputDate, formatProvider, ref inputPos);
-				var readedNum = inputPos - startAt;
-
-				// set date part, by number
-				if (t >= 0)
-				{
-					if (readedNum == 4) // switch to year
-						patternSymbol = 'y';
-
-					switch (patternSymbol)
-					{
-						case 'y':
-							if (year == -1)
-								year = t;
-							break;
-						case 'M':
-							if (t > 12)
-								goto case 'd';
-
-							if (month == -1)
-								month = t;
-							break;
-						case 'd':
-							if (t > 31)
-								goto case 'y';
-
-							if (day == -1)
-								day = t;
-							break;
-
-						case 'H':
-							if (hour == -1)
-								hour = t;
-							break;
-						case 'm':
-							if (minute == -1)
-								minute = t;
-							break;
-						case 's':
-							if (second == -1)
-								second = t;
-							break;
-
-						default:
-							error = true;
-							break;
-					}
-				}
-			}
-
-			if (error) // error is set, parse the complete input date
-			{
-				if (DateTime.TryParseExact(inputDate, datePattern, dtf, DateTimeStyles.None, out var dt)
-					|| DateTime.TryParse(inputDate, dtf, DateTimeStyles.None, out dt)) // try parse full date
-				{
-					resultDateTime = dt;
-					return 'F';
-				}
-				else
-					return 'E';
+				var parts = inputDate.Split(dateTimePartsSeparators);
+				datePart = parts[0];
+				timePart = parts[1];
 			}
 			else
 			{
-				if (hour < 0 && minute < 0 && second < 0)
+				if (inputDate.IndexOf(dtf.TimeSeparator) >= 0 || (inputDate.Length <= 2))
+					timePart = inputDate;
+				else
+					datePart = inputDate;
+			}
+
+			int year = -1, month = -1, day = -1;
+			int hour = -1, minute = -1, second = -1;
+
+			var error = false;
+			if (!string.IsNullOrEmpty(datePart))
+				error = TryParseDatePart(datePart, formatProvider, dtf, ref year, ref month, ref day);
+
+			if (!error && !string.IsNullOrEmpty(timePart))
+			{
+				error = ParseTimePart(timePart, formatProvider, dtf, ref hour, ref minute, ref second);
+			}
+
+			if (!error)
+			{
+				// only the date part is present
+				if (!string.IsNullOrEmpty(datePart) && string.IsNullOrEmpty(timePart))
 				{
 					if (year < 1 && month < 1 && day < 1) // all components are missing
 						return 'D';
@@ -1727,7 +1710,7 @@ namespace TecWare.PPSn.Data
 						return 'D';
 					}
 				}
-				else
+				else if (hour >= 0 || minute >= 0 || second >= 0)
 				{
 					GetValidDate(resultDateTime, ref year, ref month, ref day);
 
@@ -1735,7 +1718,144 @@ namespace TecWare.PPSn.Data
 					return second < 0 ? 't' : 'T';
 				}
 			}
+			// error is set, parse the complete input date
+			var datePattern = dtf.ShortDatePattern + "T" + dtf.LongTimePattern;
+			if (DateTime.TryParseExact(inputDate, datePattern, dtf, DateTimeStyles.None, out var dt)
+				|| DateTime.TryParse(inputDate, dtf, DateTimeStyles.None, out dt)) // try parse full date
+			{
+				resultDateTime = dt;
+				return 'F';
+			}
+			else
+				return 'E';
 		} // func TryParseDateTime
+
+		private static bool ParseTimePart(string timePart, IFormatProvider formatProvider, DateTimeFormatInfo dtf, ref int hour, ref int minute, ref int second)
+		{
+			var timePattern = dtf.LongTimePattern;
+			var error = false;
+			var patternPos = 0;
+			var inputPos = 0;
+
+			while (patternPos < timePattern.Length && !error)
+			{
+				// read complete pattern
+				var patternSymbol = timePattern[patternPos];
+				var splitSymbol = JumpPattern(patternSymbol, timePattern, ref patternPos); // returns the date part separator
+
+				// read digits until the symbol
+				var startAt = inputPos;
+				var t = ReadDigits(timePart, formatProvider, ref inputPos, splitSymbol);
+				var readedNum = inputPos - startAt;
+
+				// set date part, by number
+				if (t >= 0)
+				{
+					switch (patternSymbol)
+					{
+						case 'H':
+							if (hour == -1)
+								hour = t;
+							break;
+						case 'm':
+							if (minute == -1)
+								minute = t;
+							break;
+						case 's':
+							if (second == -1)
+								second = t;
+							break;
+
+						default:
+							error = true;
+							break;
+					}
+				}
+			}
+				return error;
+		}
+
+		private static bool TryParseDatePart(string datePart, IFormatProvider formatProvider, DateTimeFormatInfo dtf, ref int year, ref int month, ref int day)
+		{
+			// using regex
+			// ^(?<year>\d{4})(-(?<month>\d\d)(-(?<day>\d\d)(T(?<hour>\d\d):(?<minute>\d\d)(:(?<seconds>\d\d))?)?)?)?$
+			// string patterns = @"(?<day>\d{2}).(?<month>\d{2}).(?<year>\d{4})";
+			//					@"(?<year>\d{4}).(?<month>\d{2}).(?<day>\d{2})";
+			//					@"(?<year>\d{4}).(?<month>\d{2})"
+			//					@"(?<month>\d{2}).(?<year>\d{4})"
+			// or manualy
+
+			var datePattern = dtf.ShortDatePattern;
+			var hasError = false;
+
+			// split string using dtf.DateSeparator
+			// check the count of the parts
+			// if parts.count = 1 -> assume that string contins the year
+			// if parts.count = 2 -> assume that string contins the year and the month.
+			//   Year part length is 4 char.
+			// if parts.count = 3 -> assume that string contins the year and the month and day.
+			//   Year part length is 4 char. Day Month order with respect to there order in the ShortDatePattern.
+			var dateSep = !String.IsNullOrEmpty(dtf.DateSeparator) ? dtf.DateSeparator[0] : '.';
+			var parts = datePart.Split(dateSep);
+			if (datePart.IndexOf(dateSep) < 0)
+			{
+				return !Int32.TryParse(datePart, NumberStyles.None, formatProvider, out year);
+			}
+
+			var yearPartNdx = -1;
+			var monthPartNdx = -1;
+			var dayPartNdx = -1;
+			var monthSucceedsDay = datePattern.IndexOf('M') > datePattern.IndexOf('d');
+
+			switch (parts.Length)
+			{
+				case 2:
+					if (parts[0].Length == 4)
+					{
+						yearPartNdx = 0;
+						monthPartNdx = 1;
+					}
+					else if (parts[1].Length == 4)
+					{
+						monthPartNdx = 0;
+						yearPartNdx = 1;
+					}
+					else
+					{
+						// we can also handle MM.dd or dd.MM here
+						hasError = true;
+					}
+					break;
+				case 3:
+					if (parts[0].Length == 4)
+					{
+						yearPartNdx = 0;
+						monthPartNdx = monthSucceedsDay ? 1 : 2;
+						dayPartNdx   = monthSucceedsDay ? 2 : 1;
+					}
+					else if (parts[2].Length == 4)
+					{
+						yearPartNdx = 2;
+						monthPartNdx = monthSucceedsDay ? 1 : 0;
+						dayPartNdx = monthSucceedsDay ? 0 : 1;
+					}
+					else
+						hasError = true;
+
+					break;
+				default:
+					hasError = true;
+					break;
+			}
+			if (!hasError &&  yearPartNdx >= 0 && !String.IsNullOrEmpty(parts[yearPartNdx]))
+				hasError = !Int32.TryParse(parts[yearPartNdx], NumberStyles.None, formatProvider, out year);
+			if (!hasError && monthPartNdx >= 0 && !String.IsNullOrEmpty(parts[monthPartNdx]))
+				hasError = !Int32.TryParse(parts[monthPartNdx], NumberStyles.None, formatProvider, out month);
+			if (!hasError && dayPartNdx >= 0 && !String.IsNullOrEmpty(parts[dayPartNdx]))
+				hasError = !Int32.TryParse(parts[dayPartNdx], NumberStyles.None, formatProvider, out day);
+
+			return hasError;
+		} // func ParseDatePart
 
 		internal static PpsDataFilterDateTimeValue ParseDateTime(string expression, int offset, int count, IFormatProvider formatProvider)
 		{
@@ -2088,6 +2208,19 @@ namespace TecWare.PPSn.Data
 						break;
 					case PpsDataFilterCompareOperator.Contains:
 						break;
+					case PpsDataFilterCompareOperator.StartWith:
+						sb.Append("[");
+						break;
+					case PpsDataFilterCompareOperator.EndWith:
+						sb.Append("]");
+						break;
+					case PpsDataFilterCompareOperator.NotStartWith:
+						sb.Append("![");
+						break;
+					case PpsDataFilterCompareOperator.NotEndWith:
+						sb.Append("!]");
+						break;
+
 					default:
 						throw new InvalidOperationException();
 				}
@@ -2426,6 +2559,15 @@ namespace TecWare.PPSn.Data
 									return new PpsDataFilterCompareExpression(cmp.Operand, PpsDataFilterCompareOperator.GreaterOrEqual, cmp.Value);
 								case PpsDataFilterCompareOperator.GreaterOrEqual:
 									return new PpsDataFilterCompareExpression(cmp.Operand, PpsDataFilterCompareOperator.Greater, cmp.Value);
+								
+								case PpsDataFilterCompareOperator.StartWith:
+									return new PpsDataFilterCompareExpression(cmp.Operand, PpsDataFilterCompareOperator.NotStartWith, cmp.Value);
+								case PpsDataFilterCompareOperator.EndWith:
+									return new PpsDataFilterCompareExpression(cmp.Operand, PpsDataFilterCompareOperator.NotEndWith, cmp.Value);
+								case PpsDataFilterCompareOperator.NotStartWith:
+									return new PpsDataFilterCompareExpression(cmp.Operand, PpsDataFilterCompareOperator.StartWith, cmp.Value);
+								case PpsDataFilterCompareOperator.NotEndWith:
+									return new PpsDataFilterCompareExpression(cmp.Operand, PpsDataFilterCompareOperator.EndWith, cmp.Value);
 							}
 						}
 					}
@@ -2615,35 +2757,70 @@ namespace TecWare.PPSn.Data
 			{
 				case PpsDataFilterValueType.Field:
 					return CreateCompareFilterField(expression.Operand, expression.Operator, ((PpsDataFilterFieldValue)expression.Value).FieldName);
-				case PpsDataFilterValueType.Text:
-					return CreateCompareFilterText(expression.Operand, expression.Operator, ((PpsDataFilterTextValue)expression.Value).Text);
 				case PpsDataFilterValueType.Date:
 					return CreateCompareFilterDate(expression.Operand, expression.Operator, ((PpsDataFilterDateTimeValue)expression.Value).From, ((PpsDataFilterDateTimeValue)expression.Value).To);
+
+				case PpsDataFilterValueType.Text:
 				case PpsDataFilterValueType.Number:
-					return CreateCompareFilterNumber(expression.Operand, expression.Operator, ((PpsDataFilterTextKeyValue)expression.Value).Text);
 				case PpsDataFilterValueType.Integer:
-					return CreateCompareFilterInteger(expression.Operand, expression.Operator, ((PpsDataFilterIntegerValue)expression.Value).Value);
 				case PpsDataFilterValueType.Decimal:
-					return CreateCompareFilterDecimal(expression.Operand, expression.Operator, ((PpsDataFilterDecimalValue)expression.Value).Value);
+					var columnToken = expression.Operand;
+					var column = LookupNumberColumn(columnToken);
+					if (column == null)
+						return CreateColumnErrorFilter(columnToken);
+
+					var (columnName, columnType) = column;
+					string parseableValue;
+					try
+					{
+						string value = expression.Value is PpsDataFilterTextValue txtValueFilter
+							? txtValueFilter.Text
+							: expression.Value.ToString(CultureInfo.InvariantCulture);
+						parseableValue = CreateParsableValue(value, columnType);
+					}
+					catch (FormatException)
+					{
+						return CreateColumnErrorFilter(columnToken);
+					}
+					return CreateDefaultCompareValue(columnName, expression.Operator, parseableValue, columnType == typeof(string));
+
 				case PpsDataFilterValueType.Null:
 					return CreateCompareFilterNull(expression.Operand, expression.Operator);
 				default:
 					throw new NotImplementedException();
 			}
+
 		} // func CreateCompareFilter
 
 		private string CreateDefaultCompareValue(string columnName, PpsDataFilterCompareOperator op, string value, bool useContains)
 		{
 			switch (op)
 			{
+				case PpsDataFilterCompareOperator.StartWith:
+				case PpsDataFilterCompareOperator.EndWith:
 				case PpsDataFilterCompareOperator.Contains:
 					if (useContains)
-						return columnName + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Both);
+					{
+						var flags = op == PpsDataFilterCompareOperator.Contains
+							? PpsSqlLikeStringEscapeFlag.Both
+							: (op == PpsDataFilterCompareOperator.StartWith ? PpsSqlLikeStringEscapeFlag.Trailing : PpsSqlLikeStringEscapeFlag.Leading);
+
+						return columnName + " LIKE " + CreateLikeString(value, flags);
+					}
 					else
 						goto case PpsDataFilterCompareOperator.Equal;
+
 				case PpsDataFilterCompareOperator.NotContains:
+				case PpsDataFilterCompareOperator.NotStartWith:
+				case PpsDataFilterCompareOperator.NotEndWith:
 					if (useContains)
-						return "NOT " + columnName + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Both);
+					{
+						var flags = op == PpsDataFilterCompareOperator.NotContains
+							? PpsSqlLikeStringEscapeFlag.Both
+							: (op == PpsDataFilterCompareOperator.NotStartWith ? PpsSqlLikeStringEscapeFlag.Trailing : PpsSqlLikeStringEscapeFlag.Leading);
+
+						return "NOT " + columnName + " LIKE " + CreateLikeString(value, flags);
+					}
 					else
 						goto case PpsDataFilterCompareOperator.NotEqual;
 

@@ -56,7 +56,7 @@ namespace PPSnExcel
 	{
 		bool PrepareMapping(Excel.ListObject list);
 
-		Task<(bool, string)> GetNextBlockAsync(int blockSize);
+		Task<(bool, string)> GetNextBlockAsync(int blockSize, bool enableAnonymization);
 		IDataColumn FindColumnFromExpression(string expression);
 
 		Excel.XmlMap XlMapping { get; }
@@ -148,7 +148,7 @@ namespace PPSnExcel
 				this.xmlType = xmlType;
 				this.isNullable = isNullable;
 			} // ctor
-
+			
 			public PpsDataColumnExpression ToColumnExpression()
 				=> selectColumnName == null ? null : new PpsDataColumnExpression(selectColumnName);
 
@@ -190,6 +190,8 @@ namespace PPSnExcel
 			private Excel.XmlMap xlMap = null;
 			private int[] resultToXml = null;
 			private bool firstRow = true;
+			private bool[] columnsAnonMask = null;
+			private readonly Random randomGen;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -200,16 +202,16 @@ namespace PPSnExcel
 				if (enumerable == null)
 					throw new ArgumentNullException(nameof(enumerable));
 
+				randomGen = new Random(DateTime.Now.Millisecond);
+				
 				enumerator = enumerable.GetEnumerator();
 				try
 				{
-					if (enumerable is IDataColumns dc1)
-						resultColumns = dc1.Columns;
-					else
-						resultColumns = ((IDataColumns)enumerator).Columns;
-
+					resultColumns = enumerable is IDataColumns columns ? columns.Columns : ((IDataColumns)enumerator).Columns;
 					if (resultColumns.Count == 0)
 						throw new ExcelException("Ergebnismenge hat keine Spalten.");
+
+					CreateCollumnMask(resultColumns);
 				}
 				catch
 				{
@@ -266,10 +268,10 @@ namespace PPSnExcel
 
 			#region -- GetNextBlockAsync ----------------------------------------------
 
-			private void WriteRow(XmlWriter x, IDataValues r)
+			private void WriteRow(XmlWriter x, IDataValues r, bool anonymize)
 			{
 				x.WriteStartElement("r");
-
+				var key = 0;
 				var count = map.columns.Length;
 				for (var i = 0; i < count; i++)
 				{
@@ -277,15 +279,192 @@ namespace PPSnExcel
 					if (v != null)
 					{
 						x.WriteStartElement(map.columns[i].ResultColumnName);
+
+						if (anonymize && columnsAnonMask[i])
+						{
+							key = key == 0 ? randomGen.Next(7, 30) : key;
+							v = AnonymizeData(v, r[i].GetType(), key);
+						}
 						x.WriteValue(v);
 						x.WriteEndElement();
 					}
 				}
-
 				x.WriteEndElement();
 			} // func WriteRow
 
-			public async Task<(bool, string)> GetNextBlockAsync(int blockSize)
+			#region -- Data Anonymization --------------------------------------------------
+			
+			private object AnonymizeData(object value, Type valueType, int key)
+			{
+				try
+				{
+					var typeCode = Type.GetTypeCode(valueType);
+					switch (typeCode)
+					{
+						case TypeCode.Object:
+							if (typeof(Guid) == valueType)
+							{
+								var gstr = CaesarCipher.Encrypt(value.ToString(), key);
+								var g = Guid.Parse(gstr);
+								return g;
+							}
+							else
+								return value;
+
+						case TypeCode.Empty:
+						case TypeCode.DBNull:
+							return value;
+
+						case TypeCode.Boolean:
+							return !((bool)value);
+							
+						case TypeCode.Char:
+							var cstr = CaesarCipher.Encrypt(value.ToString(), key);
+							return cstr[0];
+							
+						case TypeCode.SByte:
+						case TypeCode.Byte:
+						case TypeCode.Int16:
+						case TypeCode.UInt16:
+						case TypeCode.Int32:
+						case TypeCode.UInt32:
+						case TypeCode.Int64:
+						case TypeCode.UInt64:
+						case TypeCode.Single:
+						case TypeCode.Double:
+						case TypeCode.Decimal:
+							return AnonymizeNumericData(value, valueType, key);
+
+						case TypeCode.DateTime:
+							var date = (DateTime)value;
+							if (key > 15)
+								date = date.AddDays(key);
+							else
+								date = date.AddDays(-key);
+							return date.Date;
+
+						case TypeCode.String:
+							string str = value.ToString();
+							str = CaesarCipher.Encrypt(str, key);
+							return str;
+
+						default:
+							break;
+					}
+				}
+				catch(Exception xp)
+				{
+					Debug.WriteLine(xp);
+				}
+				return value;
+			}
+			
+			private static byte[] NumericValueToBytes(object value)
+			{
+				byte[] bytes = null;
+				switch (Type.GetTypeCode(value.GetType()))
+				{
+					case TypeCode.SByte:
+						bytes = BitConverter.GetBytes((sbyte)value);
+						break;
+					case TypeCode.Byte:
+						bytes = BitConverter.GetBytes((byte)value);
+						break;
+					case TypeCode.Int16:
+						bytes = BitConverter.GetBytes((short)value);
+						break;
+					case TypeCode.UInt16:
+						bytes = BitConverter.GetBytes((ushort)value);
+						break;
+					case TypeCode.Int32:
+						bytes = BitConverter.GetBytes((int)value);
+						break;
+					case TypeCode.UInt32:
+						bytes = BitConverter.GetBytes((uint)value);
+						break;
+					case TypeCode.Int64:
+						bytes = BitConverter.GetBytes((Int64)value);
+						break;
+					case TypeCode.UInt64:
+						bytes = BitConverter.GetBytes((UInt64)value);
+						break;
+					case TypeCode.Single:
+						bytes = BitConverter.GetBytes((Single)value);
+						break;
+					case TypeCode.Double:
+						bytes = BitConverter.GetBytes((double)value);
+						break;
+					case TypeCode.Decimal:
+						var bits = Decimal.GetBits((Decimal)value);
+						bytes = new byte[bits.Length / 4];
+						var off = 0;
+						foreach (var i in bits)
+						{
+							Buffer.BlockCopy(BitConverter.GetBytes(i), 0, bytes, off, sizeof(int));
+							off += sizeof(int);
+						}
+						break;
+				}
+				return bytes;
+			}
+			private static object BytesToNumericValue(byte[] bytes, Type valueType)
+			{
+				switch (Type.GetTypeCode(valueType))
+				{
+					case TypeCode.SByte:
+						return (sbyte)bytes[0];
+					case TypeCode.Byte:
+						return (byte)bytes[0];
+					case TypeCode.Int16:
+						return BitConverter.ToInt16(bytes, 0);
+					case TypeCode.UInt16:
+						return BitConverter.ToUInt16(bytes, 0);
+					case TypeCode.Int32:
+						return BitConverter.ToInt32(bytes, 0);
+					case TypeCode.UInt32:
+						return BitConverter.ToUInt32(bytes, 0);
+					case TypeCode.Int64:
+						return BitConverter.ToInt64(bytes, 0);
+					case TypeCode.UInt64:
+						return BitConverter.ToUInt64(bytes, 0);
+					case TypeCode.Single:
+						return BitConverter.ToSingle(bytes, 0);
+					case TypeCode.Double:
+						return BitConverter.ToUInt16(bytes, 0);
+					case TypeCode.Decimal:
+						int[] bits = new int[4];
+						for (int i = 0; i < 4; i++)
+						{
+							bits[i] = BitConverter.ToInt32(bytes, 1 * sizeof(int));
+						}
+						return new Decimal(bits);
+				}
+				return null;
+			}
+
+			private static object AnonymizeNumericData(object value, Type valueType, int key)
+			{
+				var bytes = NumericValueToBytes(value);
+
+				if (bytes != null)
+				{
+					byte xk = (byte)key;
+					for(int i=0; i<bytes.Length; i++)
+					{
+						// dont change Decimal flags part  
+						bytes[i] = (i < 12) ? (byte)(bytes[i] ^ xk) : bytes[i];
+					}
+
+					var convRes = BytesToNumericValue(bytes, valueType);
+					if (convRes != null)
+						return convRes;
+				}
+				return value;
+			}
+			
+			#endregion -- Data Anonymization --------------------------------------------------
+
+			public async Task<(bool, string)> GetNextBlockAsync(int blockSize, bool enableAnonymization)
 			{
 				if (xlMap == null)
 					throw new InvalidOperationException("Prepare not called.");
@@ -305,11 +484,12 @@ namespace PPSnExcel
 							if (firstRow)
 								firstRow = false;
 
-							WriteRow(x, enumerator.Current);
+							var r = enumerator.Current;
+							WriteRow(x, r, enableAnonymization);
 						}
 
 						if (firstRow) // no rows returned, add a dummy row
-							WriteRow(x, DataRowHelper.GetDefaultValues(resultColumns));
+							WriteRow(x, DataRowHelper.GetDefaultValues(resultColumns), false);
 
 						x.WriteEndElement();
 					});
@@ -323,6 +503,20 @@ namespace PPSnExcel
 					return (moveNext, tw.GetStringBuilder().ToString());
 				}
 			} // func GetNextBlockAsync
+
+			private void CreateCollumnMask(IReadOnlyList<IDataColumn> cols)
+			{
+				columnsAnonMask = new bool[cols.Count];
+
+				for (int i = 0; i < cols.Count; i++)
+				{
+					var colDef = cols[i];
+					if (colDef.Attributes != null && colDef.Attributes.TryGetProperty("xl.AnonMode", out string anonMode))
+						columnsAnonMask[i] = anonMode == "FixNumber";
+					else
+						columnsAnonMask[i] = false;
+				}
+			}
 
 			#endregion
 
@@ -1305,8 +1499,17 @@ namespace PPSnExcel
 			using (var result = map.GetEmptyData())
 			{
 				result.PrepareMapping(xlList.InnerObject);
-				await ImportDataAsync(false, result);
+				await ImportDataAsync(false, result, false);
 			}
+		} // proc ClearDataAsync
+
+		#endregion
+
+		#region -- Data Anonymisiern --------------------------------------------------
+
+		public async Task AnonymizeDataAsync()
+		{
+			await Globals.ThisAddIn.RefreshTableAsync(ThisAddIn.RefreshContext.ActiveListObject, null, true);
 		} // proc ClearDataAsync
 
 		#endregion
@@ -1390,7 +1593,7 @@ namespace PPSnExcel
 			}
 		} // proc CompareOrder
 
-		private async Task ImportDataAsync(bool singleLineMode, IPpsViewResult result)
+		private async Task ImportDataAsync(bool singleLineMode, IPpsViewResult result, bool enableAnonymization)
 		{
 			var errorCheckingOptions = xlList.Application.ErrorCheckingOptions;
 			var oldNumberAsTextValue = errorCheckingOptions.NumberAsText;
@@ -1405,7 +1608,7 @@ namespace PPSnExcel
 				while (moveNext)
 				{
 					string xmlData;
-					(moveNext, xmlData) = await result.GetNextBlockAsync(blockSize);
+					(moveNext, xmlData) = await result.GetNextBlockAsync(blockSize, enableAnonymization);
 					switch (result.XlMapping.ImportXml(xmlData, blockIndex == 0))
 					{
 						case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:
@@ -1423,7 +1626,7 @@ namespace PPSnExcel
 			}
 		} // func ImportDataAsync
 
-		public async Task RefreshAsync(PpsXlRefreshList refreshLayout, bool singleLineMode, IPpsTableColumn[] columns)
+		public async Task RefreshAsync(PpsXlRefreshList refreshLayout, bool singleLineMode, IPpsTableColumn[] columns, bool enableAnonymization)
 		{
 			var showTotals = false;
 			var worksheet = ThisAddIn.GetWorksheet(xlList.InnerObject);
@@ -1465,7 +1668,7 @@ namespace PPSnExcel
 				}
 
 				// import data
-				await ImportDataAsync(singleLineMode, result);
+				await ImportDataAsync(singleLineMode, result, enableAnonymization);
 
 				//// disable alerts
 				//	var dataRange = xlList.DataBodyRange;
@@ -1493,16 +1696,17 @@ namespace PPSnExcel
 		#region -- Editor -------------------------------------------------------------
 
 		public void Edit(bool extended)
-			=> map.Shell.EditTable(this, extended);
-
-		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
+		{ 
+			map.Shell.EditTable(this, extended);
+		}
+		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize)
 		{
 			var columnArray = columns.ToArray();
 
 			// create new mapping
 			map = PpsListMapping.Create(map.Shell, views, filter, columnArray, map);
 			using (var progress = PpsShell.Global.CreateProgress())
-				return RefreshAsync(PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columnArray);
+				return RefreshAsync(PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columnArray, anonymize);
 		} // proc UpdateAsync
 
 		string IPpsTableData.DisplayName { get => xlList.DisplayName; set => xlList.DisplayName = value; }
@@ -1514,8 +1718,30 @@ namespace PPSnExcel
 
 		#endregion
 
+		#region -- EnumerateDefinedNames ----------------------------------------------
+
+		private static string GetVariableName(Excel.Name name)
+		{
+			var n = name.Name;
+			return n.Replace('!', '_');
+		} // func GetVariableName
+
+		private static IEnumerable<string> GetDefinedNames(Excel.Worksheet worksheet)
+		{
+			var workbook = ThisAddIn.GetWorkbook(worksheet);
+			if (workbook != null)
+			{
+				for (var i = 1; i <= workbook.Names.Count; i++)
+					yield return GetVariableName( workbook.Names.Item(i));
+			}
+		} // func EnumerateDefinedNames
+
+		#endregion
+
 		public ListObject List => xlList;
 		public PpsListMapping Mapping => map;
+
+		public IEnumerable<string> DefinedNames => GetDefinedNames(ThisAddIn.GetWorksheet(xlList.InnerObject).InnerObject);
 
 		#region -- New ----------------------------------------------------------------
 
@@ -1530,7 +1756,7 @@ namespace PPSnExcel
 				this.topLeftCell = topLeftCell ?? throw new ArgumentNullException(nameof(topLeftCell));
 			} // ctor
 
-			public async Task UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
+			public async Task UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize)
 			{
 				var columnArray = columns.ToArray();
 
@@ -1542,7 +1768,7 @@ namespace PPSnExcel
 				var ppsList = new PpsListObject(xlList, newMapping);
 
 				// Create table content
-				await ppsList.RefreshAsync(PpsXlRefreshList.Style | PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columnArray);
+				await ppsList.RefreshAsync(PpsXlRefreshList.Style | PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columnArray, anonymize);
 			} // proc UpdateAsync
 
 			public string DisplayName { get; set; } = null;
@@ -1551,6 +1777,8 @@ namespace PPSnExcel
 			public string Filter => null;
 			public IEnumerable<IPpsTableColumn> Columns => null;
 			public bool IsEmpty => true;
+
+			public IEnumerable<string> DefinedNames => GetDefinedNames(topLeftCell.Worksheet);
 		} // class NewModel 
 
 		public static void New(IPpsShell shell, Excel.Range topLeftCell, string views)

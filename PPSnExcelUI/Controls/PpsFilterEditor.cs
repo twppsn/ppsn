@@ -16,12 +16,13 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
+using TecWare.DE.Data;
 using TecWare.PPSn.Data;
+using static TecWare.PPSn.Controls.TableInsertForm;
 
 namespace TecWare.PPSn.Controls
 {
@@ -39,6 +40,11 @@ namespace TecWare.PPSn.Controls
 		int IndexOf(IPpsFilterColumn filterColumn);
 
 		IPpsFilterGroup Group { get; }
+
+		/// <summary>Other data fields for selection.</summary>
+		IEnumerable<IDataColumn> Fields { get; }
+		/// <summary>Variables</summary>
+		IEnumerable<string> DefinedVariables { get; }
 	} // interface IPpsFilterExpression
 
 	#endregion
@@ -62,6 +68,7 @@ namespace TecWare.PPSn.Controls
 
 		string ColumnName { get; }
 		string ColumnSource { get; }
+		Type ColumnSourceType { get; }
 
 		PpsDataFilterCompareOperator Operator { get; set; }
 		string Value { get; }
@@ -86,6 +93,7 @@ namespace TecWare.PPSn.Controls
 
 	#region -- class PpsFilterEditor --------------------------------------------------
 
+	/// <summary>DataGridView</summary>
 	internal class PpsFilterEditor : DataGridView
 	{
 		private const int groupColumnWidth = 24;
@@ -457,9 +465,135 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region -- class FilterEditingControl -----------------------------------------
+
+		private class FilterEditingControl : PpsFilterControl, IDataGridViewEditingControl
+		{
+			private DataGridView dataGridView = null;
+			private bool valueChanged = false;
+			private int rowIndex;
+
+			/// <summary>Implements the IDataGridViewEditingControl.GetEditingControlFormattedValue method.</summary>
+			/// <param name="context"></param>
+			/// <returns></returns>
+			public object GetEditingControlFormattedValue(DataGridViewDataErrorContexts context)
+				=> EditingControlFormattedValue;
+
+			/// <summary>Implements the IDataGridViewEditingControl.ApplyCellStyleToEditingControl method.</summary>
+			/// <param name="dataGridViewCellStyle"></param>
+			public void ApplyCellStyleToEditingControl(DataGridViewCellStyle dataGridViewCellStyle)
+			{
+				Font = dataGridViewCellStyle.Font;
+				BackColor = dataGridViewCellStyle.BackColor;
+			} // proc ApplyCellStyleToEditingControl
+
+			/// <summary>Implements the IDataGridViewEditingControl.EditingControlWantsInputKey method.</summary>
+			/// <param name="key"></param>
+			/// <param name="dataGridViewWantsInputKey"></param>
+			/// <returns></returns>
+			public bool EditingControlWantsInputKey(Keys key, bool dataGridViewWantsInputKey)
+				=> true;
+
+			/// <summary>Implements the IDataGridViewEditingControl.PrepareEditingControlForEdit method.</summary>
+			/// <param name="selectAll"></param>
+			public void PrepareEditingControlForEdit(bool selectAll)
+			{
+				// No preparation needs to be done.
+			} // proc PrepareEditingControlForEdit
+
+			protected override void UpdateControls()
+			{
+				var filterColumn = GetFilterColumn(dataGridView, rowIndex);
+				SetFilterColumn(filterColumn);
+
+				var filterEditor = (PpsFilterEditor)dataGridView;
+				SetDefinedNames(filterEditor.resultFilter.DefinedVariables?.ToArray());
+
+				// select fields of same DataType
+				SetFields(filterEditor.resultFilter.Fields.Where(c => c.DataType == filterColumn.ColumnSourceType));
+			} // prop UpdateControls
+
+			/// <summary>Implements the IDataGridViewEditingControl.EditingControlDataGridView property.</summary>
+			public DataGridView EditingControlDataGridView
+			{
+				get => dataGridView;
+				set
+				{
+					dataGridView = value;
+					if (dataGridView != null)
+						UpdateControls();
+				}
+			} // prop EditingControlDataGridView
+
+			/// <summary>Implements the IDataGridViewEditingControl .RepositionEditingControlOnValueChange property.</summary>
+			public bool RepositionEditingControlOnValueChange => false;
+
+			/// <summary>Implements the IDataGridViewEditingControl.EditingControlValueChanged property.</summary>
+			public bool EditingControlValueChanged
+			{
+				get => valueChanged;
+				set => valueChanged = value;
+			} // prop EditingControlValueChanged
+
+			/// <summary>Implements the IDataGridViewEditingControl.EditingControlFormattedValue property.</summary>
+			public object EditingControlFormattedValue
+			{
+				get => Expression;
+				set => Expression = value as string;
+			} // prop EditingControlFormattedValue
+
+			/// <summary>Implements the IDataGridViewEditingControl.EditingControlRowIndex property.</summary>
+			public int EditingControlRowIndex
+			{
+				get => rowIndex;
+				set => rowIndex = value;
+			} // prop EditingControlRowIndex
+
+			/// <summary>Implements the IDataGridViewEditingControl.EditingPanelCursor property.</summary>
+			public Cursor EditingPanelCursor => base.Cursor;
+		} // class FilterEditingControl
+
+		#endregion
+
+		#region -- class FilterTextBoxCell --------------------------------------------
+
+		private class FilterTextBoxCell : DataGridViewTextBoxCell
+		{
+			public FilterTextBoxCell()
+			{
+			} // ctor
+
+			public override void InitializeEditingControl(int rowIndex, object initialFormattedValue, DataGridViewCellStyle dataGridViewCellStyle)
+			{
+				// Set the value of the editing control to the current cell value.
+				base.InitializeEditingControl(rowIndex, initialFormattedValue, dataGridViewCellStyle);
+				var ctl = (FilterEditingControl)DataGridView.EditingControl;
+				// Use the default row value when Value property is null.
+				ctl.Expression = (Value ?? DefaultNewRowValue) as string;
+			} // proc InitializeEditingControl
+
+			/// <summary>override DetachEditingControl to copy editor Value back to the cell</summary>
+			public override void DetachEditingControl()
+			{
+				base.DetachEditingControl();
+				var ctl = (FilterEditingControl)DataGridView.EditingControl;
+				Value = (ctl.Expression ?? DefaultNewRowValue) as string;
+			} // proc DetachEditingControl
+
+			public override Type EditType => typeof(FilterEditingControl);
+
+			/// <summary>Return the type of the value that CalendarCell contains.</summary>
+			public override Type ValueType => typeof(string);
+
+			/// <summary>Use the current date and time as the default value.</summary>
+			public override object DefaultNewRowValue => string.Empty;
+		} // class FilterTextBoxCell
+
+		#endregion
+
 		#region -- class FilterExpressionCell -----------------------------------------
 
-		private sealed class FilterExpressionCell : DataGridViewTextBoxCell
+		private sealed class FilterExpressionCell : FilterTextBoxCell
 		{
 			protected override object GetValue(int rowIndex)
 			{
@@ -509,7 +643,7 @@ namespace TecWare.PPSn.Controls
 		private readonly ToolStripMenuItem logicGroupRemoveMenuItem;
 		private readonly ToolStripMenuItem logicAndMenuItem;
 		private readonly ToolStripMenuItem logicOrMenuItem;
-		private readonly ToolStripMenuItem logicNotAndMenuItem; 
+		private readonly ToolStripMenuItem logicNotAndMenuItem;
 		private readonly ToolStripMenuItem logicNotOrMenuItem;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -756,7 +890,7 @@ namespace TecWare.PPSn.Controls
 
 		private IEnumerable<IPpsFilterColumn> GetRowGroupSelection()
 		{
-			if(TryGetRowGroupSelection(out var startRow, out var endRow))
+			if (TryGetRowGroupSelection(out var startRow, out var endRow))
 			{
 				for (var i = startRow; i <= endRow; i++)
 					yield return resultFilter[i];
@@ -1077,7 +1211,7 @@ namespace TecWare.PPSn.Controls
 					SetRowChecked(CurrentCell.RowIndex, (ModifierKeys & Keys.Control) != 0);
 				e.Handled = true;
 			}
-			else if(e.KeyCode == Keys.Delete)
+			else if (e.KeyCode == Keys.Delete)
 			{
 				if (CurrentRow != null)
 					resultFilter.Remove(CurrentRow.Index);
@@ -1169,7 +1303,7 @@ namespace TecWare.PPSn.Controls
 
 		protected override void OnDragEnter(DragEventArgs e)
 		{
-			if (TableInsertForm.TryGetFilterFactoriesInDragSource(e, out _))
+			if (TryGetFilterFactoriesInDragSource(e, out _))
 				e.Effect = e.AllowedEffect & DragDropEffects.Copy;
 			else if (e.Data.GetData("filterRow[]") is IPpsFilterColumn[]
 				|| e.Data.GetData("filterGroup") is IPpsFilterGroup)
@@ -1183,7 +1317,7 @@ namespace TecWare.PPSn.Controls
 
 		protected override void OnDragDrop(DragEventArgs e)
 		{
-			if (TableInsertForm.TryGetFilterFactoriesInDragSource(e, out var filterFactories))
+			if (TryGetFilterFactoriesInDragSource(e, out var filterFactories))
 				Insert(filterFactories, TryGetHoverGroup(e, out var group), group, true);
 			else
 			{
@@ -1215,17 +1349,21 @@ namespace TecWare.PPSn.Controls
 		{
 			operatorItems = new KeyValuePair<PpsDataFilterCompareOperator, string>[] {
 				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.Contains, ""),
+				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.StartWith, "["),
+				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.EndWith, "]"),
 				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.NotContains, "!"),
+				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.NotStartWith, "!["),
+				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.NotEndWith, "!]"),
 				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.Equal, "="),
 				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.NotEqual, "!="),
 				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.Greater, ">"),
 				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.GreaterOrEqual, ">="),
 				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.Lower, "<"),
-				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.LowerOrEqual, "<=")
+				new KeyValuePair<PpsDataFilterCompareOperator, string>(PpsDataFilterCompareOperator.LowerOrEqual, "<="),
 			};
 		} // sctor
 
-		private static IPpsFilterColumn GetFilterColumn(DataGridView dataGridView, int rowIndex)
+		internal static IPpsFilterColumn GetFilterColumn(DataGridView dataGridView, int rowIndex)
 		{
 			var self = (PpsFilterEditor)dataGridView;
 			if (self == null)

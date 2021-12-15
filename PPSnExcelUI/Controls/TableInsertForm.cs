@@ -34,7 +34,7 @@ namespace TecWare.PPSn.Controls
 	{
 		#region -- class TreeNodeData -------------------------------------------------
 
-		private abstract class TreeNodeData
+		private abstract class TreeNodeData : IDataColumns
 		{
 			private readonly TreeNodeData parent; // parent node
 			private readonly List<JoinTreeNodeData> joins = new List<JoinTreeNodeData>(); // list of all sub joins
@@ -221,6 +221,8 @@ namespace TecWare.PPSn.Controls
 			public bool IsActive => alias != null;
 			/// <summary>Alias</summary>
 			public string Alias => alias;
+
+			public IReadOnlyList<IDataColumn> Columns => View?.Columns;
 		} // class TreeNodeData
 
 		#endregion
@@ -485,7 +487,7 @@ namespace TecWare.PPSn.Controls
 
 		#region -- class SourceColumnData ---------------------------------------------
 
-		private sealed class SourceColumnData : ColumnData, IPpsFilterColumnFactory
+		private sealed class SourceColumnData : ColumnData, IPpsFilterColumnFactory, IDataColumn
 		{
 			private readonly TreeNodeData columnSource;
 			private readonly IDataColumn column;
@@ -506,7 +508,7 @@ namespace TecWare.PPSn.Controls
 			public bool IsEqualColumn(SourceColumnData other)
 				=> column == other.column && columnSource == other.columnSource;
 
-			protected override string GetColumnExpression() 
+			protected override string GetColumnExpression()
 				=> Source.GetColumnName(column);
 
 			IPpsFilterColumn IPpsFilterColumnFactory.CreateFilterColumn(IPpsFilterExpression filterExpression, IPpsFilterGroup group)
@@ -517,6 +519,10 @@ namespace TecWare.PPSn.Controls
 			public IDataColumn Column => column;
 			public override string SourceName => sourceDisplayName;
 			public override string SourcePath => columnSource.Path;
+
+			string IDataColumn.Name => column.Name;
+			Type IDataColumn.DataType => column.DataType;
+			IPropertyEnumerableDictionary IDataColumn.Attributes => column.Attributes;
 		} // class SourceColumnData
 
 		#endregion
@@ -575,6 +581,7 @@ namespace TecWare.PPSn.Controls
 
 			public string ColumnName => columnSource.SourceName;
 			public string ColumnSource => columnSource.SourcePath;
+			public Type ColumnSourceType => columnSource.Column.DataType;
 
 			public FilterGroup Group
 			{
@@ -652,8 +659,14 @@ namespace TecWare.PPSn.Controls
 		{
 			public event EventHandler FilterChanged;
 
+			private readonly TableInsertForm owner;
 			private readonly List<FilterColumn> filterColumns = new List<FilterColumn>();
 			private readonly FilterGroup root = new FilterGroup(null, PpsDataFilterExpressionType.And);
+
+			public FilterExpression(TableInsertForm owner)
+			{
+				this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
+			} // ctor
 
 			internal void OnFilterChanged()
 				=> FilterChanged?.Invoke(this, EventArgs.Empty);
@@ -746,7 +759,8 @@ namespace TecWare.PPSn.Controls
 
 			public void Insert(int insertAt, IPpsFilterColumn column)
 			{
-				filterColumns.Insert(insertAt, (FilterColumn)column);
+				var filterColumn = (FilterColumn)column;
+				filterColumns.Insert(insertAt, filterColumn);
 				OnFilterChanged();
 			} // proc Insert
 
@@ -766,13 +780,29 @@ namespace TecWare.PPSn.Controls
 			public IEnumerator<IPpsFilterColumn> GetEnumerator()
 				=> filterColumns.GetEnumerator();
 
-			IEnumerator IEnumerable.GetEnumerator() 
+			IEnumerator IEnumerable.GetEnumerator()
 				=> filterColumns.GetEnumerator();
 
 			public int Count => filterColumns.Count;
 			public IPpsFilterColumn this[int index] => filterColumns[index];
 
 			public IPpsFilterGroup Group => root;
+
+			public IEnumerable<IDataColumn> Fields
+			{
+				get
+				{
+					foreach (var c in owner.resultView.Columns)
+						yield return c;
+					foreach (var v in owner.resultView.ActiveChildren())
+					{
+						foreach (var c in v.Columns)
+							yield return c;
+					}
+				}
+			} // prop Fields
+
+			public IEnumerable<string> DefinedVariables => owner.currentData.DefinedNames;
 		} // class FilterExpression
 
 		#endregion
@@ -884,7 +914,7 @@ namespace TecWare.PPSn.Controls
 		private IPpsTableData currentData = null;   // current selected mapping
 		private ViewTreeNodeData resultView = null;   // current selected root table
 		private readonly List<ColumnData> resultColumns = new List<ColumnData>(); // result column set
-		private readonly FilterExpression resultFilter = new FilterExpression(); // filter expression
+		private readonly FilterExpression resultFilter; // filter expression
 
 		private bool showInternalName = false;
 		private int currentColumnsSortOrder = 1;
@@ -894,6 +924,7 @@ namespace TecWare.PPSn.Controls
 		public TableInsertForm(IPpsShell shell)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+			resultFilter = new FilterExpression(this);
 
 			InitializeComponent();
 
@@ -1182,7 +1213,7 @@ namespace TecWare.PPSn.Controls
 					foreach (var col in nodeData.View.Columns)
 					{
 						var newCol = new SourceColumnData(nodeData, col);
-						
+
 						// search column
 						int FindColumn()
 						{
@@ -1584,7 +1615,7 @@ namespace TecWare.PPSn.Controls
 			{
 				// hover item ermitteln
 				var hoverItem = GetListViewHoverItem(resultColumnsListView, e, out var insertAfter);
-				
+
 				if (hoverItem == null) // append at end
 					MoveColumnsToResult(columns, insertAfter ? -1 : 0);
 				else if (hoverItem.Tag is ColumnData columnSource)
@@ -1696,7 +1727,8 @@ namespace TecWare.PPSn.Controls
 				await currentData.UpdateAsync(
 					sbView.ToString(),
 					resultFilter.Compile(visibleColumnHelper).ToString(),
-					from col in resultColumns where visibleColumnHelper.IsVisibleColumn(col) select col
+					from col in resultColumns where visibleColumnHelper.IsVisibleColumn(col) select col,
+					false
 				);
 
 				DialogResult = DialogResult.OK;

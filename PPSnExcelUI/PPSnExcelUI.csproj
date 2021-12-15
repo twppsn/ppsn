@@ -48,8 +48,20 @@
     <Compile Include="..\Common\AssemblyInfo.cs">
       <Link>Properties\AssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Controls\PpsFilterControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\PpsFilterControl.Designer.cs">
+      <DependentUpon>PpsFilterControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="Controls\PpsFilterEditor.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\PpsPopup.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\PpsPopup.designer.cs">
+      <DependentUpon>PpsPopup.cs</DependentUpon>
     </Compile>
     <Compile Include="Controls\PpsTreeView.cs">
       <SubType>Component</SubType>
@@ -103,6 +115,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Controls\ExceptionDialog.resx">
       <DependentUpon>ExceptionDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Controls\PpsFilterControl.resx">
+      <DependentUpon>PpsFilterControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Controls\TableInsertForm.resx">
       <DependentUpon>TableInsertForm.cs</DependentUpon>

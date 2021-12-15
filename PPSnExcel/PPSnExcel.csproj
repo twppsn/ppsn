@@ -190,6 +190,7 @@
     <Compile Include="..\Common\AssemblyInfo.cs">
       <Link>Properties\AssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Data\CaesarCipher.cs" />
     <Compile Include="Data\Converter.cs" />
     <Compile Include="PpsListData.cs" />
     <Compile Include="PpsMenu.cs">
