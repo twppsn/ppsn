@@ -405,6 +405,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		private readonly List<PpsSqlColumnInfo> columns = new List<PpsSqlColumnInfo>();
 		private readonly List<PpsSqlRelationInfo> relations = new List<PpsSqlRelationInfo>();
+		private readonly List<PpsSqlRelationInfo> referenced = new List<PpsSqlRelationInfo>();
 
 		/// <summary></summary>
 		/// <param name="schemaName"></param>
@@ -442,6 +443,11 @@ namespace TecWare.PPSn.Server.Sql
 			relations.Add(relationInfo);
 			OnRelationAdded(relationInfo);
 		} // proc AddRelation
+
+		internal void AddReference(PpsSqlRelationInfo relationInfo)
+		{
+			referenced.Add(relationInfo);
+		} // proc AddReference
 
 		/// <summary>New relation added to this table.</summary>
 		/// <param name="relationInfo"></param>
@@ -483,8 +489,10 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary>Column information of this table.</summary>
 		public IEnumerable<PpsSqlColumnInfo> Columns => columns;
-		/// <summary>Relations of this table.</summary>
+		/// <summary>Parent-Relations of this table.</summary>
 		public IEnumerable<PpsSqlRelationInfo> RelationInfo => relations;
+		/// <summary>Child-Relations of this table.</summary>
+		public IEnumerable<PpsSqlRelationInfo> ReferenceInfo => referenced;
 
 		IReadOnlyList<IPpsColumnDescription> IPpsSqlTableOrView.Columns => columns;
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columns;
@@ -2927,8 +2935,8 @@ namespace TecWare.PPSn.Server.Sql
 			public void AddRelation(PpsSqlRelationInfo relation)
 			{
 				relation.ParentColumn.Table.AddRelation(relation);
+				relation.ReferencedColumn.Table.AddReference(relation);
 				relationCounter++;
-				//relation.ReferencedColumn.Table.AddRelation(relation);
 			} // proc AddRelation
 
 			public void Failed(string objectName, object objectId, Exception e)
