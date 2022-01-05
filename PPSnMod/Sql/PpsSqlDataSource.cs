@@ -139,15 +139,14 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="format"></param>
 		/// <param name="xlFormat"></param>
 		/// <returns></returns>
-		protected virtual bool TryGetDefaultFormatProperty(out string format, out string xlFormat)
+		protected virtual bool TryGetDefaultFormatProperty(out string format)
 		{
 			var dataType = DataType;
 
 			if (dataType == typeof(string))
 			{
 				format = null;
-				xlFormat = "Text";
-				return true;
+				return false;
 			}
 			else if (dataType == typeof(byte)
 				|| dataType == typeof(ushort)
@@ -159,7 +158,6 @@ namespace TecWare.PPSn.Server.Sql
 				|| dataType == typeof(long))
 			{
 				format = "N0";
-				xlFormat = null;
 				return true;
 			}
 			else if (dataType == typeof(float)
@@ -167,18 +165,15 @@ namespace TecWare.PPSn.Server.Sql
 				|| dataType == typeof(decimal))
 			{
 				format = "N3";
-				xlFormat = null;
 				return true;
 			}
 			else if (dataType == typeof(DateTime))
 			{
 				format = "g";
-				xlFormat = null;
 				return true;
 			}
 
 			format = null;
-			xlFormat = null;
 			return false;
 		} // func GetDefaultFormatProperty
 
@@ -196,13 +191,8 @@ namespace TecWare.PPSn.Server.Sql
 				yield return new PropertyValue(nameof(Nullable), isNullable);
 			if (IsIdentity)
 				yield return new PropertyValue(nameof(IsIdentity), isIdentity);
-			if (TryGetDefaultFormatProperty(out var fmt, out var xlFmt))
-			{
-				if (!String.IsNullOrEmpty(fmt))
-					yield return new PropertyValue(PpsFieldDescription.FormatAttributeName, fmt);
-				if (!String.IsNullOrEmpty(xlFmt))
-					yield return new PropertyValue(PpsFieldDescription.XlFormatAttributeName, xlFmt);
-			}
+			if (TryGetDefaultFormatProperty(out var fmt))
+				yield return new PropertyValue(PpsFieldDescription.FormatAttributeName, fmt);
 		} // func GetProperties
 
 		/// <summary>Return default properties.</summary>
@@ -256,18 +246,9 @@ namespace TecWare.PPSn.Server.Sql
 				case 'F':
 				case 'f':
 					if (String.Compare(propertyName, PpsFieldDescription.FormatAttributeName, StringComparison.OrdinalIgnoreCase) == 0
-						&& TryGetDefaultFormatProperty(out var fmt, out _) && fmt != null)
+						&& TryGetDefaultFormatProperty(out var fmt) && fmt != null)
 					{
 						value = fmt;
-						return true;
-					}
-					break;
-				case 'X':
-				case 'x':
-					if (String.Compare(propertyName, PpsFieldDescription.XlFormatAttributeName, StringComparison.OrdinalIgnoreCase) == 0
-						&& TryGetDefaultFormatProperty(out _, out var xlFmt) && xlFmt != null)
-					{
-						value = xlFmt;
 						return true;
 					}
 					break;
