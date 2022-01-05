@@ -2386,8 +2386,6 @@ namespace TecWare.PPSn.Server
 					));
 					return true;
 				case "login.xml":
-					r.DemandToken(SecurityUser);
-
 					var user = r.DemandUser();
 					await Task.Run(() => WriteUserInfo(r, GetLoginData(user.Info)));
 					return true;

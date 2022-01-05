@@ -135,6 +135,53 @@ namespace TecWare.PPSn.Server.Sql
 		protected override IPropertyEnumerableDictionary CreateAttributes()
 			=> new PpsColumnAttributes(this);
 
+		/// <summary>Default default-format for the column.</summary>
+		/// <param name="format"></param>
+		/// <param name="xlFormat"></param>
+		/// <returns></returns>
+		protected virtual bool TryGetDefaultFormatProperty(out string format, out string xlFormat)
+		{
+			var dataType = DataType;
+
+			if (dataType == typeof(string))
+			{
+				format = null;
+				xlFormat = "Text";
+				return true;
+			}
+			else if (dataType == typeof(byte)
+				|| dataType == typeof(ushort)
+				|| dataType == typeof(uint)
+				|| dataType == typeof(ulong)
+				|| dataType == typeof(sbyte)
+				|| dataType == typeof(short)
+				|| dataType == typeof(int)
+				|| dataType == typeof(long))
+			{
+				format = "N0";
+				xlFormat = null;
+				return true;
+			}
+			else if (dataType == typeof(float)
+				|| dataType == typeof(double)
+				|| dataType == typeof(decimal))
+			{
+				format = "N3";
+				xlFormat = null;
+				return true;
+			}
+			else if (dataType == typeof(DateTime))
+			{
+				format = "g";
+				xlFormat = null;
+				return true;
+			}
+
+			format = null;
+			xlFormat = null;
+			return false;
+		} // func GetDefaultFormatProperty
+
 		/// <summary>Return default properties.</summary>
 		/// <returns></returns>
 		protected virtual IEnumerator<PropertyValue> GetProperties()
@@ -149,6 +196,13 @@ namespace TecWare.PPSn.Server.Sql
 				yield return new PropertyValue(nameof(Nullable), isNullable);
 			if (IsIdentity)
 				yield return new PropertyValue(nameof(IsIdentity), isIdentity);
+			if (TryGetDefaultFormatProperty(out var fmt, out var xlFmt))
+			{
+				if (!String.IsNullOrEmpty(fmt))
+					yield return new PropertyValue(PpsFieldDescription.FormatAttributeName, fmt);
+				if (!String.IsNullOrEmpty(xlFmt))
+					yield return new PropertyValue(PpsFieldDescription.XlFormatAttributeName, xlFmt);
+			}
 		} // func GetProperties
 
 		/// <summary>Return default properties.</summary>
@@ -196,6 +250,24 @@ namespace TecWare.PPSn.Server.Sql
 					if (String.Compare(propertyName, nameof(IsIdentity), StringComparison.OrdinalIgnoreCase) == 0)
 					{
 						value = IsIdentity;
+						return true;
+					}
+					break;
+				case 'F':
+				case 'f':
+					if (String.Compare(propertyName, PpsFieldDescription.FormatAttributeName, StringComparison.OrdinalIgnoreCase) == 0
+						&& TryGetDefaultFormatProperty(out var fmt, out _) && fmt != null)
+					{
+						value = fmt;
+						return true;
+					}
+					break;
+				case 'X':
+				case 'x':
+					if (String.Compare(propertyName, PpsFieldDescription.XlFormatAttributeName, StringComparison.OrdinalIgnoreCase) == 0
+						&& TryGetDefaultFormatProperty(out _, out var xlFmt) && xlFmt != null)
+					{
+						value = xlFmt;
 						return true;
 					}
 					break;
@@ -734,7 +806,7 @@ namespace TecWare.PPSn.Server.Sql
 			public SqlDataResultColumnDescription(IPpsColumnDescription parent, DataRow row, string name, Type dataType)
 				: base(parent, name, dataType)
 			{
-				this.row = row;
+				this.row = row ?? throw new ArgumentNullException(nameof(row));
 			} // ctor
 
 			protected override IPropertyEnumerableDictionary CreateAttributes()
@@ -783,14 +855,14 @@ namespace TecWare.PPSn.Server.Sql
 			public IPpsColumnDescription GetFieldDescription(string selectorColumn)
 				=> columnDescriptions.FirstOrDefault(c => String.Compare(selectorColumn, c.Name, StringComparison.OrdinalIgnoreCase) == 0);
 
-			/// <summary></summary>
+			/// <summary>Name of the view.</summary>
 			public string Name => name;
-			/// <summary></summary>
+			/// <summary>Name of the view, within sql-database.</summary>
 			public string ViewName => viewName;
-			/// <summary></summary>
+			/// <summary>Data source.</summary>
 			public PpsSqlDataSource DataSource => source;
 
-			/// <summary></summary>
+			/// <summary>Columns of the view.</summary>
 			public IReadOnlyCollection<IPpsColumnDescription> Columns => columnDescriptions;
 
 			PpsDataSource IPpsSelectorToken.DataSource => DataSource;
@@ -3503,13 +3575,65 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- View Management ----------------------------------------------------
 
+		/// <summary>Create a select, to select only the result set.</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		protected virtual string CreateSelectForResultSet(string name)
+			=> "SELECT * FROM " + name;
+
+		/// <summary></summary>
+		/// <param name="schemaRow"></param>
+		/// <param name="referencedFieldName"></param>
+		protected virtual bool TryGetReferencedFieldDescriptionName(DataRow schemaRow, out string referencedFieldName)
+		{
+			if (schemaRow != null)
+			{
+				var schemaName = GetDataRowValue<string>(schemaRow, "BaseSchemaName", null) ?? "dbo";
+				var tableName = GetDataRowValue<string>(schemaRow, "BaseTableName", null);
+				var columnName = GetDataRowValue<string>(schemaRow, "BaseColumnName", null);
+				if (tableName != null && columnName != null)
+				{
+					referencedFieldName = schemaName + "." + tableName + "." + columnName;
+					return true;
+				}
+			}
+
+			referencedFieldName = null;
+			return false;
+		} // func TryGetReferencedFieldDescriptionName
+
+		/// <summary>Return field description for the result column.</summary>
+		/// <param name="fieldName"></param>
+		/// <param name="schemaRow"></param>
+		/// <param name="fieldDescription"></param>
+		/// <returns></returns>
+		protected virtual bool TryGetFieldDescriptionForResultRow(string fieldName, DataRow schemaRow, out IPpsColumnDescription fieldDescription)
+		{
+			// first try find direct field-description
+			fieldDescription = Application.GetFieldDescription(fieldName, throwException: false);
+			if (fieldDescription != null)
+				return true;
+
+			// try find referenced field-description
+			if (TryGetReferencedFieldDescriptionName(schemaRow, out var referencedFieldName)
+				&& TryGetFieldDescriptionForResultRow(referencedFieldName, null, out fieldDescription))
+				return true;
+
+			// try fiend column-description
+			fieldDescription = GetColumnDescription(fieldName, throwException: false);
+			if (fieldDescription != null)
+				return true;
+
+			return false;
+		} // func TryGetFieldDescriptionForResultRow
+
 		private async Task<IPpsColumnDescription[]> ExecuteForResultSetAsync(DbConnection connection, string name)
 		{
 			// execute the view once to determine the resultset
 			using (var cmd = connection.CreateCommand())
 			{
 				cmd.CommandTimeout = 6000;
-				cmd.CommandText = "SELECT * FROM " + name;
+				cmd.CommandText = CreateSelectForResultSet(name);
 				using (var r = await cmd.ExecuteReaderAsync(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
 				{
 					var columnDescriptions = new List<IPpsColumnDescription>(r.FieldCount);
@@ -3525,22 +3649,10 @@ namespace TecWare.PPSn.Server.Sql
 						if (isHidden is bool t && t)
 							continue;
 
-						// try to find the view base description
-						parentColumnDescription = Application.GetFieldDescription(name + "." + nativeColumnName, false);
-
-						// try to find the table based field name
-						if (parentColumnDescription == null)
-						{
-							var schemaName = GetDataRowValue<string>(c, "BaseSchemaName", null) ?? "dbo";
-							var tableName = GetDataRowValue<string>(c, "BaseTableName", null);
-							var columnName = GetDataRowValue<string>(c, "BaseColumnName", null);
-
-							if (tableName != null && columnName != null)
-							{
-								var fieldName = schemaName + "." + tableName + "." + columnName;
-								parentColumnDescription = Application.GetFieldDescription(fieldName, false);
-							}
-						}
+						// try to find the field description
+						parentColumnDescription = TryGetFieldDescriptionForResultRow(name + "." + nativeColumnName, c, out var fieldDescription) 
+							? fieldDescription 
+							: null;
 
 						columnDescriptions.Add(new SqlDataResultColumnDescription(parentColumnDescription, c, nativeColumnName, r.GetFieldType(i)));
 						i++;

@@ -639,7 +639,7 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			private static readonly string[] WellKnownUserOptionKeys = new string[] {
 				"userId",
-				"displayName",
+				PpsFieldDescription.DisplayNameAttributeName,
 				PpsApplication.UserContextDataSource,
 				PpsApplication.UserContextFullName,
 				PpsApplication.UserContextInitials,

@@ -42,9 +42,27 @@ namespace TecWare.PPSn.Server
 	/// custom attributes.</summary>
 	public sealed class PpsFieldDescription : IPpsColumnDescription
 	{
-		private const string displayNameAttributeString = "displayName";
-		private const string maxLengthAttributeString = "maxLength";
-		private const string dataTypeAttributeString = "dataType";
+		/// <summary></summary>
+		public const string DisplayNameAttributeName = "displayName";
+		/// <summary></summary>
+		public const string MaxLengthAttributeName = "maxLength";
+		/// <summary></summary>
+		public const string DataTypeAttributeName = "dataType";
+
+		/// <summary>.net format definition.</summary>
+		public const string FormatAttributeName = "format";
+		/// <summary>Excel format definition.</summary>
+		public const string XlFormatAttributeName = "xl.format";
+		/// <summary>Alignment of the value (left, right, far, near, center, justify, fill).</summary>
+		public const string HAlignAttributeName = "halign";
+		/// <summary>Alignment of the value (top, bottom, far, near, center, distributed, fill).</summary>
+		public const string VAlignAttributeName = "valign";
+
+		/// <summary>Attribute property name for description</summary>
+		public const string DescriptionAttributeName = "Doc.Description";
+		/// <summary>Attribute property name for native typeid</summary>
+		public const string SqlNativeTypeIdAttributeName = "Sql.NativeTypeId";
+
 		private const string inheritedAttributeString = "inherited";
 
 		#region -- class PpsFieldAttributesEnumerator ---------------------------------
@@ -63,7 +81,7 @@ namespace TecWare.PPSn.Server
 
 			public PpsFieldAttributesEnumerator(PpsFieldDescription field)
 			{
-				this.field = field;
+				this.field = field ?? throw new ArgumentNullException(nameof(field));
 				Reset();
 			} // ctor
 
@@ -112,17 +130,17 @@ namespace TecWare.PPSn.Server
 							goto case 1;
 						}
 					case 1:
-						if (currentField.TryGetAttributeBasedProperty(displayNameAttributeString, typeof(string), out r) && EmitPropertyValue(r, 2))
+						if (currentField.TryGetAttributeBasedProperty(DisplayNameAttributeName, typeof(string), out r) && EmitPropertyValue(r, 2))
 							return true;
 						else
 							goto case 2;
 					case 2:
-						if (currentField.TryGetAttributeBasedProperty(dataTypeAttributeString, typeof(string), out r) && EmitPropertyValue(r, 3))
+						if (currentField.TryGetAttributeBasedProperty(DataTypeAttributeName, typeof(string), out r) && EmitPropertyValue(r, 3))
 							return true;
 						else
 							goto case 3;
 					case 3:
-						if (currentField.TryGetAttributeBasedProperty(maxLengthAttributeString, typeof(string), out r) && EmitPropertyValue(r, 4))
+						if (currentField.TryGetAttributeBasedProperty(MaxLengthAttributeName, typeof(string), out r) && EmitPropertyValue(r, 4))
 							return true;
 						else
 							goto case 4;
@@ -205,7 +223,7 @@ namespace TecWare.PPSn.Server
 
 			public PpsFieldAttributes(PpsFieldDescription field)
 			{
-				this.field = field;
+				this.field = field ?? throw new ArgumentNullException(nameof(field));
 			} // ctor
 
 			public bool TryGetProperty(string name, out object value)
@@ -259,10 +277,10 @@ namespace TecWare.PPSn.Server
 
 			inheritedFieldNames = Procs.GetStrings(xDefinition.Attribute(inheritedAttributeString)?.Value, false);
 
-			displayName = new Lazy<string>(() => Attributes.GetProperty(displayNameAttributeString, null));
-			maxLength = new Lazy<int>(() => Attributes.GetProperty(maxLengthAttributeString, Int32.MaxValue));
+			displayName = new Lazy<string>(() => Attributes.GetProperty(DisplayNameAttributeName, null));
+			maxLength = new Lazy<int>(() => Attributes.GetProperty(MaxLengthAttributeName, Int32.MaxValue));
 
-			var xDataType = xDefinition.Attribute(dataTypeAttributeString);
+			var xDataType = xDefinition.Attribute(DataTypeAttributeName);
 
 			dataType = xDataType != null ?
 				new Lazy<Type>(() => LuaType.GetType(xDataType.Value, lateAllowed: false)) :
@@ -362,11 +380,11 @@ namespace TecWare.PPSn.Server
 			fetchedFields.Add(this);
 
 			// find a attribute property
-			if (TryGetAttributeBasedPropertyLocal(displayNameAttributeString, typeof(string), out var ret))
+			if (TryGetAttributeBasedPropertyLocal(DisplayNameAttributeName, typeof(string), out var ret))
 				return ret;
-			if (TryGetAttributeBasedPropertyLocal(dataTypeAttributeString, typeof(Type), out ret))
+			if (TryGetAttributeBasedPropertyLocal(DataTypeAttributeName, typeof(Type), out ret))
 				return ret;
-			if (TryGetAttributeBasedPropertyLocal(maxLengthAttributeString, typeof(int), out ret))
+			if (TryGetAttributeBasedPropertyLocal(MaxLengthAttributeName, typeof(int), out ret))
 				return ret;
 
 			// search for a attribute field, with the specific name
@@ -536,7 +554,7 @@ namespace TecWare.PPSn.Server
 
 		internal PpsViewDescription(IPpsSelectorToken selectorToken, string displayName, PpsViewJoinDefinition[] joins, PpsViewParameterDefinition[] filters, PpsViewParameterDefinition[] orders, IPropertyReadOnlyDictionary attributes)
 		{
-			this.selectorToken = selectorToken;
+			this.selectorToken = selectorToken ?? throw new ArgumentNullException(nameof(selectorToken));
 			this.displayName = displayName;
 
 			this.joins = joins ?? PpsViewJoinDefinition.EmptyArray;
@@ -583,9 +601,6 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Selector token to execute the view.</summary>
 		public IPpsSelectorToken SelectorToken => selectorToken;
-
-		/// <summary>Is this view visible for the user.</summary>
-		public bool IsVisible => displayName != null;
 	} // class PpsViewDefinition
 
 	#endregion
@@ -619,12 +634,12 @@ namespace TecWare.PPSn.Server
 
 				var view = new PpsViewDescription(
 					selectorToken,
-					xDefinition.GetAttribute("displayName", (string)null),
+					xDefinition.GetAttribute(PpsFieldDescription.DisplayNameAttributeName, (string)null),
 					xDefinition.Elements(xnJoin).Select(CreateJoinDefinition).ToArray(),
 					xDefinition.Elements(xnFilter).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnOrder).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnAttribute).ToPropertyDictionary(
-						new KeyValuePair<string, Type>("description", typeof(string)),
+						new KeyValuePair<string, Type>(PpsFieldDescription.DescriptionAttributeName, typeof(string)),
 						new KeyValuePair<string, Type>("bi.visible", typeof(bool))
 					)
 				);
@@ -641,7 +656,7 @@ namespace TecWare.PPSn.Server
 				var aliasName = xJoin.GetAttribute("alias", null); // optional
 				var type = xJoin.GetAttribute("type", PpsDataJoinType.Inner);
 
-				return new PpsViewJoinDefinition(viewName, aliasName, xJoin.GetAttribute("displayName", null), type, statement);
+				return new PpsViewJoinDefinition(viewName, aliasName, xJoin.GetAttribute(PpsFieldDescription.DisplayNameAttributeName, null), type, statement);
 			} // func CreateJoinDefinition
 
 			private static PpsDataJoinStatement[] ParseOnStatement(XElement xJoin)
