@@ -404,7 +404,7 @@ namespace TecWare.PPSn.Server.Sql
 		private PpsSqlColumnInfo primaryKey;
 
 		private readonly List<PpsSqlColumnInfo> columns = new List<PpsSqlColumnInfo>();
-		private readonly List<PpsSqlRelationInfo> relations = new List<PpsSqlRelationInfo>();
+		private readonly List<PpsSqlRelationInfo> foreignKey = new List<PpsSqlRelationInfo>();
 		private readonly List<PpsSqlRelationInfo> referenced = new List<PpsSqlRelationInfo>();
 
 		/// <summary></summary>
@@ -438,11 +438,11 @@ namespace TecWare.PPSn.Server.Sql
 			}
 		} // proc OnColumnAdded
 
-		internal void AddRelation(PpsSqlRelationInfo relationInfo)
+		internal void AddForeignKey(PpsSqlRelationInfo relationInfo)
 		{
-			relations.Add(relationInfo);
+			foreignKey.Add(relationInfo);
 			OnRelationAdded(relationInfo);
-		} // proc AddRelation
+		} // proc AddForeignKey
 
 		internal void AddReference(PpsSqlRelationInfo relationInfo)
 		{
@@ -489,10 +489,10 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary>Column information of this table.</summary>
 		public IEnumerable<PpsSqlColumnInfo> Columns => columns;
-		/// <summary>Parent-Relations of this table.</summary>
-		public IEnumerable<PpsSqlRelationInfo> RelationInfo => relations;
 		/// <summary>Child-Relations of this table.</summary>
-		public IEnumerable<PpsSqlRelationInfo> ReferenceInfo => referenced;
+		public IEnumerable<PpsSqlRelationInfo> ForeignKeys => foreignKey;
+		/// <summary>Parent-Relations of this table.</summary>
+		public IEnumerable<PpsSqlRelationInfo> ReferencedBy => referenced;
 
 		IReadOnlyList<IPpsColumnDescription> IPpsSqlTableOrView.Columns => columns;
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columns;
@@ -1197,7 +1197,7 @@ namespace TecWare.PPSn.Server.Sql
 					&& left.Table is PpsSqlTableInfo leftTable)
 				{
 					var returnStatements = new List<PpsDataJoinStatement>();
-					foreach (var r in rightTable.RelationInfo)
+					foreach (var r in rightTable.ForeignKeys)
 					{
 						if (r.ReferencedColumn.Table == leftTable)
 						{
@@ -2934,8 +2934,8 @@ namespace TecWare.PPSn.Server.Sql
 
 			public void AddRelation(PpsSqlRelationInfo relation)
 			{
-				relation.ParentColumn.Table.AddRelation(relation);
-				relation.ReferencedColumn.Table.AddReference(relation);
+				relation.ParentColumn.Table.AddReference(relation);
+				relation.ReferencedColumn.Table.AddForeignKey(relation);
 				relationCounter++;
 			} // proc AddRelation
 
