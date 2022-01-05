@@ -3583,8 +3583,9 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary></summary>
 		/// <param name="schemaRow"></param>
+		/// <param name="fieldName"></param>
 		/// <param name="referencedFieldName"></param>
-		protected virtual bool TryGetReferencedFieldDescriptionName(DataRow schemaRow, out string referencedFieldName)
+		protected virtual bool TryGetReferencedFieldDescriptionName(string fieldName, DataRow schemaRow, out string referencedFieldName)
 		{
 			if (schemaRow != null)
 			{
@@ -3597,7 +3598,6 @@ namespace TecWare.PPSn.Server.Sql
 					return true;
 				}
 			}
-
 			referencedFieldName = null;
 			return false;
 		} // func TryGetReferencedFieldDescriptionName
@@ -3615,7 +3615,7 @@ namespace TecWare.PPSn.Server.Sql
 				return true;
 
 			// try find referenced field-description
-			if (TryGetReferencedFieldDescriptionName(schemaRow, out var referencedFieldName)
+			if (TryGetReferencedFieldDescriptionName(fieldName, schemaRow, out var referencedFieldName)
 				&& TryGetFieldDescriptionForResultRow(referencedFieldName, null, out fieldDescription))
 				return true;
 
