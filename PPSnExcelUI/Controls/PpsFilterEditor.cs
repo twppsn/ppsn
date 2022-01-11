@@ -503,14 +503,24 @@ namespace TecWare.PPSn.Controls
 
 			protected override void UpdateControls()
 			{
-				var filterColumn = GetFilterColumn(dataGridView, rowIndex);
-				SetFilterColumn(filterColumn);
+				SuspendLayout();
+				try
+				{
+					var filterColumn = GetFilterColumn(dataGridView, rowIndex);
+					SetFilterColumn(filterColumn);
 
-				var filterEditor = (PpsFilterEditor)dataGridView;
-				SetDefinedNames(filterEditor.resultFilter.DefinedVariables?.ToArray());
+					var filterEditor = (PpsFilterEditor)dataGridView;
+					SetDefinedNames(filterEditor.resultFilter.DefinedVariables?.ToArray());
 
-				// select fields of same DataType
-				SetFields(filterEditor.resultFilter.Fields.Where(c => c.DataType == filterColumn.ColumnSourceType));
+					// select fields of same DataType
+					SetFields(filterEditor.resultFilter.Fields.Where(c => c.DataType == filterColumn.ColumnSourceType));
+					base.UpdateControls();
+				}
+				finally
+				{
+					ResumeLayout();
+					PerformLayout();
+				}
 			} // prop UpdateControls
 
 			/// <summary>Implements the IDataGridViewEditingControl.EditingControlDataGridView property.</summary>

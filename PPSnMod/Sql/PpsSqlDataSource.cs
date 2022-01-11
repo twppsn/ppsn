@@ -2915,9 +2915,12 @@ namespace TecWare.PPSn.Server.Sql
 
 			public void AddRelation(PpsSqlRelationInfo relation)
 			{
-				relation.ParentColumn.Table.AddReference(relation);
-				relation.ReferencedColumn.Table.AddForeignKey(relation);
-				relationCounter++;
+				if (relation.IsSingleColumnRelation)
+				{
+					relation.ParentColumn.Table.AddReference(relation);
+					relation.ReferencedColumn.Table.AddForeignKey(relation);
+					relationCounter++;
+				}
 			} // proc AddRelation
 
 			public void Failed(string objectName, object objectId, Exception e)

@@ -14,6 +14,9 @@ namespace TecWare.PPSn.Controls
 		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
 		protected override void Dispose(bool disposing)
 		{
+			if (disposing)
+				DisposeTrue();
+
 			if (disposing && (components != null))
 			{
 				components.Dispose();
@@ -29,103 +32,97 @@ namespace TecWare.PPSn.Controls
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.tblLayout = new System.Windows.Forms.TableLayoutPanel();
 			this.tbxExpression = new System.Windows.Forms.TextBox();
-			this.btnDatetimePicker = new System.Windows.Forms.Button();
-			this.btnDefinedNames = new System.Windows.Forms.Button();
-			this.btnField = new System.Windows.Forms.Button();
-			this.tblLayout.SuspendLayout();
+			this.dateTimeButton = new System.Windows.Forms.Button();
+			this.definedNamesButton = new System.Windows.Forms.Button();
+			this.fieldButton = new System.Windows.Forms.Button();
+			this.panel1 = new System.Windows.Forms.Panel();
+			this.panel1.SuspendLayout();
 			this.SuspendLayout();
-			// 
-			// tblLayout
-			// 
-			this.tblLayout.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-			this.tblLayout.BackColor = System.Drawing.Color.Transparent;
-			this.tblLayout.ColumnCount = 4;
-			this.tblLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.tblLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-			this.tblLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-			this.tblLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-			this.tblLayout.Controls.Add(this.tbxExpression, 0, 0);
-			this.tblLayout.Controls.Add(this.btnDatetimePicker, 1, 0);
-			this.tblLayout.Controls.Add(this.btnDefinedNames, 2, 0);
-			this.tblLayout.Controls.Add(this.btnField, 3, 0);
-			this.tblLayout.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.tblLayout.Location = new System.Drawing.Point(0, 0);
-			this.tblLayout.Name = "tblLayout";
-			this.tblLayout.RowCount = 1;
-			this.tblLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.tblLayout.Size = new System.Drawing.Size(199, 24);
-			this.tblLayout.TabIndex = 0;
-			this.tblLayout.Enter += new System.EventHandler(this.HendleGetFocus);
 			// 
 			// tbxExpression
 			// 
 			this.tbxExpression.BorderStyle = System.Windows.Forms.BorderStyle.None;
 			this.tbxExpression.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.tbxExpression.Location = new System.Drawing.Point(3, 4);
-			this.tbxExpression.Margin = new System.Windows.Forms.Padding(3, 4, 1, 1);
+			this.tbxExpression.Location = new System.Drawing.Point(3, 5);
 			this.tbxExpression.Name = "tbxExpression";
-			this.tbxExpression.Size = new System.Drawing.Size(135, 13);
+			this.tbxExpression.Size = new System.Drawing.Size(121, 13);
 			this.tbxExpression.TabIndex = 0;
 			this.tbxExpression.WordWrap = false;
 			this.tbxExpression.KeyDown += new System.Windows.Forms.KeyEventHandler(this.HandleTextBoxKeyDown);
 			this.tbxExpression.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.HandleTextBoxKeyPress);
 			// 
-			// btnDatetimePicker
+			// dateTimeButton
 			// 
-			this.btnDatetimePicker.Location = new System.Drawing.Point(139, 1);
-			this.btnDatetimePicker.Margin = new System.Windows.Forms.Padding(0, 1, 0, 1);
-			this.btnDatetimePicker.Name = "btnDatetimePicker";
-			this.btnDatetimePicker.Size = new System.Drawing.Size(20, 22);
-			this.btnDatetimePicker.TabIndex = 1;
-			this.btnDatetimePicker.Text = "#";
-			this.btnDatetimePicker.UseVisualStyleBackColor = true;
-			this.btnDatetimePicker.Click += new System.EventHandler(this.HandleButtonClickEvent);
+			this.dateTimeButton.Dock = System.Windows.Forms.DockStyle.Right;
+			this.dateTimeButton.Location = new System.Drawing.Point(127, 0);
+			this.dateTimeButton.Margin = new System.Windows.Forms.Padding(1);
+			this.dateTimeButton.Name = "dateTimeButton";
+			this.dateTimeButton.Size = new System.Drawing.Size(24, 24);
+			this.dateTimeButton.TabIndex = 1;
+			this.dateTimeButton.Text = "#";
+			this.dateTimeButton.UseVisualStyleBackColor = true;
+			this.dateTimeButton.Click += new System.EventHandler(this.HandleButtonClickEvent);
 			// 
-			// btnDefinedNames
+			// definedNamesButton
 			// 
-			this.btnDefinedNames.Location = new System.Drawing.Point(159, 1);
-			this.btnDefinedNames.Margin = new System.Windows.Forms.Padding(0, 1, 0, 1);
-			this.btnDefinedNames.Name = "btnDefinedNames";
-			this.btnDefinedNames.Size = new System.Drawing.Size(20, 22);
-			this.btnDefinedNames.TabIndex = 2;
-			this.btnDefinedNames.Text = "$";
-			this.btnDefinedNames.UseVisualStyleBackColor = true;
-			this.btnDefinedNames.Click += new System.EventHandler(this.HandleButtonClickEvent);
+			this.definedNamesButton.Dock = System.Windows.Forms.DockStyle.Right;
+			this.definedNamesButton.Location = new System.Drawing.Point(151, 0);
+			this.definedNamesButton.Margin = new System.Windows.Forms.Padding(0, 1, 0, 1);
+			this.definedNamesButton.Name = "definedNamesButton";
+			this.definedNamesButton.Size = new System.Drawing.Size(24, 24);
+			this.definedNamesButton.TabIndex = 2;
+			this.definedNamesButton.Text = "$";
+			this.definedNamesButton.UseVisualStyleBackColor = true;
+			this.definedNamesButton.Click += new System.EventHandler(this.HandleButtonClickEvent);
 			// 
-			// btnField
+			// fieldButton
 			// 
-			this.btnField.Location = new System.Drawing.Point(179, 1);
-			this.btnField.Margin = new System.Windows.Forms.Padding(0, 1, 0, 1);
-			this.btnField.Name = "btnField";
-			this.btnField.Size = new System.Drawing.Size(20, 22);
-			this.btnField.TabIndex = 3;
-			this.btnField.Text = ":";
-			this.btnField.UseVisualStyleBackColor = true;
-			this.btnField.Click += new System.EventHandler(this.HandleButtonClickEvent);
+			this.fieldButton.Dock = System.Windows.Forms.DockStyle.Right;
+			this.fieldButton.Location = new System.Drawing.Point(175, 0);
+			this.fieldButton.Margin = new System.Windows.Forms.Padding(1);
+			this.fieldButton.Name = "fieldButton";
+			this.fieldButton.Size = new System.Drawing.Size(24, 24);
+			this.fieldButton.TabIndex = 3;
+			this.fieldButton.Text = ":";
+			this.fieldButton.UseVisualStyleBackColor = true;
+			this.fieldButton.Click += new System.EventHandler(this.HandleButtonClickEvent);
+			// 
+			// panel1
+			// 
+			this.panel1.Controls.Add(this.tbxExpression);
+			this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel1.Location = new System.Drawing.Point(0, 0);
+			this.panel1.Name = "panel1";
+			this.panel1.Padding = new System.Windows.Forms.Padding(3, 5, 3, 0);
+			this.panel1.Size = new System.Drawing.Size(127, 24);
+			this.panel1.TabIndex = 4;
 			// 
 			// PpsFilterControl
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-			this.Controls.Add(this.tblLayout);
+			this.Controls.Add(this.panel1);
+			this.Controls.Add(this.dateTimeButton);
+			this.Controls.Add(this.definedNamesButton);
+			this.Controls.Add(this.fieldButton);
 			this.Margin = new System.Windows.Forms.Padding(0);
 			this.Name = "PpsFilterControl";
 			this.Size = new System.Drawing.Size(199, 24);
-			this.tblLayout.ResumeLayout(false);
-			this.tblLayout.PerformLayout();
+			this.Enter += new System.EventHandler(this.HendleGetFocus);
+			this.panel1.ResumeLayout(false);
+			this.panel1.PerformLayout();
 			this.ResumeLayout(false);
 
 		}
 
 		#endregion
 
-		private System.Windows.Forms.TableLayoutPanel tblLayout;
 		private System.Windows.Forms.TextBox tbxExpression;
-		private System.Windows.Forms.Button btnDefinedNames;
-		private System.Windows.Forms.Button btnDatetimePicker;
-		private System.Windows.Forms.Button btnField;
+		private System.Windows.Forms.Button definedNamesButton;
+		private System.Windows.Forms.Button dateTimeButton;
+		private System.Windows.Forms.Button fieldButton;
+		private System.Windows.Forms.Panel panel1;
 	}
 }

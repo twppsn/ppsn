@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
@@ -26,38 +27,37 @@ namespace TecWare.PPSn.Controls
 	internal partial class PpsFilterControl : UserControl
 	{
 		#region -- DataColumnrWrapper --------------------------------------------------
+
 		internal class DataColumnrWrapper
 		{
-			private IDataColumn internalField;
+			private readonly IDataColumn field;
 
 			public DataColumnrWrapper(IDataColumn field)
 			{
-				internalField = field;
+				this.field = field;
 			}
 
-			public string Name { get => internalField.Name; }
-			public string DisplayName
-			{
-				get => internalField.Attributes.GetProperty<string>("DisplayName", internalField.Name);
-			}
+			public string Name => field.Name;
+			public string DisplayName => field.Attributes.GetProperty<string>("DisplayName", field.Name);
 		}
+
 		#endregion -- DataColumnrWrapper -----------------------------------------------
 
 		#region -- DataColummns --------------------------------------------------------
-		internal class DataColummns
-		{
-			public List<DataColumnrWrapper> columns;
 
-			public List<DataColumnrWrapper> Columns => columns;
+		private class DataColummns
+		{
+			private readonly List<DataColumnrWrapper> columns;
+
 			public DataColummns(IEnumerable<IDataColumn> columns)
 			{
-				this.columns = new List<DataColumnrWrapper>();
-				foreach (var col in columns)
-				{
-					this.columns.Add(new DataColumnrWrapper(col));
-				}
+				this.columns = new List<DataColumnrWrapper>(columns.Select(c => new DataColumnrWrapper(c)));
 			}
+
+			public int Count => columns.Count;
+			public IReadOnlyList<DataColumnrWrapper> Columns => columns;
 		}
+
 		#endregion -- DataColummns -----------------------------------------------------
 
 		private PpsPopup popup;
@@ -72,15 +72,34 @@ namespace TecWare.PPSn.Controls
 		public PpsFilterControl()
 		{
 			InitializeComponent();
-			DoubleBuffered = true;
 		}
+
+		public void DisposeTrue()
+			=> CleanUp();
+
+		protected virtual void UpdateControls() { }
 
 		private void UpdateExpression(string newExepression)
 		{
 			Expression = newExepression;
 		}
 
-		protected virtual void UpdateControls() { }
+		private void ShowPopup(ListBox lb)
+		{
+			lb.SelectionMode = SelectionMode.One;
+			lb.BorderStyle = BorderStyle.None;
+
+			lb.Click += HandleListClick;
+			lb.DoubleClick += HandleListClick;
+			lb.MouseDoubleClick += HandleListClick;
+			lb.PreviewKeyDown += HandleListKeyDown;
+
+			popup = new PpsPopup(lb);
+			popup.Closed += HandlePopupClosedEvent;
+			popup.Padding = new Padding(1);
+			lb.MinimumSize = new Size(Width, 100);
+			popup.Show(this);
+		}
 
 		private void ShowFieldsControl()
 		{
@@ -96,24 +115,6 @@ namespace TecWare.PPSn.Controls
 				fieldsList.Items.AddRange(fields.Columns.ToArray());
 
 			ShowPopup(fieldsList);
-
-		}
-
-		private void ShowPopup(ListBox lb)
-		{
-			lb.SelectionMode = SelectionMode.One;
-			lb.BorderStyle = BorderStyle.None;
-			
-			lb.Click += HandleListClick;
-			lb.DoubleClick += HandleListClick;
-			lb.MouseDoubleClick += HandleListClick;
-			lb.PreviewKeyDown += HandleListKeyDown;
-
-			popup = new PpsPopup(lb);
-			popup.Closed += HandlePopupClosedEvent;
-			popup.Padding = new Padding(1);
-			lb.MinimumSize = new Size(Width, 100);
-			popup.Show(this);
 		}
 
 		private void ShowDefinedNameControl()
@@ -138,24 +139,35 @@ namespace TecWare.PPSn.Controls
 			popup.Show(this);
 		} // proc ShowCalenderControl
 
-		public string Expression { get => tbxExpression.Text; set => tbxExpression.Text = value;}
+		private void ShowButton(Button btn, bool show)
+		{
+			if (show)
+			{
+				if (Controls.IndexOf(btn) == -1)
+					Controls.Add(btn);
+			}
+			else
+				Controls.Remove(btn);
+			Update();
+		} // proc ShowButton
 
-		internal void SetFilterColumn(IPpsFilterColumn column)
+		protected void SetFilterColumn(IPpsFilterColumn column)
 		{
 			filterColumn = column;
-			if (filterColumn != null)
-			{
-				var filterFieldType = filterColumn.ColumnSourceType;
-				btnDatetimePicker.Visible = filterFieldType != null && filterFieldType == typeof(DateTime);
-
-			}
+			ShowButton(dateTimeButton, column?.ColumnSourceType == typeof(DateTime));
 		} // proc UpdateStyle
 
-		internal void SetFields(IEnumerable<IDataColumn> fields)
-			=> this.fields = new DataColummns(fields);
+		protected void SetFields(IEnumerable<IDataColumn> newFields)
+		{
+			fields = new DataColummns(newFields);
+			ShowButton(fieldButton, fields.Count > 0);
+		} // proc SetFields
 
-		internal void SetDefinedNames(string[] definedNames) 
-			=> this.definedNames = definedNames;
+		protected void SetDefinedNames(string[] newDefinedNames)
+		{
+			definedNames = newDefinedNames;
+			ShowButton(definedNamesButton, newDefinedNames.Length > 0);
+		} // proc SetDefinedNames
 
 		/// <summary> Dispose UI Controls</summary>
 		private void CleanUp()
@@ -225,11 +237,11 @@ namespace TecWare.PPSn.Controls
 
 		private void HandleButtonClickEvent(object sender, EventArgs e)
 		{
-			if (sender == btnField)
+			if (sender == fieldButton)
 				ShowFieldsControl();
-			else if (sender == btnDefinedNames)
+			else if (sender == definedNamesButton)
 				ShowDefinedNameControl();
-			else if (sender == btnDatetimePicker)
+			else if (sender == dateTimeButton)
 				ShowCalenderControl();
 		}
 		
@@ -335,5 +347,7 @@ namespace TecWare.PPSn.Controls
 
 		private void HendleGetFocus(object sender, EventArgs e)
 			=> UpdateControls();
+
+		public string Expression { get => tbxExpression.Text; set => tbxExpression.Text = value; }
 	} // class PpsFilterControl
 }

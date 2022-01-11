@@ -149,7 +149,7 @@ namespace TecWare.PPSn.UI.Barcodes
 			}
 
 			var p = checkSum % 10;
-			return (char)(p > 0 ? (10 + 48 - p) : 0);
+			return (char)(p > 0 ? (10 + 48 - p) : '0');
 		} // func CalculateCheckSum
 
 		private static bool VerifyCheckDigit(string code, int offset, int length)
@@ -337,6 +337,9 @@ namespace TecWare.PPSn.UI.Barcodes
 		/// <returns></returns>
 		public static string CreateRaw(string prodNr, string lotNumber = null, DateTime? useByDate = null, int? menge = null)
 		{
+			if (String.IsNullOrEmpty(prodNr))
+				throw new ArgumentNullException(nameof(prodNr));
+
 			var sb = new StringBuilder("01", 256);
 
 			// product number

@@ -492,13 +492,23 @@ namespace TecWare.PPSn.Controls
 			private readonly TreeNodeData columnSource;
 			private readonly IDataColumn column;
 			private readonly string sourceDisplayName;
+			private readonly bool isDefaultVisible;
 
 			public SourceColumnData(TreeNodeData columnSource, IDataColumn column)
 			{
 				this.columnSource = columnSource ?? throw new ArgumentNullException(nameof(columnSource));
 				this.column = column ?? throw new ArgumentNullException(nameof(column));
 
-				sourceDisplayName = column.Attributes.GetProperty<string>("DisplayName", column.Name);
+				if (column.Attributes.TryGetProperty<string>("DisplayName", out var displayName))
+				{
+					sourceDisplayName = displayName;
+					isDefaultVisible = true;
+				}
+				else
+				{
+					sourceDisplayName = column.Name;
+					isDefaultVisible = false;
+				}
 				DisplayName = sourceDisplayName;
 			} // ctor
 
@@ -519,6 +529,8 @@ namespace TecWare.PPSn.Controls
 			public IDataColumn Column => column;
 			public override string SourceName => sourceDisplayName;
 			public override string SourcePath => columnSource.Path;
+
+			public bool IsDefaultVisible => isDefaultVisible;
 
 			string IDataColumn.Name => column.Name;
 			Type IDataColumn.DataType => column.DataType;
@@ -891,14 +903,23 @@ namespace TecWare.PPSn.Controls
 			public int Compare(object x, object y)
 				=> Compare((ListViewItem)x, (ListViewItem)y);
 
+			private int CompareText(ListViewItem x, ListViewItem y, int index, bool desc)
+			{
+				var r = String.Compare(x.SubItems[index].Text, y.SubItems[index].Text, StringComparison.OrdinalIgnoreCase);
+				if (desc)
+					r *= -1;
+				return r;
+			} // func CompareText
+
+			private int CompareDefaultIndex(ListViewItem x, ListViewItem y)
+				=> x.SubItems[1].Tag is int a && y.SubItems[1].Tag is int b ? a - b : 0;
+
 			private int Compare(ListViewItem x, ListViewItem y)
 			{
 				var sortOrder = tableInsertForm.currentColumnsSortOrder;
-				var index = sortOrder > 0 ? sortOrder - 1 : -sortOrder - 1;
-				var r = String.Compare(x.SubItems[index].Text, y.SubItems[index].Text, StringComparison.OrdinalIgnoreCase);
-				if (sortOrder < 0)
-					r *= -1;
-				return r;
+				return sortOrder == 0
+					? CompareDefaultIndex(x, y)
+					: CompareText(x, y, sortOrder > 0 ? sortOrder - 1 : -sortOrder - 1, sortOrder < 0);
 			}
 		} // class CurrentColumnsSortComparer
 
@@ -917,7 +938,7 @@ namespace TecWare.PPSn.Controls
 		private readonly FilterExpression resultFilter; // filter expression
 
 		private bool showInternalName = false;
-		private int currentColumnsSortOrder = 1;
+		private int currentColumnsSortOrder = 0;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -1184,10 +1205,13 @@ namespace TecWare.PPSn.Controls
 
 		private void ToggleCurrentColumnsListViewSort(int sortColumnIndex)
 		{
-			if (currentColumnsSortOrder == sortColumnIndex)
+			if (currentColumnsSortOrder == -sortColumnIndex)
+				currentColumnsSortOrder = 0;
+			else if (currentColumnsSortOrder == sortColumnIndex)
 				currentColumnsSortOrder = -sortColumnIndex;
 			else
 				currentColumnsSortOrder = sortColumnIndex;
+
 			currentColumnsListView.Sort();
 		} // proc ToggleCurrentColumnsListViewSort
 
@@ -1210,6 +1234,7 @@ namespace TecWare.PPSn.Controls
 					}
 
 					// add new columns
+					var defaultSortIndex = 0;
 					foreach (var col in nodeData.View.Columns)
 					{
 						var newCol = new SourceColumnData(nodeData, col);
@@ -1226,22 +1251,29 @@ namespace TecWare.PPSn.Controls
 						} // func FindColumn
 
 						var idx = FindColumn();
-						ListViewItem lvi;
-						if (idx < 0)
+						if (showInternalName || newCol.IsDefaultVisible)
 						{
-							lvi = new ListViewItem() { Tag = newCol };
-							lvi.SubItems.Add("");
+							ListViewItem lvi;
+							if (idx < 0)
+							{
+								lvi = new ListViewItem() { Tag = newCol };
+								lvi.SubItems.Add("");
 
-							currentColumnsListView.Items.Add(lvi);
+								currentColumnsListView.Items.Add(lvi);
 
+							}
+							else
+								lvi = currentColumnsListView.Items[idx];
+
+							lvi.Text = newCol.DisplayName;
+							lvi.SubItems[1].Text = newCol.Column.Name;
+							lvi.SubItems[1].Tag = defaultSortIndex++;
+							
+							if (newCol.Column.Attributes.TryGetProperty<string>("doc.description", out var description))
+								lvi.ToolTipText = description;
 						}
-						else
-							lvi = currentColumnsListView.Items[idx];
-
-						lvi.Text = newCol.DisplayName;
-						lvi.SubItems[1].Text = newCol.Column.Name;
-						if (newCol.Column.Attributes.TryGetProperty<string>("doc.description", out var description))
-							lvi.ToolTipText = description;
+						else if (idx >= 0)
+							currentColumnsListView.Items.RemoveAt(idx);
 					}
 
 					currentColumnsListView.Sort();
@@ -1644,6 +1676,8 @@ namespace TecWare.PPSn.Controls
 					break;
 				case Keys.F4:
 					showInternalName = !showInternalName;
+					if (tableTree.SelectedNode != null && tableTree.SelectedNode.Tag is TreeNodeData data)
+						RefreshAvailableColumns(data);
 					UpdateLayout();
 					break;
 			}
