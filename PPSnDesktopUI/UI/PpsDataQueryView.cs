@@ -17,15 +17,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using TecWare.DE.Data;
 using TecWare.PPSn.Core.Data;
+using TecWare.PPSn.Data;
 
-namespace TecWare.PPSn.Data
+namespace TecWare.PPSn.UI
 {
 	#region -- class PpsDataQueryView -------------------------------------------------
 
