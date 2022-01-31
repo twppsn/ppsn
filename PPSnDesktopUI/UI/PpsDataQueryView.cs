@@ -18,8 +18,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using TecWare.DE.Data;
 using TecWare.PPSn.Core.Data;
@@ -31,18 +31,46 @@ namespace TecWare.PPSn.UI
 
 	public class PpsDataQueryView : DependencyObject, IDataRowEnumerable, INotifyCollectionChanged, ICollectionViewFactory
 	{
-		//#region -- class PpsDataQueryEnumerator ---------------------------------------
+		#region -- class PpsDataQueryBuilder ------------------------------------------
 
-		//private sealed class PpsDataQueryEnumerator : IEnumerator<IDataRow>
-		//{
+		private sealed class PpsDataQueryBuilder : IDataRowEnumerable
+		{
+			private readonly PpsDataQueryView view;
+			private readonly PpsDataQuery query;
 
-		//} // class PpsDataQueryEnumerator
+			public PpsDataQueryBuilder(PpsDataQueryView view, PpsDataQuery query, PpsDataFilterExpression filter = null, IEnumerable<PpsDataColumnExpression> columns = null, IEnumerable<PpsDataOrderExpression> order = null)
+			{
+				this.view = view ?? throw new ArgumentNullException(nameof(view));
+				this.query = new PpsDataQuery(query, filter, columns, order);
+			} // ctor
 
-		//#endregion
+			public IEnumerator<IDataRow> GetEnumerator()
+				=> view.ExecuteQueryCore(query).GetEnumerator();
+			
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+
+			public IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
+				=> new PpsDataQueryBuilder(view, query, columns: columns);
+
+			public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression filter, Func<string, string> lookupNative = null)
+			{
+				if (lookupNative != null)
+					throw new ArgumentException();
+				return new PpsDataQueryBuilder(view, query, filter: filter);
+			} // func ApplyFilter
+
+			public IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> order, Func<string, string> lookupNative = null)
+			{
+				if (lookupNative != null)
+					throw new ArgumentException();
+				return new PpsDataQueryBuilder(view, query, order: order);
+			} // func ApplyOrder
+		} // class PpsDataQueryBuilder
+
+		#endregion
 
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
-
-		private PpsDataQuery query = null;
 
 		private void OnCollectionChanged()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -50,63 +78,94 @@ namespace TecWare.PPSn.UI
 		ICollectionView ICollectionViewFactory.CreateView()
 			=> new PpsDataRowEnumerableCollectionView(this);
 
-		public IEnumerator<IDataRow> GetEnumerator()
+		#region -- IDataRowEnumerable - members ---------------------------------------
+
+		private PpsDataQueryBuilder CreateQueryBuilder()
+		{
+			if (String.IsNullOrEmpty(ViewName))
+				return new PpsDataQueryBuilder(this, PpsDataQuery.Empty);
+
+			var query = new PpsDataQuery(ViewName)
+			{
+				Filter = PpsDataFilterExpression.Parse(Filter, formatProvider: CultureInfo.InvariantCulture),
+				Columns = PpsDataColumnExpression.Parse(Columns).ToArray(),
+				Order = PpsDataOrderExpression.Parse(Order).ToArray()
+			};
+
+			return new PpsDataQueryBuilder(this, query);
+		} // func CreateQuery
+
+		private IEnumerable<IDataRow> ExecuteQueryCore(PpsDataQuery query)
 		{
 			var shell = this.GetControlService<IPpsShell>(false);
-			if (shell == null)
-				return Array.Empty<IDataRow>().OfType<IDataRow>().GetEnumerator();
+			if (shell == null || query.ViewId == null)
+				return Array.Empty<IDataRow>().OfType<IDataRow>();
 
-			var a = Task.Run(() => shell.GetViewData(query).ToArray()).Await();
-			return a.OfType<IDataRow>().GetEnumerator();
-		} // func GetEnumerator
+			return shell.GetViewData(query);
+		} // func ExecuteQueryCore
+
+		private IPpsShell GetShell()
+			=> this.GetControlService<IPpsShell>(false);
+
+		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
+			=> CreateQueryBuilder().GetEnumerator();
 
 		IEnumerator IEnumerable.GetEnumerator()
-			=> GetEnumerator();
+			=> CreateQueryBuilder().GetEnumerator();
 
-		public IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
-			=> this;
+		IDataRowEnumerable IDataRowEnumerable.ApplyOrder(IEnumerable<PpsDataOrderExpression> order, Func<string, string> lookupNative)
+			=> CreateQueryBuilder().ApplyOrder(order, lookupNative);
 
-		public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null) 
-			=> this;
+		IDataRowEnumerable IDataRowEnumerable.ApplyFilter(PpsDataFilterExpression filter, Func<string, string> lookupNative)
+			=> CreateQueryBuilder().ApplyFilter(filter, lookupNative);
 
-		public IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
-			=> this;
+		IDataRowEnumerable IDataRowEnumerable.ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
+			=> CreateQueryBuilder().ApplyColumns(columns);
+
+		#endregion
 
 		#region -- ViewName - property ------------------------------------------------
 
 		public static readonly DependencyProperty ViewNameProperty = DependencyProperty.Register(nameof(ViewName), typeof(string), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnViewNameChanged)));
 
 		private static void OnViewNameChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataQueryView)d).OnViewNameChanged((string)e.OldValue, (string)e.NewValue);
-
-		private void OnViewNameChanged(string oldValue, string newValue)
-		{
-			query = new PpsDataQuery(newValue);
-			query.Columns = new PpsDataColumnExpression[] { new PpsDataColumnExpression("TEILTNR"), new PpsDataColumnExpression("TEILNAME") };
-			OnCollectionChanged(); 
-			// todo:
-			// collection changed -> empty
-			// request to server
-			// collection changed -> has rows
-		} // proc OnViewNameChanged
+			=> ((PpsDataQueryView)d).OnCollectionChanged();
 
 		public string ViewName { get => (string)GetValue(ViewNameProperty); set => SetValue(ViewNameProperty, value); }
 
 		#endregion
 
+		#region -- Columns - property -------------------------------------------------
+
+		public static readonly DependencyProperty ColumnsProperty = DependencyProperty.Register(nameof(Columns), typeof(object), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnColumnsChanged)));
+
+		private static void OnColumnsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataQueryView)d).OnCollectionChanged();
+
+
+		public object Columns { get => GetValue(ColumnsProperty); set => SetValue(ColumnsProperty, value); }
+
+		#endregion
+
 		#region -- FilterExpression - property ----------------------------------------
 
-		//PpsDataFilterExpression IPpsDataRowViewFilter.FilterExpression
-		//{
-		//	get => query != null ? query.Filter : PpsDataFilterExpression.False;
-		//	set
-		//	{
-		//		if (query == null)
-		//			return;
-		//		query.Filter = value;
-		//		OnCollectionChanged();
-		//	}
-		//} // prop FilterExpression
+		public static readonly DependencyProperty FilterProperty = DependencyProperty.Register(nameof(Filter), typeof(object), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnFilterChanged)));
+
+		private static void OnFilterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataQueryView)d).OnCollectionChanged();
+
+		public object Filter { get => GetValue(FilterProperty); set => SetValue(FilterProperty, value); }
+
+		#endregion
+
+		#region -- Order - property ---------------------------------------------------
+
+		public static readonly DependencyProperty OrderProperty = DependencyProperty.Register(nameof(Order), typeof(object), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnOrderChanged)));
+
+		private static void OnOrderChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataQueryView)d).OnCollectionChanged();
+
+		public object Order { get => GetValue(OrderProperty); set => SetValue(OrderProperty, value); }
 
 		#endregion
 	} // class PpsDataQueryView
