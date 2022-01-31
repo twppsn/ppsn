@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -28,7 +29,7 @@ namespace TecWare.PPSn.UI
 {
 	#region -- class PpsDataQueryView -------------------------------------------------
 
-	public class PpsDataQueryView : DependencyObject, IPpsDataRowViewFilter, IEnumerable<IDataRow>, INotifyCollectionChanged //, ICollectionViewFactory
+	public class PpsDataQueryView : DependencyObject, IDataRowEnumerable, INotifyCollectionChanged, ICollectionViewFactory
 	{
 		//#region -- class PpsDataQueryEnumerator ---------------------------------------
 
@@ -46,17 +47,30 @@ namespace TecWare.PPSn.UI
 		private void OnCollectionChanged()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
+		ICollectionView ICollectionViewFactory.CreateView()
+			=> new PpsDataRowEnumerableCollectionView(this);
+
 		public IEnumerator<IDataRow> GetEnumerator()
 		{
 			var shell = this.GetControlService<IPpsShell>(false);
 			if (shell == null)
 				return Array.Empty<IDataRow>().OfType<IDataRow>().GetEnumerator();
 
-			return Task.Run(() => shell.GetViewData(query).ToArray()).Await().OfType<IDataRow>().GetEnumerator();
+			var a = Task.Run(() => shell.GetViewData(query).ToArray()).Await();
+			return a.OfType<IDataRow>().GetEnumerator();
 		} // func GetEnumerator
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
+
+		public IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
+			=> this;
+
+		public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null) 
+			=> this;
+
+		public IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
+			=> this;
 
 		#region -- ViewName - property ------------------------------------------------
 
@@ -68,6 +82,7 @@ namespace TecWare.PPSn.UI
 		private void OnViewNameChanged(string oldValue, string newValue)
 		{
 			query = new PpsDataQuery(newValue);
+			query.Columns = new PpsDataColumnExpression[] { new PpsDataColumnExpression("TEILTNR"), new PpsDataColumnExpression("TEILNAME") };
 			OnCollectionChanged(); 
 			// todo:
 			// collection changed -> empty
@@ -81,17 +96,17 @@ namespace TecWare.PPSn.UI
 
 		#region -- FilterExpression - property ----------------------------------------
 
-		PpsDataFilterExpression IPpsDataRowViewFilter.FilterExpression
-		{
-			get => query != null ? query.Filter : PpsDataFilterExpression.False;
-			set
-			{
-				if (query == null)
-					return;
-				query.Filter = value;
-				OnCollectionChanged();
-			}
-		} // prop FilterExpression
+		//PpsDataFilterExpression IPpsDataRowViewFilter.FilterExpression
+		//{
+		//	get => query != null ? query.Filter : PpsDataFilterExpression.False;
+		//	set
+		//	{
+		//		if (query == null)
+		//			return;
+		//		query.Filter = value;
+		//		OnCollectionChanged();
+		//	}
+		//} // prop FilterExpression
 
 		#endregion
 	} // class PpsDataQueryView

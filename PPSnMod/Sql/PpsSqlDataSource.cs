@@ -20,10 +20,8 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -3877,30 +3875,28 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly Func<string, string> lookupNative;
 			private readonly SqlColumnFinder columnLookup;
 
-			/// <summary></summary>
-			/// <param name="lookupNative"></param>
-			/// <param name="columnLookup"></param>
+			/// <inherited/>
+			protected override string CreateErrorFilter(string message) 
+				=> throw new ArgumentException(message);
+
+			/// <inherited/>
 			public SqlDataFilterVisitor(Func<string, string> lookupNative, SqlColumnFinder columnLookup)
 			{
 				this.lookupNative = lookupNative;
 				this.columnLookup = columnLookup;
 			} // ctor
 
-			/// <summary></summary>
-			/// <param name="columnToken"></param>
-			/// <returns></returns>
+			/// <inherited/>
 			protected override Tuple<string, Type> LookupColumn(string columnToken)
 			{
-				var column = columnLookup.Find(columnToken);
+				var column = columnToken == null ? null : columnLookup.Find(columnToken);
 				if (column == null)
 					throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
 
 				return new Tuple<string, Type>(column.Expression, column.DataType);
 			} // func LookupColumn
 
-			/// <summary></summary>
-			/// <param name="key"></param>
-			/// <returns></returns>
+			/// <inherited/>
 			protected override string LookupNativeExpression(string key)
 			{
 				var expr = lookupNative(key);
@@ -3908,6 +3904,9 @@ namespace TecWare.PPSn.Server.Sql
 					throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{key}'.");
 				return expr;
 			} // func LookupNativeExpression
+
+			/// <summary>Column lookup provider.</summary>
+			protected SqlColumnFinder ColumnLookup => columnLookup;
 		} // class SqlDataFilterVisitor
 
 		#endregion

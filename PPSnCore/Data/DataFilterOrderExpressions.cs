@@ -2742,7 +2742,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="columnToken"></param>
 		/// <returns></returns>
 		protected virtual string CreateColumnErrorFilter(string columnToken)
-			=> CreateErrorFilter(String.Format("Column '{0}' not found.'", columnToken));
+			=> CreateErrorFilter(String.Format("Column '{0}' not found.'", columnToken ?? "<null>"));
 
 		#endregion
 
@@ -2761,6 +2761,9 @@ namespace TecWare.PPSn.Data
 					return CreateCompareFilterDate(expression.Operand, expression.Operator, ((PpsDataFilterDateTimeValue)expression.Value).From, ((PpsDataFilterDateTimeValue)expression.Value).To);
 
 				case PpsDataFilterValueType.Text:
+					//if (expression.Operand == null) // fulltext
+					//	;
+					//goto case PpsDataFilterValueType.Decimal;
 				case PpsDataFilterValueType.Number:
 				case PpsDataFilterValueType.Integer:
 				case PpsDataFilterValueType.Decimal:
