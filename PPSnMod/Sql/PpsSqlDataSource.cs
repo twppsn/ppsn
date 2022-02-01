@@ -3891,7 +3891,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var column = columnToken == null ? null : columnLookup.Find(columnToken);
 				if (column == null)
-					throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
+					throw new ArgumentNullException("operand", $"Could not resolve column '{(columnToken ?? "<null>")}'.");
 
 				return new Tuple<string, Type>(column.Expression, column.DataType);
 			} // func LookupColumn

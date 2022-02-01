@@ -316,7 +316,19 @@ namespace TecWare.PPSn.Core.Data
 			ValueChanged?.Invoke(this, new PpsPropertyValueChangedEventArgs<T>(propertyPath, oldValue, newValue));
 
 			foreach (var kv in notifier)
-				((PropertyChangedEventHandler)kv.Value).Invoke(this, new PropertyChangedEventArgs(kv.Key));
+			{
+				switch (kv.Value)
+				{
+					case PropertyChangedEventHandler pce:
+						pce.Invoke(this, new PropertyChangedEventArgs(kv.Key));
+						break;
+					case Action<string> pc:
+						pc.Invoke(kv.Key);
+						break;
+					default:
+						throw new ArgumentOutOfRangeException(nameof(kv.Value));
+				}
+			}	
 		} // proc OnValueChanged
 
 		void IPpsPropertyWatcher.FireChanged()
@@ -335,25 +347,43 @@ namespace TecWare.PPSn.Core.Data
 		public void SetRoot(object root)
 			=> firstElement.OnParentValueChanged(root);
 
-		/// <summary>Add property change handler.</summary>
-		/// <param name="propertyName"></param>
-		/// <param name="handler"></param>
-		public void AddPropertyHandler(string propertyName, PropertyChangedEventHandler handler)
+		private void AddPropertyHandlerCore(string propertyName, Delegate handler)
 		{
 			if (notifier.TryGetValue(propertyName, out var currentHandler))
 				notifier[propertyName] = Delegate.Combine(currentHandler, handler);
 			else
 				notifier[propertyName] = handler;
-		} // proc AddPropertyChanged
+		} // proc AddPropertyHandlerCore
+
+		private void RemovePropertyHandlerCore(string propertyName, Delegate handler)
+		{
+			if (notifier.TryGetValue(propertyName, out var currentHandler))
+				notifier[propertyName] = Delegate.Remove(currentHandler, handler);
+		} // proc RemovePropertyHandlerCore
+
+		/// <summary>Add property change handler.</summary>
+		/// <param name="propertyName"></param>
+		/// <param name="handler"></param>
+		public void AddPropertyHandler(string propertyName, PropertyChangedEventHandler handler)
+			=> AddPropertyHandlerCore(propertyName, handler);
+
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		/// <param name="handler"></param>
+		public void AddPropertyHandler(string propertyName, Action<string> handler)
+			=> AddPropertyHandlerCore(propertyName, handler);
 
 		/// <summary>Remove a property change handler.</summary>
 		/// <param name="propertyName"></param>
 		/// <param name="handler"></param>
 		public void RemovePropertyHandler(string propertyName, PropertyChangedEventHandler handler)
-		{
-			if (notifier.TryGetValue(propertyName, out var currentHandler))
-				notifier[propertyName] = Delegate.Remove(currentHandler, handler);
-		} // proc RemovePropertyHandler
+			=> RemovePropertyHandlerCore(propertyName, handler);
+
+		/// <summary>Remove a property change handler.</summary>
+		/// <param name="propertyName"></param>
+		/// <param name="handler"></param>
+		public void RemovePropertyHandler(string propertyName, Action<string> handler)
+			=> RemovePropertyHandlerCore(propertyName, handler);
 
 		/// <summary>Is a value binded.</summary>
 		public bool HasValue => lastElement?.Value != null;

@@ -4195,6 +4195,9 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public static bool IsEmpty(IEnumerable<PpsDataColumnExpression> columns)
 			=> columns == null || (columns is PpsDataColumnExpression[] a && a.Length == 0);
+
+		/// <summary></summary>
+		public static PpsDataColumnExpression[] Empty { get; } = Array.Empty<PpsDataColumnExpression>();
 	} // class PpsDataColumnExpression
 
 	#endregion

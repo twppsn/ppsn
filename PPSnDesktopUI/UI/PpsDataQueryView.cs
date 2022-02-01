@@ -46,7 +46,7 @@ namespace TecWare.PPSn.UI
 
 			public IEnumerator<IDataRow> GetEnumerator()
 				=> view.ExecuteQueryCore(query).GetEnumerator();
-			
+
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
 
@@ -72,6 +72,11 @@ namespace TecWare.PPSn.UI
 
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
+		private string viewName;
+		private PpsDataFilterExpression filter = PpsDataFilterExpression.True;
+		private PpsDataColumnExpression[] columns = PpsDataColumnExpression.Empty;
+		private PpsDataOrderExpression[] order = PpsDataOrderExpression.Empty;
+
 		private void OnCollectionChanged()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
@@ -82,14 +87,14 @@ namespace TecWare.PPSn.UI
 
 		private PpsDataQueryBuilder CreateQueryBuilder()
 		{
-			if (String.IsNullOrEmpty(ViewName))
+			if (String.IsNullOrEmpty(viewName))
 				return new PpsDataQueryBuilder(this, PpsDataQuery.Empty);
 
-			var query = new PpsDataQuery(ViewName)
+			var query = new PpsDataQuery(viewName)
 			{
-				Filter = PpsDataFilterExpression.Parse(Filter, formatProvider: CultureInfo.InvariantCulture),
-				Columns = PpsDataColumnExpression.Parse(Columns).ToArray(),
-				Order = PpsDataOrderExpression.Parse(Order).ToArray()
+				Filter = filter,
+				Columns = columns,
+				Order = order
 			};
 
 			return new PpsDataQueryBuilder(this, query);
@@ -103,9 +108,6 @@ namespace TecWare.PPSn.UI
 
 			return shell.GetViewData(query);
 		} // func ExecuteQueryCore
-
-		private IPpsShell GetShell()
-			=> this.GetControlService<IPpsShell>(false);
 
 		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
 			=> CreateQueryBuilder().GetEnumerator();
@@ -129,7 +131,13 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty ViewNameProperty = DependencyProperty.Register(nameof(ViewName), typeof(string), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnViewNameChanged)));
 
 		private static void OnViewNameChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataQueryView)d).OnCollectionChanged();
+			=> ((PpsDataQueryView)d).OnViewNameChanged((string)e.NewValue);
+
+		private void OnViewNameChanged(string newValue)
+		{
+			viewName = newValue;
+			OnCollectionChanged();
+		} // proc OnViewNameChanged
 
 		public string ViewName { get => (string)GetValue(ViewNameProperty); set => SetValue(ViewNameProperty, value); }
 
@@ -140,8 +148,13 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty ColumnsProperty = DependencyProperty.Register(nameof(Columns), typeof(object), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnColumnsChanged)));
 
 		private static void OnColumnsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataQueryView)d).OnCollectionChanged();
+			=> ((PpsDataQueryView)d).OnColumnsChanged(e.NewValue);
 
+		private void OnColumnsChanged(object newValue)
+		{
+			columns = PpsDataColumnExpression.Parse(newValue).ToArray();
+			OnCollectionChanged();
+		} // proc OnColumnsChanged
 
 		public object Columns { get => GetValue(ColumnsProperty); set => SetValue(ColumnsProperty, value); }
 
@@ -152,7 +165,13 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty FilterProperty = DependencyProperty.Register(nameof(Filter), typeof(object), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnFilterChanged)));
 
 		private static void OnFilterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataQueryView)d).OnCollectionChanged();
+			=> ((PpsDataQueryView)d).OnFilterChanged(e.NewValue);
+
+		private void OnFilterChanged(object newValue)
+		{
+			filter = PpsDataFilterExpression.Parse(newValue, formatProvider: CultureInfo.InvariantCulture);
+			OnCollectionChanged();
+		} // proc OnFilterChanged
 
 		public object Filter { get => GetValue(FilterProperty); set => SetValue(FilterProperty, value); }
 
@@ -163,7 +182,13 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty OrderProperty = DependencyProperty.Register(nameof(Order), typeof(object), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnOrderChanged)));
 
 		private static void OnOrderChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataQueryView)d).OnCollectionChanged();
+			=> ((PpsDataQueryView)d).OnOrderChanged(e.NewValue);
+
+		private void OnOrderChanged(object newValue)
+		{
+			order = PpsDataOrderExpression.Parse(newValue).ToArray();
+			OnCollectionChanged();
+		} // proc OnOrderChanged
 
 		public object Order { get => GetValue(OrderProperty); set => SetValue(OrderProperty, value); }
 
