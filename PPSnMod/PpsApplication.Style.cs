@@ -418,7 +418,7 @@ namespace TecWare.PPSn.Server
 			};
 
 			foreach (var seg in SvgPathBuilder.Parse(new ReadOnlySpan<char>(path.ToCharArray())))
-				seg.AddToPath(graphicsPath);
+				seg.AddToPath(graphicsPath, graphicsPath.PathPoints[0], null);
 
 			g.FillPath(brush, graphicsPath);
 		} // func DrawSvgPath

@@ -58,10 +58,6 @@
       <Project>{56f95a2c-abdb-49cf-91d9-e01d7e3a23a1}</Project>
       <Name>PPSnMod</Name>
     </ProjectReference>
-    <ProjectReference Include="..\PPSnReport\PPSnReport.csproj">
-      <Project>{bd5faf7d-b1dd-4a54-a481-c46179fcc087}</Project>
-      <Name>PPSnReport</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\PPSnExcelMSI\bin\Release\de-DE\PPSnExcel.msi">

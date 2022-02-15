@@ -135,7 +135,6 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary>Default default-format for the column.</summary>
 		/// <param name="format"></param>
-		/// <param name="xlFormat"></param>
 		/// <returns></returns>
 		protected virtual bool TryGetDefaultFormatProperty(out string format)
 		{

@@ -865,49 +865,6 @@
 		</xs:complexType>
 	</xs:element>
 	
-	<xs:element name="reports">
-		<xs:annotation>
-			<xs:documentation>Definies the report settings.</xs:documentation>
-		</xs:annotation>
-		<xs:complexType>
-			<xs:attribute name="system" type="PathType" use="optional">
-				<xs:annotation>
-					<xs:documentation>Root path of the ConTeXt report environent.</xs:documentation>
-				</xs:annotation>
-			</xs:attribute>
-			<xs:attribute name="base" type="PathType" use="required">
-				<xs:annotation>
-					<xs:documentation>Report source path, the base path.</xs:documentation>
-				</xs:annotation>
-			</xs:attribute>
-			<xs:attribute name="logs" type="PathType" use="optional">
-				<xs:annotation>
-					<xs:documentation>Path were the reports are moved (default: %base%\.logs)</xs:documentation>
-				</xs:annotation>
-			</xs:attribute>
-			<xs:attribute name="work" type="PathType" use="optional">
-				<xs:annotation>
-					<xs:documentation>Path were the reports are processed (default: %base%\.work)</xs:documentation>
-				</xs:annotation>
-			</xs:attribute>
-			<xs:attribute name="cleanBaseDirectory" type="xs:int" use="optional" default="1440">
-				<xs:annotation>
-					<xs:documentation>Is it allowed to clean other files than the session files (in min, default: 1440 / 24h).</xs:documentation>
-				</xs:annotation>
-			</xs:attribute>
-			<xs:attribute name="zipLogFiles" type="xs:boolean" use="optional" default="true">
-				<xs:annotation>
-					<xs:documentation>Zip resulting log files, to save space (default: true)</xs:documentation>
-				</xs:annotation>
-			</xs:attribute>
-			<xs:attribute name="storeSuccessLogs" type="xs:boolean" use="optional" default="false">
-				<xs:annotation>
-					<xs:documentation>Store also logs with the result success (default: false)</xs:documentation>
-				</xs:annotation>
-			</xs:attribute>
-		</xs:complexType>
-	</xs:element>
-
 	<xs:element name="style">
 		<xs:complexType>
 			<xs:sequence minOccurs="0" maxOccurs="unbounded">

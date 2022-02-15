@@ -36,7 +36,6 @@ using TecWare.DE.Server.Configuration;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
-using TecWare.PPSn.Reporting;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
@@ -608,9 +607,6 @@ namespace TecWare.PPSn.Server
 		private readonly List<ClientOptionHook> clientOptionHooks = new List<ClientOptionHook>();
 		private long lastSeenClientsChange = DateTime.Now.ToFileTime();
 
-		private PpsReportEngine reporting = null;
-		private readonly PpsServerReportProvider reportProvider;
-
 		private DateTime lastConfigurationTimeStamp = DateTime.MinValue;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -625,7 +621,6 @@ namespace TecWare.PPSn.Server
 
 			databaseLibrary = new PpsDatabaseLibrary(this);
 			objectsLibrary = new PpsObjectsLibrary(this);
-			reportProvider = new PpsServerReportProvider(this);
  
 			// register shortcut for text
 			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
@@ -711,7 +706,6 @@ namespace TecWare.PPSn.Server
 
 			// parse the configuration
 			BeginReadConfigurationData(config);
-			BeginReadConfigurationReport(config);
 		} // proc OnBeginReadConfiguration
 
 		/// <summary></summary>
@@ -905,298 +899,6 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Is the ppsn configuration initialized.</summary>
 		public bool IsInitializedSuccessful => isInitializedSuccessful;
-
-		#endregion
-
-		#region -- Reporting ----------------------------------------------------------
-
-		#region -- class PpsServerReportProvider --------------------------------------
-
-		/// <summary></summary>
-		private sealed class PpsServerReportProvider : PpsDataServerProviderBase
-		{
-			private readonly PpsApplication application;
-
-			public PpsServerReportProvider(PpsApplication application)
-			{
-				this.application = application ?? throw new ArgumentNullException(nameof(application));
-			} // ctor
-
-			public async override Task<IEnumerable<IDataRow>> GetListAsync(string select, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
-				=> await application.Database.CreateSelectorAsync(select, columns, filter, order);
-
-			public override async Task<PpsDataSet> GetDataSetAsync(object identitfication, string[] tableFilter)
-			{
-				PpsObjectAccess GetObjectCore()
-				{
-					switch (identitfication)
-					{
-						case int i:
-							return application.Objects.GetObject(i);
-						case long l:
-							return application.Objects.GetObject(l);
-						case Guid g:
-							return application.Objects.GetObject(g);
-						case LuaTable t:
-							var o = application.Objects.GetObject(t);
-							if (t.TryGetValue<long>("RevId", out var revId))
-								o.SetRevision(revId);
-							return o;
-						default:
-							return application.Objects.GetObject(identitfication.ChangeType<long>());
-					}
-				} // func GetObjectCore
-
-				// initialize object
-				var obj = await Task.Run(() => GetObjectCore());
-				var item = application.Objects.GetObjectItem(obj.Typ);
-				return (PpsDataSet)await Task.Run(() => item.PullData(obj));
-			} // func GetDataSetAsync
-
-			public override Task<LuaTable> ExecuteAsync(LuaTable arguments)
-			{
-				var functionName = arguments.GetOptionalValue("name", (string)null);
-				if (functionName == null)
-					throw new ArgumentNullException("name", "No function definied.");
-
-				return Task.FromResult(new LuaResult(application.CallMember(functionName, arguments))[0] as LuaTable);
-			} // func ExecuteAsync
-		} // class PpsServerReportProvider
-
-		#endregion
-
-		#region -- class PpsReportSession ---------------------------------------------
-
-		/// <summary></summary>
-		private sealed class PpsReportSession : PpsReportSessionBase
-		{
-			#region -- class ImageConverter -------------------------------------------
-
-			private sealed class ImageConverter : PpsReportValueEmitter
-			{
-				private readonly PpsReportSession session;
-
-				public ImageConverter(PpsReportSession session, string columnName, IDataColumns columns)
-					: base(columnName, columns)
-				{
-					this.session = session ?? throw new ArgumentNullException(nameof(session));
-				} // ctor
-
-				private async Task WriteAsync(XmlWriter xml, FileInfo fi)
-				{
-					await xml.WriteStartElementAsync(null, "ref", null);
-					await xml.WriteAttributeStringAsync(null, "src", null, fi.FullName);
-					await xml.WriteEndElementAsync();
-				} // proc WriteAsync
-
-				public override async Task WriteAsync(XmlWriter xml, IDataRow row)
-				{
-					var objkIdKey = GetValue(row);
-					if (objkIdKey == null)
-						return;
-
-					var objkId = objkIdKey.ChangeType<long>();
-
-					// check cache
-					if (session.exportedImages.TryGetValue(objkId, out var fi) && fi != null)
-					{
-						await WriteAsync(xml, fi);
-						return;
-					}
-
-					// mark as exported
-					session.exportedImages[objkId] = null;
-
-					// test if the object is an image
-					var obj = session.application.Objects.GetObject(objkId);
-					if (obj.MimeType != MimeTypes.Image.Jpeg
-						&& obj.MimeType != MimeTypes.Image.Png
-						&& obj.MimeType != MimeTypes.Application.Pdf)
-						return;
-
-					// write object to disc
-					// todo: optimize to use direct link
-					fi = session.CreateTempFile(objkId.ToString() + MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType), true);
-
-					using (var dst = fi.OpenWrite())
-					using (var src = obj.GetDataStream())
-						await src.CopyToAsync(dst);
-
-					await WriteAsync(xml, fi);
-
-					session.exportedImages[objkId] = fi;
-				} // proc WriteAsnyc
-			} // class ImageConverter
-
-			#endregion
-
-			private readonly PpsApplication application;
-
-			private readonly Dictionary<long, FileInfo> exportedImages = new Dictionary<long, FileInfo>();
-
-			public PpsReportSession(PpsApplication application)
-			{
-				this.application = application ?? throw new ArgumentNullException(nameof(application));
-			} // ctor
-
-			public override IPpsReportValueEmitter CreateColumnEmitter(string argument, string columnName, IDataColumns columns)
-			{
-				if (argument == "image" && columnName != null)
-					return new ImageConverter(this, columnName, columns);
-				else
-					return base.CreateColumnEmitter(argument, columnName, columns);
-			} // func CreateColumnEmitter
-		} // class PpsReportSession
-
-		#endregion
-
-		private void BeginReadConfigurationReport(IDEConfigLoading config)
-		{
-			var currentNode = XConfigNode.Create(Server.Configuration, config.ConfigNew).Element(PpsStuff.xnReports);
-
-			var systemPath = currentNode.GetAttribute<string>("system") ?? throw new DEConfigurationException(currentNode.Data, "@system is empty.");
-			var basePath = currentNode.GetAttribute<string>("base") ?? throw new DEConfigurationException(currentNode.Data, "@base is empty.");
-			var logPath = currentNode.GetAttribute<string>("logs");
-			var workPath = currentNode.GetAttribute<string>("work");
-
-			// check for recreate the reporting engine
-			if (reporting == null
-				|| !ProcsDE.IsPathEqual(reporting.EnginePath, systemPath)
-				|| !ProcsDE.IsPathEqual(reporting.BasePath, basePath)
-				|| (logPath != null && !ProcsDE.IsPathEqual(reporting.LogPath, logPath))
-				|| (workPath != null && !ProcsDE.IsPathEqual(reporting.WorkingPath, workPath)))
-			{
-				reporting = new PpsReportEngine(systemPath, basePath, reportProvider, CreateReportSession, reportWorkingPath: workPath, reportLogPath: logPath);
-			}
-
-			// update values
-			reporting.CleanBaseDirectoryAfter = currentNode.GetAttribute<int>("cleanBaseDirectory");
-			reporting.ZipLogFiles = currentNode.GetAttribute<bool>("zipLogFiles");
-			reporting.StoreSuccessLogs = currentNode.GetAttribute<bool>("storeSuccessLogs");
-		} // proc BeginReadConfigurationReport
-
-		private PpsReportSessionBase CreateReportSession()
-			=> new PpsReportSession(this);
-
-		/// <summary>Run a report.</summary>
-		/// <param name="table"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public string RunReport(LuaTable table)
-			=> RunReportAsync(table).AwaitTask();
-
-		/// <summary>Run a report data.</summary>
-		/// <param name="table"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public string DebugData(LuaTable table)
-			=> RunDataAsync(table).AwaitTask();
-
-		/// <summary>Run a report, with a static name.</summary>
-		/// <param name="table"></param>
-		[LuaMember]
-		public void DebugReport(LuaTable table)
-		{
-			table["DebugOutput"] = new Action<string>(text => Log.LogMsg(LogMsgType.Debug, text));
-			var resultFile = RunReportAsync(table).AwaitTask();
-
-			// move to a unique name
-			var moveFileTo = table.GetMemberValue("name") as string;
-			var p = moveFileTo.LastIndexOfAny(new char[] { '/', '\\' });
-			moveFileTo = Path.Combine(Path.GetDirectoryName(resultFile), moveFileTo.Substring(p + 1)) + ".pdf";
-			if (File.Exists(moveFileTo))
-				File.Delete(moveFileTo);
-			File.Move(resultFile, moveFileTo);
-		} // proc DebugReport
-
-		private static SimpleDataRow GetRowContent(LuaTable table)
-		{
-			var columns = new List<SimpleDataColumn>();
-			var values = new List<object>();
-			foreach (var c in table.Members)
-			{
-				columns.Add(new SimpleDataColumn(c.Key, c.Value.GetType()));
-				values.Add(c.Value);
-			}
-			return new SimpleDataRow(values.ToArray(), columns.ToArray());
-		} // func GetRowContent
-
-		/// <summary></summary>
-		/// <param name="table"></param>
-		/// <returns></returns>
-		/// <remarks>return DebugEmitter { converter = "markdown", columnName = "test", row = { test = [[ Hallo **Welt**!]] } }</remarks>
-		/// <remarks>return DebugEmitter { converter = "image", columnName = "test", row = { test = 57006 } }</remarks>
-		[LuaMember]
-		public string DebugEmitter(LuaTable table)
-		{
-			var arguments = table.GetOptionalValue("converter", (string)null);
-			var columnName = table.GetOptionalValue("columnName", (string)null);
-			// create row
-			var row = GetRowContent((table.GetMemberValue("row") as LuaTable) ?? throw new ArgumentNullException("row", "Row information is missing."));
-
-			using (var session = reporting.CreateDebugReportSession())
-			using (var sw = new StringWriter())
-			using (var xml = XmlWriter.Create(sw, new XmlWriterSettings() { NewLineHandling = NewLineHandling.Entitize, IndentChars = "  ", Async = true }))
-			{
-				// emit column
-				var emitter = session.CreateColumnEmitter(arguments, columnName, row);
-				xml.WriteStartElement(emitter.ElementName);
-				emitter.WriteAsync(xml, row).AwaitTask();
-				xml.WriteEndElement();
-				xml.Flush();
-
-				return sw.GetStringBuilder().ToString();
-			}
-		} // func DebugEmitter
-
-		/// <summary>Run a report.</summary>
-		/// <param name="table"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public Task<string> RunReportAsync(LuaTable table)
-			=> reporting.RunReportAsync(table);
-
-		/// <summary>Run a report data only.</summary>
-		/// <param name="table"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public Task<string> RunDataAsync(LuaTable table)
-			=> reporting.RunDataAsync(table);
-
-		[DEConfigHttpAction("report")]
-		private void HttpRunReport(IDEWebRequestScope r)
-		{
-			var reportName = r.GetProperty("name", null);
-			if (reportName == null)
-				throw new ArgumentNullException("name", "Report name is missing.");
-			// enforce user context
-			r.DemandUser();
-			try
-			{
-				// collection arguments
-				var properties = new List<KeyValuePair<string, object>>();
-				foreach (var p in r.ParameterNames)
-				{
-					var v = r.GetProperty(p, (object)null);
-					if (v != null)
-						properties.Add(new KeyValuePair<string, object>(p, v));
-				}
-
-				// execute report
-				var resultInfo = reporting.RunReportAsync(reportName, properties.ToArray()).AwaitTask();
-				r.OutputHeaders["x-ppsn-reportname"] = reportName;
-				r.WriteFile(resultInfo, MimeTypes.Application.Pdf);
-			}
-			catch (Exception e)
-			{
-				Log.Except(e);
-				throw;
-			}
-		} // proc HttpRunReport
-
-		/// <summary>Access to the report engine.</summary>
-		[LuaMember]
-		public PpsReportEngine Reports => reporting;
 
 		#endregion
 

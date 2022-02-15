@@ -50,7 +50,6 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\PPSnCore\PPSnCore.csproj" />
-	  <ProjectReference Include="..\PPSnReport\PPSnReport.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Reference Include="Microsoft.Deployment.WindowsInstaller">
