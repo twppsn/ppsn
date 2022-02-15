@@ -516,7 +516,7 @@ namespace PPSnExcel
 					else
 						columnsAnonMask[i] = false;
 				}
-			}
+			} // func CreateCollumnMask
 
 			#endregion
 
@@ -1253,7 +1253,7 @@ namespace PPSnExcel
 					Expression = parent.map.GetColumnExpressionFromXPath(xPath);
 					Type = PpsTableColumnType.Data;
 				}
-				else if (column.DataBodyRange != null && column.DataBodyRange.HasFormula)
+				else if (column.DataBodyRange != null && column.DataBodyRange.HasFormula is bool hasFormula && hasFormula)
 				{
 					Type = PpsTableColumnType.Formula;
 					Expression = column.Name + column.DataBodyRange.Cells[1, 1].Formula;
