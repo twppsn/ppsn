@@ -989,7 +989,6 @@
 						<xs:element ref="pps:wpf" minOccurs="0" maxOccurs="1" />
 						<xs:element ref="pps:datawareHouse" minOccurs="0" maxOccurs="1" />
 						<xs:element ref="pps:register" minOccurs="0" maxOccurs="unbounded" />
-						<xs:element ref="pps:reports" minOccurs="0" maxOccurs="1" />
 						<xs:element ref="pps:objectItem" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:package" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:style" minOccurs="0" maxOccurs="1" />
