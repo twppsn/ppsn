@@ -519,6 +519,9 @@ namespace TecWare.PPSn.UI
 
 		internal PpsBarcode ParseCode(string rawCode)
 		{
+			if (String.IsNullOrEmpty(rawCode))
+				throw new ArgumentNullException(nameof(rawCode));
+
 			lock (decoders)
 			{
 				for (var i = 0; i < decoders.Count; i++)

@@ -110,7 +110,7 @@ namespace TecWare.PPSn.UI.Barcodes
 		/// <summary>Seriennummer</summary>
 		public string Serialnumber => lotNumber != null && serialNumber != null ? serialNumber : null;
 		/// <summary>Menge</summary>
-		public int? Menge => quantity;
+		public override decimal? Menge => quantity;
 		/// <inherited/>
 		public override DateTime? UseByDate => useByDate;
 		/// <inherited/>
