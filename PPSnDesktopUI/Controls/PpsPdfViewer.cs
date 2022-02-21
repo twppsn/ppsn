@@ -25,6 +25,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -118,7 +119,7 @@ namespace TecWare.PPSn.Controls
 			private void InvalidViewer(Task t)
 			{
 				if (!isDead)
-					viewer.Dispatcher.BeginInvoke(new Action(()=>viewer.InvalidateVisual()));
+					viewer.Dispatcher.BeginInvoke(new Action(() => viewer.InvalidateVisual()));
 			} // proc InvalidViewer
 
 			private void StopRenderUnsafe()
@@ -535,7 +536,7 @@ namespace TecWare.PPSn.Controls
 
 			return;
 
-			EmptyResult:
+EmptyResult:
 			pageArea = Rect.Empty;
 			visibleArea = Rect.Empty;
 		} // func GetVisiblePageArea
@@ -695,7 +696,7 @@ namespace TecWare.PPSn.Controls
 			// insert page
 			if (cacheIndex >= currentPages.Count || currentPages[cacheIndex].PageNumber > pageNumber)
 				currentPages.Insert(cacheIndex, new PageCache(this, pageNumber));
-		
+
 			// return page cache entry
 			return currentPages[cacheIndex];
 		} // func GetPageCacheEntry
@@ -880,6 +881,28 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Visible page area in page units.</summary>
 		public Rect VisiblePageArea => (Rect)GetValue(VisiblePageAreaProperty);
+
+		#endregion
+
+		#region -- Print --------------------------------------------------------------
+
+		private sealed class PpsPdfViewerPrintDocument : PpsPdfReaderPrintDocument
+		{
+			private readonly PpsPdfViewer viewer;
+
+			public PpsPdfViewerPrintDocument(PpsPdfViewer viewer)
+				: base((viewer ?? throw new ArgumentNullException(nameof(viewer))).pdf)
+			{
+				this.viewer = viewer;
+			} // ctor
+
+			public override int? CurrentPage => viewer.CurrentPageNumber;
+		} //class PpsPdfViewerPrintDocument
+
+		/// <summary>Create print document</summary>
+		/// <returns></returns>
+		public IPpsPrintDocument GetPrintDocument()
+			=> new PpsPdfViewerPrintDocument(this);
 
 		#endregion
 

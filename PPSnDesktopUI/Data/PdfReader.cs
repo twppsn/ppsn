@@ -23,6 +23,7 @@ using System.Security;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using TecWare.PPSn.UI;
 using static TecWare.PPSn.NativeMethods;
 
 namespace TecWare.PPSn.Data
@@ -669,6 +670,109 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- class PdfProperties ----------------------------------------------------
+
+	/// <summary>Property collection of the pdf-file</summary>
+	public sealed class PdfProperties : IReadOnlyDictionary<string, string>
+	{
+		private static readonly string[] metaKeys = new string[] { "Name", "Version", "Title", "Author", "Subject", "Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped" };
+
+		private readonly PdfReader pdf;
+
+		internal PdfProperties(PdfReader pdf)
+		{
+			this.pdf = pdf ?? throw new ArgumentNullException(nameof(pdf));
+		} // ctor
+
+		public bool ContainsKey(string key)
+			=> Array.IndexOf(metaKeys, key) >= 0;
+
+		private bool TryGetValue(int metaKeyIndex, out string value)
+		{
+			switch (metaKeyIndex)
+			{
+				case -1:
+					value = null;
+					return false;
+				case 0:
+					value = pdf.Name;
+					return true;
+				case 1:
+					value = pdf.Version.ToString(2);
+					return true;
+				default:
+					value = FPDF_GetMetaText(pdf.Handle, metaKeys[metaKeyIndex]);
+					return !String.IsNullOrEmpty(value);
+			}
+		} // func TryGetValue
+
+		public bool TryGetValue(string key, out string value)
+			=> TryGetValue(Array.FindIndex(metaKeys, c => String.Compare(c, key, StringComparison.OrdinalIgnoreCase) == 0), out value);
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+
+		public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
+		{
+			for (var i = 0; i < metaKeys.Length; i++)
+			{
+				if (!TryGetValue(i, out var tmp))
+					tmp = null;
+				yield return new KeyValuePair<string, string>(metaKeys[i], tmp);
+			}
+		} // func GetEnumerator
+
+		public string this[string key]
+			=> TryGetValue(key, out var tmp) ? tmp : null;
+
+		public IEnumerable<string> Keys => metaKeys;
+		public IEnumerable<string> Values
+		{
+			get
+			{
+				foreach (var key in metaKeys)
+				{
+					if (TryGetValue(key, out var tmp) && tmp != null)
+						yield return tmp;
+				}
+			}
+		} // prop Values
+
+		public string Name => TryGetValue(metaKeys[0], out var n) ? n : null;
+		public string Version => TryGetValue(metaKeys[1], out var n) ? n : null;
+		public string Title => TryGetValue(metaKeys[2], out var n) ? n : null;
+		public string Author => TryGetValue(metaKeys[3], out var n) ? n : null;
+		public string Subject => TryGetValue(metaKeys[4], out var n) ? n : null;
+		public string Keywords => TryGetValue(metaKeys[5], out var n) ? n : null;
+		public string Creator => TryGetValue(metaKeys[6], out var n) ? n : null;
+		public string Producer => TryGetValue(metaKeys[7], out var n) ? n : null;
+		public DateTime? CreationDate => TryGetValue(metaKeys[8], out var n) && DateTime.TryParse(n, out var dt) ? (DateTime?)dt : null;
+		public DateTime? ModDate => TryGetValue(metaKeys[9], out var n) && DateTime.TryParse(n,out var dt) ?  (DateTime?)dt : null;
+		public string Trapped => TryGetValue(metaKeys[10], out var n) ? n : null;
+
+		public int Count => metaKeys.Length;
+	} // class PdfProperties
+
+	#endregion
+
+	#region -- class PpsPdfReaderPrintDocument ----------------------------------------
+
+	public class PpsPdfReaderPrintDocument : PpsDrawingPrintDocument
+	{
+		private readonly int pageCount;
+
+		public PpsPdfReaderPrintDocument(PdfReader pdf)
+			: base((pdf ?? throw new ArgumentNullException(nameof(pdf))).GetDrawingPrintDocument(), PpsPrinting.FindPrintTag(pdf.Properties.Keywords))
+		{
+			pageCount = pdf.PageCount;
+		} // ctor
+
+		public sealed override int? MinPage { get => 1; set { } }
+		public sealed override int? MaxPage { get => pageCount; set { } }
+	} // class PpsPdfReaderPrintDocument
+
+	#endregion
+
 	#region -- class PdfReader --------------------------------------------------------
 
 	/// <summary>Pdf document reader.</summary>
@@ -873,6 +977,8 @@ namespace TecWare.PPSn.Data
 
 		#region -- Print --------------------------------------------------------------
 
+		#region -- class PdfPrintDocument ---------------------------------------------
+
 		private sealed class PdfPrintDocument : PrintDocument
 		{
 			private readonly PdfReader pdf;
@@ -881,8 +987,11 @@ namespace TecWare.PPSn.Data
 
 			public PdfPrintDocument(PdfReader pdf)
 			{
-				this.pdf = pdf;
+				this.pdf = pdf ?? throw new ArgumentNullException(nameof(pdf));
 				DocumentName = Path.GetFileName(pdf.Name);
+
+				PrinterSettings.MinimumPage = 1;
+				PrinterSettings.MaximumPage = pdf.PageCount;
 			} // ctor
 
 			protected override void OnBeginPrint(PrintEventArgs e)
@@ -942,10 +1051,16 @@ namespace TecWare.PPSn.Data
 				=> base.OnQueryPageSettings(e);
 		} // class PdfPrintDocument
 
+		#endregion
+
 		/// <summary>GDI+ printing of the pdf.</summary>
 		/// <returns>Return a winforms print document.</returns>
-		public PrintDocument GetPrintDocument()
+		internal PrintDocument GetDrawingPrintDocument()
 			=> new PdfPrintDocument(this);
+
+		/// <summary>Get a pps print document</summary>
+		public IPpsPrintDocument GetPrintDocument()
+			=> new PpsPdfReaderPrintDocument(this);
 
 		#endregion
 
@@ -975,74 +1090,6 @@ namespace TecWare.PPSn.Data
 
 		#region -- Properties ---------------------------------------------------------
 
-		private static readonly string[] metaKeys = new string[] { "Name", "Version", "Title", "Author", "Subject", "Keywords", "Creator", "Producer", "CreationDate", "ModDate", "Trapped" };
-
-		private sealed class PdfProperties : IReadOnlyDictionary<string, string>
-		{
-			private readonly PdfReader pdf;
-
-			public PdfProperties(PdfReader pdf)
-			{
-				this.pdf = pdf ?? throw new ArgumentNullException(nameof(pdf));
-			}
-
-			public bool ContainsKey(string key)
-				=> Array.IndexOf(metaKeys, key) >= 0;
-
-			private bool TryGetValue(int metaKeyIndex, out string value)
-			{
-				switch (metaKeyIndex)
-				{
-					case -1:
-						value = null;
-						return false;
-					case 0:
-						value = pdf.Name;
-						return true;
-					case 1:
-						value = pdf.Version.ToString(2);
-						return true;
-					default:
-						value = FPDF_GetMetaText(pdf.Handle, metaKeys[metaKeyIndex]);
-						return !String.IsNullOrEmpty(value);
-				}
-			} // func TryGetValue
-
-			public bool TryGetValue(string key, out string value)
-				=> TryGetValue(Array.FindIndex(metaKeys, c => String.Compare(c, key, StringComparison.OrdinalIgnoreCase) == 0), out value);
-
-			IEnumerator IEnumerable.GetEnumerator()
-				=> GetEnumerator();
-
-			public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
-			{
-				for (var i = 0; i < metaKeys.Length; i++)
-				{
-					if (!TryGetValue(i, out var tmp))
-						tmp = null;
-					yield return new KeyValuePair<string, string>(metaKeys[i], tmp);
-				}
-			} // func GetEnumerator
-
-			public string this[string key]
-				=> TryGetValue(key, out var tmp) ? tmp : null;
-
-			public IEnumerable<string> Keys => metaKeys;
-			public IEnumerable<string> Values
-			{
-				get
-				{
-					foreach (var key in metaKeys)
-					{
-						if (TryGetValue(key, out var tmp) && tmp != null)
-							yield return tmp;
-					}
-				}
-			} // prop Values
-
-			public int Count => metaKeys.Length;
-		} // class PdfProperties
-
 		/// <summary>Get the document permissions.</summary>
 		/// <returns></returns>
 		public PdfDocPermission GetPermissions()
@@ -1052,7 +1099,7 @@ namespace TecWare.PPSn.Data
 		} // func GetPermissions
 
 		/// <summary>Return the properties of this pdf-document.</summary>
-		public IReadOnlyDictionary<string, string> Properties { get; }
+		public PdfProperties Properties { get; }
 
 		/// <summary>Name of the pdf, in most cases the file name.</summary>
 		public string Name => pdfName;

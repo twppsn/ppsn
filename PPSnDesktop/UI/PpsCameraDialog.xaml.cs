@@ -864,7 +864,7 @@ namespace TecWare.PPSn.UI
 					}
 				)
 			);
-			this.AddCommandBinding(shell, ApplicationCommands.Redo,
+			this.AddCommandBinding(shell, ApplicationCommands.Redo, // Neues Foto
 				new PpsCommand(
 					ctx =>
 					{
@@ -874,7 +874,7 @@ namespace TecWare.PPSn.UI
 					},
 					CanTakePicture)
 			);
-			this.AddCommandBinding(shell, ApplicationCommands.Save,
+			this.AddCommandBinding(shell, ApplicationCommands.Save, // übernehmen
 				new PpsCommand(ctx =>
 					{
 						DialogResult = true;
@@ -1046,7 +1046,7 @@ namespace TecWare.PPSn.UI
 		{
 			var window = new PpsCameraDialog(PpsWpfShell.GetShell(owner));
 			window.SetFullscreen(owner);
-			return owner.ShowModalDialog(window) == true
+			return owner.ShowModalDialog(window)
 				? window.CurrentImage
 				: null;
 		} // func TakePicture
