@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Xps;
 using System.Xml.Linq;
@@ -424,10 +425,10 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- interface IPpsPrintService ---------------------------------------------
+	#region -- class PpsPrintService --------------------------------------------------
 
 	/// <summary>Shell service to manage printer settings.</summary>
-	[PpsLazyService]
+	[PpsLazyService, PpsService(typeof(PpsPrintService))]
 	public class PpsPrintService : IPpsShellService
 	{
 		private readonly IPpsShell shell;
@@ -775,7 +776,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- class PaginatorDocument ------------------------------------------
+		#region -- class PaginatorDocument --------------------------------------------
 
 		private sealed class PaginatorDocument : PpsWpfPrintDocument
 		{
@@ -859,7 +860,7 @@ namespace TecWare.PPSn.UI
 		public static IPpsPrintDocument CreatePrintDocument(this DocumentPaginator documentPaginator, string printKey = null)
 			=> new PaginatorDocument(documentPaginator, printKey);
 
-		public static Task<IPpsPrintDocument> GetPrintDocumentAsync(this DEHttpClient http, Uri uri)
+		public static Task<IPpsPrintDocument> CreatePrintDocumentAsync(this DEHttpClient http, Uri uri)
 			=> new PpsWebDocument().LoadAsync(http, uri);
 
 		#endregion
@@ -1175,6 +1176,9 @@ namespace TecWare.PPSn.UI
 		} // func GetPrintTag
 
 		#endregion
+
+		/// <summary>Toggle to dialog</summary>
+		public static bool ToggleProperties => (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt)) == (ModifierKeys.Control | ModifierKeys.Alt);
 	} // class PpsPrinting
 
 	#endregion
