@@ -367,6 +367,9 @@ namespace TecWare.PPSn.UI
 
 		public override async Task CommitAsync()
 		{
+			if (!IsModified)
+				return;
+
 			using (var dst = await OpenStreamAsync(fileName, true))
 				await SaveToStreamAsync(dst, IsCompressed());
 		} // proc CommitAsync
@@ -1000,14 +1003,38 @@ namespace TecWare.PPSn.UI
 		/// <summary>Print document with dialog.</summary>
 		/// <param name="document"></param>
 		/// <param name="dp"></param>
+		/// <param name="enforceShowDialog"></param>
 		/// <returns></returns>
-		public static async Task<bool> PrintDialogAsync(this IPpsPrintDocument document, DependencyObject dp)
+		public static async Task<bool> PrintDialogAsync(this IPpsPrintDocument document, DependencyObject dp, bool enforceShowDialog = true)
 		{
-			var job = await ShowDialogAsync(document, dp);
+			if (document == null)
+				throw new ArgumentNullException(nameof(document));
+			if (dp == null)
+				throw new ArgumentNullException(nameof(dp));
+
+			IPpsPrintSettings settings = null;
+			
+			// load settings
+			var printService = dp.GetControlService<PpsPrintService>(false);
+			if (printService != null)
+				settings = await printService.GetPrintSettingsAsync(document.PrintKey);
+
+			// show dialog
+			var job = enforceShowDialog || settings.IsDefault || ToggleProperties
+				? ShowDialog(document, dp, settings)
+				: document.GetPrintJob(settings);
 			if (job == null)
 				return false;
 
-			await job.PrintAsync(dp);
+			using (var progress = dp.CreateProgress(progressText: $"Drucke {job.Name}..."))
+			{
+				// save settings
+				if (settings != null)
+					await settings.CommitAsync();
+
+				// print job
+				await job.PrintAsync(progress);
+			}
 			return true;
 		} // func PrintDialogAsync
 
