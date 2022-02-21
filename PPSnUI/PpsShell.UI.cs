@@ -607,9 +607,9 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="owner"></param>
 		/// <param name="device"></param>
-		// <param name="addCapture"></param>
 		/// <returns></returns>
 		Task<object> CaputureAsync(object owner, PpsCaptureDevice device);
+		// <param name="addCapture"></param>
 		//Task<object> CaputureAsync(object owner, PpsCaptureDevice device, AddCaptureDelegate addCapture = null);
 		// bool IsSupported(PpsImageDevice device);
 	} // interface IPpsCaptureService

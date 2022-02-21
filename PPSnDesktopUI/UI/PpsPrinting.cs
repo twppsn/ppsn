@@ -189,6 +189,7 @@ namespace TecWare.PPSn.UI
 		{
 			SetQueueCore(printQueue ?? LocalPrintServer.GetDefaultPrintQueue());
 			SetTicketCore(printTicket ?? queue.DefaultPrintTicket);
+			SetDefault(true);
 		} // proc InitDefault
 
 		public abstract Task CommitAsync();
@@ -269,7 +270,7 @@ namespace TecWare.PPSn.UI
 
 			using (var m = new MemoryStream())
 			{
-				xDoc.Save(source);
+				xDoc.Save(m);
 				m.Position = 0;
 
 				var newTicket = new PrintTicket(m);
@@ -939,7 +940,7 @@ namespace TecWare.PPSn.UI
 				UserPageRangeEnabled = document.HasRange(),
 			};
 
-			if (settings == null)
+			if (settings != null)
 			{
 				printDialog.PrintQueue = settings.Queue;
 				printDialog.PrintTicket = settings.Ticket;
@@ -948,6 +949,12 @@ namespace TecWare.PPSn.UI
 			// show dialog
 			if (!dp.ShowModalDialog(printDialog.ShowDialog))
 				return null;
+
+			if (settings != null)
+			{
+				settings.Queue = printDialog.PrintQueue;
+				settings.Ticket = printDialog.PrintTicket;
+			}
 
 			// return job-info
 			return document.GetPrintJob(

@@ -1162,7 +1162,7 @@ namespace TecWare.PPSn.Data
 			if (length < 0)
 				length = data.Length - offset;
 			if (length < 0)
-				throw new ArgumentOutOfRangeException(nameof(length), length, "Length");
+				throw new ArgumentOutOfRangeException(nameof(length), length, "Length is lower zero.");
 
 			name = name ?? "bytes.pdf";
 			var mem = new PdfMemoryBlock(data, offset, length);
