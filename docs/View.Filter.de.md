@@ -1,4 +1,4 @@
-# Filter
+﻿# Filter
 
 Für Filter gibt es aktuell 3 Darstellungen von Filterbedingungen.
 
