@@ -1,14 +1,35 @@
 # Filter
 
+Für Filter gibt es aktuell 3 Darstellungen von Filterbedingungen.
+
+Diese bietet eine möglicheit Zeilen-Bedingungen zu definieren, welche in diverse Sprachen übersetzt werden. Z.b. SQL, MaschinenCode, ... .
+Komplexerer Möglichkeiten können per Native-Filter definiert werden.
+
 ## Syntax - Text
 
 ```
 expr ::=
-    [ identifier ] ( ':' [ '<' | '>' | '<=' | '>=' | '!' | '!=' ) [ '(' ] value [ ')' ]
+    [identifier] ( ':' [  symbol  ] )
+    [ '(' ]  value  [ ')' ]
     [ 'and' | 'or' | 'nand' | 'nor' ] '(' expr { SP ... } [ ')' ]
     ':' native ':'
     value
-
+    
+symbol ::=
+	=	Gleich
+	<	Weniger als
+	>	Größer als
+	[	Beginnt mit
+	]	Endet mit
+	[]	Enthält
+	<=	kleiner als oder gleich
+	>=	Größer oder gleich
+	!	Verneinungsoperator 
+	!=	Ungleich
+	![	Nicht mit beginnt
+	!]	Nicht mit Endet
+	![]	Nicht enthält
+	
 value ::= 
     Text |
     `"` Text `"` |
@@ -17,8 +38,10 @@ value ::=
     `$` Text
 ```
 
+Bsp:
 ```
 ID:=(23, 34, 545)
+NAME:["St"
 ```
 
 ## Syntax - Table
@@ -34,15 +57,15 @@ Eine `table` umklammert einen logischen Operator. Dieser Operator wird am Index 
 - `nil`: Wird als `UND` interpretiert.
 - `"and"`: Logisches Und.
 - `"or"`: Logisches Oder.
-- `"nand"`: Logisches NichtUnd.
-- `"nor"`: Logisches NichtOder.
+- `"nand"`: Logisches Nicht Und.
+- `"nor"`: Logisches Nicht Oder.
 
 Zusätzlich kann auch der `PpsDataFilterExpressionType` verwendet werden.
 
 ```
 { [0] = "or", ID = 23, TNR = "4223" }
 ```
-Die `Column/Value` paare werden zu Equal operationen umgebaut. Ist der Wert `nil`, wird die
+Die `Column/Value` paare werden zu Equal Operationen umgebaut. Ist der Wert `nil`, wird die
 entsprechende Operation weggelassen. Es wird kein `NULL` vergleich generiert.
 
 ```
@@ -61,8 +84,12 @@ Eine einzelne Zeichenkette wird als Text-Expression geparst.
 { "ID:=23" }
 ```
 
-Die logischen Operatoren können geschachelt/geklammert werden.
+Die logischen Operatoren können geschachtelt/geklammert werden.
 
 ```
 { [0] = "or", "ID:=23", { [0] = "and", TNR = "2332", POS = "023" } }
 ```
+
+## Syntax - C#
+
+Siehe dazu `PpsDataFilterExpression`...
