@@ -55,6 +55,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CodesTests.cs" />
     <Compile Include="DESCoreStrings.cs" />
     <Compile Include="FilterTests.cs" />
     <Compile Include="FormattedStringParserTests.cs" />

@@ -1,7 +1,0 @@
-- uid: ppsn.readme
-- name: Übersicht
-  href: ../overview.md
-- name: PPSnMod - Servermodule
-  href: ../mod/toc.yml
-- name: PPSnWpf - Clientmodule
-  href: ../wpf/toc.yml
