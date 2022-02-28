@@ -430,7 +430,7 @@ namespace TecWare.PPSn.Core.UI.Barcodes.Encoding
 			{
 				for (var j = 0; j < 6; j++)
 				{
-					var w = patterns[i, j];
+					var w = patterns[codes[i], j];
 					bars[k++] = w;
 					totalWidth += w;
 				}

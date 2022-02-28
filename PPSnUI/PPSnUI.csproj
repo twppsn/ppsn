@@ -23,7 +23,7 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TecWare.DES.Core" Version="3.4.89" />
+    <PackageReference Include="TecWare.DES.Core" Version="3.4.90" />
   </ItemGroup>
 
   <ItemGroup>
