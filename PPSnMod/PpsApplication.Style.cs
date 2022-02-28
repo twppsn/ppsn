@@ -50,43 +50,19 @@ namespace TecWare.PPSn.Server
 			ViewPort = viewport ?? DefaultViewPort;
 		} // ctor
 
-		private static bool TryGetPath(string rawPath, out string path, out string pathFill)
-		{
-			if (rawPath == null || rawPath.Length < 2)
-			{
-				path = null;
-				pathFill = null;
-				return false;
-			}
-
-			var ofs = 0;
-			pathFill = "evenodd";
-
-			// test for fill rule
-			if (rawPath[0] == 'F' && rawPath[1] == '1')
-			{
-				ofs += 2;
-				pathFill = "nonzero";
-			}
-
-			// create path
-			path = rawPath.Substring(ofs);
-			return true;
-		} // func TryGetPath
-
 		/// <summary>Split the raw path in fill type and path.</summary>
 		/// <param name="path"></param>
 		/// <param name="pathFill"></param>
 		/// <returns></returns>
-		public bool TryGetPath(out string path, out string pathFill)
-			=> TryGetPath(RawPath, out path, out pathFill);
+		public bool TryGetPath(out string path, out FillMode pathFill)
+			=> PpsStuff.TryParseWpfPath(RawPath, out path, out pathFill);
 
 		/// <summary>Split the raw path2 in fill type and path.</summary>
 		/// <param name="path"></param>
 		/// <param name="pathFill"></param>
 		/// <returns></returns>
-		public bool TryGetPath2(out string path, out string pathFill)
-			=> TryGetPath(RawPath2, out path, out pathFill);
+		public bool TryGetPath2(out string path, out FillMode pathFill)
+			=> PpsStuff.TryParseWpfPath(RawPath2, out path, out pathFill);
 
 		/// <summary>Name of the geometry</summary>
 		public string Name { get; }
@@ -396,34 +372,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetImageOutputByArgument
 
-		private static readonly XNamespace svgNameSpace = "http://www.w3.org/2000/svg";
-		private static readonly XName xSvg = svgNameSpace + "svg";
-		private static readonly XName xPath = svgNameSpace + "path";
-
-		private static XElement GetSvgPathElement(Color color, string pathFill, string path)
-		{
-			return new XElement(xPath,
-				new XAttribute("fill", ColorTranslator.ToHtml(color)),
-				new XAttribute("fill-rule", pathFill),
-				new XAttribute("fill-opacity", (color.A / 255.0f).ChangeType<string>()),
-				new XAttribute("d", path)
-			);
-		} // func GetSvgPathElement
-
-		private static void DrawSvgPath(Graphics g, Brush brush, string path, string pathFill)
-		{
-			var graphicsPath = new GraphicsPath
-			{
-				FillMode = pathFill == "nonzero" ? FillMode.Winding : FillMode.Alternate
-			};
-
-			foreach (var seg in SvgPathBuilder.Parse(new ReadOnlySpan<char>(path.ToCharArray())))
-				seg.AddToPath(graphicsPath, graphicsPath.PathPoints[0], null);
-
-			g.FillPath(brush, graphicsPath);
-		} // func DrawSvgPath
-
-		private bool TryGetSvgPath(IDEWebRequestScope r, PpsGeometryInfo geometry, out string path, out string pathFill)
+		private bool TryGetSvgPath(IDEWebRequestScope r, PpsGeometryInfo geometry, out string path, out FillMode pathFill)
 		{
 			if (!geometry.TryGetPath(out path, out pathFill))
 			{
@@ -459,18 +408,11 @@ namespace TecWare.PPSn.Server
 			{
 				GetImagePropertiesFromRequest(r, out var width, out var height, out var color, out var color2);
 
-				var svg = new XDocument(
-					new XDocumentType("svg", "-//W3C//DTD SVG 1.1//EN", "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd", null),
-					new XElement(xSvg,
-						new XAttribute("version", "1.1"),
-						new XAttribute("width", width),
-						new XAttribute("height", height),
-						new XAttribute("viewBox", geometry.ViewPort.Replace(',', ' ')),
-						GetSvgPathElement(color, pathFill, path),
-						geometry.TryGetPath2(out var path2, out var pathFill2)
-							? GetSvgPathElement(color2, pathFill2, path2)
-							: null
-					)
+				var svg = PpsStuff.CreateSvgDocument(width, height, geometry.ViewPort.Replace(',', ' '),
+					PpsStuff.CreateSvgPathElement(color, pathFill, path),
+					geometry.TryGetPath2(out var path2, out var pathFill2)
+						? PpsStuff.CreateSvgPathElement(color2, pathFill2, path2)
+						: null
 				);
 
 				await r.WriteXmlAsync(svg, MimeTypes.Image.Svg);
@@ -525,12 +467,12 @@ namespace TecWare.PPSn.Server
 
 								// draw paths
 								using (var br = new SolidBrush(color))
-									DrawSvgPath(g, br, pathData, pathFill);
+									PpsStuff.DrawSvgPath(g, br, pathFill, pathData);
 
 								if (geometry.TryGetPath2(out var path2, out var pathFill2))
 								{
 									using (var br2 = new SolidBrush(color2))
-										DrawSvgPath(g, br2, path2, pathFill2);
+										PpsStuff.DrawSvgPath(g, br2, pathFill2, path2);
 								}
 							}
 							bmp.Save(r.GetOutputStream(mimeType), imageFormat);

@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -26,6 +27,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Microsoft.Deployment.WindowsInstaller;
 using Neo.IronLua;
+using Svg;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 
@@ -565,6 +567,93 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public static Color ChangeColorOpacity(Color color, int alpha)
 			=> Color.FromArgb(alpha, color.R, color.G, color.B);
+
+		#endregion
+
+		#region -- Svg ----------------------------------------------------------------------
+
+		private static readonly XNamespace svgNameSpace = "http://www.w3.org/2000/svg";
+		private static readonly XName xSvg = svgNameSpace + "svg";
+		private static readonly XName xPath = svgNameSpace + "path";
+
+		/// <summary>Parse a wpf path, to the path and fillmode.</summary>
+		/// <param name="wpfPath"></param>
+		/// <param name="svgPath"></param>
+		/// <param name="pathFill"></param>
+		/// <returns></returns>
+		public static bool TryParseWpfPath(string wpfPath, out string svgPath, out FillMode pathFill)
+		{
+			pathFill = FillMode.Alternate;
+
+			if (wpfPath == null || wpfPath.Length < 2)
+			{
+				svgPath = null;
+				return false;
+			}
+
+			var ofs = 0;
+
+			// test for fill rule
+			if (wpfPath[0] == 'F' && wpfPath[1] == '1')
+			{
+				ofs += 2;
+				pathFill = FillMode.Winding;
+			}
+
+			// create path
+			svgPath = wpfPath.Substring(ofs);
+			return true;
+		} // func TryParseWpfPath
+
+		/// <summary>Create a svg-path element</summary>
+		/// <param name="color"></param>
+		/// <param name="pathFill"></param>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public static XElement CreateSvgPathElement(Color color, FillMode pathFill, string path)
+		{
+			return new XElement(xPath,
+				new XAttribute("fill", ColorTranslator.ToHtml(color)),
+				new XAttribute("fill-rule",  pathFill == FillMode.Winding ? "nonzero" : "evenodd"),
+				new XAttribute("fill-opacity", (color.A / 255.0f).ChangeType<string>()),
+				new XAttribute("d", path)
+			);
+		} // func CreateSvgPathElement
+
+		/// <summary>Draw a svg-path to gdi.</summary>
+		/// <param name="g"></param>
+		/// <param name="brush"></param>
+		/// <param name="path"></param>
+		/// <param name="pathFill"></param>
+		public static void DrawSvgPath(Graphics g, Brush brush, FillMode pathFill, string path)
+		{
+			var graphicsPath = new GraphicsPath { FillMode = pathFill };
+
+			foreach (var seg in SvgPathBuilder.Parse(new ReadOnlySpan<char>(path.ToCharArray())))
+				seg.AddToPath(graphicsPath, graphicsPath.PathPoints[0], null);
+
+			g.FillPath(brush, graphicsPath);
+		} // func DrawSvgPath
+
+		/// <summary>Create the basic svg-framge</summary>
+		/// <param name="width"></param>
+		/// <param name="height"></param>
+		/// <param name="viewBox"></param>
+		/// <param name="drawings"></param>
+		/// <returns></returns>
+		public static XDocument CreateSvgDocument(int width, int height, string viewBox, params XElement[] drawings)
+		{
+			return new XDocument(
+				new XDocumentType("svg", "-//W3C//DTD SVG 1.1//EN", "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd", null),
+				new XElement(xSvg,
+					new XAttribute("version", "1.1"),
+					new XAttribute("width", width),
+					new XAttribute("height", height),
+					new XAttribute("viewBox", viewBox),
+					drawings
+				)
+			);
+		} // func CreateSvgDocument
 
 		#endregion
 	} // class PpsStuff
