@@ -421,7 +421,7 @@ namespace TecWare.PPSn.Server.Data
 #pragma warning restore IDE1006 // Naming Styles
 
 			private readonly int emitType = 0; // -1 emit none, 0 check rules, 1 emit all, 2 emit root
-			private readonly Dictionary<string, List<Func<string, bool>>> expressions = new Dictionary<string, List<Func<string, bool>>>(StringComparer.OrdinalIgnoreCase);
+			private readonly Dictionary<string, List<Predicate<string>>> expressions = new Dictionary<string, List<Predicate<string>>>(StringComparer.OrdinalIgnoreCase);
 
 			public PpsAttributeSelector(string expression)
 			{
@@ -444,15 +444,15 @@ namespace TecWare.PPSn.Server.Data
 						if (attributeClass == "*")
 							continue; // invalid filter
 						else
-							AddExpression(attributeClass ?? String.Empty, Procs.GetFilerFunction(attributeName, false));
+							AddExpression(attributeClass ?? String.Empty, Procs.GetFilterFunction(attributeName, false));
 					}
 				}
 			} // ctor
 
-			private void AddExpression(string attributeClass, Func<string, bool> func)
+			private void AddExpression(string attributeClass, Predicate<string> func)
 			{
 				if (!expressions.TryGetValue(attributeClass, out var fn))
-					expressions[attributeClass] = fn = new List<Func<string, bool>>();
+					expressions[attributeClass] = fn = new List<Predicate<string>>();
 				fn.Add(func);
 			} // proc AddExpression
 

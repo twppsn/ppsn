@@ -259,7 +259,7 @@ namespace TecWare.PPSn.Server.Data
 			if (parameter.GetMemberValue("rows") != null)
 				throw new ArgumentNullException("rows", "Prepare does not support 'rows'.");
 
-			return PrepareCore(parameter, firstArgs);
+			return PrepareCore(parameter, firstArgs ?? (parameter[1] as LuaTable));
 		} // func Prepare
 
 		/// <summary>Prepare a command.</summary>

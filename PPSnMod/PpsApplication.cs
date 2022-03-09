@@ -1734,7 +1734,10 @@ namespace TecWare.PPSn.Server
 					src.CopyTo(dst);
 			}
 
-			Log.Info("{0}: Log received.", client.ClientId);
+			Log.Info(
+				"{0}: Log received." + Environment.NewLine +
+				"{1}", client.ClientId, targetFile.FullName
+			);
 
 			r.SetStatus(HttpStatusCode.OK, "Log received.");
 		} // proc HttpClientReceiveLogFile
