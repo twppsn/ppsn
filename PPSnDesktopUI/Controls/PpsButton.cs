@@ -32,7 +32,9 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Show as filled Rectangle with content and optional image.</summary>
 		Standard,
 		/// <summary>Show with transparent Background.</summary>
-		Transparent
+		Transparent,
+		/// <summary></summary>
+		Circled
 	} // enum PpsButtonDisplayType
 
 	#endregion
@@ -106,6 +108,7 @@ namespace TecWare.PPSn.Controls
 		{
 			var newValue = (PpsButtonDisplayType)e.NewValue;
 			d.SetValue(isTransparentPropertyKey, BooleanBox.GetObject(newValue == PpsButtonDisplayType.Transparent));
+			d.SetValue(borderRadiusPropertyKey, newValue == PpsButtonDisplayType.Circled ? ((PpsButton)d).Width / 2.00 : 0.00);
 		}
 
 		#endregion
@@ -160,6 +163,16 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Display retangular Background</summary>
 		public bool IsTransparent => BooleanBox.GetBool(GetValue(IsTransparentProperty));
+
+		#endregion
+
+		#region -- BorderRadius - Property --------------------------------------------
+
+		private static readonly DependencyPropertyKey borderRadiusPropertyKey = DependencyProperty.RegisterReadOnly(nameof(BorderRadius), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(0.00));
+		/// <summary></summary>
+		public static readonly DependencyProperty BorderRadiusProperty = borderRadiusPropertyKey.DependencyProperty;
+		/// <summary></summary>
+		public double BorderRadius => (double)GetValue(BorderRadiusProperty);
 
 		#endregion
 
