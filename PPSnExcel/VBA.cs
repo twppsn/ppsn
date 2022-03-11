@@ -39,7 +39,7 @@ namespace PPSnExcel
 		{
 			if (listObject is Excel.ListObject list)
 			{
-				Globals.ThisAddIn.RefreshTableAsync(list, null, refreshLayout is bool l && l).Await();
+				Globals.ThisAddIn.RefreshTableAsync(list, null, refreshLayout is bool l && l, false).Await();
 				return true;
 			}
 			else

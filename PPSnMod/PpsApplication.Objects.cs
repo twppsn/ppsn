@@ -22,7 +22,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -581,7 +580,7 @@ namespace TecWare.PPSn.Server
 			{
 				{ "ObjkId", objectId },
 				
-				{ "CreateUserId", DEScope.GetScopeService<IPpsPrivateDataContext>().UserId },
+				{ "CreateUserId", DEScope.GetScopeService<IDECommonScope>().DemandUser().GetProperty<long>("UserId", -1) },
 				{ "CreateDate",  DateTime.Now }
 			};
 
@@ -1367,7 +1366,7 @@ namespace TecWare.PPSn.Server
 		{
 			long objectId = -1;
 
-			var currentUser = ctx.GetUser<IPpsPrivateDataContext>(); // ensure user
+			ctx.DemandUser(); // ensure user
 			try
 			{
 				// read header length
@@ -1808,188 +1807,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class PpsDatabaseLibrary ---------------------------------------------
-
-		/// <summary>Library implementation for database access.</summary>
-		public sealed class PpsDatabaseLibrary : LuaTable
-		{
-			private readonly PpsApplication application;
-			private readonly Dictionary<string, object> memberCache = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
-			internal PpsDatabaseLibrary(PpsApplication application)
-			{
-				this.application = application;
-			} // ctor
-
-			/// <summary>Clear dynamic member cache</summary>
-			public void ClearCache()
-			{
-				lock (memberCache)
-					memberCache.Clear();
-			} // proc ClearCache
-
-			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
-			/// <param name="name">Name of the database</param>
-			/// <returns></returns>
-			public Task<PpsDataTransaction> GetDatabaseAsync(string name = null)
-			{
-				// find existing source
-				var dataSource = name == null ? application.MainDataSource : application.GetDataSource(name, true);
-				return GetDatabaseAsync(dataSource);
-			} // func GetDatabaseAsync
-
-			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
-			/// <param name="dataSource">Source of the database</param>
-			/// <returns></returns>
-			public async Task<PpsDataTransaction> GetDatabaseAsync(PpsDataSource dataSource)
-			{
-				var scope = DEScope.GetScopeService<IDECommonScope>(true);
-				if (scope.TryGetGlobal<PpsDataTransaction>(this, dataSource, out var trans))
-					return trans;
-
-				// get datasource
-				var user = DEScope.GetScopeService<IPpsPrivateDataContext>(true);
-
-				// create and register transaction
-				trans = await user.CreateTransactionAsync(dataSource, true);
-
-				scope.RegisterCommitAction(new Action(trans.Commit), true);
-				scope.RegisterRollbackAction(new Action(trans.Rollback), true);
-				scope.RegisterDispose(trans);
-
-				scope.SetGlobal(this, dataSource, trans);
-
-				return trans;
-			} // func GetDatabaseAsync
-
-			/// <summary>Get a active transaction of the data source.</summary>
-			/// <param name="dataSource"></param>
-			/// <returns><c>null</c>, if there is no active transaction.</returns>
-			public PpsDataTransaction GetActiveTransaction(PpsDataSource dataSource)
-			{
-				var scope = DEScope.GetScopeService<IDECommonScope>(false);
-				return scope != null && scope.TryGetGlobal<PpsDataTransaction>(this, dataSource, out var trans)
-					? trans
-					: null;
-			} // func GetActiveTransaction
-
-			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
-			/// <param name="name">Name of the database</param>
-			/// <returns></returns>
-			[LuaMember]
-			public PpsDataTransaction GetDatabase(string name = null)
-				=> GetDatabaseAsync(name).AwaitTask();
-
-			/// <summary>Create a selector database views.</summary>
-			/// <param name="select"></param>
-			/// <param name="columns"></param>
-			/// <param name="filter"></param>
-			/// <param name="order"></param>
-			/// <returns></returns>
-			public Task<PpsDataSelector> CreateSelectorAsync(string select, string columns, string filter, string order)
-				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true).CreateSelectorAsync(select, columns, filter, order, true);
-
-			/// <summary>Create a selector database views.</summary>
-			/// <param name="select"></param>
-			/// <param name="columns"></param>
-			/// <param name="filter"></param>
-			/// <param name="order"></param>
-			/// <returns></returns>
-			public Task<PpsDataSelector> CreateSelectorAsync(string select, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
-				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true).CreateSelectorAsync(select, columns, filter, order, true);
-
-			/// <summary>Create a selector database views.</summary>
-			/// <param name="table"></param>
-			/// <returns></returns>
-			public Task<PpsDataSelector> CreateSelectorAsync(LuaTable table)
-				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true).CreateSelectorAsync(table, true);
-
-			/// <summary>Create a selector database views.</summary>
-			/// <param name="select"></param>
-			/// <returns></returns>
-			[LuaMember]
-			public PpsDataSelector CreateSelector(string select)
-				=> CreateSelectorAsync(select, (PpsDataColumnExpression[])null, null, null).AwaitTask();
-
-			/// <summary>Create a selector database views.</summary>
-			/// <param name="select"></param>
-			/// <param name="columns"></param>
-			/// <param name="filter"></param>
-			/// <param name="order"></param>
-			/// <returns></returns>
-			[LuaMember]
-			public PpsDataSelector CreateSelector(string select, string columns, string filter, string order)
-				=> CreateSelectorAsync(select, columns, filter, order).AwaitTask();
-
-			/// <summary>Create a selector database views.</summary>
-			/// <param name="table"></param>
-			/// <returns></returns>
-			[LuaMember]
-			public PpsDataSelector CreateSelector(LuaTable table)
-				=> CreateSelectorAsync(table).AwaitTask();
-
-			private object GetMemberCacheItem(string memberName)
-			{
-				lock (memberCache)
-				{
-					if (memberCache.TryGetValue(memberName, out var cacheItem))
-						return cacheItem;
-					else
-					{
-						var dataSource = application.GetDataSource(memberName, false);
-						if (dataSource != null)
-						{
-							memberCache[memberName] = dataSource;
-							return dataSource;
-						}
-
-						var viewInfo = application.GetViewDefinition(memberName);
-						if (viewInfo != null)
-						{
-							memberCache[memberName] = viewInfo;
-							return viewInfo;
-						}
-
-						memberCache[memberName] = null;
-						return null;
-					}
-				}
-			} // func GetMemberCacheItem
-
-			/// <summary>Add virtual keys</summary>
-			/// <param name="key"></param>
-			/// <returns></returns>
-			protected override object OnIndex(object key)
-			{
-				if (key is string memberName)
-				{
-					switch (GetMemberCacheItem(memberName))
-					{
-						case PpsDataSource dataSource:
-							return GetDatabaseAsync(dataSource).AwaitTask();
-						case PpsViewDescription view:
-							return DEScope.GetScopeService<IPpsPrivateDataContext>(true).CreateSelectorAsync(view.SelectorToken).AwaitTask();
-						default:
-							return base.OnIndex(key);
-					}
-				}
-				else
-					return base.OnIndex(key);
-			} // func OnIndex
-
-			/// <summary>Get a global transaction to the main database.</summary>
-			[LuaMember]
-			public PpsDataTransaction Main => GetDatabase();
-		} // class PpsDatabaseLibrary
-
-		#endregion
-
 		private readonly PpsObjectsLibrary objectsLibrary;
-		private readonly PpsDatabaseLibrary databaseLibrary;
-		
-		/// <summary>Library for access the object store.</summary>
-		[LuaMember("Db")]
-		public PpsDatabaseLibrary Database => databaseLibrary;
 
 		/// <summary>Library for access the object store.</summary>
 		[LuaMember]

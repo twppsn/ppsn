@@ -86,6 +86,17 @@ Datenquelle und Namespace kann wegelassen werden.
 
 Ein gute Übersicht über alle Views befindet sich unter /ppsn/info.html. Dort können die Metadaten enumeriert und kontrolliert werden.
 
+### `CreateSelector`
+
+Datenquellen können Transaktionen besitzen, welche mittels CreateSelector abfragen erzeugen.
+
+Diese Abfragen könenn mittels
+- `ApplyFilter`
+- `ApplyJoin`
+- `ApplyColumns`
+- `ApplyOrder`
+gestaltet werden.
+
 ### Web-Interface
 
 ```
@@ -96,6 +107,8 @@ http://server/ppsn/?action=viewget&v=views.Artikel%20t&f=or%28t.TEILBEST%3A%3C10
 - `f`: Filter-Bedingung
 - `r`: Spaltendefinition
 - `a`: Selectiert die Attribute
+
+Todo Rückgabe: xml oder csv...
 
 ### Filter Bedingungen
 

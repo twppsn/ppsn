@@ -75,7 +75,7 @@ namespace TecWare.PPSn.Main
 
 			charmBarControl = (PpsWindowPaneCharmBarControl)GetTemplateChild("PART_CharmBar");
 			controlPresenter = (ContentPresenter)GetTemplateChild("PART_Control");
-			
+
 			var currentPane = Pane;
 			if (currentPane != null)
 			{
@@ -117,14 +117,8 @@ namespace TecWare.PPSn.Main
 			}
 		} // proc UpdateFocus
 
-		public void OnActivated()
-		{
-			Dispatcher.BeginInvoke(new Action<bool>(UpdateFocus), DispatcherPriority.ApplicationIdle, true);
-		} // proc OnActivated
-
-		public void OnDeactivated()
-		{
-		} // proc OnDeactivated
+		public override void OnActivated()
+			=> Dispatcher.BeginInvoke(new Action<bool>(UpdateFocus), DispatcherPriority.ApplicationIdle, true);
 
 		#endregion
 
@@ -142,11 +136,6 @@ namespace TecWare.PPSn.Main
 		private PpsMainWindow Window => (PpsMainWindow)PaneManager;
 		/// <summary>Pane state classification.</summary>
 		internal PpsWindowPaneHostState State => paneState;
-
-		//#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
-		
-		//#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		static PpsWindowPaneHost()
 		{

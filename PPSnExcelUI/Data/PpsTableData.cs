@@ -63,7 +63,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="views"></param>
 		/// <param name="filter"></param>
 		/// <param name="columns"></param>
-		Task UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns);
+		Task UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize);
 
 		/// <summary>Change the displayname of the table.</summary>
 		string DisplayName { get; set; }
@@ -74,6 +74,8 @@ namespace TecWare.PPSn.Data
 		string Filter { get; }
 		/// <summary></summary>
 		IEnumerable<IPpsTableColumn> Columns { get; }
+		/// <summary> Defined Cells name </summary>
+		IEnumerable<string> DefinedNames { get; }
 
 		/// <summary>Is this an empty view.</summary>
 		bool IsEmpty { get; }

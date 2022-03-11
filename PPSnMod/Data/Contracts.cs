@@ -20,8 +20,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
-using System.Security;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using Neo.IronLua;
@@ -52,13 +50,14 @@ namespace TecWare.PPSn.Server.Data
 			/// <param name="other"></param>
 			/// <returns></returns>
 			public override bool Equals(IIdentity other)
-				=> other is PpsSystemIdentity;
-
-			/// <summary></summary>
-			/// <param name="identity"></param>
-			/// <returns></returns>
-			protected override PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity)
-				=> Equals(identity) ? new PpsIntegratedCredentials(WindowsIdentity.GetCurrent(), false) : null;
+			{
+				if (other is PpsSystemIdentity)
+					return true;
+				else if (other is WindowsIdentity windowsIdentity)
+					return WindowsIdentity.GetCurrent().User == windowsIdentity.User;
+				else
+					return false;
+			} // func Equals
 
 			/// <summary></summary>
 			public override bool IsAuthenticated => true;
@@ -89,24 +88,21 @@ namespace TecWare.PPSn.Server.Data
 
 			public override bool Equals(IIdentity other)
 			{
-				if (other is HttpListenerBasicIdentity basicIdentity)
+				if (other is HttpListenerBasicIdentity http)
 				{
 					if (String.Compare(userName, other.Name, StringComparison.OrdinalIgnoreCase) != 0)
 						return false;
-					return ProcsDE.PasswordCompare(basicIdentity.Password, passwordHash);
+					return ProcsDE.PasswordCompare(http.Password, passwordHash);
 				}
-				else if (other is PpsBasicIdentity checkSql)
+				else if (other is PpsBasicIdentity basic)
 				{
-					if (String.Compare(userName, checkSql.Name, StringComparison.OrdinalIgnoreCase) != 0)
+					if (String.Compare(userName, basic.Name, StringComparison.OrdinalIgnoreCase) != 0)
 						return false;
-					return Procs.CompareBytes(passwordHash, checkSql.passwordHash);
+					return Procs.CompareBytes(passwordHash, basic.passwordHash);
 				}
 				else
 					return false;
 			} // func Equals
-
-			protected override PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity)
-				=> identity is HttpListenerBasicIdentity p ? new PpsUserCredentials(p) : null;
 
 			public override string Name => userName;
 			public override bool IsAuthenticated => passwordHash != null;
@@ -137,16 +133,14 @@ namespace TecWare.PPSn.Server.Data
 					return false;
 			} // func Equals
 
-			protected override PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity)
-				=> identity is WindowsIdentity w ? new PpsIntegratedCredentials(w, true) : null;
-
 			public override string Name => identityAccount.ToString();
 			public override bool IsAuthenticated => false;
 		} // class PpsWindowsIdentity
 
 		#endregion
 
-		private PpsUserIdentity()
+		/// <summary></summary>
+		protected PpsUserIdentity()
 		{
 		} // ctor
 
@@ -186,22 +180,6 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public abstract bool Equals(IIdentity other);
 
-		/// <summary></summary>
-		/// <param name="identity"></param>
-		/// <returns></returns>
-		public PpsCredentials GetCredentialsFromIdentity(IIdentity identity)
-		{
-			if (identity == null)
-				throw new ArgumentNullException(nameof(identity));
-
-			return GetCredentialsFromIdentityCore(identity) ?? throw new ArgumentException($"Identity from type {identity.GetType().Name} is not compatible.", nameof(identity));
-		} // func GetCredentialsFromIdentity
-
-		/// <summary></summary>
-		/// <param name="identity"></param>
-		/// <returns></returns>
-		protected abstract PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity);
-
 		/// <summary>des</summary>
 		public string AuthenticationType => "des";
 		/// <summary>Immer <c>true</c></summary>
@@ -212,10 +190,17 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Singleton</summary>
 		public static PpsUserIdentity System { get; } = new PpsSystemIdentity();
 
-		internal static PpsUserIdentity CreateBasicIdentity(string userName, byte[] passwordHash)
+		/// <summary></summary>
+		/// <param name="userName"></param>
+		/// <param name="passwordHash"></param>
+		/// <returns></returns>
+		public static PpsUserIdentity CreateBasicIdentity(string userName, byte[] passwordHash)
 			=> new PpsBasicIdentity(userName, passwordHash);
 
-		internal static PpsUserIdentity CreateIntegratedIdentity(string userName)
+		/// <summary></summary>
+		/// <param name="userName"></param>
+		/// <returns></returns>
+		public static PpsUserIdentity CreateIntegratedIdentity(string userName)
 		{
 			var p = userName.IndexOf('\\');
 			return p == -1
@@ -223,120 +208,6 @@ namespace TecWare.PPSn.Server.Data
 				: new PpsWindowsIdentity(userName.Substring(0, p), userName.Substring(p + 1));
 		} // func CreateIntegratedIdentity
 	} // class PpsUserIdentity
-
-	#endregion
-
-	#region -- class PpsCredentials ---------------------------------------------------
-
-	/// <summary>Generice pps credentials</summary>
-	public abstract class PpsCredentials : IDisposable
-	{
-		/// <summary></summary>
-		public void Dispose()
-		{
-			Dispose(true);
-		} // proc Dispose
-
-		/// <summary></summary>
-		/// <param name="disposing"></param>
-		protected virtual void Dispose(bool disposing) { }
-	} // class PpsCredentials
-
-	#endregion
-
-	#region -- class PpsIntegratedCredentials -----------------------------------------
-
-	/// <summary>LDAP credentials</summary>
-	public sealed class PpsIntegratedCredentials : PpsCredentials
-	{
-		private readonly WindowsIdentity identity;
-
-		internal PpsIntegratedCredentials(WindowsIdentity identity, bool doClone)
-		{
-			if (identity == null)
-				throw new ArgumentNullException(nameof(identity));
-
-			this.identity = doClone ? (WindowsIdentity)identity.Clone() : identity;
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="disposing"></param>
-		protected override void Dispose(bool disposing)
-		{
-			base.Dispose(disposing);
-			if (disposing)
-				identity.Dispose();
-		} // proc Dispose
-
-		/// <summary></summary>
-		/// <returns></returns>
-		public IDisposable Impersonate()
-			=> WindowsIdentity.GetCurrent().User != identity.User
-				? identity.Impersonate()
-				: null;
-
-		/// <summary></summary>
-		public string Name => identity.Name;
-	} // class PpsIntegratedCredentials
-
-	#endregion
-
-	#region -- class PpsUserCredentials -----------------------------------------------
-
-	/// <summary>Basic user credentials.</summary>
-	public sealed class PpsUserCredentials : PpsCredentials
-	{
-		private readonly string userName;
-		private readonly SecureString password;
-		
-		/// <summary></summary>
-		/// <param name="userName"></param>
-		/// <param name="password"></param>
-		public PpsUserCredentials(string userName, SecureString password)
-		{
-			this.userName = userName ?? throw new ArgumentNullException(nameof(userName));
-			this.password = password ?? throw new ArgumentNullException(nameof(password));
-		} // ctor
-
-		internal unsafe PpsUserCredentials(HttpListenerBasicIdentity identity)
-		{
-			if (identity == null)
-				throw new ArgumentNullException(nameof(identity));
-
-			if (String.IsNullOrEmpty(identity.Name))
-				throw new ArgumentException($"{nameof(identity)}.{nameof(HttpListenerBasicIdentity.Name)} is null or empty.");
-
-			if (String.IsNullOrEmpty(identity.Password))
-				throw new ArgumentException($"{nameof(identity)}.{nameof(HttpListenerBasicIdentity.Password)} is null or empty.");
-
-			// copy the arguments
-			this.userName = identity.Name;
-			var passwordPtr = Marshal.StringToHGlobalUni(identity.Password);
-			try
-			{
-				this.password = new SecureString((char*)passwordPtr.ToPointer(), identity.Password.Length);
-			}
-			finally
-			{
-				Marshal.ZeroFreeGlobalAllocUnicode(passwordPtr);
-			}
-			this.password.MakeReadOnly();
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="disposing"></param>
-		protected override void Dispose(bool disposing)
-		{
-			base.Dispose(disposing);
-			if (disposing)
-				password?.Dispose();
-		} // proc Dispose
-
-		/// <summary></summary>
-		public string UserName => userName;
-		/// <summary></summary>
-		public SecureString Password => password;
-	} // class PpsUserCredentials
 
 	#endregion
 
@@ -350,79 +221,16 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary>Enforces the connection.</summary>
 		/// <returns></returns>
-		Task<bool> EnsureConnectionAsync(bool throwException = true);
+		Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser authentificatedUser, bool throwException = true);
 
 		/// <summary>Is the connection still active.</summary>
 		bool IsConnected { get; }
 
+		/// <summary>User that created this connection.</summary>
+		IDEUser User { get; }
 		/// <summary>DataSource of the current connection.</summary>
 		PpsDataSource DataSource { get; }
 	} // interface IPpsConnectionHandle
-
-	#endregion
-
-	#region -- interface IPpsPrivateDataContext ---------------------------------------
-
-	/// <summary>Hold's the connection and context data for one user.</summary>
-	public interface IPpsPrivateDataContext : IDEAuthentificatedUser, IPropertyReadOnlyDictionary, IDisposable
-	{
-		/// <summary>Returns a pooled connection for a datasource</summary>
-		/// <param name="source"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException = true);
-
-		/// <summary>Creates a selector for a view.</summary>
-		/// <param name="selectorToken"></param>
-		/// <param name="alias"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		Task<PpsDataSelector> CreateSelectorAsync(IPpsSelectorToken selectorToken, string alias = null, bool throwException = true);
-
-		/// <summary>Creates a selector for a view.</summary>
-		/// <param name="select">Name of the view</param>
-		/// <param name="columns">Column definition.</param>
-		/// <param name="filter">Filter rules</param>
-		/// <param name="order">Order rules</param>
-		/// <param name="throwException">Should the method throw on an exception on failure.</param>
-		/// <returns></returns>
-		Task<PpsDataSelector> CreateSelectorAsync(string select, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true);
-
-		/// <summary>Creates a transaction to manipulate data.</summary>
-		/// <param name="dataSourceName"></param>
-		/// <param name="throwException">Should the method throw on an exception on failure.</param>
-		/// <returns></returns>
-		Task<PpsDataTransaction> CreateTransactionAsync(string dataSourceName, bool throwException = true);
-		/// <summary>Creates a transaction to manipulate data.</summary>
-		/// <param name="dataSource">Datasource specified as object.</param>
-		/// <param name="throwException">Should the method throw on an exception on failure.</param>
-		/// <returns></returns>
-		Task<PpsDataTransaction> CreateTransactionAsync(PpsDataSource dataSource, bool throwException = true);
-
-		/// <summary>Creates the credentials for to user for external tasks (like database connections).</summary>
-		/// <returns></returns>
-		PpsCredentials GetNetworkCredential();
-		/// <summary>Creates the credentials for the local computer (e.g. file operations).</summary>
-		/// <returns></returns>
-		PpsIntegratedCredentials GetLocalCredentials();
-
-		/// <summary>>Determines whether the current user belongs to the specified security token.</summary>
-		/// <param name="securityToken"></param>
-		/// <returns></returns>
-		bool TryDemandToken(string securityToken);
-
-		/// <summary>Persists a property in the user table.</summary>
-		/// <param name="properties"></param>
-		/// <returns></returns>
-		Task UpdatePropertiesAsync(LuaTable properties);
-
-		/// <summary>UserId of the user in the main database.</summary>
-		long UserId { get; }
-		/// <summary>Name (display info) of the current user.</summary>
-		string UserName { get; }
-		/// <summary>Returns the current identity.</summary>
-		new PpsUserIdentity Identity { get; }
-	} // interface IPpsPrivateDataContext
 
 	#endregion
 
@@ -613,7 +421,7 @@ namespace TecWare.PPSn.Server.Data
 #pragma warning restore IDE1006 // Naming Styles
 
 			private readonly int emitType = 0; // -1 emit none, 0 check rules, 1 emit all, 2 emit root
-			private readonly Dictionary<string, List<Func<string, bool>>> expressions = new Dictionary<string, List<Func<string, bool>>>(StringComparer.OrdinalIgnoreCase);
+			private readonly Dictionary<string, List<Predicate<string>>> expressions = new Dictionary<string, List<Predicate<string>>>(StringComparer.OrdinalIgnoreCase);
 
 			public PpsAttributeSelector(string expression)
 			{
@@ -636,15 +444,15 @@ namespace TecWare.PPSn.Server.Data
 						if (attributeClass == "*")
 							continue; // invalid filter
 						else
-							AddExpression(attributeClass ?? String.Empty, Procs.GetFilerFunction(attributeName, false));
+							AddExpression(attributeClass ?? String.Empty, Procs.GetFilterFunction(attributeName, false));
 					}
 				}
 			} // ctor
 
-			private void AddExpression(string attributeClass, Func<string, bool> func)
+			private void AddExpression(string attributeClass, Predicate<string> func)
 			{
 				if (!expressions.TryGetValue(attributeClass, out var fn))
-					expressions[attributeClass] = fn = new List<Func<string, bool>>();
+					expressions[attributeClass] = fn = new List<Predicate<string>>();
 				fn.Add(func);
 			} // proc AddExpression
 
@@ -779,51 +587,6 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Attached datasource</summary>
 		PpsDataSource DataSource { get; }
 	} // interface IPpsSelectorToken
-
-	#endregion
-	
-	#region -- class PpsPrivateDataContextHelper --------------------------------------
-
-	/// <summary>Simple helpder for Data Context</summary>
-	public static class PpsPrivateDataContextHelper
-	{
-		/// <summary>Create a selector.</summary>
-		/// <param name="ctx"></param>
-		/// <param name="select"></param>
-		/// <param name="columns"></param>
-		/// <param name="filter"></param>
-		/// <param name="order"></param>
-		/// <param name="formatProvider"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string select, string columns = null, string filter = null, string order = null, bool throwException = true, CultureInfo formatProvider = null)
-		{
-			return ctx.CreateSelectorAsync(
-				select,
-				PpsDataColumnExpression.Parse(columns).ToArray(),
-				PpsDataFilterExpression.Parse(filter, formatProvider: formatProvider),
-				PpsDataOrderExpression.Parse(order).ToArray(),
-				throwException
-			);
-		} // func CreateSelectorAsync
-
-		/// <summary>Create a selector.</summary>
-		/// <param name="ctx"></param>
-		/// <param name="table"></param>
-		/// <param name="formatProvider"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true, CultureInfo formatProvider = null)
-		{
-			return ctx.CreateSelectorAsync(
-				table.GetOptionalValue("select", table.GetOptionalValue("name", (string)null)),
-				PpsDataColumnExpression.Parse(table.GetMemberValue("columns")).ToArray(),
-				PpsDataFilterExpression.Parse(table.GetMemberValue("filter"), formatProvider: formatProvider),
-				PpsDataOrderExpression.Parse(table.GetMemberValue("order")).ToArray(),
-				throwException
-			);
-		} // func CreateSelectorAsync
-	} // class PpsPrivateDataContextHelper
 
 	#endregion
 }

@@ -21,9 +21,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
 using Microsoft.Win32;
-using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Stuff;
@@ -205,11 +203,7 @@ namespace TecWare.PPSn.UI
 		} // proc IsDpcUnlockCode
 
 		public bool IsDpcPin(string pin)
-		{
-			return pin == null
-				? isUnlocked
-				: pin == shell.Settings.DpcPin;
-		} // func IsDpcPin
+			=> pin == null ? isUnlocked : pin == shell.Settings.DpcPin;
 
 		#endregion
 

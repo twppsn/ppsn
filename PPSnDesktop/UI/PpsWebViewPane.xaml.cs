@@ -14,7 +14,9 @@
 //
 #endregion
 using System;
+using System.Globalization;
 using System.Threading.Tasks;
+using System.Windows.Data;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
@@ -61,11 +63,34 @@ namespace TecWare.PPSn.UI
 		private void ToggleKeyboard(PpsCommandContext obj)
 		{
 			if (virtualKeyboard.IsVisible)
-				virtualKeyboard.Show();
-			else
 				virtualKeyboard.Hide();
+			else
+				virtualKeyboard.Show();
 		} // proc ToggleKeyboard
 
 		public bool? CanBackButton => webView.CanGoBack ? (bool?)true : null;
+
+		#region -- TitleConverter -----------------------------------------------------
+
+		private sealed class TitleConverterImplementation : IMultiValueConverter
+		{
+			public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+			{
+				var title = values[0] as string;
+				var isNavigating = BooleanBox.GetBool(values[1]);
+
+				if (String.IsNullOrEmpty(title))
+					return isNavigating ? "Lade..." : "Leer";
+				else
+					return isNavigating ? String.Format("Lade {0}", title) : title;
+			} // func Convert
+
+			public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+				=> throw new NotSupportedException();
+		} // class TitleConverterImplementation
+
+		public static IMultiValueConverter TitleConverter { get; } = new TitleConverterImplementation();
+
+		#endregion
 	} // class PpsWebViewPane
 }

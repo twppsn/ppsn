@@ -26,9 +26,11 @@ namespace TecWare.PPSn.UI.Barcodes
 
 		internal GenericCode(string code)
 		{
-			this.code = code;
+			this.code = code ?? throw new ArgumentNullException(nameof(code));
 		} // ctor
 
+		/// <summary>Return raw barcode</summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> code;
 

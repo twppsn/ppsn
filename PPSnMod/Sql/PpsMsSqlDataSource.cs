@@ -39,8 +39,8 @@ namespace TecWare.PPSn.Server.Sql
 
 		private sealed class SqlConnectionHandle : PpsSqlConnectionHandle<SqlConnection, SqlConnectionStringBuilder>
 		{
-			public SqlConnectionHandle(PpsMsSqlDataSource dataSource, PpsCredentials credentials)
-				: base(dataSource, credentials)
+			public SqlConnectionHandle(PpsMsSqlDataSource dataSource)
+				: base(dataSource)
 			{
 			} // ctor
 
@@ -54,27 +54,53 @@ namespace TecWare.PPSn.Server.Sql
 				return r;
 			} // func CreateConnectionStringBuilder
 
-			protected override async Task ConnectCoreAsync(SqlConnection connection, SqlConnectionStringBuilder connectionString)
+			private static async Task OpenConnectionIntegratedAsync(SqlConnection connection, SqlConnectionStringBuilder connectionString)
 			{
-				if (Credentials is PpsIntegratedCredentials ic)
-				{
-					connectionString.IntegratedSecurity = true;
-					connection.ConnectionString = connectionString.ToString();
+				connectionString.IntegratedSecurity = true;
+				connection.ConnectionString = connectionString.ToString();
+				await connection.OpenAsync();
+			} // proc OpenConnectionIntegratedAsync
 
-					using (ic.Impersonate()) // is only functional in the admin context
-						await connection.OpenAsync();
-				}
-				else if (Credentials is PpsUserCredentials uc) // use network credentials
-				{
-					connectionString.IntegratedSecurity = false;
-					connection.ConnectionString = connectionString.ToString();
+			private static async Task OpenConnectionAsync(SqlConnection connection, SqlConnectionStringBuilder connectionString, SqlCredential credential)
+			{
+				connectionString.IntegratedSecurity = false;
+				connection.ConnectionString = connectionString.ToString();
+				connection.Credential = credential;
+				await connection.OpenAsync();
+			} // proc OpenConnectionAsync
 
-					connection.Credential = new SqlCredential(uc.UserName, uc.Password);
-					await connection.OpenAsync();
+			protected override async Task ConnectCoreAsync(SqlConnection connection, SqlConnectionStringBuilder connectionString, IDEAuthentificatedUser authentificatedUser)
+			{
+				if (authentificatedUser.Identity == PpsUserIdentity.System) // system user is asking for a connection
+				{
+					var sqlDataSource = (PpsMsSqlDataSource)DataSource;
+					if (sqlDataSource.sysUserName == null)
+						await OpenConnectionIntegratedAsync(connection, connectionString);
+					else
+						await OpenConnectionAsync(connection, connectionString, new SqlCredential(sqlDataSource.sysUserName, sqlDataSource.sysPassword));
 				}
+				else if (authentificatedUser.TryImpersonate(out var ctx)) // does only work in the admin context
+				{
+					using (ctx)
+						await OpenConnectionIntegratedAsync(connection, connectionString);
+				}
+				else if (authentificatedUser.TryGetCredential(out var uc)) // use user credentials
+					await OpenConnectionAsync(connection, connectionString, new SqlCredential(uc.UserName, ReadOnlyPassword(uc.Password)));
 				else
-					throw new ArgumentOutOfRangeException(nameof(Credentials));
+					throw new ArgumentOutOfRangeException(nameof(authentificatedUser));
 			} // func ConnectCoreAsync
+
+			private static SecureString ReadOnlyPassword(SecureString password)
+			{
+				if (password.IsReadOnly())
+					return password;
+				else
+				{
+					var copy = password.Copy();
+					copy.MakeReadOnly();
+					return copy;
+				}
+			} // proc ReadOnlyPassword
 
 			/// <summary>Is connection alive.</summary>
 			public override bool IsConnected => IsConnectionOpen(Connection);
@@ -123,7 +149,6 @@ namespace TecWare.PPSn.Server.Sql
 			public PpsMsSqlDataTransaction(PpsSqlDataSource dataSource, IPpsConnectionHandle connectionHandle)
 				: base(dataSource, connectionHandle)
 			{
-				Credentials = ((SqlConnectionHandle)connectionHandle).Credentials;
 			} // ctor
 
 			#endregion
@@ -708,8 +733,6 @@ namespace TecWare.PPSn.Server.Sql
 			public IDisposable LogMessages(LogMessageScopeProxy log)
 				=> new SqlConnectionLogger(SqlConnection, log);
 
-			/// <summary></summary>
-			public PpsCredentials Credentials { get; }
 			/// <summary></summary>
 			public PpsMsSqlDataSource SqlDataSource => (PpsMsSqlDataSource)DataSource;
 			/// <summary></summary>
@@ -1407,6 +1430,12 @@ namespace TecWare.PPSn.Server.Sql
 		protected override void CloseMasterConnection()
 			=> Procs.FreeAndNil(ref databaseMainThread);
 
+		/// <summary></summary>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		public override IPpsConnectionHandle CreateConnection(bool throwException = true)
+			=> new SqlConnectionHandle(this);
+
 		#endregion
 
 		#region -- Execute Database ---------------------------------------------------
@@ -1623,26 +1652,6 @@ namespace TecWare.PPSn.Server.Sql
 		} // func CreateViewCommand
 
 		#endregion
-
-		/// <summary></summary>
-		/// <param name="userContext"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userContext, bool throwException = true)
-		{
-			PpsCredentials credentials;
-			if (userContext.Identity == PpsUserIdentity.System)
-			{
-				if (sysUserName != null)
-					credentials = new PpsUserCredentials(sysUserName, sysPassword);
-				else
-					credentials = PpsUserIdentity.System.GetCredentialsFromIdentity(PpsUserIdentity.System);
-			}
-			else
-				credentials = userContext.GetNetworkCredential();
-
-			return new SqlConnectionHandle(this, credentials);
-		} // func CreateConnection
 
 		/// <summary></summary>
 		/// <param name="connection"></param>

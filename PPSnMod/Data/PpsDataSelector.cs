@@ -94,7 +94,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		/// <param name="connection"></param>
 		/// <param name="columns"></param>
-		public PpsDataSelector(IPpsConnectionHandle connection, AliasColumn[] columns)
+		protected PpsDataSelector(IPpsConnectionHandle connection, AliasColumn[] columns)
 		{
 			this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
 			this.columns = columns ?? throw new ArgumentNullException(nameof(columns)); 

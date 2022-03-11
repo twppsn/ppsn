@@ -221,6 +221,7 @@ namespace TecWare.PPSn.UI
 			private readonly StringBuilder scannerBuffer = new StringBuilder();
 			private int numInput = 0;
 			private readonly byte[] statesScanner = new byte[256];
+			private int lastAppendOperation = Environment.TickCount;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -365,6 +366,8 @@ namespace TecWare.PPSn.UI
 
 			internal bool HandleScannerPacket(string code, bool endMark, out string barcode)
 			{
+				lastAppendOperation = Environment.TickCount;
+
 				if (endMark && scannerBuffer.Length == 0) // code kann direkt weiter gegeben werden
 				{
 					barcode = code;
@@ -377,7 +380,7 @@ namespace TecWare.PPSn.UI
 					&& scannerBuffer[1] == code[1]
 					&& scannerBuffer[2] == code[2])
 					scannerBuffer.Append(code, 3, code.Length - 3); // wenn mehrerer blöcke folgen sind die ersten 3 Zeichen gleich?
-				else
+				else if(code.Length > 0)
 					scannerBuffer.Append(code);
 
 				if (endMark)
@@ -392,6 +395,26 @@ namespace TecWare.PPSn.UI
 					return false;
 				}
 			} // func HandleScannerPacket
+
+			public bool HandleTimerCommand(out string barcode)
+			{
+				if (scannerBuffer.Length == 0)
+				{
+					barcode = String.Empty;
+					return true;
+				}
+				else if (unchecked(Environment.TickCount - lastAppendOperation) < 350)
+				{
+					barcode = null;
+					return false;
+				}
+				else
+				{
+					if (!HandleScannerPacket(String.Empty, true, out barcode))
+						barcode = String.Empty;
+					return true;
+				}
+			} // proc HandleTimerCommand
 
 			#endregion
 
@@ -659,6 +682,8 @@ namespace TecWare.PPSn.UI
 
 						// parse packets
 						var bCode = new byte[hid.dwSizeHid];
+						var timeoutDetection = TimeoutDetection > 100;
+						var resetTimer = false;
 						for (var i = 0; i < hid.dwCount; i++)
 						{
 							Marshal.Copy(new IntPtr(buf), bCode, 0, bCode.Length);
@@ -670,12 +695,20 @@ namespace TecWare.PPSn.UI
 							//}
 
 							if (TryDecodeBarcodeData(PrefixDetection, bCode, out var offset, out var count, out var endMark)
-								&& dev.HandleScannerPacket(Encoding.Default.GetString(bCode, offset, count), endMark, out var barcode))
+								&& dev.HandleScannerPacket(Encoding.Default.GetString(bCode, offset, count), !timeoutDetection && endMark, out var barcode))
 							{
 								OnBarcode(dev, barcode);
 							}
+							else if (timeoutDetection)
+								resetTimer = true;
+
 							buf += hid.dwSizeHid;
 						}
+
+						if (resetTimer)
+							ResetTimer(TimeoutDetection);
+						else
+							KillTimer();
 					}
 				}
 
@@ -691,6 +724,13 @@ namespace TecWare.PPSn.UI
 				Marshal.FreeHGlobal(pBuf);
 			}
 		} // proc ProcessInput
+
+		private void ResetTimer(int timeout)
+			=> SetTimer(Handle, new IntPtr(1), (uint)timeout, IntPtr.Zero);
+
+
+		private void KillTimer()
+			=> NativeMethods.KillTimer(Handle, new IntPtr(1));
 
 		/// <summary>Listen for WM_INPUT and WM_DEVICECHANGE</summary>
 		/// <param name="hwnd"></param>
@@ -712,6 +752,20 @@ namespace TecWare.PPSn.UI
 					{
 						RefreshDevices();
 					}
+					break;
+				case WinMsg.WM_TIMER:
+					var killTimer = true;
+					foreach (var dev in devices)
+					{
+						if (!dev.HandleTimerCommand(out var barcode))
+						{
+							killTimer = false;
+							if (barcode.Length > 0)
+								OnBarcode(dev, barcode);
+						}
+					}
+					if (killTimer)
+						KillTimer(); 
 					break;
 			}
 
@@ -777,6 +831,8 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Global prefix detection for POS-Devices.</summary>
 		public bool PrefixDetection { get; set; } = true;
+		/// <summary>Global timeout detection for POS-Devices.</summary>
+		public int TimeoutDetection { get; set; } = 300;
 
 		#region -- Raw Input Helper ---------------------------------------------------
 

@@ -7,7 +7,7 @@
 			             xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
                          xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
 						 Title="Information"
-						 SubTitle="{Binding Source={x:Reference webView},Path=Title}"
+						 Image="report"
                          mc:Ignorable="d" 
                          d:DesignHeight="450" d:DesignWidth="800">
 	<ui:PpsWindowPaneControl.Commands>
@@ -17,4 +17,11 @@
 	</ui:PpsWindowPaneControl.Commands>
 	
 	<ui:PpsWebView x:Name="webView" />
+	
+	<ui:PpsWindowPaneControl.SubTitle>
+		<MultiBinding Converter="{x:Static uiL:PpsWebViewPane.TitleConverter}">
+			<Binding Source="{x:Reference webView}" Path="Title" />
+			<Binding Source="{x:Reference webView}" Path="IsNavigating" />
+		</MultiBinding>
+	</ui:PpsWindowPaneControl.SubTitle>
 </ui:PpsWindowPaneControl>

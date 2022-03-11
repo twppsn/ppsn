@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<RootNamespace>TecWare.PPSn.Core</RootNamespace>
 		<AssemblyName>PPSn.Core</AssemblyName>
-		<TargetFrameworks>net47;netstandard2.0</TargetFrameworks>
+		<TargetFrameworks>net47;netstandard2.1;netcoreapp3.1;net5.0</TargetFrameworks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<PackageId>TecWare.PPSn.Core</PackageId>
 		<Description>Basic contracts and functionality for the ppsn, they are shared between client and server.</Description>
@@ -27,7 +27,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Web" Condition="'$(TargetFramework)' == 'net47'" />
-    <PackageReference Include="NeoLua" Version="1.3.13" />
-    <PackageReference Include="TecWare.DES.Core" Version="3.4.80" />
+    <PackageReference Include="NeoLua" Version="1.3.14" />
+    <PackageReference Include="TecWare.DES.Core" Version="3.4.92" />
   </ItemGroup>
 </Project>

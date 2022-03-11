@@ -28,7 +28,7 @@ namespace PPSnExcel.Data
 
 		private static bool TryMatchRegex(Regex regex, string input, out Match m)
 		{
-			m = numberFormat.Match(input);
+			m = regex.Match(input);
 			return m.Success;
 		} // func TryMatchRegex
 

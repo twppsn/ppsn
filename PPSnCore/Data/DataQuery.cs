@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Web;
+using TecWare.DE.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Core.Data
@@ -21,14 +24,18 @@ namespace TecWare.PPSn.Core.Data
 
 		/// <summary>Copy parameter.</summary>
 		/// <param name="copy"></param>
-		public PpsDataQuery(PpsDataQuery copy)
+		/// <param name="filter">combine filter</param>
+		/// <param name="columns"></param>
+		/// <param name="order"></param>
+		public PpsDataQuery(PpsDataQuery copy, PpsDataFilterExpression filter = null, IEnumerable< PpsDataColumnExpression> columns = null, IEnumerable< PpsDataOrderExpression> order = null)
 		{
 			if (copy == null)
 				copy = Empty;
 
 			ViewId = copy.ViewId;
-			Filter = copy.Filter;
-			Order = copy.Order;
+			Filter = filter == null ? copy.Filter : PpsDataFilterExpression.Combine(copy.Filter, filter);
+			Columns = columns == null ? copy.Columns : columns.ToArray();
+			Order = order == null ? copy.Order : order.ToArray();
 			Start = copy.Start;
 			Count = copy.Count;
 		} // ctor

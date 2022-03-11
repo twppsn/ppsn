@@ -29,12 +29,12 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Export
 {
-	public partial class MainWindow : Form, IPpsFormsApplication
+	public partial class MainWindow : Form//, IPpsFormsApplication
 	{
 		private readonly PpsTableTextData listInfo = new PpsTableTextData();
-
+		
 		private readonly Lua lua = new Lua();
-		private readonly PpsEnvironment environment;
+		//private readonly PpsEnvironment environment;
 		private readonly SynchronizationContext synchronizationContext;
 
 		public MainWindow()
@@ -44,27 +44,27 @@ namespace TecWare.PPSn.Export
 			synchronizationContext = SynchronizationContext.Current;
 
 			// init env
-			environment = new PpsEnvironment(lua, this, new PpsEnvironmentInfo("Test") { Uri = new Uri("http://localhost:8080/ppsn/") });
-			environment.ContinueCatch(InitEnvironmentAsync());
+			//environment = new PpsEnvironment(lua, this, new PpsEnvironmentInfo("Test") { Uri = new Uri("http://localhost:8080/ppsn/") });
+			//			environment.ContinueCatch(InitEnvironmentAsync());
 
-			cmdEdit.Enabled = environment.IsAuthentificated;
-			environment.IsAuthentificatedChanged += (sender, e) => cmdEdit.Enabled = environment.IsAuthentificated;
+			//			cmdEdit.Enabled = environment.IsAuthentificated;
+			//			environment.IsAuthentificatedChanged += (sender, e) => cmdEdit.Enabled = environment.IsAuthentificated;
 
-			joinTextBox.DataBindings.Add(new Binding("Text", listInfo, "Views",true, DataSourceUpdateMode.OnPropertyChanged));
+			joinTextBox.DataBindings.Add(new Binding("Text", listInfo, "Views", true, DataSourceUpdateMode.OnPropertyChanged));
 			filterTextBox.DataBindings.Add(new Binding("Text", listInfo, "Filter", true, DataSourceUpdateMode.OnPropertyChanged));
 			columnsTextBox.DataBindings.Add(new Binding("Text", listInfo, "Columns", true, DataSourceUpdateMode.OnPropertyChanged));
 			listInfo.PropertyChanged += ListInfo_PropertyChanged;
 
-			//joinTextBox.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
-#if DEBUG
-			listInfo.Views = "views.Teil t";
-			listInfo.Filter = "or(t.TEILBEST:<10 t.TEILBEST:>100)";
-			listInfo.Columns = String.Join(Environment.NewLine, 
-				"+t.TEILTNR=Artikel_Nr",
-				"t.TEILNAME1=Artikelbezeichnung",
-				"t.TEILBEST=Bestand"
-			);
-#endif
+			joinTextBox.Text = "views.Betriebsmittelstamm,(views.Werkzeugstamm,views.WkzLebenslauf)";
+			//#if DEBUG
+			//			listInfo.Views = "views.Teil t";
+			//			listInfo.Filter = "or(t.TEILBEST:<10 t.TEILBEST:>100)";
+			//			listInfo.Columns = String.Join(Environment.NewLine, 
+			//				"+t.TEILTNR=Artikel_Nr",
+			//				"t.TEILNAME1=Artikelbezeichnung",
+			//				"t.TEILBEST=Bestand"
+			//			);
+			//#endif
 		} // ctor
 
 		private PpsDataQuery ToQuery(bool includeColumnAlias)
@@ -96,7 +96,7 @@ namespace TecWare.PPSn.Export
 
 		private async Task InitEnvironmentAsync()
 		{
-			await environment.LoginAsync(this);
+		//	await environment.LoginAsync(this);
 			UpdateUri();
 		} // proc InitEnvironmentAsync
 
@@ -104,7 +104,7 @@ namespace TecWare.PPSn.Export
 			=> uriText.Text = listInfo.IsEmpty ? String.Empty : CreateUriSafe(ToQuery(columnAliasCheck.Checked).ToQuery());
 
 		private string CreateUriSafe(string query)
-			=> environment?.Request?.CreateFullUri(Uri.EscapeUriString(query))?.ToString() ?? query;
+			=> string.Empty ; //environment?.Request?.CreateFullUri(Uri.EscapeUriString(query))?.ToString() ?? query;
 
 		#region -- IPpsFormsApplication members ---------------------------------------
 
@@ -120,38 +120,38 @@ namespace TecWare.PPSn.Export
 
 		private readonly Stack<AwaitStack> awaitStack = new Stack<AwaitStack>();
 
-		void IPpsFormsApplication.Await(Task task)
-		{
-			if (task.IsCompleted)
-				return;
+		//void IPpsFormsApplication.Await(Task task)
+		//{
+		//	if (task.IsCompleted)
+		//		return;
 
-			if (InvokeRequired)
-			{
-				if (SynchronizationContext.Current is PpsSynchronizationContext sync)
-					sync.ProcessMessageLoop(task);
-				else
-					task.Wait();
-			}
-			else
-			{
-				var a = new AwaitStack();
-				awaitStack.Push(a);
+		//	if (InvokeRequired)
+		//	{
+		//		if (SynchronizationContext.Current is PpSynchronizationContext sync)
+		//			sync.ProcessMessageLoop(task);
+		//		else
+		//			task.Wait();
+		//	}
+		//	else
+		//	{
+		//		var a = new AwaitStack();
+		//		awaitStack.Push(a);
 				
-				task.GetAwaiter().OnCompleted(() => Invoke(new Action(a.DoContinue)));
-				while (!a.Continue)
-				{
-					Application.DoEvents();
-					Thread.Sleep(100);
-				}
+		//		task.GetAwaiter().OnCompleted(() => Invoke(new Action(a.DoContinue)));
+		//		while (!a.Continue)
+		//		{
+		//			Application.DoEvents();
+		//			Thread.Sleep(100);
+		//		}
 
-				awaitStack.Pop();
-			}
-		} // proc Await
+		//		awaitStack.Pop();
+		//	}
+		//} // proc Await
 
-		IPpsProgress IPpsProgressFactory.CreateProgress(bool blockUI)
-			=> null;
+		//IPpsProgress IPpsProgressFactory.CreateProgress(bool blockUI)
+		//	=> null;
 
-		SynchronizationContext IPpsFormsApplication.SynchronizationContext => synchronizationContext;
+		//SynchronizationContext IPpsFormsApplication.SynchronizationContext => synchronizationContext;
 
 		public string ApplicationId => "PPSnExport";
 		public string Title => "PPSn Exporter";
@@ -160,7 +160,7 @@ namespace TecWare.PPSn.Export
 
 		private void button1_Click(object sender, EventArgs e)
 		{
-			environment.EditTable(listInfo, false);
+			//environment.EditTable(listInfo, false);
 		}
 
 		private void columnAliasCheck_CheckedChanged(object sender, EventArgs e)

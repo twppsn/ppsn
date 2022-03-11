@@ -37,7 +37,8 @@ namespace TecWare.PPSn.Bde
 	{
 		public static readonly RoutedCommand BackCommand = new RoutedCommand();
 
-		private static readonly DependencyPropertyKey topPaneHostPropertyKey = DependencyProperty.RegisterReadOnly(nameof(TopPaneHost), typeof(PpsBdePaneHost), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(null));
+		private static readonly DependencyPropertyKey topPaneHostPropertyKey = DependencyProperty.RegisterReadOnly(nameof(TopPaneHost), typeof(PpsBdePaneHost), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(TopPaneHostChanged)));
+
 		public static readonly DependencyProperty TopPaneHostProperty = topPaneHostPropertyKey.DependencyProperty;
 
 		private readonly PpsDpcService dpcService;
@@ -160,7 +161,6 @@ namespace TecWare.PPSn.Bde
 			panes.Add(host);
 			AddLogicalChild(host);
 			virtualKeyboard.Hide();
-
 			SetValue(topPaneHostPropertyKey, panes.LastOrDefault());
 
 			// load content
@@ -240,6 +240,14 @@ namespace TecWare.PPSn.Bde
 		/// <returns></returns>
 		public IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments = null)
 			=> panes.FirstOrDefault(p => PpsWpfShell.EqualPane(p.Pane, paneType, arguments))?.Pane;
+
+		private static void TopPaneHostChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			if (e.OldValue is PpsBdePaneHost oldPane)
+				oldPane.OnDeactivated();
+			if (e.NewValue is PpsBdePaneHost newPane)
+				newPane.OnActivated();
+		} // proc TopPaneHostChanged
 
 		/// <summary>Return complete pane stack</summary>
 		public IEnumerable<IPpsWindowPane> Panes => panes.Select(p => p.Pane);

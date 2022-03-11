@@ -15,10 +15,12 @@
 #endregion
 using System;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Neo.IronLua;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
@@ -41,8 +43,11 @@ namespace TecWare.PPSn.UI
 		{
 			InitializeComponent();
 
-			//// add commands
-			//Commands.AddButton("100;100", "print", new PpsAsyncCommand(ctx => PrintAsync(ctx), ctx => CanPrint(ctx)), "Drucken", "Druckt die Pdf-Datei.");
+			if (paneHost.PaneManager.Shell.Settings.GetProperty("PPSn.Pdf.AllowPrint", true))
+			{
+				// add commands
+				Commands.AddButton("100;100", "print", new PpsAsyncCommand(ctx => PrintAsync(ctx), ctx => CanPrint(ctx)), "Drucken", "Druckt die Pdf-Datei.");
+			}
 		} // ctor
 
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -65,7 +70,12 @@ namespace TecWare.PPSn.UI
 			{
 				case string fileName: // open a file from disk
 					using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Datei ({0})...", fileName)))
-						SetLoadedDocument(await LoadDocumentFromFileNameAsync(fileName)); // parse pdf in background
+					{
+						if (fileName.StartsWith("http://") || fileName.StartsWith("https://"))
+							SetLoadedDocument(await DownloadDocumentAsync(PaneHost.PaneManager.Shell.Http, new Uri(fileName)));
+						else
+							SetLoadedDocument(await LoadDocumentFromFileNameAsync(fileName)); // parse pdf in background
+					}
 					break;
 				case byte[] bytes:
 					using (var bar = this.CreateProgress(progressText: "Lade Pdf-Datei..."))
@@ -92,8 +102,23 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc OpenPdfAsync
 
-		private static Task<PdfReader> LoadDocumentFromFileNameAsync(string fileName) 
+		private static Task<PdfReader> LoadDocumentFromFileNameAsync(string fileName)
 			=> Task.Run(() => PdfReader.Open(fileName));
+
+		internal static async Task<PdfReader> DownloadDocumentAsync(DEHttpClient http, Uri uri)
+		{
+			using (var r = await http.GetAsync(uri))
+			{
+				if (!r.IsSuccessStatusCode)
+					throw new HttpResponseException(r);
+				if (r.Content == null)
+					throw new HttpResponseException(HttpStatusCode.NoContent);
+				if (r.Content.Headers.ContentType?.MediaType != MimeTypes.Application.Pdf)
+					throw new ArgumentOutOfRangeException("Content-Type", r.Content.Headers.ContentType?.MediaType, "Only pdf supported.");
+
+				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: r.Content.Headers.ContentDisposition?.FileName ?? "a.pdf");
+			}
+		} // func DownloadDocumentAsync
 
 		private async Task LoadDocumentFromObjectAsync()
 		{
@@ -158,45 +183,16 @@ namespace TecWare.PPSn.UI
 
 		private bool inPrint = false;
 
-		private bool CanPrint(PpsCommandContext ctx)
+		private bool CanPrint(PpsCommandContext _)
 			=> pdfViewer.Document != null && !inPrint;
 
-		private async Task PrintAsync(PpsCommandContext ctx)
+		private async Task PrintAsync(PpsCommandContext _)
 		{
-			var pdf = pdfViewer.Document;
-			using (var doc = pdf.GetPrintDocument())
+			using (var doc = pdfViewer.GetPrintDocument())
 			{
-				var printDialog = new PrintDialog
-				{
-					MinPage = 1,
-					MaxPage = (uint)pdf.PageCount,
-					PageRange = new PageRange(1, pdf.PageCount),
-					CurrentPageEnabled = true,
-					UserPageRangeEnabled = true
-				};
-
-				using (var bar = this.CreateProgress(progressText: "Drucken..."))
-				{
-					if (this.ShowModalDialog(printDialog.ShowDialog))
-					{
-						inPrint = true;
-						try
-						{
-							if (printDialog.PageRangeSelection == PageRangeSelection.CurrentPage)
-							{
-								printDialog.PageRange = new PageRange(pdfViewer.CurrentPageNumber + 1);
-								printDialog.PageRangeSelection = PageRangeSelection.UserPages;
-							}
-							printDialog.SetPrintDocument(doc, bar);
-
-							await Task.Run(new Action(doc.Print));
-						}
-						finally
-						{
-							inPrint = false;
-						}
-					}
-				}
+				var job = doc.ShowDialog(this);
+				if (job != null)
+					await job.PrintAsync(this);
 			}
 		} // proc PrintAsync
 

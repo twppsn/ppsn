@@ -115,7 +115,7 @@ namespace TecWare.PPSn.Data
 		public void Load(IPpsTableData tableData)
 			=> LoadCore(tableData.DisplayName, tableData.Views, tableData.Filter, tableData.Columns);
 
-		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns)
+		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize)
 		{
 			LoadCore(null, views, filter, columns);
 			return Task.CompletedTask;
@@ -219,6 +219,8 @@ namespace TecWare.PPSn.Data
 		} // func GetOrderExpression
 
 		IEnumerable<IPpsTableColumn> IPpsTableData.Columns => columnInfos;
+
+		IEnumerable<string> IPpsTableData.DefinedNames => null;
 
 		public bool IsEmpty => String.IsNullOrEmpty(views);
 	} // class PpsTableTextData

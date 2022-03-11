@@ -44,6 +44,8 @@ namespace TecWare.PPSn.UI.Barcodes
 		public abstract DateTime? UseByDate { get; }
 		/// <summary>Production date</summary>
 		public abstract DateTime? ProductionDate { get; }
+		/// <summary>Quantity</summary>
+		public abstract decimal? Menge { get; }
 	} // class ExtendedCode
 
 	#endregion

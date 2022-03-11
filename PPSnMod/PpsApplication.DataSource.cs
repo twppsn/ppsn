@@ -15,13 +15,15 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
@@ -34,13 +36,12 @@ namespace TecWare.PPSn.Server
 		public event EventHandler Disposed;
 
 		private readonly PpsSysDataSource dataSource;
-		private readonly IIdentity identity;
+		private IDEAuthentificatedUser authentificatedUser = null;
 		private bool isDisposed = false;
-		
-		internal PpsSysConnectionHandle(PpsSysDataSource dataSource, IIdentity identity)
+
+		internal PpsSysConnectionHandle(PpsSysDataSource dataSource)
 		{
 			this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-			this.identity = identity ?? throw new ArgumentNullException(nameof(identity));
 		} // ctor
 
 		public void Dispose()
@@ -52,12 +53,21 @@ namespace TecWare.PPSn.Server
 			Disposed?.Invoke(this, EventArgs.Empty);
 		} // proc Dispose
 
-		public Task<bool> EnsureConnectionAsync(bool throwException = true)
-			=> Task.FromResult(true);
+		public Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser testUser, bool throwException = true)
+		{
+			// first check identity, and than try connect
+			if (!PpsDataSource.EnsureEqualUser(authentificatedUser, testUser, throwException))
+				return Task.FromResult(false);
+
+			// update user, do not check password!
+			if (testUser != null)
+				authentificatedUser = testUser;
+			return Task.FromResult(true);
+		} // func EnsureConnectionAsync
 
 		public PpsDataSource DataSource => dataSource;
-		public IIdentity Identity => identity;
-		public bool IsConnected => !isDisposed;
+		public IDEUser User => authentificatedUser.Info;
+		public bool IsConnected => !isDisposed && authentificatedUser != null;
 	} // class PpsSysConnectionHandle
 
 	#endregion
@@ -170,17 +180,14 @@ namespace TecWare.PPSn.Server
 		public PpsSysDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
-			this.application = sp.GetService<PpsApplication>(true);
-			this.systemConnection = new PpsSysConnectionHandle(this, PpsUserIdentity.System);			
+			application = sp.GetService<PpsApplication>(true);
+			systemConnection = (PpsSysConnectionHandle)application.GetOrCreatePooledConnection(this, application.GetSystemUser().Info, true);
 		} // ctor
 
-		/// <summary></summary>
-		/// <param name="userData"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userData, bool throwException = true)
-			=> new PpsSysConnectionHandle(this, userData.Identity);
-		
+		/// <inherited/>
+		public override IPpsConnectionHandle CreateConnection(bool throwException = true)
+			=> new PpsSysConnectionHandle(this);
+
 		/// <summary></summary>
 		/// <param name="name"></param>
 		/// <param name="sourceDescription"></param>
@@ -235,6 +242,465 @@ namespace TecWare.PPSn.Server
 		/// <summary></summary>
 		public override string Type => "Sys";
 	} // class PpsSysDataSource
+
+	#endregion
+
+	#region -- class PpsApplication ---------------------------------------------------
+
+	public partial class PpsApplication
+	{
+		#region -- class PpsDatabaseLibrary ---------------------------------------------
+
+		/// <summary>Library implementation for database access.</summary>
+		public sealed class PpsDatabaseLibrary : LuaTable
+		{
+			private readonly PpsApplication application;
+			private readonly Dictionary<string, object> memberCache = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+			internal PpsDatabaseLibrary(PpsApplication application)
+			{
+				this.application = application;
+			} // ctor
+
+			/// <summary>Clear dynamic member cache</summary>
+			public void ClearCache()
+			{
+				lock (memberCache)
+					memberCache.Clear();
+			} // proc ClearCache
+
+			#region -- EnsureConnectionAsync, GetDatabase -----------------------------
+
+			private static bool IsNull(object value, bool throwException, string name)
+			{
+				if (value == null)
+				{
+					if (throwException)
+						throw new ArgumentNullException(name);
+					return true;
+				}
+				else
+					return false;
+			} // func IsNull
+
+			private static bool TryGetCurrentUser(IDECommonScope scope, bool throwException, out IDEAuthentificatedUser authentificatedUser)
+			{
+				if (IsNull(scope, throwException, nameof(scope)))
+				{
+					authentificatedUser = null;
+					return false;
+				}
+
+				authentificatedUser = throwException ? scope.DemandUser() : scope.TryDemandUser();
+				return authentificatedUser != null;
+			} // func TryGetCurrentUser
+
+			private static bool TryGetCurrentUser(bool throwException, out IDEAuthentificatedUser authentificatedUser)
+				=> TryGetCurrentUser(DEScope.GetScopeService<IDECommonScope>(throwException), throwException, out authentificatedUser);
+
+			/// <summary>Ensure connection</summary>
+			/// <param name="source"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException)
+			{
+				// get datasource
+				return TryGetCurrentUser(throwException, out var user)
+					? application.EnsurePooledConnectionAsync(source, user, throwException)
+					: Task.FromResult<IPpsConnectionHandle>(null);
+			} // func EnsureConnectionAsync
+
+			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
+			/// <param name="scope"></param>
+			/// <param name="dataSource">Source of the database</param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public async Task<PpsDataTransaction> GetDatabaseAsync(IDECommonScope scope, PpsDataSource dataSource, bool throwException)
+			{
+				if (IsNull(scope, throwException, nameof(scope)))
+					return null;
+
+				// cached transaction
+				if (scope.TryGetGlobal<PpsDataTransaction>(this, dataSource, out var trans))
+					return trans;
+
+				// get user
+				if (!TryGetCurrentUser(scope, throwException, out var authentificatedUser))
+					return null;
+
+				// get database connection
+				var connectionHandle = await application.EnsurePooledConnectionAsync(dataSource, authentificatedUser, throwException);
+				if (connectionHandle == null)
+					return null;
+
+				// create and register transaction
+				trans = dataSource.CreateTransaction(connectionHandle);
+
+				scope.RegisterCommitAction(new Action(trans.Commit), true);
+				scope.RegisterRollbackAction(new Action(trans.Rollback), true);
+				scope.RegisterDispose(trans);
+
+				scope.SetGlobal(this, dataSource, trans);
+
+				return trans;
+			} // func GetDatabaseAsync
+
+			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
+			/// <param name="dataSource">Source of the database</param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public Task<PpsDataTransaction> GetDatabaseAsync(PpsDataSource dataSource, bool throwException = true)
+			{
+				var scope = DEScope.GetScopeService<IDECommonScope>(throwException);
+				if (scope == null)
+					return null;
+
+				return GetDatabaseAsync(scope, dataSource, throwException);
+			} // func GetDatabaseAsync
+
+			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
+			/// <param name="name">Name of the database</param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public Task<PpsDataTransaction> GetDatabaseAsync(string name = null, bool throwException = true)
+			{
+				// find existing source
+				var dataSource = name == null ? application.MainDataSource : application.GetDataSource(name, true);
+				return GetDatabaseAsync(dataSource, throwException);
+			} // func GetDatabaseAsync
+
+			/// <summary>Get a active transaction of the data source.</summary>
+			/// <param name="scope"></param>
+			/// <param name="dataSource"></param>
+			/// <returns><c>null</c>, if there is no active transaction.</returns>
+			public PpsDataTransaction GetActiveTransaction(IDECommonScope scope, PpsDataSource dataSource)
+				=> scope != null && scope.TryGetGlobal<PpsDataTransaction>(this, dataSource, out var trans) ? trans : null;
+
+			/// <summary>Get a active transaction of the data source.</summary>
+			/// <param name="dataSource"></param>
+			/// <returns><c>null</c>, if there is no active transaction.</returns>
+			public PpsDataTransaction GetActiveTransaction(PpsDataSource dataSource)
+				=> GetActiveTransaction(DEScope.GetScopeService<IDECommonScope>(false), dataSource);
+
+			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
+			/// <param name="name">Name of the database</param>
+			/// <returns></returns>
+			[LuaMember]
+			public PpsDataTransaction GetDatabase(string name = null)
+				=> GetDatabaseAsync(name).AwaitTask();
+
+			#endregion
+
+			#region -- CreateSelectorAsync --------------------------------------------
+
+			#region -- class PpsViewJoinExpression ------------------------------------
+
+			private sealed class PpsViewJoinExpression : PpsDataJoinExpression<PpsViewDescription>
+			{
+				#region -- class PpsViewJoinVisitor -----------------------------------
+
+				private sealed class PpsViewJoinVisitor : PpsJoinVisitor<PpsDataSelector>
+				{
+					private readonly PpsViewJoinExpression owner;
+
+					public PpsViewJoinVisitor(PpsViewJoinExpression owner)
+					{
+						this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
+					} // ctor
+
+					public override PpsDataSelector CreateJoinStatement(PpsDataSelector leftExpression, PpsDataJoinType type, PpsDataSelector rightExpression, PpsDataJoinStatement[] on)
+						=> leftExpression.ApplyJoin(rightExpression, type, on);
+
+					public override PpsDataSelector CreateTableStatement(PpsViewDescription table, string alias)
+						=> owner.CreateSelector(table, alias);
+				} // class PpsViewJoinVisitor
+
+				#endregion
+
+				private readonly PpsApplication application;
+				private readonly IDEAuthentificatedUser authentificatedUser;
+				private readonly bool throwException;
+
+				private readonly Dictionary<PpsDataSource, IPpsConnectionHandle> openConnections = new Dictionary<PpsDataSource, IPpsConnectionHandle>();
+
+				public PpsViewJoinExpression(PpsApplication application, IDEAuthentificatedUser authentificatedUser, string expression, bool throwException)
+				{
+					this.application = application ?? throw new ArgumentNullException(nameof(application));
+					this.authentificatedUser = authentificatedUser ?? throw new ArgumentNullException(nameof(authentificatedUser));
+					this.throwException = throwException;
+
+					Parse(expression);
+				} // ctor
+
+				private PpsDataSelector CreateSelector(PpsViewDescription viewInfo, string alias)
+				{
+					// ensure the connection
+					var dataSource = viewInfo.SelectorToken.DataSource;
+					if (!openConnections.TryGetValue(dataSource, out var connectionHandle))
+					{
+						connectionHandle = application.EnsurePooledConnectionAsync(dataSource, authentificatedUser, throwException).Result;
+						if (connectionHandle == null)
+						{
+							if (throwException)
+								throw new ArgumentNullException("No connection handle returned.");
+							else
+								return null;
+						}
+						openConnections.Add(dataSource, connectionHandle);
+					}
+
+					// create the selector
+					return viewInfo.SelectorToken.CreateSelector(connectionHandle, alias, throwException);
+				} // func CreateSelector
+
+				protected override PpsDataJoinStatement[] CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
+					=> left.Table.LookupJoin(right.Table.Name)?.Statement;
+
+				protected override PpsViewDescription ResolveTable(string tableName)
+					=> application.GetViewDefinition(tableName, throwException);
+
+				public string LookupFilter(string expr)
+					=> null;
+
+				public string LookupOrder(string expr)
+					=> null;
+
+				public Task<PpsDataSelector> CreateSelectorAsync()
+				{
+					if (!IsValid)
+						throw new InvalidOperationException("Expression is not valid.");
+					return Task.Run(() => new PpsViewJoinVisitor(this).Visit(this));
+				} // func CreateSelectorAsync
+			} // class PpsViewJoinExpression
+
+			#endregion
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="scope"></param>
+			/// <param name="selectorToken"></param>
+			/// <param name="alias"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public async Task<PpsDataSelector> CreateSelectorAsync(IDECommonScope scope, IPpsSelectorToken selectorToken, string alias = null, bool throwException = true)
+			{
+				if (IsNull(scope, throwException, nameof(scope)))
+					return null;
+
+				// ensure user
+				if (!TryGetCurrentUser(scope, throwException, out var authentificatedUser))
+					return null;
+
+				// ensure connection
+				var connectionHandle = await application.EnsurePooledConnectionAsync(selectorToken.DataSource, authentificatedUser, throwException);
+				if (connectionHandle == null)
+					return null;
+
+				return selectorToken.CreateSelector(connectionHandle, alias, throwException);
+			} // func CreateSelectorAsync
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="selectorToken"></param>
+			/// <param name="alias"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public Task<PpsDataSelector> CreateSelectorAsync(IPpsSelectorToken selectorToken, string alias = null, bool throwException = true)
+				=> CreateSelectorAsync(DEScope.GetScopeService<IDECommonScope>(throwException), selectorToken, alias, throwException);
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="scope"></param>
+			/// <param name="select"></param>
+			/// <param name="columns"></param>
+			/// <param name="filter"></param>
+			/// <param name="order"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public async Task<PpsDataSelector> CreateSelectorAsync(IDECommonScope scope, string select, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true)
+			{
+				if (String.IsNullOrEmpty(select))
+					throw new ArgumentNullException(nameof(select));
+				if (IsNull(scope, throwException, nameof(scope)))
+					return null;
+
+				// ensure user
+				if (!TryGetCurrentUser(scope, throwException, out var authentificatedUser))
+					return null;
+
+				// create selector
+				var selectorInfo = new PpsViewJoinExpression(application, authentificatedUser, select, throwException);
+				if (!selectorInfo.IsValid && !throwException)
+					return null;
+
+				// create selector
+				var selector = await selectorInfo.CreateSelectorAsync();
+				if (selector == null)
+					return null;
+
+				// column restrictions
+				if (!PpsDataColumnExpression.IsEmpty(columns))
+					selector = selector.ApplyColumns(columns);
+
+				// apply filter rules
+				if (!PpsDataFilterExpression.IsEmpty(filter))
+					selector = selector.ApplyFilter(filter, selectorInfo.LookupFilter);
+
+				// apply order
+				if (!PpsDataOrderExpression.IsEmpty(order))
+					selector = selector.ApplyOrder(order, selectorInfo.LookupOrder);
+
+				return selector;
+			} // func CreateSelectorAsync
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="select"></param>
+			/// <param name="columns"></param>
+			/// <param name="filter"></param>
+			/// <param name="order"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public Task<PpsDataSelector> CreateSelectorAsync(string select, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true)
+				=> CreateSelectorAsync(DEScope.GetScopeService<IDECommonScope>(throwException), select, columns, filter, order, throwException);
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="select"></param>
+			/// <param name="columns"></param>
+			/// <param name="filter"></param>
+			/// <param name="order"></param>
+			/// <param name="scope"></param>
+			/// <param name="formatProvider"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public Task<PpsDataSelector> CreateSelectorAsync(string select, string columns, string filter, string order, IDECommonScope scope = null, IFormatProvider formatProvider = null, bool throwException = true)
+			{
+				return CreateSelectorAsync(
+					scope ?? DEScope.GetScopeService<IDECommonScope>(throwException),
+					select,
+					PpsDataColumnExpression.Parse(columns).ToArray(),
+					PpsDataFilterExpression.Parse(filter, formatProvider: formatProvider),
+					PpsDataOrderExpression.Parse(order).ToArray(),
+					throwException
+				);
+			} // func CreateSelectorAsync
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="table"></param>
+			/// <param name="scope"></param>
+			/// <param name="formatProvider"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public Task<PpsDataSelector> CreateSelectorAsync(LuaTable table, IDECommonScope scope = null, IFormatProvider formatProvider = null, bool throwException = true)
+			{
+				return CreateSelectorAsync(
+					scope ?? DEScope.GetScopeService<IDECommonScope>(throwException),
+					table.GetOptionalValue("select", table.GetOptionalValue("name", (string)null)),
+					PpsDataColumnExpression.Parse(table.GetMemberValue("columns")).ToArray(),
+					PpsDataFilterExpression.Parse(table.GetMemberValue("filter"), formatProvider: formatProvider),
+					PpsDataOrderExpression.Parse(table.GetMemberValue("order")).ToArray()
+				);
+			} // func CreateSelectorAsync
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="select"></param>
+			/// <returns></returns>
+			[LuaMember]
+			public PpsDataSelector CreateSelector(string select)
+				=> CreateSelectorAsync(select, (PpsDataColumnExpression[])null, null, null).AwaitTask();
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="select"></param>
+			/// <param name="columns"></param>
+			/// <param name="filter"></param>
+			/// <param name="order"></param>
+			/// <returns></returns>
+			[LuaMember]
+			public PpsDataSelector CreateSelector(string select, string columns, string filter, string order)
+				=> CreateSelectorAsync(select, columns, filter, order).AwaitTask();
+
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="table"></param>
+			/// <returns></returns>
+			[LuaMember]
+			public PpsDataSelector CreateSelector(LuaTable table)
+				=> CreateSelectorAsync(table).AwaitTask();
+
+			#endregion
+
+			private object GetMemberCacheItem(string memberName)
+			{
+				lock (memberCache)
+				{
+					if (memberCache.TryGetValue(memberName, out var cacheItem))
+						return cacheItem;
+					else
+					{
+						var dataSource = application.GetDataSource(memberName, false);
+						if (dataSource != null)
+						{
+							memberCache[memberName] = dataSource;
+							return dataSource;
+						}
+
+						var viewInfo = application.GetViewDefinition(memberName);
+						if (viewInfo != null)
+						{
+							memberCache[memberName] = viewInfo;
+							return viewInfo;
+						}
+
+						memberCache[memberName] = null;
+						return null;
+					}
+				}
+			} // func GetMemberCacheItem
+
+			/// <summary>Add virtual keys</summary>
+			/// <param name="key"></param>
+			/// <returns></returns>
+			protected override object OnIndex(object key)
+			{
+				if (key is string memberName)
+				{
+					switch (GetMemberCacheItem(memberName))
+					{
+						case PpsDataSource dataSource:
+							return GetDatabaseAsync(dataSource).AwaitTask();
+						case PpsViewDescription view:
+							return CreateSelectorAsync(view.SelectorToken).AwaitTask();
+						default:
+							return base.OnIndex(key);
+					}
+				}
+				else
+					return base.OnIndex(key);
+			} // func OnIndex
+
+			/// <summary>Get a global transaction to the main database.</summary>
+			[LuaMember]
+			public PpsDataTransaction Main => GetDatabase();
+		} // class PpsDatabaseLibrary
+
+		#endregion
+
+		private readonly PpsDatabaseLibrary databaseLibrary;
+
+		/// <summary>Find a data source by name.</summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsDataSource GetDataSource(string name, bool throwException = true)
+		{
+			if (name == null)
+				throw new ArgumentNullException(nameof(name));
+
+			using (EnterReadLock())
+				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
+					?? (throwException ? throw new ArgumentOutOfRangeException(nameof(name), name, $"Data source is not defined ('{name}').") : (PpsDataSource)null);
+		} // func GetDataSource
+
+		/// <summary>Library for access the object store.</summary>
+		[LuaMember("Db")]
+		public PpsDatabaseLibrary Database => databaseLibrary;
+	} // class PpsApplication
 
 	#endregion
 }

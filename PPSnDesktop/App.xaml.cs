@@ -1307,11 +1307,11 @@ namespace TecWare.PPSn
 			// get pane information
 			var paneType = paneManager.Shell.GetService<IPpsKnownWindowPanes>(false)?.GetPaneType(link.Location.Host) ?? Type.GetType(link.Location.AbsolutePath);
 			if (paneType == null)
-				throw new ArgumentNullException(nameof(link), String.Format("PaneType unknown: {0}", link.Location));
+				throw new ArgumentOutOfRangeException(nameof(link), String.Format("PaneType unknown: {0}", link.Location));
 
 			// open pane
 			paneManager.OpenPaneAsync(paneType, GetOpenPaneModeFromLink(paneManager, link), link.Location.GetArgumentsAsTable()).OnException();
-		} // event LinkCommandExecuted
+		} // event ProcessPaneManager
 
 		private static void ProcessDefaultLink(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
 		{

@@ -220,7 +220,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Local store for the instance data.</summary>
 		DirectoryInfo LocalPath { get; }
-		/// <summary>Local store for the user data of the instance.</summary>
+		/// <summary>Local store for the user data of the instance (e.g. the place for the info.xml).</summary>
 		DirectoryInfo LocalUserPath { get; }
 
 		/// <summary>Is the shell fully loaded.</summary>

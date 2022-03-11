@@ -48,7 +48,8 @@ namespace PPSnExcel
 			ActiveWorkBook,
 			ActiveWorkSheet,
 			ActiveListObject,
-			ActiveListObjectLayout
+			ActiveListObjectLayout,
+			ActiveWorkBookPivotCaches
 		} // enum RefreshContext
 
 		#endregion
@@ -136,7 +137,7 @@ namespace PPSnExcel
 			PpsShell.Global.AddService(typeof(IWin32Window), this);
 			PpsShell.Global.AddService(typeof(IPpsShellApplication), this);
 			PpsShell.Global.AddService(typeof(IPpsIdleService), idleService);
-
+			
 			//Globals.Ribbons.PpsMenu.
 		} // ctor
 
@@ -400,7 +401,7 @@ namespace PPSnExcel
 			PpsListObject.New(shell, range, reportId);
 		} // func NewTable
 
-		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, IPpsShell replaceShell = null)
+		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, IPpsShell replaceShell = null, bool anonymize = false)
 		{
 			using (var progress = PpsShell.Global.CreateProgress())
 			{
@@ -413,9 +414,11 @@ namespace PPSnExcel
 						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook, replaceShell);
 					case RefreshContext.ActiveWorkSheet:
 						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet, replaceShell, Globals.ThisAddIn.Application.ActiveWorkbook);
+					case RefreshContext.ActiveWorkBookPivotCaches:
+						return RefreshAllPivotCaches(Globals.ThisAddIn.Application.ActiveWorkbook);
 					default:
 						if (Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null))
-							return RefreshTableAsync(r.ListObject, replaceShell, context == RefreshContext.ActiveListObjectLayout);
+							return RefreshTableAsync(r.ListObject, replaceShell, context == RefreshContext.ActiveListObjectLayout, anonymize);
 						return Task.CompletedTask;
 				}
 
@@ -436,13 +439,13 @@ namespace PPSnExcel
 		private async Task RefreshTableAsync(Excel.Worksheet worksheet, IPpsShell replaceShell, Excel.Workbook pivotCachesWorkbook)
 		{
 			for (var i = 1; i <= worksheet.ListObjects.Count; i++)
-				await RefreshTableAsync(worksheet.ListObjects[i], replaceShell, false);
+				await RefreshTableAsync(worksheet.ListObjects[i], replaceShell, false, false);
 
 			if (pivotCachesWorkbook != null)
 				RefreshPivotCaches(pivotCachesWorkbook);
 		} // func RefreshTableAsync
 
-		internal async Task RefreshTableAsync(Excel.ListObject _xlList, IPpsShell replaceShell, bool refreshLayout)
+		internal async Task RefreshTableAsync(Excel.ListObject _xlList, IPpsShell replaceShell, bool refreshLayout, bool enableAnonymization)
 		{
 			using (var progress = PpsShell.Global.CreateProgress())
 			{
@@ -455,7 +458,7 @@ namespace PPSnExcel
 					: new Func<string, Uri, IPpsShell>((n, u) => replaceShell);
 
 				if (PpsListObject.TryGet(f, xlList, out var ppsList))
-					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null);
+					await ppsList.RefreshAsync(refreshLayout ? PpsXlRefreshList.Style : PpsXlRefreshList.None, PpsMenu.IsSingleLineModeToggle(), null, enableAnonymization);
 				else
 				{
 					switch (xlList.SourceType)
@@ -473,6 +476,14 @@ namespace PPSnExcel
 				}
 			}
 		} // func RefreshTableAsync
+
+		private async Task RefreshAllPivotCaches(Excel.Workbook workbook)
+		{
+			if (workbook != null)
+				RefreshPivotCaches(workbook);
+
+			await Task.CompletedTask;
+		}
 
 		private void RefreshPivotCaches(Excel.Workbook workbook)
 		{

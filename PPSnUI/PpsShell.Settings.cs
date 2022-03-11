@@ -689,12 +689,12 @@ namespace TecWare.PPSn
 
 		private IEnumerable<SettingBase> QueryFiltered(string[] filter)
 		{
-			var filterFuncs = new List<Func<string, bool>>();
+			var filterFuncs = new List<Predicate<string>>();
 
 			foreach (var k in filter)
 			{
 				if (k.IndexOf('*') >= 0)
-					filterFuncs.Add(Procs.GetFilerFunction(k));
+					filterFuncs.Add(Procs.GetFilterFunction(k));
 				else if (TryGetSetting(k, out var setting))
 					yield return setting;
 			}

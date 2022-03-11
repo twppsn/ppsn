@@ -48,7 +48,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Commit the data to the local changes.</summary>
 		/// <returns></returns>
 		Task CommitAsync();
-		
+
 		/// <summary>Is the data changable.</summary>
 		bool IsReadOnly { get; }
 

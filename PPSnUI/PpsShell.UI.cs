@@ -589,6 +589,7 @@ namespace TecWare.PPSn
 	/// <summary>Generic image sources.</summary>
 	public enum PpsCaptureDevice
 	{
+		/// <summary>Use camera</summary>
 		Camera
 	} // enum PpsCaptureDevice
 
@@ -597,12 +598,19 @@ namespace TecWare.PPSn
 	#region -- interface IPpsCaptureService -------------------------------------------
 
 	/// <summary></summary>
+	/// <param name="capture"></param>
+	public delegate void AddCaptureDelegate(object capture);
+
+	/// <summary></summary>
 	public interface IPpsCaptureService
 	{
 		/// <summary></summary>
+		/// <param name="owner"></param>
 		/// <param name="device"></param>
 		/// <returns></returns>
 		Task<object> CaputureAsync(object owner, PpsCaptureDevice device);
+		// <param name="addCapture"></param>
+		//Task<object> CaputureAsync(object owner, PpsCaptureDevice device, AddCaptureDelegate addCapture = null);
 		// bool IsSupported(PpsImageDevice device);
 	} // interface IPpsCaptureService
 

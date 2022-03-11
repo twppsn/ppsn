@@ -20,10 +20,9 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -134,6 +133,47 @@ namespace TecWare.PPSn.Server.Sql
 		protected override IPropertyEnumerableDictionary CreateAttributes()
 			=> new PpsColumnAttributes(this);
 
+		/// <summary>Default default-format for the column.</summary>
+		/// <param name="format"></param>
+		/// <returns></returns>
+		protected virtual bool TryGetDefaultFormatProperty(out string format)
+		{
+			var dataType = DataType;
+
+			if (dataType == typeof(string))
+			{
+				format = null;
+				return false;
+			}
+			else if (dataType == typeof(byte)
+				|| dataType == typeof(ushort)
+				|| dataType == typeof(uint)
+				|| dataType == typeof(ulong)
+				|| dataType == typeof(sbyte)
+				|| dataType == typeof(short)
+				|| dataType == typeof(int)
+				|| dataType == typeof(long))
+			{
+				format = "N0";
+				return true;
+			}
+			else if (dataType == typeof(float)
+				|| dataType == typeof(double)
+				|| dataType == typeof(decimal))
+			{
+				format = "N3";
+				return true;
+			}
+			else if (dataType == typeof(DateTime))
+			{
+				format = "g";
+				return true;
+			}
+
+			format = null;
+			return false;
+		} // func GetDefaultFormatProperty
+
 		/// <summary>Return default properties.</summary>
 		/// <returns></returns>
 		protected virtual IEnumerator<PropertyValue> GetProperties()
@@ -148,6 +188,8 @@ namespace TecWare.PPSn.Server.Sql
 				yield return new PropertyValue(nameof(Nullable), isNullable);
 			if (IsIdentity)
 				yield return new PropertyValue(nameof(IsIdentity), isIdentity);
+			if (TryGetDefaultFormatProperty(out var fmt))
+				yield return new PropertyValue(PpsFieldDescription.FormatAttributeName, fmt);
 		} // func GetProperties
 
 		/// <summary>Return default properties.</summary>
@@ -195,6 +237,15 @@ namespace TecWare.PPSn.Server.Sql
 					if (String.Compare(propertyName, nameof(IsIdentity), StringComparison.OrdinalIgnoreCase) == 0)
 					{
 						value = IsIdentity;
+						return true;
+					}
+					break;
+				case 'F':
+				case 'f':
+					if (String.Compare(propertyName, PpsFieldDescription.FormatAttributeName, StringComparison.OrdinalIgnoreCase) == 0
+						&& TryGetDefaultFormatProperty(out var fmt) && fmt != null)
+					{
+						value = fmt;
 						return true;
 					}
 					break;
@@ -331,7 +382,8 @@ namespace TecWare.PPSn.Server.Sql
 		private PpsSqlColumnInfo primaryKey;
 
 		private readonly List<PpsSqlColumnInfo> columns = new List<PpsSqlColumnInfo>();
-		private readonly List<PpsSqlRelationInfo> relations = new List<PpsSqlRelationInfo>();
+		private readonly List<PpsSqlRelationInfo> foreignKey = new List<PpsSqlRelationInfo>();
+		private readonly List<PpsSqlRelationInfo> referenced = new List<PpsSqlRelationInfo>();
 
 		/// <summary></summary>
 		/// <param name="schemaName"></param>
@@ -364,11 +416,16 @@ namespace TecWare.PPSn.Server.Sql
 			}
 		} // proc OnColumnAdded
 
-		internal void AddRelation(PpsSqlRelationInfo relationInfo)
+		internal void AddForeignKey(PpsSqlRelationInfo relationInfo)
 		{
-			relations.Add(relationInfo);
+			foreignKey.Add(relationInfo);
 			OnRelationAdded(relationInfo);
-		} // proc AddRelation
+		} // proc AddForeignKey
+
+		internal void AddReference(PpsSqlRelationInfo relationInfo)
+		{
+			referenced.Add(relationInfo);
+		} // proc AddReference
 
 		/// <summary>New relation added to this table.</summary>
 		/// <param name="relationInfo"></param>
@@ -410,8 +467,10 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary>Column information of this table.</summary>
 		public IEnumerable<PpsSqlColumnInfo> Columns => columns;
-		/// <summary>Relations of this table.</summary>
-		public IEnumerable<PpsSqlRelationInfo> RelationInfo => relations;
+		/// <summary>Child-Relations of this table.</summary>
+		public IEnumerable<PpsSqlRelationInfo> ForeignKeys => foreignKey;
+		/// <summary>Parent-Relations of this table.</summary>
+		public IEnumerable<PpsSqlRelationInfo> ReferencedBy => referenced;
 
 		IReadOnlyList<IPpsColumnDescription> IPpsSqlTableOrView.Columns => columns;
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columns;
@@ -599,12 +658,14 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary></summary>
 	public interface IPpsSqlConnectionHandle : IPpsConnectionHandle
 	{
-		/// <summary>Create a new connection.</summary>
+		/// <summary>Create a new connection for write operations.</summary>
 		/// <returns></returns>
 		DbConnection ForkConnection();
 
 		/// <summary>Access the database connection.</summary>
 		DbConnection Connection { get; }
+		/// <summary>Referenz to user context, that created the connection.</summary>
+		IDEAuthentificatedUser AuthentificatedUser { get; }
 	} // interface IPpsSqlConnectionHandle
 
 	#endregion
@@ -731,7 +792,7 @@ namespace TecWare.PPSn.Server.Sql
 			public SqlDataResultColumnDescription(IPpsColumnDescription parent, DataRow row, string name, Type dataType)
 				: base(parent, name, dataType)
 			{
-				this.row = row;
+				this.row = row ?? throw new ArgumentNullException(nameof(row));
 			} // ctor
 
 			protected override IPropertyEnumerableDictionary CreateAttributes()
@@ -780,14 +841,14 @@ namespace TecWare.PPSn.Server.Sql
 			public IPpsColumnDescription GetFieldDescription(string selectorColumn)
 				=> columnDescriptions.FirstOrDefault(c => String.Compare(selectorColumn, c.Name, StringComparison.OrdinalIgnoreCase) == 0);
 
-			/// <summary></summary>
+			/// <summary>Name of the view.</summary>
 			public string Name => name;
-			/// <summary></summary>
+			/// <summary>Name of the view, within sql-database.</summary>
 			public string ViewName => viewName;
-			/// <summary></summary>
+			/// <summary>Data source.</summary>
 			public PpsSqlDataSource DataSource => source;
 
-			/// <summary></summary>
+			/// <summary>Columns of the view.</summary>
 			public IReadOnlyCollection<IPpsColumnDescription> Columns => columnDescriptions;
 
 			PpsDataSource IPpsSelectorToken.DataSource => DataSource;
@@ -815,7 +876,7 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly PpsSqlDataSource dataSource;
 			private readonly DBCONNECTION connection;
 			private readonly DBCONNECTIONSTRINGBUILDER connectionString;
-			private readonly PpsCredentials credentials;
+			private IDEAuthentificatedUser authentificatedUser = null;
 
 			private bool isDisposed = false;
 
@@ -823,11 +884,9 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="dataSource"></param>
-			/// <param name="credentials"></param>
-			protected PpsSqlConnectionHandle(PpsSqlDataSource dataSource, PpsCredentials credentials)
+			protected PpsSqlConnectionHandle(PpsSqlDataSource dataSource)
 			{
 				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-				this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
 
 				connection = CreateConnection();
 				connectionString = CreateConnectionStringBuilder(false);
@@ -857,11 +916,11 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // proc Dispose
 
-			/// <summary></summary>
+			/// <summary>Create a empty ado.net connection-object.</summary>
 			/// <returns></returns>
 			protected abstract DBCONNECTION CreateConnection();
 
-			/// <summary></summary>
+			/// <summary>Create the ado.net ConnectionStringBuilder with the basic connection information.</summary>
 			/// <param name="forWrite"></param>
 			/// <returns></returns>
 			protected virtual DBCONNECTIONSTRINGBUILDER CreateConnectionStringBuilder(bool forWrite)
@@ -871,16 +930,16 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- Connect --------------------------------------------------------
 
-			/// <summary></summary>
+			/// <summary>Override to open the ado.net connection.</summary>
 			/// <returns></returns>
-			protected abstract Task ConnectCoreAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString);
+			protected abstract Task ConnectCoreAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, IDEAuthentificatedUser authentificatedUser);
 
-			private async Task<bool> ConnectAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, bool throwException)
+			private async Task<bool> ConnectAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, IDEAuthentificatedUser authentificatedUser, bool throwException)
 			{
 				// create the connection
 				try
 				{
-					await ConnectCoreAsync(connection, connectionString);
+					await ConnectCoreAsync(connection, connectionString, authentificatedUser);
 					return true;
 				}
 				catch (Exception)
@@ -894,7 +953,7 @@ namespace TecWare.PPSn.Server.Sql
 			DbConnection IPpsSqlConnectionHandle.ForkConnection()
 				=> ForkConnectionAsync().AwaitTask();
 
-			/// <summary></summary>
+			/// <summary>Create a new ado.net connection-object for this connection.</summary>
 			/// <returns></returns>
 			public async Task<DBCONNECTION> ForkConnectionAsync()
 			{
@@ -902,35 +961,103 @@ namespace TecWare.PPSn.Server.Sql
 				var con = CreateConnection();
 
 				// ensure connection
-				await ConnectAsync(con, CreateConnectionStringBuilder(true), true);
+				await ConnectAsync(con, CreateConnectionStringBuilder(true), authentificatedUser, true);
 
 				return con;
 			} // func ForkConnection
 
-			/// <summary></summary>
+			private static bool VerifyIdentity(IDEAuthentificatedUser authentificatedUser, IDEAuthentificatedUser testUser)
+			{
+				if (authentificatedUser == null)
+					return false;
+
+				var currentIdentity = authentificatedUser.Info.Identity;
+
+				if (currentIdentity is PpsUserIdentity userIdentity)
+					return userIdentity.Equals(testUser.Identity);
+				else if (currentIdentity is WindowsIdentity currentWindowsIdentity && testUser.Identity is WindowsIdentity testWindowsIdentity)
+					return currentWindowsIdentity.User == testWindowsIdentity.User;
+				else if (authentificatedUser.TryGetCredential(out var currentCredential) && testUser.TryGetCredential(out var testCredential))
+				{
+					return String.Compare(currentCredential.Domain, testCredential.Domain, StringComparison.OrdinalIgnoreCase) == 0
+						&& String.Compare(currentCredential.UserName, testCredential.UserName, StringComparison.OrdinalIgnoreCase) == 0
+						&& ProcsDE.Compare(currentCredential.Password, testCredential.Password);
+				}
+				else
+					return false;
+			} // func VerifyIdentity
+
+			/// <summary>Verify identity, e.g. Passwort</summary>
+			/// <param name="authentificatedUser"></param>
+			/// <param name="testUser"></param>
 			/// <param name="throwException"></param>
 			/// <returns></returns>
-			public Task<bool> EnsureConnectionAsync(bool throwException)
-			{
-				if (IsConnected)
-					return Task.FromResult(true);
+			protected virtual Task<bool> VerifyIdentityAsync(IDEAuthentificatedUser authentificatedUser, IDEAuthentificatedUser testUser, bool throwException)
+				=> Task.FromResult(VerifyIdentity(authentificatedUser, testUser));
 
-				return ConnectAsync(connection, connectionString, throwException);
+			/// <summary>Ensure that this connection is active.</summary>
+			/// <param name="testUser"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public async Task<bool> EnsureConnectionAsync(IDEAuthentificatedUser testUser, bool throwException)
+			{
+				if (testUser == null && authentificatedUser == null)
+					throw new ArgumentNullException(nameof(testUser));
+
+				// first check identity, and than try connect
+				if (!EnsureEqualUser(authentificatedUser, testUser, throwException))
+					return false;
+				
+				if (IsConnected && authentificatedUser != null) // check identity and password
+				{
+					if (testUser != null)
+					{
+						if (ReferenceEquals(authentificatedUser.Identity, testUser.Identity))
+							return true;
+						else if (await VerifyIdentityAsync(authentificatedUser, testUser, throwException))
+						{
+							authentificatedUser = testUser;
+							return true;
+						}
+						else
+						{
+							if (throwException)
+								throw new ArgumentException($"Verification failed for {testUser.Identity.Name}.");
+							return false;
+						}
+					}
+					else
+						return true;
+				}
+				else 
+				{
+					// connect with new authentification information
+					if (await ConnectAsync(connection, connectionString, testUser ?? authentificatedUser, throwException))
+					{
+						if (testUser != null)
+							authentificatedUser = testUser;
+						return true;
+					}
+					else
+						return false;
+				}
 			} // func EnsureConnection
 
 			#endregion
 
-			/// <summary></summary>
+			/// <summary>DataSource of this connection</summary>
 			public PpsSqlDataSource DataSource => dataSource;
 			PpsDataSource IPpsConnectionHandle.DataSource => dataSource;
 
-			/// <summary></summary>
+			/// <summary>ADO.NET connection object.</summary>
 			public DBCONNECTION Connection => connection;
 			DbConnection IPpsSqlConnectionHandle.Connection => connection;
-			/// <summary></summary>
-			public PpsCredentials Credentials => credentials;
+			/// <summary>User for this connection.</summary>
+			public IDEUser User => authentificatedUser.Info;
+			/// <summary>User for this connection.</summary>
+			public IDEAuthentificatedUser AuthentificatedUser => authentificatedUser;
 
-			/// <summary></summary>
+			/// <summary>Is the connection still active</summary>
 			public abstract bool IsConnected { get; }
 		} // class PpsSqlConnectionHandle
 
@@ -1048,7 +1175,7 @@ namespace TecWare.PPSn.Server.Sql
 					&& left.Table is PpsSqlTableInfo leftTable)
 				{
 					var returnStatements = new List<PpsDataJoinStatement>();
-					foreach (var r in rightTable.RelationInfo)
+					foreach (var r in rightTable.ForeignKeys)
 					{
 						if (r.ReferencedColumn.Table == leftTable)
 						{
@@ -2026,6 +2153,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			private readonly DBCONNECTION connection;
 			private DBTRANSACTION transaction;
+			private readonly IDEAuthentificatedUser authentificatedUser;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
@@ -2036,7 +2164,9 @@ namespace TecWare.PPSn.Server.Sql
 				: base(dataSource, connection)
 			{
 				// create a connection for the transaction
-				this.connection = (DBCONNECTION)((IPpsSqlConnectionHandle)connection).ForkConnection();
+				var sqlCon = (IPpsSqlConnectionHandle)connection;
+				this.connection = (DBCONNECTION)sqlCon.ForkConnection();
+				authentificatedUser = sqlCon.AuthentificatedUser;
 
 				// create the sql transaction
 				transaction = CreateTransaction();
@@ -2058,7 +2188,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary>Overwrite to create a new transaction.</summary>
 			/// <returns></returns>
 			protected DBTRANSACTION CreateTransaction()
-				=> (DBTRANSACTION)this.connection.BeginTransaction(IsolationLevel.ReadUncommitted);
+				=> (DBTRANSACTION)connection.BeginTransaction(IsolationLevel.ReadUncommitted);
 
 			private DBTRANSACTION GetTransaction()
 			{
@@ -2705,6 +2835,8 @@ namespace TecWare.PPSn.Server.Sql
 			public PpsDataSelector CreateSelector(string viewOrTableName, string alias)
 				=> ((PpsSqlDataSource)DataSource).CreateSelector(Connection, viewOrTableName, alias);
 
+			/// <summary>Authentificated user.</summary>
+			public IDEAuthentificatedUser AuthentificatedUser => authentificatedUser;
 			/// <summary>Connection for the data manipulation</summary>
 			public DBCONNECTION DbConnection => connection;
 			/// <summary>Access the transaction</summary>
@@ -2780,9 +2912,12 @@ namespace TecWare.PPSn.Server.Sql
 
 			public void AddRelation(PpsSqlRelationInfo relation)
 			{
-				relation.ParentColumn.Table.AddRelation(relation);
-				relationCounter++;
-				//relation.ReferencedColumn.Table.AddRelation(relation);
+				if (relation.IsSingleColumnRelation)
+				{
+					relation.ParentColumn.Table.AddReference(relation);
+					relation.ReferencedColumn.Table.AddForeignKey(relation);
+					relationCounter++;
+				}
 			} // proc AddRelation
 
 			public void Failed(string objectName, object objectId, Exception e)
@@ -3429,13 +3564,65 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- View Management ----------------------------------------------------
 
+		/// <summary>Create a select, to select only the result set.</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		protected virtual string CreateSelectForResultSet(string name)
+			=> "SELECT * FROM " + name;
+
+		/// <summary></summary>
+		/// <param name="schemaRow"></param>
+		/// <param name="fieldName"></param>
+		/// <param name="referencedFieldName"></param>
+		protected virtual bool TryGetReferencedFieldDescriptionName(string fieldName, DataRow schemaRow, out string referencedFieldName)
+		{
+			if (schemaRow != null)
+			{
+				var schemaName = GetDataRowValue<string>(schemaRow, "BaseSchemaName", null) ?? "dbo";
+				var tableName = GetDataRowValue<string>(schemaRow, "BaseTableName", null);
+				var columnName = GetDataRowValue<string>(schemaRow, "BaseColumnName", null);
+				if (tableName != null && columnName != null)
+				{
+					referencedFieldName = schemaName + "." + tableName + "." + columnName;
+					return true;
+				}
+			}
+			referencedFieldName = null;
+			return false;
+		} // func TryGetReferencedFieldDescriptionName
+
+		/// <summary>Return field description for the result column.</summary>
+		/// <param name="fieldName"></param>
+		/// <param name="schemaRow"></param>
+		/// <param name="fieldDescription"></param>
+		/// <returns></returns>
+		protected virtual bool TryGetFieldDescriptionForResultRow(string fieldName, DataRow schemaRow, out IPpsColumnDescription fieldDescription)
+		{
+			// first try find direct field-description
+			fieldDescription = Application.GetFieldDescription(fieldName, throwException: false);
+			if (fieldDescription != null)
+				return true;
+
+			// try find referenced field-description
+			if (TryGetReferencedFieldDescriptionName(fieldName, schemaRow, out var referencedFieldName)
+				&& TryGetFieldDescriptionForResultRow(referencedFieldName, null, out fieldDescription))
+				return true;
+
+			// try fiend column-description
+			fieldDescription = GetColumnDescription(fieldName, throwException: false);
+			if (fieldDescription != null)
+				return true;
+
+			return false;
+		} // func TryGetFieldDescriptionForResultRow
+
 		private async Task<IPpsColumnDescription[]> ExecuteForResultSetAsync(DbConnection connection, string name)
 		{
 			// execute the view once to determine the resultset
 			using (var cmd = connection.CreateCommand())
 			{
 				cmd.CommandTimeout = 6000;
-				cmd.CommandText = "SELECT * FROM " + name;
+				cmd.CommandText = CreateSelectForResultSet(name);
 				using (var r = await cmd.ExecuteReaderAsync(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
 				{
 					var columnDescriptions = new List<IPpsColumnDescription>(r.FieldCount);
@@ -3451,22 +3638,10 @@ namespace TecWare.PPSn.Server.Sql
 						if (isHidden is bool t && t)
 							continue;
 
-						// try to find the view base description
-						parentColumnDescription = Application.GetFieldDescription(name + "." + nativeColumnName, false);
-
-						// try to find the table based field name
-						if (parentColumnDescription == null)
-						{
-							var schemaName = GetDataRowValue<string>(c, "BaseSchemaName", null) ?? "dbo";
-							var tableName = GetDataRowValue<string>(c, "BaseTableName", null);
-							var columnName = GetDataRowValue<string>(c, "BaseColumnName", null);
-
-							if (tableName != null && columnName != null)
-							{
-								var fieldName = schemaName + "." + tableName + "." + columnName;
-								parentColumnDescription = Application.GetFieldDescription(fieldName, false);
-							}
-						}
+						// try to find the field description
+						parentColumnDescription = TryGetFieldDescriptionForResultRow(name + "." + nativeColumnName, c, out var fieldDescription) 
+							? fieldDescription 
+							: null;
 
 						columnDescriptions.Add(new SqlDataResultColumnDescription(parentColumnDescription, c, nativeColumnName, r.GetFieldType(i)));
 						i++;
@@ -3699,30 +3874,28 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly Func<string, string> lookupNative;
 			private readonly SqlColumnFinder columnLookup;
 
-			/// <summary></summary>
-			/// <param name="lookupNative"></param>
-			/// <param name="columnLookup"></param>
+			/// <inherited/>
+			protected override string CreateErrorFilter(string message) 
+				=> throw new ArgumentException(message);
+
+			/// <inherited/>
 			public SqlDataFilterVisitor(Func<string, string> lookupNative, SqlColumnFinder columnLookup)
 			{
 				this.lookupNative = lookupNative;
 				this.columnLookup = columnLookup;
 			} // ctor
 
-			/// <summary></summary>
-			/// <param name="columnToken"></param>
-			/// <returns></returns>
+			/// <inherited/>
 			protected override Tuple<string, Type> LookupColumn(string columnToken)
 			{
-				var column = columnLookup.Find(columnToken);
+				var column = columnToken == null ? null : columnLookup.Find(columnToken);
 				if (column == null)
-					throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
+					throw new ArgumentNullException("operand", $"Could not resolve column '{(columnToken ?? "<null>")}'.");
 
 				return new Tuple<string, Type>(column.Expression, column.DataType);
 			} // func LookupColumn
 
-			/// <summary></summary>
-			/// <param name="key"></param>
-			/// <returns></returns>
+			/// <inherited/>
 			protected override string LookupNativeExpression(string key)
 			{
 				var expr = lookupNative(key);
@@ -3730,6 +3903,9 @@ namespace TecWare.PPSn.Server.Sql
 					throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{key}'.");
 				return expr;
 			} // func LookupNativeExpression
+
+			/// <summary>Column lookup provider.</summary>
+			protected SqlColumnFinder ColumnLookup => columnLookup;
 		} // class SqlDataFilterVisitor
 
 		#endregion

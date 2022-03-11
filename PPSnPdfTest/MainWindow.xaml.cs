@@ -25,7 +25,7 @@ namespace PPSnPdfTest
 		{
 			InitializeComponent();
 
-			pdfViewer.Document = PdfReader.Open(@"x:\test.pdf");
+			pdfViewer.Document = PdfReader.Open(@"D:\Temp\RAUF-3.pdf");
 		}
 	}
 }

@@ -100,20 +100,59 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsBarcodeInfo ---------------------------------------------------
 
 	/// <summary>Event parameter during read</summary>
-	public sealed class PpsBarcodeInfo
+	public abstract class PpsBarcodeInfo
 	{
-		private readonly IPpsBarcodeProvider provider;
-		private readonly string rawCode;
-		private readonly string format;
-		private readonly Lazy<PpsBarcode> parseCode;
+		#region -- class PpsTextBarcodeInfo -------------------------------------------
 
-		internal PpsBarcodeInfo(PpsBarcodeService service, IPpsBarcodeProvider provider, string rawCode, string format)
+		private sealed class PpsTextBarcodeInfo : PpsBarcodeInfo
+		{
+			private readonly string rawCode;
+			private readonly string format;
+			private readonly Lazy<PpsBarcode> parseCode;
+
+			public PpsTextBarcodeInfo(PpsBarcodeService service, IPpsBarcodeProvider provider, string rawCode, string format)
+				: base(provider)
+			{
+				this.rawCode = rawCode ?? throw new ArgumentNullException(nameof(rawCode));
+				this.format = format;
+
+				parseCode = new Lazy<PpsBarcode>(() => service.ParseCode(rawCode));
+			} // ctor
+
+			public override string RawCode => rawCode;
+			public override PpsBarcode Code => parseCode.Value;
+			public override string Format => format;
+		} // class PpsTextBarcodeInfo
+
+		#endregion
+
+		#region -- class PpsCodeBarcodeInfo -------------------------------------------
+
+		private sealed class PpsCodeBarcodeInfo : PpsBarcodeInfo
+		{
+			private readonly PpsBarcode barcode;
+			private readonly Lazy<string> encodeCode;
+
+			public PpsCodeBarcodeInfo(IPpsBarcodeProvider provider, PpsBarcode barcode)
+				: base(provider)
+			{
+				this.barcode = barcode ?? throw new ArgumentNullException(nameof(barcode));
+
+				encodeCode = new Lazy<string>(() => barcode.Code);
+			} // ctor
+
+			public override string RawCode => encodeCode.Value;
+			public override PpsBarcode Code => barcode;
+			public override string Format => null;
+		} // class PpsCodeBarcodeInfo
+
+		#endregion
+
+		private readonly IPpsBarcodeProvider provider;
+
+		private PpsBarcodeInfo(IPpsBarcodeProvider provider)
 		{
 			this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
-			this.rawCode = rawCode ?? throw new ArgumentNullException(nameof(rawCode));
-			this.format = format;
-
-			parseCode = new Lazy<PpsBarcode>(() => service.ParseCode(rawCode));
 		} // ctor
 
 		/// <summary>Return parse code.</summary>
@@ -121,16 +160,22 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public T Parse<T>()
 			where T : PpsBarcode
-			=> parseCode.Value as T;
+			=> Code as T;
 
 		/// <summary>Provider of this code.</summary>
 		public IPpsBarcodeProvider Provider => provider;
 		/// <summary>Raw data of the code.</summary>
-		public string RawCode => rawCode;
+		public abstract string RawCode { get; }
 		/// <summary>Optional barcode format, the format of 'picture'.</summary>
-		public string Format => format;
+		public abstract string Format { get; }
 		/// <summary>Parsed barcode.</summary>
-		public PpsBarcode Code => parseCode.Value;
+		public abstract PpsBarcode Code { get; }
+
+		internal static PpsBarcodeInfo Create(PpsBarcodeService service, IPpsBarcodeProvider provider, string text, string format)
+			=> new PpsTextBarcodeInfo(service, provider, text, format);
+
+		internal static PpsBarcodeInfo Create(IPpsBarcodeProvider provider, PpsBarcode barcode)
+			=> new PpsCodeBarcodeInfo(provider, barcode);
 	} // class PpsBarcodeInfo
 
 	#endregion
@@ -285,6 +330,16 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- class ProgramProvider ----------------------------------------------
+
+		private sealed class ProgramProvider : IPpsBarcodeProvider
+		{
+			public string Description => "Program";
+			public string Type => "ui";
+		} // class ProgramProvider
+
+		#endregion
+
 		/// <summary>Notify device changes</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
@@ -389,7 +444,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- DispatchBarcode ----------------------------------------------------
 
-		private async Task DisposeBarcodeUIAsync(IPpsBarcodeProvider provider, string text, string format)
+		private async Task DisposeBarcodeUIAsync(PpsBarcodeInfo info)
 		{
 			IPpsBarcodeReceiver receiver = null;
 
@@ -408,7 +463,6 @@ namespace TecWare.PPSn.UI
 			}
 
 			// debug message
-			var info = new PpsBarcodeInfo(this, provider, text, format);
 			if (receiver == null || !await receiver.OnBarcodeAsync(info))
 				await OnDefaultBarcodeAsync(info);
 		} // proc DisposeBarcodeUIAsync
@@ -418,9 +472,18 @@ namespace TecWare.PPSn.UI
 		/// <param name="text">Barcode text</param>
 		/// <param name="format">Optional barcode format.</param>
 		public void DispatchBarcode(IPpsBarcodeProvider provider, string text, string format = null)
-			=> synchronizationContext.Post(state => barcodeProcessQueue.Enqueue(() => DisposeBarcodeUIAsync(provider, text, format)), null);
+		{
+			var info = PpsBarcodeInfo.Create(this, provider, text, format);
+			synchronizationContext.Post(state => barcodeProcessQueue.Enqueue(() => DisposeBarcodeUIAsync(info)), null);
+		} // func DispatchBarcode
 
-		/// <summary></summary>
+		/// <summary>Dispatch a barcode within the ui-thread.</summary>
+		/// <param name="barcode"></param>
+		/// <returns></returns>
+		public Task DispatchBarcodeAsync(PpsBarcode barcode)
+			=> DisposeBarcodeUIAsync(PpsBarcodeInfo.Create(Program, barcode));
+
+		/// <summary>Run default barcode receivers.</summary>
 		/// <param name="info"></param>
 		/// <returns></returns>
 		public async Task<bool> OnDefaultBarcodeAsync(PpsBarcodeInfo info)
@@ -456,6 +519,9 @@ namespace TecWare.PPSn.UI
 
 		internal PpsBarcode ParseCode(string rawCode)
 		{
+			if (String.IsNullOrEmpty(rawCode))
+				throw new ArgumentNullException(nameof(rawCode));
+
 			lock (decoders)
 			{
 				for (var i = 0; i < decoders.Count; i++)
@@ -490,6 +556,9 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Is a receiver active.</summary>
 		public bool HasReceivers => receivers.Count > 0;
+
+		/// <summary>Program provider for dispatch of barcodes.</summary>
+		public static IPpsBarcodeProvider Program { get; } = new ProgramProvider();
 	} // interface PpsBarcodeService
 
 	#endregion

@@ -140,7 +140,6 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private readonly CachedRowEnumerable cachedRowEnumerable;
 		private readonly IDataRowEnumerable baseEnumerable;
 		private readonly int blockFetchSize = 100;
 
@@ -161,8 +160,6 @@ namespace TecWare.PPSn.Data
 			: base(new CachedRowEnumerable())
 		{
 			baseEnumerable = collection ?? throw new ArgumentNullException(nameof(collection));
-
-			cachedRowEnumerable = (CachedRowEnumerable)base.SourceCollection;
 
 			// todo: hook baseEnumerable.CollectionChanged
 
@@ -429,6 +426,9 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Returns it self.</summary>
 		public override IEnumerable SourceCollection => this;
+		/// <summary>Access the cached rows</summary>
+		public IEnumerable CachedRows => (CachedRowEnumerable)base.SourceCollection;
+
 		/// <summary>Number of rows in this view.</summary>
 		public sealed override int Count => currentFetchedRows?.Count ?? 0;
 

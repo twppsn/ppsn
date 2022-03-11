@@ -187,6 +187,20 @@ namespace TecWare.PPSn.Controls
 		Task<bool> IPpsWindowPane.UnloadAsync(bool? commit)
 			=> OnUnloadAsync(commit);
 
+		/// <summary></summary>
+		/// <remarks>Gets not called during load.</remarks>
+		protected virtual void OnActivated() { }
+
+		void IPpsWindowPane.Activate()
+			=> OnActivated();
+
+		/// <summary></summary>
+		/// <remarks>Gets not called during load.</remarks>
+		protected virtual void OnDeactivated() { }
+
+		void IPpsWindowPane.Deactivate()
+			=> OnDeactivated();
+
 		/// <summary>Define help key</summary>
 		protected virtual string HelpKey => GetType().Name;
 

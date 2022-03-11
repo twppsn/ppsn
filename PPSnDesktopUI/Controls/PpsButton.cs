@@ -109,7 +109,7 @@ namespace TecWare.PPSn.Controls
 			var newValue = (PpsButtonDisplayType)e.NewValue;
 			d.SetValue(isTransparentPropertyKey, BooleanBox.GetObject(newValue == PpsButtonDisplayType.Transparent));
 			d.SetValue(borderRadiusPropertyKey, newValue == PpsButtonDisplayType.Circled ? ((PpsButton)d).Width / 2.00 : 0.00);
-		} // proc DisplayModeChanged
+		}
 
 		#endregion
 

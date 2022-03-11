@@ -16,7 +16,6 @@
 using System;
 using System.Linq;
 using System.Windows.Forms;
-using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
 using TecWare.DE.Stuff;
 using TecWare.PPSn;
@@ -91,7 +90,7 @@ namespace PPSnExcel
 			editTableExCommand.Enabled = hasListObjectInfo;
 			cmdListObjectInfo.Enabled = hasListObjectInfo;
 			removeTableSourceData.Enabled = hasListObjectInfo;
-
+			dataAnonymisiern.Enabled = hasListObjectInfo;
 			cmdRefresh.Enabled =
 				cmdRefreshLayout.Enabled = Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null);
 		} // proc Refresh
@@ -168,6 +167,18 @@ namespace PPSnExcel
 				list.ClearDataAsync().Await();
 		} // proc RemoveTableData
 
+		private static void DataAnonymisieren()
+		{
+			if (!PpsListObject.TryGetFromSelection(out var list))
+				return;
+
+			if (MessageBox.Show(String.Format("Anonymisiern Xml-Data of {0} ({1})?", list.List.DisplayName, list.List.XmlMap.Name), "Question", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				list.AnonymizeDataAsync().Await();
+				Globals.ThisAddIn.RefreshTableAsync(ThisAddIn.RefreshContext.ActiveWorkBookPivotCaches).Await();
+			}
+		} // proc RemoveTableData
+
 		private static void InsertTableCore(bool extendedEdit)
 		{
 			if (PpsListObject.TryGetFromSelection(out var ppsList)) // edit the current selected table
@@ -197,6 +208,10 @@ namespace PPSnExcel
 		private void removeTableSourceData_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(RemoveTableData);
 
+		private void dataAnonymisiern_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(DataAnonymisieren);
+
+		
 		private void cmdListObjectInfo_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(Globals.ThisAddIn.ShowTableInfo);
 

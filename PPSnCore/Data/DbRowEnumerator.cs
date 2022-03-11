@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TecWare.DE.Data;
 
@@ -26,15 +27,15 @@ namespace TecWare.PPSn.Data
 	public interface IDataRowEnumerable : IEnumerable<IDataRow>
 	{
 		/// <summary>Apply an order and return a filtered enumerator.</summary>
-		/// <param name="expressions"></param>
+		/// <param name="order"></param>
 		/// <param name="lookupNative"></param>
 		/// <returns></returns>
-		IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null);
+		IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> order, Func<string, string> lookupNative = null);
 		/// <summary>Apply a filter and return a filtered enumerator.</summary>
-		/// <param name="expression"></param>
+		/// <param name="filter"></param>
 		/// <param name="lookupNative"></param>
 		/// <returns></returns>
-		IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null);
+		IDataRowEnumerable ApplyFilter(PpsDataFilterExpression filter, Func<string, string> lookupNative = null);
 		/// <summary>Select columns and return a filtered enumerator.</summary>
 		/// <param name="columns"></param>
 		/// <returns></returns>

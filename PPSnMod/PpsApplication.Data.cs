@@ -42,9 +42,27 @@ namespace TecWare.PPSn.Server
 	/// custom attributes.</summary>
 	public sealed class PpsFieldDescription : IPpsColumnDescription
 	{
-		private const string displayNameAttributeString = "displayName";
-		private const string maxLengthAttributeString = "maxLength";
-		private const string dataTypeAttributeString = "dataType";
+		/// <summary></summary>
+		public const string DisplayNameAttributeName = "displayName";
+		/// <summary></summary>
+		public const string MaxLengthAttributeName = "maxLength";
+		/// <summary></summary>
+		public const string DataTypeAttributeName = "dataType";
+
+		/// <summary>.net format definition.</summary>
+		public const string FormatAttributeName = "format";
+		/// <summary>Excel format definition.</summary>
+		public const string XlFormatAttributeName = "xl.format";
+		/// <summary>Alignment of the value (left, right, far, near, center, justify, fill).</summary>
+		public const string HAlignAttributeName = "halign";
+		/// <summary>Alignment of the value (top, bottom, far, near, center, distributed, fill).</summary>
+		public const string VAlignAttributeName = "valign";
+
+		/// <summary>Attribute property name for description</summary>
+		public const string DescriptionAttributeName = "Doc.Description";
+		/// <summary>Attribute property name for native typeid</summary>
+		public const string SqlNativeTypeIdAttributeName = "Sql.NativeTypeId";
+
 		private const string inheritedAttributeString = "inherited";
 
 		#region -- class PpsFieldAttributesEnumerator ---------------------------------
@@ -63,7 +81,7 @@ namespace TecWare.PPSn.Server
 
 			public PpsFieldAttributesEnumerator(PpsFieldDescription field)
 			{
-				this.field = field;
+				this.field = field ?? throw new ArgumentNullException(nameof(field));
 				Reset();
 			} // ctor
 
@@ -112,17 +130,17 @@ namespace TecWare.PPSn.Server
 							goto case 1;
 						}
 					case 1:
-						if (currentField.TryGetAttributeBasedProperty(displayNameAttributeString, typeof(string), out r) && EmitPropertyValue(r, 2))
+						if (currentField.TryGetAttributeBasedProperty(DisplayNameAttributeName, typeof(string), out r) && EmitPropertyValue(r, 2))
 							return true;
 						else
 							goto case 2;
 					case 2:
-						if (currentField.TryGetAttributeBasedProperty(dataTypeAttributeString, typeof(string), out r) && EmitPropertyValue(r, 3))
+						if (currentField.TryGetAttributeBasedProperty(DataTypeAttributeName, typeof(string), out r) && EmitPropertyValue(r, 3))
 							return true;
 						else
 							goto case 3;
 					case 3:
-						if (currentField.TryGetAttributeBasedProperty(maxLengthAttributeString, typeof(string), out r) && EmitPropertyValue(r, 4))
+						if (currentField.TryGetAttributeBasedProperty(MaxLengthAttributeName, typeof(string), out r) && EmitPropertyValue(r, 4))
 							return true;
 						else
 							goto case 4;
@@ -205,7 +223,7 @@ namespace TecWare.PPSn.Server
 
 			public PpsFieldAttributes(PpsFieldDescription field)
 			{
-				this.field = field;
+				this.field = field ?? throw new ArgumentNullException(nameof(field));
 			} // ctor
 
 			public bool TryGetProperty(string name, out object value)
@@ -259,10 +277,10 @@ namespace TecWare.PPSn.Server
 
 			inheritedFieldNames = Procs.GetStrings(xDefinition.Attribute(inheritedAttributeString)?.Value, false);
 
-			displayName = new Lazy<string>(() => Attributes.GetProperty(displayNameAttributeString, null));
-			maxLength = new Lazy<int>(() => Attributes.GetProperty(maxLengthAttributeString, Int32.MaxValue));
+			displayName = new Lazy<string>(() => Attributes.GetProperty(DisplayNameAttributeName, null));
+			maxLength = new Lazy<int>(() => Attributes.GetProperty(MaxLengthAttributeName, Int32.MaxValue));
 
-			var xDataType = xDefinition.Attribute(dataTypeAttributeString);
+			var xDataType = xDefinition.Attribute(DataTypeAttributeName);
 
 			dataType = xDataType != null ?
 				new Lazy<Type>(() => LuaType.GetType(xDataType.Value, lateAllowed: false)) :
@@ -341,7 +359,7 @@ namespace TecWare.PPSn.Server
 		} // func GetPropertyFromElement
 
 		private PropertyValue GetInheritedProperty(string propertyName, ICollection<PpsFieldDescription> fetchedFields)
-			=> inheritedDefinitions?.Select(d => d.GetProperty(propertyName, fetchedFields)).FirstOrDefault(p => p != null);
+			=> inheritedDefinitions?.Select(d => d.GetProperty(propertyName, fetchedFields)).FirstOrDefault(p => p != null && p.Value != null);
 
 		private PropertyValue GetProperty(string propertyName, ICollection<PpsFieldDescription> fetchedFields)
 		{
@@ -362,11 +380,11 @@ namespace TecWare.PPSn.Server
 			fetchedFields.Add(this);
 
 			// find a attribute property
-			if (TryGetAttributeBasedPropertyLocal(displayNameAttributeString, typeof(string), out var ret))
+			if (TryGetAttributeBasedPropertyLocal(DisplayNameAttributeName, typeof(string), out var ret))
 				return ret;
-			if (TryGetAttributeBasedPropertyLocal(dataTypeAttributeString, typeof(Type), out ret))
+			if (TryGetAttributeBasedPropertyLocal(DataTypeAttributeName, typeof(Type), out ret))
 				return ret;
-			if (TryGetAttributeBasedPropertyLocal(maxLengthAttributeString, typeof(int), out ret))
+			if (TryGetAttributeBasedPropertyLocal(MaxLengthAttributeName, typeof(int), out ret))
 				return ret;
 
 			// search for a attribute field, with the specific name
@@ -536,7 +554,7 @@ namespace TecWare.PPSn.Server
 
 		internal PpsViewDescription(IPpsSelectorToken selectorToken, string displayName, PpsViewJoinDefinition[] joins, PpsViewParameterDefinition[] filters, PpsViewParameterDefinition[] orders, IPropertyReadOnlyDictionary attributes)
 		{
-			this.selectorToken = selectorToken;
+			this.selectorToken = selectorToken ?? throw new ArgumentNullException(nameof(selectorToken));
 			this.displayName = displayName;
 
 			this.joins = joins ?? PpsViewJoinDefinition.EmptyArray;
@@ -583,9 +601,6 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Selector token to execute the view.</summary>
 		public IPpsSelectorToken SelectorToken => selectorToken;
-
-		/// <summary>Is this view visible for the user.</summary>
-		public bool IsVisible => displayName != null;
 	} // class PpsViewDefinition
 
 	#endregion
@@ -619,12 +634,12 @@ namespace TecWare.PPSn.Server
 
 				var view = new PpsViewDescription(
 					selectorToken,
-					xDefinition.GetAttribute("displayName", (string)null),
+					xDefinition.GetAttribute(PpsFieldDescription.DisplayNameAttributeName, (string)null),
 					xDefinition.Elements(xnJoin).Select(CreateJoinDefinition).ToArray(),
 					xDefinition.Elements(xnFilter).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnOrder).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnAttribute).ToPropertyDictionary(
-						new KeyValuePair<string, Type>("description", typeof(string)),
+						new KeyValuePair<string, Type>(PpsFieldDescription.DescriptionAttributeName, typeof(string)),
 						new KeyValuePair<string, Type>("bi.visible", typeof(bool))
 					)
 				);
@@ -641,7 +656,7 @@ namespace TecWare.PPSn.Server
 				var aliasName = xJoin.GetAttribute("alias", null); // optional
 				var type = xJoin.GetAttribute("type", PpsDataJoinType.Inner);
 
-				return new PpsViewJoinDefinition(viewName, aliasName, xJoin.GetAttribute("displayName", null), type, statement);
+				return new PpsViewJoinDefinition(viewName, aliasName, xJoin.GetAttribute(PpsFieldDescription.DisplayNameAttributeName, null), type, statement);
 			} // func CreateJoinDefinition
 
 			private static PpsDataJoinStatement[] ParseOnStatement(XElement xJoin)
@@ -766,7 +781,7 @@ namespace TecWare.PPSn.Server
 			protected bool IsColumnAllowed(int columnIndex)
 				=> rowAllowed != null && columnIndex >= 0 && columnIndex < rowAllowed.Length && rowAllowed[columnIndex];
 
-			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
+			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IDECommonScope scope = null, string attributeSelector = null)
 			{
 				if (columns != null)
 				{
@@ -780,9 +795,9 @@ namespace TecWare.PPSn.Server
 						var fieldDescription = selectorAccess?.GetFieldDescription(col.Name);
 
 						rowAllowed[i] = fieldDescription == null
-							|| ctx == null
+							|| scope == null
 							|| !fieldDescription.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
-							|| ctx.TryDemandToken(securityToken);
+							|| scope.TryDemandToken(securityToken);
 					}
 				}
 
@@ -1445,21 +1460,6 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		/// <summary>Find a data source by name.</summary>
-		/// <param name="name"></param>
-		/// <param name="throwException"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public PpsDataSource GetDataSource(string name, bool throwException = true)
-		{
-			if (name == null)
-				throw new ArgumentNullException(nameof(name));
-
-			using (EnterReadLock())
-				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
-					?? (throwException ? throw new ArgumentOutOfRangeException(nameof(name), name, $"Data source is not defined ('{name}').") : (PpsDataSource)null);
-		} // func GetDataSource
-
 		/// <summary>Find a field description.</summary>
 		/// <param name="name"></param>
 		/// <param name="throwException"></param>
@@ -1587,12 +1587,12 @@ namespace TecWare.PPSn.Server
 			{
 				if (table.GetMemberValue("selector") is PpsDataSelector selector) // selector is givven, export
 				{
-					ExportViewCore(viewWriter, selector, 0, Int32.MaxValue, DEScope.GetScopeService<IPpsPrivateDataContext>(false));
+					ExportViewCore(viewWriter, selector, 0, Int32.MaxValue, DEScope.GetScopeService<IDECommonScope>(false));
 				}
 				else if (table.Members.ContainsKey("select") || table.Members.ContainsKey("name")) // try create a selector
 				{
-					var ctx = DEScope.GetScopeService<IPpsPrivateDataContext>(true);
-					ExportViewCore(viewWriter, ctx.CreateSelectorAsync(table).AwaitTask(), 0, Int32.MaxValue, ctx, null);
+					var scope = DEScope.GetScopeService<IDECommonScope>(true);
+					ExportViewCore(viewWriter, Database.CreateSelectorAsync(table, scope: scope).AwaitTask(), 0, Int32.MaxValue, scope, null);
 				}
 				else if (table.GetMemberValue("rows") is IEnumerable<IDataRow> rows)
 				{
@@ -1603,7 +1603,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc Export
 
-		private void ExportViewCore(ViewWriter viewWriter, IEnumerable<IDataRow> selector, int startAt, int count, IPpsPrivateDataContext ctx = null, string attributeSelector = null)
+		private void ExportViewCore(ViewWriter viewWriter, IEnumerable<IDataRow> selector, int startAt, int count, IDECommonScope scope = null, string attributeSelector = null)
 		{
 			// execute the complete statement
 			using (var enumerator = selector is IDERangeEnumerable<IDataRow> rangeSelector
@@ -1627,7 +1627,7 @@ namespace TecWare.PPSn.Server
 				}
 
 				// write header
-				viewWriter.Begin(selector, columnDefinition, ctx, attributeSelector);
+				viewWriter.Begin(selector, columnDefinition, scope, attributeSelector);
 
 				// emit first row
 				if (emitCurrentRow)
@@ -1660,15 +1660,14 @@ namespace TecWare.PPSn.Server
 			var startAt = r.GetProperty("s", 0);
 			var count = r.GetProperty("c", Int32.MaxValue);
 
-			var ctx = r.GetUser<IPpsPrivateDataContext>();
-
-			var selector = ctx.CreateSelectorAsync(
+			var selector = Database.CreateSelectorAsync(
 				r.GetProperty<string>("v", null),
 				r.GetProperty<string>("r", null),
 				r.GetProperty<string>("f", null),
 				r.GetProperty<string>("o", null),
-				true,
-				r.CultureInfo
+				scope: r,
+				throwException: true,
+				formatProvider: r.CultureInfo
 			).AwaitTask();
 
 			var attributeSelector = r.GetProperty("a", "*");
@@ -1680,7 +1679,7 @@ namespace TecWare.PPSn.Server
 				r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
 				try
 				{
-					ExportViewCore(viewWriter, selector, startAt, count, ctx, attributeSelector);
+					ExportViewCore(viewWriter, selector, startAt, count, r, attributeSelector);
 				}
 				catch (Exception e)
 				{
@@ -1814,7 +1813,9 @@ namespace TecWare.PPSn.Server
 					// create synchronization session for the table expression
 					if (!sessions.TryGetValue(dataSource, out var syncSession))
 					{
-						var connection = dataSource.CreateConnection(r.GetUser<IPpsPrivateDataContext>());
+						var connection = dataSource.CreateConnection();
+						connection.EnsureConnectionAsync(r.DemandUser()).AwaitTask();
+
 						syncSession = dataSource.CreateSynchronizationSession(connection, globalLastSyncId, false);
 						if (enforceCDC)
 							syncSession.RefreshChanges();
