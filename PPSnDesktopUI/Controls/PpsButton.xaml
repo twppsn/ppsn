@@ -37,6 +37,7 @@ specific language governing permissions and limitations under the Licence.
 			<Border x:Name="OuterBorder"
 					BorderThickness="{TemplateBinding BorderThickness}"
 					BorderBrush="{TemplateBinding BorderBrush}"
+					CornerRadius="{Binding BorderRadius, RelativeSource={RelativeSource TemplatedParent}}"
 					Background="{TemplateBinding Background}"
 					Padding="4,0,8,0"
 					SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
@@ -62,6 +63,8 @@ specific language governing permissions and limitations under the Licence.
 			<Rectangle x:Name="StatusRectangle"
 					   StrokeThickness="0"
 					   Fill="{TemplateBinding Foreground}"
+					   RadiusX="{TemplateBinding BorderRadius}"
+					   RadiusY="{TemplateBinding BorderRadius}"
 					   IsHitTestVisible="False"
 					   Opacity="0" />
 		</Grid>
