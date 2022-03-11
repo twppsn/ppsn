@@ -156,7 +156,7 @@ namespace TecWare.PPSn.UI
 
 			#region -- Exec -----------------------------------------------------------
 
-			private void ExecCore(string command, string arguments)
+			private void ExecCore(string command, string arguments, bool runasAdministrator = false)
 			{
 				var psi = new ProcessStartInfo
 				{
@@ -164,6 +164,10 @@ namespace TecWare.PPSn.UI
 					Arguments = arguments,
 					WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
 				};
+
+				if (runasAdministrator && !PpsWpfShell.IsAdministrator())
+					psi.Verb = "runas";
+
 				Process.Start(psi)?.Dispose();
 			} // proc Exec
 
@@ -247,11 +251,11 @@ namespace TecWare.PPSn.UI
 					sw.WriteLine(@"[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]");
 					WriteRegistryValue(sw, "AutoAdminLogon", password != null ? "1" : "0");
 					WriteRegistryValue(sw, "DefaultDomain", domainName);
-					WriteRegistryValue(sw, "DefaultUserName", userName);
+					WriteRegistryValue(sw, "DefaultUserName", String.IsNullOrEmpty(domainName) ? userName : domainName + "\\\\" + userName);
 					WriteRegistryValue(sw, "DefaultPassword", password);
 				}
 
-				ExecCore(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName);
+				ExecCore(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName, true);
 			} // proc ConfigAutoLogon
 
 			[LuaMember]

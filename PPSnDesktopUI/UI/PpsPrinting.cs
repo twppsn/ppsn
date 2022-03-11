@@ -933,7 +933,7 @@ namespace TecWare.PPSn.UI
 
 			var printDialog = new PrintDialog
 			{
-				MinPage = (uint)(document.MinPage ?? 0),
+				MinPage = (uint)(document.MinPage ?? 1),
 				MaxPage = (uint)(document.MaxPage ?? 9999),
 				PageRange = document.ToPageRange(),
 				CurrentPageEnabled = document.CurrentPage.HasValue,
