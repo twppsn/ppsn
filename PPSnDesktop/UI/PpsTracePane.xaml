@@ -21,15 +21,62 @@
 		<ui:PpsSideBarPanel Header="Information">
 			<Grid x:Name="appInfoPane">
 				<StackPanel Orientation="Vertical">
-					<TextBlock Text="{Binding AppName,Mode=OneTime}" />
-					<TextBlock>
-						<Run Text="Version: "/>
-						<Run Text="{Binding AssemblyVersion,Mode=OneTime}" />
-					</TextBlock>
-					<TextBlock>
-						<Run Text="Installiert: "/>
-						<Run Text="{Binding InstalledVersion,Mode=OneTime}" />
-					</TextBlock>
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition />
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition />
+							<RowDefinition />
+							<RowDefinition />
+						</Grid.RowDefinitions>
+					
+						<TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="{Binding AppName,Mode=OneTime}" />
+
+						<TextBlock Grid.Row="1" Grid.Column="0" Text="Version: " Foreground="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+						<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AssemblyVersion,Mode=OneTime}" />
+
+						<TextBlock Grid.Row="2" Grid.Column="0" Text="Installiert: " Foreground="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+						<TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding InstalledVersion,Mode=OneTime}" />
+					</Grid>
+					
+					<ItemsControl ItemsSource="{Binding AssemblyInfo}" Margin="0,16">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate DataType="{x:Type local:AppAssemblyInfo}">
+								<Grid Margin="0,4">
+									<Grid.RowDefinitions>
+										<RowDefinition />
+										<RowDefinition />
+									</Grid.RowDefinitions>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition />
+									</Grid.ColumnDefinitions>
+
+									<ui:PpsGeometryImage GeometryName="project" Grid.RowSpan="2" Width="32" Height="32" Margin="0,0,4,0"/>
+
+									<TextBlock Grid.Row="0" Grid.Column="1">
+										<Run FontWeight="Bold" Text="{Binding Name,Mode=OneTime}" />
+										<Run Text="{Binding FileVersion,Mode=OneTime}" />
+										(<Run Text="{Binding InformationalVersion,Mode=OneTime}" />)
+									</TextBlock>
+
+									<TextBlock x:Name="companyInfo" Grid.Row="1" Grid.Column="1" Foreground="{DynamicResource PPSnWindowDisabledForegroundBrush}" Text="{Binding Company,Mode=OneTime}" />
+									<TextBlock x:Name="serverWarning" Grid.Row="1" Grid.Column="1" Visibility="Collapsed">
+										<Run Text="Neuere Version:" Foreground="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
+										<Run Text="{Binding ServerVersion,Mode=OneTime}"/>
+									</TextBlock>
+								</Grid>
+								<DataTemplate.Triggers>
+									<DataTrigger Binding="{Binding IsOutdated}" Value="True">
+										<Setter TargetName="serverWarning" Property="Visibility" Value="Visible" />
+										<Setter TargetName="companyInfo" Property="Visibility" Value="Collapsed" />
+									</DataTrigger>
+								</DataTemplate.Triggers>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
 				</StackPanel>
 			</Grid>
 		</ui:PpsSideBarPanel>
@@ -229,12 +276,13 @@
 
 				<ui:PpsListBox Grid.Row="0" x:Name="barcodeList">
 					<ui:PpsListBox.ItemTemplate>
-						<DataTemplate>
+						<DataTemplate DataType="{x:Type local:PpsTraceBarcodeItem}">
 							<Grid>
 								<Grid.ColumnDefinitions>
 									<ColumnDefinition Width="100" />
 									<ColumnDefinition Width="100" />
 									<ColumnDefinition Width="*" />
+									<ColumnDefinition Width="Auto" />
 								</Grid.ColumnDefinitions>
 								
 								<TextBlock Grid.Column="0" Margin="4" Text="{Binding Provider,Mode=OneTime}" />
@@ -242,7 +290,8 @@
 									<Run Text="{Binding CodeName,Mode=OneTime}" /> /
 									<Run Text="{Binding Format,Mode=OneTime}" />
 								</TextBlock>
-								<TextBlock Grid.Column="2" Margin="4" Text="{Binding Code,Mode=OneTime}" />
+								<TextBlock Grid.Column="2" Margin="4" FontSize="13" FontFamily="Consolas" Text="{Binding Code,Mode=OneTime}" />
+								<ui:PpsButton Grid.Column="3" Content="..." Command="{x:Static local:PpsTracePane.ExecuteBarcodeCommand}" />
 							</Grid>
 						</DataTemplate>
 					</ui:PpsListBox.ItemTemplate>
@@ -265,8 +314,8 @@
 				</ItemsControl>
 				
 				<StackPanel Grid.Row="2" Orientation="Horizontal">
-					<TextBlock Text="Zuletzt gesehen:" />
-					<TextBlock Text="{Binding Path=LastSeenDevice,Mode=OneWay,Source={x:Static ui:KeyboardScanner.Default}}" />
+					<TextBlock Text="Zuletzt gesehen:"/>
+					<TextBox FontFamily="Consolas" FontSize="14" Text="{Binding Path=LastSeenDevice,Mode=OneWay,Source={x:Static ui:KeyboardScanner.Default}}" IsReadOnly="True" BorderThickness="0" Background="Transparent" Margin="4,0" />
 				</StackPanel>
 			</Grid>
 		</ui:PpsSideBarPanel>

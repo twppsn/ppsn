@@ -197,7 +197,7 @@ namespace TecWare.PPSn.UI
 
 			var unlockCode = shell.Settings.DpcUnlockCode;
 			if (unlockCode == null)
-				return isUnlocked;
+				return false;
 
 			return unlockCode == code; 
 		} // proc IsDpcUnlockCode

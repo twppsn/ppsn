@@ -167,7 +167,7 @@ specific language governing permissions and limitations under the Licence.
 								HorizontalAlignment="Left"
 								Background="{DynamicResource PPSnMarkerBrush}"
 								Visibility="Hidden" />
-						<ContentPresenter Grid.Column="1"
+						<ContentPresenter x:Name="headerContent" Grid.Column="1"
 										  Content="{TemplateBinding Header}" 
 										  ContentTemplate="{TemplateBinding HeaderTemplate}"  			  
 										  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}" 
@@ -182,7 +182,10 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="selectionMarker" Property="Visibility" Value="Visible" />
 						</Trigger>
 						<Trigger Property="IsMouseOver" SourceName="HeaderGrid" Value="True">
-							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnHighlightedBrush}" />
+							<Setter TargetName="HeaderGrid" Property="Background" Value="{DynamicResource PPSnHighlightedBrush}" />
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter TargetName="headerContent" Property="TextElement.Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
