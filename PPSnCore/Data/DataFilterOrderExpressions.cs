@@ -794,7 +794,7 @@ namespace TecWare.PPSn.Data
 				return null;
 
 			if (expr.Value is LuaTable t && t.Members.Count == 0 && t.ArrayList.Count > 0) // create in filter
-				return CompareIn(expr.Key, GetValueExpresion(t.ArrayList.ToArray()));
+				return CompareIn(expr.Key, t.ArrayList.ToArray());
 			else // create compare filter
 				return Compare(expr.Key, PpsDataFilterCompareOperator.Equal, expr.Value);
 		} // func GetExpressionFromObject
