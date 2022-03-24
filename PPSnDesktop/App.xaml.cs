@@ -1120,11 +1120,34 @@ namespace TecWare.PPSn
 		private void LogException(Exception e)
 			=> (shell ?? PpsShell.Global).GetService<ILogger>(false)?.LogMsg(LogMsgType.Error, e);
 
+		private Exception currentException = null;
+
 		private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
 		{
-			LogException(e.Exception);
-			CoreExceptionHandler(e.Exception);
-			e.Handled = true;
+			var newException = e.Exception;
+			if (currentException != null)
+			{
+				if (currentException.GetType() == newException.GetType()
+					&& currentException.Message == newException.Message)
+					return; // same exception, ignore
+				else 
+				{
+					LogException(newException); // only log, we have already one exception on the screen
+					return;
+				}
+			}
+
+			currentException = newException;
+			try
+			{
+				LogException(currentException);
+				CoreExceptionHandler(currentException);
+				e.Handled = true;
+			}
+			finally
+			{
+				currentException = null;
+			}
 		} // event App_DispatcherUnhandledException
 
 		private static bool IsDefaultUser(string userName)

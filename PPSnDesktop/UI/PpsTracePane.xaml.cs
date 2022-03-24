@@ -748,7 +748,7 @@ namespace TecWare.PPSn.UI
 			var infoVersion = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
 			var companyInfo = asm.GetCustomAttribute<AssemblyCopyrightAttribute>();
 
-			if (Version.TryParse(fileVersionInfo.Version, out var fileVersion))
+			if (!Version.TryParse(fileVersionInfo.Version, out var fileVersion))
 				fileVersion = name.Version;
 
 			return new AppAssemblyInfo(name.Name, fileVersion, serverVersion, infoVersion?.InformationalVersion, companyInfo?.Copyright);
