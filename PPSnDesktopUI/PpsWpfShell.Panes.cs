@@ -103,10 +103,10 @@ namespace TecWare.PPSn
 		/// <param name="paneManager"></param>
 		/// <returns></returns>
 		public static IPpsWindowPane GetActivePane(this IPpsWindowPaneManager paneManager)
-			=> paneManager.Panes.Where(p => ReferenceEquals(paneManager, p.PaneHost.PaneManager) ||  p.PaneHost.PaneManager.IsActive && p.PaneHost.IsActive).FirstOrDefault();
+			=> paneManager.Panes.FirstOrDefault(p => ReferenceEquals(paneManager, p.PaneHost.PaneManager) &&  p.PaneHost.IsActive);
 
 		public static IPpsWindowPane GetActivePane(this IPpsShell shell)
-			=> shell.GetService<IPpsWindowPaneManager>(false)?.GetActivePane();
+			=> shell.GetService<IPpsWindowPaneManager>(false)?.Panes.FirstOrDefault(p => p.PaneHost.IsActive && p.PaneHost.PaneManager.IsActive);
 
 		/// <summary></summary>
 		/// <param name="paneManager"></param>

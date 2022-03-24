@@ -1129,10 +1129,14 @@ namespace TecWare.PPSn
 			{
 				if (currentException.GetType() == newException.GetType()
 					&& currentException.Message == newException.Message)
+				{
+					e.Handled = true;
 					return; // same exception, ignore
-				else 
+				}
+				else
 				{
 					LogException(newException); // only log, we have already one exception on the screen
+					e.Handled = true;
 					return;
 				}
 			}

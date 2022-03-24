@@ -118,7 +118,10 @@ namespace TecWare.PPSn.Main
 		} // proc UpdateFocus
 
 		public override void OnActivated()
-			=> Dispatcher.BeginInvoke(new Action<bool>(UpdateFocus), DispatcherPriority.ApplicationIdle, true);
+		{
+			base.OnActivated();
+			Dispatcher.BeginInvoke(new Action<bool>(UpdateFocus), DispatcherPriority.ApplicationIdle, true);
+		} // proc OnActivated
 
 		#endregion
 

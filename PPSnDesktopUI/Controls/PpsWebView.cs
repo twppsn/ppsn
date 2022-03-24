@@ -508,10 +508,10 @@ namespace TecWare.PPSn.Controls
 				var http = shell.Http;
 
 				if (currentFilterUri != null)
-					htmlView.CoreWebView2.RemoveWebResourceRequestedFilter(currentFilterUri, CoreWebView2WebResourceContext.All);
+					htmlView.CoreWebView2.RemoveWebResourceRequestedFilter(currentFilterUri + "*", CoreWebView2WebResourceContext.All);
 
-				currentFilterUri = GetFilterUri(shell.GetRemoteUri(http)) + "*";
-				htmlView.CoreWebView2.AddWebResourceRequestedFilter(currentFilterUri, CoreWebView2WebResourceContext.All);
+				currentFilterUri = GetFilterUri(shell.GetRemoteUri(http));
+				htmlView.CoreWebView2.AddWebResourceRequestedFilter(currentFilterUri + "*", CoreWebView2WebResourceContext.All);
 			}
 		} // proc UpdateResourceRequest
 
