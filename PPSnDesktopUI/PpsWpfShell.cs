@@ -509,13 +509,13 @@ namespace TecWare.PPSn
 				{
 					Title = PpsImage.Error.ToTitle(),
 					ImageName = PpsImage.Error.ToGeometryName(),
-					Message = alternativeMessage ?? exception.GetInnerException().ToString()
+					Message = alternativeMessage ?? exception.GetInnerException().Message
 				};
 
-				if (PpsWpfShell.ShowModalDialog(null, msg) == true)
+				if (PpsWpfShell.ShowModalDialog(null, msg))
 				{
 					if (msg.ButtonIndex == 0)
-						MsgBox("Show Details?");
+						MsgBox(exception.GetInnerException().ToString(), PpsImage.Error, Ok);
 				}
 
 				// shutdown application

@@ -14,7 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -22,14 +21,12 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Resources;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
-using System.Windows.Resources;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using Neo.IronLua;
@@ -1307,7 +1304,7 @@ namespace TecWare.PPSn
 
 			var dpc = shell.GetService<PpsDpcService>(false);
 			if (dpc == null)
-				throw new ExitApplicationException("DpcRequest", true, shell.Info, shell.Http.Credentials);
+				throw new ExitApplicationException("DpcRequest", true, shell.Info, shell.Http.Credentials.GetUserNameFromCredentials() != "dpc" ? shell.Http.Credentials : null);
 			else
 			{
 				dpc.ScheduleRestart("Missmatch of application version.");

@@ -658,7 +658,7 @@ namespace TecWare.PPSn.Server
 			PublishItem(clientApplicationTypes = new DEList<PpsClientApplicationType>(this, "tw_ppsn_client_types", "Client types"));
 			PublishItem(clientApplicationInfos =  DEDictionary<string, PpsClientApplicationFile>.CreateSortedList(this, "tw_ppsn_client_infos", "Client applications"));
 
-			PublishItem(new DEConfigItemPublicAction(refreshAppsAction) { DisplayName = "Refresh application sources." });
+			PublishItem(new DEConfigItemPublicAction(refreshAppsAction) { DisplayName = "Refresh Application Sources" });
 
 			RegisterApplicationType("msi", TryGetMsiApplicationInfo);
 
@@ -1856,8 +1856,11 @@ namespace TecWare.PPSn.Server
 			return x;
 		} // func GetMimeTypesInfo
 
-		private static bool WriteTableOption(XmlWriter xml, string n, object value, bool writeEmptyValue)
+		private static bool WriteTableOption(XmlWriter xml, string n, object value, bool writeEmptyValue, int stackCount)
 		{
+			if (stackCount > 100)
+				throw new StackOverflowException("User configuration has an recursion.");
+
 			int GetStringType(string v)
 			{
 				var r = 0;
@@ -1887,7 +1890,7 @@ namespace TecWare.PPSn.Server
 				if (t.Members.Count > 0 || t.ArrayList.Count > 0)
 				{
 					xml.WriteStartElement(n);
-					WriteTableOptions(xml, t);
+					WriteTableOptions(xml, t, stackCount + 1);
 					xml.WriteEndElement();
 				}
 			}
@@ -1925,17 +1928,17 @@ namespace TecWare.PPSn.Server
 			return true;
 		} // proc WriteTableOption
 
-		private static void WriteTableOptions(XmlWriter xml, LuaTable options)
+		private static void WriteTableOptions(XmlWriter xml, LuaTable options, int stackCount)
 		{
 			// write key/value pairs
 			foreach (var kv in options.Members)
-				WriteTableOption(xml, kv.Key, kv.Value, true);
+				WriteTableOption(xml, kv.Key, kv.Value, true, stackCount);
 
 			// index value 0-10, will be all checked
 			var i = 0;
 			while (true)
 			{
-				if (!WriteTableOption(xml, "i" + i.ToString(), options[i], false) && i > 10)
+				if (!WriteTableOption(xml, "i" + i.ToString(), options[i], false, stackCount) && i > 10)
 					break;
 				i++;
 			}
@@ -1987,7 +1990,7 @@ namespace TecWare.PPSn.Server
 
 					// add options
 					xml.WriteStartElement("options");
-					WriteTableOptions(xml, options);
+					WriteTableOptions(xml, options, 0);
 					xml.WriteEndElement();
 
 					xml.WriteEndElement();
@@ -2007,7 +2010,7 @@ namespace TecWare.PPSn.Server
 					if (kv.Value is LuaTable t)
 					{
 						xml.WriteStartElement(kv.Key);
-						WriteTableOptions(xml, t);
+						WriteTableOptions(xml, t, 0);
 						xml.WriteEndElement();
 					}
 				}

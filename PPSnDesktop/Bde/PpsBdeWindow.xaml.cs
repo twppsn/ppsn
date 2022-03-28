@@ -119,10 +119,13 @@ namespace TecWare.PPSn.Bde
 				}
 				else
 				{
-					paneContent.IsEnabled = false;
-					disconnectProgress.Visibility = Visibility.Visible;
+					var allowEdit = Shell.Settings.GetProperty("PPSn.Bde.AllowEditOnDisconnect", false);
+					if (!allowEdit)
+					{
+						paneContent.IsEnabled = false;
+						disconnectProgress.Visibility = Visibility.Visible;
+					}
 				}
-
 			}
 		} // event Shell_PropertyChanged
 

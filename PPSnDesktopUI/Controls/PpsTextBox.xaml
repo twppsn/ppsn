@@ -55,6 +55,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="ScrollViewer.PanningMode" Value="VerticalFirst"/>
 		<Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
+		<Setter Property="MinHeight" Value="23" />
 		<Setter Property="Validation.ErrorTemplate" Value="{StaticResource PpsTextBoxValidationTemplate}" />
 		<Setter Property="Template">
 			<Setter.Value>

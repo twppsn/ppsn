@@ -1429,7 +1429,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- IsNavigating - property ---------------------------------------------------
+		#region -- IsNavigating - property --------------------------------------------
 
 		private static readonly DependencyPropertyKey isNavigatingPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsNavigating), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary>Navigation in process.</summary>
