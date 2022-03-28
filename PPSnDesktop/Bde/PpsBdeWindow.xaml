@@ -137,7 +137,7 @@
 		</Grid>
 
 		<ContentControl x:Name="paneContent" Grid.Row="1" Content="{Binding TopPaneHost}" Focusable="False" />
-		<Grid x:Name="disconnectProgress" Grid.Row="1" Grid.RowSpan="3" Visibility="Visible">
+		<Grid x:Name="disconnectProgress" Grid.Row="1" Grid.RowSpan="3" Visibility="Hidden">
 			<StackPanel VerticalAlignment="Center">
 				<ui:PpsProgressControl Width="64" Height="64" Visibility="Visible" HorizontalAlignment="Center" />
 				<TextBlock Text="Verbindung verloren..." HorizontalAlignment="Center" Margin="0,16,0,0" />
