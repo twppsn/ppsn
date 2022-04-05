@@ -483,8 +483,20 @@ namespace TecWare.PPSn.UI
 			{
 				base.OnStartPrint(document, e);
 
-				fromPage = document.PrinterSettings.FromPage;
-				pageCount = document.PrinterSettings.ToPage - document.PrinterSettings.FromPage;
+				switch (document.PrinterSettings.PrintRange)
+				{
+					case PrintRange.AllPages:
+						fromPage = 0;
+						pageCount = document.PrinterSettings.MaximumPage - document.PrinterSettings.MinimumPage + 1;
+						break;
+
+					default:
+					case PrintRange.SomePages:
+						fromPage = document.PrinterSettings.FromPage;
+						pageCount = document.PrinterSettings.ToPage - document.PrinterSettings.FromPage + 1;
+						break;
+				}
+
 				jobName = document.DocumentName;
 				pageNumber = 0;
 
@@ -515,7 +527,7 @@ namespace TecWare.PPSn.UI
 
 			private void UpdateProgress()
 			{
-				progress.Text = String.Format("Drucke '{0}' Seite {1} (letzte {2})", jobName, pageNumber + fromPage, pageCount + fromPage);
+				progress.Text = String.Format("Drucke '{0}' Seite {1} (letzte {2})", jobName, pageNumber + fromPage + 1, fromPage + pageCount);
 				progress.Value = pageNumber * 1000 / (pageCount + 1);
 			} // proc UpdateProgress
 		} // class PpsDrawingPrintController
@@ -558,7 +570,6 @@ namespace TecWare.PPSn.UI
 				printDocument.PrintController = progress != null
 					? (PrintController)new PpsDrawingPrintController(new StandardPrintController(), progress)
 					: new StandardPrintController();
-
 
 				return Task.Run(new Action(printDocument.Print));
 			} // proc PrintAsync

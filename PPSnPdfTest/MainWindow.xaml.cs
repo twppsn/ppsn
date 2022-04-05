@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.UI;
 
 namespace PPSnPdfTest
 {
@@ -25,7 +26,14 @@ namespace PPSnPdfTest
 		{
 			InitializeComponent();
 
-			pdfViewer.Document = PdfReader.Open(@"D:\Temp\RAUF-3.pdf");
+			pdfViewer.Document = PdfReader.Open(@"D:\Temp\test.pdf");
+		}
+
+		private async void Print_Click(object sender, RoutedEventArgs e)
+		{
+			var p = pdfViewer.Document.GetPrintDocument();
+			var j = p.ShowDialog(this);
+			await j.PrintAsync(this);
 		}
 	}
 }

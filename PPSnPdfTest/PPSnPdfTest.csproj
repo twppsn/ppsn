@@ -99,6 +99,10 @@
       <Project>{c7d09a93-da78-4b81-8d3c-260442c61c5f}</Project>
       <Name>PPSnDesktopUI</Name>
     </ProjectReference>
+    <ProjectReference Include="..\PPSnUI\PPSnUI.csproj">
+      <Project>{136CAD3E-3599-4D02-9FCE-334F2CF66ECD}</Project>
+      <Name>PPSnUI</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
