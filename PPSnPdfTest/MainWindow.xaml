@@ -7,9 +7,12 @@
 		xmlns:pps="http://tecware-gmbh.de/ppsn/wpf/2015"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
-    <Grid>
+    <DockPanel LastChildFill="True">
+		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+			<Button Content="Print" Click="Print_Click" />
+		</StackPanel>
 		<pps:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" MinScaleFactor="0.1" MaxScaleFactor="20.0" CanContentScroll="True" IsManipulationEnabled="True">
 			<pps:PpsPdfViewer x:Name="pdfViewer" Zoom="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=TwoWay}" />
 		</pps:PpsScrollViewer>
-	</Grid>
+	</DockPanel>
 </Window>

@@ -20,8 +20,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Themes;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -101,10 +103,10 @@ namespace TecWare.PPSn
 		/// <param name="paneManager"></param>
 		/// <returns></returns>
 		public static IPpsWindowPane GetActivePane(this IPpsWindowPaneManager paneManager)
-			=> paneManager.Panes.Where(p => ReferenceEquals(paneManager, p.PaneHost.PaneManager) ||  p.PaneHost.PaneManager.IsActive && p.PaneHost.IsActive).FirstOrDefault();
+			=> paneManager.Panes.FirstOrDefault(p => ReferenceEquals(paneManager, p.PaneHost.PaneManager) &&  p.PaneHost.IsActive);
 
 		public static IPpsWindowPane GetActivePane(this IPpsShell shell)
-			=> shell.GetService<IPpsWindowPaneManager>(false)?.GetActivePane();
+			=> shell.GetService<IPpsWindowPaneManager>(false)?.Panes.FirstOrDefault(p => p.PaneHost.IsActive && p.PaneHost.PaneManager.IsActive);
 
 		/// <summary></summary>
 		/// <param name="paneManager"></param>
@@ -212,6 +214,19 @@ namespace TecWare.PPSn
 				? Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive)
 				: Window.GetWindow(dependencyObject);
 		} // func GetWindowFromOwner
+
+		#endregion
+
+		#region -- CreateException ----------------------------------------------------
+
+		public static Control CreateExceptionControl(this FrameworkElement fe, Exception e)
+		{
+			var control = new ContentControl { Focusable = false };
+			control.Content = e;
+			if (TryFindResource(fe, PpsResource.ExceptionControlStyle, out var tmp) && tmp is Style style)
+				control.Style = style;
+			return control;
+		} // func CreateExceptionControl
 
 		#endregion
 

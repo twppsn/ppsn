@@ -21,6 +21,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -38,7 +39,8 @@ namespace TecWare.PPSn.UI
 	/// <summary>Pane to display trace messages.</summary>
 	internal sealed partial class PpsTracePane : PpsWindowPaneControl, IPpsBarcodeReceiver
 	{
-		public static readonly RoutedCommand ToggleDebugCommand = new RoutedCommand();
+		public static readonly RoutedCommand ToggleDebugCommand = PpsRoutedCommand.Create(typeof(PpsTracePane), "ToggleDebug");
+		public static readonly RoutedCommand ExecuteBarcodeCommand = PpsRoutedCommand.Create(typeof(PpsTracePane), "ExecBarcode");
 
 		#region -- class PpsTraceTable ------------------------------------------------
 
@@ -156,7 +158,7 @@ namespace TecWare.PPSn.UI
 
 			#region -- Exec -----------------------------------------------------------
 
-			private void ExecCore(string command, string arguments)
+			private void ExecCore(string command, string arguments, bool runasAdministrator = false)
 			{
 				var psi = new ProcessStartInfo
 				{
@@ -164,6 +166,10 @@ namespace TecWare.PPSn.UI
 					Arguments = arguments,
 					WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
 				};
+
+				if (runasAdministrator && !PpsWpfShell.IsAdministrator())
+					psi.Verb = "runas";
+
 				Process.Start(psi)?.Dispose();
 			} // proc Exec
 
@@ -247,11 +253,11 @@ namespace TecWare.PPSn.UI
 					sw.WriteLine(@"[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]");
 					WriteRegistryValue(sw, "AutoAdminLogon", password != null ? "1" : "0");
 					WriteRegistryValue(sw, "DefaultDomain", domainName);
-					WriteRegistryValue(sw, "DefaultUserName", userName);
+					WriteRegistryValue(sw, "DefaultUserName", String.IsNullOrEmpty(domainName) ? userName : domainName + "\\\\" + userName);
 					WriteRegistryValue(sw, "DefaultPassword", password);
 				}
 
-				ExecCore(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName);
+				ExecCore(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName, true);
 			} // proc ConfigAutoLogon
 
 			[LuaMember]
@@ -326,15 +332,37 @@ namespace TecWare.PPSn.UI
 		private sealed class AppInfoModel
 		{
 			private readonly IPpsShellApplication shellApplication;
+			private readonly AppAssemblyInfo[] assemblyInfo;
 
 			public AppInfoModel(IPpsShell shell)
 			{
 				shellApplication = shell.GetService<IPpsShellApplication>(false);
+
+				assemblyInfo = (
+					from c in
+						from cur in shell.Settings.GetGroups("PPSn.Application.Files", true, "Path", "Version", "Load")
+						where cur.GetProperty("Load", null) == "net"
+						select CreateAssemblyInfo(cur)
+					where c != null
+					orderby c.Name
+					select c
+				).ToArray();
 			} // ctor
+
+			private static AppAssemblyInfo CreateAssemblyInfo(PpsSettingsGroup setting)
+			{
+				var name = Path.GetFileNameWithoutExtension(setting.GetProperty("Path", null));
+				var asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(c => c.GetName().Name == name);
+				return asm != null && Version.TryParse(setting.GetProperty("Version", "0.0.0.0"), out var serverVersion)
+					? AppAssemblyInfo.Create(asm, serverVersion)
+					: null;
+			} // func CreateAssemblyInfo
 
 			public string AppName => shellApplication?.Name;
 			public Version AssemblyVersion => shellApplication?.AssenblyVersion;
 			public Version InstalledVersion => shellApplication?.InstalledVersion;
+
+			public IReadOnlyList<AppAssemblyInfo> AssemblyInfo => assemblyInfo;
 		} // class AppInfoModel
 
 		#endregion
@@ -388,6 +416,8 @@ namespace TecWare.PPSn.UI
 			eventPane.AddCommandBinding(Shell, ToggleDebugCommand,
 				new PpsCommand(ctx => ToggleDebug())
 			);
+
+			barcodePanel.AddCommandBinding(Shell, ExecuteBarcodeCommand, new PpsAsyncCommand(ExecuteBarcodeAsync));
 
 			// create environment for the command box
 			traceTable = new PpsTraceTable(this);
@@ -588,6 +618,21 @@ namespace TecWare.PPSn.UI
 			return true;
 		} // event IPpsBarcodeReceiver.OnBarcodeAsync
 
+		private Task ExecuteBarcodeAsync(PpsCommandContext arg)
+		{
+			if (arg.DataContext is PpsTraceBarcodeItem item)
+			{
+				return barcodeService.OnDefaultBarcodeAsync(item.Info).ContinueWith(
+					t =>
+					{
+						if (!t.Result)
+							ui.ShowNotificationAsync("Keine Verarbeitung erfolgt...", PpsImage.Information);
+					}, TaskContinuationOptions.ExecuteSynchronously
+				 );
+			}
+			return Task.CompletedTask;
+		} // proc ExecuteBarcodeAsync
+
 		/// <summary>Is the barcode receiver active.</summary>
 		bool IPpsBarcodeReceiver.IsActive => true;
 
@@ -669,7 +714,46 @@ namespace TecWare.PPSn.UI
 		public string Code => code.Code.ToString();
 		public string RawCode => code.RawCode;
 		public string Format => code.Format;
+
+		public PpsBarcodeInfo Info => code;
 	} // class PpsTraceBarcodeItem
+
+	#endregion
+
+	#region -- class AppAssemblyInfo ----------------------------------------------
+
+	internal sealed class AppAssemblyInfo
+	{
+		public AppAssemblyInfo(string name, Version fileVersion, Version serverVersion, string informationalVersion, string company)
+		{
+			Name = name;
+			FileVersion = fileVersion;
+			ServerVersion = serverVersion;
+			InformationalVersion = informationalVersion;
+			Company = company;
+		} // ctor
+
+		public string Name { get; }
+		public Version FileVersion { get; }
+		public Version ServerVersion { get; }
+		public string InformationalVersion { get; }
+		public string Company { get; }
+		public bool IsOutdated => ServerVersion > FileVersion;
+
+		public static AppAssemblyInfo Create(Assembly asm, Version serverVersion)
+		{
+			var name = asm.GetName();
+
+			var fileVersionInfo = asm.GetCustomAttribute<AssemblyFileVersionAttribute>();
+			var infoVersion = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+			var companyInfo = asm.GetCustomAttribute<AssemblyCopyrightAttribute>();
+
+			if (!Version.TryParse(fileVersionInfo.Version, out var fileVersion))
+				fileVersion = name.Version;
+
+			return new AppAssemblyInfo(name.Name, fileVersion, serverVersion, infoVersion?.InformationalVersion, companyInfo?.Copyright);
+		} // class AppAssemblyInfo
+	} // class AppAssemblyInfo
 
 	#endregion
 }

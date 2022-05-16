@@ -499,7 +499,7 @@ namespace TecWare.PPSn.Controls
 		} // event HtmlView_PermissionRequested
 
 		private static string GetFilterUri(Uri uri)
-			=> uri.Scheme + "://" + uri.Host + (uri.Port == 80 || uri.Port <= 0 ? String.Empty : ":" + uri.Port.ToString()) + "/";
+			=> uri.Scheme + "://" + uri.Host + (uri.Port == 80 || uri.Port <= 0 ? String.Empty : ":" + uri.Port.ToString()) + uri.AbsolutePath;
 
 		private void UpdateResourceRequest(IPpsShell shell)
 		{
@@ -508,10 +508,10 @@ namespace TecWare.PPSn.Controls
 				var http = shell.Http;
 
 				if (currentFilterUri != null)
-					htmlView.CoreWebView2.RemoveWebResourceRequestedFilter(currentFilterUri, CoreWebView2WebResourceContext.All);
+					htmlView.CoreWebView2.RemoveWebResourceRequestedFilter(currentFilterUri + "*", CoreWebView2WebResourceContext.All);
 
-				currentFilterUri = GetFilterUri(shell.GetRemoteUri(http)) + "*";
-				htmlView.CoreWebView2.AddWebResourceRequestedFilter(currentFilterUri, CoreWebView2WebResourceContext.All);
+				currentFilterUri = GetFilterUri(shell.GetRemoteUri(http));
+				htmlView.CoreWebView2.AddWebResourceRequestedFilter(currentFilterUri + "*", CoreWebView2WebResourceContext.All);
 			}
 		} // proc UpdateResourceRequest
 
@@ -568,7 +568,7 @@ namespace TecWare.PPSn.Controls
 			}
 			else // set other response and cancel request
 			{
-				await SetResponseMessageAsync(token, response, true);
+				await SetResponseMessageAsync(token, response, false);
 				SetHtmlEmptyResponse(e);
 			}
 		} // proc HtmlViewSetMainResourceAsync
@@ -647,7 +647,7 @@ namespace TecWare.PPSn.Controls
 				// get the current navigation token
 				ViewNavigationToken token = null;
 				if (e.ResourceContext == CoreWebView2WebResourceContext.Document) // is this the main document
-					token = htmlTokens.Values.Where(c => c.IsActive).FirstOrDefault();
+					token = htmlTokens.Values.FirstOrDefault(c => c.IsActive);
 
 				if (token == null)
 					await HtmlViewSetOtherResourceAsync(e, relativeUri);
@@ -1429,7 +1429,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- IsNavigating - property ---------------------------------------------------
+		#region -- IsNavigating - property --------------------------------------------
 
 		private static readonly DependencyPropertyKey isNavigatingPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsNavigating), typeof(bool), typeof(PpsWebView), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary>Navigation in process.</summary>

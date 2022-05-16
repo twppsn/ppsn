@@ -161,11 +161,10 @@ namespace TecWare.PPSn.UI
 			return true;
 		} // proc SetQueueCore
 
-		protected bool SetQueueByName(string queueName)
+		protected async Task<bool> SetQueueByNameAsync(string queueName)
 		{
-			var printServer = new LocalPrintServer();
-			var printQueue = printServer.GetPrintQueues().FirstOrDefault(c => String.Compare(c.Name, queueName, StringComparison.OrdinalIgnoreCase) == 0);
-			SetQueueCore(printQueue ?? printServer.DefaultPrintQueue);
+			var printQueue = await PpsPrinting.GetPrintQueueAsync(queueName);
+			SetQueueCore(printQueue ?? new LocalPrintServer().DefaultPrintQueue);
 			return printQueue != null;
 		} // func SetQueueByName
 
@@ -226,7 +225,7 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Ticket
 
-		public bool IsDefault => isModified ? false : isDefault;
+		public bool IsDefault => !isModified && isDefault;
 		public bool IsModified => isModified;
 	} // class PpsPersistPrintSettings
 
@@ -266,7 +265,7 @@ namespace TecWare.PPSn.UI
 			var xDoc = await (decompress ? LoadCompressedAsync(source) : LoadAsync(source));
 			var queueName = xDoc.Root.GetAttribute("queueName", null);
 
-			var findQueue = SetQueueByName(queueName);
+			var findQueue = await SetQueueByNameAsync(queueName);
 
 			using (var m = new MemoryStream())
 			{
@@ -287,7 +286,7 @@ namespace TecWare.PPSn.UI
 		protected Task SaveToStreamAsync(Stream destination, bool compress)
 		{
 			var xDoc = XDocument.Load(Ticket.GetXmlStream());
-			xDoc.Root.SetAttributeValue("queueName", Queue.Name);
+			xDoc.Root.SetAttributeValue("queueName", Queue.FullName);
 
 			ResetChanged();
 			return compress ? SaveCompressedAsync(destination, xDoc) : SaveAsync(destination, xDoc);
@@ -484,8 +483,20 @@ namespace TecWare.PPSn.UI
 			{
 				base.OnStartPrint(document, e);
 
-				fromPage = document.PrinterSettings.FromPage;
-				pageCount = document.PrinterSettings.ToPage - document.PrinterSettings.FromPage;
+				switch (document.PrinterSettings.PrintRange)
+				{
+					case PrintRange.AllPages:
+						fromPage = 0;
+						pageCount = document.PrinterSettings.MaximumPage - document.PrinterSettings.MinimumPage + 1;
+						break;
+
+					default:
+					case PrintRange.SomePages:
+						fromPage = document.PrinterSettings.FromPage;
+						pageCount = document.PrinterSettings.ToPage - document.PrinterSettings.FromPage + 1;
+						break;
+				}
+
 				jobName = document.DocumentName;
 				pageNumber = 0;
 
@@ -516,7 +527,7 @@ namespace TecWare.PPSn.UI
 
 			private void UpdateProgress()
 			{
-				progress.Text = String.Format("Drucke '{0}' Seite {1} (letzte {2})", jobName, pageNumber + fromPage, pageCount + fromPage);
+				progress.Text = String.Format("Drucke '{0}' Seite {1} (letzte {2})", jobName, pageNumber + fromPage + 1, fromPage + pageCount);
 				progress.Value = pageNumber * 1000 / (pageCount + 1);
 			} // proc UpdateProgress
 		} // class PpsDrawingPrintController
@@ -559,7 +570,6 @@ namespace TecWare.PPSn.UI
 				printDocument.PrintController = progress != null
 					? (PrintController)new PpsDrawingPrintController(new StandardPrintController(), progress)
 					: new StandardPrintController();
-
 
 				return Task.Run(new Action(printDocument.Print));
 			} // proc PrintAsync
@@ -698,7 +708,7 @@ namespace TecWare.PPSn.UI
 		{
 			using (var printTicketConverter = new PrintTicketConverter(printQueue.Name, PrintTicketConverter.MaxPrintSchemaVersion))
 			{
-				printerSettings.PrinterName = printQueue.Name;
+				printerSettings.PrinterName = printQueue.FullName;
 
 				var bDevMode = printTicketConverter.ConvertPrintTicketToDevMode(printTicket, BaseDevModeType.UserDefault, PrintTicketScope.JobScope);
 				var pDevMode = Marshal.AllocHGlobal(bDevMode.Length);
@@ -715,6 +725,61 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // proc SetFromSystemPrint
+
+		private static PrintServer GetPrintServer(string printServerPath, bool throwException = false)
+		{
+			try
+			{
+				return new PrintServer(printServerPath);
+			}
+			catch (PrintServerException)
+			{
+				if (throwException)
+					throw;
+				return null;
+			}
+		} // func GetPrintServer
+
+		/// <summary>Get the print server, without an exception.</summary>
+		/// <param name="printServerPath">Path to the print server.</param>
+		/// <param name="throwException"><c>true</c>, if the server is not found. A exception will be thrown.</param>
+		/// <returns><see cref="PrintServer"/> or <c>null</c></returns>
+		public static Task<PrintServer> GetPrintServerAsync(string printServerPath, bool throwException = false)
+			=> Task.Run(() => GetPrintServer(printServerPath, throwException));
+
+		/// <summary>Get a print queue for the printer name.</summary>
+		/// <param name="printServer">Print server to search.</param>
+		/// <param name="queueName">Local printer name</param>
+		/// <param name="throwException"><c>true</c>, if the queue is not found. A exception will be thrown.</param>
+		/// <returns><see cref="PrintQueue"/> or <c>null</c></returns>
+		public static PrintQueue GetPrintQueue(PrintServer printServer, string queueName, bool throwException = false)
+		{
+			var queue = printServer?.GetPrintQueues().FirstOrDefault(c => String.Compare(c.Name, queueName, StringComparison.OrdinalIgnoreCase) == 0);
+			if (queue == null && throwException)
+				throw new FileNotFoundException(String.Format($"Printer {0} on {1} not found.", queueName, printServer?.Name));
+			return queue;
+		} // func GetPrintQueue
+
+		/// <summary>Get a print queue from a full printer name.</summary>
+		/// <param name="queueName">Full printer name, or a local printer name.</param>
+		/// <param name="throwException"><c>true</c>, if the queue is not found. A exception will be thrown.</param>
+		/// <returns><see cref="PrintQueue"/> or <c>null</c></returns>
+		public static async Task<PrintQueue> GetPrintQueueAsync(string queueName, bool throwException = false)
+		{
+			if (queueName.Length > 1 && queueName[0] == '\\' && queueName[1] == '\\') // network printer
+			{
+				var endAt = queueName.IndexOf('\\', 2);
+				if (endAt == -1)
+					return GetPrintQueue(new LocalPrintServer(), queueName, throwException);
+				else
+				{
+					var printServer = await GetPrintServerAsync(queueName.Substring(0, endAt), throwException);
+					return GetPrintQueue(printServer, queueName.Substring(endAt + 1), throwException);
+				}
+			}
+			else
+				return GetPrintQueue(new LocalPrintServer(), queueName, throwException);
+		} // func GetPrintQueueAsync
 
 		/// <summary>Copy printer settings from System.Drawing to System.Printing</summary>
 		/// <param name="printerSettings"></param>
@@ -933,7 +998,7 @@ namespace TecWare.PPSn.UI
 
 			var printDialog = new PrintDialog
 			{
-				MinPage = (uint)(document.MinPage ?? 0),
+				MinPage = (uint)(document.MinPage ?? 1),
 				MaxPage = (uint)(document.MaxPage ?? 9999),
 				PageRange = document.ToPageRange(),
 				CurrentPageEnabled = document.CurrentPage.HasValue,
@@ -1117,7 +1182,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="document"></param>
 		/// <returns></returns>
 		public static PageRange ToPageRange(this IPpsPrintDocument document)
-			=> HasRange(document) ? new PageRange(document.MinPage.Value, document.MaxPage.Value) : new PageRange();
+			=> HasRange(document) ? new PageRange(document.MinPage.Value, document.MaxPage.Value) : new PageRange(1);
 
 		#endregion
 

@@ -149,8 +149,8 @@ namespace TecWare.PPSn
 		/// <param name="blockUI"></param>
 		/// <param name="progressText"></param>
 		/// <returns></returns>
-		public static IPpsProgress CreateProgress(this DependencyObject sender, bool blockUI = true, string progressText = null)
-			=> PpsShell.CreateProgress(GetControlService<IPpsProgressFactory>(sender, true), blockUI, progressText);
+		public static IPpsProgress CreateProgress(this DependencyObject sender, bool blockUI = true, string progressText = null, bool throwException = false)
+			=> PpsShell.CreateProgress(GetControlService<IPpsProgressFactory>(sender, throwException), blockUI, progressText);
 
 		/// <summary></summary>
 		/// <param name="sender"></param>

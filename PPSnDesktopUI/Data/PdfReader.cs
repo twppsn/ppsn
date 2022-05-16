@@ -1021,9 +1021,11 @@ namespace TecWare.PPSn.Data
 				if (e.Cancel)
 					return;
 
+				// e.PageSettings.PrintableArea
+
 				var pt = new System.Drawing.Point[] {
-					new System.Drawing.Point(e.PageBounds.Left - (int)e.PageSettings.PrintableArea.Left, e.PageBounds.Top - (int)e.PageSettings.PrintableArea.Top),
-					new System.Drawing.Point(e.PageBounds.Width - (int)e.PageSettings.PrintableArea.Left, e.PageBounds.Height - (int)e.PageSettings.PrintableArea.Top)
+					new System.Drawing.Point(e.PageBounds.Left, e.PageBounds.Top),
+					new System.Drawing.Point(e.PageBounds.Width, e.PageBounds.Height)
 				};
 				e.Graphics.TransformPoints(System.Drawing.Drawing2D.CoordinateSpace.Device, System.Drawing.Drawing2D.CoordinateSpace.Page, pt);
 
@@ -1032,8 +1034,37 @@ namespace TecWare.PPSn.Data
 				{
 					using (var page = pdf.OpenPage(printPage))
 					{
-						//e.PageSettings.PrinterResolution.Kind
-						page.Render(hdc, pt[0].X, pt[0].Y, pt[1].X, pt[1].Y, 0, PdfPageRenderFlag.ForPrinting);
+						var targetX = pt[0].X;
+						var targetY = pt[0].Y;
+						var targetWidth = pt[1].X;
+						var targetHeight = pt[1].Y;
+						var r = 0;
+
+						var aspectTarget = (double)targetWidth / targetHeight;
+						var aspectPage = page.Width / page.Height;
+						if (aspectPage > 1.0 && aspectTarget < 1.0) // landscape vs portrait
+						{
+							// rotate
+							r = 270;
+							aspectPage = 1.0 / aspectPage;
+						}
+
+						if (aspectPage < aspectTarget)
+						{
+							var newWidth = targetHeight * aspectPage;
+							targetX += (int)Math.Floor((targetWidth - newWidth) / 2.0);
+							targetWidth = (int)Math.Floor(newWidth);
+						}
+						else
+						{
+							var newHeight = targetWidth / aspectPage;
+							targetY += (int)Math.Floor((targetHeight - newHeight) / 2.0);
+							targetHeight = (int)Math.Floor(newHeight);
+						}
+
+						// e.PageSettings.Landscape
+						// e.PageSettings.PrinterResolution.Kind
+						page.Render(hdc, targetX, targetY, targetWidth, targetHeight, r, PdfPageRenderFlag.ForPrinting);
 					}
 				}
 				finally

@@ -354,29 +354,34 @@ namespace TecWare.PPSn.Main
 
 		#region -- OpenPaneAsync ------------------------------------------------------
 
-		private PpsWindowPaneHostState GetDefaultPaneState(Type paneType)
+		private PpsWindowPaneHostState GetDefaultPaneState(Type paneType, PpsWindowPaneHostState paneState)
 		{
 			// check for static IsFixed-Property
 			var pi = paneType.GetProperty("IsFixed", BindingFlags.Static | BindingFlags.GetProperty | BindingFlags.Public, null, typeof(bool), Array.Empty<Type>(), null);
 			if (pi != null && (bool)pi.GetValue(pi))
 				return PpsWindowPaneHostState.Fixed;
 
-			return PpsWindowPaneHostState.Root;
+			return paneState;
 		} // func GetDefaultPaneState
 
-		private async Task<IPpsWindowPane> LoadPaneInternAsync(Type paneType, LuaTable arguments)
+		private async Task<IPpsWindowPane> LoadPaneInternAsync(bool isFirstPane, Type paneType, LuaTable arguments)
 		{
 			arguments = arguments ?? new LuaTable();
 
 			var oldPaneHost = CurrentPaneHost;
 
 			// Build the new pane host
-			var newPaneHost = new PpsWindowPaneHost(GetDefaultPaneState(paneType));
+			var relatedPaneHost = FindPaneHost(arguments.GetMemberValue("RelatedPane") as IPpsWindowPane, false);
+			var newPaneHost = new PpsWindowPaneHost(GetDefaultPaneState(paneType, 
+				isFirstPane 
+				? PpsWindowPaneHostState.Fixed 
+					: (relatedPaneHost != null ? PpsWindowPaneHostState.Related : PpsWindowPaneHostState.Root)
+			));
 
 			try
 			{
 				// add pane and show it, progress handling should be done by the Load
-				paneHosts.AddPane(newPaneHost, FindPaneHost(arguments.GetMemberValue("RelatedPane") as IPpsWindowPane, false));
+				paneHosts.AddPane(newPaneHost, relatedPaneHost);
 				AddLogicalChild(newPaneHost);
 
 				ActivatePaneHost(newPaneHost);
@@ -403,6 +408,7 @@ namespace TecWare.PPSn.Main
 		/// <remarks>- <c>arguments.mode</c>: is the <see cref="PpsOpenPaneMode"/> (optional)</remarks>
 		public async Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null)
 		{
+			var isFirstPane = paneHosts.Count == 0;
 			try
 			{
 				if (newPaneMode == PpsOpenPaneMode.Default)
@@ -417,13 +423,13 @@ namespace TecWare.PPSn.Main
 
 						// replace pane => will close all panes an open an new one
 						if (await UnloadPanesAsync())
-							return await LoadPaneInternAsync(paneType, arguments);
+							return await LoadPaneInternAsync(isFirstPane, paneType, arguments);
 						return null;
 
 					default:
 						var pane = FindOpenPane(paneType, arguments);
 						if (pane == null)
-							return await LoadPaneInternAsync(paneType, arguments);
+							return await LoadPaneInternAsync(isFirstPane, paneType, arguments);
 						else
 						{
 							ActivatePane(pane);

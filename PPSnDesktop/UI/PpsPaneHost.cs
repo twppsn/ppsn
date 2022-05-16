@@ -374,7 +374,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- IsActive - property -------------------------------------------------
+		#region -- IsActive - property ------------------------------------------------
 
 		private static readonly DependencyPropertyKey isActivePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsActive), typeof(bool), typeof(PpsPaneHost), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty IsActiveProperty = isActivePropertyKey.DependencyProperty;
@@ -383,6 +383,7 @@ namespace TecWare.PPSn.UI
 		public bool IsActive => BooleanBox.GetBool(GetValue(IsActiveProperty));
 
 		#endregion
+
 		#region -- ProgressStack - property -------------------------------------------
 
 		/// <summary>Access the progress stack</summary>
