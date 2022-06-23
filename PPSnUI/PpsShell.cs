@@ -908,12 +908,17 @@ namespace TecWare.PPSn
 				try
 				{
 					// create a none user context for the initialization
-					using (var dpcHttp = CreateHttpCore(CreateProxyUri(shellId), info.Uri, Settings.GetDpcCredentials()))
+					using (var directHttp = CreateHttpCore(null, info.Uri, Settings.GetDpcCredentials()))
 					{
-						http = dpcHttp;
+						http = directHttp;
 
 						// load settings from server
 						lastSettingsVersion = await LoadSettingsFromServerAsync(settingsService, this, instanceSettingsInfo.DpcDeviceId, lastSettingsVersion);
+					}
+
+					using (var dpcHttp = CreateHttpCore(CreateProxyUri(shellId), info.Uri, Settings.GetDpcCredentials()))
+					{
+						http = dpcHttp;
 
 						// notify settings loaded
 						OnPropertyChanged(nameof(Settings));
@@ -1099,8 +1104,9 @@ namespace TecWare.PPSn
 			private DEHttpClient CreateHttpCore(Uri uri, Uri remoteUri, ICredentials credentials)
 			{
 				var handler = new PpsMessageHandler(this, remoteUri);
-				var http = DEHttpClient.Create(uri, credentials, httpHandler: handler);
-				RegisterHandler(http, handler);
+				var http = DEHttpClient.Create(uri ?? remoteUri, credentials, httpHandler: handler);
+				if (uri != null)
+					RegisterHandler(http, handler);
 				return http;
 			} // proc CreateHttpCore
 

@@ -80,7 +80,8 @@ namespace TecWare.PPSn.Server.Data
 
 		private IEnumerable<IEnumerable<IDataRow>> ExecuteResult(object args, PpsDataTransactionExecuteBehavior behavior)
 		{
-			transaction.ResetTransaction();
+			if (transaction.IsCommited.HasValue)
+				transaction.ResetTransaction();
 			return ExecuteResultCore(args, behavior);
 		} // func ExecuteResult
 
