@@ -429,7 +429,9 @@ namespace TecWare.PPSn.Controls
 
 				if (token.OnStarted(e.Uri, false, true))
 				{
-					if (!cachedAppendToHistory)
+					if (e.Uri == "about:blank")
+						token.NoHistory();
+					else if (!cachedAppendToHistory)
 					{
 						token.NoHistory();
 						cachedAppendToHistory = true;
@@ -568,7 +570,7 @@ namespace TecWare.PPSn.Controls
 			}
 			else // set other response and cancel request
 			{
-				await SetResponseMessageAsync(token, response, false);
+				await SetResponseMessageAsync(token, response, false, true);
 				SetHtmlEmptyResponse(e);
 			}
 		} // proc HtmlViewSetMainResourceAsync
@@ -595,7 +597,7 @@ namespace TecWare.PPSn.Controls
 			catch (Exception ex)
 			{
 				SetHtmlEmptyResponse(e);
-				await SetResponseMessageAsync(currentNavigationToken, new ViewResponseMessage(uri, ex), true);
+				await SetResponseMessageAsync(currentNavigationToken, new ViewResponseMessage(uri, ex), true, true);
 			}
 		} // proc HtmlViewSetMainResourceAsync
 
@@ -738,6 +740,14 @@ namespace TecWare.PPSn.Controls
 				var e = new PpsWebViewNavigationXamlCodeEventArgs(sourceUri);
 				RaiseEvent(e);
 
+				// get default code
+				if (e.Code == null)
+				{
+					var luaShell = shell.Value.GetService<IPpsLuaShell>(false);
+					if (luaShell != null)
+						e.Code = new PpsLuaCodeBehind(luaShell, sourceUri);
+				}
+
 				// create the control
 				var control = await PpsXamlParser.LoadAsync<FrameworkElement>(xml, new PpsXamlReaderSettings { BaseUri = sourceUri, Code = e.Code });
 
@@ -762,6 +772,8 @@ namespace TecWare.PPSn.Controls
 			xamlView.ContentTemplate = template;
 
 			SetValue(sourceUriPropertyKey, sourceUri);
+
+			Title = content is PpsWindowPaneControl pane ? pane.SubTitle : "";
 		} // proc SetXamlAsync
 
 		private void HideXaml()
@@ -909,6 +921,20 @@ namespace TecWare.PPSn.Controls
 		private DataTemplate GetErrorTemplate()
 			=> null;
 
+		private bool TryGetRelativePath(Uri baseUri, Uri absoluteUri, out Uri relativeUri)
+		{
+			if (baseUri == null)
+			{
+				relativeUri = absoluteUri;
+				return false;
+			}
+			else
+			{
+				relativeUri = baseUri.MakeRelativeUri(absoluteUri);
+				return !relativeUri.IsAbsoluteUri;
+			}
+		} // func TryGetRelativePath
+
 		private bool TryGetRelativePath(Uri absoluteUri, out Uri relativeUri)
 		{
 			if (absoluteUri.IsFile)
@@ -918,8 +944,8 @@ namespace TecWare.PPSn.Controls
 			}
 			else if (TryGetHttp(out var http))
 			{
-				relativeUri = http.BaseAddress.MakeRelativeUri(absoluteUri);
-				return !relativeUri.IsAbsoluteUri;
+				return TryGetRelativePath(http.BaseAddress, absoluteUri, out relativeUri)
+					|| TryGetRelativePath(shell.Value.GetRemoteUri(http), absoluteUri, out relativeUri);
 			}
 			else
 			{
@@ -982,7 +1008,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc SendShellAsync
 
-		private Task SetResponseMessageAsync(ViewNavigationToken token, ViewResponseMessage response, bool enforceContent)
+		private Task SetResponseMessageAsync(ViewNavigationToken token, ViewResponseMessage response, bool enforceContent, bool appendToHistory)
 		{
 			if (!token.IsActive)
 				return Task.CompletedTask;
@@ -994,7 +1020,7 @@ namespace TecWare.PPSn.Controls
 				switch (response.State)
 				{
 					case ViewState.Html:
-						return SetHtmlAsync(response.SourceUri, true, response);
+						return SetHtmlAsync(response.SourceUri, appendToHistory, response);
 					case ViewState.Xaml:
 						return SetXamlAsync(response.SourceUri, response.Content, null);
 					case ViewState.Empty:
@@ -1214,7 +1240,7 @@ namespace TecWare.PPSn.Controls
 			if (token.IsActive)
 			{
 				using (var response = new ViewResponseMessage(null, ex))
-					await SetResponseMessageAsync(token, response, true);
+					await SetResponseMessageAsync(token, response, true, false);
 			}
 			shell.Value.LogProxy().LogMsg(LogMsgType.Error, ex);
 		} // proc SetExceptionAsync
@@ -1252,7 +1278,7 @@ namespace TecWare.PPSn.Controls
 					try
 					{
 						using (var request = new ViewRequestMessage(HttpMethod.Get.Method, relativeUri, null, null))
-							await SetResponseMessageAsync(token, await SendShellAsync(token, request), false);
+							await SetResponseMessageAsync(token, await SendShellAsync(token, request), false, false);
 					}
 					catch (HttpResponseException e)
 					{

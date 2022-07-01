@@ -1337,14 +1337,24 @@ namespace TecWare.PPSn
 			paneManager.OpenPaneAsync(paneType, GetOpenPaneModeFromLink(paneManager, link), link.Location.GetArgumentsAsTable()).OnException();
 		} // event ProcessPaneManager
 
+		private static void ProcessDefaultWebLink(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
+			=> paneManager.OpenPaneAsync(typeof(PpsWebViewPane), GetOpenPaneModeFromLink(paneManager, link), new LuaTable { ["uri"] = link.Location });
+
 		private static void ProcessDefaultLink(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
 		{
 			try
 			{
-				if (link.Location.IsAbsoluteUri && link.Location.Scheme == "panemanager")
-					ProcessPaneManager(paneManager, link);
+				if (link.Location.IsAbsoluteUri)
+				{
+					if (link.Location.Scheme == "panemanager")
+						ProcessPaneManager(paneManager, link);
+					else if (link.Location.Scheme == "shell")
+						PpsDpcService.Execute(link.Location.AbsolutePath.Substring(1));
+					else
+						ProcessDefaultWebLink(paneManager, link);
+				}
 				else
-					paneManager.OpenPaneAsync(typeof(PpsWebViewPane), GetOpenPaneModeFromLink(paneManager, link), new LuaTable { ["uri"] = link.Location });
+					ProcessDefaultWebLink(paneManager, link);
 			}
 			catch (Exception e)
 			{

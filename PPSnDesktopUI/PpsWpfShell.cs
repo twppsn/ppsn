@@ -373,7 +373,7 @@ namespace TecWare.PPSn
 		/// <typeparam name="T">Type of the child</typeparam>
 		/// <param name="current">Current visual element.</param>
 		/// <returns>Child or <c>null</c>.</returns>
-		public static IEnumerable< T> GetVisualChildren<T>(this DependencyObject current)
+		public static IEnumerable<T> GetVisualChildren<T>(this DependencyObject current)
 			where T : DependencyObject
 		{
 			var analyzeStack = new Queue<DependencyObject>();
@@ -667,7 +667,7 @@ namespace TecWare.PPSn
 			// initialize theme from server
 			defaultTheme = new PpsColorTheme(nameof(PpsColorTheme.Default), shell.Settings.GetProperties(themeSettingPrefix + "*").Select(ConvertToThemeColor));
 			SetCurrentTheme(defaultTheme, true);
-			
+
 			return Task.CompletedTask;
 		} // proc IPpsShellServiceInit.InitAsync
 
@@ -957,7 +957,7 @@ namespace TecWare.PPSn
 		private readonly DEHttpClient http; // owner, that retrieves a resource
 		private readonly Uri originalUri;
 		private readonly Uri remoteUri;
-		
+
 		private bool aborted = false; // is the request cancelled
 
 		private WebHeaderCollection headers;
@@ -976,7 +976,7 @@ namespace TecWare.PPSn
 		internal PpsProxyRequest(DEHttpClient http, Uri originalUri, Uri remoteUri)
 		{
 			this.http = http ?? throw new ArgumentNullException(nameof(http));
-		
+
 			this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
 			this.remoteUri = remoteUri ?? throw new ArgumentNullException(nameof(remoteUri));
 

@@ -158,39 +158,12 @@ namespace TecWare.PPSn.UI
 
 			#region -- Exec -----------------------------------------------------------
 
-			private void ExecCore(string command, string arguments, bool runasAdministrator = false)
-			{
-				var psi = new ProcessStartInfo
-				{
-					FileName = command,
-					Arguments = arguments,
-					WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-				};
-
-				if (runasAdministrator && !PpsWpfShell.IsAdministrator())
-					psi.Verb = "runas";
-
-				Process.Start(psi)?.Dispose();
-			} // proc Exec
-
-			private string FindRemoteDebugger()
-			{
-				var fi = new FileInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio 16.0", "Common7", "IDE", "Remote Debugger", "x64", "msvsmon.exe"));
-				return fi.Exists ? fi.FullName : null;
-			} // funcFindRemoteDebugger
-
 			[LuaMember]
 			public void Exec(string command, string pin)
 			{
 				if (command == null)
-					command = "cmd.exe";
-				else if (command == "rdbg")
-					command = FindRemoteDebugger();
-				else if (command == "settings")
-					command = "ms-settings:";
-
-				if (command != null)
-					PinProtected(() => ExecCore(command, null), pin, command + " ausgeführt.");
+					command = "cmd";
+				PinProtected(() => PpsDpcService.Execute(command, null), pin, command + " ausgeführt.");
 			} // proc Exec
 
 			#endregion
@@ -213,8 +186,8 @@ namespace TecWare.PPSn.UI
 			{
 				tw.Write('"');
 				tw.Write(key);
-					tw.Write('"');
-					tw.Write('=');
+				tw.Write('"');
+				tw.Write('=');
 
 				if (value == null)
 					tw.Write('-');
@@ -257,7 +230,7 @@ namespace TecWare.PPSn.UI
 					WriteRegistryValue(sw, "DefaultPassword", password);
 				}
 
-				ExecCore(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName, true);
+				PpsDpcService.Execute(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName, true);
 			} // proc ConfigAutoLogon
 
 			[LuaMember]
