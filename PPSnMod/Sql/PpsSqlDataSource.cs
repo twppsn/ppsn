@@ -2208,7 +2208,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary>Transaction commit</summary>
 			public override void Commit()
 			{
-				if (!IsCommited.HasValue)
+				if (!IsCommited.HasValue && transaction != null)
 					transaction.Commit();
 				base.Commit();
 			} // proc Commit
@@ -2218,7 +2218,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				try
 				{
-					if (!IsCommited.HasValue)
+					if (!IsCommited.HasValue && transaction != null)
 						transaction.Rollback();
 				}
 				finally
@@ -2827,9 +2827,9 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="viewOrTableName"></param>
-			/// <param name="alias"></param>
+			/// <param name="alias"></param>schweitzer
 			/// <returns></returns>
-			public PpsDataSelector CreateSelector(string viewOrTableName, string alias)
+			public PpsDataSelector CreateSelector(string viewOrTableName, string alias = null)
 				=> ((PpsSqlDataSource)DataSource).CreateSelector(Connection, viewOrTableName, alias);
 
 			/// <summary>Authentificated user.</summary>
