@@ -277,9 +277,6 @@ namespace TecWare.PPSn.UI
 			return fi.Exists ? fi.FullName : null;
 		} // funcFindRemoteDebugger
 
-		private static Process FindProcess(string name)
-			=> Process.GetProcessesByName(name).FirstOrDefault();
-
 		public static void Execute(string command, string args = null, bool runasAdministrator = false)
 		{
 			if (command == null)

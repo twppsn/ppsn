@@ -5,12 +5,22 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PPSnPdfTest"
 		xmlns:pps="http://tecware-gmbh.de/ppsn/wpf/2015"
+		xmlns:ppsd="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Desktop.UI"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <DockPanel LastChildFill="True">
 		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
 			<Button Content="Print" Click="Print_Click" />
 		</StackPanel>
+
+		<pps:PpsTreeListView DockPanel.Dock="Left" Width="400" ItemsSource="{Binding ElementName=pdfViewer,Path=Document.Bookmarks}" SelectedItemChanged="PpsTreeListView_SelectedItemChanged">
+			<pps:PpsTreeListView.ItemTemplate>
+				<HierarchicalDataTemplate DataType="{x:Type ppsd:PdfBookmark}" ItemsSource="{Binding}">
+					<TextBlock Text="{Binding Title}" />
+				</HierarchicalDataTemplate>
+			</pps:PpsTreeListView.ItemTemplate>
+		</pps:PpsTreeListView>
+
 		<pps:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" MinScaleFactor="0.1" MaxScaleFactor="20.0" CanContentScroll="True" IsManipulationEnabled="True">
 			<pps:PpsPdfViewer x:Name="pdfViewer" Zoom="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=TwoWay}" />
 		</pps:PpsScrollViewer>
