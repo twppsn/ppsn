@@ -257,9 +257,9 @@ namespace TecWare.PPSn.Data
 		internal PdfAction(PdfReader pdf, IntPtr intPtr)
 		{
 			this.pdf = pdf ?? throw new ArgumentNullException(nameof(pdf));
-			this.hAction = intPtr;
-
-			this.type = (PdfActionType)FPDFAction_GetType(hAction);
+			
+			hAction = intPtr;
+			type = (PdfActionType)FPDFAction_GetType(hAction);
 		} // ctor
 
 		/// <summary>Type of the action.</summary>
@@ -325,7 +325,7 @@ namespace TecWare.PPSn.Data
 					return PdfDestination.Create(pdf, FPDFBookmark_GetDest(pdf.Handle, hBookmark));
 			}
 		} // prop Destination
-		  /// <summary>Action of the bookmark</summary>
+		/// <summary>Action of the bookmark</summary>
 		public PdfAction Action
 		{
 			get
@@ -382,7 +382,7 @@ namespace TecWare.PPSn.Data
 					if (FPDFLink_GetAnnotRect(hLink, out var rect) == 0)
 						throw PdfReaderException.Create(page.Document.Name);
 
-					return new Rect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+					return new Rect(rect.left, rect.top, Math.Max(0, rect.right - rect.left), Math.Max(0, rect.bottom - rect.top));
 				}
 			}
 		} // prop Bounds
@@ -622,7 +622,7 @@ namespace TecWare.PPSn.Data
 			get
 			{
 				var idx = 0;
-				if (LinkEnumerate(ref idx, out var hLink))
+				while (LinkEnumerate(ref idx, out var hLink))
 				{
 					var link = PdfLink.Create(this, hLink);
 					if (link != null)
@@ -761,8 +761,8 @@ namespace TecWare.PPSn.Data
 	{
 		private readonly int pageCount;
 
-		public PpsPdfReaderPrintDocument(PdfReader pdf)
-			: base((pdf ?? throw new ArgumentNullException(nameof(pdf))).GetDrawingPrintDocument(), PpsPrinting.FindPrintTag(pdf.Properties.Keywords))
+		public PpsPdfReaderPrintDocument(PdfReader pdf, bool withAnnotations)
+			: base((pdf ?? throw new ArgumentNullException(nameof(pdf))).GetDrawingPrintDocument(withAnnotations ? PdfPageRenderFlag.Annotations : PdfPageRenderFlag.None), PpsPrinting.FindPrintTag(pdf.Properties.Keywords))
 		{
 			pageCount = pdf.PageCount;
 		} // ctor
@@ -982,16 +982,19 @@ namespace TecWare.PPSn.Data
 		private sealed class PdfPrintDocument : PrintDocument
 		{
 			private readonly PdfReader pdf;
+			private readonly PdfPageRenderFlag renderFlags;
 			private int printPage = 0;
 			private int lastPage = 0;
 
-			public PdfPrintDocument(PdfReader pdf)
+			public PdfPrintDocument(PdfReader pdf, PdfPageRenderFlag renderFlags)
 			{
 				this.pdf = pdf ?? throw new ArgumentNullException(nameof(pdf));
 				DocumentName = Path.GetFileName(pdf.Name);
 
 				PrinterSettings.MinimumPage = 1;
 				PrinterSettings.MaximumPage = pdf.PageCount;
+
+				this.renderFlags = renderFlags | PdfPageRenderFlag.ForPrinting;
 			} // ctor
 
 			protected override void OnBeginPrint(PrintEventArgs e)
@@ -1064,7 +1067,7 @@ namespace TecWare.PPSn.Data
 
 						// e.PageSettings.Landscape
 						// e.PageSettings.PrinterResolution.Kind
-						page.Render(hdc, targetX, targetY, targetWidth, targetHeight, r, PdfPageRenderFlag.ForPrinting);
+						page.Render(hdc, targetX, targetY, targetWidth, targetHeight, r, renderFlags);
 					}
 				}
 				finally
@@ -1086,12 +1089,12 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>GDI+ printing of the pdf.</summary>
 		/// <returns>Return a winforms print document.</returns>
-		internal PrintDocument GetDrawingPrintDocument()
-			=> new PdfPrintDocument(this);
+		internal PrintDocument GetDrawingPrintDocument(PdfPageRenderFlag renderFlags)
+			=> new PdfPrintDocument(this, renderFlags);
 
 		/// <summary>Get a pps print document</summary>
-		public IPpsPrintDocument GetPrintDocument()
-			=> new PpsPdfReaderPrintDocument(this);
+		public IPpsPrintDocument GetPrintDocument(bool withAnnotations = true)
+			=> new PpsPdfReaderPrintDocument(this, withAnnotations);
 
 		#endregion
 

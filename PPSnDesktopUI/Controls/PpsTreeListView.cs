@@ -122,7 +122,6 @@ namespace TecWare.PPSn.Controls
 				return;
 			SelectNode(Items[0]);
 		} // proc EnsureSelection
-
 	} // class PpsTreeListView
 
 	#endregion
@@ -138,7 +137,6 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public PpsTreeListViewItem()
 		{
-			//Loaded += OnLoaded;
 		} // ctor
 
 		/// <summary></summary>
@@ -155,25 +153,6 @@ namespace TecWare.PPSn.Controls
 			base.OnPreviewMouseRightButtonDown(e);
 			IsSelected = true;
 		} // proc OnPreviewMouseRightButtonDown
-
-		//private void OnLoaded(object sender, RoutedEventArgs e)
-		//	=> UpdateAlternationIndex();
-
-		///// <summary>Overridden to update the Alternation index. Passes to base-class</summary>
-		///// <param name="e">Arguments</param>
-		//protected override void OnExpanded(RoutedEventArgs e)
-		//{
-		//	base.OnExpanded(e);
-		//	UpdateAlternationIndex();
-		//} // proc OnExpanded
-
-		///// <summary>Overridden to update the Alternation index. Passes to base-class</summary>
-		///// <param name="e">Arguments</param>
-		//protected override void OnCollapsed(RoutedEventArgs e)
-		//{
-		//	base.OnCollapsed(e);
-		//	UpdateAlternationIndex();
-		//} // proc OnCollapsed
 
 		/// <summary>Overridden to update the Alternation index or select an added item. Passes to base-class</summary>
 		/// <param name="e">Arguments</param>
@@ -192,24 +171,17 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc OnItemChanged
 
-		//private void UpdateAlternationIndex()
-		//{
-		//	// update index
-		//	var parent = ParentTreeView;
-		//	if (parent != null)
-		//		AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)parent, 0);
-		//} // proc UpdateAlternationIndex
-
 		#region -- ItemSelection --------------------------------------------------------
 
 		private void SelectNode(object item)
 		{
-			var node = ItemContainerGenerator.ContainerFromItem(item) as PpsTreeListViewItem;
-			if (node == null)
+			if (ItemContainerGenerator.ContainerFromItem(item) is PpsTreeListViewItem node)
+			{
+				node.IsSelected = true;
+				node.BringIntoView();
+			}
+			else
 				throw new ArgumentNullException("SelectNode TreeListViewItem");
-
-			node.IsSelected = true;
-			node.BringIntoView();
 		} // proc SelectNode
 
 		private void SelectAddedNode(object item)
@@ -251,7 +223,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		private ItemsControl ParentItemControl => ItemsControl.ItemsControlFromItemContainer(this);
+		private ItemsControl ParentItemControl => ItemsControlFromItemContainer(this);
 
 		private PpsTreeListView ParentTreeView
 		{
@@ -262,52 +234,12 @@ namespace TecWare.PPSn.Controls
 				{
 					if (parent is PpsTreeListView)
 						return (PpsTreeListView)parent;
-					parent = ItemsControl.ItemsControlFromItemContainer(parent);
+					parent = ItemsControlFromItemContainer(parent);
 				}
 				return null;
 			}
 		} // prop ParentTreeView
 	} // class PpsTreeListViewItem
-
-	#endregion
-
-	#region -- class AlternationExtensions ----------------------------------------------
-
-	internal static class AlternationExtensions
-	{
-		private static readonly MethodInfo SetAlternationIndexMethodInfo;
-
-		static AlternationExtensions()
-		{
-			SetAlternationIndexMethodInfo = typeof(ItemsControl).GetMethod("SetAlternationIndex", BindingFlags.Static | BindingFlags.NonPublic);
-			if (SetAlternationIndexMethodInfo == null)
-				throw new ArgumentNullException("SetAlternationIndexMethodInfo");
-		} // sctor
-
-		public static int SetAlternationIndexRecursively(ItemsControl control, int firstAlternationIndex)
-		{
-			// check for alternating
-			var alternationCount = control.AlternationCount;
-			if (alternationCount == 0)
-				return 0;
-
-			// set the index for the controls
-			foreach (var item in control.Items)
-			{
-				var container = control.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
-				if (container != null)
-				{
-					var nextAlternation = firstAlternationIndex++ % alternationCount;
-					SetAlternationIndexMethodInfo.Invoke(null, new object[] { container, nextAlternation });
-					if (container.IsExpanded)
-						firstAlternationIndex = SetAlternationIndexRecursively(container, firstAlternationIndex);
-				}
-			}
-
-			return firstAlternationIndex;
-		}
-
-	} // class AlternationExtensions
 
 	#endregion
 
@@ -335,7 +267,8 @@ namespace TecWare.PPSn.Controls
 			return new Thickness(level * indentSize, 0, 0, 0);
 		} // func Convert
 
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) { throw new System.NotSupportedException(); }
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) 
+			=> throw new NotSupportedException();
 	} // class PpsTreeViewLevelToIndentConverter
 
 	#endregion
