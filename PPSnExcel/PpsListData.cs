@@ -618,7 +618,7 @@ namespace PPSnExcel
 
 			private bool IsKeyPattern(long value, string fmt, out string key)
 			{
-				if (fmt != null && fmt.All(c => c == '0'))
+				if (fmt != null && fmt.Length >= 3 && fmt.All(c => c == '0'))
 				{
 					key = value.ToString(fmt);
 					return true;
