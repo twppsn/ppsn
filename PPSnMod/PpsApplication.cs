@@ -93,6 +93,21 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
+	#region -- interface IPpsClientApplicationSource ----------------------------------
+
+	/// <summary>Source information to a client application.</summary>
+	public interface IPpsClientApplicationSource : IPpsClientApplicationInfo
+	{
+		/// <summary>Type of the source</summary>
+		string Type { get; }
+		/// <summary>Source</summary>
+		string Source { get; }
+		/// <summary>Is there a active source.</summary>
+		bool HasSource { get; }
+	} // interface IPpsClientApplicationSource
+
+	#endregion
+
 	#region -- class PpsClientApplicationInfo -----------------------------------------
 
 	/// <summary>Implementation of <see cref="IPpsClientApplicationInfo"/> </summary>
@@ -186,7 +201,7 @@ namespace TecWare.PPSn.Server
 
 	/// <summary>Retrieves a application info from an application source.</summary>
 	public delegate IPpsClientApplicationInfo PpsClientApplicationInfoDelegate(PpsClientApplicationSource source);
-	
+
 	#endregion
 
 	/// <summary>Base service provider, for all pps-moduls:
@@ -198,7 +213,7 @@ namespace TecWare.PPSn.Server
 	{
 		/// <summary>Security token for dpc tasks</summary>
 		public const string SecurityDpc = "dpc.sec";
-		
+
 		private const RegexOptions clientOptionHookRegexOptions = RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled;
 		private const string propertyCategory = "Applications";
 		private const string refreshAppsAction = "refreshApp";
@@ -264,18 +279,18 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Client application information</summary>
 		[DEListTypeProperty("appinfo")]
-		private sealed class PpsClientApplicationFile : IPpsClientApplicationInfo
+		private sealed class PpsClientApplicationFile : IPpsClientApplicationInfo, IPpsClientApplicationSource
 		{
 			private readonly string type;
 			private readonly List<PpsClientApplicationSource> sources = new List<PpsClientApplicationSource>();
 			private int activeSourceIndex = -1;
 
 			private IPpsClientApplicationInfo info;
-			
+
 			internal PpsClientApplicationFile(string type, PpsClientApplicationSource source, IPpsClientApplicationInfo info)
 			{
 				this.type = type ?? throw new ArgumentNullException(nameof(type));
-				
+
 				sources.Add(source ?? throw new ArgumentNullException(nameof(source)));
 				activeSourceIndex = 0;
 
@@ -380,6 +395,7 @@ namespace TecWare.PPSn.Server
 
 			/// <summary>Is a source active.</summary>
 			internal bool HasActiveSource => activeSourceIndex >= 0 && activeSourceIndex < sources.Count;
+			bool IPpsClientApplicationSource.HasSource => HasActiveSource;
 
 			internal IEnumerable<PpsClientApplicationSource> Sources => sources;
 		} // class PpsClientApplicationInfo
@@ -418,7 +434,7 @@ namespace TecWare.PPSn.Server
 
 				var lastUpdate = x.GetAttribute("last", 0L);
 				this.lastUpdate = lastUpdate > 0 ? DateTime.FromFileTimeUtc(lastUpdate) : DateTime.MinValue;
-				
+
 				version = x.GetAttribute("v", null);
 
 				lastLng = x.GetAttribute("lng", Double.NaN);
@@ -621,7 +637,7 @@ namespace TecWare.PPSn.Server
 
 			databaseLibrary = new PpsDatabaseLibrary(this);
 			objectsLibrary = new PpsObjectsLibrary(this);
- 
+
 			// register shortcut for text
 			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
@@ -656,7 +672,7 @@ namespace TecWare.PPSn.Server
 
 			PublishItem(seenClients = new DEList<PpsSeenClient>(this, "tw_ppsn_clients", "Last seen clients"));
 			PublishItem(clientApplicationTypes = new DEList<PpsClientApplicationType>(this, "tw_ppsn_client_types", "Client types"));
-			PublishItem(clientApplicationInfos =  DEDictionary<string, PpsClientApplicationFile>.CreateSortedList(this, "tw_ppsn_client_infos", "Client applications"));
+			PublishItem(clientApplicationInfos = DEDictionary<string, PpsClientApplicationFile>.CreateSortedList(this, "tw_ppsn_client_infos", "Client applications"));
 
 			PublishItem(new DEConfigItemPublicAction(refreshAppsAction) { DisplayName = "Refresh Application Sources" });
 
@@ -720,7 +736,7 @@ namespace TecWare.PPSn.Server
 			lastConfigurationTimeStamp = config.LastWrite;
 
 			databaseLibrary.ClearCache();
-			
+
 			// restart main thread
 			initializationProcess = Task.Run(new Action(InitializeApplication));
 
@@ -1026,7 +1042,7 @@ namespace TecWare.PPSn.Server
 		private static Uri CreateRelativePath(string baseUri, string baseDirectory, FileInfo fileInfo, string alternativeName = null)
 		{
 
-			var baseDirectoryLength = IsPathSeperator(baseDirectory, baseDirectory.Length - 1) ? baseDirectory.Length - 1: baseDirectory.Length;
+			var baseDirectoryLength = IsPathSeperator(baseDirectory, baseDirectory.Length - 1) ? baseDirectory.Length - 1 : baseDirectory.Length;
 			var fullPath = Path.Combine(fileInfo.DirectoryName, alternativeName ?? fileInfo.Name);
 
 			if (!IsPathSeperator(fullPath, baseDirectoryLength))
@@ -1233,15 +1249,15 @@ namespace TecWare.PPSn.Server
 					if (fi.Exists)
 					{
 						var xDoc = XDocument.Load(fi.FullName);
-						foreach (var x in xDoc.Root.Elements("dev"))
+						foreach (var x in xDoc.Root.Elements("client"))
 						{
-							var devId = x.GetAttribute("id", null);
-							if (String.IsNullOrEmpty(devId))
+							var clientId = x.GetAttribute("id", null);
+							if (String.IsNullOrEmpty(clientId))
 								continue;
 
-							var idx = FindSeenClientIndex(devId);
+							var idx = FindSeenClientIndex(clientId);
 							if (idx == -1)
-								seenClients.Add(new PpsSeenClient(devId, x));
+								seenClients.Add(new PpsSeenClient(clientId, x));
 						}
 					}
 				}
@@ -1285,6 +1301,42 @@ namespace TecWare.PPSn.Server
 				SaveSeenClients();
 		} // proc EnqueueSaveSeenClients
 
+		/// <summary></summary>
+		/// <param name="clientFilter"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public IEnumerable<PpsSeenClient> EnumerateDevices(string clientFilter = null)
+		{
+			using (seenClients.EnterReadLock())
+			{
+				var filterExpr = Procs.GetFilterFunction(clientFilter, true);
+				foreach (var c in seenClients)
+				{
+					if (filterExpr(c.ClientId))
+						yield return c;
+				}
+			}
+		} // func EnumerateDevices
+
+		/// <summary></summary>
+		/// <param name="clientId"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsSeenClient GetSeenClient(string clientId, bool throwException = true)
+		{
+			using (seenClients.EnterReadLock())
+			{
+				var idx = FindSeenClientIndex(clientId);
+				if (idx >= 0)
+					return seenClients[idx];
+				else if (throwException)
+					throw new ArgumentOutOfRangeException(nameof(clientId), clientId, $"Client '{clientId}' not seen.");
+				else
+					return null;
+			}
+		} // func GetSeenClient
+
 		/// <summary>Remove a device from the list.</summary>
 		/// <param name="clientId"></param>
 		[LuaMember]
@@ -1300,6 +1352,31 @@ namespace TecWare.PPSn.Server
 				}
 			}
 		} // proc RemoveSeenClient
+
+		/// <summary>Set the log request for the device id.</summary>
+		/// <param name="clientFilter"></param>
+		/// <param name="dumpAppInfo"></param>
+		[LuaMember]
+		public void RequestLog(string clientFilter, bool dumpAppInfo = false)
+		{
+			foreach (var dev in EnumerateDevices(clientFilter))
+			{
+				if (dumpAppInfo)
+					dev.GetDumpAppStateFlag();
+				else
+					dev.SetSendLogFlag();
+			}
+		} // proc Request
+
+		/// <summary>Set the flag for the repeat tone.</summary>
+		/// <param name="clientFilter"></param>
+		/// <param name="repeat"></param>
+		[LuaMember]
+		public void RequestTone(string clientFilter, int repeat)
+		{
+			foreach (var dev in EnumerateDevices(clientFilter))
+				dev.SetAlarmRepeatFlag(repeat);
+		} // proc RequestTone
 
 		/// <summary>Return last seen clients</summary>
 		/// <param name="dataSource"></param>
@@ -1328,7 +1405,7 @@ namespace TecWare.PPSn.Server
 
 		private IEnumerable<(string key, object value)> ColorClientOptionHook(IDEWebScope r, Match keyMatch, string value)
 			=> GetColors(value).Select(c => new ValueTuple<string, object>(keyMatch.Value + "." + c.Name, ColorTranslator.ToHtml(c.Color)));
-				
+
 		private (int idx, Match) FindClientOptionHookForKey(string key, int startAt)
 		{
 			for (var i = startAt; i >= 0; i--)
@@ -1372,7 +1449,12 @@ namespace TecWare.PPSn.Server
 		private int FindSeenClientIndex(string clientId)
 			=> seenClients.FindIndex(c => String.Compare(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase) == 0);
 
-		private PpsSeenClient GetSeenClient(IDEWebRequestScope r, bool throwException)
+		/// <summary>Return the client information for the request.</summary>
+		/// <param name="r"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		/// <exception cref="HttpResponseException"></exception>
+		public PpsSeenClient GetSeenClient(IDEWebRequestScope r, bool throwException = true)
 		{
 			var clientId = r.GetProperty("id", null);
 
@@ -1398,7 +1480,7 @@ namespace TecWare.PPSn.Server
 			EnqueueSaveSeenClients();
 
 			return seenClients[clientIdx];
-		} // func GetLastSeenClient
+		} // func GetSeenClient
 
 		private XElement GetClientOptionsByDevId(string clientId)
 		{
@@ -1594,14 +1676,14 @@ namespace TecWare.PPSn.Server
 				);
 				lastTick = -1;
 			}
-			
+
 			// set dynamic options, that may change, only if we have a real device
 			if (device != null)
 				SetDynamicClientOptions(device, options);
 
 			// ask for more options
 			CallTableMethods("DeviceOptions", options, deviceId, lastTick);
-			
+
 			lastTick = serverTick;
 			return options;
 		} // func GetClientOptionsCore
@@ -1634,7 +1716,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- Dpc - actions ------------------------------------------------------
+		#region -- Dpc - Actions ------------------------------------------------------
 
 		private static void GetReceiveLogParamater(IDEWebRequestScope r, string raw, out string extention, out bool readText)
 		{
@@ -1856,11 +1938,8 @@ namespace TecWare.PPSn.Server
 			return x;
 		} // func GetMimeTypesInfo
 
-		private static bool WriteTableOption(XmlWriter xml, string n, object value, bool writeEmptyValue, int stackCount)
+		private static void WriteTableOptionXml(XmlWriter xml, string name, object value, bool writeEmptyValue)
 		{
-			if (stackCount > 100)
-				throw new StackOverflowException("User configuration has an recursion.");
-
 			int GetStringType(string v)
 			{
 				var r = 0;
@@ -1882,6 +1961,58 @@ namespace TecWare.PPSn.Server
 				return r;
 			} // func GetStringType
 
+			xml.WriteStartElement(name);
+			if (value != null)
+			{
+				if (value is string str)
+				{
+					switch (GetStringType(str))
+					{
+						case 1:
+							xml.WriteValue(str);
+							break;
+						case 2:
+							xml.WriteCData(str);
+							break;
+						case 3:
+							xml.WriteValue(Convert.ToBase64String(Encoding.UTF8.GetBytes(str)));
+							break;
+						default:
+							xml.WriteValue(str);
+							break;
+					}
+				}
+				else if (value is byte[] data)
+					xml.WriteValue(Convert.ToBase64String(data));
+				else
+					xml.WriteValue(value.ChangeType<string>());
+			}
+			xml.WriteEndElement();
+		} // proc WriteTableOptionXml
+
+		private static void WriteTableOptionText(TextWriter tw, string name, object value, bool writeEmptyValue)
+		{
+			tw.Write(name);
+			tw.Write('=');
+			switch (value)
+			{
+				case byte[] b:
+					tw.WriteLine(Convert.ToBase64String(b));
+					break;
+				case string s:
+					tw.WriteLine(Procs.EscapeSpecialChars(s));
+					break;
+				default:
+					tw.WriteLine(value.ChangeType<string>());
+					break;
+			}
+		} // proc WriteTableOptionText
+
+		private static bool WriteTableOption(XmlWriter xml, TextWriter tw, Stack<string> nameStack, object value, bool writeEmptyValue)
+		{
+			if (nameStack.Count > 100)
+				throw new StackOverflowException("User configuration has an recursion.");
+
 			if (!writeEmptyValue && value == null)
 				return false;
 
@@ -1889,60 +2020,52 @@ namespace TecWare.PPSn.Server
 			{
 				if (t.Members.Count > 0 || t.ArrayList.Count > 0)
 				{
-					xml.WriteStartElement(n);
-					WriteTableOptions(xml, t, stackCount + 1);
-					xml.WriteEndElement();
+					if (xml != null)
+						xml.WriteStartElement(nameStack.Peek());
+					WriteTableOptions(xml, tw, t, nameStack);
+					if (xml != null)
+						xml.WriteEndElement();
 				}
 			}
 			else
 			{
-				xml.WriteStartElement(n);
-				if (value != null)
-				{
-					if (value is string str)
-					{
-						switch (GetStringType(str))
-						{
-							case 1:
-								xml.WriteValue(str);
-								break;
-							case 2:
-								xml.WriteCData(str);
-								break;
-							case 3:
-								xml.WriteValue(Convert.ToBase64String(Encoding.UTF8.GetBytes(str)));
-								break;
-							default:
-								xml.WriteValue(str);
-								break;
-						}
-					}
-					else if (value is byte[] data)
-						xml.WriteValue(Convert.ToBase64String(data));
-					else
-						xml.WriteValue(value.ChangeType<string>());
-				}
-				xml.WriteEndElement();
+				if (tw != null)
+					WriteTableOptionText(tw, String.Join(".", nameStack.Reverse()), value, writeEmptyValue);
+				else if (xml != null)
+					WriteTableOptionXml(xml, nameStack.Peek(), value, writeEmptyValue);
 			}
 
 			return true;
 		} // proc WriteTableOption
 
-		private static void WriteTableOptions(XmlWriter xml, LuaTable options, int stackCount)
+		private static void WriteTableOptions(XmlWriter xml, TextWriter sw, LuaTable options, Stack<string> nameStack)
 		{
 			// write key/value pairs
 			foreach (var kv in options.Members)
-				WriteTableOption(xml, kv.Key, kv.Value, true, stackCount);
+			{
+				nameStack.Push(kv.Key);
+				WriteTableOption(xml, sw, nameStack, kv.Value, true);
+				nameStack.Pop();
+			}
 
 			// index value 0-10, will be all checked
 			var i = 0;
 			while (true)
 			{
-				if (!WriteTableOption(xml, "i" + i.ToString(), options[i], false, stackCount) && i > 10)
+				nameStack.Push(xml != null ? "i" + i.ToString() : i.ToString());
+				if (!WriteTableOption(xml, sw, nameStack, options[i], false) && i > 10)
+				{
+					nameStack.Pop();
 					break;
+				}
+				else
+					nameStack.Pop();
 				i++;
 			}
 		} // proc WriteTableOptions
+
+		private static void WriteTableOptions(XmlWriter xml, TextWriter sw, LuaTable options)
+			=> WriteTableOptions(xml, sw, options, new Stack<string>(10));
 
 		private void WriteApplicationInfo(IDEWebRequestScope r, string applicationName, bool returnAll)
 		{
@@ -1990,13 +2113,26 @@ namespace TecWare.PPSn.Server
 
 					// add options
 					xml.WriteStartElement("options");
-					WriteTableOptions(xml, options, 0);
+					WriteTableOptions(xml, null, options);
 					xml.WriteEndElement();
 
 					xml.WriteEndElement();
 				}
 			}
 		} // func WriteApplicationInfo
+
+		private void WriteApplicationInfoAsText(IDEWebRequestScope r)
+		{
+			// Security
+			r.DemandToken(SecurityDpc);
+
+			// Optionen aus Standard lesen
+			var options = GetClientOptions(r);
+
+			// write output as text
+			using (var sw = r.GetOutputTextWriter(MimeTypes.Text.Plain, Encoding.UTF8))
+				WriteTableOptions(null, sw, options);
+		} // proc WriteApplicationInfoAsText
 
 		private void WriteUserInfo(IDEWebRequestScope r, LuaTable userOptions)
 		{
@@ -2010,7 +2146,7 @@ namespace TecWare.PPSn.Server
 					if (kv.Value is LuaTable t)
 					{
 						xml.WriteStartElement(kv.Key);
-						WriteTableOptions(xml, t, 0);
+						WriteTableOptions(xml, null, t);
 						xml.WriteEndElement();
 					}
 				}
@@ -2084,6 +2220,9 @@ namespace TecWare.PPSn.Server
 		{
 			switch (r.RelativeSubPath)
 			{
+				case "info":
+					await Task.Run(() => WriteApplicationInfoAsText(r));
+					return true;
 				case "info.xml":
 					// additional options
 					// id={clientId}

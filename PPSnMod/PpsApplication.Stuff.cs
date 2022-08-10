@@ -50,19 +50,28 @@ namespace TecWare.PPSn.Server
 		private static LuaTable GetTableFromPathCore(LuaTable table, string tablePath, int offset, int count, bool writable)
 		{
 			var cur = table;
-			
+
+			LuaTable GetOrCreateTable(string k)
+			{
+				if (cur[k] is LuaTable t)
+					return t;
+				else if (writable)
+				{
+					t = new LuaTable();
+					cur[k] = t;
+					return t;
+				}
+				else
+					return null;
+			} // func GetOrCreateTable
+
 			var lastDot = offset - 1;
-			var endAt = offset + count  - 1;
+			var endAt = offset + count - 1;
 			while (offset <= endAt)
 			{
 				if (tablePath[offset] == '.')
 				{
-					var k = tablePath.Substring(lastDot + 1, offset - lastDot + 1);
-					if (cur[k] is LuaTable t)
-						cur = t;
-					else if (writable)
-						cur[k] = cur = new LuaTable();
-					else
+					if ((cur = GetOrCreateTable(tablePath.Substring(lastDot + 1, offset - lastDot - 1))) == null)
 						return null;
 
 					lastDot = offset;
@@ -71,7 +80,7 @@ namespace TecWare.PPSn.Server
 				offset++;
 			}
 
-			return cur;
+			return GetOrCreateTable(tablePath.Substring(lastDot + 1));
 		} // func GetTableFromPathCore
 
 		private static LuaTable GetTableFromPathCore(LuaTable table, string tablePath, bool writable)
@@ -102,20 +111,30 @@ namespace TecWare.PPSn.Server
 		public static LuaTable GetTableWithRows(IEnumerable<IDataRow> rows)
 		{
 			var t = new LuaTable();
-			foreach(var r in rows)
+			foreach (var r in rows)
 				t.ArrayList.Add(GetTableCore(r));
 			return t;
 		} // func GetTableWithRows
 
 		/// <summary>Get a structured property.</summary>
-		/// <param name="table"></param>
+		/// <param name="value"></param>
 		/// <param name="propertyPath"></param>
+		/// <param name="default"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public static object GetTableProperty(LuaTable table, string propertyPath)
+		public static object GetProperty(object value, string propertyPath, object @default = null)
 		{
-			TryGetTableProperty(table, propertyPath, out var v);
-			return v;
+			if (String.IsNullOrEmpty(propertyPath))
+				return value;
+
+			if (value is LuaTable t)
+				return TryGetTableProperty(t, propertyPath, out var r) ? r : @default;
+			else if (value is IDataRow row)
+				return TryGetTableProperty(row.ToTable(), propertyPath, out var r) ? r : @default;
+			else if (value is IPropertyReadOnlyDictionary props)
+				return TryGetTableProperty(props.ToTable(), propertyPath, out var r) ? r : @default;
+			else
+				throw new ArgumentException($"First argument must be a {nameof(IPropertyReadOnlyDictionary)}, {nameof(IDataRow)} or {nameof(LuaTable)}", nameof(value));
 		} // func GetTableProperty
 
 		/// <summary></summary>
@@ -123,7 +142,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="propertyPath"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public static bool TryGetTableProperty(LuaTable table, string propertyPath,out object value)
+		public static bool TryGetTableProperty(LuaTable table, string propertyPath, out object value)
 		{
 			if (table == null)
 			{
