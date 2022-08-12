@@ -2018,7 +2018,7 @@ namespace TecWare.PPSn.Server
 
 			if (value is LuaTable t)
 			{
-				if (t.Members.Count > 0 || t.ArrayList.Count > 0)
+				if (t.Values.Count > 0)
 				{
 					if (xml != null)
 						xml.WriteStartElement(nameStack.Peek());
