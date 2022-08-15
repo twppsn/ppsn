@@ -67,6 +67,7 @@ namespace TecWare.PPSn
 		private sealed class AppStartArguments
 		{
 			public int WaitProcessId { get; set; } = -1;
+			public int WaitTime { get; set; } = -1;
 			public IPpsShellInfo ShellInfo { get; set; } = null;
 			public ICredentials UserInfo { get; set; } = null;
 			public bool DoAutoLogin { get; set; } = false;
@@ -736,6 +737,17 @@ namespace TecWare.PPSn
 			await Task.Run(new Action(process.WaitForExit));
 		} // func WaitForProcessAsync
 
+		private static async Task WaitForTimeAsync(IPpsProgress progress, int timeout)
+		{
+			progress.Text = String.Format($"Warte ({(timeout / 1000.0):N1}sec)...");
+			for (var i = 0; i < timeout; i++)
+			{
+				await Task.Delay(100);
+				i += 100;
+				progress.Value = i * 1000 / timeout;
+			}
+		} // func WaitForProcessAsync
+
 		private static void GetApplicationModulParameter(IPpsShell shell, string applicationModul, out Type paneType, out LuaTable paneArguments)
 		{
 			if (!String.IsNullOrEmpty(applicationModul))
@@ -781,6 +793,13 @@ namespace TecWare.PPSn
 			{
 				using (var progress = splashWindow.CreateProgress(false))
 					await WaitForProcessAsync(progress, process);
+			}
+
+			// wait for timeout
+			if (args.WaitTime > 0)
+			{
+				using (var progress = splashWindow.CreateProgress(false))
+					await WaitForTimeAsync(progress, args.WaitTime);
 			}
 
 			try
@@ -1067,6 +1086,10 @@ namespace TecWare.PPSn
 						case 'w': // wait process id
 							if (Int32.TryParse(arg.Substring(2), out var pid))
 								r.WaitProcessId = pid;
+							break;
+						case 'd': // delay
+							if (Int32.TryParse(arg.Substring(2), out var timeout))
+								r.WaitTime = timeout;
 							break;
 						case '-':
 							if (arg == "--nosync")
