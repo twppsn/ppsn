@@ -1622,11 +1622,19 @@ namespace TecWare.PPSn.Server
 			table.SetValue(localKey, value, rawSet: true);
 		} // proc SetClientOptionVlaue
 
-		private LuaTable ParseClientOptions(IDEWebScope r, LuaTable options, bool emitSecureOptions, XElement xOptions)
+
+		private LuaTable ParseClientOptions(IDEWebScope r, LuaTable options, bool emitSecureOptions, XElement xOptions, IList<string> processedOptions)
 		{
+			bool IsNotProcessed(string strictId)
+			{
+				if (processedOptions.Contains(strictId))
+					return false;
+				processedOptions.Add(strictId);
+				return true;
+			} // func IsAlreadyProcessed
+
 			if (xOptions == null)
 				return options;
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
 
@@ -1645,7 +1653,11 @@ namespace TecWare.PPSn.Server
 			{
 				var refArray = refs.Split(new char[] { ' ', ';' }, StringSplitOptions.RemoveEmptyEntries);
 				for (var i = 0; i < refArray.Length; i++)
-					options = ParseClientOptions(r, options, emitSecureOptions, GetClientOptionsById(refArray[i]));
+				{
+					var strictId = refArray[i];
+					if (IsNotProcessed(strictId))
+						options = ParseClientOptions(r, options, emitSecureOptions, GetClientOptionsById(strictId), processedOptions);
+				}
 			}
 			return options;
 		} // proc ParseClientOptions
@@ -1672,7 +1684,8 @@ namespace TecWare.PPSn.Server
 					DEScope.GetScopeService<IDEWebScope>(false),
 					options,
 					emitSecureOptions,
-					GetClientOptionsByDevId(deviceId)
+					GetClientOptionsByDevId(deviceId),
+					new SortedList<string>(StringComparer.OrdinalIgnoreCase)
 				);
 				lastTick = -1;
 			}
