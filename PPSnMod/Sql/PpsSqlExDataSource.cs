@@ -384,7 +384,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlSynchronizationTransaction --------------------------------
 
-		private sealed class SqlSynchronizationTransaction : PpsDataSynchronization
+		private sealed class SqlSynchronizationTransaction : PpsMsSqlDataSynchronization
 		{
 			#region -- class SqlSynchronizationBatch ----------------------------------
 
@@ -444,7 +444,7 @@ namespace TecWare.PPSn.Server.Sql
 			#region -- Ctor/Dtor --------------------------------------------------------
 
 			public SqlSynchronizationTransaction(PpsApplication application, IPpsSqlConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen)
-				: base(application, connection, leaveConnectionOpen)
+				: base(application, connection, lastSyncronizationStamp, leaveConnectionOpen)
 			{
 				Connection.EnsureConnectionAsync(null, true).AwaitTask();
 

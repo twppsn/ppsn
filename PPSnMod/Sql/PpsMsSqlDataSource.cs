@@ -14,14 +14,21 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Security;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Fizzler;
+using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.SqlServer.Server;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -285,7 +292,7 @@ namespace TecWare.PPSn.Server.Sql
 
 				// find the connected table
 				var tableInfo = SqlDataSource.ResolveTableByName<SqlTableInfo>(name, true);
-				
+
 				var cmd = CreateCommand(CommandType.Text, parameter);
 				try
 				{
@@ -402,7 +409,7 @@ namespace TecWare.PPSn.Server.Sql
 					// where
 					commandText.Append(" WHERE ");
 					first = true;
-					foreach(var p in tableInfo.PrimaryKeys)
+					foreach (var p in tableInfo.PrimaryKeys)
 					{
 						CreateWhereParameter(commandText, cmd, p, first, p.Name, false);
 						first = false;
@@ -743,6 +750,458 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class PpsMsSqlSynchronizationCache ---------------------------------
+
+		private sealed class PpsMsSqlSynchronizationCache
+		{
+			private readonly PpsMsSqlDataSource dataSource;
+			private AsyncQueue changeTrackingActions = null;
+
+			private readonly object changeTrackingLock = new object();
+			private long databaseCreationTime = -1L;
+			private long lastChangeTrackingId = -1;
+			private readonly Dictionary<long, long> minValidVersions = new Dictionary<long, long>();
+
+			public PpsMsSqlSynchronizationCache(PpsMsSqlDataSource dataSource)
+			{
+				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+			} // ctor
+
+			public bool TryGetMinValidVersion(SqlTableInfo tableInfo, out long minValidVersion, out long currentVersion, out long databaseCreationTime)
+			{
+				lock (changeTrackingLock)
+				{
+					databaseCreationTime = this.databaseCreationTime;
+					currentVersion = lastChangeTrackingId;
+					return minValidVersions.TryGetValue(tableInfo.ObjectId, out minValidVersion);
+				}
+			} // func TryGetMinValidVersion
+
+			#region -- RefreshChangeTrackingAsync -------------------------------------
+
+			private async Task RefreshChangeTrackingCoreAsync(TaskCompletionSource<bool> tcs)
+			{
+				Debug.WriteLine("START: RefreshChangeTrackingCoreAsync " + dataSource.Name);
+				try
+				{
+					var isChanged = false;
+
+					if (databaseCreationTime < 0L)
+					{
+						using (var cmd = dataSource.masterConnection.CreateCommand())
+						{
+							cmd.CommandText = "SELECT create_date FROM sys.databases WHERE database_id = DB_ID()";
+							databaseCreationTime = ((DateTime)await cmd.ExecuteScalarAsync()).ToFileTimeUtc();
+						}
+					}
+
+					using (var cmd = dataSource.masterConnection.CreateCommand())
+					{
+						cmd.Parameters.AddWithValue("@LASTVERSION", lastChangeTrackingId);
+						cmd.CommandText = "BEGIN\r\n" +
+							"\tDECLARE @CURVERSION BIGINT;\r\n" +
+							"\tSET @CURVERSION = change_tracking_current_version();\r\n" +
+							"\tIF  @LASTVERSION < @CURVERSION\r\n" +
+							"\t\tSELECT @CURVERSION, object_id, min_valid_version from sys.change_tracking_tables;\r\n" +
+							"\tELSE\r\n" +
+							"\t\tSELECT @CURVERSION\r\n" +
+							"END;";
+
+						using (var r = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult))
+						{
+							var newChangeTrackingVersion = -1L;
+							var newMinValidVersion = new List<Tuple<int, long>>(minValidVersions.Count);
+
+							while (await r.ReadAsync())
+							{
+								if (r.FieldCount > 1)
+									newMinValidVersion.Add(Tuple.Create(r.GetInt32(1), r.GetInt64(2)));
+								newChangeTrackingVersion = r.IsDBNull(0) ? 0 : r.GetInt64(0);
+							}
+
+							if (newChangeTrackingVersion != -1L)
+							{
+								lock (changeTrackingLock)
+								{
+									if (newChangeTrackingVersion != lastChangeTrackingId)
+										lastChangeTrackingId = newChangeTrackingVersion;
+
+									for (var i = 0; i < newMinValidVersion.Count; i++)
+										minValidVersions[newMinValidVersion[i].Item1] = newMinValidVersion[i].Item2;
+								}
+							}
+						}
+					}
+
+					// notify clients, something has changed
+					if (isChanged)
+						dataSource.Application.FireDataChangedEvent(dataSource.Name);
+
+					if (tcs != null)
+						tcs.SetResult(true);
+				}
+				catch (Exception e)
+				{
+					if (tcs != null)
+						tcs.SetException(e);
+					else
+						throw;
+				}
+				finally
+				{
+					Debug.WriteLine("END: RefreshChangeTrackingCoreAsync " + dataSource.Name);
+				}
+			} // proc RefreshChangeTrackingCoreAsync
+
+			public void CreateQueue()
+				=> changeTrackingActions = new AsyncQueue();
+			
+			public Task RefreshChangeTrackingAsync()
+			{
+				if (changeTrackingActions != null)
+				{
+					var tcs = new TaskCompletionSource<bool>();
+					changeTrackingActions.Enqueue(() => RefreshChangeTrackingCoreAsync(tcs));
+					return tcs.Task;
+				}
+				else
+					return RefreshChangeTrackingCoreAsync(null);
+			} // proc RefreshChangeTrackingAsync
+
+			#endregion
+
+			public long CurerntVersion => lastChangeTrackingId;
+		} // class PpsMsSqlSynchronizationCache
+
+		#endregion
+
+		#region -- class PpsMsSqlSynchronizationBatchParts ----------------------------
+
+		private sealed class PpsMsSqlSynchronizationBatchParts : IPpsDataSynchronizationBatch
+		{
+			#region -- class DataRowProxy -----------------------------------------
+
+			private sealed class DataRowProxy : IDataRow
+			{
+				private readonly PpsMsSqlSynchronizationBatchParts owner;
+
+				public DataRowProxy(PpsMsSqlSynchronizationBatchParts owner)
+				{
+					this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
+				} // ctor
+
+				private object GetValue(int columnIndex)
+				{
+					var fieldIndex = owner.columnMapping[columnIndex];
+					var reader = GetReader();
+					if (owner.tableInfo.ChangeTracking == SqlTableChangeTracking.Rows
+						|| owner.columnIsPrimary[columnIndex])
+						return reader.GetValue(fieldIndex);
+					else
+					{
+						var isChanged = reader.GetInt32(fieldIndex + 1) != 0;
+						return isChanged ? reader.GetValue(fieldIndex) : null;
+					}
+				} // func GetValue
+
+				public bool TryGetProperty(string name, out object value)
+				{
+					var idx = Array.FindIndex(owner.columns, c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+					if (idx == -1)
+					{
+						value = null;
+						return false;
+					}
+					else
+					{
+						value = GetValue(idx);
+						return true;
+					}
+				} // func TryGetProperty
+
+				public object this[int columnIndex] => GetValue(columnIndex);
+
+				public object this[string columnName, bool throwException = true]
+				{
+					get
+					{
+						if (TryGetProperty(columnName, out var v))
+							return v;
+						else if (throwException)
+							throw new ArgumentOutOfRangeException(nameof(columnName), columnName, "Column not found.");
+						else
+							return null;
+					}
+				} // prop this
+
+				private SqlDataReader GetReader()
+					=> owner.reader;
+
+				public char CurrentMode // sys_change_operation
+				{
+					get
+					{
+						var m = Char.ToLower(GetReader().GetString(0)[0]);
+						if (owner.tableInfo.ChangeTracking == SqlTableChangeTracking.Rows)
+							return m == 'u' ? 'r' : m;
+						else
+							return m;
+					}
+				} // func CurrentMode
+
+				public long CurrentVersion => GetReader().GetInt64(1); // sys_change_version
+
+				public IReadOnlyList<IDataColumn> Columns => owner.Columns;
+				public bool IsDataOwner => false;
+			} // class DataRowProxy
+
+			#endregion
+
+			private readonly SqlTableInfo tableInfo;
+			private readonly long lastChangeTrackingVersion;
+			private readonly long currentChangeTrackingVersion;
+
+			private readonly SqlCommand command;
+			private readonly IDataColumn[] columns;
+			private readonly int[] columnMapping;
+			private readonly bool[] columnIsPrimary;
+			private readonly DataRowProxy dataRowProxy;
+			private SqlDataReader reader = null;
+			private bool? hasRow = null;
+
+			public PpsMsSqlSynchronizationBatchParts(SqlConnection connection, SqlTableInfo tableInfo, long lastChangeTrackingVersion, long currentChangeTrackingVersion)
+			{
+				this.tableInfo = tableInfo ?? throw new ArgumentNullException(nameof(tableInfo));
+				this.lastChangeTrackingVersion = lastChangeTrackingVersion;
+				this.currentChangeTrackingVersion = currentChangeTrackingVersion;
+
+				InitCommand(tableInfo, lastChangeTrackingVersion, out var commandText, out columns, out columnMapping, out columnIsPrimary);
+
+				dataRowProxy = new DataRowProxy(this);
+				command = connection.CreateCommand();
+				command.CommandType = CommandType.Text;
+				command.CommandText = commandText;
+			} // ctor
+
+			public void Dispose()
+			{
+				CloseReader();
+				command.Dispose();
+			} // proc Dispose
+
+			private void OpenReader()
+			{
+				reader = command.ExecuteReader(CommandBehavior.SingleResult);
+				hasRow = null;
+			} // proc OpenReader
+
+			private void CloseReader()
+			{
+				if (reader != null)
+				{
+					reader.Close();
+					reader = null;
+				}
+				hasRow = null;
+			} // proc CloseReader
+
+			private DataRowProxy GetValidRowProxy()
+			{
+				if (hasRow.HasValue && hasRow.Value)
+					return dataRowProxy;
+				throw new InvalidOperationException();
+			} // func GetValidRowProxy
+
+			public void Reset()
+				=> CloseReader();
+
+			public bool MoveNext()
+			{
+				if (reader == null)
+					OpenReader();
+
+				var r = reader.Read();
+				hasRow = r;
+				return r;
+			} // func MoveNext
+
+			public IReadOnlyList<IDataColumn> Columns => columns;
+
+			object IEnumerator.Current => Current;
+			public IDataRow Current => GetValidRowProxy();
+			public char CurrentMode => GetValidRowProxy().CurrentMode;
+
+			public long CurrentSyncId
+			{
+				get
+				{
+					if (hasRow.HasValue) // hat zeilen gelesen
+					{
+						if (hasRow.Value) // hat eine aktive zeile
+							return dataRowProxy.CurrentVersion;
+						else
+							return currentChangeTrackingVersion;
+					}
+					else
+						return lastChangeTrackingVersion;
+				}
+			} // func CurrentSyncId
+
+			public PpsSynchonizationMode Mode => PpsSynchonizationMode.Parts;
+
+			#region -- CreateCommandText ----------------------------------------------
+
+			private static void InitCommand(SqlTableInfo tableInfo, long lastChangeTrackingVersion, out string commandText, out IDataColumn[] columns, out int[] columnMapping, out bool[] columnIsPrimary)
+			{
+				var sb = new StringBuilder();
+
+				sb.Append("SELECT ct.sys_change_operation,ct.sys_change_version");
+
+				var columnInfos = new List<Tuple<int, bool, IDataColumn>>();
+				var columnOffset = 2;
+
+				// add changed columns
+				if (tableInfo.ChangeTracking == SqlTableChangeTracking.Columns)
+				{
+					foreach (var col in tableInfo.Columns.Cast<SqlColumnInfo>())
+					{
+						var isPrimary = col.IsPrimaryKey;
+						sb.Append(',').Append(isPrimary ? "ct" : "d").Append(".[").Append(col.Name).Append("]");
+						sb.Append(",CHANGE_TRACKING_IS_COLUMN_IN_MASK(").Append(col.ColumnId).Append(", ct.sys_change_columns)");
+						columnInfos.Add(Tuple.Create<int, bool, IDataColumn>(columnOffset, isPrimary, new SimpleDataColumn(col.Name, col.DataType)));
+						columnOffset += 2;
+					}
+				}
+				else
+				{
+					foreach (var col in tableInfo.PrimaryKeys)
+					{
+						sb.Append(",ct.[").Append(col.Name).Append("]");
+						columnInfos.Add(Tuple.Create<int, bool, IDataColumn>(columnOffset, true, new SimpleDataColumn(col.Name, col.DataType)));
+						columnOffset++;
+					}
+				}
+
+				// from
+				sb.Append(" FROM changetable(changes ").Append(tableInfo.SqlQualifiedName).Append(",").Append(lastChangeTrackingVersion).Append(") AS ct")
+					.Append(" LEFT OUTER JOIN ").Append(tableInfo.QualifiedName).Append(" d ON ");
+				var first = true;
+				foreach (var col in tableInfo.PrimaryKeys)
+				{
+					if (first)
+						first = false;
+					else
+						sb.Append(" AND ");
+					sb.Append("ct.[").Append(col.Name).Append("]").Append("=").Append("d.[").Append(col.Name).Append("]");
+				}
+
+				// prepare result
+				commandText = sb.ToString();
+
+				columnMapping = new int[columnInfos.Count];
+				columnIsPrimary = new bool[columnInfos.Count];
+				columns = new IDataColumn[columnInfos.Count];
+				for(var i = 0;i< columnInfos.Count;i++)
+				{
+					columnMapping[i] = columnInfos[i].Item1;
+					columnIsPrimary[i] = columnInfos[i].Item2;
+					columns[i] = columnInfos[i].Item3;
+				}
+			} // func CreateCommandText
+
+			#endregion
+		} // class PpsMsSqlSynchronizationBatch
+
+		#endregion
+
+		#region -- class PpsMsSqlSynchronizationBatchNone -----------------------------
+
+		private sealed class PpsMsSqlSynchronizationBatchNone : IPpsDataSynchronizationBatch
+		{
+			private readonly PpsSynchonizationMode mode;
+			private readonly long currentChangeTrackingVersion;
+
+			public PpsMsSqlSynchronizationBatchNone(PpsSynchonizationMode mode, long currentChangeTrackingVersion)
+			{
+				this.mode = mode;
+				this.currentChangeTrackingVersion = currentChangeTrackingVersion;
+			} // ctor
+
+			public void Dispose() { }
+
+			public void Reset() { }
+
+			public bool MoveNext()
+				=> false;
+			
+			public IReadOnlyList<IDataColumn> Columns => throw new InvalidOperationException();
+
+			object IEnumerator.Current => Current;
+			public IDataRow Current => throw new InvalidOperationException();
+			public char CurrentMode => throw new InvalidOperationException();
+
+			public long CurrentSyncId => currentChangeTrackingVersion;
+			public PpsSynchonizationMode Mode => mode;
+		} // class PpsMsSqlSynchronizationBatchNone
+
+		#endregion
+
+		#region -- class PpsMsSqlDataSynchronization ----------------------------------
+
+		/// <summary>Synchronization Batch</summary>
+		protected class PpsMsSqlDataSynchronization : PpsDataSynchronization
+		{
+			private readonly long lastSyncronizationStamp;
+
+			/// <inherited />
+			public PpsMsSqlDataSynchronization(PpsApplication application, IPpsConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen)
+				: base(application, connection, leaveConnectionOpen)
+			{
+				this.lastSyncronizationStamp = lastSyncronizationStamp;
+			} // ctor
+
+			/// <inhertied/>
+			public override PpsDataSelector CreateSelector(string tableName, long lastSyncId)
+				=> base.CreateSelector(tableName, lastSyncId);
+
+			/// <inhertied/>
+			public override IPpsDataSynchronizationBatch GetChanges(string tableName, long lastSyncId)
+			{
+				var tableInfo = (SqlTableInfo)DataSource.GetTableDescription(tableName, true);
+
+				var connection = DataSource.masterConnection;
+				if (tableInfo.ChangeTracking == SqlTableChangeTracking.None) // no change tracking active, return nothing
+				{
+					var currentChangeTrackingVersion = DataSource.changeTracking.CurerntVersion;
+					return new PpsMsSqlSynchronizationBatchNone(PpsSynchonizationMode.None, currentChangeTrackingVersion);
+				}
+				else
+				{
+					if (DataSource.changeTracking.TryGetMinValidVersion(tableInfo, out var minValidVersion, out var currentChangeTrackingVersion, out var databaseCreationTime))
+					{
+						var isForceFull = databaseCreationTime > lastSyncronizationStamp; // recreate database
+						if (isForceFull || lastSyncId < minValidVersion)
+							return new PpsMsSqlSynchronizationBatchNone(PpsSynchonizationMode.Full, currentChangeTrackingVersion);
+						else if(lastSyncId < currentChangeTrackingVersion)
+							return new PpsMsSqlSynchronizationBatchParts(connection, tableInfo, lastSyncId, currentChangeTrackingVersion);
+						else
+							return new PpsMsSqlSynchronizationBatchNone(PpsSynchonizationMode.None, currentChangeTrackingVersion);
+					}
+					else
+						return new PpsMsSqlSynchronizationBatchNone(PpsSynchonizationMode.Full, currentChangeTrackingVersion);
+				}
+			} // func GetChanges
+
+			/// <inhertied/>
+			public override void RefreshChanges()
+				=> DataSource.changeTracking.RefreshChangeTrackingAsync();
+
+			/// <summary>Access datasource</summary>
+			public PpsMsSqlDataSource DataSource => (PpsMsSqlDataSource)Connection.DataSource;
+		} // class PpsMsSqlDataSynchronization
+
+		#endregion
+
 		#region -- interface ISqlParameterTypeInfo ------------------------------------
 
 		private interface ISqlParameterTypeInfo
@@ -787,10 +1246,10 @@ namespace TecWare.PPSn.Server.Sql
 				)
 			{
 				columnId = r.GetInt32(1);
-				
+
 				var t = r.GetByte(3);
 				sqlType = GetSqlType(t);
-			
+
 				typeName = typeName = r.IsDBNull(10) ? null : r.GetString(10);
 
 				xmlSchemaCollectionDatabase = r.IsDBNull(11) ? null : r.GetString(11);
@@ -887,7 +1346,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- GetFieldType, GetSqlType -----------------------------------------------
 
-			private static readonly string[] geometryTypeNames = {  
+			private static readonly string[] geometryTypeNames = {
 				"sys.Geometry",
 				"sys.Point",
 				"sys.LineString",
@@ -1074,12 +1533,27 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlTableInfo -------------------------------------------------
 
+		private enum SqlTableChangeTracking
+		{
+			None,
+			Rows,
+			Columns
+		} // enum SqlTableChangeTracking
+
 		private sealed class SqlTableInfo : PpsSqlTableInfo
 		{
+			private readonly long objectId;
+			private readonly SqlTableChangeTracking changeTracking;
+
 			public SqlTableInfo(SqlDataReader r)
 				: base(r.GetString(1), r.GetString(2))
 			{
-			}
+				objectId = r.GetInt32(0);
+				changeTracking = r.IsDBNull(3) ? SqlTableChangeTracking.None : (r.GetBoolean(3) ? SqlTableChangeTracking.Columns : SqlTableChangeTracking.Rows);
+			} // ctor
+
+			public long ObjectId => objectId;
+			public SqlTableChangeTracking ChangeTracking => changeTracking;
 		} // class SqlTableInfo
 
 		#endregion
@@ -1132,7 +1606,7 @@ namespace TecWare.PPSn.Server.Sql
 				scale = r.GetByte(6);
 
 				typeName = r.IsDBNull(8) ? null : r.GetString(8);
-				
+
 				xmlSchemaCollectionDatabase = r.IsDBNull(9) ? null : r.GetString(9);
 				xmlSchemaCollectionName = r.IsDBNull(10) ? null : r.GetString(10);
 				xmlSchemaCollectionOwningSchema = r.IsDBNull(11) ? null : r.GetString(11);
@@ -1197,7 +1671,7 @@ namespace TecWare.PPSn.Server.Sql
 				base.AddParameter(parameterInfo);
 			} // func AddParameter
 
-			public override void AddResult(PpsSqlParameterInfo resultInfo) 
+			public override void AddResult(PpsSqlParameterInfo resultInfo)
 				=> base.AddResult(resultInfo);
 
 			public override bool HasResult => hasResult;
@@ -1208,6 +1682,7 @@ namespace TecWare.PPSn.Server.Sql
 		#endregion
 
 		private readonly SqlConnection masterConnection;
+		private readonly PpsMsSqlSynchronizationCache changeTracking;
 		private string sysUserName = null;
 		private SecureString sysPassword = null;
 		private DEThread databaseMainThread = null;
@@ -1221,6 +1696,7 @@ namespace TecWare.PPSn.Server.Sql
 			: base(sp, name)
 		{
 			masterConnection = new SqlConnection();
+			changeTracking = new PpsMsSqlSynchronizationCache(this);
 		} // ctor
 
 		/// <summary></summary>
@@ -1442,8 +1918,9 @@ namespace TecWare.PPSn.Server.Sql
 
 		private async Task ExecuteDatabaseAsync(DEThread thread)
 		{
-			var lastChangeTrackingId = -1L;
 			var lastExceptionNumber = 0;
+			
+			changeTracking.CreateQueue();
 
 			while (thread.IsRunning)
 			{
@@ -1473,23 +1950,7 @@ namespace TecWare.PPSn.Server.Sql
 								InitializeSchema();
 
 							// check for change tracking
-							using (var cmd = masterConnection.CreateCommand())
-							{
-								cmd.CommandText = "SELECT change_tracking_current_version()";
-								var r = await cmd.ExecuteScalarAsync();
-								if (r is long l)
-								{
-									if (lastChangeTrackingId == -1L)
-										lastChangeTrackingId = l;
-									else if (lastChangeTrackingId != l)
-									{
-										lastChangeTrackingId = l;
-
-										// notify clients, something has changed
-										Application.FireDataChangedEvent(Name);
-									}
-								}
-							}
+							await changeTracking.RefreshChangeTrackingAsync();
 						}
 					}
 					catch (SqlException e)
@@ -1534,7 +1995,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		private sealed class MsSqlDataFilterVisitor : SqlDataFilterVisitor
 		{
-			public MsSqlDataFilterVisitor(Func<string, string> lookupNative, SqlColumnFinder columnLookup) 
+			public MsSqlDataFilterVisitor(Func<string, string> lookupNative, SqlColumnFinder columnLookup)
 				: base(lookupNative, columnLookup)
 			{
 			} // ctor
@@ -1653,11 +2114,13 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		/// <summary></summary>
-		/// <param name="connection"></param>
-		/// <returns></returns>
+		/// <inherited />
 		public override PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 			=> new PpsMsSqlDataTransaction(this, connection);
+
+		/// <inherited />
+		public override PpsDataSynchronization CreateSynchronizationSession(IPpsConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen)
+			=> new PpsMsSqlDataSynchronization(Application, connection, lastSyncronizationStamp, leaveConnectionOpen);
 
 		/// <summary></summary>
 		/// <param name="connectionString"></param>

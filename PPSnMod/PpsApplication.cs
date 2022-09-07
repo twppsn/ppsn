@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -1623,7 +1624,7 @@ namespace TecWare.PPSn.Server
 		} // proc SetClientOptionVlaue
 
 
-		private LuaTable ParseClientOptions(IDEWebScope r, LuaTable options, bool emitSecureOptions, XElement xOptions, IList<string> processedOptions)
+		private LuaTable ParseClientOptions(IDEWebScope r, LuaTable options, bool emitSecureOptions, XElement xOptions, ICollection<string> processedOptions)
 		{
 			bool IsNotProcessed(string strictId)
 			{
@@ -1685,7 +1686,7 @@ namespace TecWare.PPSn.Server
 					options,
 					emitSecureOptions,
 					GetClientOptionsByDevId(deviceId),
-					new SortedList<string>(StringComparer.OrdinalIgnoreCase)
+					new SortedSet<string>(StringComparer.OrdinalIgnoreCase)
 				);
 				lastTick = -1;
 			}

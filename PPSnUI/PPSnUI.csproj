@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;net47</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1;net48</TargetFrameworks>
     <RootNamespace>TecWare.PPSn</RootNamespace>
     <PackageId>TecWare.PPSn.UI</PackageId>
     <Description>Basic contracts and functionality for the ppsn, they are only for client applications.</Description>
@@ -18,12 +18,12 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net47' ">
+	<ItemGroup Condition=" '$(TargetFramework)' == 'net48' ">
 		<Reference Include="System.Web" />
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TecWare.DES.Core" Version="3.4.93" />
+    <PackageReference Include="TecWare.DES.Core" Version="3.4.97" />
   </ItemGroup>
 
   <ItemGroup>

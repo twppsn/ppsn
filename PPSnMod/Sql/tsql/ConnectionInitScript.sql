@@ -3,8 +3,10 @@ SELECT
 		u.object_id
 		, s.name
 		, u.name
+		, ct.is_track_columns_updated_on
 	FROM sys.objects u
-		INNER JOIN sys.schemas s ON (u.schema_id = s.schema_id)
+		INNER JOIN sys.schemas s ON u.schema_id = s.schema_id
+		LEFT OUTER JOIN sys.change_tracking_tables ct ON u.object_id = ct.object_id
 	WHERE u.type = 'U';
 
 -- user columns
