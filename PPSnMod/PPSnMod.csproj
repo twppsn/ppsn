@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<RootNamespace>TecWare.PPSn.Server</RootNamespace>
 		<AssemblyName>DEM.PPSn</AssemblyName>
-		<TargetFramework>net47</TargetFramework>
+		<TargetFramework>net48</TargetFramework>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<PackageId>TecWare.PPSn.Module</PackageId>
 		<Description>Base module for the Data Exchange Server.</Description>
