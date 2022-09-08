@@ -45,6 +45,8 @@ namespace TecWare.PPSn.Tests
 			CommandBindings.Add(PpsCommandBase.CreateBinding(null, ApplicationCommands.Copy, new PpsCommand(CopyExecuted)));
 			CommandBindings.Add(new CommandBinding(ApplicationCommands.Paste, FindExecuted));
 			CommandBindings.Add(new CommandBinding(ApplicationCommands.Find, FindExecuted));
+
+			DataContext = new TestItem { Name = "HALLO TEST" };
 		}
 
 		private void FindExecuted(object sender, ExecutedRoutedEventArgs e)

@@ -22,7 +22,16 @@
 				</ui:PpsListColumns>
 			</ui:PpsListColumns.Columns>
 			<ui:PpsDataListBox.ListCommands>
-				<ui:PpsUICommandButton DisplayText="Test" Command="{x:Static ApplicationCommands.Find}" />
+				<ui:PpsUICommandButton Order="100,100" DisplayText="Test" Command="{x:Static ApplicationCommands.Find}" />
+				<ui:PpsUICommandPanel Order="100,110" Content="{Binding}">
+					<ui:PpsUICommandPanel.ContentTemplate>
+						<DataTemplate>
+							<Border Padding="3" Background="DarkBlue" BorderBrush="AliceBlue" BorderThickness="1">
+								<TextBlock Text="{Binding Name}" Foreground="White" />
+							</Border>
+						</DataTemplate>
+					</ui:PpsUICommandPanel.ContentTemplate>
+				</ui:PpsUICommandPanel>
 			</ui:PpsDataListBox.ListCommands>
 			<ui:PpsDataListBox.ItemCommands>
 				<ui:PpsUICommandButton DisplayText="Item1" Command="{x:Static ApplicationCommands.Copy}" />

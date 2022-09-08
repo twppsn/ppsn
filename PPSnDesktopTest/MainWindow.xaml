@@ -8,7 +8,7 @@
         Title="MainWindow" Height="450" Width="800">
 	<Grid Background="{DynamicResource PPSnDesktopBrush}">
 		<ContentControl x:Name="testPane" Padding="6" />
-		<Image>
+		<!--<Image>
 			<Image.Source>
 				<DrawingImage>
 					<DrawingImage.Drawing>
@@ -16,6 +16,6 @@
 					</DrawingImage.Drawing>
 				</DrawingImage>
 			</Image.Source>
-		</Image>
+		</Image>-->
 	</Grid>
 </Window>

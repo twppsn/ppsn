@@ -781,7 +781,6 @@ namespace TecWare.PPSn.Server.Sql
 
 			private async Task RefreshChangeTrackingCoreAsync(TaskCompletionSource<bool> tcs)
 			{
-				Debug.WriteLine("START: RefreshChangeTrackingCoreAsync " + dataSource.Name);
 				try
 				{
 					var isChanged = false;
@@ -846,10 +845,6 @@ namespace TecWare.PPSn.Server.Sql
 						tcs.SetException(e);
 					else
 						throw;
-				}
-				finally
-				{
-					Debug.WriteLine("END: RefreshChangeTrackingCoreAsync " + dataSource.Name);
 				}
 			} // proc RefreshChangeTrackingCoreAsync
 
@@ -1173,7 +1168,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (tableInfo.ChangeTracking == SqlTableChangeTracking.None) // no change tracking active, return nothing
 				{
 					var currentChangeTrackingVersion = DataSource.changeTracking.CurerntVersion;
-					return new PpsMsSqlSynchronizationBatchNone(PpsSynchonizationMode.None, currentChangeTrackingVersion);
+					return new PpsMsSqlSynchronizationBatchNone(lastSyncId == -1L ? PpsSynchonizationMode.Full : PpsSynchonizationMode.None, currentChangeTrackingVersion);
 				}
 				else
 				{
