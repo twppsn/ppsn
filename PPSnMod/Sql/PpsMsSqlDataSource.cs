@@ -755,7 +755,7 @@ namespace TecWare.PPSn.Server.Sql
 		private sealed class PpsMsSqlSynchronizationCache
 		{
 			private readonly PpsMsSqlDataSource dataSource;
-			private AsyncQueue changeTrackingActions = null;
+			private readonly SemaphoreSlim changeTrackingSync = new SemaphoreSlim(1);
 
 			private readonly object changeTrackingLock = new object();
 			private long databaseCreationTime = -1L;
@@ -779,8 +779,9 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- RefreshChangeTrackingAsync -------------------------------------
 
-			private async Task RefreshChangeTrackingCoreAsync(TaskCompletionSource<bool> tcs)
+			private async Task RefreshChangeTrackingCoreAsync()
 			{
+				await changeTrackingSync.WaitAsync();
 				try
 				{
 					var isChanged = false;
@@ -809,12 +810,12 @@ namespace TecWare.PPSn.Server.Sql
 						using (var r = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult))
 						{
 							var newChangeTrackingVersion = -1L;
-							var newMinValidVersion = new List<Tuple<int, long>>(minValidVersions.Count);
+							var newMinValidVersions = new List<Tuple<int, long>>(minValidVersions.Count);
 
 							while (await r.ReadAsync())
 							{
 								if (r.FieldCount > 1)
-									newMinValidVersion.Add(Tuple.Create(r.GetInt32(1), r.GetInt64(2)));
+									newMinValidVersions.Add(Tuple.Create(r.GetInt32(1), r.GetInt64(2)));
 								newChangeTrackingVersion = r.IsDBNull(0) ? 0 : r.GetInt64(0);
 							}
 
@@ -825,8 +826,17 @@ namespace TecWare.PPSn.Server.Sql
 									if (newChangeTrackingVersion != lastChangeTrackingId)
 										lastChangeTrackingId = newChangeTrackingVersion;
 
-									for (var i = 0; i < newMinValidVersion.Count; i++)
-										minValidVersions[newMinValidVersion[i].Item1] = newMinValidVersion[i].Item2;
+									for (var i = 0; i < newMinValidVersions.Count; i++)
+									{
+										var tableId = newMinValidVersions[i].Item1;
+										var newMinValidVersion = newMinValidVersions[i].Item2;
+										if (!minValidVersions.TryGetValue(tableId, out var currentMinValidVersion) || currentMinValidVersion != newMinValidVersion)
+										{
+											dataSource.Log.Debug("[RefreshChangeTracking] ({0}) {1} -> {2}", tableId, currentMinValidVersion, newMinValidVersion);
+											minValidVersions[tableId] = newMinValidVersion;
+											isChanged = true;
+										}
+									}
 								}
 							}
 						}
@@ -834,34 +844,18 @@ namespace TecWare.PPSn.Server.Sql
 
 					// notify clients, something has changed
 					if (isChanged)
+					{
 						dataSource.Application.FireDataChangedEvent(dataSource.Name);
-
-					if (tcs != null)
-						tcs.SetResult(true);
+					}
 				}
-				catch (Exception e)
+				finally
 				{
-					if (tcs != null)
-						tcs.SetException(e);
-					else
-						throw;
+					changeTrackingSync.Release();
 				}
 			} // proc RefreshChangeTrackingCoreAsync
 
-			public void CreateQueue()
-				=> changeTrackingActions = new AsyncQueue();
-			
 			public Task RefreshChangeTrackingAsync()
-			{
-				if (changeTrackingActions != null)
-				{
-					var tcs = new TaskCompletionSource<bool>();
-					changeTrackingActions.Enqueue(() => RefreshChangeTrackingCoreAsync(tcs));
-					return tcs.Task;
-				}
-				else
-					return RefreshChangeTrackingCoreAsync(null);
-			} // proc RefreshChangeTrackingAsync
+				=> RefreshChangeTrackingCoreAsync();
 
 			#endregion
 
@@ -1177,8 +1171,11 @@ namespace TecWare.PPSn.Server.Sql
 						var isForceFull = databaseCreationTime > lastSyncronizationStamp; // recreate database
 						if (isForceFull || lastSyncId < minValidVersion)
 							return new PpsMsSqlSynchronizationBatchNone(PpsSynchonizationMode.Full, currentChangeTrackingVersion);
-						else if(lastSyncId < currentChangeTrackingVersion)
+						else if (lastSyncId < currentChangeTrackingVersion)
+						{
+							DataSource.Log.Debug("[GetChanges] {0}({1}) {2} -> {3}", tableInfo.TableName, tableInfo.ObjectId, lastSyncId, currentChangeTrackingVersion);
 							return new PpsMsSqlSynchronizationBatchParts(connection, tableInfo, lastSyncId, currentChangeTrackingVersion);
+						}
 						else
 							return new PpsMsSqlSynchronizationBatchNone(PpsSynchonizationMode.None, currentChangeTrackingVersion);
 					}
@@ -1189,7 +1186,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <inhertied/>
 			public override void RefreshChanges()
-				=> DataSource.changeTracking.RefreshChangeTrackingAsync();
+				=> DataSource.changeTracking.RefreshChangeTrackingAsync().AwaitTask();
 
 			/// <summary>Access datasource</summary>
 			public PpsMsSqlDataSource DataSource => (PpsMsSqlDataSource)Connection.DataSource;
@@ -1915,8 +1912,6 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			var lastExceptionNumber = 0;
 			
-			changeTracking.CreateQueue();
-
 			while (thread.IsRunning)
 			{
 				var executeStartTick = Environment.TickCount;

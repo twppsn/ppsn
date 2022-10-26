@@ -3199,6 +3199,9 @@ namespace TecWare.PPSn.Data
 									SetRefreshAll();
 							}
 							break;
+						case "s":
+							UpdateNextSyncId(xItem.GetAttribute("id", 0L));
+							break;
 						case "u":
 							UpdateNextSyncId(xItem.GetAttribute("id", 0L));
 							if (!refreshAll)

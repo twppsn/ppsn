@@ -1889,6 +1889,12 @@ namespace TecWare.PPSn.Server
 									xml.WriteEndElement();
 									openElements--;
 								}
+
+								// emit last syncid
+								xml.WriteStartElement("s");
+								openElements++;
+								xml.WriteAttributeString("id", batch.CurrentSyncId.ChangeType<string>());
+								xml.WriteEndElement();
 							}
 
 							xml.WriteEndElement();

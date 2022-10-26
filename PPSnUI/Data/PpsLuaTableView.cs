@@ -90,7 +90,13 @@ namespace TecWare.PPSn.Data
 				{
 					type = GetType(v);
 					childMetaTable = null;
-					return true;
+					if (type == null)
+					{
+						type = typeof(object);
+						return false;
+					}
+					else
+						return true;
 				}
 			}
 			type = typeof(object);
@@ -248,5 +254,8 @@ namespace TecWare.PPSn.Data
 		object IList.this[int index] { get => GetIndexedValue(index); set => throw new NotSupportedException(); }
 
 		#endregion
+
+		/// <summary>Access row table.</summary>
+		public LuaTable RawTable => table;
 	} // class PpsLuaTableView
 }

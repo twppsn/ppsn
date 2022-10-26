@@ -155,8 +155,24 @@ namespace TecWare.PPSn.Bde
 		private Exception GetPaneStackException()
 			=> new NotSupportedException("Bde uses a pane stack, it is not allowed to changed the stack.");
 
-		private async Task<IPpsWindowPane> PushPaneAsync(Type paneType, LuaTable arguments)
+		private async Task<IPpsWindowPane> PushPaneAsync(Type paneType, LuaTable arguments, bool enforce)
 		{
+			if (!enforce)
+			{
+				var currentPane = TopPaneHost.Pane;
+				if (currentPane.GetType() == paneType)
+				{
+					switch (currentPane.CompareArguments(arguments))
+					{
+						case PpsWindowPaneCompareResult.Same:
+							return currentPane;
+						case PpsWindowPaneCompareResult.Reload:
+							await currentPane.LoadAsync(arguments);
+							return currentPane;
+					}
+				}
+			}
+
 			// create the pane 
 			var host = new PpsBdePaneHost();
 
@@ -225,8 +241,9 @@ namespace TecWare.PPSn.Bde
 			switch (newPaneMode)
 			{
 				case PpsOpenPaneMode.Default:
+					return PushPaneAsync(paneType, arguments, false);
 				case PpsOpenPaneMode.NewPane:
-					return PushPaneAsync(paneType, arguments);
+					return PushPaneAsync(paneType, arguments, true);
 
 				case PpsOpenPaneMode.ReplacePane:
 				case PpsOpenPaneMode.NewSingleDialog:

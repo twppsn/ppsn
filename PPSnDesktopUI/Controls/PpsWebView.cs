@@ -956,6 +956,8 @@ namespace TecWare.PPSn.Controls
 
 		private async Task<HttpResponseMessage> SendCoreAsync(DEHttpClient http, HttpRequestMessage request, bool throwException)
 		{
+			request.Headers.TryAddWithoutValidation("des-ppsn-webview", "true");
+
 			var response = await http.SendAsync(request);
 
 			if (response.StatusCode == HttpStatusCode.Moved

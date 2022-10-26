@@ -226,7 +226,7 @@ namespace TecWare.PPSn.UI
 					sw.WriteLine(@"[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]");
 					WriteRegistryValue(sw, "AutoAdminLogon", password != null ? "1" : "0");
 					WriteRegistryValue(sw, "DefaultDomain", String.Empty);
-					WriteRegistryValue(sw, "DefaultUserName", String.IsNullOrEmpty(domainName) ? userName : domainName + "\\\\" + userName);
+					WriteRegistryValue(sw, "DefaultUserName", String.IsNullOrEmpty(domainName) ? userName : domainName + "\\" + userName);
 					WriteRegistryValue(sw, "DefaultPassword", password);
 				}
 
