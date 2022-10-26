@@ -143,7 +143,7 @@
       <Version>1.3.14</Version>
     </PackageReference>
     <PackageReference Include="TecWare.DES.Core">
-      <Version>3.4.98</Version>
+      <Version>3.4.99</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

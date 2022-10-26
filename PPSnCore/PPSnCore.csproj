@@ -23,7 +23,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="NeoLua" Version="1.3.14" />
-    <PackageReference Include="TecWare.DES.Core" Version="3.4.99-pre.537" />
+    <PackageReference Include="TecWare.DES.Core" Version="3.4.99" />
     <Reference Include="System.Web" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
