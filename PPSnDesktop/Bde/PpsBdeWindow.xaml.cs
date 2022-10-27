@@ -159,8 +159,8 @@ namespace TecWare.PPSn.Bde
 		{
 			if (!enforce)
 			{
-				var currentPane = TopPaneHost.Pane;
-				if (currentPane.GetType() == paneType)
+				var currentPane = TopPaneHost?.Pane;
+				if (currentPane != null && currentPane.GetType() == paneType)
 				{
 					switch (currentPane.CompareArguments(arguments))
 					{

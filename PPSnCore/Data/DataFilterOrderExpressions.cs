@@ -2908,7 +2908,7 @@ namespace TecWare.PPSn.Data
 			var column = LookupDateColumn(columnToken);
 			if (column == null)
 				return CreateColumnErrorFilter(columnToken);
-			else if (column.Item2 != typeof(DateTime))
+			else if (column.Item2 != typeof(DateTime) && column.Item2 != typeof(DateTimeOffset))
 				return CreateErrorFilter(String.Format("Date expected for column: {0}.", columnToken));
 
 			switch (op)
