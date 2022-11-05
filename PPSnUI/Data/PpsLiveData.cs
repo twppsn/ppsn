@@ -2855,7 +2855,7 @@ namespace TecWare.PPSn.Data
 				for (var i = 0; i < filterParts.Length; i++)
 				{
 					query.Filter = filterParts[i];
-					isModified = await RefreshRowsAsync(client, touchRow, queryFields, query, isModified);
+					isModified |= await RefreshRowsAsync(client, touchRow, queryFields, query, isModified);
 				}
 				return isModified;
 			} // proc RefreshRowsAsync
