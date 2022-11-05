@@ -808,6 +808,9 @@ namespace TecWare.PPSn
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public const string ApplicationModeKey = "PPSn.Application.Mode";
 		public const string ApplicationModulKey = "PPSn.Application.Modul";
+		public const string ApplicationMutexKey = "PPSn.Application.Mutex";
+		public const string AutoLoginUserKey = "PPSn.AutoLogin.UserName";
+		public const string AutoLoginPasswordKey = "PPSn.AutoLogin.Password";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary></summary>
@@ -838,14 +841,16 @@ namespace TecWare.PPSn
 		} // func GetAutoLogin
 
 		/// <summary>Automatic login</summary>
-		public string AutoLoginUser => this.GetProperty("PPSn.AutoLogin.UserName", null);
+		public string AutoLoginUser => this.GetProperty(AutoLoginUserKey, null);
 		/// <summary>Automatic login</summary>
-		public string AutoLoginPassword => this.GetProperty("PPSn.AutoLogin.Password", null);
+		public string AutoLoginPassword => this.GetProperty(AutoLoginPasswordKey, null);
 
 		/// <summary>Application mode</summary>
 		public string ApplicationMode => this.GetProperty(ApplicationModeKey, "main");
 		/// <summary>Initial modul to load.</summary>
 		public string ApplicationModul => this.GetProperty(ApplicationModulKey, null);
+		/// <summary>Mutex for Single-Instanze application</summary>
+		public string ApplicationMutex => this.GetProperty(ApplicationMutexKey, null);
 	} // class PpsWpfShellSettings
 
 	#endregion

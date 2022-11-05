@@ -28,6 +28,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
+using System.Xml.Linq;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Networking;
@@ -589,6 +590,7 @@ namespace TecWare.PPSn
 		#endregion
 
 		private IPpsShell shell = null;
+		private Mutex applicationMutex = null;
 		private bool logoffUser = true;
 		private bool isProcessProtected = false;
 
@@ -775,6 +777,48 @@ namespace TecWare.PPSn
 			}
 		} // proc GetApplicationModulParameter
 
+		private static Mutex CreateOwnMutex(string name)
+		{
+			var mutex = new Mutex(true, name, out var createdNew);
+			if (createdNew)
+				return mutex;
+			else
+			{
+				mutex.Dispose();
+				return null;
+			}
+		} // func CreateOwnMutex
+
+		private async Task<bool> CreateApplicationMutex(IPpsProgressFactory factory, string name)
+		{
+			if (String.IsNullOrEmpty(name))
+				return true;
+
+			var c = 3;
+			IPpsProgress progress = null;
+			do
+			{
+				var m = CreateOwnMutex(name);
+				if (m != null)
+				{
+					applicationMutex = m;
+					return true;
+				}
+				else
+				{
+					if (progress == null)
+						progress = factory.CreateProgress();
+					progress.Text = "Warte auf Anwendung...";
+					await Task.Delay(3000);
+				}
+			} while (--c >= 0);
+
+			if (progress != null)
+				progress.Dispose();
+
+			return false;
+		} // func CreateApplicationMutex
+
 		private async Task<bool> StartApplicationAsync(AppStartArguments args)
 		{
 			// we will have no windows
@@ -815,6 +859,10 @@ namespace TecWare.PPSn
 
 				// get login handler
 				var settings = newShell.GetSettings<PpsWpfShellSettings>();
+
+				// handle mutex
+				if (!await CreateApplicationMutex(splashWindow, settings.ApplicationMutex))
+					return false;
 
 				// auto login for a user
 				var userInfo = args.UserInfo ?? GetLastUserInfo(newShell.Info);
@@ -958,6 +1006,11 @@ namespace TecWare.PPSn
 
 			if (await shell.ShutdownAsync())
 			{
+				if (applicationMutex != null)
+				{
+					applicationMutex.Dispose();
+					applicationMutex = null;
+				}
 				shell = null;
 				return true;
 			}
