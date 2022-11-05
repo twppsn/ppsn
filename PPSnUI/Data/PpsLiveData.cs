@@ -2780,31 +2780,8 @@ namespace TecWare.PPSn.Data
 					: new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.Or, filterList.ToArray()).Reduce();
 			} // func GetCurrentViewFilter
 
-			public async Task<bool> RefreshRowsAsync(DEHttpClient client, bool touchRow, PpsDataFilterExpression filter)
+			private async Task<bool> RefreshRowsAsync(DEHttpClient client, bool touchRow, List<PpsDataColumnExpression> queryFields, PpsDataQuery query, bool isModified)
 			{
-				// create local field mapping
-				var fieldMapping = new List<int>(fields.Capacity);
-				var queryFields = new List<PpsDataColumnExpression>(fields.Capacity);
-
-				for (var i = 0; i < fields.Count; i++)
-				{
-					if (fields[i].IsActive)
-					{
-						fieldMapping.Add(i);
-						queryFields.Add(new PpsDataColumnExpression(fields[i].Name));
-					}
-				}
-
-				// create query
-				var query = new PpsDataQuery(name)
-				{
-					Columns = queryFields.ToArray(),
-					Filter = filter,
-					Order = primaryKey.Select(i => new PpsDataOrderExpression(false, fields[i].Name)).ToArray()
-				};
-
-				// execute query for full refresh
-				var isModified = false;
 				int[] resultMapping = null;
 				using (var e = CreateViewDataReader(client, query).GetEnumerator())
 				{
@@ -2841,6 +2818,44 @@ namespace TecWare.PPSn.Data
 							isModified = true;
 						}
 					}
+				}
+
+				return isModified;
+			} // func RefreshRowsAsync
+
+			public async Task<bool> RefreshRowsAsync(DEHttpClient client, bool touchRow, PpsDataFilterExpression filter)
+			{
+				// create local field mapping
+				var fieldMapping = new List<int>(fields.Capacity);
+				var queryFields = new List<PpsDataColumnExpression>(fields.Capacity);
+
+				for (var i = 0; i < fields.Count; i++)
+				{
+					if (fields[i].IsActive)
+					{
+						fieldMapping.Add(i);
+						queryFields.Add(new PpsDataColumnExpression(fields[i].Name));
+					}
+				}
+
+				// create query
+				var query = new PpsDataQuery(name)
+				{
+					Columns = queryFields.ToArray(),
+					Order = primaryKey.Select(i => new PpsDataOrderExpression(false, fields[i].Name)).ToArray()
+				};
+
+				// it is more performant to fetch or filter
+				var filterParts = filter is PpsDataFilterLogicExpression logicExpression && logicExpression.Type == PpsDataFilterExpressionType.Or
+					? logicExpression.Arguments
+					: new PpsDataFilterExpression[] { filter };
+
+				// execute query for full refresh all filter parts
+				var isModified = false;
+				for (var i = 0; i < filterParts.Length; i++)
+				{
+					query.Filter = filterParts[i];
+					isModified = await RefreshRowsAsync(client, touchRow, queryFields, query, isModified);
 				}
 				return isModified;
 			} // proc RefreshRowsAsync
