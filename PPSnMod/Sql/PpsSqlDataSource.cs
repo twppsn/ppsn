@@ -3514,10 +3514,13 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary></summary>
 		/// <param name="connection"></param>
-		/// <param name="selectorName"></param>
+		/// <param name="selectorExpression"></param>
 		/// <returns></returns>
-		public sealed override PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorName)
-			=> CreateSelector(connection, selectorName, null);
+		public sealed override PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorExpression)
+		{
+			SelectorSplitAlias(selectorExpression, out var selectorName, out var selectorAlias);
+			return CreateSelector(connection, selectorName, selectorAlias);
+		} // func CreateSelector
 
 		/// <summary></summary>
 		/// <param name="connection"></param>

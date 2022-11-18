@@ -61,15 +61,46 @@ namespace TecWare.PPSn.Server.Data
 		public virtual PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 			=> throw new NotImplementedException();
 
+		/// <summary>Split selector from alias.</summary>
+		/// <param name="selectorExpression"></param>
+		/// <param name="selectorName"></param>
+		/// <param name="alias"></param>
+		/// <exception cref="NotImplementedException"></exception>
+		protected void SelectorSplitAlias(string selectorExpression, out string selectorName, out string alias)
+		{
+			if (String.IsNullOrEmpty(selectorExpression))
+			{
+				selectorName = null;
+				alias = null;
+			}
+			else
+			{
+				var p = selectorExpression.LastIndexOfAny(new char[] { ' ', '\t' });
+				if (p > 0)
+				{
+					selectorName = selectorExpression.Substring(0, p).Trim();
+					alias = selectorExpression.Substring(p + 1).Trim();
+				}
+				else
+				{
+					selectorName = selectorExpression;
+					alias = null;
+				}
+			}
+		} // proc SelectorSplitAlias
+
+
 		/// <summary></summary>
 		/// <param name="connection"></param>
-		/// <param name="selectorName"></param>
+		/// <param name="selectorExpression"></param>
 		/// <returns></returns>
-		public virtual PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorName)
+		public virtual PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorExpression)
 		{
+			SelectorSplitAlias(selectorExpression, out var selectorName, out var alias);
+
 			// support own view definitions
 			var view = Application.GetViewDefinition(selectorName, false);
-			if (view.SelectorToken.DataSource == this)
+			if (view != null && view.SelectorToken.DataSource == this)
 				return view.SelectorToken.CreateSelector(connection);
 			else // return nothing
 				return null;

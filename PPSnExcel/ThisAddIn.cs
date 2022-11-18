@@ -311,6 +311,9 @@ namespace PPSnExcel
 			using (var bar = uiService.CreateProgress(progressText: String.Format("Verbinde mit {0}...", info.Name)))
 			{
 				var shell = CreateShellAsync(info, isDefault).Await();
+				if (shell == null)
+					return null;
+
 				shell.Disposed += ShellDestroyed;
 				activatedShells.Add(shell);
 				Globals.Ribbons.PpsMenu.RefreshUserName();
