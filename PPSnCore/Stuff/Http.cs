@@ -60,7 +60,7 @@ namespace TecWare.PPSn.Core.Stuff
 		/// <summary>Names of the replacements.</summary>
 		public IReadOnlyList<string> ParameterNames => parameters;
 
-		private static readonly Regex parseReplacer = new Regex(@"\{(?<n>\w+)(?<a>:.*)\}", RegexOptions.Compiled);
+		private static readonly Regex parseReplacer = new Regex(@"\{(?<n>\w+)(?<a>:.*)?\}", RegexOptions.Compiled);
 
 		/// <summary>Create a jump info.</summary>
 		/// <param name="uri"></param>
