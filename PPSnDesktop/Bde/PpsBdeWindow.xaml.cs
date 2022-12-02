@@ -24,6 +24,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
@@ -76,6 +77,8 @@ namespace TecWare.PPSn.Bde
 				WindowStyle = WindowStyle.None;
 				WindowState = WindowState.Maximized;
 				captionLabel.Tag = null;
+
+				SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
 			}
 			// init window settings
 			if (WindowStyle != WindowStyle.None)
@@ -91,6 +94,13 @@ namespace TecWare.PPSn.Bde
 				Services.AddService(typeof(IPpsVirtualKeyboard), virtualKeyboard);
 			}
 		} // ctor
+
+		private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)
+		{
+			Shell.LogProxy().Info("DisplaySettingsChanged. Resize Window.");
+			WindowState = WindowState.Normal;
+			WindowState = WindowState.Maximized;
+		} // event SystemEvents_DisplaySettingsChanged
 
 		protected override void OnClosed(EventArgs e)
 		{

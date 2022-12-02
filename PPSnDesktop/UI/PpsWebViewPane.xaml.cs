@@ -47,14 +47,20 @@ namespace TecWare.PPSn.UI
 				Commands.AddButton("-100;100", "keyboard", new PpsCommand(ToggleKeyboard), null, " Zeigt die virtuelle Tastatur an.");
 		} // ctor
 
+		private static object GetUriArgument(LuaTable args)
+			=> args["uri"];
+
 		protected override PpsWindowPaneCompareResult CompareArguments(LuaTable args)
-			=> PpsWindowPaneCompareResult.Reload;
+		{
+			var uriArg = GetUriArgument(args);
+			return webView.History.Count > 0 && uriArg is Uri uri && webView.History[0].Uri == uri ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;
+		} // func CompareArguments
 
 		protected override async Task OnLoadAsync(LuaTable args)
 		{
 			await base.OnLoadAsync(args);
 
-			webView.Source = args["uri"];
+			webView.Source = GetUriArgument(args);
 		} // proc OnLoadAsync
 
 		public void InvokeBackButton()
