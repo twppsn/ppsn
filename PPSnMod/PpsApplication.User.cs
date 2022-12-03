@@ -393,12 +393,21 @@ namespace TecWare.PPSn.Server
 
 			// execute script based extensions
 			var options = new LuaTable();
+			var userOptions = new LuaTable();
+			options["PPSn"] = new LuaTable { ["User"] = userOptions };
 			foreach (var c in userInfo)
 			{
-				if (c.Value != null)
-					options.SetMemberValue(c.Name, c.Value);
+				if (c.Value is LuaTable t)
+					options.SetMemberValue(c.Name, t);
+				else if (c.Value != null)
+				{
+					if (c.Name.IndexOf(".") == -1)
+						userOptions.SetMemberValue(c.Name, c.Value);
+					else
+						options.SetMemberValue(c.Name, c.Value);
+				}
 			}
-			CallTableMethods(ExtendLoginMethods, new object[] { userInfo, options });
+			CallTableMethods(ExtendLoginMethods, new object[] { userInfo, options, userOptions });
 			return options;
 		} // func GetLoginData
 

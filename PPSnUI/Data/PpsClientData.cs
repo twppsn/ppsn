@@ -43,8 +43,12 @@ namespace TecWare.PPSn.Data
 		// protected abstract T CreateExtendedRowValue() <-- z.b. Link in LiveData?
 		// protected abstract T CreateTypedDataRow();
 		
-		private static Type tableType = null; //  ICollectionViewFactory, PpsDataTableDesktop - Problem <- sollte privat sein
+		// private static Type tableType = null; //  ICollectionViewFactory, PpsDataTableDesktop - Problem <- sollte privat sein
 		
+		/// <summary></summary>
+		/// <param name="clientDataSetType"></param>
+		/// <param name="serverName"></param>
+		/// <returns></returns>
 		public static Task<PpsClientData> CreateAsync(Type clientDataSetType, string serverName)
 		{
 			return Task.FromResult<PpsClientData>(null);

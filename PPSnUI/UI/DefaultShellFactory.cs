@@ -135,6 +135,9 @@ namespace TecWare.PPSn.UI
 			return settings;
 		} // proc LoadSettingsAsync
 
+		public void UpdateLastUsed()
+			=> infoFile.LastAccessTime = DateTime.Now;
+
 		public bool TryGetProperty(string name, out object value)
 		{
 			value = query.Get(name);
@@ -154,6 +157,8 @@ namespace TecWare.PPSn.UI
 					query = HttpUtility.ParseQueryString(uriQuery, Encoding.UTF8);
 			}
 		} // prop Uri
+
+		public DateTime LastUsed => infoFile.LastAccessTime;
 
 		public string FullUri => uri.ToString() + "?" + query;
 		public string Query => uriQuery;

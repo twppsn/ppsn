@@ -48,8 +48,7 @@ namespace PPSnExcel
 			ActiveWorkBook,
 			ActiveWorkSheet,
 			ActiveListObject,
-			ActiveListObjectLayout,
-			ActiveWorkBookPivotCaches
+			ActiveListObjectLayout
 		} // enum RefreshContext
 
 		#endregion
@@ -305,10 +304,10 @@ namespace PPSnExcel
 			}
 		} // func CreateShellAsync
 
-		private IPpsShell CreateShell(IPpsShellInfo info, bool isDefault)
+		private IPpsShell CreateShell(IPpsShellInfo info, bool isDefault, bool inBackground)
 		{
 			// connect to shell			
-			using (var bar = uiService.CreateProgress(progressText: String.Format("Verbinde mit {0}...", info.Name)))
+			using (var progress = inBackground ? null : uiService.CreateProgress(progressText: String.Format("Verbinde mit {0}...", info.Name)))
 			{
 				var shell = CreateShellAsync(info, isDefault).Await();
 				if (shell == null)
@@ -342,7 +341,7 @@ namespace PPSnExcel
 			foreach (var cur in factory)
 			{
 				if (cur.Name == name)
-					return CreateShell(cur, false);
+					return CreateShell(cur, false, false);
 				else if (cur.Uri == uri)
 					shellInfo = cur;
 			}
@@ -351,7 +350,7 @@ namespace PPSnExcel
 			if (shell != null)
 				return shell;
 			else if (shellInfo != null)
-				return CreateShell(shellInfo, false);
+				return CreateShell(shellInfo, false, false);
 			else
 				return null;
 		} // func EnforceShell
@@ -359,7 +358,7 @@ namespace PPSnExcel
 		public IPpsShell GetShellFromInfo(IPpsShellInfo info)
 			=> activatedShells.Find(c => c.Info == info);
 
-		public void ActivateEnvironment(IPpsShellInfo info)
+		public void ActivateEnvironment(IPpsShellInfo info, bool inBackground)
 		{
 			if (info is null)
 				return;
@@ -370,7 +369,7 @@ namespace PPSnExcel
 				return;
 
 			// activate the shell
-			CreateShell(info, true);
+			CreateShell(info, true, inBackground);
 		} // proc ActivateEnvironment
 
 		public void DeactivateShell(IPpsShell shell = null)
@@ -404,7 +403,12 @@ namespace PPSnExcel
 			PpsListObject.New(shell, range, reportId);
 		} // func NewTable
 
-		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, IPpsShell replaceShell = null, bool anonymize = false)
+		/// <summary>Refresh tables</summary>
+		/// <param name="context">Context to refresh</param>
+		/// <param name="replaceShell"></param>
+		/// <param name="anonymize"></param>
+		/// <returns></returns>
+		internal async Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, IPpsShell replaceShell = null, bool anonymize = false)
 		{
 			using (var progress = PpsShell.Global.CreateProgress())
 			{
@@ -414,41 +418,56 @@ namespace PPSnExcel
 				switch (context)
 				{
 					case RefreshContext.ActiveWorkBook:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook, replaceShell);
+						await RefreshTableAsync(progress, Globals.ThisAddIn.Application.ActiveWorkbook, replaceShell);
+						break;
 					case RefreshContext.ActiveWorkSheet:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet, replaceShell, Globals.ThisAddIn.Application.ActiveWorkbook);
-					case RefreshContext.ActiveWorkBookPivotCaches:
-						return RefreshAllPivotCaches(Globals.ThisAddIn.Application.ActiveWorkbook);
+						await RefreshTableAsync(progress, Globals.ThisAddIn.Application.ActiveSheet, replaceShell, true);
+						break;
 					default:
 						if (Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null))
-							return RefreshTableAsync(r.ListObject, replaceShell, context == RefreshContext.ActiveListObjectLayout, anonymize);
-						return Task.CompletedTask;
+						{
+							await RefreshTableAsync(r.ListObject, replaceShell, context == RefreshContext.ActiveListObjectLayout, anonymize);
+							RefreshPivotTables(progress, r.ListObject);
+						}
+						break;
 				}
 
 			}
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Workbook workbook, IPpsShell replaceShell)
+		internal async Task RefreshTableAsync(IPpsProgress progress, Excel.ListObject xlList, bool refreshLayout)
+		{
+			// refresh table
+			await RefreshTableAsync(xlList, null, refreshLayout, false);
+			// refresh pivot cache
+			RefreshPivotTables(progress, xlList);
+		} // proc RefreshTableAsync
+
+		private async Task RefreshTableAsync(IPpsProgress progress, Excel.Workbook workbook, IPpsShell replaceShell)
 		{
 			for (var i = 1; i <= workbook.Sheets.Count; i++)
 			{
 				if (workbook.Sheets[i] is Excel.Worksheet worksheet)
-					await RefreshTableAsync(worksheet, replaceShell, null);
+					await RefreshTableAsync(null, worksheet, replaceShell, false);
 			}
 
-			RefreshPivotCaches(workbook);
+			RefreshPivotCaches(progress, workbook, null);
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Worksheet worksheet, IPpsShell replaceShell, Excel.Workbook pivotCachesWorkbook)
+		private async Task RefreshTableAsync(IPpsProgress progress, Excel.Worksheet worksheet, IPpsShell replaceShell, bool refreshPivotCache)
 		{
 			for (var i = 1; i <= worksheet.ListObjects.Count; i++)
-				await RefreshTableAsync(worksheet.ListObjects[i], replaceShell, false, false);
+			{
+				var xlList = worksheet.ListObjects[i];
+				progress?.Report($"Aktualisiere {xlList.Name}...");
+				await RefreshTableAsync(xlList, replaceShell, false, false);
+			}
 
-			if (pivotCachesWorkbook != null)
-				RefreshPivotCaches(pivotCachesWorkbook);
+			if (refreshPivotCache && worksheet.Parent is Excel.Workbook wkb)
+				RefreshPivotCaches(progress, wkb, null);
 		} // func RefreshTableAsync
 
-		internal async Task RefreshTableAsync(Excel.ListObject _xlList, IPpsShell replaceShell, bool refreshLayout, bool enableAnonymization)
+		private async Task RefreshTableAsync(Excel.ListObject _xlList, IPpsShell replaceShell, bool refreshLayout, bool enableAnonymization)
 		{
 			using (var progress = PpsShell.Global.CreateProgress())
 			{
@@ -480,26 +499,70 @@ namespace PPSnExcel
 			}
 		} // func RefreshTableAsync
 
-		private async Task RefreshAllPivotCaches(Excel.Workbook workbook)
-		{
-			if (workbook != null)
-				RefreshPivotCaches(workbook);
+		private bool IsSourceDataOfTable(Excel.PivotCache pivotCache, string tableName)
+			=> pivotCache.SourceType == Excel.XlPivotTableSourceType.xlDatabase && pivotCache.SourceData is string sourceName && sourceName == tableName;
 
-			await Task.CompletedTask;
-		}
-
-		private void RefreshPivotCaches(Excel.Workbook workbook)
+		private void RefreshPivotTables(Excel.PivotTables pivotTables, Excel.PivotCache pivotCache)
 		{
+			for (var i = 1; i <= pivotTables.Count; i++)
+			{
+				var pivotTable = pivotTables.Item(i);
+				if (pivotTable.CacheIndex == pivotCache.Index)
+				{
+					try
+					{
+						pivotTable.RefreshTable();
+					}
+					catch (COMException) { }
+				}
+			}
+		} // proc RefreshPivotTables
+
+		private void RefreshPivotTables(Excel.Workbook workbook, Excel.PivotCache pivotCache)
+		{
+			if (workbook.PivotTables is Excel.PivotTables pivotTables)
+				RefreshPivotTables(pivotTables, pivotCache);
+
+			for (var i = 1; i <= workbook.Sheets.Count; i++)
+			{
+				if (workbook.Sheets[i] is Excel.Worksheet wks && wks.PivotTables() is Excel.PivotTables pivotTables2)
+					RefreshPivotTables(pivotTables2, pivotCache);
+			}
+		} // proc RefreshPivotTables
+
+		private void RefreshPivotCaches(IPpsProgress progress, Excel.Workbook workbook, string tableName)
+		{
+			if (workbook == null)
+				return;
+
+			progress?.Report("Aktualisiere Pivot-Cache...");
 			var pivotCaches = workbook.PivotCaches();
 			for (var i = 1; i <= pivotCaches.Count; i++)
 			{
+				var cache = pivotCaches[i];
+				if (tableName != null && !IsSourceDataOfTable(cache, tableName))
+					continue;
+				
 				try
 				{
-					pivotCaches[i].Refresh();
+					cache.Refresh();
+
+					// refresh depended tables
+					RefreshPivotTables(workbook, cache);
 				}
 				catch (COMException) { }
 			}
 		} // proc RefreshPivotCaches
+
+		public void RefreshPivotTables(IPpsProgress progress, Excel.ListObject xlList)
+		{
+			if (xlList != null && xlList.Parent is Excel.Worksheet wks && wks.Parent is Excel.Workbook wkb)
+				RefreshPivotCaches(progress, wkb, xlList.Name);
+		} // proc RefreshPivotTables
+
+		#endregion
+
+		#region -- Download Xlsx Report -----------------------------------------------
 
 		private static readonly DEAction xlsxTemplateAction = DEAction.Create("xlsxtmpl", "bi/", new DEActionParam("id", typeof(string)));
 

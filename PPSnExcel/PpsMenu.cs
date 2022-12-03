@@ -46,8 +46,12 @@ namespace PPSnExcel
 
 			PpsShell.CurrentChanged += (s, _e) => { RefreshUserName(); Refresh(); };
 
+			// activate last shell
+			if (PpsShell.Current == null)
+				Globals.ThisAddIn.ActivateEnvironment(null, true);
+
 			// init environment
-			RefreshEnvironments();
+			RefreshEnvironments(true);
 			RefreshUserName();
 			Refresh();
 
@@ -103,16 +107,18 @@ namespace PPSnExcel
 			logoutButton.Enabled = !(currentShell is null);
 		} // proc RefreshUsername
 
-		private void RefreshEnvironments()
+		private void RefreshEnvironments(bool activateLastUsed)
 		{
 			// remove all instances
 			loginGalery.Items.Clear();
-			
+
 			// readd them
+			IPpsShellInfo lastUsedShell = null;
 			var shellFactory = PpsShell.Global.GetService<IPpsShellFactory>(true);
 			foreach (var cur in shellFactory.OrderBy(c => c.DisplayName))
 			{
 				var shell = Globals.ThisAddIn.GetShellFromInfo(cur);
+
 				var ribbonButton = Factory.CreateRibbonDropDownItem();
 				ribbonButton.Label = cur.Name ?? cur.DisplayName;
 				ribbonButton.ScreenTip = $"{ cur.Name} ({cur.DisplayName})";
@@ -123,7 +129,13 @@ namespace PPSnExcel
 				ribbonButton.Tag = cur;
 				ribbonButton.Image = shell != null && shell.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
 				loginGalery.Items.Add(ribbonButton);
+
+				if (activateLastUsed &&( lastUsedShell == null || cur.LastUsed > lastUsedShell.LastUsed))
+					lastUsedShell = cur;
 			}
+
+			if (lastUsedShell != null) // try activate last shell
+				Globals.ThisAddIn.ActivateEnvironment(lastUsedShell, true);
 		} // proc RefreshEnvironments
 
 		private static Excel.Range GetTopLeftCell() 
@@ -167,22 +179,22 @@ namespace PPSnExcel
 				list.ClearDataAsync().Await();
 		} // proc RemoveTableData
 
-		private static void DataAnonymisieren()
+		private static void AnonTableData()
 		{
 			if (!PpsListObject.TryGetFromSelection(out var list))
 				return;
 
 			if (MessageBox.Show(String.Format("Anonymisiern Xml-Data of {0} ({1})?", list.List.DisplayName, list.List.XmlMap.Name), "Question", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-			{
 				list.AnonymizeDataAsync().Await();
-				Globals.ThisAddIn.RefreshTableAsync(ThisAddIn.RefreshContext.ActiveWorkBookPivotCaches).Await();
-			}
-		} // proc RemoveTableData
+		} // proc AnonTableData
 
 		private static void InsertTableCore(bool extendedEdit)
 		{
 			if (PpsListObject.TryGetFromSelection(out var ppsList)) // edit the current selected table
-				ppsList.Edit(extendedEdit);
+			{
+				if (ppsList.Edit(extendedEdit))
+					Globals.ThisAddIn.RefreshPivotTables(null, ppsList.List.InnerObject);
+			}
 			else if (!extendedEdit) // create a fresh table
 			{
 				var shell = PpsShell.Current; // get shell
@@ -192,9 +204,7 @@ namespace PPSnExcel
 		} // proc InsertTableCore
 
 		private void SelectionChanged(object sender, bool activate)
-		{
-			Refresh();
-		} // proc SelectionChanged
+			=> Refresh();
 
 		private void cmdReport_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(InsertReport);
@@ -209,9 +219,8 @@ namespace PPSnExcel
 			=> RunActionSafe(RemoveTableData);
 
 		private void dataAnonymisiern_Click(object sender, RibbonControlEventArgs e)
-			=> RunActionSafe(DataAnonymisieren);
+			=> RunActionSafe(AnonTableData);
 
-		
 		private void cmdListObjectInfo_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(Globals.ThisAddIn.ShowTableInfo);
 
@@ -232,10 +241,10 @@ namespace PPSnExcel
 			=> RunRefreshTableCommand(ThisAddIn.RefreshContext.ActiveWorkBook);
 
 		private void loginGalery_ItemsLoading(object sender, RibbonControlEventArgs e)
-			=> RunActionSafe(RefreshEnvironments);
+			=> RunActionSafe(() => RefreshEnvironments(false));
 
 		private void loginGalery_Click(object sender, RibbonControlEventArgs e)
-			=> RunActionSafe(() => Globals.ThisAddIn.ActivateEnvironment(loginGalery.SelectedItem?.Tag as IPpsShellInfo));
+			=> RunActionSafe(() => Globals.ThisAddIn.ActivateEnvironment(loginGalery.SelectedItem?.Tag as IPpsShellInfo, false));
 
 		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateShell());

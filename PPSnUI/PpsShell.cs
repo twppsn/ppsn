@@ -238,6 +238,8 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		Task<IPpsSettingsService> LoadSettingsAsync(IPpsShell shell);
+		/// <summary>Update the last used stamp.</summary>
+		void UpdateLastUsed();
 
 		/// <summary>Name of the instance.</summary>
 		string Name { get; }
@@ -247,6 +249,8 @@ namespace TecWare.PPSn
 		Uri Uri { get; }
 		/// <summary>Last Server-Version</summary>
 		Version Version { get; }
+		/// <summary>Last time this shell was used.</summary>
+		DateTime LastUsed { get; }
 
 		/// <summary>Local store for the instance data.</summary>
 		DirectoryInfo LocalPath { get; }
@@ -851,6 +855,8 @@ namespace TecWare.PPSn
 				this.info = info ?? throw new ArgumentNullException(nameof(info));
 				shellId = GetNextShellId();
 				this.parentProvider = parentProvider ?? throw new ArgumentNullException(nameof(parentProvider));
+
+				info.UpdateLastUsed();
 
 				AddService(typeof(IServiceProvider), this);
 				AddService(typeof(IPpsShell), this);

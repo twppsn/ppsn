@@ -1695,18 +1695,17 @@ namespace PPSnExcel
 
 		#region -- Editor -------------------------------------------------------------
 
-		public void Edit(bool extended)
-		{ 
-			map.Shell.EditTable(this, extended);
-		}
-		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize)
+		public bool Edit(bool extended)
+			=> map.Shell.EditTable(this, extended);
+
+		async Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize)
 		{
 			var columnArray = columns.ToArray();
 
 			// create new mapping
 			map = PpsListMapping.Create(map.Shell, views, filter, columnArray, map);
 			using (var progress = PpsShell.Global.CreateProgress())
-				return RefreshAsync(PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columnArray, anonymize);
+				await RefreshAsync(PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columnArray, anonymize);
 		} // proc UpdateAsync
 
 		string IPpsTableData.DisplayName { get => xlList.DisplayName; set => xlList.DisplayName = value; }

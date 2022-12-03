@@ -74,7 +74,7 @@ namespace TecWare.PPSn.Data
 		string Filter { get; }
 		/// <summary></summary>
 		IEnumerable<IPpsTableColumn> Columns { get; }
-		/// <summary> Defined Cells name </summary>
+		/// <summary>Defined Cells name </summary>
 		IEnumerable<string> DefinedNames { get; }
 
 		/// <summary>Is this an empty view.</summary>
