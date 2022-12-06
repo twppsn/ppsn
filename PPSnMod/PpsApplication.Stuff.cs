@@ -24,12 +24,30 @@ namespace TecWare.PPSn.Server
 {
 	public partial class PpsApplication
 	{
+		/// <summary>Return row of a request.</summary>
+		/// <param name="row"></param>
+		/// <param name="columnInfo"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public static IDataRow GetRow(IDataRow row, IDataColumns columnInfo = null)
+		{
+			var columns = new IDataColumn[row.Columns.Count];
+			var values = new object[row.Columns.Count];
+			for (var i = 0; i < values.Length; i++)
+			{
+				values[i] = row[i];
+				columns[i] = (columnInfo ?? row).Columns[i];
+			}
+
+			return new SimpleDataRow(values, columns);
+		} // GetRow
+
 		/// <summary>Return first row of a request.</summary>
 		/// <param name="rows"></param>
 		/// <returns></returns>
 		[LuaMember]
 		public static IDataRow GetFirstRow(IEnumerable<IDataRow> rows)
-			=> rows.Select(c => c.ToMyData()).FirstOrDefault();
+			=> rows.Select(row => GetRow(row, rows as IDataColumns)).FirstOrDefault();
 
 		private static LuaTable GetTableCore(IDataRow row)
 		{

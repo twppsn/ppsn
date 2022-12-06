@@ -156,7 +156,11 @@ namespace TecWare.PPSn.UI
 
 			#endregion
 
-			#region -- Exec -----------------------------------------------------------
+			#region -- Open, Exec -----------------------------------------------------
+
+			[LuaMember]
+			public void Open(string link)
+				=> PpsWebView.LinkCommand.Execute(new PpsWebViewLink(luaShell.Shell.Http.CreateFullUri(link)), pane);
 
 			[LuaMember]
 			public void Exec(string command, string pin)
