@@ -29,7 +29,7 @@ namespace TecWare.PPSn.UI
 {
 	#region -- class PpsDataQueryView -------------------------------------------------
 
-	public class PpsDataQueryView : DependencyObject, IDataRowEnumerable, INotifyCollectionChanged, ICollectionViewFactory
+	public class PpsDataQueryView : DependencyObject, IDataRowEnumerableRange, INotifyCollectionChanged, ICollectionViewFactory
 	{
 		#region -- class PpsDataQueryBuilder ------------------------------------------
 
@@ -85,7 +85,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- IDataRowEnumerable - members ---------------------------------------
 
-		private PpsDataQueryBuilder CreateQueryBuilder()
+		private PpsDataQueryBuilder CreateQueryBuilder(int start = -1, int count = -1)
 		{
 			if (String.IsNullOrEmpty(viewName))
 				return new PpsDataQueryBuilder(this, PpsDataQuery.Empty);
@@ -94,7 +94,9 @@ namespace TecWare.PPSn.UI
 			{
 				Filter = filter,
 				Columns = columns,
-				Order = order
+				Order = order,
+				Start = start,
+				Count = count
 			};
 
 			return new PpsDataQueryBuilder(this, query);
@@ -114,6 +116,9 @@ namespace TecWare.PPSn.UI
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> CreateQueryBuilder().GetEnumerator();
+
+		IEnumerator<IDataRow> IDataRowEnumerableRange.GetEnumerator(int start, int count)
+			=> CreateQueryBuilder(start, count).GetEnumerator();
 
 		IDataRowEnumerable IDataRowEnumerable.ApplyOrder(IEnumerable<PpsDataOrderExpression> order, Func<string, string> lookupNative)
 			=> CreateQueryBuilder().ApplyOrder(order, lookupNative);

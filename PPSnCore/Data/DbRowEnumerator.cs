@@ -43,4 +43,19 @@ namespace TecWare.PPSn.Data
 	} // interface IDataRowEnumerable
 
 	#endregion
+
+	#region -- interface IDataRowEnumerableRange --------------------------------------
+
+	/// <summary>Interface to provider access to an enumerable, that is filtered 
+	/// and/or sorted.</summary>
+	public interface IDataRowEnumerableRange : IDataRowEnumerable
+	{
+		/// <summary>Return a enumerate about a scope of rows.</summary>
+		/// <param name="start"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
+		IEnumerator<IDataRow> GetEnumerator(int start, int count);
+	} // interface IDataRowEnumerableRange
+
+	#endregion
 }

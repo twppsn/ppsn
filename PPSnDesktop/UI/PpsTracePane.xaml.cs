@@ -697,7 +697,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class AppAssemblyInfo ----------------------------------------------
+	#region -- class AppAssemblyInfo --------------------------------------------------
 
 	internal sealed class AppAssemblyInfo
 	{

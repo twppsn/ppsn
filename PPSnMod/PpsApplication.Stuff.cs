@@ -42,12 +42,35 @@ namespace TecWare.PPSn.Server
 			return new SimpleDataRow(values, columns);
 		} // GetRow
 
+		/// <summary>Copy single rows.</summary>
+		/// <param name="rows"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public static IEnumerable<IDataRow> CopyRows(IEnumerable<IDataRow> rows)
+			=> rows.Select(row => GetRow(row, rows as IDataColumns));
+
+		/// <summary>Create a copy of the whole result set.</summary>
+		/// <param name="rows"></param>
+		/// <param name="offset"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public static IReadOnlyList<IDataRow> GetRows(IEnumerable<IDataRow> rows, int offset = 0, int count = Int32.MaxValue)
+		{
+			rows = CopyRows(rows);
+			if (offset > 0)
+				rows = rows.Skip(offset);
+			if (count < Int32.MaxValue)
+				rows = rows.Take(count);
+			return rows.ToArray();
+		} // func GetRows
+
 		/// <summary>Return first row of a request.</summary>
 		/// <param name="rows"></param>
 		/// <returns></returns>
 		[LuaMember]
 		public static IDataRow GetFirstRow(IEnumerable<IDataRow> rows)
-			=> rows.Select(row => GetRow(row, rows as IDataColumns)).FirstOrDefault();
+			=> CopyRows(rows).FirstOrDefault();
 
 		private static LuaTable GetTableCore(IDataRow row)
 		{

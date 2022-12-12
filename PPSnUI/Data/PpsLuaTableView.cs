@@ -73,7 +73,7 @@ namespace TecWare.PPSn.Data
 		} // func GetType
 
 		private object GetTypedValue(object v, Type type)
-			=> Procs.ChangeType(v, type);
+			=> v == null ? null : Procs.ChangeType(v, type);
 
 		private bool TryGetType(string name, out Type type, out LuaTable childMetaTable)
 		{
