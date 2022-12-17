@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Neo.IronLua;
@@ -24,6 +25,33 @@ namespace TecWare.PPSn.Server
 {
 	public partial class PpsApplication
 	{
+		#region -- class RowsArray ----------------------------------------------------
+
+		private sealed class RowsArray : IReadOnlyList<IDataRow>, IDataColumns
+		{
+			private readonly IDataColumns columns;
+			private readonly IDataRow[] rows;
+
+			public RowsArray(IDataColumns columns, IDataRow[] rows)
+			{
+				this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
+				this.rows = rows ?? throw new ArgumentNullException(nameof(rows));
+			} // ctor
+
+			public IEnumerator<IDataRow> GetEnumerator()
+				=> ((IEnumerable<IDataRow>)rows).GetEnumerator();
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> rows.GetEnumerator();
+
+			public int Count => rows.Length;
+			public IDataRow this[int index] => rows[index];
+
+			public IReadOnlyList<IDataColumn> Columns => columns.Columns;
+		} // class RowsArray
+
+		#endregion
+
 		/// <summary>Return row of a request.</summary>
 		/// <param name="row"></param>
 		/// <param name="columnInfo"></param>
@@ -57,12 +85,15 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public static IReadOnlyList<IDataRow> GetRows(IEnumerable<IDataRow> rows, int offset = 0, int count = Int32.MaxValue)
 		{
+			var columns = rows as IDataColumns;
+
 			rows = CopyRows(rows);
 			if (offset > 0)
 				rows = rows.Skip(offset);
 			if (count < Int32.MaxValue)
 				rows = rows.Take(count);
-			return rows.ToArray();
+
+			return new RowsArray(columns, rows.ToArray());
 		} // func GetRows
 
 		/// <summary>Return first row of a request.</summary>

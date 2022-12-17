@@ -33,7 +33,7 @@ namespace TecWare.PPSn.UI
 	{
 		#region -- class PpsDataQueryBuilder ------------------------------------------
 
-		private sealed class PpsDataQueryBuilder : IDataRowEnumerable
+		private sealed class PpsDataQueryBuilder : IDataRowEnumerableRange
 		{
 			private readonly PpsDataQueryView view;
 			private readonly PpsDataQuery query;
@@ -46,6 +46,9 @@ namespace TecWare.PPSn.UI
 
 			public IEnumerator<IDataRow> GetEnumerator()
 				=> view.ExecuteQueryCore(query).GetEnumerator();
+
+			public IEnumerator<IDataRow> GetEnumerator(int start, int count)
+				=> view.ExecuteQueryCore(query, start, count).GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
@@ -85,7 +88,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- IDataRowEnumerable - members ---------------------------------------
 
-		private PpsDataQueryBuilder CreateQueryBuilder(int start = -1, int count = -1)
+		private PpsDataQueryBuilder CreateQueryBuilder()
 		{
 			if (String.IsNullOrEmpty(viewName))
 				return new PpsDataQueryBuilder(this, PpsDataQuery.Empty);
@@ -94,19 +97,22 @@ namespace TecWare.PPSn.UI
 			{
 				Filter = filter,
 				Columns = columns,
-				Order = order,
-				Start = start,
-				Count = count
+				Order = order
 			};
 
 			return new PpsDataQueryBuilder(this, query);
 		} // func CreateQuery
 
-		private IEnumerable<IDataRow> ExecuteQueryCore(PpsDataQuery query)
+		private IEnumerable<IDataRow> ExecuteQueryCore(PpsDataQuery query, int start = -1, int count = -1)
 		{
 			var shell = this.GetControlService<IPpsShell>(false);
 			if (shell == null || query.ViewId == null)
 				return Array.Empty<IDataRow>().OfType<IDataRow>();
+
+			if (start != -1)
+				query.Start = start;
+			if (count != -1)
+				query.Count = count;
 
 			return shell.GetViewData(query);
 		} // func ExecuteQueryCore
@@ -118,7 +124,7 @@ namespace TecWare.PPSn.UI
 			=> CreateQueryBuilder().GetEnumerator();
 
 		IEnumerator<IDataRow> IDataRowEnumerableRange.GetEnumerator(int start, int count)
-			=> CreateQueryBuilder(start, count).GetEnumerator();
+			=> CreateQueryBuilder().GetEnumerator(start, count);
 
 		IDataRowEnumerable IDataRowEnumerable.ApplyOrder(IEnumerable<PpsDataOrderExpression> order, Func<string, string> lookupNative)
 			=> CreateQueryBuilder().ApplyOrder(order, lookupNative);

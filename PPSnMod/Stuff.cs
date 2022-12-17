@@ -655,6 +655,12 @@ namespace TecWare.PPSn.Server
 			);
 		} // func CreateSvgDocument
 
+		/// <summary>Create a svg view port.</summary>
+		/// <param name="view"></param>
+		/// <returns></returns>
+		public static string CreateSvgViewPort(RectangleF view)
+			=> String.Format(CultureInfo.InvariantCulture, "{0} {1} {2} {3}", view.Left, view.Top, view.Right, view.Bottom);
+
 		#endregion
 	} // class PpsStuff
 

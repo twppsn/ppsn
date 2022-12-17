@@ -115,32 +115,6 @@ namespace TecWare.PPSn.Controls
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		internal FrameworkElement CreateCell(PpsListColumnRow parent)
-		{
-			if (CellTemplate != null)
-			{
-				var content = new ContentPresenter
-				{
-					Content = parent.DataContext,
-					ContentTemplate = CellTemplate
-				};
-				return content;
-			}
-			else if (DisplayMemberBinding != null)
-			{
-				var text = new TextBlock
-				{
-					Foreground = Brushes.Black,
-					Background = Brushes.LightCoral
-				};
-
-				text.SetBinding(TextBlock.TextProperty, DisplayMemberBinding);
-				return text;
-			}
-			else
-				return null;
-		} // func CreateCell
-
 		private void InvokePropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
@@ -765,8 +739,10 @@ namespace TecWare.PPSn.Controls
 			}
 			else if (column.DisplayMemberBinding != null)
 			{
-				var text = new TextBlock();
-				text.Padding = new Thickness(2);
+				var text = new TextBlock
+				{
+					Padding = new Thickness(2)
+				};
 				text.SetBinding(TextBlock.TextProperty, column.DisplayMemberBinding);
 				return text;
 			}
@@ -787,8 +763,7 @@ namespace TecWare.PPSn.Controls
 		protected override Size ArrangeOverride(Size finalSize)
 		{
 			// invalidate size
-			if (ColumnGenerator != null)
-				ColumnGenerator.InvalidateColumnWidths(finalSize.Width, false);
+			ColumnGenerator?.InvalidateColumnWidths(finalSize.Width, false);
 
 			return base.ArrangeOverride(finalSize);
 		} // func ArrangeOverride
