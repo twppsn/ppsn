@@ -68,7 +68,7 @@ namespace TecWare.PPSn.Controls
 				var t = (IPpsTableData)tableTextData;
 				currentData.DisplayName = t.DisplayName;
 				
-				await currentData.UpdateAsync(t.Views, t.Filter, t.Columns, false);
+				await currentData.UpdateAsync(t.Source, t.Columns, false);
 
 				DialogResult = DialogResult.OK;
 			}

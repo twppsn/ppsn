@@ -23,7 +23,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -266,33 +265,7 @@ namespace PPSnExcel
 
 			#endregion
 
-			#region -- GetNextBlockAsync ----------------------------------------------
-
-			private void WriteRow(XmlWriter x, IDataValues r, bool anonymize)
-			{
-				x.WriteStartElement("r");
-				var key = 0;
-				var count = map.columns.Length;
-				for (var i = 0; i < count; i++)
-				{
-					var v = r[resultToXml?[i] ?? i];
-					if (v != null)
-					{
-						x.WriteStartElement(map.columns[i].ResultColumnName);
-
-						if (anonymize && columnsAnonMask[i])
-						{
-							key = key == 0 ? randomGen.Next(7, 30) : key;
-							v = AnonymizeData(v, r[i].GetType(), key);
-						}
-						x.WriteValue(v);
-						x.WriteEndElement();
-					}
-				}
-				x.WriteEndElement();
-			} // func WriteRow
-
-			#region -- Data Anonymization --------------------------------------------------
+			#region -- Data Anonymization ---------------------------------------------
 			
 			private object AnonymizeData(object value, Type valueType, int key)
 			{
@@ -462,7 +435,33 @@ namespace PPSnExcel
 				return value;
 			}
 			
-			#endregion -- Data Anonymization --------------------------------------------------
+			#endregion
+
+			#region -- GetNextBlockAsync ----------------------------------------------
+
+			private void WriteRow(XmlWriter x, IDataValues r, bool anonymize)
+			{
+				x.WriteStartElement("r");
+				var key = 0;
+				var count = map.columns.Length;
+				for (var i = 0; i < count; i++)
+				{
+					var v = r[resultToXml?[i] ?? i];
+					if (v != null)
+					{
+						x.WriteStartElement(map.columns[i].ResultColumnName);
+
+						if (anonymize && columnsAnonMask[i])
+						{
+							key = key == 0 ? randomGen.Next(7, 30) : key;
+							v = AnonymizeData(v, r[i].GetType(), key);
+						}
+						x.WriteValue(v);
+						x.WriteEndElement();
+					}
+				}
+				x.WriteEndElement();
+			} // func WriteRow
 
 			public async Task<(bool, string)> GetNextBlockAsync(int blockSize, bool enableAnonymization)
 			{
@@ -532,18 +531,18 @@ namespace PPSnExcel
 
 		#endregion
 
-		#region -- class PpsEmptyResult ------------------------------------------------
+		#region -- class PpsEmptyResult -----------------------------------------------
 
 		private sealed class PpsEmptyResult : IEnumerable<IDataRow>, IDataColumns
 		{
-			private readonly PpsListMapping map;
 			private readonly IDataColumn[] columns;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
 			internal PpsEmptyResult(PpsListMapping map)
 			{
-				this.map = map ?? throw new ArgumentNullException(nameof(map));
+				if (map == null)
+					throw new ArgumentNullException(nameof(map));
 
 				columns = map.columns.Select(c => c.ToDataColumn()).ToArray();
 			} // ctor
@@ -563,23 +562,14 @@ namespace PPSnExcel
 
 		private static readonly Regex schemaName = new Regex(@"^ppsnXsd(?<n>\d+)$");
 
-		private const string environmentNameTag = "env";
-		private const string environmentUriTag = "uri";
-		private const string filterTag = "filter";
-		private const string viewTag = "view";
-
-		private readonly IPpsShell shell;    // attached environment
-		private readonly string viewId;                 // view or views
-		private readonly string filterExpr;             // uses placeholder for cells
+		private readonly PpsListSource listSource;
 		private PpsListColumnInfo[] columns;            // columns information
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		private PpsListMapping(IPpsShell shell, string select, PpsListColumnInfo[] columns, string filterExpr)
+		private PpsListMapping(PpsListSource listSource, PpsListColumnInfo[] columns)
 		{
-			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
-			this.viewId = select ?? throw new ArgumentNullException(nameof(select));
-			this.filterExpr = filterExpr ?? String.Empty;
+			this.listSource = listSource ?? throw new ArgumentNullException(nameof(listSource));
 			this.columns = columns ?? Array.Empty<PpsListColumnInfo>();
 		} // ctor
 
@@ -788,21 +778,11 @@ namespace PPSnExcel
 
 		#endregion
 
-		private IPropertyReadOnlyDictionary GetVariables(Worksheet worksheet, SynchronizationContext context)
+		public static IPropertyReadOnlyDictionary GetVariables(Worksheet worksheet)
 			=> new WorksheetPropertyDictionary(worksheet);
 
-		internal IPpsViewResult GetViewData(PpsDataOrderExpression[] order, Worksheet current, SynchronizationContext context = null)
-		{
-			var request = new PpsDataQuery(viewId)
-			{
-				Columns = columns.Select(c => c.ToColumnExpression()).Where(c => c != null).ToArray(),
-				Filter = PpsDataFilterExpression.Parse(filterExpr, CultureInfo.CurrentUICulture, PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.AllowVariables).Reduce(GetVariables(current, context)),
-				Order = order,
-				AttributeSelector = "*,V.*,Xl.*"
-			};
-
-			return new PpsViewResult(this, shell.GetViewData(request));
-		} // func GetViewData
+		internal IPpsViewResult GetViewData(PpsDataOrderExpression[] order, Worksheet current)
+			=> new PpsViewResult(this, listSource.GetData(DataColumnExpressions, order, PpsListMapping.GetVariables(current)));
 
 		internal IPpsViewResult GetEmptyData()
 			=> new PpsViewResult(this, new PpsEmptyResult(this));
@@ -824,12 +804,7 @@ namespace PPSnExcel
 			if (columnInfo.Columns.Count == 0)
 				throw new ExcelException("Ergebnismenge hat keine Spalten.");
 
-			var annotation = PpsWinShell.UpdateProperties(String.Empty,
-				new KeyValuePair<string, string>(environmentNameTag, shell.Info.Name),
-				new KeyValuePair<string, string>(environmentUriTag, shell.Info.Uri.ToString()),
-				new KeyValuePair<string, string>(viewTag, viewId),
-				new KeyValuePair<string, string>(filterTag, filterExpr)
-			);
+			var annotation = PpsWinShell.UpdateProperties(String.Empty, listSource.GetProperties().ToArray());
 
 			XElement xColumns;
 			#region -- base schema --
@@ -898,18 +873,10 @@ namespace PPSnExcel
 				=> GetTypeToXsd(netType) == xsdType;
 
 			// test base params
-			if (!TryParse(map, out _, out var shellUri, out var currentViewId, out var currentFilterExpr, out var currentColumns))
+			if (!TryParse(map, out var properties, out var currentColumns))
 				return (false, null);
 
-			if (Uri.Compare(shellUri, shell.Info.Uri, UriComponents.Scheme | UriComponents.Host | UriComponents.Port | UriComponents.Path, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) != 0)
-				return (true, null);
-
-			if (viewId != currentViewId)
-				return (true, null);
-
-			if (String.IsNullOrEmpty(currentFilterExpr))
-				currentFilterExpr = currentFilterExpr ?? String.Empty;
-			if (filterExpr != currentFilterExpr)
+			if (listSource.IsChanged(properties))
 				return (true, null);
 
 			// test schema
@@ -1031,17 +998,15 @@ namespace PPSnExcel
 			return null;
 		} // func GetColumnFromExpression
 
-		public IPpsShell Shell => shell;
-		public string Select => viewId;
-		public string Filter => filterExpr;
-
+		public PpsListSource Source => listSource;
+		public IEnumerable<PpsDataColumnExpression> DataColumnExpressions => columns.Select(c => c.ToColumnExpression()).Where(c => c != null);
 		public int ColumnCount => columns.Length;
 
 		#region -- TryParse -----------------------------------------------------------
 
-		public static PpsListMapping Create(IPpsShell shell, string views, string filter, IEnumerable<IPpsTableColumn> columns, PpsListMapping currentMapping)
+		public static PpsListMapping Create(PpsListSource listSource, IEnumerable<IPpsTableColumn> columns, PpsListMapping currentMapping)
 		{
-			return new PpsListMapping(shell, views,
+			return new PpsListMapping(listSource,
 				columns == null
 					? Array.Empty<PpsListColumnInfo>()
 					: (
@@ -1049,8 +1014,7 @@ namespace PPSnExcel
 						where col.Type == PpsTableColumnType.Data
 						let currentColumn = currentMapping?.GetColumnFromExpression(col.Expression)
 						select new PpsListColumnInfo(col.Expression, currentColumn?.ResultColumnName, currentColumn?.XmlType, currentColumn?.IsNullable ?? true)
-					).ToArray(),
-				filter
+					).ToArray()
 			);
 		} // func Create
 
@@ -1073,18 +1037,11 @@ namespace PPSnExcel
 
 		public static bool TryParse(Func<string, Uri, IPpsShell> findShell, Excel.XmlMap xlMap, out PpsListMapping ppsMap)
 		{
-			if (TryParse(xlMap, out var shellName, out var shellUri, out var viewId, out var filterExpr, out var columns))
+			if (TryParse(xlMap, out var properties, out var columns)
+				&& PpsListSource.TryParse(findShell, properties, out var listSource))
 			{
-				// find environment
-				var env = findShell(shellName, shellUri);
-				if (env == null)
-				{
-					ppsMap = null;
-					return false;
-				}
-
 				// create mapping
-				ppsMap = new PpsListMapping(env, viewId, columns, filterExpr);
+				ppsMap = new PpsListMapping(listSource, columns);
 				return true;
 			}
 			else
@@ -1094,49 +1051,65 @@ namespace PPSnExcel
 			}
 		} // func TryParse
 
-		public static bool TryParseComment(XElement xSchema, out string shellName, out Uri shellUri, out string viewId, out string filterExpr)
+		private static bool TryParseComment(XElement xSchema, out IPropertyEnumerableDictionary properties)
 		{
-			shellName = null;
-			shellUri = null;
-			viewId = null;
-			filterExpr = null;
-
 			// get annotation
 			var comment = xSchema.Element(xsdAnnotationName)?.Element(xsdDocumentationName)?.Value;
 			if (String.IsNullOrEmpty(comment))
+			{
+				properties = PropertyDictionary.EmptyReadOnly;
 				return false;
+			}
 
 			// parse content
+			var propertiesData = new PropertyDictionary();
 			foreach (var kv in PpsWinShell.GetLineProperties(comment))
 			{
 				switch (kv.Key)
 				{
-					case environmentNameTag:
-						shellName = kv.Value;
+					case PpsListSource.EnvironmentUriTag:
+						if (!Uri.TryCreate(kv.Value, UriKind.Absolute, out var uri))
+						{
+							properties = PropertyDictionary.EmptyReadOnly;
+							return false;
+						}
+						propertiesData.SetProperty(kv.Key, uri);
 						break;
-					case environmentUriTag:
-						shellUri = new Uri(kv.Value, UriKind.Absolute);
-						break;
-					case filterTag:
-						filterExpr = kv.Value;
-						break;
-					case viewTag:
-						viewId = kv.Value;
+					default:
+						propertiesData.SetProperty(kv.Key, kv.Value);
 						break;
 				}
 			}
+
+			properties = propertiesData;
 			return true;
 		} // func TryParseComment
 
 		public static void DebugInfo(Excel.XmlMap xlMap, StringBuilder sb)
 		{
-			if (TryParse(xlMap, out var environmentName, out var environmentUri, out var viewId, out var filterExpr, out var columns))
+			if (TryParse(xlMap, out var properties, out var columns))
 			{
 				sb.AppendLine("Mapping found:");
+
+				if (!properties.TryGetProperty(PpsListSource.EnvironmentNameTag, out var environmentName))
+					environmentName = String.Empty;
+				if (!properties.TryGetProperty(PpsListSource.EnvironmentUriTag, out var environmentUri))
+					environmentUri = "#error#";
+
 				sb.AppendFormat("\tEnvironment: {0} ({1})", environmentName, environmentUri).AppendLine();
-				sb.Append("\tView: ").Append(viewId).AppendLine();
-				sb.Append("\tFilter: ").Append(filterExpr).AppendLine();
+
+				foreach (var prop in properties)
+				{
+					if (prop.Name == PpsListSource.EnvironmentNameTag
+						|| prop.Name == PpsListSource.EnvironmentUriTag)
+						continue;
+
+					if (prop.Name.Length > 0)
+						sb.Append('\t').Append(Char.ToUpper(prop.Name[0])).Append(prop.Name.Substring(1)).Append(": ").Append(prop.Value).AppendLine();
+				}
+
 				sb.AppendLine();
+
 				if (columns == null || columns.Length == 0)
 					sb.Append("Column information not found.");
 				else
@@ -1162,12 +1135,9 @@ namespace PPSnExcel
 			}
 		} // func DebugInfo
 
-		private static bool TryParse(Excel.XmlMap xlMap, out string environmentName, out Uri environmentUri, out string viewId, out string filterExpr, out PpsListColumnInfo[] columns)
+		private static bool TryParse(Excel.XmlMap xlMap, out IPropertyEnumerableDictionary properties, out PpsListColumnInfo[] columns)
 		{
-			environmentName = null;
-			environmentUri = null;
-			viewId = null;
-			filterExpr = null;
+			properties = PropertyDictionary.EmptyReadOnly;
 			columns = null;
 
 			if (xlMap == null || xlMap.Schemas.Count != 1)
@@ -1178,7 +1148,7 @@ namespace PPSnExcel
 				return false;
 
 			// parse header
-			if (!TryParseComment(xSchema, out environmentName, out environmentUri, out viewId, out filterExpr))
+			if (!TryParseComment(xSchema, out properties))
 				return false;
 
 			// parse column information
@@ -1191,7 +1161,7 @@ namespace PPSnExcel
 					   select new PpsListColumnInfo(id, name, type, minOccurs == 0)
 			).ToArray();
 
-			return environmentUri != null && !String.IsNullOrEmpty(viewId);
+			return true;
 		} // func TryParse
 
 		public static bool TryParseFromSelection(out PpsListMapping ppsMap)
@@ -1630,7 +1600,6 @@ namespace PPSnExcel
 		{
 			var showTotals = false;
 			var worksheet = ThisAddIn.GetWorksheet(xlList.InnerObject);
-			var syncContext = SynchronizationContext.Current;
 
 			// get current column layout
 			// before the xml mapping is changed, because it will clear all mappings
@@ -1643,7 +1612,7 @@ namespace PPSnExcel
 			if (columns != null && xlList.AutoFilter != null)
 				xlList.AutoFilter.ShowAllData();
 
-			using (var result = await Task.Run(() => map.GetViewData(order, worksheet, syncContext)))
+			using (var result = await Task.Run(() => map.GetViewData(order, worksheet)))
 			{
 				// create a default layout from the current layout
 				// this must be created add this place, because the change of the mapping will destroy all xpath-relations
@@ -1696,21 +1665,20 @@ namespace PPSnExcel
 		#region -- Editor -------------------------------------------------------------
 
 		public bool Edit(bool extended)
-			=> map.Shell.EditTable(this, extended);
+			=> map.Source.Shell.EditTable(this, extended);
 
-		async Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize)
+		async Task IPpsTableData.UpdateAsync(PpsListSource source, IEnumerable<IPpsTableColumn> columns, bool anonymize)
 		{
 			var columnArray = columns.ToArray();
 
 			// create new mapping
-			map = PpsListMapping.Create(map.Shell, views, filter, columnArray, map);
+			map = PpsListMapping.Create(source, columnArray, map);
 			using (var progress = PpsShell.Global.CreateProgress())
 				await RefreshAsync(PpsXlRefreshList.Columns, PpsMenu.IsSingleLineModeToggle(), columnArray, anonymize);
 		} // proc UpdateAsync
 
 		string IPpsTableData.DisplayName { get => xlList.DisplayName; set => xlList.DisplayName = value; }
-		string IPpsTableData.Views => map.Select;
-		string IPpsTableData.Filter => map.Filter;
+		PpsListSource IPpsTableData.Source => map.Source;
 		IEnumerable<IPpsTableColumn> IPpsTableData.Columns => GetListColumnInfo();
 
 		bool IPpsTableData.IsEmpty => false;
@@ -1746,21 +1714,21 @@ namespace PPSnExcel
 
 		private sealed class NewModel : IPpsTableData
 		{
-			private readonly IPpsShell shell;
+			private readonly PpsListSource source;
 			private readonly Excel.Range topLeftCell;
 
-			public NewModel(IPpsShell shell, Excel.Range topLeftCell)
+			public NewModel(Excel.Range topLeftCell, PpsListSource source)
 			{
-				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+				this.source = source ?? throw new ArgumentNullException(nameof(source));
 				this.topLeftCell = topLeftCell ?? throw new ArgumentNullException(nameof(topLeftCell));
 			} // ctor
 
-			public async Task UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize)
+			public async Task UpdateAsync(PpsListSource source, IEnumerable<IPpsTableColumn> columns, bool anonymize)
 			{
 				var columnArray = columns.ToArray();
 
 				// create a new mapping
-				var newMapping = PpsListMapping.Create(shell, views, filter, columnArray, null);
+				var newMapping = PpsListMapping.Create((PpsListSource)source, columnArray, null);
 
 				// Initialize ListObject
 				var xlList = Globals.Factory.GetVstoObject(topLeftCell.ListObject ?? topLeftCell.Worksheet.ListObjects.Add());
@@ -1772,19 +1740,25 @@ namespace PPSnExcel
 
 			public string DisplayName { get; set; } = null;
 
-			public string Views { get; set; } = null;
-			public string Filter => null;
+			public PpsListSource Source => source;
 			public IEnumerable<IPpsTableColumn> Columns => null;
 			public bool IsEmpty => true;
 
 			public IEnumerable<string> DefinedNames => GetDefinedNames(topLeftCell.Worksheet);
 		} // class NewModel 
 
-		public static void New(IPpsShell shell, Excel.Range topLeftCell, string views)
-			=> shell.EditTable(new NewModel(shell, topLeftCell) { Views = views }, false);
-
+		/// <summary>Create a new list view.</summary>
+		/// <param name="shell"></param>
+		/// <param name="topLeftCell"></param>
 		public static void New(IPpsShell shell, Excel.Range topLeftCell)
-			=> shell.EditTable(new NewModel(shell, topLeftCell), false);
+			=> shell.EditTable(new NewModel(topLeftCell, new PpsListViewSource(shell)), false);
+
+		/// <summary>Create a new list view, based on view.</summary>
+		/// <param name="shell"></param>
+		/// <param name="topLeftCell"></param>
+		/// <param name="views"></param>
+		public static void New(IPpsShell shell, Excel.Range topLeftCell, string views)
+			=> shell.EditTable(new NewModel(topLeftCell, new PpsListViewSource(shell, views)), false);
 
 		#endregion
 
