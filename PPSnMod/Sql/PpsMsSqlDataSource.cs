@@ -16,22 +16,19 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Security;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Fizzler;
-using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.SqlServer.Server;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -76,25 +73,71 @@ namespace TecWare.PPSn.Server.Sql
 				await connection.OpenAsync();
 			} // proc OpenConnectionAsync
 
+
+			private static Task ConnectSystemUserAsync(PpsMsSqlDataSource dataSource, SqlConnection connection, SqlConnectionStringBuilder connectionString)
+			{
+				if (dataSource.sysUserName == null)
+					return OpenConnectionIntegratedAsync(connection, connectionString);
+				else
+					return OpenConnectionAsync(connection, connectionString, new SqlCredential(dataSource.sysUserName, dataSource.sysPassword));
+			} // func ConnectSystemUserAsync
+
 			protected override async Task ConnectCoreAsync(SqlConnection connection, SqlConnectionStringBuilder connectionString, IDEAuthentificatedUser authentificatedUser)
 			{
-				if (authentificatedUser.Identity == PpsUserIdentity.System) // system user is asking for a connection
+				var sqlDataSource = (PpsMsSqlDataSource)DataSource;
+				if (ReferenceEquals(PpsUserIdentity.System, authentificatedUser.Identity) || PpsUserIdentity.System.Equals(authentificatedUser.Identity)) // system user is asking for a connection
 				{
-					var sqlDataSource = (PpsMsSqlDataSource)DataSource;
-					if (sqlDataSource.sysUserName == null)
-						await OpenConnectionIntegratedAsync(connection, connectionString);
-					else
-						await OpenConnectionAsync(connection, connectionString, new SqlCredential(sqlDataSource.sysUserName, sqlDataSource.sysPassword));
+					await ConnectSystemUserAsync(sqlDataSource, connection, connectionString);
 				}
-				else if (authentificatedUser.TryImpersonate(out var ctx)) // does only work in the admin context
+				else // ask for other user information
 				{
-					using (ctx)
-						await OpenConnectionIntegratedAsync(connection, connectionString);
+					switch (sqlDataSource.TryGetConnectionMode(authentificatedUser))
+					{
+						case UserCredential uc:
+							await OpenConnectionAsync(connection, connectionString, new SqlCredential(uc.UserName, ReadOnlyPassword(uc.Password)));
+							break;
+						case SqlCredential cred:
+							await OpenConnectionAsync(connection, connectionString, cred);
+							break;
+						case WindowsImpersonationContext ctx:
+							using (ctx)
+								await OpenConnectionIntegratedAsync(connection, connectionString);
+							break;
+						case WindowsIdentity identity:
+							if (identity.User.Equals(WindowsIdentity.GetCurrent().User))
+							{
+								await ConnectSystemUserAsync(sqlDataSource, connection, connectionString);
+								break;
+							}
+							else
+							{
+								using (identity.Impersonate())
+									await OpenConnectionIntegratedAsync(connection, connectionString);
+								break;
+							}
+						case bool system:
+							if (system)
+							{
+								await ConnectSystemUserAsync(sqlDataSource, connection, connectionString);
+								break;
+							}
+							else if (authentificatedUser.TryImpersonate(out var ctx)) // does only work in the admin context
+							{
+								using (ctx)
+									await OpenConnectionIntegratedAsync(connection, connectionString);
+								break;
+							}
+							else if (authentificatedUser.TryGetCredential(out var uc)) // use user credentials
+							{
+								await OpenConnectionAsync(connection, connectionString, new SqlCredential(uc.UserName, ReadOnlyPassword(uc.Password)));
+								break;
+							}
+							else
+								goto default;
+						default:
+							throw new ArgumentOutOfRangeException(nameof(authentificatedUser));
+					}
 				}
-				else if (authentificatedUser.TryGetCredential(out var uc)) // use user credentials
-					await OpenConnectionAsync(connection, connectionString, new SqlCredential(uc.UserName, ReadOnlyPassword(uc.Password)));
-				else
-					throw new ArgumentOutOfRangeException(nameof(authentificatedUser));
 			} // func ConnectCoreAsync
 
 			private static SecureString ReadOnlyPassword(SecureString password)
@@ -2111,6 +2154,27 @@ namespace TecWare.PPSn.Server.Sql
 		/// <inherited />
 		public override PpsDataSynchronization CreateSynchronizationSession(IPpsConnectionHandle connection, long lastSyncronizationStamp, bool leaveConnectionOpen)
 			=> new PpsMsSqlDataSynchronization(Application, connection, lastSyncronizationStamp, leaveConnectionOpen);
+
+		/// <summary>Get connection mode for the user</summary>
+		/// <param name="authentificatedUser"></param>
+		/// <returns></returns>
+		protected virtual object TryGetConnectionMode(IDEAuthentificatedUser authentificatedUser)
+		{
+			foreach(var cur in ConfigNode.Elements("access"))
+			{
+				if (authentificatedUser.IsInRole(cur.GetAttribute<string>("security")))
+				{
+					var user = cur.GetAttribute<string>("user");
+					if (user == ".sys")
+						return true;
+					else if (user == ".self")
+						return false;
+					else
+						return UserCredential.Create(user, cur.GetAttribute<SecureString>("password")); 
+				}
+			}
+			return null;
+		} // func TryGetConnectionMode
 
 		/// <summary></summary>
 		/// <param name="connectionString"></param>

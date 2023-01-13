@@ -21,14 +21,12 @@ using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using System.IO;
 using System.IO.Compression;
-using System.Net;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
-using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -974,6 +972,22 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		public override PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 			=> new SqlDataTransaction(this, connection);
+
+		/// <inherited/>
+		protected override object TryGetConnectionMode(IDEAuthentificatedUser authentificatedUser)
+		{
+			if (authentificatedUser.Info is SqlUser)
+			{
+				if (authentificatedUser.TryImpersonate(out var ctx)) // does only work in the admin context
+					return ctx;
+				else if (authentificatedUser.TryGetCredential(out var uc)) // use user credentials
+					return uc;
+				else
+					return null;
+			}
+
+			return base.TryGetConnectionMode(authentificatedUser);
+		} // func TryGetConnectionMode
 
 		/// <summary></summary>
 		/// <param name="connection"></param>
