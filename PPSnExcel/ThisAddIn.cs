@@ -213,7 +213,7 @@ namespace PPSnExcel
 			return true;
 		} // proc UpdateApplicationAsync
 
-		private static async Task<bool> LoginShellAsync(IWin32Window parent, IPpsShell shell)
+		private static async Task<bool> LoginShellAsync(IWin32Window parent, IPpsShell shell, bool isBackground)
 		{
 			// open trust stroe
 			using (var login = new PpsClientLogin(shell.Info.GetCredentialTarget(), shell.Info.Name, false))
@@ -224,7 +224,9 @@ namespace PPSnExcel
 					// show login dialog
 					if (loginCounter > 0)
 					{
-						if (!login.ShowWindowsLogin(parent.Handle))
+						if (isBackground)
+							return false;
+						else if (!login.ShowWindowsLogin(parent.Handle))
 							return false;
 					}
 
@@ -254,7 +256,7 @@ namespace PPSnExcel
 			}
 		} // proc LoginShellAsync
 
-		private async Task<IPpsShell> CreateShellAsync(IPpsShellInfo info, bool isDefault)
+		private async Task<IPpsShell> CreateShellAsync(IPpsShellInfo info, bool isDefault, bool isBackground)
 		{
 			if (info == null)
 				throw new ArgumentNullException(nameof(info));
@@ -266,7 +268,7 @@ namespace PPSnExcel
 				newShell = await PpsShell.StartAsync(info, isDefault);
 
 				// authentificate shell
-				if (!await LoginShellAsync(this, newShell))
+				if (!await LoginShellAsync(this, newShell, isBackground))
 				{
 					newShell.Dispose();
 					return null;
@@ -304,20 +306,27 @@ namespace PPSnExcel
 			}
 		} // func CreateShellAsync
 
-		private IPpsShell CreateShell(IPpsShellInfo info, bool isDefault, bool inBackground)
+		private IPpsShell CreateShellUpdateUI(IPpsShell shell)
 		{
-			// connect to shell			
-			using (var progress = inBackground ? null : uiService.CreateProgress(progressText: String.Format("Verbinde mit {0}...", info.Name)))
-			{
-				var shell = CreateShellAsync(info, isDefault).Await();
-				if (shell == null)
-					return null;
+			if (shell == null)
+				return null;
 
-				shell.Disposed += ShellDestroyed;
-				activatedShells.Add(shell);
-				Globals.Ribbons.PpsMenu.RefreshUserName();
-				return shell;
-			}
+			shell.Disposed += ShellDestroyed;
+			activatedShells.Add(shell);
+			Globals.Ribbons.PpsMenu.RefreshUserName();
+			return shell;
+		} // func CreateShellUpdateUI
+
+		private void CreateShellInBackground(IPpsShellInfo info)
+		{
+			CreateShellAsync(info, true, true)
+				.ContinueWith(t => CreateShellUpdateUI(t.Result));
+		} // func CreateShellInBackground
+
+		private IPpsShell CreateShell(IPpsShellInfo info, bool isDefault)
+		{
+			using (var progress = uiService.CreateProgress(progressText: String.Format("Verbinde mit {0}...", info.Name)))
+				return CreateShellUpdateUI(CreateShellAsync(info, isDefault, false).Await());
 		} // proc CreateShell
 
 		private void ShellDestroyed(object sender, EventArgs e)
@@ -341,7 +350,7 @@ namespace PPSnExcel
 			foreach (var cur in factory)
 			{
 				if (cur.Name == name)
-					return CreateShell(cur, false, false);
+					return CreateShell(cur, false);
 				else if (cur.Uri == uri)
 					shellInfo = cur;
 			}
@@ -350,7 +359,7 @@ namespace PPSnExcel
 			if (shell != null)
 				return shell;
 			else if (shellInfo != null)
-				return CreateShell(shellInfo, false, false);
+				return CreateShell(shellInfo, false);
 			else
 				return null;
 		} // func EnforceShell
@@ -369,7 +378,10 @@ namespace PPSnExcel
 				return;
 
 			// activate the shell
-			CreateShell(info, true, inBackground);
+			if (inBackground)
+				CreateShellInBackground(info);
+			else
+				CreateShell(info, true);
 		} // proc ActivateEnvironment
 
 		public void DeactivateShell(IPpsShell shell = null)

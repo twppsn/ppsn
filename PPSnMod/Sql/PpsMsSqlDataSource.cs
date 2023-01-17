@@ -19,12 +19,14 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
 using System.Security;
 using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Microsoft.SqlServer.Server;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -39,6 +41,8 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary>Access sql-server.</summary>
 	public class PpsMsSqlDataSource : PpsSqlDataSource
 	{
+		private static readonly XName xnAccess = PpsStuff.PpsNamespace + "access";
+
 		#region -- class SqlConnectionHandle ------------------------------------------
 
 		private sealed class SqlConnectionHandle : PpsSqlConnectionHandle<SqlConnection, SqlConnectionStringBuilder>
@@ -2160,7 +2164,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <returns></returns>
 		protected virtual object TryGetConnectionMode(IDEAuthentificatedUser authentificatedUser)
 		{
-			foreach(var cur in ConfigNode.Elements("access"))
+			foreach(var cur in ConfigNode.Elements(xnAccess))
 			{
 				if (authentificatedUser.IsInRole(cur.GetAttribute<string>("security")))
 				{
