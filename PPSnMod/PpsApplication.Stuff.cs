@@ -59,7 +59,7 @@ namespace TecWare.PPSn.Server
 
 			public RowsArray(IDataColumns columns, IDataRow[] rows)
 			{
-				this.columns = columns ?? throw new ArgumentNullException(nameof(columns));
+				this.columns = columns ?? (rows.Length > 0 ? rows[0] : RowColumns.Empty);
 				this.rows = rows ?? throw new ArgumentNullException(nameof(rows));
 			} // ctor
 
@@ -72,7 +72,15 @@ namespace TecWare.PPSn.Server
 			public int Count => rows.Length;
 			public IDataRow this[int index] => rows[index];
 
-			public IReadOnlyList<IDataColumn> Columns => columns.Columns;
+			public IReadOnlyList<IDataColumn> Columns
+			{
+				get
+				{
+					if (columns == null)
+						throw new ArgumentNullException(nameof(columns));
+					return columns.Columns;
+				}
+			}
 		} // class RowsArray
 
 		#endregion
@@ -145,6 +153,8 @@ namespace TecWare.PPSn.Server
 
 			public IPpsColumnDescription GetFieldDescription(string columnName)
 				=> columns.FirstOrDefault(c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+
+			public static IDataColumns Empty { get; } = new RowColumns(Array.Empty<IPpsColumnDescription>());
 		} // class RowColumns
 
 		#endregion
@@ -320,6 +330,9 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public static IReadOnlyList<IDataRow> GetRows(IEnumerable<IDataRow> rows, int offset = 0, int count = Int32.MaxValue, IDataColumns columnInfo = null)
 		{
+			if (columnInfo == null)
+				columnInfo = rows as IDataColumns;
+
 			rows = CopyRows(rows, columnInfo);
 
 			if (offset > 0)
@@ -327,7 +340,7 @@ namespace TecWare.PPSn.Server
 			if (count < Int32.MaxValue)
 				rows = rows.Take(count);
 
-			return new RowsArray(columnInfo ?? rows as IDataColumns, rows.ToArray());
+			return new RowsArray(columnInfo, rows.ToArray());
 		} // func GetRows
 
 		/// <summary>Create a copy of the whole result set.</summary>
