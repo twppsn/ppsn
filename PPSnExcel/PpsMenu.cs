@@ -19,6 +19,7 @@ using System.Windows.Forms;
 using Microsoft.Office.Tools.Ribbon;
 using TecWare.DE.Stuff;
 using TecWare.PPSn;
+using TecWare.PPSn.Controls;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
@@ -113,6 +114,7 @@ namespace PPSnExcel
 			loginGalery.Items.Clear();
 
 			// readd them
+			var isShellAdded = false;
 			IPpsShellInfo lastUsedShell = null;
 			var shellFactory = PpsShell.Global.GetService<IPpsShellFactory>(true);
 			foreach (var cur in shellFactory.OrderBy(c => c.DisplayName))
@@ -129,14 +131,46 @@ namespace PPSnExcel
 				ribbonButton.Tag = cur;
 				ribbonButton.Image = shell != null && shell.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
 				loginGalery.Items.Add(ribbonButton);
+				isShellAdded = true;
 
 				if (activateLastUsed &&( lastUsedShell == null || cur.LastUsed > lastUsedShell.LastUsed))
 					lastUsedShell = cur;
 			}
 
+			if (isShellAdded)
+				newItemButton.Visible = Globals.ThisAddIn.Application.ShowDevTools;
+			else
+			{
+				newItemButton.Visible = false;
+				var ribbonButton = Factory.CreateRibbonDropDownItem();
+				ribbonButton.Label = newItemButton.Label;
+				ribbonButton.ScreenTip = newItemButton.ScreenTip;
+				ribbonButton.SuperTip = newItemButton.SuperTip;
+				ribbonButton.Image = null;
+				loginGalery.Items.Add(ribbonButton);
+			}
+
 			if (lastUsedShell != null) // try activate last shell
 				Globals.ThisAddIn.ActivateEnvironment(lastUsedShell, true);
 		} // proc RefreshEnvironments
+
+		private void ActivateEnvironmentCommand()
+		{
+			if (loginGalery.SelectedItem?.Tag is IPpsShellInfo shellInfo)
+				Globals.ThisAddIn.ActivateEnvironment(shellInfo, false);
+			else
+				CreateEnvironmentCommand();
+		} // proc ActivateEnvironmentCommand
+
+		private void CreateEnvironmentCommand()
+		{
+			var newShell = PpsWinShell.CreateNewShellDialog(Globals.ThisAddIn);
+			if (newShell != null)
+			{
+				RefreshEnvironments(false);
+				Globals.ThisAddIn.ActivateEnvironment(newShell, false);
+			}
+		} // func CreateEnvironmentCommand
 
 		private static Excel.Range GetTopLeftCell() 
 			=> Globals.ThisAddIn.Application.Selection as Excel.Range;
@@ -244,12 +278,15 @@ namespace PPSnExcel
 			=> RunActionSafe(() => RefreshEnvironments(false));
 
 		private void loginGalery_Click(object sender, RibbonControlEventArgs e)
-			=> RunActionSafe(() => Globals.ThisAddIn.ActivateEnvironment(loginGalery.SelectedItem?.Tag as IPpsShellInfo, false));
+			=> RunActionSafe(ActivateEnvironmentCommand);
 
 		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateShell());
 
 		/// <summary>Was Loaded called.</summary>
 		public bool IsMenuLoaded => isMenuLoaded;
+
+		private void newItemButton_Click(object sender, RibbonControlEventArgs e)
+		=> RunActionSafe(ActivateEnvironmentCommand);
 	} // class PpsMenu
 }

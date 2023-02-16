@@ -49,6 +49,12 @@
     <Compile Include="..\Common\AssemblyInfo.cs">
       <Link>Properties\AssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Controls\NewShellForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\NewShellForm.Designer.cs">
+      <DependentUpon>NewShellForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Controls\PpsFilterControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -116,6 +122,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Controls\ExceptionDialog.resx">
       <DependentUpon>ExceptionDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Controls\NewShellForm.resx">
+      <DependentUpon>NewShellForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Controls\PpsFilterControl.resx">
       <DependentUpon>PpsFilterControl.cs</DependentUpon>

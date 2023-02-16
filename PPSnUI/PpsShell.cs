@@ -1845,6 +1845,31 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- GetCleanShellName --------------------------------------------------
+
+		/// <summary>Replace all none direction chars.</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static string GetCleanShellName(string name)
+		{
+			var sb = new StringBuilder();
+			foreach (var c in name)
+			{
+				if (Array.IndexOf(Path.GetInvalidPathChars(), c) >= 0)
+					continue;
+				if (Array.IndexOf(Path.GetInvalidFileNameChars(), c) >= 0)
+					continue;
+
+				if (Char.IsWhiteSpace(c))
+					sb.Append('_');
+				else
+					sb.Append(c);
+			}
+			return sb.ToString();
+		} // func GetCleanShellName
+
+		#endregion
+
 		/// <summary>Current shell</summary>
 		public static IPpsShell Current => currentShell;
 

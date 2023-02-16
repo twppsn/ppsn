@@ -94,7 +94,7 @@ namespace TecWare.PPSn
 
 		public static int ShowMessage(IWin32Window owner, string message, PpsImage image, string[] buttons)
 		{
-			switch (PpsWinShell.ShowMessage(owner, message, GetIconFromImage(image), GetMessageButtons(buttons)))
+			switch (ShowMessage(owner, message, GetIconFromImage(image), GetMessageButtons(buttons)))
 			{
 				case DialogResult.Yes:
 				case DialogResult.OK:
@@ -105,7 +105,10 @@ namespace TecWare.PPSn
 				default:
 					return -1;
 			}
-		}
+		} // proc ShowMessage
+
+		public static IPpsShellInfo CreateNewShellDialog(IWin32Window owner)
+			=> NewShellForm.CreateNew(owner);
 
 		#endregion
 
