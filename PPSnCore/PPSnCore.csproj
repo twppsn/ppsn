@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<RootNamespace>TecWare.PPSn.Core</RootNamespace>
 		<AssemblyName>PPSn.Core</AssemblyName>
-		<TargetFrameworks>net48;netstandard2.1;netcoreapp3.1;net5.0</TargetFrameworks>
+		<TargetFrameworks>net48;netstandard2.1;net5.0</TargetFrameworks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<PackageId>TecWare.PPSn.Core</PackageId>
 		<Description>Basic contracts and functionality for the ppsn, they are shared between client and server.</Description>

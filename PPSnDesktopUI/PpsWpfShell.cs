@@ -137,7 +137,7 @@ namespace TecWare.PPSn
 				case FrameworkContentElement fce:
 					return (IPpsShell)fce.TryFindResource(DefaultShellKey) ?? GetShell(null);
 				default:
-					return (IPpsShell)Application.Current.TryFindResource(DefaultShellKey);
+					return (IPpsShell)Application.Current?.TryFindResource(DefaultShellKey);
 			}
 		} // func GetShell	
 
@@ -469,6 +469,19 @@ namespace TecWare.PPSn
 			=> PpsShell.Await(task, GetControlService<IServiceProvider>(dp));
 
 		#endregion
+
+		/// <summary>Get data context from <see cref="FrameworkElement"/> or <see cref="FrameworkContentElement"/>.</summary>
+		/// <param name="e"></param>
+		/// <returns></returns>
+		public static object GetDataContext(object e)
+		{
+			if (e is FrameworkElement fe)
+				return fe.DataContext ?? e;
+			else if (e is FrameworkContentElement fce)
+				return fce.DataContext ?? e;
+			else
+				return e;
+		} // func GetDataSource
 
 		/// <summary>Resource key for the environment.</summary>
 		public static ResourceKey DefaultShellKey { get; } = new InstanceKey<IPpsShell>();

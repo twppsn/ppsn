@@ -64,8 +64,7 @@ namespace TecWare.PPSn.Core.Data
 	#region -- class PpsPropertyWatcher -----------------------------------------------
 
 	/// <summary>Watches a property behind a path description.</summary>
-	/// <typeparam name="T"></typeparam>
-	public class PpsPropertyWatcher<T> : IPpsPropertyWatcher
+	public abstract class PpsPropertyWatcher : IPpsPropertyWatcher
 	{
 		#region -- class PathElement --------------------------------------------------
 
@@ -76,19 +75,32 @@ namespace TecWare.PPSn.Core.Data
 
 			public PathElement(IPpsPropertyWatcher watcher, PathElement child)
 			{
-				this.watcher = watcher ?? throw new ArgumentNullException(nameof(watcher));
+				this.watcher = watcher;
 				this.child = child;
 			} // ctor
 
 			protected void OnValueChanged()
 			{
 				if (child == null)
-					watcher.FireChanged();
+					watcher?.FireChanged();
 				else
 					child.OnParentValueChanged(Value);
 			} // proc OnValueChanged
 
-			public abstract void OnParentValueChanged(object newValue);
+			public abstract void OnParentValueChanged(object parentValue);
+
+			protected abstract object GetValueCore(object parentValue);
+
+			/// <summary>Return a none cached value.</summary>
+			/// <param name="parentValue"></param>
+			/// <returns></returns>
+			public object GetValue(object parentValue)
+			{
+				var value = GetValueCore(parentValue);
+				if (value == null || child == null)
+					return value;
+				return child.GetValue(value);
+			} // func GetValue
 
 			public abstract object Value { get; }
 
@@ -112,9 +124,22 @@ namespace TecWare.PPSn.Core.Data
 				this.propertyName = propertyName ?? throw new ArgumentNullException(nameof(propertyName));
 			} // ctor
 
-			public override void OnParentValueChanged(object newValue)
+			private PropertyInfo GetPropertyInfo(object parentValue)
 			{
-				if (newValue == null)
+				if (propertyInfo == null || propertyInfo.ReflectedType != parentValue.GetType())
+					propertyInfo = parentValue.GetType().GetProperty(propertyName);
+				return propertyInfo;
+			} // func GetPropertyInfo
+
+			private static object GetValueCore(object parentValue, PropertyInfo propertyInfo)
+				=> parentValue == null ? null : propertyInfo.GetValue(parentValue);
+
+			protected override object GetValueCore(object parentValue)
+				=> parentValue == null ? null : GetValueCore(parentValue, GetPropertyInfo(parentValue));
+
+			public override void OnParentValueChanged(object parentValue)
+			{
+				if (parentValue == null)
 				{
 					if (instance != null)
 					{
@@ -125,13 +150,12 @@ namespace TecWare.PPSn.Core.Data
 				}
 				else
 				{
-					if (propertyInfo == null || propertyInfo.ReflectedType != newValue.GetType())
-						propertyInfo = newValue.GetType().GetProperty(propertyName);
+					GetPropertyInfo(parentValue);
 
 					if (instance != null)
 						instance.PropertyChanged -= PropertyChanged_PropertyChanged;
 
-					if (propertyInfo != null && newValue is INotifyPropertyChanged npc)
+					if (propertyInfo != null && parentValue is INotifyPropertyChanged npc)
 					{
 						instance = npc;
 
@@ -147,7 +171,7 @@ namespace TecWare.PPSn.Core.Data
 					OnValueChanged();
 			} // event PropertyChanged_PropertyChanged
 
-			public override object Value => instance == null ? null : propertyInfo.GetValue(instance);
+			public override object Value => GetValueCore(instance, propertyInfo);
 		} // class PropertyElement
 
 		#endregion
@@ -165,9 +189,28 @@ namespace TecWare.PPSn.Core.Data
 				this.index = index;
 			} // ctor
 
-			public override void OnParentValueChanged(object newValue)
+			private static object GetValueCore(object parentValue, int index)
 			{
-				if (newValue == null)
+				if (parentValue is System.Collections.IList list)
+				{
+					if (index >= 0)
+						return index < list.Count ? list[index] : null;
+					else
+					{
+						var n = list.Count + index;
+						return n >= 0 ? list[n] : null;
+					}
+				}
+				else
+					return null;
+			} // func GetValueCore
+
+			protected override object GetValueCore(object parentValue)
+				=> GetValueCore(parentValue, index);
+
+			public override void OnParentValueChanged(object parentValue)
+			{
+				if (parentValue == null)
 				{
 					if (collectionChanged != null)
 					{
@@ -176,7 +219,7 @@ namespace TecWare.PPSn.Core.Data
 						OnValueChanged();
 					}
 				}
-				else if (newValue is INotifyCollectionChanged col)
+				else if (parentValue is INotifyCollectionChanged col)
 				{
 					if (collectionChanged != null)
 						collectionChanged.CollectionChanged -= CollectionChanged_CollectionChanged;
@@ -200,30 +243,38 @@ namespace TecWare.PPSn.Core.Data
 				}
 			} // event CollectionChanged_CollectionChanged
 
-			public override object Value
-			{
-				get
-				{
-					if (collectionChanged is System.Collections.IList list)
-					{
-						if (index >= 0)
-							return index < list.Count ? list[index] : null;
-						else
-						{
-							var n = list.Count + index;
-							return n >= 0 ? list[n] : null;
-						}
-					}
-					else
-						return null;
-				}
-			} // prop Value
+			public override object Value => GetValueCore(collectionChanged, index);
 		} // class CollectionElement
 
 		#endregion
 
-		/// <summary>Value behind the path has changed.</summary>
-		public event EventHandler<PpsPropertyValueChangedEventArgs<T>> ValueChanged;
+		#region -- class PropertyDictionary -------------------------------------------
+
+		private sealed class PropertyDictionary : IPropertyReadOnlyDictionary
+		{
+			private readonly object root;
+
+			public PropertyDictionary(object root)
+			{
+				this.root = root;
+			} // ctor
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				if (root == null)
+				{
+					value = null;
+					return false;
+				}
+				else
+				{
+					value = GetPropertyValue(root, name);
+					return value != null;
+				}
+			} // func TryGetProperty
+		} // class PpsProperties
+
+		#endregion
 
 		private readonly string propertyPath;
 		private readonly PathElement firstElement;
@@ -231,16 +282,14 @@ namespace TecWare.PPSn.Core.Data
 
 		private readonly Dictionary<string, Delegate> notifier = new Dictionary<string, Delegate>();
 
-		private T currentValue = default;
-
-		/// <summary></summary>
+		/// <summary>Watches a property behind a path description.</summary>
 		/// <param name="root"></param>
 		/// <param name="propertyPath">Property path to the final property.</param>
 		public PpsPropertyWatcher(object root, string propertyPath)
 		{
 			this.propertyPath = propertyPath ?? throw new ArgumentNullException(nameof(propertyPath));
 
-			firstElement = Parse(propertyPath, 0);
+			firstElement = Parse(this, propertyPath, 0);
 			lastElement = firstElement;
 
 			if (lastElement != null)
@@ -249,11 +298,10 @@ namespace TecWare.PPSn.Core.Data
 					lastElement = lastElement.Child;
 			}
 
-			if (firstElement != null)
-				firstElement.OnParentValueChanged(root);
+			firstElement?.OnParentValueChanged(root);
 		} // ctor
 
-		private PathElement Parse(string path, int offset)
+		private static PathElement Parse(IPpsPropertyWatcher watcher, string path, int offset)
 		{
 			var s = 0;
 			var i = offset;
@@ -262,7 +310,7 @@ namespace TecWare.PPSn.Core.Data
 			var currentIdxNeg = false;
 			while (i < path.Length)
 			{
-				var c = propertyPath[i];
+				var c = path[i];
 				switch (s)
 				{
 					case 0:
@@ -278,14 +326,14 @@ namespace TecWare.PPSn.Core.Data
 						break;
 					case 10:
 						if (!Char.IsLetterOrDigit(c))
-							return new PropertyElement(this, path.Substring(ofs, i - ofs), Parse(path, i));
+							return new PropertyElement(watcher, path.Substring(ofs, i - ofs), Parse(watcher, path, i));
 						break;
 					case 20:
 						if (c == ']')
 						{
 							if (currentIdxNeg)
 								currentIdx = -currentIdx;
-							return new CollectionElement(this, currentIdx, Parse(path, i + 1));
+							return new CollectionElement(watcher, currentIdx, Parse(watcher, path, i + 1));
 						}
 						else if (Char.IsDigit(c))
 							currentIdx = currentIdx * 10 + c - '0';
@@ -297,24 +345,23 @@ namespace TecWare.PPSn.Core.Data
 			}
 
 			if (s == 10)
-				return new PropertyElement(this, path.Substring(ofs), null);
+				return new PropertyElement(watcher, path.Substring(ofs), null);
 			else
-				return null;
+				return default;
 		} // func Parse
 
-		private T GetValue()
-		{
-			var r = lastElement?.Value;
-			return r == null ? default : Procs.ChangeType<T>(r);
-		} // func GetValue
+		/// <summary>Get the first value</summary>
+		/// <returns></returns>
+		protected object GetValueCore()
+			=> firstElement?.Value;
 
 		/// <summary></summary>
-		/// <param name="oldValue"></param>
-		/// <param name="newValue"></param>
-		protected virtual void OnValueChanged(T oldValue, T newValue)
-		{
-			ValueChanged?.Invoke(this, new PpsPropertyValueChangedEventArgs<T>(propertyPath, oldValue, newValue));
+		protected abstract void OnFireChanged();
 
+		/// <summary></summary>
+		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		protected void OnNotifyValueChanged()
+		{
 			foreach (var kv in notifier)
 			{
 				switch (kv.Value)
@@ -328,24 +375,18 @@ namespace TecWare.PPSn.Core.Data
 					default:
 						throw new ArgumentOutOfRangeException(nameof(kv.Value));
 				}
-			}	
-		} // proc OnValueChanged
+			}
+		} // proc OnNotifyValueChanged
 
 		void IPpsPropertyWatcher.FireChanged()
-		{
-			var newValue = GetValue();
-			if (!Equals(newValue, currentValue))
-			{
-				var oldValue = currentValue;
-				currentValue = newValue;
-				OnValueChanged(oldValue, currentValue);
-			}
-		} // prop IPropertyWatcher.FireChanged
+			=> OnFireChanged();
 
 		/// <summary>Change the root of the property path.</summary>
 		/// <param name="root"></param>
 		public void SetRoot(object root)
 			=> firstElement.OnParentValueChanged(root);
+
+		#region -- Property Handler ---------------------------------------------------
 
 		private void AddPropertyHandlerCore(string propertyName, Delegate handler)
 		{
@@ -385,13 +426,101 @@ namespace TecWare.PPSn.Core.Data
 		public void RemovePropertyHandler(string propertyName, Action<string> handler)
 			=> RemovePropertyHandlerCore(propertyName, handler);
 
+		#endregion
+
+		object IPpsPropertyWatcher.Value => GetValueCore();
+
+		/// <summary></summary>
+		public string Path => propertyPath;
+
+		/// <summary>Return the value from the path.</summary>
+		/// <param name="root"></param>
+		/// <param name="propertyPath"></param>
+		/// <returns></returns>
+		public static object GetPropertyValue(object root, string propertyPath)
+			=> Parse(null, propertyPath, 0).GetValue(root);
+
+		/// <summary></summary>
+		/// <param name="root"></param>
+		/// <returns></returns>
+		public static IPropertyReadOnlyDictionary GetProperties(object root)
+			=> new PropertyDictionary(root);
+	} // class PpsPropertyWatcher
+
+	#endregion
+
+
+	#region -- class PpsPropertyWatcher -----------------------------------------------
+
+	/// <summary>Watches a property behind a path description.</summary>
+	/// <typeparam name="T"></typeparam>
+	public class PpsPropertyWatcher<T> : PpsPropertyWatcher
+	{
+		/// <summary>Value behind the path has changed.</summary>
+		public event EventHandler<PpsPropertyValueChangedEventArgs<T>> ValueChanged;
+
+		private T currentValue = default;
+
+		/// <summary></summary>
+		/// <param name="root"></param>
+		/// <param name="propertyPath">Property path to the final property.</param>
+		public PpsPropertyWatcher(object root, string propertyPath)
+			: base(root, propertyPath)
+		{
+		} // ctor
+
+		private T GetValue()
+		{
+			var r = GetValueCore();
+			return r == null ? default : Procs.ChangeType<T>(r);
+		} // func GetValue
+
+		/// <summary></summary>
+		protected override void OnFireChanged()
+		{
+			var newValue = GetValue();
+			if (!Equals(newValue, currentValue))
+			{
+				var oldValue = currentValue;
+				currentValue = newValue;
+				OnValueChanged(oldValue, currentValue);
+			}
+		} // proc OnFireChanged
+
+		/// <summary></summary>
+		/// <param name="oldValue"></param>
+		/// <param name="newValue"></param>
+		protected virtual void OnValueChanged(T oldValue, T newValue)
+		{
+			ValueChanged?.Invoke(this, new PpsPropertyValueChangedEventArgs<T>(Path, oldValue, newValue));
+			OnNotifyValueChanged();
+		} // proc OnValueChanged
+
 		/// <summary>Is a value binded.</summary>
-		public bool HasValue => lastElement?.Value != null;
+		public bool HasValue => GetValueCore() != null;
 		/// <summary>Current value or default.</summary>
 		public T Value => currentValue;
 
-		object IPpsPropertyWatcher.Value => currentValue;
-	} // class PropertyWatcher
+		/// <summary>Return the value from the path.</summary>
+		/// <param name="root"></param>
+		/// <param name="propertyPath"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static bool TryGetPropertyValue(object root, string propertyPath, out T value)
+		{
+			var v = GetPropertyValue(root, propertyPath);
+			if (v != null)
+			{
+				value = v.ChangeType<T>();
+				return true;
+			}
+			else
+			{
+				value = default;
+				return false;
+			}
+		} // func TryGetPropertyValue
+	} // class PpsPropertyWatcher
 
 	#endregion
 }

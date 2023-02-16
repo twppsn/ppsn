@@ -35,6 +35,8 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Bde;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Core.Data;
+using TecWare.PPSn.Core.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
@@ -1454,7 +1456,9 @@ namespace TecWare.PPSn
 							ProcessDefaultLink(paneManager, new PpsWebViewLink(uri));
 							break;
 						case string url:
-							if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var ruri))
+							// PpsPropertyWatcher.GetPropertyValue()
+							var jumpInfo = PpsJumpInfo.Create(url); 
+							if (Uri.TryCreate(jumpInfo.CreateUri(PpsPropertyWatcher.GetProperties(PpsWpfShell.GetDataContext(e.OriginalSource))), UriKind.RelativeOrAbsolute, out var ruri))
 								ProcessDefaultLink(paneManager, new PpsWebViewLink(ruri));
 							break;
 					}
