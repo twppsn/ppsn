@@ -418,7 +418,7 @@ namespace TecWare.PPSn.UI
 
 		private BitmapSource GetBitmapFrame(System.Drawing.Bitmap bitmap)
 		{
-			//Debug.Print(String.Format("Frame: {0}, {1}", bitmap.Width, bitmap.Width));
+			//Debug.Print(String.Format("Frame: {0}, {1}", bitmap.Width, bitmap.Height));
 			var rc = new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
 			var bitmapData = bitmap.LockBits(rc, System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
 			try
@@ -746,13 +746,14 @@ namespace TecWare.PPSn.UI
 		/// <summary>bitmaps of the preview stream</summary>
 		public ImageSource PreviewImage => currentPreviewImage;
 
-		public static Task<PpsCameraDevice> TryCreateAsync(ILogger log, FilterInfo deviceFilter, Size previewSize)
+		public static async Task<PpsCameraDevice> TryCreateAsync(ILogger log, FilterInfo deviceFilter, Size previewSize)
 		{
 			PpsCameraDevice device = null;
 			try
 			{
 				device = new PpsCameraDevice(log, deviceFilter.Name, new VideoCaptureDevice(deviceFilter.MonikerString));
-				return device.InitAsync(previewSize).ContinueWith(t => device, TaskContinuationOptions.OnlyOnRanToCompletion);
+				await device.InitAsync(previewSize);
+				return device;
 			}
 			catch (Exception e)
 			{
@@ -761,7 +762,7 @@ namespace TecWare.PPSn.UI
 				try { device?.Dispose(); }
 				catch { }
 
-				return Task.FromResult<PpsCameraDevice>(null);
+				return null;
 			}
 		} // func TryCreateAsync
 	} // class PpsCameraDevice
@@ -831,10 +832,12 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Template name for the settings box</summary>
 		private const string settingsBoxTemplateName = "PART_SettingsBox";
+		private const string lastCameraUsedSettingsKey = "PPSn.User.LastCameraUsed";
 
 		private readonly IPpsShell shell;
-		private readonly IPpsUIService uiService;
+		private readonly IPpsUIService ui;
 		private readonly DispatcherTimer refreshCameraDevices;
+		private int allowSaveDeviceMoniker = 0;
 		private readonly List<PpsCameraDevice> devices = new List<PpsCameraDevice>(); // list of current camera devices
 		private readonly ICollectionView devicesView;
 		private readonly Size initialPreviewSize = new Size(80, 80);
@@ -843,7 +846,7 @@ namespace TecWare.PPSn.UI
 		public PpsCameraDialog(IPpsShell shell)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
-			uiService = shell.GetService<IPpsUIService>(true);
+			ui = shell.GetService<IPpsUIService>(true);
 			
 			InitializeComponent();
 
@@ -851,7 +854,7 @@ namespace TecWare.PPSn.UI
 			devicesView.CurrentChanged += DevicesView_CurrentChanged;
 			devicesView.CollectionChanged += DevicesView_CollectionChanged;
 
-			refreshCameraDevices = new DispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Send, RefreshDevicesTick, Dispatcher) { IsEnabled = true };
+			refreshCameraDevices = new DispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Send, refreshCameraDevices_Tick, Dispatcher) { IsEnabled = false };
 
 			this.AddCommandBinding(shell, ApplicationCommands.New,
 				new PpsAsyncCommand(TakePictureImpl, CanTakePicture)
@@ -890,14 +893,53 @@ namespace TecWare.PPSn.UI
 					ctx => CurrentStatus == PpsCameraDialogStatus.Preview
 				)
 			);
+
+			RefreshCameraDevicesAsync(true).Spawn();
+
 			DataContext = this;
 		} // ctor
 
-		// WIP:
+		private IDisposable SuspendSaveDeviceMoniker()
+		{
+			allowSaveDeviceMoniker++;
+			return new DisposableScope(() => { allowSaveDeviceMoniker--; });
+		} // func SuspendSaveDeviceMoniker
+
+		private bool CanSaveDeviceMoniker
+			=> allowSaveDeviceMoniker <= 0;
+
+		private void DevicesView_CurrentChanged(object sender, EventArgs e)
+		{
+			var newDevice = (PpsCameraDevice) devicesView.CurrentItem;
+			if (CanSaveDeviceMoniker)
+			{
+				using (var props = shell.UserSettings.Edit())
+				{
+					props.Set(lastCameraUsedSettingsKey, newDevice.Moniker);
+					props.CommitAsync().Await();
+				}
+			}
+			SetValue(currentDevicePropertyKey, newDevice);
+		} // event DevicesView_CurrentChanged
+
 		private void DevicesView_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
 			if (CurrentDevice == null && !devicesView.IsEmpty)
-				devicesView.MoveCurrentToFirst();
+			{
+				using (SuspendSaveDeviceMoniker())
+				{
+					if (shell.UserSettings.TryGetProperty<string>(lastCameraUsedSettingsKey, out var moniker))
+					{
+						var deviceToSelect = devices.FirstOrDefault(d => d.Moniker == moniker);
+						if (deviceToSelect != null)
+							devicesView.MoveCurrentTo(deviceToSelect);
+						else
+							devicesView.MoveCurrentToFirst();
+					}
+					else
+						devicesView.MoveCurrentToFirst();
+				}
+			}
 
 			SetValue(hasDevicePropertyKey, devices.Count > 1);
 
@@ -931,90 +973,62 @@ namespace TecWare.PPSn.UI
 			base.OnClosed(e);
 		} // proc OnClsoed
 
-		private void DevicesView_CurrentChanged(object sender, EventArgs e)
-			=> SetValue(currentDevicePropertyKey, devicesView.CurrentItem);
-
 		#region  -- Refresh camera's --------------------------------------------------
 
-		private void RefreshDevicesTick(object sender, EventArgs e)
+		private async Task RefreshCameraDevicesAsync(bool firstRefresh)
 		{
 			refreshCameraDevices.IsEnabled = false;
-			Task.Run(new Action(RefreshCameraDevices))
-				.ContinueWith(t =>
-				{
-					try
-					{
-						t.Wait();
-					}
-					catch (Exception ex)
-					{
-						uiService.ShowException(ex);
-					}
-					finally
-					{
-						refreshCameraDevices.IsEnabled = true;
-					}
-				}, TaskContinuationOptions.ExecuteSynchronously
-			);
-		} // proc RefreshDevicesTick
-
-		private void RefreshCameraDevices()
-		{
-			var deviceFilterCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-
-			// check for new camera
-			var log = shell.GetService<ILogger>(false);
-			var newCameras = new List<PpsCameraDevice>();
-			foreach (var deviceFilter in deviceFilterCollection.OfType<FilterInfo>())
+			try
 			{
-				// only usb and pnp:display (directly on cpu/bus)
-				if (!deviceFilter.MonikerString.Contains("vid") && !deviceFilter.MonikerString.Contains("pnp:\\\\?\\display"))
-					continue;
+				var log = this.GetControlService<ILogger>(true);
+				var deviceFilterCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
 
-				try
+				var newCameras = new List<PpsCameraDevice>();
+				using (SuspendSaveDeviceMoniker())
+				using (devicesView.DeferRefresh())
 				{
-					if (!devices.Exists(d => d.Moniker == deviceFilter.MonikerString))
+					foreach (var deviceFilter in deviceFilterCollection.OfType<FilterInfo>())
 					{
-						var camera = PpsCameraDevice.TryCreateAsync(log, deviceFilter, initialPreviewSize).Result;
-						if (camera != null)
-							newCameras.Add(camera);
+						// only usb and pnp:display (directly on cpu/bus)
+						if (!deviceFilter.MonikerString.Contains("vid") && !deviceFilter.MonikerString.Contains("pnp:\\\\?\\display"))
+							continue;
+
+						try
+						{
+							if (!devices.Exists(d => d.Moniker == deviceFilter.MonikerString))
+							{
+								var camera = await PpsCameraDevice.TryCreateAsync(log, deviceFilter, initialPreviewSize);
+								if (camera != null)
+									devices.Add(camera);
+							}
+						}
+						catch (Exception e)
+						{
+							log.LogMsg(LogMsgType.Error, e);
+						}
+					}
+
+					// check for lost camera's
+					foreach (var dev in devices.Where(d => d.IsCameraLost || d.IsTimeout || d.IsDisposed).ToArray())
+					{
+						devices.Remove(dev);
+						if (!dev.IsDisposed)
+							dev.Dispose();
 					}
 				}
-				catch (Exception e)
-				{
-					log?.LogMsg(LogMsgType.Error, e);
-				}
 			}
-
-			// check for lost camera's
-			var devicesToRemove = devices.Where(d => d.IsCameraLost || d.IsTimeout || d.IsDisposed).ToArray();
-			if (devicesToRemove.Length > 0 || newCameras.Count > 0)
+			catch (Exception e)
 			{
-				Dispatcher.Invoke(new Action<PpsCameraDevice[], PpsCameraDevice[]>(UpdateDevicesUI),
-				  devicesToRemove,
-				  newCameras.ToArray()
-			  );
+				ui.ShowException(e);
 			}
-		} // proc RefreshCameraDevices
-
-		private void UpdateDevicesUI(PpsCameraDevice[] devicesToRemove, PpsCameraDevice[] devicesToAdd)
-		{
-			// remove devices
-			foreach (var rd in devicesToRemove)
+			finally
 			{
-				if (devices.Remove(rd))
-				{
-					if (!rd.IsDisposed)
-						rd.Dispose();
-				}
+				refreshCameraDevices.IsEnabled = true;
 			}
+		} // func RefreshCameraDevicesAsync
 
-			// append new devices
-			foreach (var nd in devicesToAdd)
-				devices.Add(nd);
-
-			devicesView.Refresh();
-		} // proc UpdateDevices
+		private void refreshCameraDevices_Tick(object sender, EventArgs e)
+			=> RefreshCameraDevicesAsync(false).Spawn();
 
 		#endregion
 
@@ -1031,7 +1045,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception ex)
 			{
-				uiService.ShowException(ex);
+				ui.ShowException(ex);
 			}
 		} // func TakePictureImpl
 

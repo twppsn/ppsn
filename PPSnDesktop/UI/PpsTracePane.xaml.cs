@@ -163,6 +163,13 @@ namespace TecWare.PPSn.UI
 				=> PpsWebView.LinkCommand.Execute(new PpsWebViewLink(luaShell.Shell.Http.CreateFullUri(link)), pane);
 
 			[LuaMember]
+			public void TakePicture(string path = null)
+			{
+				var captureService = pane.GetControlService<IPpsCaptureService>(true);
+				LuaRunTask(() => captureService.CaputureAsync(pane, PpsCaptureDevice.Camera), "Geschlossen.");
+			} // proc TakePicture
+
+			[LuaMember]
 			public void Exec(string command, string pin)
 			{
 				if (command == null)

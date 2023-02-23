@@ -353,7 +353,7 @@ namespace TecWare.PPSn.Core.Data
 		/// <summary>Get the first value</summary>
 		/// <returns></returns>
 		protected object GetValueCore()
-			=> firstElement?.Value;
+			=> lastElement?.Value;
 
 		/// <summary></summary>
 		protected abstract void OnFireChanged();
@@ -448,7 +448,6 @@ namespace TecWare.PPSn.Core.Data
 	} // class PpsPropertyWatcher
 
 	#endregion
-
 
 	#region -- class PpsPropertyWatcher -----------------------------------------------
 
