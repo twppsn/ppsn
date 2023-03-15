@@ -33,6 +33,7 @@ namespace TecWare.PPSn.Controls
 {
 	/// <summary>This Filterbox is used to filter a List</summary>
 	[TemplatePart(Name = "PART_FilteredItemsListBox", Type = typeof(ListBox))]
+	[Obsolete]
 	public abstract partial class PpsDataFilterBase : Selector
 	{
 		#region ---- Dependency Properties-----------------------------------------------
@@ -393,6 +394,7 @@ namespace TecWare.PPSn.Controls
 	}
 
 	/// <summary>Resembles a ComboBox, which is search-able</summary>
+	[Obsolete]
 	public partial class PpsDataFilterCombo : PpsDataFilterBase
 	{
 		/// <summary>DependencyProperty for DropDown state</summary>
@@ -688,6 +690,7 @@ namespace TecWare.PPSn.Controls
 	} // class PpsDataFilterCombo
 
 	/// <summary>This Control shows a List of its Items with an applied Filter</summary>
+	[Obsolete]
 	public class PpsDataFilterList : PpsDataFilterBase
 	{
 		static PpsDataFilterList()
@@ -755,6 +758,7 @@ namespace TecWare.PPSn.Controls
 	}
 
 	/// <summary>This textBlock enables Highlighting of text</summary>
+	[Obsolete]
 	public class PpsDataFilterItemTextBlock : TextBlock
 	{
 		/// <summary>The parts of text to highlight, separated by whitespace - may be overlapping</summary>

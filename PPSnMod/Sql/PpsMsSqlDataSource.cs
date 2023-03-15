@@ -2038,7 +2038,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // ctor
 
 			protected override string CreateDateString(DateTime value)
-				=> "convert(datetime, '" + value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss") + "', 126)";
+				=> "convert(datetime, '" + value.ToString("yyyy-MM-ddTHH:mm:ss") + "', 126)";
 		} // class MsSqlDataFilterVisitor
 
 		#endregion

@@ -1744,10 +1744,8 @@ namespace TecWare.PPSn.Data
 				var splitSymbol = JumpPattern(patternSymbol, timePattern, ref patternPos); // returns the date part separator
 
 				// read digits until the symbol
-				var startAt = inputPos;
 				var t = ReadDigits(timePart, formatProvider, ref inputPos, splitSymbol);
-				var readedNum = inputPos - startAt;
-
+				
 				// set date part, by number
 				if (t >= 0)
 				{

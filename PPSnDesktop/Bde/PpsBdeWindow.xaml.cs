@@ -332,10 +332,21 @@ namespace TecWare.PPSn.Bde
 
 		private static readonly DependencyPropertyKey currentTimeStringPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentTimeString), typeof(string), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty CurrentTimeStringProperty = currentTimeStringPropertyKey.DependencyProperty;
-
+		private static readonly DependencyPropertyKey currentTimeLineHeightPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentTimeLineHeight), typeof(double), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(16.0));
+		public static readonly DependencyProperty CurrentTimeLineHeightProperty = currentTimeLineHeightPropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey currentTimeFontSizePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentTimeFontSize), typeof(double), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(14.0));
+		public static readonly DependencyProperty CurrentTimeFontSizeProperty = currentTimeFontSizePropertyKey.DependencyProperty;
+		
 		private void UpdateDateTimeFormat()
 		{
 			currentDateTimeFormat = Shell.Settings.ClockFormat;
+
+			// passe die Metricen entsprechend der Zeilen an
+			var newLines = currentDateTimeFormat.Count(c => c == '\n') + 1;
+			var lineHeight = 32.0 / newLines;
+			SetValue(currentTimeLineHeightPropertyKey, lineHeight);
+			SetValue(currentTimeFontSizePropertyKey, lineHeight - 2.0);
+			
 			UpdateCurrentTimeString();
 		} // proc UpdateDateTimeFormat
 
@@ -349,7 +360,8 @@ namespace TecWare.PPSn.Bde
 		} // proc UpdateCurrentTimeString
 
 		public string CurrentTimeString => (string)GetValue(CurrentTimeStringProperty);
-
+		public double CurrentTimeLineHeight => (double)GetValue(CurrentTimeLineHeightProperty);
+		public double CurrentTimeFontSize => (double)GetValue(CurrentTimeFontSizeProperty);
 		#endregion
 
 		protected override IEnumerator LogicalChildren
