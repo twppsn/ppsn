@@ -45,7 +45,7 @@
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
     <PackageReference Include="TecWare.DES.Core">
-      <Version>3.4.106</Version>
+      <Version>3.4.107</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
