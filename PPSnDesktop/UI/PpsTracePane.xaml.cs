@@ -344,7 +344,7 @@ namespace TecWare.PPSn.UI
 
 			public string AppName => shellApplication?.Name;
 			public Version AssemblyVersion => shellApplication?.AssenblyVersion;
-			public Version InstalledVersion => shellApplication?.InstalledVersion;
+			public PpsShellApplicationVersion InstalledVersion => shellApplication?.InstalledVersion ?? PpsShellApplicationVersion.Default;
 
 			public IReadOnlyList<AppAssemblyInfo> AssemblyInfo => assemblyInfo;
 		} // class AppInfoModel

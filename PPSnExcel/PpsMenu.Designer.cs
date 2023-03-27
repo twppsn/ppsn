@@ -36,19 +36,19 @@
 		{
 			this.tabPPSn = this.Factory.CreateRibbonTab();
 			this.groupData = this.Factory.CreateRibbonGroup();
-			this.separator1 = this.Factory.CreateRibbonSeparator();
-			this.groupConnection = this.Factory.CreateRibbonGroup();
-			this.groupCommands = this.Factory.CreateRibbonGroup();
 			this.cmdReport = this.Factory.CreateRibbonButton();
 			this.cmdTable = this.Factory.CreateRibbonButton();
+			this.separator1 = this.Factory.CreateRibbonSeparator();
 			this.cmdRefreshAll = this.Factory.CreateRibbonSplitButton();
 			this.cmdRefreshLayout = this.Factory.CreateRibbonButton();
 			this.separator3 = this.Factory.CreateRibbonSeparator();
 			this.cmdRefresh = this.Factory.CreateRibbonButton();
 			this.button1 = this.Factory.CreateRibbonButton();
+			this.groupConnection = this.Factory.CreateRibbonGroup();
 			this.loginMenu = this.Factory.CreateRibbonMenu();
 			this.loginGalery = this.Factory.CreateRibbonGallery();
 			this.separator2 = this.Factory.CreateRibbonSeparator();
+			this.newItemButton = this.Factory.CreateRibbonButton();
 			this.logoutButton = this.Factory.CreateRibbonButton();
 			this.cmdExtended = this.Factory.CreateRibbonMenu();
 			this.editTableExCommand = this.Factory.CreateRibbonButton();
@@ -57,7 +57,7 @@
 			this.cmdListObjectInfo = this.Factory.CreateRibbonButton();
 			this.separator4 = this.Factory.CreateRibbonSeparator();
 			this.cmdStyles = this.Factory.CreateRibbonButton();
-			this.newItemButton = this.Factory.CreateRibbonButton();
+			this.groupCommands = this.Factory.CreateRibbonGroup();
 			this.tabPPSn.SuspendLayout();
 			this.groupData.SuspendLayout();
 			this.groupConnection.SuspendLayout();
@@ -82,23 +82,6 @@
 			this.groupData.Items.Add(this.button1);
 			this.groupData.Label = "Auswertungen";
 			this.groupData.Name = "groupData";
-			// 
-			// separator1
-			// 
-			this.separator1.Name = "separator1";
-			// 
-			// groupConnection
-			// 
-			this.groupConnection.Items.Add(this.loginMenu);
-			this.groupConnection.Items.Add(this.cmdExtended);
-			this.groupConnection.Label = "Verbindung";
-			this.groupConnection.Name = "groupConnection";
-			// 
-			// groupCommands
-			// 
-			this.groupCommands.Label = "Befehle";
-			this.groupCommands.Name = "groupCommands";
-			this.groupCommands.Visible = false;
 			// 
 			// cmdReport
 			// 
@@ -125,6 +108,10 @@
 			this.cmdTable.ShowImage = true;
 			this.cmdTable.SuperTip = "Verknüpft eine Datentabelle mit dem aktuellen Arbeitsblatt";
 			this.cmdTable.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdTable_Click);
+			// 
+			// separator1
+			// 
+			this.separator1.Name = "separator1";
 			// 
 			// cmdRefreshAll
 			// 
@@ -168,6 +155,13 @@
 			this.button1.ShowImage = true;
 			this.button1.Visible = false;
 			// 
+			// groupConnection
+			// 
+			this.groupConnection.Items.Add(this.loginMenu);
+			this.groupConnection.Items.Add(this.cmdExtended);
+			this.groupConnection.Label = "Verbindung";
+			this.groupConnection.Name = "groupConnection";
+			// 
 			// loginMenu
 			// 
 			this.loginMenu.Dynamic = true;
@@ -189,6 +183,14 @@
 			// separator2
 			// 
 			this.separator2.Name = "separator2";
+			// 
+			// newItemButton
+			// 
+			this.newItemButton.Description = "Neue Umgebung einrichten";
+			this.newItemButton.Label = "Neue Umgebung...";
+			this.newItemButton.Name = "newItemButton";
+			this.newItemButton.ShowImage = true;
+			this.newItemButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.newItemButton_Click);
 			// 
 			// logoutButton
 			// 
@@ -254,13 +256,11 @@
 			this.cmdStyles.Visible = false;
 			this.cmdStyles.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdStyles_Click);
 			// 
-			// newItemButton
+			// groupCommands
 			// 
-			this.newItemButton.Description = "Neue Umgebung einrichten";
-			this.newItemButton.Label = "Neue Umgebung...";
-			this.newItemButton.Name = "newItemButton";
-			this.newItemButton.ShowImage = true;
-			this.newItemButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.newItemButton_Click);
+			this.groupCommands.Label = "Befehle";
+			this.groupCommands.Name = "groupCommands";
+			this.groupCommands.Visible = false;
 			// 
 			// PpsMenu
 			// 

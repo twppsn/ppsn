@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -53,22 +54,19 @@ namespace PPSnExcel
 
 		#endregion
 
-		#region -- class ExcelApplicationUpdateException ------------------------------
+		#region -- class ExcelApplicationRestartException -----------------------------
 
-		private class ExcelApplicationUpdateException : Exception
+		private class ExcelApplicationRestartException : Exception
 		{
 			private readonly IPpsShell shell;
-			private readonly Uri uri;
 
-			public ExcelApplicationUpdateException(IPpsShell shell, Uri uri)
+			public ExcelApplicationRestartException(IPpsShell shell)
 			{
 				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
-				this.uri = uri;
 			} // ctor
 
 			public IPpsShell Shell => shell;
-			public Uri Uri => uri;
-		} // class ExcelApplicationUpdateException
+		} // class ExcelApplicationRestartException
 
 		#endregion
 
@@ -122,6 +120,7 @@ namespace PPSnExcel
 
 		private WaitForm uiService;
 		private ExcelIdleService idleService;
+		private bool noUpdate = false;
 
 		private IPpsnFunctions modul = null;
 
@@ -157,13 +156,10 @@ namespace PPSnExcel
 
 		private const string applicationId = "PPSnExcel";
 
-		Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri)
+		async Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri, bool useRunAs)
 		{
-#if DEBUG
-			return Task.CompletedTask;
-#else
-			throw new ExcelApplicationUpdateException(shell, uri);
-#endif
+			if (await UpdateApplicationAsync(shell, uri, useRunAs))
+				throw new ExcelApplicationRestartException(shell);
 		} // proc IPpsShellApplication.RequestUpdateAsync
 
 		Task IPpsShellApplication.RequestRestartAsync(IPpsShell shell)
@@ -171,46 +167,63 @@ namespace PPSnExcel
 #if DEBUG
 			return Task.CompletedTask;
 #else
-			throw new ExcelApplicationUpdateException(shell, null);
+			throw new ExcelApplicationRestartException(shell);
 #endif
 		} // proc IPpsShellApplication.RequestRestartAsync
 
 		string IPpsShellApplication.Name => applicationId;
 
 		Version IPpsShellApplication.AssenblyVersion => PpsShell.GetDefaultAssemblyVersion(this);
-		Version IPpsShellApplication.InstalledVersion
-		{
-			get
-			{
-				using (var reg = Registry.CurrentUser.OpenSubKey(@"Software\TecWare\PPSnExcel\Components", false))
-				{
-					return reg?.GetValue(null) is string v
-						? new Version(v)
-						: new Version(1, 0, 0, 0);
-				}
-			}
-		} // prop IPpsShellApplication.InstalledVersion
+		PpsShellApplicationVersion IPpsShellApplication.InstalledVersion => PpsShellApplicationVersion.GetInstalledVersion(applicationId);
 
 		#endregion
 
 		#region -- Shell Handling -----------------------------------------------------
 
-		private async Task<bool> UpdateApplicationAsync(IPpsShell shell, Uri sourceUri)
+		private async Task<bool> UpdateApplicationAsync(IPpsShell shell, Uri sourceUri, bool useRunAs)
 		{
-			if (PpsWinShell.ShowMessage(this, String.Format("Eine neue Anwendung steht bereit.\nInstallieren und {0} neustarten?", applicationId), MessageBoxIcon.Question, MessageBoxButtons.YesNo) != DialogResult.Yes)
+			if (noUpdate)
 				return false;
 
+			if (PpsWinShell.ShowMessage(this, String.Format("Eine neue Version von {0} steht bereit.\nInstallieren und Microsoft Excel beenden?", applicationId), MessageBoxIcon.Question, MessageBoxButtons.YesNo) != DialogResult.Yes)
+			{
+				noUpdate = true;
+				return false;
+			}
+
+			// Dieser Code funktioniert durch den Defender nicht
 			var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
 			var msiLog = Path.Combine(Path.GetTempPath(), applicationId + ".msi.txt");
-			var psi = new ProcessStartInfo(msiExe, "/i " + sourceUri.ToString() + " /q /l*v \"" + msiLog + "\"");
-			using (var bar = uiService.CreateProgress(true))
-			using (var ps = Process.Start(psi))
+			var psi = new ProcessStartInfo(msiExe, "/i " + sourceUri.ToString() + " /qf /l*v \"" + msiLog + "\"");
+			if (useRunAs)
+				psi.Verb = "runas";
+			try
 			{
-				bar.Text = "Installation wird ausgeführt...";
-				await Task.Run(new Action(ps.WaitForExit));
-				// ps.ExitCode
+				using (var bar = uiService.CreateProgress(true))
+				using (var ps = Process.Start(psi))
+				{
+					bar.Text = "Installation wird ausgeführt...";
+					await Task.Run(new Action(ps.WaitForExit));
+					// ps.ExitCode
+				}
+				return true;
 			}
-			return true;
+			catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
+			{
+				noUpdate = true;
+				await shell.GetService<IPpsUIService>(true).RunUI(() =>
+				{
+					if (PpsWinShell.ShowMessage(this, "Installation des Updates ist durch Einstellungen des Virenschutzes oder SmartScreen fehlgeschlagen.\n\nSoll der Befehl zur Ausführung des Updates in der Zwischenablage abegelegt werden?", MessageBoxIcon.Error, MessageBoxButtons.YesNo) == DialogResult.Yes)
+						Clipboard.SetText(psi.FileName + " " + psi.Arguments);
+				});
+				return false;
+			}
+			catch (Exception ex)
+			{
+				noUpdate = true;
+				PpsWinShell.ShowException(this, PpsExceptionShowFlags.None, ex, "Installation des Updates fehlgeschlagen. Der Befehl zur Ausführung des Updates befindet sich in der Zwischenablage.");
+				return false;
+			}
 		} // proc UpdateApplicationAsync
 
 		private static async Task<bool> LoginShellAsync(IWin32Window parent, IPpsShell shell, bool isBackground)
@@ -276,12 +289,9 @@ namespace PPSnExcel
 
 				return newShell;
 			}
-			catch (ExcelApplicationUpdateException e)
+			catch (ExcelApplicationRestartException)
 			{
-				if (e.Uri != null)
-					UpdateApplicationAsync(e.Shell, e.Uri).Await();
-
-				if (PpsWinShell.ShowMessage(this, String.Format("Die Anwendung muss für eine Aktivierung neugestartet werden.\nNeustart von {0} sofort einleiten?", applicationId), MessageBoxIcon.Question, MessageBoxButtons.YesNo) == DialogResult.Yes)
+				if (PpsWinShell.ShowMessage(this, String.Format("Die Anwendung muss für eine Aktivierung neugestartet werden.\nMicrosoft Excel beenden?", applicationId), MessageBoxIcon.Question, MessageBoxButtons.YesNo) == DialogResult.Yes)
 					Application.Quit();
 				return null;
 			}

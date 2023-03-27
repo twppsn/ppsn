@@ -1337,17 +1337,7 @@ namespace TecWare.PPSn
 		private const string applicationName = "PPSnDesktop";
 		private static bool noRestart = false;
 
-		private static Version GetInstalledVersionDefault()
-		{
-			using (var reg = Registry.CurrentUser.OpenSubKey(@"Software\TecWare\" + applicationName + @"\Components", false))
-			{
-				return reg?.GetValue(null) is string v
-					? new Version(v)
-					: new Version(1, 0, 0, 0);
-			}
-		} // func GetInstalledVersionDefault
-
-		Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri)
+		Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri, bool useRunas)
 		{
 			if (noRestart)
 				return Task.CompletedTask;
@@ -1360,6 +1350,8 @@ namespace TecWare.PPSn
 				var msiLogFile = Path.Combine(Path.GetTempPath(), applicationName + ".msi.txt");
 				var psi = new ProcessStartInfo(msiExe, "/i " + uri.ToString() + " /qb /l*v \"" + msiLogFile + "\" SHELLNAME=" + shell.Info.Name);
 
+					if (useRunas)
+						psi.Verb = "runas";
 #if DEBUG
 				MessageBox.Show($"RunMSI: {psi.FileName} {psi.Arguments}", "Debug");
 				return Task.CompletedTask;
@@ -1392,7 +1384,7 @@ namespace TecWare.PPSn
 
 		string IPpsShellApplication.Name => applicationName;
 		Version IPpsShellApplication.AssenblyVersion => PpsShell.GetDefaultAssemblyVersion(this);
-		Version IPpsShellApplication.InstalledVersion => GetInstalledVersionDefault();
+		PpsShellApplicationVersion IPpsShellApplication.InstalledVersion => PpsShellApplicationVersion.GetInstalledVersion(applicationName);
 
 		#endregion
 

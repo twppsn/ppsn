@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?include Version.wxi ?>
 <?define ProductUpgradeCode = "0d3f4ec0-fc60-463b-9873-07a409090616" ?>
+
+<?ifndef PerUser?>
+<?error "PerUser not set.?>
+<?endif?>
+
+<?if $(var.PerUser) = "true" ?>
+<?define ProductName = "!(loc.ProductNameUser)" ?>
+<?define PackageScope = "perUser" ?>
+<?define PackagePrivileges = "limited" ?>
+<?else?>
+<?define ProductName = "!(loc.ProductNameMachine)" ?>
+<?define PackageScope = "perMachine" ?>
+<?define PackagePrivileges = "elevated" ?>
+<?endif?>
+
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Product Id="$(var.ProductCode)"
 					 UpgradeCode="$(var.ProductUpgradeCode)"
@@ -9,21 +24,26 @@
 					 Version="$(var.ProductVersion)"
 					 Manufacturer="!(loc.ProductCompany)" >
 
-		<Package Description="!(loc.ProductName)"
-						 Comments="!(loc.PackageComments)"
-						 InstallerVersion="200"
-						 Compressed="yes"
-						 InstallScope="perUser"
-						 InstallPrivileges="limited"
+		<Package Description="$(var.ProductName)"
+				 Comments="!(loc.PackageComments)"
+				 InstallerVersion="200"
+				 Compressed="yes"
+				 InstallScope="$(var.PackageScope)"
+				 InstallPrivileges="$(var.PackagePrivileges)" 
 		/>
 
 		<WixVariable Id="WixUILicenseRtf" Value="de\License.rtf" />
 
 		<Property Id="ARPHELPLINK" Value="!(loc.ArpHelpLink)" />
 		<Property Id="ARPURLINFOABOUT" Value="!(loc.ArpUrlInfoAbout)" />
-		<Property Id="ALLUSERS" Secure="yes"/>
 		<Property Id="SHELLNAME" Secure="yes" />
 		<Property Id="SHELLURI" Secure="yes" />
+		<?if $(var.PerUser) = "true" ?>
+		<Property Id="ALLUSERS" Secure="yes"/>
+		<Property Id="ProductMode" Value="User" />
+		<?else?>
+		<Property Id="ProductMode" Value="Machine" />
+		<?endif?>
 
 		<Media Id="1" Cabinet="data.cab" EmbedCab="yes" />
 
@@ -46,6 +66,7 @@
 		<!--<CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="no" />-->
 
 		<!-- Enforce users -->
+		<?if $(var.PerUser) = "true" ?>
 		<Condition Message="!(loc.ConditionAllUsers)">NOT ALLUSERS</Condition>
 
 		<Directory Id="TARGETDIR" Name="SourceDir">
@@ -61,6 +82,24 @@
 				</Directory>
 			</Directory>
 		</Directory>
+		
+		<?else?>
+
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="DesktopFolder" Name="DesktopFolder" />
+
+			<Directory Id="ProgramFilesFolder" Name="Programs">
+				<Directory Id="ppsn" Name="ppsn">
+					<Directory Id="INSTALLFOLDER" Name="PPSnDesktop">
+						<Directory Id="BinDe" Name="de" />
+						<Directory Id="BinX86" Name="x86" />
+						<Directory Id="BinX64" Name="x64" />
+					</Directory>
+				</Directory>
+			</Directory>
+		</Directory>
+
+		<?endif?>
 
 		<Feature Id="PPSnDesktop" Title="!(loc.ProductName)" Level="1">
 			<ComponentGroupRef Id="PPSnDesktop" />

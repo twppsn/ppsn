@@ -925,10 +925,12 @@ namespace TecWare.PPSn.Server
 		{
 			const string productNameProperty = "ProductName";
 			const string productVersionProperty = "ProductVersion";
+			const string productModeProperty = "ProductMode";
 
 			var key = Path.GetFileNameWithoutExtension(fi.Name); // id of the client application
 			var productName = key;
 			var productVersion = new Version(0, 0, 0, 0);
+			var productMode = "User";
 
 			// remove version add on
 			var p = key.LastIndexOf('.');
@@ -940,7 +942,8 @@ namespace TecWare.PPSn.Server
 			{
 				using (var view = msi.OpenView("SELECT `Property`, `Value` FROM `Property` " +
 					"WHERE `Property` = '" + productNameProperty + "' " +
-						"OR `Property` = '" + productVersionProperty + "' ")
+						"OR `Property` = '" + productVersionProperty + "' " +
+						"OR `Property` = '" + productModeProperty + "' ")
 				)
 				{
 					view.Execute();
@@ -956,11 +959,18 @@ namespace TecWare.PPSn.Server
 								case productVersionProperty:
 									productVersion = new Version(c.GetString(2));
 									break;
+								case productModeProperty:
+									productMode = c.GetString(2);
+									break;
 							}
 						}
 					}
 				}
 			}
+
+			// append product mode
+			if (String.Compare(productMode, "User", StringComparison.OrdinalIgnoreCase) != 0)
+				productName = productName + "." + productMode;
 
 			return new PpsClientApplicationInfo(key, -1, productVersion, productName, null);
 		} // func GetClientMsiApplication

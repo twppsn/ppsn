@@ -9,8 +9,9 @@
 		<OutputType>WinExe</OutputType>
 		<PackageId>TecWare.PPSn.DesktopExe</PackageId>
 		<Nullable>disable</Nullable>
-		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<Description>Base module for the Data Exchange Server.</Description>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<ApplicationIcon>table_selection_range.ico</ApplicationIcon>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 	  <PlatformTarget>x86</PlatformTarget>
@@ -19,6 +20,9 @@
 	  <PlatformTarget>x86</PlatformTarget>
 	</PropertyGroup>
 	<Import Project="..\Common\AssemblyInfo.targets" />
+	<ItemGroup>
+	  <Content Include="table_selection_range.ico" />
+	</ItemGroup>
 	<ItemGroup>
 	  <PackageReference Include="AForge.Video" Version="2.2.5" />
 	  <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
