@@ -928,6 +928,7 @@ namespace TecWare.PPSn.UI
 	internal sealed class FileShellFactory : IPpsShellFactory
 	{
 		private static readonly string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
+		private static readonly string commonEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ppsn", "env");
 
 		/// <summary>Create a new shell information.</summary>
 		/// <param name="instanceName"></param>
@@ -972,6 +973,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Returns the local environment path</summary>
 		public static string LocalEnvironmentsPath => localEnvironmentsPath;
+		public static string CommonEnvironmentsPath => commonEnvironmentsPath;
 	} // class FileShellFactory
 
 	#endregion

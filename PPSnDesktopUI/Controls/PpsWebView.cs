@@ -287,7 +287,7 @@ namespace TecWare.PPSn.Controls
 			// htmlView.CreationProperties.BrowserExecutableFolder;
 			htmlView.CreationProperties = new CoreWebView2CreationProperties
 			{
-				UserDataFolder = Path.Combine(PpsShell.Current.LocalPath.FullName, "$cache")
+				UserDataFolder = PpsShell.Current.EnforceLocalPath("$cache").FullName
 			};
 			htmlView.CoreWebView2InitializationCompleted += HtmlView_CoreWebView2Ready;
 

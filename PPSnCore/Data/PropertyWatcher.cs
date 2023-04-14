@@ -279,6 +279,7 @@ namespace TecWare.PPSn.Core.Data
 		private readonly string propertyPath;
 		private readonly PathElement firstElement;
 		private readonly PathElement lastElement;
+		private object currentValue = null;
 
 		private readonly Dictionary<string, Delegate> notifier = new Dictionary<string, Delegate>();
 
@@ -350,17 +351,7 @@ namespace TecWare.PPSn.Core.Data
 				return default;
 		} // func Parse
 
-		/// <summary>Get the first value</summary>
-		/// <returns></returns>
-		protected object GetValueCore()
-			=> lastElement?.Value;
-
-		/// <summary></summary>
-		protected abstract void OnFireChanged();
-
-		/// <summary></summary>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
-		protected void OnNotifyValueChanged()
+		private void OnNotifyValueChanged()
 		{
 			foreach (var kv in notifier)
 			{
@@ -378,8 +369,27 @@ namespace TecWare.PPSn.Core.Data
 			}
 		} // proc OnNotifyValueChanged
 
+		/// <summary>Get the first value</summary>
+		/// <returns></returns>
+		protected object GetValueCore()
+			=> lastElement?.Value;
+
+		/// <summary></summary>
+		/// <param name="oldValue"></param>
+		/// <param name="newValue"></param>
+		protected abstract void OnValueChanged(object oldValue, object newValue);
+
 		void IPpsPropertyWatcher.FireChanged()
-			=> OnFireChanged();
+		{
+			var newValue = GetValueCore();
+			if (!Equals(newValue, currentValue))
+			{
+				var oldValue = currentValue;
+				currentValue = newValue;
+				OnValueChanged(oldValue, currentValue);
+				OnNotifyValueChanged();
+			}
+		} // proc FireChanged
 
 		/// <summary>Change the root of the property path.</summary>
 		/// <param name="root"></param>
@@ -458,8 +468,6 @@ namespace TecWare.PPSn.Core.Data
 		/// <summary>Value behind the path has changed.</summary>
 		public event EventHandler<PpsPropertyValueChangedEventArgs<T>> ValueChanged;
 
-		private T currentValue = default;
-
 		/// <summary></summary>
 		/// <param name="root"></param>
 		/// <param name="propertyPath">Property path to the final property.</param>
@@ -468,37 +476,19 @@ namespace TecWare.PPSn.Core.Data
 		{
 		} // ctor
 
-		private T GetValue()
-		{
-			var r = GetValueCore();
-			return r == null ? default : Procs.ChangeType<T>(r);
-		} // func GetValue
-
-		/// <summary></summary>
-		protected override void OnFireChanged()
-		{
-			var newValue = GetValue();
-			if (!Equals(newValue, currentValue))
-			{
-				var oldValue = currentValue;
-				currentValue = newValue;
-				OnValueChanged(oldValue, currentValue);
-			}
-		} // proc OnFireChanged
+		private static T ConvertValue(object value)
+			=> value == null ? default : Procs.ChangeType<T>(value);
 
 		/// <summary></summary>
 		/// <param name="oldValue"></param>
 		/// <param name="newValue"></param>
-		protected virtual void OnValueChanged(T oldValue, T newValue)
-		{
-			ValueChanged?.Invoke(this, new PpsPropertyValueChangedEventArgs<T>(Path, oldValue, newValue));
-			OnNotifyValueChanged();
-		} // proc OnValueChanged
+		protected override void OnValueChanged(object oldValue, object newValue)
+			=> ValueChanged?.Invoke(this, new PpsPropertyValueChangedEventArgs<T>(Path, ConvertValue(oldValue), ConvertValue(newValue)));
 
 		/// <summary>Is a value binded.</summary>
 		public bool HasValue => GetValueCore() != null;
 		/// <summary>Current value or default.</summary>
-		public T Value => currentValue;
+		public T Value => ConvertValue(GetValueCore());
 
 		/// <summary>Return the value from the path.</summary>
 		/// <param name="root"></param>
