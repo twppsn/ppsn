@@ -1823,7 +1823,12 @@ namespace TecWare.PPSn
 		private static IEnumerable<PropertyValue> GetLoadSettingsArguments(IPpsShellApplication application, string clientId, long lastRefreshTick)
 		{
 			if (application != null)
-				yield return new PropertyValue("app", application.Name);
+			{
+				var appName = application.Name;
+				if (application.InstalledVersion.PerMachine)
+					appName += ".Machine";
+				yield return new PropertyValue("app", appName);
+			}
 			yield return new PropertyValue("id", clientId);
 			yield return new PropertyValue("last", lastRefreshTick);
 		} // func GetLoadSettingsArguments

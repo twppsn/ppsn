@@ -540,7 +540,7 @@ namespace TecWare.PPSn
 				paneRegister.RegisterPaneType(typeof(PpsPdfViewerPane), "pdf", MimeTypes.Application.Pdf);
 				paneRegister.RegisterPaneType(typeof(PpsMarkdownPane), "markdown", MimeTypes.Text.Markdown);
 				paneRegister.RegisterPaneType(typeof(PpsLuaWindowPane), "xaml");
-				paneRegister.RegisterPaneType(typeof(PpsLuaWindowPane), "web");
+				paneRegister.RegisterPaneType(typeof(PpsWebViewPane), "web");
 
 				// change PpsLiveData
 				var liveData = shell.GetService<PpsLiveData>(true);
