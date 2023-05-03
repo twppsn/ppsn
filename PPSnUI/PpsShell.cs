@@ -433,6 +433,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Local store for the instance data.</summary>
 		DirectoryInfo LocalPath { get; }
+		/// <summary>Is this a per machine store.</summary>
+		bool PerMachine { get; }
 	} // interface IPpsShellInfo
 
 	#endregion
@@ -446,8 +448,9 @@ namespace TecWare.PPSn
 		/// <param name="instanceName">Name for shell</param>
 		/// <param name="displayName"></param>
 		/// <param name="uri">Uri to connect.</param>
+		/// <param name="perMachine">Enforce a perUser or perMachine shell. <c>null</c> for default.</param>
 		/// <returns>Shell info.</returns>
-		IPpsShellInfo CreateNew(string instanceName, string displayName, Uri uri);
+		IPpsShellInfo CreateNew(string instanceName, string displayName, Uri uri, bool? perMachine = null);
 	} // interface IPpsShellFactory
 
 	#endregion
@@ -1331,7 +1334,11 @@ namespace TecWare.PPSn
 					// create local directory from user name
 					localUserPath = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, userName));
 					if (!localUserPath.Exists)
+					{
 						localUserPath.Create();
+						if (info.PerMachine)
+							FileShellFactory.RestrictControlToUser(localUserPath, userName);
+					}
 
 					// load user settings
 					var userSettings = FileSettingsInfo.CreateUserSettings(this, new FileInfo(Path.Combine(LocalUserPath.FullName, "info.xml")), userName);
