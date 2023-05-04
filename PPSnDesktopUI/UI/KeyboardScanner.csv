@@ -53,3 +53,4 @@
 0x00010111;1;;Opticon OPN (Bluetooth)
 0x000123A1;0x00001234;;DataLogic QuickScan QBT 2400 (Bluetooth)
 0x6352;0x681B;;EloRFID
+0x000205AC;0x00000239;;Tera Barcode

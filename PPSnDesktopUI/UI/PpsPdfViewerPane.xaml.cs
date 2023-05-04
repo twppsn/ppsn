@@ -25,6 +25,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -117,9 +118,12 @@ namespace TecWare.PPSn.UI
 				if (r.Content.Headers.ContentType?.MediaType != MimeTypes.Application.Pdf)
 					throw new ArgumentOutOfRangeException("Content-Type", r.Content.Headers.ContentType?.MediaType, "Only pdf supported.");
 
-				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: r.Content.Headers.ContentDisposition?.FileName ?? "a.pdf");
+				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: GetCleanPdfName(r.Content.Headers.ContentDisposition?.FileName));
 			}
 		} // func DownloadDocumentAsync
+
+		private static string GetCleanPdfName(string fileName)
+			=> String.IsNullOrEmpty(fileName) ? "a.pdf" : PpsShell.GetCleanShellName(fileName);
 
 		private async Task LoadDocumentFromObjectAsync()
 		{
