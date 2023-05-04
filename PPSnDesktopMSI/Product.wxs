@@ -18,11 +18,11 @@
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Product Id="$(var.ProductCode)"
-					 UpgradeCode="$(var.ProductUpgradeCode)"
-					 Name="!(loc.ProductName)"
-					 Language="!(loc.ProductLanguage)"
-					 Version="$(var.ProductVersion)"
-					 Manufacturer="!(loc.ProductCompany)" >
+			 UpgradeCode="$(var.ProductUpgradeCode)"
+			 Name="!(loc.ProductName)"
+			 Language="!(loc.ProductLanguage)"
+			 Version="$(var.ProductVersion)"
+			 Manufacturer="!(loc.ProductCompany)" >
 
 		<Package Description="$(var.ProductName)"
 				 Comments="!(loc.PackageComments)"
@@ -89,7 +89,7 @@
 			<Directory Id="DesktopFolder" Name="DesktopFolder" />
 
 			<Directory Id="ProgramFilesFolder" Name="Programs">
-				<Directory Id="ppsn" Name="ppsn">
+				<Directory Id="ppsn" Name="TecWare">
 					<Directory Id="INSTALLFOLDER" Name="PPSnDesktop">
 						<Directory Id="BinDe" Name="de" />
 						<Directory Id="BinX86" Name="x86" />

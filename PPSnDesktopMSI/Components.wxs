@@ -20,16 +20,22 @@
 				<RemoveFolder Id="ppsn" Directory="ppsn" On="uninstall" />
 				<RemoveFolder Id="INSTALLFOLDER" On="uninstall" />
 
-				<?if $(var.PerUser) = "true"?>
 				<File Id="PPSnDesktopExe" Name="PPSnDesktop.exe" Source="$(var.BinDirectory)\PPSnDesktop.exe">
-					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" />
+					<?if $(var.PerUser) = "true"?>
+					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" Description="PPSnDesktop starten" />
+					<?else?>
+					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" Description="PPSnDesktop starten" Advertise="yes" />
+					<?endif?>
 				</File>
-				<?endif?>
 				<File Id="PPSnDesktopPdb" Name="PPSnDesktop.pdb" Source="$(var.BinDirectory)\PPSnDesktop.pdb" />
 				<File Id="PPSnDesktopExeConfig" Name="PPSnDesktop.exe.config" Source="$(var.BinDirectory)\PPSnDesktop.exe.config" />
 
 				<RegistryKey Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)">
+					<?if $(var.PerUser) = "true"?>
 					<RegistryValue Name="PPSnDesktop" Value="1" Type="integer" KeyPath="yes" />
+					<?else?>
+					<RegistryValue Name="PPSnDesktop" Value="1" Type="integer" KeyPath="no" />
+					<?endif?>
 					<RegistryValue Value="[ProductVersion]" Type="string" />
 				</RegistryKey>
 			</Component>
