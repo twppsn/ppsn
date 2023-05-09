@@ -177,7 +177,7 @@ namespace TecWare.PPSn.Server
 			for (var i = 0; i < values.Length; i++)
 			{
 				values[i] = row[i];
-					columns[i] = row.Columns[i];
+				columns[i] = row.Columns[i];
 			}
 
 			return new RowCopy(values, new SimpleDataColumns(columns));
@@ -297,7 +297,7 @@ namespace TecWare.PPSn.Server
 
 					if (columnInfo == null) // copy columns of the first row
 					{
-						var firstRow = GetRowCreateColumnInfo(row);
+						var firstRow = rows is IDataColumns columns ? GetRowWithColumnInfo(row, columns) : GetRowCreateColumnInfo(row);
 						columnInfo = firstRow;
 						yield return firstRow;
 					}
@@ -319,7 +319,7 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		[LuaMember]
 		public static IEnumerable<IDataRow> CopyRows(IEnumerable<IDataRow> rows, IDataColumns columnInfo = null)
-			=> columnInfo == null ? CopyRowsCore(rows, columnInfo) : new RowsEnumerable(columnInfo, CopyRowsCore(rows, columnInfo));
+			=> columnInfo == null ? CopyRowsCore(rows, null) : new RowsEnumerable(columnInfo, CopyRowsCore(rows, columnInfo));
 
 		/// <summary>Create a copy of the whole result set.</summary>
 		/// <param name="rows"></param>
