@@ -144,12 +144,12 @@ namespace TecWare.PPSn
 		int IComparable<Version>.CompareTo(Version other)
 			=> Version.CompareTo(other);
 
-		/// <summary></summary>
+		/// <summary>User installation detected.</summary>
 		public bool PerUser => type == VersionType.User;
 		/// <summary></summary>
 		public bool PerMachine => type == VersionType.Machine;
-		/// <summary></summary>
-		public bool IsDefault => type == VersionType.Unknown;
+		/// <summary>No installation detected.</summary>
+		public bool IsInstalled => type != VersionType.Unknown;
 		/// <summary></summary>
 		public Version Version => version ?? defaultVersion;
 
@@ -1886,10 +1886,13 @@ namespace TecWare.PPSn
 					var installedVersion = application.InstalledVersion;
 					var assemblyVersion = application.AssenblyVersion;
 
-					if (installedVersion.Version < serverVersion) // new version is provided
-						await application.RequestUpdateAsync(shell, new Uri(xInfo.GetAttribute("src", null), UriKind.Absolute), installedVersion.PerMachine);
-					else if (assemblyVersion < installedVersion.Version) // new version is installed, but not active
-						await application.RequestRestartAsync(shell);
+					if (installedVersion.IsInstalled)
+					{
+						if (installedVersion.Version < serverVersion) // new version is provided
+							await application.RequestUpdateAsync(shell, new Uri(xInfo.GetAttribute("src", null), UriKind.Absolute), installedVersion.PerMachine);
+						else if (assemblyVersion < installedVersion.Version) // new version is installed, but not active
+							await application.RequestRestartAsync(shell);
+					}
 				}
 
 				// update mime type mappings

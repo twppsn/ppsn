@@ -1531,4 +1531,4 @@ namespace TecWare.PPSn.Controls
 }
 /*
  * // CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, )
-*/
+ */

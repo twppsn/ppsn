@@ -254,6 +254,7 @@ namespace TecWare.PPSn.UI
 		private bool isCameraLost = false;
 
 		private ImageSource currentPreviewImage;
+		private int lastNotifiedFrameTick;
 		private int lastPreviewFrameTick;
 
 		private readonly object lockFrameEventsLock = new object();
@@ -418,7 +419,7 @@ namespace TecWare.PPSn.UI
 
 		private BitmapSource GetBitmapFrame(System.Drawing.Bitmap bitmap)
 		{
-			//Debug.Print(String.Format("Frame: {0}, {1}", bitmap.Width, bitmap.Height));
+			// Debug.Print(String.Format("Frame: {0}, {1}", bitmap.Width, bitmap.Height));
 			var rc = new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
 			var bitmapData = bitmap.LockBits(rc, System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
 			try
@@ -563,35 +564,10 @@ namespace TecWare.PPSn.UI
 			});
 		} // proc DoneVideo
 
-		private bool inRenderFrame = false;
-
-		private async Task UpdatePreviewImageAsync(System.Drawing.Bitmap frame)
+		private void NotifyNewFrame()
 		{
-			if (inRenderFrame)
-				frame.Dispose();// drop frame
-			else
-			{
-				inRenderFrame = true;
-				try
-				{
-					try
-					{
-						currentPreviewImage = GetBitmapFrame(frame);
-					}
-					finally
-					{
-						frame.Dispose();
-					}
-
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewImage)));
-					await Task.Delay(100);
-				}
-				finally
-				{
-					inRenderFrame = false;
-				}
-			}
-		} // proc UpdatePreviewImage
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PreviewImage)));
+		}
 
 		private void Device_NewFrame(object sender, NewFrameEventArgs eventArgs)
 		{
@@ -599,8 +575,23 @@ namespace TecWare.PPSn.UI
 
 			if (canUpdatePreviewImage)
 			{
-				UpdatePreviewImageAsync(eventArgs.Frame)
-					.ContinueWith(t => log?.LogMsg(LogMsgType.Error, t.Exception),TaskContinuationOptions.OnlyOnFaulted);
+				try
+				{
+					// do not render to often
+					if (unchecked(Environment.TickCount - lastNotifiedFrameTick) > 100)
+					{
+						// create copy of the image
+						currentPreviewImage = GetBitmapFrame(eventArgs.Frame);
+
+						// notify change
+						lastNotifiedFrameTick = lastPreviewFrameTick;
+						Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(NotifyNewFrame));
+					}
+				}
+				catch (Exception ex)
+				{
+					log?.Except(ex, "Frame exception.");
+				}
 			}
 			else
 			{

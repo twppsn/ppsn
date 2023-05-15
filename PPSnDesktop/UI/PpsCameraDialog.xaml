@@ -60,7 +60,7 @@
 									<RowDefinition Height="100"/>
 									<RowDefinition Height="Auto" />
 								</Grid.RowDefinitions>
-								<Image Source="{Binding PreviewImage,IsAsync=True}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+								<Image Source="{Binding PreviewImage}" VerticalAlignment="Center" HorizontalAlignment="Center" />
 								<TextBlock Grid.Row="1" Text="{Binding Name}" Foreground="White" HorizontalAlignment="Center" TextWrapping="Wrap" />
 							</Grid>
 						</DataTemplate>
@@ -88,7 +88,7 @@
 					</ListBox.ItemContainerStyle>
 				</ListBox>
 				<Image x:Name="previewImage"
-						   Source="{Binding CurrentDevice.PreviewImage,IsAsync=True}"
+						   Source="{Binding CurrentDevice.PreviewImage}"
 						   Grid.Column="1"
 						   Grid.Row="1"
 						   Visibility="Collapsed" />
