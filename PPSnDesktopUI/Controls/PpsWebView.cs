@@ -55,6 +55,13 @@ namespace TecWare.PPSn.Controls
 		public bool NewWindow { get; set; } = false;
 		/// <summary>Uri that will be open.</summary>
 		public Uri Location => uri;
+
+		/// <summary>Command parameter for the PpsWebView.LinkCommand</summary>
+		/// <param name="uri"></param>
+		/// <param name="newWindow"></param>
+		/// <returns></returns>
+		public static PpsWebViewLink Create(string uri, bool newWindow = false)
+			=> new PpsWebViewLink(new Uri(uri, UriKind.RelativeOrAbsolute)) { NewWindow = newWindow };
 	} // class PpsWebViewLink
 
 	#endregion
@@ -1304,8 +1311,16 @@ namespace TecWare.PPSn.Controls
 
 		private void LinkCommandExecuted(object sender, ExecutedRoutedEventArgs e)
 		{
-			SetSource(e.Parameter, false, true);
-			e.Handled = true;
+			if (e.Parameter is PpsWebViewLink lnk && lnk.NewWindow)
+			{
+				// clear NewWindow
+				LinkCommand.Execute(new PpsWebViewLink(lnk.Location), this.GetParentInputElement() ?? Keyboard.FocusedElement);
+			}
+			else
+			{
+				SetSource(e.Parameter, false, true);
+				e.Handled = true;
+			}
 		} // proc LinkCommandExecuted
 
 		private void CanLinkCommandExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -1354,7 +1369,7 @@ namespace TecWare.PPSn.Controls
 					SetSource(his.Uri, setAsHome: setAsHome, appendToHistory: false);
 					break;
 				case PpsWebViewLink link:
-					SetUri(link.Location, setAsHome, appendToHistory);
+					SetSource(link.Location, setAsHome, appendToHistory);
 					break;
 				case Exception ex:
 					SetExceptionAsync(ex).Spawn();

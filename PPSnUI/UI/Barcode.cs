@@ -190,7 +190,6 @@ namespace TecWare.PPSn.UI
 			public void Dispose()
 				=> refCount--;
 
-
 			protected bool TryGetTargetCore(out T target)
 			{
 				if (reference.TryGetTarget(out target))
@@ -367,8 +366,8 @@ namespace TecWare.PPSn.UI
 					// move to top
 					token = tokens[idx];
 					token.AddRef();
-					tokens.Add(token);
 					tokens.RemoveAt(idx);
+					tokens.Add(token);
 				}
 				return token;
 			}
@@ -393,7 +392,7 @@ namespace TecWare.PPSn.UI
 				if (idx < 0)
 					defaultReceivers.Insert(~idx, token);
 				else
-					throw new ArgumentException("Already registered.");
+					throw new ArgumentException("Already registered.", nameof(receiver));
 				return token;
 			}
 		} // func RegisterDefaultReceiver
@@ -438,7 +437,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (receivers[i].TryGetTarget(out var r))
 					{
-						if (r != null && r.IsActive)
+						if (r != null && r.IsActive && receiver == null)
 							receiver = r;
 					}
 					else

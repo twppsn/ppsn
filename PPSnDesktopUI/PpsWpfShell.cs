@@ -346,6 +346,18 @@ namespace TecWare.PPSn
 			);
 		} // func GetVisualParent
 
+		public static IInputElement GetParentInputElement(this DependencyObject current)
+		{
+			do
+			{
+				current = GetVisualParent(current);
+				if (current is null)
+					return null;
+				else if (current is IInputElement ie)
+					return ie;
+			} while (true);
+		} // func GetParentInputElement
+
 		/// <summary>Find a child in the Visual tree.</summary>
 		/// <typeparam name="T">Type of the child</typeparam>
 		/// <param name="current">Current visual element.</param>
