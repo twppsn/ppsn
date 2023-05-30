@@ -546,8 +546,17 @@ namespace TecWare.PPSn.UI
 		private void InitResources()
 		{
 			var resourceList = new List<PpsTraceResourceInfoItem>();
+
+			// load theme images
+			GetAllResources(new ResourceDictionary { Source = new Uri("pack://application:,,,/PPSn.Desktop.UI;component/themes/images.xaml", UriKind.Absolute) }, resourceList);
+
+			// load application resources
 			GetAllResources(wpfResources.Resources, resourceList);
+			
+			// source resources
 			resourceList.Sort();
+
+			// create resource view
 			var resourceView = new PpsTypedListCollectionView<PpsTraceResourceInfoItem>(resourceList);
 			resourceView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PpsTraceResourceInfoItem.SourceName), null, StringComparison.OrdinalIgnoreCase));
 

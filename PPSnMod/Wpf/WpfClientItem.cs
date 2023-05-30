@@ -17,10 +17,12 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -1282,16 +1284,42 @@ namespace TecWare.PPSn.Server.Wpf
 
 			foreach (var g in application.GetGeometries())
 			{
+				XElement xTransform = null;
+				if (!g.IsDefaultViewPort && PpsStuff.TryParseRectangle(g.ViewPort, out var viewPort) && PpsStuff.TryParseRectangle(PpsGeometryInfo.DefaultViewPort, out var defaultViewPort))
+				{
+					var matrix = new Matrix();
+					matrix.Translate(defaultViewPort.X - viewPort.X, defaultViewPort.Y - viewPort.Y);
+					matrix.Scale(defaultViewPort.Width / viewPort.Width, defaultViewPort.Width / viewPort.Width);
+
+					xTransform = new XElement(PresentationNamespace + "MatrixTransform",
+						new XElement(PresentationNamespace + "MatrixTransform.Matrix",
+							new XElement(PresentationNamespace + "Matrix",
+								new XAttribute("M11", matrix.Elements[0]),
+								new XAttribute("M12", matrix.Elements[1]),
+								new XAttribute("M21", matrix.Elements[2]),
+								new XAttribute("M22", matrix.Elements[3]),
+								new XAttribute("OffsetX", matrix.Elements[4]),
+								new XAttribute("OffsetY", matrix.Elements[5])
+							)
+						)
+					);
+				}
+
 				if (g.RawPath2 == null)
 				{
-					yield return new XElement(PresentationNamespace + "PathGeometry",
+					var xPathGeometry = new XElement(PresentationNamespace + "PathGeometry",
 						new XAttribute(xnXamlKey, g.Name + "PathGeometry"),
 						new XAttribute("Figures", g.RawPath)
 					);
+
+					if (xTransform != null)
+						xPathGeometry.Add(new XElement(PresentationNamespace + "PathGeometry.Transform", xTransform));
+
+					yield return xPathGeometry;
 				}
 				else
 				{
-					yield return new XElement(PresentationNamespace + "CombinedGeometry",
+					var xPathGeometry = new XElement(PresentationNamespace + "CombinedGeometry",
 						new XAttribute(xnXamlKey, g.Name + "PathGeometry"),
 						new XElement(PresentationNamespace + "CombinedGeometry.Geometry1",
 							new XElement(PresentationNamespace + "PathGeometry",
@@ -1304,6 +1332,11 @@ namespace TecWare.PPSn.Server.Wpf
 							)
 						)
 					);
+
+					if (xTransform != null)
+						xPathGeometry.Add(new XElement(PresentationNamespace + "CombinedGeometry.Transform", xTransform));
+
+					yield return xPathGeometry;
 				}
 			}
 		} // func GetGeometries

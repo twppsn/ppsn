@@ -230,18 +230,17 @@
 							<Grid.Resources>
 								<DataTemplate x:Key="{DataTemplateKey {x:Type Brush}}">
 									<StackPanel Orientation="Horizontal">
-										<Rectangle Width="16" Height="16" Fill="{Binding}" Stroke="Black" />
+										<Rectangle Width="16" Height="16" Fill="{Binding}" Stroke="Black" Margin="0,0,4,0" />
 										<TextBlock Text="{Binding}" />
 									</StackPanel>
 								</DataTemplate>
 								<DataTemplate x:Key="{DataTemplateKey {x:Type Color}}">
 									<StackPanel Orientation="Horizontal">
-										<!-- todo gibt binding error
-										<Rectangle Width="16" Height="16" Stroke="Black">
+										<Rectangle Width="16" Height="16" Stroke="Black" Margin="0,0,4,0">
 											<Rectangle.Fill>
 												<SolidColorBrush Color="{Binding}" />
 											</Rectangle.Fill>
-										</Rectangle>-->
+										</Rectangle>
 										<TextBlock Text="{Binding}" />
 									</StackPanel>
 								</DataTemplate>
