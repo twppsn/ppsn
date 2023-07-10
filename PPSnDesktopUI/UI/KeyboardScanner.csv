@@ -25,6 +25,7 @@
 0x09D8;0x0410;;Die SMART Technologies ID GmbH RFID Multiplex Multi125
 0x1D57;0xAC08;;dpm-ident RFID-Reader V2.0 HID
 0x0C2E;0x0961;;Elimicron ES 8023
+0x0C2E;0x0204;;Honeywell Eclipse
 0x060E;0x16C1;;Generic Handheld 2D QR USB
 0x065A;0xA001;;Generic LX-51X
 0x08FF;0x0009;;Generic Generic RFID-Reader (125kHz)

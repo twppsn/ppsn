@@ -143,13 +143,12 @@ specific language governing permissions and limitations under the Licence.
 							<Setter Property="Background" Value="Transparent" />
 						</Trigger>
 
-						<!-- Vorerst abschalten, führt zu Verwirrungen bei Multiline
 						<Trigger Property="AcceptsReturn" Value="True">
 							<Setter Property="Padding" Value="2,2,2,0"/>
 							<Setter Property="VerticalContentAlignment" Value="Top"/>
 							<Setter Property="TextWrapping" Value="Wrap"/>
 							<Setter TargetName="ClearButton" Property="VerticalAlignment" Value="Top"/>
-						</Trigger>-->
+						</Trigger>
 					
 						<Trigger Property="IsKeyboardFocusWithin" Value="True">
 							<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
