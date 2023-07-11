@@ -28,7 +28,6 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
-using System.Xml.Linq;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Networking;
@@ -1434,24 +1433,44 @@ namespace TecWare.PPSn
 
 		private static void LinkCommandExecuted(object sender, ExecutedRoutedEventArgs e)
 		{
+			bool TryCreateReplacedUri(string url, object source, bool newWindow, out PpsWebViewLink linkInfo)
+			{
+				var jumpInfo = PpsJumpInfo.Create(url);
+				if (Uri.TryCreate(jumpInfo.CreateUri(PpsPropertyWatcher.GetProperties(PpsWpfShell.GetDataContext(source))), UriKind.RelativeOrAbsolute, out var ruri))
+				{
+					linkInfo = new PpsWebViewLink(ruri) { NewWindow = newWindow };
+					return true;
+				}
+				else
+				{
+					linkInfo = null;
+					return false;
+				}
+			} // func TryCreateReplacedUri
+
 			if (e.Source is DependencyObject d)
 			{
 				var paneManager = d.GetControlService<IPpsWindowPaneManager>(false);
 				if (paneManager != null)
 				{
+					PpsWebViewLink linkInfo;
 					switch (e.Parameter)
 					{
 						case PpsWebViewLink l:
-							ProcessDefaultLink(paneManager, l);
+							if (TryCreateReplacedUri(l.Location.OriginalString, l.Source ?? e.OriginalSource, l.NewWindow, out linkInfo))
+								ProcessDefaultLink(paneManager, linkInfo);
+							else
+								ProcessDefaultLink(paneManager, l);
 							break;
 						case Uri uri:
-							ProcessDefaultLink(paneManager, new PpsWebViewLink(uri));
+							if (TryCreateReplacedUri(uri.OriginalString, e.OriginalSource, false, out linkInfo))
+								ProcessDefaultLink(paneManager, linkInfo);
+							else
+								ProcessDefaultLink(paneManager, new PpsWebViewLink(uri));
 							break;
 						case string url:
-							// PpsPropertyWatcher.GetPropertyValue()
-							var jumpInfo = PpsJumpInfo.Create(url); 
-							if (Uri.TryCreate(jumpInfo.CreateUri(PpsPropertyWatcher.GetProperties(PpsWpfShell.GetDataContext(e.OriginalSource))), UriKind.RelativeOrAbsolute, out var ruri))
-								ProcessDefaultLink(paneManager, new PpsWebViewLink(ruri));
+							if (TryCreateReplacedUri(url, e.OriginalSource, false, out linkInfo))
+								ProcessDefaultLink(paneManager, linkInfo);
 							break;
 					}
 				}

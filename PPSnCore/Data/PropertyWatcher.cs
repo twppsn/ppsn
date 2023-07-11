@@ -131,8 +131,17 @@ namespace TecWare.PPSn.Core.Data
 				return propertyInfo;
 			} // func GetPropertyInfo
 
-			private static object GetValueCore(object parentValue, PropertyInfo propertyInfo)
-				=> parentValue == null ? null : propertyInfo.GetValue(parentValue);
+			private object GetValueCore(object parentValue, PropertyInfo propertyInfo)
+			{
+				if (parentValue == null)
+					return null;
+				else if (propertyInfo != null) // c# property
+					return propertyInfo.GetValue(parentValue);
+				else if (parentValue is IPropertyReadOnlyDictionary d)
+					return d.TryGetProperty(propertyName, out var value) ? value : null;
+				else
+					return null;
+			} // func GetValueCore
 
 			protected override object GetValueCore(object parentValue)
 				=> parentValue == null ? null : GetValueCore(parentValue, GetPropertyInfo(parentValue));

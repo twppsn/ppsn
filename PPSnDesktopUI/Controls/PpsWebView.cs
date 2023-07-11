@@ -55,6 +55,8 @@ namespace TecWare.PPSn.Controls
 		public bool NewWindow { get; set; } = false;
 		/// <summary>Uri that will be open.</summary>
 		public Uri Location => uri;
+		/// <summary>Source of the link request.</summary>
+		public object Source { get; set; } = null;
 
 		/// <summary>Command parameter for the PpsWebView.LinkCommand</summary>
 		/// <param name="uri"></param>
@@ -1314,13 +1316,16 @@ namespace TecWare.PPSn.Controls
 			if (e.Parameter is PpsWebViewLink lnk && lnk.NewWindow)
 			{
 				// clear NewWindow
-				LinkCommand.Execute(new PpsWebViewLink(lnk.Location), this.GetParentInputElement() ?? Keyboard.FocusedElement);
+				LinkCommand.Execute(new PpsWebViewLink(lnk.Location) { Source = e.OriginalSource }, this.GetParentInputElement() ?? Keyboard.FocusedElement);
 			}
 			else
 			{
-				SetSource(e.Parameter, false, true);
-				e.Handled = true;
+				if (e.Parameter is string uriString && uriString.Contains("&_newwindow=true"))
+					LinkCommand.Execute(new PpsWebViewLink(new Uri(uriString, UriKind.RelativeOrAbsolute)) { Source = e.OriginalSource, NewWindow = false }, this.GetParentInputElement() ?? Keyboard.FocusedElement);
+				else
+					SetSource(e.Parameter, false, true);
 			}
+			e.Handled = true;
 		} // proc LinkCommandExecuted
 
 		private void CanLinkCommandExecute(object sender, CanExecuteRoutedEventArgs e)
