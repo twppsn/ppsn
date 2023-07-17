@@ -283,10 +283,10 @@ namespace PPSnExcel
 		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateShell());
 
+		private void newItemButton_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(CreateEnvironmentCommand);
+
 		/// <summary>Was Loaded called.</summary>
 		public bool IsMenuLoaded => isMenuLoaded;
-
-		private void newItemButton_Click(object sender, RibbonControlEventArgs e)
-		=> RunActionSafe(ActivateEnvironmentCommand);
 	} // class PpsMenu
 }

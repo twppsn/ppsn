@@ -15,14 +15,17 @@
 #endregion
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
@@ -78,6 +81,40 @@ namespace TecWare.PPSn.UI
 	/// <summary>Picture view and editor for one image.</summary>
 	public partial class PpsPicturePane : PpsWindowPaneControl
 	{
+		#region -- class GaleryItem ---------------------------------------------------
+
+		private sealed class GaleryItem
+		{
+			private readonly int zusaId;
+			private readonly string name;
+			private readonly Uri uri;
+
+			public GaleryItem(int index, int zusaId, string name, Uri uri)
+			{
+				this.zusaId = zusaId;
+				this.name = name ?? $"image{index}";
+				this.uri= uri ?? throw new ArgumentNullException(nameof(uri));
+			} // ctor
+
+			public int ZusaId => zusaId;
+			public string Name => name;
+			public Uri Uri => uri;
+
+			public static GaleryItem Create(int index, LuaTable t)
+			{
+				if (t.TryGetValue<int>("Id", out var zusaId)
+						&& t.TryGetValue<string>("Uri", out var uriInfo)
+						&& Uri.TryCreate(uriInfo, UriKind.RelativeOrAbsolute, out var uri))
+				{
+					return new GaleryItem(++index, zusaId, t.GetOptionalValue<string>("Name", null), uri);
+				}
+				else
+					return null;
+			} // func Create
+		} // class GaleryItem
+
+		#endregion
+
 		#region -- CanEdit - Property -------------------------------------------------
 
 		private static readonly DependencyPropertyKey canEditPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanEdit), typeof(bool), typeof(PpsPicturePane), new FrameworkPropertyMetadata(false));
@@ -117,9 +154,12 @@ namespace TecWare.PPSn.UI
 		private IPpsDataInfo currentPictureInfo = null;
 		private IPpsDataObject currentPicture = null;
 
+		private int currentGaleryIndex = -1;
+		private GaleryItem[] galeryItems = null;
+
 		private bool scheduleFitToImage = false;
 
-		#region -- Constructor --------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>initializes the cameras, the settings and the events</summary>
 		/// <param name="paneHost"></param>
@@ -141,6 +181,9 @@ namespace TecWare.PPSn.UI
 					ctx => !shapeCanvas.IsReadOnly
 				)
 			);
+
+			this.AddCommandBinding(Shell, MediaCommands.NextTrack, new PpsAsyncCommand(OpenNextImageAsync, CanOpenNextImage));
+			this.AddCommandBinding(Shell, MediaCommands.PreviousTrack, new PpsAsyncCommand(OpenPrevImageAsync, CanOpenPrevImage));
 
 			//AddCommandBindings();
 
@@ -164,16 +207,16 @@ namespace TecWare.PPSn.UI
 		protected override async Task OnLoadAsync(LuaTable args)
 		{
 			// set current picture
-			if (args["Object"] is byte[] bytes)
+			if (args["Object"] is IPpsDataInfo dataInfo)
+				await OpenPictureAsync(dataInfo);
+			else if (args["Object"] is byte[] bytes)
 			{
 				CurrentImage = BitmapFrame.Create(new MemoryStream(bytes));
 				SubTitle = "Bild";
 				CanEdit = false;
 				scheduleFitToImage = true;
 			}
-			else
-				await OpenPictureAsync(args["Object"] as IPpsDataInfo);
-
+			
 			if (args["SubTitle"] is string subTitle)
 				SubTitle = subTitle;
 		} // proc OnLoadAsync
@@ -198,6 +241,52 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- Galery -------------------------------------------------------------
+
+		private void RefreshGaleryInfo()
+		{
+			if (galeryItems != null)
+			{
+				imageGaleryInfo.Content = new Tuple<int, int>(currentGaleryIndex + 1, galeryItems.Length);
+				nextImage.IsVisible = true;
+				prevImage.IsVisible = true;
+			}
+			else
+			{
+				nextImage.IsVisible = false;
+				prevImage.IsVisible = false;
+			}
+		} // proc RefreshGaleryInfo
+
+		private async Task LoadGaleryImageAsync(GaleryItem item)
+		{
+			using (this.CreateProgress(progressText: $"Lade {item.Name}..."))
+			{
+				// todo: ObjectManager
+				if (Shell.Http.TryMakeRelative(item.Uri, out var path))
+				{
+					using (var http = await Shell.Http.GetResponseAsync(path))
+					await OpenPictureAsync(await PpsDataInfo.ToPpsDataInfoAsync(http));
+				}
+				else
+					throw new NotSupportedException();
+			}
+		} // func LoadGaleryImageAsync
+
+		private Task OpenPrevImageAsync(PpsCommandContext context)
+			=> CanOpenPrevImage(context) ? LoadGaleryImageAsync(galeryItems[currentGaleryIndex - 1]) : Task.CompletedTask;
+		
+		private Task OpenNextImageAsync(PpsCommandContext context)
+			=> CanOpenNextImage(context) ? LoadGaleryImageAsync(galeryItems[currentGaleryIndex + 1]) : Task.CompletedTask;
+
+		private bool CanOpenNextImage(PpsCommandContext context)
+			=> galeryItems != null && currentGaleryIndex < galeryItems.Length - 1;
+
+		private bool CanOpenPrevImage(PpsCommandContext context)
+			=> galeryItems != null && currentGaleryIndex > 0;
+
+		#endregion
+
 		#region -- Picture ------------------------------------------------------------
 
 		private async Task<bool> OpenPictureAsync(IPpsDataInfo open)
@@ -213,6 +302,31 @@ namespace TecWare.PPSn.UI
 			currentPicture = await open.LoadAsync();
 			currentPicture.DisableUI = () => this.CreateProgress(progressText: "Bild wird bearbeitet...");
 			currentPicture.DataChanged += CurrentImage_DataChanged;
+
+			// image galerie
+			if (currentPicture.TryGetProperty<string>("zusa-group", out var groupUrl)
+				&& Uri.TryCreate(groupUrl, UriKind.RelativeOrAbsolute, out var groupUri)
+				&& Shell.Http.TryMakeRelative(groupUri, out var galeryPath))
+			{
+				var galeryInfo = await Shell.Http.GetTableAsync(galeryPath);
+
+				var currentId = currentPicture.GetProperty("Id", -1);
+				var index = 0;
+				var list = new List<GaleryItem>();
+				foreach (var cur in galeryInfo.ArrayList.OfType<LuaTable>())
+				{
+					var item = GaleryItem.Create(index, cur);
+
+					if (item.ZusaId == currentId)
+						currentGaleryIndex = index;
+
+					if (item != null)
+						list.Add(item);
+
+					index++;
+				}
+				galeryItems = list.Count == 0 ? null : list.ToArray();
+			}
 
 			// update subtitle to image
 			SubTitle = currentPictureInfo.Name;
@@ -247,6 +361,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (currentPicture.Data is IPpsDataStream imgSrc)
 			{
+				// update image
 				CurrentImage = await Task.Run(
 					() =>
 					{
@@ -254,6 +369,9 @@ namespace TecWare.PPSn.UI
 						return BitmapFrame.Create(src, BitmapCreateOptions.None, BitmapCacheOption.Default);
 					}
 				);
+
+				// update galery
+				RefreshGaleryInfo();
 
 				scheduleFitToImage = true;
 				CanEdit = false;// !currentPicture.IsReadOnly;

@@ -36,6 +36,7 @@ using Microsoft.Web.WebView2.Wpf;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Networking;
 using TecWare.PPSn.UI;
 
@@ -171,13 +172,13 @@ namespace TecWare.PPSn.Controls
 
 	public class PpsWebViewNavigationContentEventArgs : PpsWebViewNavigationCancelEventArgs
 	{
-		public PpsWebViewNavigationContentEventArgs(object uri, HttpContent content)
+		public PpsWebViewNavigationContentEventArgs(object uri, HttpResponseMessage response)
 			: base(PpsWebView.NavigationContentEvent, uri)
 		{
-			Content = content ?? throw new ArgumentNullException(nameof(content));
+			Response = response ?? throw new ArgumentNullException(nameof(response));
 		} // ctor
 
-		public HttpContent Content { get; }
+		public HttpResponseMessage Response { get; }
 	} // class PpsWebViewNavigationContentEventArgs
 
 	public delegate void PpsWebViewNavigationContentHandler(object sender, PpsWebViewNavigationContentEventArgs e);
@@ -797,16 +798,16 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Redirect WebRequest to Shell http ----------------------------------
 
-		private bool TryRedirectToPaneDefault(object uri, HttpContent content)
+		private bool TryRedirectToPaneDefault(object uri, HttpResponseMessage response)
 		{
-			if (content == null)
+			if (response == null || response.Content == null)
 			{
 				return false;
 			}
 			else
 			{
 				// is content marked as attachment
-				if (!content.TryGetExtensionFromContent(true, out var mimeType, out var _))
+				if (!response.Content.TryGetExtensionFromContent(true, out var mimeType, out var _))
 					return false;
 
 				// find pane register
@@ -819,13 +820,17 @@ namespace TecWare.PPSn.Controls
 				if (paneManager == null)
 					return false;
 
-				// find pane type
+				// create pane object
+				// todo: IPpsDataObjectManager
+				var dataInfo = response.ToPpsDataInfoAsync().Await();
+				//dataInfo.OpenPaneAsync()
+
+				// q&d: find pane type
 				var paneType = paneRegistrar.GetPaneTypeMimeType(mimeType, false);
 				if (paneType == null)
 					return false;
 
-				// todo: create IPpsDataObject
-				paneManager.OpenPaneAsync(paneType, arguments: new LuaTable { ["Object"] = content.ReadAsByteArrayAsync().Await() }).Spawn(paneManager);
+				paneManager.OpenPaneAsync(paneType, arguments: new LuaTable { ["Object"] = dataInfo }).Spawn(paneManager);
 				return true;
 			}
 		} // proc TryRedirectToPaneDefault
@@ -1007,7 +1012,7 @@ namespace TecWare.PPSn.Controls
 			using (var httpRequest = new HttpRequestMessage(new HttpMethod(request.Method), sourceUri))
 			{
 				var httpResponse = await SendCoreAsync(http, httpRequest, true);
-				var e = new PpsWebViewNavigationContentEventArgs(request.Uri, httpResponse.Content);
+				var e = new PpsWebViewNavigationContentEventArgs(request.Uri, httpResponse);
 				OnNavigationContent(e);
 				if (e.Cancel)
 				{
@@ -1138,7 +1143,7 @@ namespace TecWare.PPSn.Controls
 		private void OnNavigationContent(PpsWebViewNavigationContentEventArgs e)
 		{
 			RaiseEvent(e);
-			if (!e.Handled && TryRedirectToPaneDefault(e.Uri, e.Content))
+			if (!e.Handled && TryRedirectToPaneDefault(e.Uri, e.Response))
 				e.Cancel = true;
 		} // proc OnRedirectNavigationContent
 
