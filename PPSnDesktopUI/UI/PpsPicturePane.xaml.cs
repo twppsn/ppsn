@@ -216,7 +216,11 @@ namespace TecWare.PPSn.UI
 				CanEdit = false;
 				scheduleFitToImage = true;
 			}
-			
+			else if (args["Source"] is string uriString)
+				await OpenPictureFromSourceAsync(new Uri(uriString, UriKind.RelativeOrAbsolute));
+			else if (args["Source"] is Uri uri)
+				await OpenPictureFromSourceAsync(uri);
+
 			if (args["SubTitle"] is string subTitle)
 				SubTitle = subTitle;
 		} // proc OnLoadAsync
@@ -261,16 +265,7 @@ namespace TecWare.PPSn.UI
 		private async Task LoadGaleryImageAsync(GaleryItem item)
 		{
 			using (this.CreateProgress(progressText: $"Lade {item.Name}..."))
-			{
-				// todo: ObjectManager
-				if (Shell.Http.TryMakeRelative(item.Uri, out var path))
-				{
-					using (var http = await Shell.Http.GetResponseAsync(path))
-					await OpenPictureAsync(await PpsDataInfo.ToPpsDataInfoAsync(http));
-				}
-				else
-					throw new NotSupportedException();
-			}
+				await OpenPictureFromSourceAsync(item.Uri);
 		} // func LoadGaleryImageAsync
 
 		private Task OpenPrevImageAsync(PpsCommandContext context)
@@ -339,6 +334,18 @@ namespace TecWare.PPSn.UI
 
 			return true;
 		} // func OpenPictureAsync
+
+		private async Task OpenPictureFromSourceAsync(Uri uri)
+		{
+			// todo: ObjectManager
+			if (Shell.Http.TryMakeRelative(uri, out var path))
+			{
+				using (var http = await Shell.Http.GetResponseAsync(path))
+					await OpenPictureAsync(await PpsDataInfo.ToPpsDataInfoAsync(http));
+			}
+			else
+				throw new NotSupportedException();
+		} // proc OpenPictureFromSourceAsync
 
 		private void FitToImage()
 		{
