@@ -139,12 +139,16 @@
 					</Image.RenderTransform>
 				</Image>
 				<StackPanel x:Name="imageCmdPanel" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0" Visibility="Collapsed">
-					<Border Background="{StaticResource blackBackGround}" Padding="1">
-						<ui:PpsButton Command="{x:Static ApplicationCommands.Save}" Content="Übernehmen" GeometryName="launch" ImageOpacity="1" DisplayMode="Transparent" Focusable="False" 
+					<Border x:Name="multiImageButton" Background="{StaticResource blackBackGround}" Padding="1" Visibility="Collapsed">
+						<ui:PpsButton Command="{x:Static ApplicationCommands.Save}" CommandParameter="Multi" Content="Nächstes" GeometryName="cameraFilled" ImageOpacity="1" DisplayMode="Transparent" Focusable="False" 
 									  Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Bild übernehmen"/>
 					</Border>
 					<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,24,0,0">
-						<ui:PpsButton Command="{x:Static ApplicationCommands.Redo}" Content="Neues Foto" GeometryName="cameraFilled" ImageOpacity="1" DisplayMode="Transparent" Focusable="False" 
+						<ui:PpsButton Command="{x:Static ApplicationCommands.Save}" CommandParameter="Close" Content="Übernehmen" GeometryName="launch" ImageOpacity="1" DisplayMode="Transparent" Focusable="False" 
+									  Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Bild übernehmen"/>
+					</Border>
+					<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,24,0,0">
+						<ui:PpsButton Command="{x:Static ApplicationCommands.Redo}" Content="Verwerfen" GeometryName="cameraFilled" ImageOpacity="1" DisplayMode="Transparent" Focusable="False" 
 									  Foreground="White" BorderBrush="White" BorderThickness="2" Height="36" FontSize="14" FontWeight="SemiBold" ToolTip="Neues Bild aufnehmen"/>
 					</Border>
 					<Border Background="{StaticResource blackBackGround}" Padding="1" Margin="0,48,0,0">
@@ -277,6 +281,10 @@
 					</DataTrigger.ExitActions>
 				</DataTrigger>
 
+				<DataTrigger Binding="{Binding CanMultiImage}" Value="True">
+					<Setter TargetName="multiImageButton" Property="Visibility" Value="Visible" />
+				</DataTrigger>
+				
 				<DataTrigger Binding="{Binding CurrentDevice.HasProperties}" Value="True">
 					<Setter TargetName="buttonSettings" Property="Visibility" Value="Visible" />
 				</DataTrigger>

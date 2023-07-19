@@ -821,6 +821,15 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- IsSettingsActive - property ----------------------------------------
+
+		private static readonly DependencyPropertyKey canMultiImagePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CanMultiImage), typeof(bool), typeof(PpsCameraDialog), new FrameworkPropertyMetadata(BooleanBox.False));
+		public static readonly DependencyProperty CanMultiImageProperty = canMultiImagePropertyKey.DependencyProperty;
+
+		public bool CanMultiImage => BooleanBox.GetBool(GetValue(CanMultiImageProperty));
+
+		#endregion
+
 		/// <summary>Template name for the settings box</summary>
 		private const string settingsBoxTemplateName = "PART_SettingsBox";
 		private const string lastCameraUsedSettingsKey = "PPSn.User.LastCameraUsed";
@@ -831,12 +840,17 @@ namespace TecWare.PPSn.UI
 		private int allowSaveDeviceMoniker = 0;
 		private readonly List<PpsCameraDevice> devices = new List<PpsCameraDevice>(); // list of current camera devices
 		private readonly ICollectionView devicesView;
+		
 		private readonly Size initialPreviewSize = new Size(80, 80);
 		private readonly Size fullPreviewSize = new Size(1024, 1024);
 
-		public PpsCameraDialog(IPpsShell shell)
+		private readonly IPpsCaptureTarget target;
+
+		public PpsCameraDialog(IPpsShell shell, IPpsCaptureTarget target)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+			this.target = target;
+
 			ui = shell.GetService<IPpsUIService>(true);
 			
 			InitializeComponent();
@@ -858,46 +872,39 @@ namespace TecWare.PPSn.UI
 					}
 				)
 			);
-			this.AddCommandBinding(shell, ApplicationCommands.Redo, // Neues Foto
-				new PpsCommand(
-					ctx =>
-					{
-						// clear image and status
-						SetValue(currentImagePropertyKey, null);
-						SetValue(currentStatusPropertyKey, PpsCameraDialogStatus.Preview);
-					},
-					CanTakePicture)
-			);
-			this.AddCommandBinding(shell, ApplicationCommands.Save, // übernehmen
-				new PpsCommand(ctx =>
-					{
-						DialogResult = true;
-					},
-					ctx => CurrentImage != null
-				)
-			);
-			this.AddCommandBinding(shell, ApplicationCommands.Properties,
-				new PpsCommand(ctx =>
-					{
-						SetValue(isSettingsActivePropertyKey, !IsSettingsActive);
-					},
-					ctx => CurrentStatus == PpsCameraDialogStatus.Preview
-				)
-			);
+			// Neues Foto
+			this.AddCommandBinding(shell, ApplicationCommands.Redo, new PpsCommand(ClearCurrentImage, CanTakePicture));
+			// Übernehmen, Hinzufügen
+			this.AddCommandBinding(shell, ApplicationCommands.Save, new PpsAsyncCommand(SaveCurrentImageAsync,ctx => CurrentImage != null));
+			this.AddCommandBinding(shell, ApplicationCommands.Properties, new PpsCommand(ctx => SetValue(isSettingsActivePropertyKey, !IsSettingsActive), ctx => CurrentStatus == PpsCameraDialogStatus.Preview));
 
 			RefreshCameraDevicesAsync(true).Spawn();
 
+			// update multi image support
+			SetValue(canMultiImagePropertyKey, BooleanBox.GetObject(target != null));
+
 			DataContext = this;
 		} // ctor
+
+		protected override void OnClosed(EventArgs e)
+		{
+			refreshCameraDevices.IsEnabled = false;
+
+			// dispose all devices
+			foreach (var d in devices)
+				d.Dispose();
+			devices.Clear();
+
+			base.OnClosed(e);
+		} // proc OnClsoed
+
+		#region -- DevicesView --------------------------------------------------------
 
 		private IDisposable SuspendSaveDeviceMoniker()
 		{
 			allowSaveDeviceMoniker++;
 			return new DisposableScope(() => { allowSaveDeviceMoniker--; });
 		} // func SuspendSaveDeviceMoniker
-
-		private bool CanSaveDeviceMoniker
-			=> allowSaveDeviceMoniker <= 0;
 
 		private void DevicesView_CurrentChanged(object sender, EventArgs e)
 		{
@@ -940,6 +947,10 @@ namespace TecWare.PPSn.UI
 			CommandManager.InvalidateRequerySuggested();
 		} // proc DevicesView_CollectionChanged
 
+		private bool CanSaveDeviceMoniker => allowSaveDeviceMoniker <= 0;
+
+		#endregion
+
 		#region -- Simulate Popup.StaysOpen = false -----------------------------------
 
 		// simulate Popup.StaysOpen = false
@@ -951,18 +962,6 @@ namespace TecWare.PPSn.UI
 		} // proc OnPreviewMouseDown
 
 		#endregion
-
-		protected override void OnClosed(EventArgs e)
-		{
-			refreshCameraDevices.IsEnabled = false;
-
-			// dispose all devices
-			foreach (var d in devices)
-				d.Dispose();
-			devices.Clear();
-
-			base.OnClosed(e);
-		} // proc OnClsoed
 
 		#region  -- Refresh camera's --------------------------------------------------
 
@@ -1023,6 +1022,8 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- Take, Save, Clear --------------------------------------------------
+
 		private async Task TakePictureImpl(PpsCommandContext ctx)
 		{
 			try
@@ -1040,16 +1041,38 @@ namespace TecWare.PPSn.UI
 			}
 		} // func TakePictureImpl
 
+		private async Task SaveCurrentImageAsync(PpsCommandContext ctx)
+		{
+			// append picture to target
+			if (target != null)
+				await target.AppendAsync(CurrentImage);
+
+			// Close dialog, or Next Image
+			if (target == null || Equals(ctx.Parameter, "Close"))
+				DialogResult = true;
+			else
+				ClearCurrentImage(ctx);
+		} // proc SaveCurrentImageAsync
+
+		private void ClearCurrentImage(PpsCommandContext _)
+		{
+			// clear image and status
+			SetValue(currentImagePropertyKey, null);
+			SetValue(currentStatusPropertyKey, PpsCameraDialogStatus.Preview);
+		} // proc ClearCurrentImage
+
 		private bool CanTakePicture(PpsCommandContext ctx)
 			=> CurrentDevice != null && !CurrentDevice.IsCameraLost && !CurrentDevice.IsDisposed;
+
+		#endregion
 
 		public ICollectionView Devices => devicesView;
 
 		// -- static  ---------------------------------------------------------
 
-		public static ImageSource TakePicture(DependencyObject owner)
+		public static ImageSource TakePicture(DependencyObject owner, IPpsCaptureTarget target)
 		{
-			var window = new PpsCameraDialog(PpsWpfShell.GetShell(owner));
+			var window = new PpsCameraDialog(PpsWpfShell.GetShell(owner), target);
 			window.SetFullscreen(owner);
 			return owner.ShowModalDialog(window)
 				? window.CurrentImage

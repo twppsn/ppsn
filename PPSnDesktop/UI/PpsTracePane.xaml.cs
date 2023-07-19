@@ -166,7 +166,7 @@ namespace TecWare.PPSn.UI
 			public void TakePicture(string path = null)
 			{
 				var captureService = pane.GetControlService<IPpsCaptureService>(true);
-				LuaRunTask(() => captureService.CaputureAsync(pane, PpsCaptureDevice.Camera), "Geschlossen.");
+				LuaRunTask(() => captureService.CaptureAsync(pane, PpsCaptureDevice.Camera, path == null ? null : new PpsCapturePathTarget(path, "test")), "Geschlossen.");
 			} // proc TakePicture
 
 			[LuaMember]
