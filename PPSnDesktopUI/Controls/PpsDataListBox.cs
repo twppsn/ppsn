@@ -16,6 +16,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -53,9 +54,9 @@ namespace TecWare.PPSn.Controls
 		protected virtual void OnCommandsChanged(PpsUICommandCollection newValue, PpsUICommandCollection oldValue)
 		{
 			if (oldValue != null)
-				oldValue.CollectionChanged -= Commands_CollectionChanged;
+				WeakEventManager<PpsUICommandCollection, NotifyCollectionChangedEventArgs>.RemoveHandler(oldValue, nameof(PpsUICommandCollection.CollectionChanged), Commands_CollectionChanged);
 			if (newValue != null)
-				newValue.CollectionChanged += Commands_CollectionChanged;
+				WeakEventManager<PpsUICommandCollection, NotifyCollectionChangedEventArgs>.AddHandler(newValue, nameof(PpsUICommandCollection.CollectionChanged), Commands_CollectionChanged);
 
 			UpdateCommands();
 		} // proc OnCommandsChanged
