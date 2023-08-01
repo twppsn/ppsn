@@ -186,7 +186,7 @@ namespace TecWare.PPSn
 				: GetLogicalParent(current);
 
 			if (parentObject == null) // fallback to shell services
-				r = GetShell(current)?.GetService(serviceType);
+				r = (GetShell(current) ?? PpsShell.Global).GetService(serviceType);
 			else
 				return GetControlService(parentObject, serviceType, throwException, useVisualTree);
 

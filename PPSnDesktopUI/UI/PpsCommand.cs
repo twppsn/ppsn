@@ -347,7 +347,11 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception e)
 			{
-				commandContext.Shell.GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, e);
+				var ui = commandContext.Shell == null
+					? PpsShell.GetService<IPpsUIService>(true)
+					: commandContext.Shell.GetService<IPpsUIService>(true);
+
+				ui.ShowException(PpsExceptionShowFlags.None, e);
 			}
 		} // proc Execute
 
