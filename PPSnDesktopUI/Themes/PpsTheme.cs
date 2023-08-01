@@ -270,11 +270,6 @@ namespace TecWare.PPSn.Themes
 		/// <summary>Connected geometry</summary>
 		public static readonly ResourceKey ServerConnectedPathGeometry = new PpsThemeKey("serverConnected");
 
-		/// <summary>ScannerActive geometry</summary>
-		public static readonly ResourceKey ScannerActivePathGeometry = new PpsThemeKey("scannerActiveBold");
-		/// <summary>ScannerInActive geometry</summary>
-		public static readonly ResourceKey ScannerInActivePathGeometry = new PpsThemeKey("scannerInActiveBold");
-
 		/// <summary>VirtualKeyboard BackSpace geometry</summary>
 		public static readonly ResourceKey VirtKeybBackSpacePathGeometry = new PpsThemeKey("virtKeybBackSpace");
 		/// <summary>VirtualKeyboard CapsLock geometry</summary>
@@ -380,6 +375,10 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey BarcodeScannerPathGeometry = new PpsThemeKey("scannerActive");
 		/// <summary>SignOut</summary>
 		public static readonly ResourceKey BarcodeScannerNoPathGeometry = new PpsThemeKey("scannerInActive");
+		/// <summary>ScannerActive geometry</summary>
+		public static readonly ResourceKey BarcodeActivePathGeometry = new PpsThemeKey("barcodeActive");
+		/// <summary>ScannerInActive geometry</summary>
+		public static readonly ResourceKey BarcodeInActivePathGeometry = new PpsThemeKey("barcodeInActive");
 
 		#endregion
 	} // class PpsTheme
