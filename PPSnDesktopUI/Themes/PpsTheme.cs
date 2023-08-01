@@ -271,10 +271,9 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey ServerConnectedPathGeometry = new PpsThemeKey("serverConnected");
 
 		/// <summary>ScannerActive geometry</summary>
-		public static readonly ResourceKey ScannerActivePathGeometry = new PpsThemeKey("scannerActive");
+		public static readonly ResourceKey ScannerActivePathGeometry = new PpsThemeKey("scannerActiveBold");
 		/// <summary>ScannerInActive geometry</summary>
-		public static readonly ResourceKey ScannerInActivePathGeometry = new PpsThemeKey("scannerInActive");
-
+		public static readonly ResourceKey ScannerInActivePathGeometry = new PpsThemeKey("scannerInActiveBold");
 
 		/// <summary>VirtualKeyboard BackSpace geometry</summary>
 		public static readonly ResourceKey VirtKeybBackSpacePathGeometry = new PpsThemeKey("virtKeybBackSpace");
@@ -299,7 +298,7 @@ namespace TecWare.PPSn.Themes
 		/// <summary>Share</summary>
 		public static readonly ResourceKey SharePathGeometry = new PpsThemeKey("share");
 		/// <summary>Print</summary>
-		public static readonly ResourceKey PrintPathGeometry = new PpsThemeKey("Print");
+		public static readonly ResourceKey PrintPathGeometry = new PpsThemeKey("print");
 		/// <summary>Copy</summary>
 		public static readonly ResourceKey CopyPathGeometry = new PpsThemeKey("copy");
 		/// <summary>Paste</summary>
@@ -332,7 +331,7 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey UnlockPathGeometry = new PpsThemeKey("unlock");
 
 		/// <summary>Global</summary>
-		public static readonly ResourceKey GlobalPathGeometry = new PpsThemeKey("global");
+		public static readonly ResourceKey GlobalNaviPathGeometry = new PpsThemeKey("globalNavi");
 		/// <summary>Page</summary>
 		public static readonly ResourceKey PagePathGeometry = new PpsThemeKey("page");
 		/// <summary>Back</summary>
@@ -372,6 +371,15 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey StopWatchPathGeometry = new PpsThemeKey("stopWatch");
 		/// <summary>SignOut</summary>
 		public static readonly ResourceKey SignOutPathGeometry = new PpsThemeKey("signOut");
+
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey ChevronLeftPathGeometry = new PpsThemeKey("chevronLeft");
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey ChevronRightPathGeometry = new PpsThemeKey("chevronRight");
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey BarcodeScannerPathGeometry = new PpsThemeKey("scannerActive");
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey BarcodeScannerNoPathGeometry = new PpsThemeKey("scannerInActive");
 
 		#endregion
 	} // class PpsTheme
