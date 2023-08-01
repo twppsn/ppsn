@@ -347,7 +347,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception e)
 			{
-				commandContext.Shell.GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, e);
+				(commandContext.Shell ?? PpsShell.Global).GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, e);
 			}
 		} // proc Execute
 
@@ -500,7 +500,7 @@ namespace TecWare.PPSn.UI
 
 						// show exception
 						if (t.IsFaulted)
-							commandContext.Shell.GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, t.Exception.InnerException);
+							(commandContext.Shell ?? PpsShell.Global).GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, t.Exception.InnerException);
 					}, TaskContinuationOptions.ExecuteSynchronously);
 			}
 			catch

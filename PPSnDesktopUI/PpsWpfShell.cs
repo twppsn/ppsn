@@ -186,7 +186,7 @@ namespace TecWare.PPSn
 				: GetLogicalParent(current);
 
 			if (parentObject == null) // fallback to shell services
-				r = GetShell(current)?.GetService(serviceType);
+				r = (GetShell(current) ?? PpsShell.Global).GetService(serviceType);
 			else
 				return GetControlService(parentObject, serviceType, throwException, useVisualTree);
 
@@ -346,6 +346,18 @@ namespace TecWare.PPSn
 			);
 		} // func GetVisualParent
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="current"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static T GetVisualParent<T>(this DependencyObject current, string name)
+			where T : DependencyObject
+		{
+			var parent = GetVisualParent(current, name);
+			return parent is T tmp ? tmp : GetVisualParent<T>(GetVisualParent(parent), name);
+		} // func GetVisualParent
+
 		public static IInputElement GetParentInputElement(this DependencyObject current)
 		{
 			do
@@ -364,16 +376,25 @@ namespace TecWare.PPSn
 		/// <returns>Child or <c>null</c>.</returns>
 		public static T GetVisualChild<T>(this DependencyObject current)
 			where T : DependencyObject
+			=> GetVisualChild<T>(current, null);
+
+		/// <summary>Find a child in the Visual tree.</summary>
+		/// <typeparam name="T">Type of the child</typeparam>
+		/// <param name="current">Current visual element.</param>
+		/// <param name="name"></param>
+		/// <returns>Child or <c>null</c>.</returns>
+		public static T GetVisualChild<T>(this DependencyObject current, string name)
+			where T : DependencyObject
 		{
 			var c = VisualTreeHelper.GetChildrenCount(current);
 			for (var i = 0; i < c; i++)
 			{
 				var v = VisualTreeHelper.GetChild(current, i);
-				if (v is T child)
+				if (v is T child && (name == null || CompareName(v, name) == 0))
 					return child;
 				else
 				{
-					child = GetVisualChild<T>(v);
+					child = GetVisualChild<T>(v, name);
 					if (child != null)
 						return child;
 				}

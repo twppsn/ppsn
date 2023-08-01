@@ -656,7 +656,7 @@ namespace TecWare.PPSn.UI
 
 				xps.WritingCancelled += (sender, e) => taskSource.SetCanceled();
 				xps.WritingCompleted += (sender, e) => taskSource.SetResult(true);
-				printQueue.CurrentJobSettings.Description = document.Description;
+				printQueue.CurrentJobSettings.Description = document.Name;
 
 				document.WriteDocument(xps, printTicket, printRange);
 				return taskSource.Task;
@@ -666,6 +666,15 @@ namespace TecWare.PPSn.UI
 		} // class WpfPrintJob
 
 		#endregion
+
+		protected readonly string name;
+		private readonly string printKey;
+
+		protected PpsWpfPrintDocument(string printKey, string name)
+		{
+			this.printKey = printKey;
+			this.name = name ?? throw new ArgumentNullException(nameof(name));
+		} // ctor
 
 		public void Dispose()
 		{
@@ -680,14 +689,13 @@ namespace TecWare.PPSn.UI
 		public IPpsPrintJob GetPrintJob(IPpsPrintSettings settings, IPpsPrintRange printRange = null)
 			=> new WpfPrintJob(this, settings.Queue, settings.Ticket, printRange);
 
-		protected string Name { get; }
-		protected string Description { get; }
+		protected string Name => name;
 
 		public abstract int? MinPage { get; }
 		public abstract int? MaxPage { get; }
 		public abstract int? CurrentPage { get; }
 
-		public abstract string PrintKey { get; }
+		public string PrintKey => printKey;
 	} // class PpsWpfPrintDocument
 
 
@@ -818,12 +826,11 @@ namespace TecWare.PPSn.UI
 		private sealed class SinglePageDocument : PpsWpfPrintDocument
 		{
 			private readonly object page;
-			private readonly string printKey;
 
-			public SinglePageDocument(object page, string printKey)
+			public SinglePageDocument(object page, string printKey, string name)
+				: base(printKey, name)
 			{
 				this.page = page ?? throw new ArgumentNullException(nameof(page));
-				this.printKey = printKey;
 			} // ctor
 
 			protected override void WriteDocument(XpsDocumentWriter xps, PrintTicket printTicket, IPpsPrintRange printRange)
@@ -839,8 +846,6 @@ namespace TecWare.PPSn.UI
 			public override int? MinPage => null;
 			public override int? MaxPage => null;
 			public override int? CurrentPage => null;
-
-			public override string PrintKey => printKey;
 		} // class SinglePageDocument
 
 		#endregion
@@ -850,12 +855,11 @@ namespace TecWare.PPSn.UI
 		private sealed class PaginatorDocument : PpsWpfPrintDocument
 		{
 			private readonly DocumentPaginator paginator;
-			private readonly string printKey;
 
-			public PaginatorDocument(DocumentPaginator paginator, string printKey)
+			public PaginatorDocument(DocumentPaginator paginator, string printKey, string name)
+				:base(printKey, name)
 			{
 				this.paginator = paginator ?? throw new ArgumentNullException(nameof(paginator));
-				this.printKey = printKey;
 			} // ctor
 
 			protected override void WriteDocument(XpsDocumentWriter xps, PrintTicket printTicket, IPpsPrintRange printRange)
@@ -870,8 +874,6 @@ namespace TecWare.PPSn.UI
 			public override int? MinPage => paginator.IsPageCountValid ?  1 : (int?)null;
 			public override int? MaxPage => paginator.IsPageCountValid ? paginator.PageCount : (int?)null;
 			public override int? CurrentPage => null;
-
-			public override string PrintKey => printKey;
 		} // class PaginatorDocument
 
 		#endregion
@@ -914,20 +916,20 @@ namespace TecWare.PPSn.UI
 		public static IPpsPrintDocument CreatePrintDocument(this PrintDocument printDocument, string printKey = null)
 			=> new PpsDrawingPrintDocument(printDocument, printKey);
 
-		public static IPpsPrintDocument CreatePrintDocument(this Visual visual, string printKey = null)
-			=> new SinglePageDocument(visual, printKey);
+		public static IPpsPrintDocument CreatePrintDocument(this Visual visual, string printKey = null, string name = null)
+			=> new SinglePageDocument(visual, printKey, name ?? visual.GetName() ?? "visual");
 
-		public static IPpsPrintDocument CreatePrintDocument(this FixedPage fixedPage, string printKey = null)
-			=> new SinglePageDocument(fixedPage, printKey);
+		public static IPpsPrintDocument CreatePrintDocument(this FixedPage fixedPage, string printKey = null, string name = null)
+			=> new SinglePageDocument(fixedPage, printKey, name ?? fixedPage.Name ?? "page");
 
-		public static IPpsPrintDocument CreatePrintDocument(this FixedDocument fixedDocument, string printKey = null)
-			=> new PaginatorDocument(fixedDocument.DocumentPaginator, printKey);
+		public static IPpsPrintDocument CreatePrintDocument(this FixedDocument fixedDocument, string printKey = null, string name = null)
+			=> new PaginatorDocument(fixedDocument.DocumentPaginator, printKey, name ?? fixedDocument.Name ?? "document");
 
-		public static IPpsPrintDocument CreatePrintDocument(this FixedDocumentSequence fixedDocumentSequence, string printKey = null)
-			=> new PaginatorDocument(fixedDocumentSequence.DocumentPaginator, printKey);
+		public static IPpsPrintDocument CreatePrintDocument(this FixedDocumentSequence fixedDocumentSequence, string printKey = null, string name = null)
+			=> new PaginatorDocument(fixedDocumentSequence.DocumentPaginator, printKey, name ?? fixedDocumentSequence.Name ?? "document");
 
-		public static IPpsPrintDocument CreatePrintDocument(this DocumentPaginator documentPaginator, string printKey = null)
-			=> new PaginatorDocument(documentPaginator, printKey);
+		public static IPpsPrintDocument CreatePrintDocument(this DocumentPaginator documentPaginator, string printKey = null, string name = null)
+			=> new PaginatorDocument(documentPaginator, printKey, name ?? "pages");
 
 		public static Task<IPpsPrintDocument> CreatePrintDocumentAsync(this DEHttpClient http, Uri uri)
 			=> new PpsWebDocument().LoadAsync(http, uri);
@@ -985,9 +987,9 @@ namespace TecWare.PPSn.UI
 		#region -- PrintDialog --------------------------------------------------------
 
 		/// <summary>Show print dialog for this document.</summary>
-		/// <param name="document"></param>
-		/// <param name="dp"></param>
-		/// <param name="settings"></param>
+		/// <param name="document">Document for this dialog.</param>
+		/// <param name="dp">Service provider.</param>
+		/// <param name="settings">Settings that will be updated by the dialog. If there no settings, a temporary settings set will be generated.</param>
 		/// <returns></returns>
 		public static IPpsPrintJob ShowDialog(this IPpsPrintDocument document, DependencyObject dp, IPpsPrintSettings settings = null)
 		{
@@ -1073,26 +1075,25 @@ namespace TecWare.PPSn.UI
 		} // func ShowDialogAsync
 
 		/// <summary>Print document with dialog.</summary>
-		/// <param name="document"></param>
-		/// <param name="dp"></param>
-		/// <param name="enforceShowDialog"></param>
+		/// <param name="document">Document to print.</param>
+		/// <param name="dp">Service provider</param>
+		/// <param name="enforceShowDialog"><c>true</c>, always show the print dialog.</param>
+		/// <param name="settings">Optional settings, that will be updated or changed.</param>
 		/// <returns></returns>
-		public static async Task<bool> PrintDialogAsync(this IPpsPrintDocument document, DependencyObject dp, bool enforceShowDialog = true)
+		public static async Task<bool> PrintDialogAsync(this IPpsPrintDocument document, DependencyObject dp, bool enforceShowDialog = true, IPpsPrintSettings settings = null)
 		{
 			if (document == null)
 				throw new ArgumentNullException(nameof(document));
 			if (dp == null)
 				throw new ArgumentNullException(nameof(dp));
 
-			IPpsPrintSettings settings = null;
-			
 			// load settings
 			var printService = dp.GetControlService<PpsPrintService>(false);
-			if (printService != null)
+			if (printService != null && settings == null)
 				settings = await printService.GetPrintSettingsAsync(document.PrintKey);
 
 			// show dialog
-			var job = enforceShowDialog || settings.IsDefault || ToggleProperties
+			var job = enforceShowDialog || settings == null || settings.IsDefault || ToggleProperties
 				? ShowDialog(document, dp, settings)
 				: document.GetPrintJob(settings);
 			if (job == null)
