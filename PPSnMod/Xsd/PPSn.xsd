@@ -35,29 +35,54 @@
 		</xs:complexContent>
 	</xs:complexType>
 
-	<xs:element name="msSqlDataSource" substitutionGroup="pps:dataSource">
+	<xs:complexType name="msSqlDataSourceType">
+		<xs:complexContent>
+			<xs:extension base="pps:sqlDataSourceType">
+				<xs:sequence>
+					<xs:element name="access" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>Access control to this database.</xs:documentation>
+						</xs:annotation>
+						<xs:complexType>
+							<xs:attribute name="security" type="KeyType" use="required">
+								<xs:annotation>
+									<xs:documentation>Security token, the user needs to access the database.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+							<xs:attribute name="user" type="xs:string" use="required">
+								<xs:annotation>
+									<xs:documentation>User name for access (special keywords are .sys or .self)</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+							<xs:attribute name="password" type="PasswordType" use="optional">
+								<xs:annotation>
+									<xs:documentation>Password of the user.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+						</xs:complexType>
+					</xs:element>
+				</xs:sequence>
+				<xs:attribute name="sysuser" type="xs:string" use="optional">
+					<xs:annotation>
+						<xs:documentation>System user to access database.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="syspassword" type="PasswordType" use="optional">
+					<xs:annotation>
+						<xs:documentation>System password.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>	
+		</xs:complexContent>
+	</xs:complexType>
+	
+	<xs:element name="msSqlDataSource" substitutionGroup="pps:dataSource" type="pps:msSqlDataSourceType">
 		<xs:annotation>
 			<xs:documentation>Implementation for a Sql-Server data source.</xs:documentation>
 			<xs:appinfo>
 				<class>TecWare.PPSn.Server.Sql.PpsMsSqlDataSource</class>
 			</xs:appinfo>
 		</xs:annotation>
-		<xs:complexType>
-			<xs:complexContent>
-				<xs:extension base="pps:sqlDataSourceType">
-					<xs:attribute name="sysuser" type="xs:string" use="optional">
-						<xs:annotation>
-							<xs:documentation>System user to access database.</xs:documentation>
-						</xs:annotation>
-					</xs:attribute>
-					<xs:attribute name="syspassword" type="PasswordType" use="optional">
-						<xs:annotation>
-							<xs:documentation>System password.</xs:documentation>
-						</xs:annotation>
-					</xs:attribute>
-				</xs:extension>
-			</xs:complexContent>
-		</xs:complexType>
 	</xs:element>
 
 	<xs:element name="sqlExDataSource" substitutionGroup="pps:dataSource">
@@ -69,7 +94,7 @@
 		</xs:annotation>
 		<xs:complexType>
 			<xs:complexContent>
-				<xs:extension base="pps:sqlDataSourceType">
+				<xs:extension base="pps:msSqlDataSourceType">
 				</xs:extension>
 			</xs:complexContent>
 		</xs:complexType>

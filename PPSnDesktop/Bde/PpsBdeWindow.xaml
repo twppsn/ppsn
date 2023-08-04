@@ -60,9 +60,9 @@
                 <uic:PpsBarcodeState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="16,0,0,0" Padding="8" />
                 <uic:PpsConnectionState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="16,0,0,0" Padding="8" />
 				<TextBlock Text="{Binding CurrentTimeString}"
-						   FontSize="14"
+						   FontSize="{Binding CurrentTimeFontSize}"
 						   LineStackingStrategy="BlockLineHeight"
-						   LineHeight="16"
+						   LineHeight="{Binding CurrentTimeLineHeight}"
 						   TextAlignment="Center"
 						   TextWrapping="Wrap"
 						   VerticalAlignment="Center"

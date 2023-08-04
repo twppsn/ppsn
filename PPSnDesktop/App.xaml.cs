@@ -34,6 +34,8 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Bde;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Core.Data;
+using TecWare.PPSn.Core.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Main;
 using TecWare.PPSn.Properties;
@@ -67,6 +69,7 @@ namespace TecWare.PPSn
 		private sealed class AppStartArguments
 		{
 			public int WaitProcessId { get; set; } = -1;
+			public int WaitTime { get; set; } = -1;
 			public IPpsShellInfo ShellInfo { get; set; } = null;
 			public ICredentials UserInfo { get; set; } = null;
 			public bool DoAutoLogin { get; set; } = false;
@@ -536,7 +539,7 @@ namespace TecWare.PPSn
 				paneRegister.RegisterPaneType(typeof(PpsPdfViewerPane), "pdf", MimeTypes.Application.Pdf);
 				paneRegister.RegisterPaneType(typeof(PpsMarkdownPane), "markdown", MimeTypes.Text.Markdown);
 				paneRegister.RegisterPaneType(typeof(PpsLuaWindowPane), "xaml");
-				paneRegister.RegisterPaneType(typeof(PpsLuaWindowPane), "web");
+				paneRegister.RegisterPaneType(typeof(PpsWebViewPane), "web");
 
 				// change PpsLiveData
 				var liveData = shell.GetService<PpsLiveData>(true);
@@ -588,6 +591,7 @@ namespace TecWare.PPSn
 		#endregion
 
 		private IPpsShell shell = null;
+		private Mutex applicationMutex = null;
 		private bool logoffUser = true;
 		private bool isProcessProtected = false;
 
@@ -736,6 +740,17 @@ namespace TecWare.PPSn
 			await Task.Run(new Action(process.WaitForExit));
 		} // func WaitForProcessAsync
 
+		private static async Task WaitForTimeAsync(IPpsProgress progress, int timeout)
+		{
+			progress.Text = String.Format($"Warte ({(timeout / 1000.0):N1}sec)...");
+			for (var i = 0; i < timeout; i++)
+			{
+				await Task.Delay(100);
+				i += 100;
+				progress.Value = i * 1000 / timeout;
+			}
+		} // func WaitForProcessAsync
+
 		private static void GetApplicationModulParameter(IPpsShell shell, string applicationModul, out Type paneType, out LuaTable paneArguments)
 		{
 			if (!String.IsNullOrEmpty(applicationModul))
@@ -763,6 +778,48 @@ namespace TecWare.PPSn
 			}
 		} // proc GetApplicationModulParameter
 
+		private static Mutex CreateOwnMutex(string name)
+		{
+			var mutex = new Mutex(true, name, out var createdNew);
+			if (createdNew)
+				return mutex;
+			else
+			{
+				mutex.Dispose();
+				return null;
+			}
+		} // func CreateOwnMutex
+
+		private async Task<bool> CreateApplicationMutex(IPpsProgressFactory factory, string name)
+		{
+			if (String.IsNullOrEmpty(name))
+				return true;
+
+			var c = 3;
+			IPpsProgress progress = null;
+			do
+			{
+				var m = CreateOwnMutex(name);
+				if (m != null)
+				{
+					applicationMutex = m;
+					return true;
+				}
+				else
+				{
+					if (progress == null)
+						progress = factory.CreateProgress();
+					progress.Text = "Warte auf Anwendung...";
+					await Task.Delay(3000);
+				}
+			} while (--c >= 0);
+
+			if (progress != null)
+				progress.Dispose();
+
+			return false;
+		} // func CreateApplicationMutex
+
 		private async Task<bool> StartApplicationAsync(AppStartArguments args)
 		{
 			// we will have no windows
@@ -783,6 +840,13 @@ namespace TecWare.PPSn
 					await WaitForProcessAsync(progress, process);
 			}
 
+			// wait for timeout
+			if (args.WaitTime > 0)
+			{
+				using (var progress = splashWindow.CreateProgress(false))
+					await WaitForTimeAsync(progress, args.WaitTime);
+			}
+
 			try
 			{
 				// first load a shell
@@ -796,6 +860,10 @@ namespace TecWare.PPSn
 
 				// get login handler
 				var settings = newShell.GetSettings<PpsWpfShellSettings>();
+
+				// handle mutex
+				if (!await CreateApplicationMutex(splashWindow, settings.ApplicationMutex))
+					return false;
 
 				// auto login for a user
 				var userInfo = args.UserInfo ?? GetLastUserInfo(newShell.Info);
@@ -939,6 +1007,11 @@ namespace TecWare.PPSn
 
 			if (await shell.ShutdownAsync())
 			{
+				if (applicationMutex != null)
+				{
+					applicationMutex.Dispose();
+					applicationMutex = null;
+				}
 				shell = null;
 				return true;
 			}
@@ -1067,6 +1140,10 @@ namespace TecWare.PPSn
 						case 'w': // wait process id
 							if (Int32.TryParse(arg.Substring(2), out var pid))
 								r.WaitProcessId = pid;
+							break;
+						case 'd': // delay
+							if (Int32.TryParse(arg.Substring(2), out var timeout))
+								r.WaitTime = timeout;
 							break;
 						case '-':
 							if (arg == "--nosync")
@@ -1259,17 +1336,7 @@ namespace TecWare.PPSn
 		private const string applicationName = "PPSnDesktop";
 		private static bool noRestart = false;
 
-		private static Version GetInstalledVersionDefault()
-		{
-			using (var reg = Registry.CurrentUser.OpenSubKey(@"Software\TecWare\" + applicationName + @"\Components", false))
-			{
-				return reg?.GetValue(null) is string v
-					? new Version(v)
-					: new Version(1, 0, 0, 0);
-			}
-		} // func GetInstalledVersionDefault
-
-		Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri)
+		Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri, bool useRunas)
 		{
 			if (noRestart)
 				return Task.CompletedTask;
@@ -1282,6 +1349,8 @@ namespace TecWare.PPSn
 				var msiLogFile = Path.Combine(Path.GetTempPath(), applicationName + ".msi.txt");
 				var psi = new ProcessStartInfo(msiExe, "/i " + uri.ToString() + " /qb /l*v \"" + msiLogFile + "\" SHELLNAME=" + shell.Info.Name);
 
+					if (useRunas)
+						psi.Verb = "runas";
 #if DEBUG
 				MessageBox.Show($"RunMSI: {psi.FileName} {psi.Arguments}", "Debug");
 				return Task.CompletedTask;
@@ -1314,7 +1383,7 @@ namespace TecWare.PPSn
 
 		string IPpsShellApplication.Name => applicationName;
 		Version IPpsShellApplication.AssenblyVersion => PpsShell.GetDefaultAssemblyVersion(this);
-		Version IPpsShellApplication.InstalledVersion => GetInstalledVersionDefault();
+		PpsShellApplicationVersion IPpsShellApplication.InstalledVersion => PpsShellApplicationVersion.GetInstalledVersion(applicationName);
 
 		#endregion
 
@@ -1337,14 +1406,24 @@ namespace TecWare.PPSn
 			paneManager.OpenPaneAsync(paneType, GetOpenPaneModeFromLink(paneManager, link), link.Location.GetArgumentsAsTable()).OnException();
 		} // event ProcessPaneManager
 
+		private static void ProcessDefaultWebLink(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
+			=> paneManager.OpenPaneAsync(typeof(PpsWebViewPane), GetOpenPaneModeFromLink(paneManager, link), new LuaTable { ["uri"] = link.Location });
+
 		private static void ProcessDefaultLink(IPpsWindowPaneManager paneManager, PpsWebViewLink link)
 		{
 			try
 			{
-				if (link.Location.IsAbsoluteUri && link.Location.Scheme == "panemanager")
-					ProcessPaneManager(paneManager, link);
+				if (link.Location.IsAbsoluteUri)
+				{
+					if (link.Location.Scheme == "panemanager")
+						ProcessPaneManager(paneManager, link);
+					else if (link.Location.Scheme == "shell")
+						PpsDpcService.Execute(link.Location.AbsolutePath.Substring(1));
+					else
+						ProcessDefaultWebLink(paneManager, link);
+				}
 				else
-					paneManager.OpenPaneAsync(typeof(PpsWebViewPane), GetOpenPaneModeFromLink(paneManager, link), new LuaTable { ["uri"] = link.Location });
+					ProcessDefaultWebLink(paneManager, link);
 			}
 			catch (Exception e)
 			{
@@ -1354,22 +1433,44 @@ namespace TecWare.PPSn
 
 		private static void LinkCommandExecuted(object sender, ExecutedRoutedEventArgs e)
 		{
+			bool TryCreateReplacedUri(string url, object source, bool newWindow, out PpsWebViewLink linkInfo)
+			{
+				var jumpInfo = PpsJumpInfo.Create(url);
+				if (Uri.TryCreate(jumpInfo.CreateUri(PpsPropertyWatcher.GetProperties(PpsWpfShell.GetDataContext(source))), UriKind.RelativeOrAbsolute, out var ruri))
+				{
+					linkInfo = new PpsWebViewLink(ruri) { NewWindow = newWindow };
+					return true;
+				}
+				else
+				{
+					linkInfo = null;
+					return false;
+				}
+			} // func TryCreateReplacedUri
+
 			if (e.Source is DependencyObject d)
 			{
 				var paneManager = d.GetControlService<IPpsWindowPaneManager>(false);
 				if (paneManager != null)
 				{
+					PpsWebViewLink linkInfo;
 					switch (e.Parameter)
 					{
 						case PpsWebViewLink l:
-							ProcessDefaultLink(paneManager, l);
+							if (TryCreateReplacedUri(l.Location.OriginalString, l.Source ?? e.OriginalSource, l.NewWindow, out linkInfo))
+								ProcessDefaultLink(paneManager, linkInfo);
+							else
+								ProcessDefaultLink(paneManager, l);
 							break;
 						case Uri uri:
-							ProcessDefaultLink(paneManager, new PpsWebViewLink(uri));
+							if (TryCreateReplacedUri(uri.OriginalString, e.OriginalSource, false, out linkInfo))
+								ProcessDefaultLink(paneManager, linkInfo);
+							else
+								ProcessDefaultLink(paneManager, new PpsWebViewLink(uri));
 							break;
 						case string url:
-							if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var ruri))
-								ProcessDefaultLink(paneManager, new PpsWebViewLink(ruri));
+							if (TryCreateReplacedUri(url, e.OriginalSource, false, out linkInfo))
+								ProcessDefaultLink(paneManager, linkInfo);
 							break;
 					}
 				}

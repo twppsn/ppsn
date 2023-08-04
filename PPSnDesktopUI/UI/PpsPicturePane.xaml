@@ -22,7 +22,7 @@ specific language governing permissions and limitations under the Licence.
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 mc:Ignorable="d"
 			 x:Name="imagePane"
-			 Title="Bildeditor"
+			 Title="Bild"
 			 Image="image"
              d:DesignHeight="300" d:DesignWidth="300">
 	<uiC:PpsWindowPaneControl.Resources>
@@ -99,11 +99,23 @@ specific language governing permissions and limitations under the Licence.
 				</uiC:PpsPopup>
 			</ui:PpsUISplitCommandButton.Popup>
 		</ui:PpsUISplitCommandButton>-->
+		<ui:PpsUICommandButton x:Name="prevImage" Order="300;200" Description="Vorheriges Bild" Image="prevPane" IsVisible="True" Command="{x:Static MediaCommands.PreviousTrack}" />
+		<ui:PpsUICommandPanel x:Name="imageGaleryInfo" Order="300;210">
+			<ui:PpsUICommandPanel.ContentTemplate>
+				<DataTemplate>
+					<TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Padding="5">
+						<Run Text="{Binding Item1,StringFormat=N0,Mode=OneWay}" />/<Run Text="{Binding Item2,StringFormat=N0,Mode=OneWay}" />
+					</TextBlock>
+				</DataTemplate>
+			</ui:PpsUICommandPanel.ContentTemplate>
+		</ui:PpsUICommandPanel>
+		
+		<ui:PpsUICommandButton x:Name="nextImage" Order="300;220" Description="Nächstes Bild" Image="nextPane" IsVisible="True" Command="{x:Static MediaCommands.NextTrack}" />
 	</uiC:PpsWindowPaneControl.Commands>
 
 	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" PanningMode="Both" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsManipulationEnabled="True">
 		<Grid>
-			<Image x:Name="imageView" Stretch="None" Source="{Binding CurrentImage}" >
+			<Image x:Name="imageView" Stretch="None" Source="{Binding CurrentImage}">
 				<Image.LayoutTransform>
 					<ScaleTransform ScaleX="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" ScaleY="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=OneWay}" />
 				</Image.LayoutTransform>

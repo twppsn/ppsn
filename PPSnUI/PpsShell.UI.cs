@@ -595,23 +595,32 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsCaptureService -------------------------------------------
+	#region -- interface IPpsCaptureTarget --------------------------------------------
 
-	/// <summary></summary>
-	/// <param name="capture"></param>
-	public delegate void AddCaptureDelegate(object capture);
+	/// <summary>Multi capture support.</summary>
+	public interface IPpsCaptureTarget
+	{
+		/// <summary>Append picture to target.</summary>
+		/// <param name="capture"></param>
+		/// <returns></returns>
+		Task AppendAsync(object capture);
+	} // interface IPpsCaptureTarget
+
+	#endregion
+
+	#region -- interface IPpsCaptureService -------------------------------------------
 
 	/// <summary></summary>
 	public interface IPpsCaptureService
 	{
-		/// <summary></summary>
+		/// <summary>Capture images,videos, ...</summary>
 		/// <param name="owner"></param>
 		/// <param name="device"></param>
-		/// <returns></returns>
-		Task<object> CaputureAsync(object owner, PpsCaptureDevice device);
-		// <param name="addCapture"></param>
-		//Task<object> CaputureAsync(object owner, PpsCaptureDevice device, AddCaptureDelegate addCapture = null);
-		// bool IsSupported(PpsImageDevice device);
+		/// <param name="target">Allow to add multiple picture to a target.</param>
+		/// <returns>Returns the capture or the capture target.</returns>
+		Task<object> CaptureAsync(object owner, PpsCaptureDevice device, IPpsCaptureTarget target = null);
+		/// <param name="device">Is teh device supported.</param>
+		bool IsSupported(PpsCaptureDevice device);
 	} // interface IPpsCaptureService
 
 	#endregion

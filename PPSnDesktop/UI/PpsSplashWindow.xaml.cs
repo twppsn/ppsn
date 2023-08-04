@@ -194,24 +194,6 @@ namespace TecWare.PPSn.UI
 			public EditShellData(PpsSplashWindow splashWindow)
 				=> this.splashWindow = splashWindow ?? throw new ArgumentNullException(nameof(splashWindow));
 
-			private string CleanName(string name)
-			{
-				var sb = new StringBuilder();
-				foreach(var c in name)
-				{
-					if (Array.IndexOf(Path.GetInvalidPathChars(), c) >= 0)
-						continue;
-					if (Array.IndexOf(Path.GetInvalidFileNameChars(), c) >= 0)
-						continue;
-
-					if (Char.IsWhiteSpace(c))
-						sb.Append('_');
-					else
-						sb.Append(c);
-				}
-				return sb.ToString();
-			} // func CleanName
-
 			private bool TryGetParameter(IPpsShellFactory shellFactory, out string instanceName, out string displayName, out Uri uri)
 			{
 				instanceName = shellName;
@@ -272,7 +254,7 @@ namespace TecWare.PPSn.UI
 			public string NewName
 			{
 				get => shellName;
-				set => Set(ref shellName, CleanName(value), nameof(NewName));
+				set => Set(ref shellName, PpsShell.GetCleanShellName(value), nameof(NewName));
 			} // prop NewName
 
 			public string NewUri

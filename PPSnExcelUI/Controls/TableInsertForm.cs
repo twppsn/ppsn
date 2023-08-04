@@ -963,12 +963,14 @@ namespace TecWare.PPSn.Controls
 			// update data model
 			await availableViews.RefreshAsync();
 
+			var listData = data.Source as PpsListViewSource;
+
 			// check current view
-			var hasData = data != null && (!data.IsEmpty || data.Views != null);
+			var hasData = data != null && listData != null  && listData.Views != null;
 			if (hasData)
 			{
 				// joins
-				SetResultView(new PpsJoinParser(availableViews, data.Views).Result);
+				SetResultView(new PpsJoinParser(availableViews, listData.Views).Result);
 
 				// update columns
 				var visibleResultView = new VisibleColumnHelper(resultView);
@@ -993,7 +995,7 @@ namespace TecWare.PPSn.Controls
 				}
 
 				// update filter
-				var expr = PpsDataFilterExpression.Parse(data.Filter);
+				var expr = PpsDataFilterExpression.Parse(listData.Filter);
 				resultFilter.Load(visibleResultView, expr);
 			}
 
@@ -1759,8 +1761,7 @@ namespace TecWare.PPSn.Controls
 				var visibleColumnHelper = new VisibleColumnHelper(resultView);
 
 				await currentData.UpdateAsync(
-					sbView.ToString(),
-					resultFilter.Compile(visibleColumnHelper).ToString(),
+					new PpsListViewSource(shell, sbView.ToString(), resultFilter.Compile(visibleColumnHelper).ToString()),
 					from col in resultColumns where visibleColumnHelper.IsVisibleColumn(col) select col,
 					false
 				);

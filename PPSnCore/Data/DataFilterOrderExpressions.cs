@@ -1744,10 +1744,8 @@ namespace TecWare.PPSn.Data
 				var splitSymbol = JumpPattern(patternSymbol, timePattern, ref patternPos); // returns the date part separator
 
 				// read digits until the symbol
-				var startAt = inputPos;
 				var t = ReadDigits(timePart, formatProvider, ref inputPos, splitSymbol);
-				var readedNum = inputPos - startAt;
-
+				
 				// set date part, by number
 				if (t >= 0)
 				{
@@ -2740,9 +2738,10 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		/// <param name="columnToken"></param>
+		/// <param name="extented"></param>
 		/// <returns></returns>
-		protected virtual string CreateColumnErrorFilter(string columnToken)
-			=> CreateErrorFilter(String.Format("Column '{0}' not found.'", columnToken ?? "<null>"));
+		protected virtual string CreateColumnErrorFilter(string columnToken, string extented = null)
+			=> CreateErrorFilter(String.Format("Column '{0}' error ({1}).'", columnToken ?? "<null>", extented ?? "not found"));
 
 		#endregion
 
@@ -2774,16 +2773,16 @@ namespace TecWare.PPSn.Data
 
 					var (columnName, columnType) = column;
 					string parseableValue;
+					string value = expression.Value is PpsDataFilterTextValue txtValueFilter
+						? txtValueFilter.Text
+						: expression.Value.ToString(CultureInfo.InvariantCulture);
 					try
 					{
-						string value = expression.Value is PpsDataFilterTextValue txtValueFilter
-							? txtValueFilter.Text
-							: expression.Value.ToString(CultureInfo.InvariantCulture);
 						parseableValue = CreateParsableValue(value, columnType);
 					}
 					catch (FormatException)
 					{
-						return CreateColumnErrorFilter(columnToken);
+						return CreateColumnErrorFilter(columnToken, $"Format for '{value}'");
 					}
 					return CreateDefaultCompareValue(columnName, expression.Operator, parseableValue, columnType == typeof(string));
 
@@ -2860,7 +2859,7 @@ namespace TecWare.PPSn.Data
 			}
 			catch (FormatException)
 			{
-				return CreateColumnErrorFilter(columnToken);
+				return CreateColumnErrorFilter(columnToken, $"Format for '{text}");
 			}
 			return CreateDefaultCompareValue(column.Item1, op, parseableValue, column.Item2 == typeof(string));
 		} // func CreateCompareFilterText
@@ -2907,7 +2906,7 @@ namespace TecWare.PPSn.Data
 			var column = LookupDateColumn(columnToken);
 			if (column == null)
 				return CreateColumnErrorFilter(columnToken);
-			else if (column.Item2 != typeof(DateTime))
+			else if (column.Item2 != typeof(DateTime) && column.Item2 != typeof(DateTimeOffset))
 				return CreateErrorFilter(String.Format("Date expected for column: {0}.", columnToken));
 
 			switch (op)

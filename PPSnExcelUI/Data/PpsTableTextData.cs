@@ -98,26 +98,28 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		private string displayName = null;
+		private IPpsShell shell = null;
 		private string views = null;
 		private string filter = null;
 		private PpsColumnInfo[] columnInfos = Array.Empty<PpsColumnInfo>();
 
-		private void LoadCore(string displayName, string views, string filter, IEnumerable<IPpsTableColumn> columns)
+		private void LoadCore(string displayName, PpsListViewSource source, IEnumerable<IPpsTableColumn> columns)
 		{
 			DisplayName = displayName;
-			Views = views;
-			Filter = filter;
+			shell = source.Shell;
+			Views = source.Views;
+			Filter = source.Filter;
 
 			// todo: accept all types of columns
 			SetColumnCore(columns.Where(c => c.Type == PpsTableColumnType.Data).Select(c => new PpsColumnInfo(c)));
 		} // proc Load
 
 		public void Load(IPpsTableData tableData)
-			=> LoadCore(tableData.DisplayName, tableData.Views, tableData.Filter, tableData.Columns);
-
-		Task IPpsTableData.UpdateAsync(string views, string filter, IEnumerable<IPpsTableColumn> columns, bool anonymize)
+			=> LoadCore(tableData.DisplayName, (PpsListViewSource)tableData.Source, tableData.Columns);
+		
+		Task IPpsTableData.UpdateAsync(PpsListSource source, IEnumerable<IPpsTableColumn> columns, bool anonymize)
 		{
-			LoadCore(null, views, filter, columns);
+			LoadCore(null, (PpsListViewSource)source, columns);
 			return Task.CompletedTask;
 		} // func UpdateAsync
 
@@ -218,6 +220,7 @@ namespace TecWare.PPSn.Data
 				   select o;
 		} // func GetOrderExpression
 
+		PpsListSource IPpsTableData.Source => new PpsListViewSource(shell, views, filter);
 		IEnumerable<IPpsTableColumn> IPpsTableData.Columns => columnInfos;
 
 		IEnumerable<string> IPpsTableData.DefinedNames => null;

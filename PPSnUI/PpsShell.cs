@@ -30,7 +30,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using System.Xml.XPath;
+using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
@@ -86,6 +86,184 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- struct PpsShellApplicationVersion --------------------------------------
+
+	/// <summary>Version information for Shell-Application</summary>
+	public readonly struct PpsShellApplicationVersion : IComparable<Version>, IComparable<PpsShellApplicationVersion>
+	{
+		#region -- enum VersionType ---------------------------------------------------
+
+		private enum VersionType
+		{
+			Unknown,
+			User,
+			Machine
+		} // enum VersionType
+
+		#endregion
+
+		private static readonly Version defaultVersion = new Version(1, 0, 0, 0);
+		private readonly Version version;
+		private readonly VersionType type;
+
+		private PpsShellApplicationVersion(Version version, VersionType type)
+		{
+			this.version = version ?? defaultVersion;
+			this.type = type;
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="version"></param>
+		/// <param name="isMachine"></param>
+		public PpsShellApplicationVersion(Version version, bool isMachine)
+			: this(version, isMachine ? VersionType.Machine : VersionType.User)
+		{ }
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> type == VersionType.Unknown ? "not installed" : Version.ToString() + " " + (type == VersionType.Machine ? "(machine)" : "(user)");
+
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public override bool Equals(object obj)
+			=> obj is PpsShellApplicationVersion v && CompareTo(v) == 0;
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override int GetHashCode()
+			=> Version.GetHashCode();
+
+		/// <summary>Compare version part</summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		public int CompareTo(PpsShellApplicationVersion other)
+			=> Version.CompareTo(other.Version);
+
+		int IComparable<Version>.CompareTo(Version other)
+			=> Version.CompareTo(other);
+
+		/// <summary>User installation detected.</summary>
+		public bool PerUser => type == VersionType.User;
+		/// <summary></summary>
+		public bool PerMachine => type == VersionType.Machine;
+		/// <summary>No installation detected.</summary>
+		public bool IsInstalled => type != VersionType.Unknown;
+		/// <summary></summary>
+		public Version Version => version ?? defaultVersion;
+
+		#region -- Compare ------------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator ==(PpsShellApplicationVersion left, PpsShellApplicationVersion right) => left.CompareTo(right) == 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator !=(PpsShellApplicationVersion left, PpsShellApplicationVersion right) => left.CompareTo(right) != 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator <(PpsShellApplicationVersion left, PpsShellApplicationVersion right) => left.CompareTo(right) < 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator <=(PpsShellApplicationVersion left, PpsShellApplicationVersion right) => left.CompareTo(right) <= 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator >(PpsShellApplicationVersion left, PpsShellApplicationVersion right) => left.CompareTo(right) > 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator >=(PpsShellApplicationVersion left, PpsShellApplicationVersion right) => left.CompareTo(right) >= 0;
+
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator ==(PpsShellApplicationVersion left, Version right) => ((IComparable<Version>)left).CompareTo(right) == 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator !=(PpsShellApplicationVersion left, Version right) => ((IComparable<Version>)left).CompareTo(right) != 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator <(PpsShellApplicationVersion left, Version right) => ((IComparable<Version>)left).CompareTo(right) < 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator <=(PpsShellApplicationVersion left, Version right) => ((IComparable<Version>)left).CompareTo(right) <= 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator >(PpsShellApplicationVersion left, Version right) => ((IComparable<Version>)left).CompareTo(right) > 0;
+		/// <summary></summary>
+		/// <param name="left"></param>
+		/// <param name="right"></param>
+		/// <returns></returns>
+		public static bool operator >=(PpsShellApplicationVersion left, Version right) => ((IComparable<Version>)left).CompareTo(right) >= 0;
+
+		#endregion
+
+#if NET48
+		/// <summary></summary>
+		/// <param name="registryKey"></param>
+		/// <param name="applicationId"></param>
+		/// <param name="wow"></param>
+		/// <param name="version"></param>
+		/// <returns></returns>
+		public static bool TryGetInstalledVersion(RegistryKey registryKey, string applicationId, bool wow, out Version version)
+		{
+			using (var reg = registryKey.OpenSubKey(@"Software\" + (wow ? @"WOW6432Node\" : String.Empty) + @"TecWare\" + applicationId + @"\Components", false))
+			{
+				if (reg?.GetValue(null) is string versionString)
+				{
+					version = new Version(versionString);
+					return true;
+				}
+				else
+				{
+					version = defaultVersion;
+					return false;
+				}
+			}
+		} // func TryGetInstalledVersion
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public static PpsShellApplicationVersion GetInstalledVersion(string applicationId)
+		{
+			if (TryGetInstalledVersion(Registry.CurrentUser, applicationId, false, out var version))
+				return new PpsShellApplicationVersion(version, false);
+			else if (TryGetInstalledVersion(Registry.LocalMachine, applicationId, false, out version))
+				return new PpsShellApplicationVersion(version, true);
+			else if (TryGetInstalledVersion(Registry.LocalMachine, applicationId, true, out version))
+				return new PpsShellApplicationVersion(version, true);
+			else
+				return Default;
+		} // func GetInstalledVersion
+#endif
+
+		/// <summary></summary>
+		public static PpsShellApplicationVersion Default { get; } = new PpsShellApplicationVersion(defaultVersion, VersionType.Unknown);
+	} // struct PpsShellApplicationVersion
+
+#endregion
+
 	#region -- interface IPpsShellApplication -----------------------------------------
 
 	/// <summary>This interface is implemented by the main assembly.</summary>
@@ -94,7 +272,8 @@ namespace TecWare.PPSn
 		/// <summary>Schedule restart for the application, because a new version of the package is detected.</summary>
 		/// <param name="shell"></param>
 		/// <param name="uri"></param>
-		Task RequestUpdateAsync(IPpsShell shell, Uri uri);
+		/// <param name="useRunAs">Needs administrator</param>
+		Task RequestUpdateAsync(IPpsShell shell, Uri uri, bool useRunAs);
 		/// <summary>Schedule restart for the application, because a new version is detected.</summary>
 		/// <param name="shell"></param>
 		Task RequestRestartAsync(IPpsShell shell);
@@ -104,7 +283,7 @@ namespace TecWare.PPSn
 		/// <summary>Version of the running application.</summary>
 		Version AssenblyVersion { get; }
 		/// <summary>Version if the installed package.</summary>
-		Version InstalledVersion { get; }
+		PpsShellApplicationVersion InstalledVersion { get; }
 	} // interface IPpsShellApplication
 
 	#endregion
@@ -238,6 +417,8 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		Task<IPpsSettingsService> LoadSettingsAsync(IPpsShell shell);
+		/// <summary>Update the last used stamp.</summary>
+		void UpdateLastUsed();
 
 		/// <summary>Name of the instance.</summary>
 		string Name { get; }
@@ -247,9 +428,13 @@ namespace TecWare.PPSn
 		Uri Uri { get; }
 		/// <summary>Last Server-Version</summary>
 		Version Version { get; }
+		/// <summary>Last time this shell was used.</summary>
+		DateTime LastUsed { get; }
 
 		/// <summary>Local store for the instance data.</summary>
 		DirectoryInfo LocalPath { get; }
+		/// <summary>Is this a per machine store.</summary>
+		bool PerMachine { get; }
 	} // interface IPpsShellInfo
 
 	#endregion
@@ -263,8 +448,9 @@ namespace TecWare.PPSn
 		/// <param name="instanceName">Name for shell</param>
 		/// <param name="displayName"></param>
 		/// <param name="uri">Uri to connect.</param>
+		/// <param name="perMachine">Enforce a perUser or perMachine shell. <c>null</c> for default.</param>
 		/// <returns>Shell info.</returns>
-		IPpsShellInfo CreateNew(string instanceName, string displayName, Uri uri);
+		IPpsShellInfo CreateNew(string instanceName, string displayName, Uri uri, bool? perMachine = null);
 	} // interface IPpsShellFactory
 
 	#endregion
@@ -852,6 +1038,8 @@ namespace TecWare.PPSn
 				shellId = GetNextShellId();
 				this.parentProvider = parentProvider ?? throw new ArgumentNullException(nameof(parentProvider));
 
+				info.UpdateLastUsed();
+
 				AddService(typeof(IServiceProvider), this);
 				AddService(typeof(IPpsShell), this);
 				AddService(typeof(IPpsCommunicationService), this);
@@ -908,12 +1096,17 @@ namespace TecWare.PPSn
 				try
 				{
 					// create a none user context for the initialization
-					using (var dpcHttp = CreateHttpCore(CreateProxyUri(shellId), info.Uri, Settings.GetDpcCredentials()))
+					using (var directHttp = CreateHttpCore(null, info.Uri, Settings.GetDpcCredentials()))
 					{
-						http = dpcHttp;
+						http = directHttp;
 
 						// load settings from server
 						lastSettingsVersion = await LoadSettingsFromServerAsync(settingsService, this, instanceSettingsInfo.DpcDeviceId, lastSettingsVersion);
+					}
+
+					using (var dpcHttp = CreateHttpCore(CreateProxyUri(shellId), info.Uri, Settings.GetDpcCredentials()))
+					{
+						http = dpcHttp;
 
 						// notify settings loaded
 						OnPropertyChanged(nameof(Settings));
@@ -1099,8 +1292,9 @@ namespace TecWare.PPSn
 			private DEHttpClient CreateHttpCore(Uri uri, Uri remoteUri, ICredentials credentials)
 			{
 				var handler = new PpsMessageHandler(this, remoteUri);
-				var http = DEHttpClient.Create(uri, credentials, httpHandler: handler);
-				RegisterHandler(http, handler);
+				var http = DEHttpClient.Create(uri ?? remoteUri, credentials, httpHandler: handler);
+				if (uri != null)
+					RegisterHandler(http, handler);
 				return http;
 			} // proc CreateHttpCore
 
@@ -1140,7 +1334,11 @@ namespace TecWare.PPSn
 					// create local directory from user name
 					localUserPath = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, userName));
 					if (!localUserPath.Exists)
+					{
 						localUserPath.Create();
+						if (info.PerMachine)
+							FileShellFactory.RestrictControlToUser(localUserPath, userName);
+					}
 
 					// load user settings
 					var userSettings = FileSettingsInfo.CreateUserSettings(this, new FileInfo(Path.Combine(LocalUserPath.FullName, "info.xml")), userName);
@@ -1632,7 +1830,12 @@ namespace TecWare.PPSn
 		private static IEnumerable<PropertyValue> GetLoadSettingsArguments(IPpsShellApplication application, string clientId, long lastRefreshTick)
 		{
 			if (application != null)
-				yield return new PropertyValue("app", application.Name);
+			{
+				var appName = application.Name;
+				if (application.InstalledVersion.PerMachine)
+					appName += ".Machine";
+				yield return new PropertyValue("app", appName);
+			}
 			yield return new PropertyValue("id", clientId);
 			yield return new PropertyValue("last", lastRefreshTick);
 		} // func GetLoadSettingsArguments
@@ -1683,10 +1886,13 @@ namespace TecWare.PPSn
 					var installedVersion = application.InstalledVersion;
 					var assemblyVersion = application.AssenblyVersion;
 
-					if (installedVersion < serverVersion) // new version is provided
-						await application.RequestUpdateAsync(shell, new Uri(xInfo.GetAttribute("src", null), UriKind.Absolute));
-					else if (assemblyVersion < installedVersion) // new version is installed, but not active
-						await application.RequestRestartAsync(shell);
+					if (installedVersion.IsInstalled)
+					{
+						if (installedVersion.Version < serverVersion) // new version is provided
+							await application.RequestUpdateAsync(shell, new Uri(xInfo.GetAttribute("src", null), UriKind.Absolute), installedVersion.PerMachine);
+						else if (assemblyVersion < installedVersion.Version) // new version is installed, but not active
+							await application.RequestRestartAsync(shell);
+					}
 				}
 
 				// update mime type mappings
@@ -1830,6 +2036,31 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static string GetLogAsText(this IPpsLogService logService)
 			=> String.Join(Environment.NewLine, logService.Log.Select(c => c.ToString()));
+
+		#endregion
+
+		#region -- GetCleanShellName --------------------------------------------------
+
+		/// <summary>Replace all none direction chars.</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static string GetCleanShellName(string name)
+		{
+			var sb = new StringBuilder();
+			foreach (var c in name)
+			{
+				if (Array.IndexOf(Path.GetInvalidPathChars(), c) >= 0)
+					continue;
+				if (Array.IndexOf(Path.GetInvalidFileNameChars(), c) >= 0)
+					continue;
+
+				if (Char.IsWhiteSpace(c))
+					sb.Append('_');
+				else
+					sb.Append(c);
+			}
+			return sb.ToString();
+		} // func GetCleanShellName
 
 		#endregion
 

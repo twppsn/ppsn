@@ -2152,7 +2152,7 @@ namespace TecWare.PPSn.Server.Sql
 			#endregion
 
 			private readonly DBCONNECTION connection;
-			private DBTRANSACTION transaction;
+			private DBTRANSACTION transaction = null;
 			private readonly IDEAuthentificatedUser authentificatedUser;
 
 			#region -- Ctor/Dtor ------------------------------------------------------
@@ -2167,9 +2167,6 @@ namespace TecWare.PPSn.Server.Sql
 				var sqlCon = (IPpsSqlConnectionHandle)connection;
 				this.connection = (DBCONNECTION)sqlCon.ForkConnection();
 				authentificatedUser = sqlCon.AuthentificatedUser;
-
-				// create the sql transaction
-				transaction = CreateTransaction();
 			} // ctor
 
 			/// <summary></summary>
@@ -2180,7 +2177,8 @@ namespace TecWare.PPSn.Server.Sql
 
 				if (disposing)
 				{
-					transaction.Dispose();
+					if (transaction != null)
+						transaction.Dispose();
 					connection.Dispose();
 				}
 			} // proc Dispose
@@ -2192,7 +2190,9 @@ namespace TecWare.PPSn.Server.Sql
 
 			private DBTRANSACTION GetTransaction()
 			{
-				if (IsCommited.HasValue)
+				if (transaction == null)
+					transaction = CreateTransaction();
+				else if (IsCommited.HasValue)
 					ResetTransaction();
 				return transaction;
 			} // func GetTransaction
@@ -2200,18 +2200,15 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary>Set a new transaction.</summary>
 			protected internal override void ResetTransaction()
 			{
-				if (IsCommited.HasValue)
-				{
-					transaction?.Dispose();
-					transaction = CreateTransaction();
-				}
+				transaction?.Dispose();
+				transaction = CreateTransaction();
 				base.ResetTransaction();
 			} // proc ResetTransaction
 
 			/// <summary>Transaction commit</summary>
 			public override void Commit()
 			{
-				if (!IsCommited.HasValue)
+				if (!IsCommited.HasValue && transaction != null)
 					transaction.Commit();
 				base.Commit();
 			} // proc Commit
@@ -2221,7 +2218,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				try
 				{
-					if (!IsCommited.HasValue)
+					if (!IsCommited.HasValue && transaction != null)
 						transaction.Rollback();
 				}
 				finally
@@ -2830,9 +2827,9 @@ namespace TecWare.PPSn.Server.Sql
 
 			/// <summary></summary>
 			/// <param name="viewOrTableName"></param>
-			/// <param name="alias"></param>
+			/// <param name="alias"></param>schweitzer
 			/// <returns></returns>
-			public PpsDataSelector CreateSelector(string viewOrTableName, string alias)
+			public PpsDataSelector CreateSelector(string viewOrTableName, string alias = null)
 				=> ((PpsSqlDataSource)DataSource).CreateSelector(Connection, viewOrTableName, alias);
 
 			/// <summary>Authentificated user.</summary>
@@ -3517,10 +3514,13 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary></summary>
 		/// <param name="connection"></param>
-		/// <param name="selectorName"></param>
+		/// <param name="selectorExpression"></param>
 		/// <returns></returns>
-		public sealed override PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorName)
-			=> CreateSelector(connection, selectorName, null);
+		public sealed override PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string selectorExpression)
+		{
+			SelectorSplitAlias(selectorExpression, out var selectorName, out var selectorAlias);
+			return CreateSelector(connection, selectorName, selectorAlias);
+		} // func CreateSelector
 
 		/// <summary></summary>
 		/// <param name="connection"></param>

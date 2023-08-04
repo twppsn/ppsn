@@ -58,9 +58,13 @@ namespace TecWare.PPSn.Data
 		private enum CurrentEnumeratorState
 		{
 			None,
+			// reading a continues stream of rows
 			ReadFirstRow,
 			ReadBlock,
 			Fetching,
+			// base enumerator allows block fetch
+			BlockMode,
+			// end reached
 			Closed
 		} // enum CurentEnumeratorState
 
@@ -182,7 +186,7 @@ namespace TecWare.PPSn.Data
 			unchecked { enumeratorVersion++; }
 		} // proc ResetDataRowEnumerator
 
-		private IEnumerator<IDataRow> GetDataRowEnumerator()
+		private IDataRowEnumerable GetDataRowEnumerable()
 		{
 			var newEnumerable = baseEnumerable;
 
@@ -192,29 +196,41 @@ namespace TecWare.PPSn.Data
 			if (sortDescriptions.Count > 0)
 				newEnumerable = newEnumerable.ApplyOrder(Sort);
 
-			return newEnumerable.GetEnumerator();
-		} // func GetDataRowEnumerator
+			return newEnumerable;
+		} // func GetDataRowEnumerable
+
+		private IEnumerator<IDataRow> GetDataRowStreamEnumerator()
+			=> GetDataRowEnumerable().GetEnumerator();
 
 		private async Task StartEnumeratorAsync(uint callEnumeratorVersion)
 		{
 			currentEnumeratorState = CurrentEnumeratorState.ReadFirstRow;
 			currentFetchedRows = new List<IDataRow>();
 
-			var tmp = await Task.Run(() => GetDataRowEnumerator());
-
-			if (enumeratorVersion == callEnumeratorVersion)
+			if (baseEnumerable is IDataRowEnumerableRange rangeEnumerator)
 			{
-				currentEnumerator = tmp;
-				currentEnumeratorState = CurrentEnumeratorState.Fetching;
+				currentEnumerator = null;
+				currentEnumeratorState = CurrentEnumeratorState.BlockMode;
 				OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 			}
 			else
 			{
-				tmp.Dispose();
+				var tmp = await Task.Run(() => GetDataRowStreamEnumerator());
+
+				if (enumeratorVersion == callEnumeratorVersion)
+				{
+					currentEnumerator = tmp;
+					currentEnumeratorState = CurrentEnumeratorState.Fetching;
+					OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+				}
+				else
+				{
+					tmp.Dispose();
+				}
 			}
 		} // proc StartEnumerator
 
-		private static (List<IDataRow>, bool) FetchBlockCore(IEnumerator<IDataRow> enumerator, int rowsToRead)
+		private static (List<IDataRow>, bool) FetchEnumeratorCore(IEnumerator<IDataRow> enumerator, int rowsToRead)
 		{
 			var collectedRows = new List<IDataRow>(rowsToRead);
 			while (rowsToRead-- > 0)
@@ -228,14 +244,31 @@ namespace TecWare.PPSn.Data
 				}
 			}
 			return (collectedRows, false);
+		} // func FetchEnumeratorCore
+
+		private static (List<IDataRow>, bool) FetchBlockCore(IDataRowEnumerableRange enumerable, int start, int count)
+		{
+			var collectedRows = new List<IDataRow>(count);
+
+			using (var e = enumerable.GetEnumerator(start, count))
+			{
+				while (e.MoveNext())
+					collectedRows.Add(e.Current.ToMyData());
+			}
+
+			return (collectedRows, collectedRows.Count < count);
 		} // func FetchBlockCore
 
 		private async Task FetchBlockAsync(int readToCount, uint callEnumeratorVersion)
 		{
+			var isBlockMode = currentEnumeratorState == CurrentEnumeratorState.BlockMode;
 			currentEnumeratorState = CurrentEnumeratorState.ReadBlock;
 
 			// fetch block in background
-			var (rows, isEof) = await Task.Run(() => FetchBlockCore(currentEnumerator, readToCount - currentFetchedRows.Count));
+			var rowCount = readToCount - currentFetchedRows.Count;
+			var (rows, isEof) = isBlockMode
+				? await Task.Run(() => FetchBlockCore((IDataRowEnumerableRange)GetDataRowEnumerable(), currentFetchedRows.Count, rowCount))
+				: await Task.Run(() => FetchEnumeratorCore(currentEnumerator, rowCount));
 
 			if (enumeratorVersion == callEnumeratorVersion)
 			{
@@ -260,7 +293,7 @@ namespace TecWare.PPSn.Data
 				else
 					currentFetchedRows.AddRange(rows);
 
-				currentEnumeratorState = isEof ? CurrentEnumeratorState.Closed : CurrentEnumeratorState.Fetching;
+				currentEnumeratorState = isEof ? CurrentEnumeratorState.Closed : (isBlockMode ? CurrentEnumeratorState.BlockMode : CurrentEnumeratorState.Fetching);
 				if (isEof)
 					currentEnumerator = null;
 
@@ -304,6 +337,7 @@ namespace TecWare.PPSn.Data
 				case CurrentEnumeratorState.ReadBlock: // in async read block
 					break;
 				case CurrentEnumeratorState.Fetching: // fetch current block
+				case CurrentEnumeratorState.BlockMode:
 					if (index >= currentFetchedRows.Count - 1) // do we need to fetch a next block
 						CheckResult(FetchBlockAsync((((index + 1) / blockFetchSize) + 1) * blockFetchSize, enumeratorVersion));
 					break;

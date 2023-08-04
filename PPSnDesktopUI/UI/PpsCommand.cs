@@ -24,6 +24,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -346,7 +347,7 @@ namespace TecWare.PPSn.UI
 			}
 			catch (Exception e)
 			{
-				commandContext.Shell.GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, e);
+				(commandContext.Shell ?? PpsShell.Global).GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, e);
 			}
 		} // proc Execute
 
@@ -499,7 +500,7 @@ namespace TecWare.PPSn.UI
 
 						// show exception
 						if (t.IsFaulted)
-							commandContext.Shell.GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, t.Exception.InnerException);
+							(commandContext.Shell ?? PpsShell.Global).GetService<IPpsUIService>(true).ShowException(PpsExceptionShowFlags.None, t.Exception.InnerException);
 					}, TaskContinuationOptions.ExecuteSynchronously);
 			}
 			catch
@@ -873,6 +874,32 @@ namespace TecWare.PPSn.UI
 		/// <summary>Popup of the split button</summary>
 		public Popup Popup { get => (Popup)GetValue(PopupProperty); set => SetValue(PopupProperty, value); }
 	} // class PpsUISplitCommandButton
+
+	#endregion
+
+	#region -- class PpsUICommandPanel ------------------------------------------------
+
+	/// <summary>That will be placed in the command-bar.</summary>
+	public sealed class PpsUICommandPanel : PpsUICommand
+	{
+		/// <summary></summary>
+		public static readonly DependencyProperty ContentProperty = ContentControl.ContentProperty.AddOwner(typeof(PpsUICommandPanel));
+		/// <summary></summary>
+		public static readonly DependencyProperty ContentTemplateProperty = ContentControl.ContentTemplateProperty.AddOwner(typeof(PpsUICommandPanel));
+		/// <summary></summary>
+		public static readonly DependencyProperty ContentTemplateSelectorProperty = ContentControl.ContentTemplateSelectorProperty.AddOwner(typeof(PpsUICommandPanel));
+		/// <summary></summary>
+		public static readonly DependencyProperty ContentStringFormatProperty = ContentControl.ContentStringFormatProperty.AddOwner(typeof(PpsUICommandPanel));
+
+		/// <summary></summary>
+		public object Content { get => GetValue(ContentProperty); set => SetValue(ContentProperty, value); }
+		/// <summary></summary>
+		public DataTemplate ContentTemplate { get => (DataTemplate)GetValue(ContentTemplateProperty); set => SetValue(ContentTemplateProperty, value); }
+		/// <summary></summary>
+		public DataTemplateSelector ContentTemplateSelector { get => (DataTemplateSelector)GetValue(ContentTemplateSelectorProperty); set => SetValue(ContentTemplateSelectorProperty, value); }
+		/// <summary></summary>
+		public string ContentStringFormat { get => (string)GetValue(ContentStringFormatProperty); set => SetValue(ContentStringFormatProperty, value); }
+	} // class PpsUICommandPanel
 
 	#endregion
 

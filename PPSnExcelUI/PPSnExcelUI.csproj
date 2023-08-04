@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TecWare.PPSn</RootNamespace>
     <AssemblyName>PPSnExcelUI</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -47,6 +48,12 @@
   <ItemGroup>
     <Compile Include="..\Common\AssemblyInfo.cs">
       <Link>Properties\AssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="Controls\NewShellForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\NewShellForm.Designer.cs">
+      <DependentUpon>NewShellForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Controls\PpsFilterControl.cs">
       <SubType>UserControl</SubType>
@@ -116,6 +123,9 @@
     <EmbeddedResource Include="Controls\ExceptionDialog.resx">
       <DependentUpon>ExceptionDialog.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Controls\NewShellForm.resx">
+      <DependentUpon>NewShellForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Controls\PpsFilterControl.resx">
       <DependentUpon>PpsFilterControl.cs</DependentUpon>
     </EmbeddedResource>
@@ -142,7 +152,7 @@
       <Version>1.3.14</Version>
     </PackageReference>
     <PackageReference Include="TecWare.DES.Core">
-      <Version>3.4.93</Version>
+      <Version>3.4.111</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

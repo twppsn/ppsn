@@ -94,7 +94,7 @@ namespace TecWare.PPSn
 
 		public static int ShowMessage(IWin32Window owner, string message, PpsImage image, string[] buttons)
 		{
-			switch (PpsWinShell.ShowMessage(owner, message, GetIconFromImage(image), GetMessageButtons(buttons)))
+			switch (ShowMessage(owner, message, GetIconFromImage(image), GetMessageButtons(buttons)))
 			{
 				case DialogResult.Yes:
 				case DialogResult.OK:
@@ -105,7 +105,10 @@ namespace TecWare.PPSn
 				default:
 					return -1;
 			}
-		}
+		} // proc ShowMessage
+
+		public static IPpsShellInfo CreateNewShellDialog(IWin32Window owner)
+			=> NewShellForm.CreateNew(owner);
 
 		#endregion
 
@@ -116,7 +119,8 @@ namespace TecWare.PPSn
 		/// <param name="table"></param>
 		/// <param name="owner"<
 		/// <param name="extended"></param>
-		public static void EditTable(this IPpsShell shell, IPpsTableData table, bool extended)
+		/// <returns><c>true</c>, if data was refreshed.</returns>
+		public static bool EditTable(this IPpsShell shell, IPpsTableData table, bool extended)
 		{
 			if (table == null)
 				throw new ArgumentNullException(nameof(table));
@@ -126,7 +130,7 @@ namespace TecWare.PPSn
 				using (var frm = new TableInsertFormEx(shell))
 				{
 					frm.LoadData(table);
-					frm.ShowDialog(shell.GetService<IWin32Window>());
+					return frm.ShowDialog(shell.GetService<IWin32Window>()) == DialogResult.OK;
 				}
 			}
 			else
@@ -134,7 +138,7 @@ namespace TecWare.PPSn
 				using (var frm = new TableInsertForm(shell))
 				{
 					frm.LoadData(table);
-					frm.ShowDialog(shell.GetService<IWin32Window>());
+					return frm.ShowDialog(shell.GetService<IWin32Window>()) == DialogResult.OK;
 				}
 			}
 		} // void EditTable

@@ -36,6 +36,7 @@ using Microsoft.Web.WebView2.Wpf;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Networking;
 using TecWare.PPSn.UI;
 
@@ -55,6 +56,15 @@ namespace TecWare.PPSn.Controls
 		public bool NewWindow { get; set; } = false;
 		/// <summary>Uri that will be open.</summary>
 		public Uri Location => uri;
+		/// <summary>Source of the link request.</summary>
+		public object Source { get; set; } = null;
+
+		/// <summary>Command parameter for the PpsWebView.LinkCommand</summary>
+		/// <param name="uri"></param>
+		/// <param name="newWindow"></param>
+		/// <returns></returns>
+		public static PpsWebViewLink Create(string uri, bool newWindow = false)
+			=> new PpsWebViewLink(new Uri(uri, UriKind.RelativeOrAbsolute)) { NewWindow = newWindow };
 	} // class PpsWebViewLink
 
 	#endregion
@@ -162,13 +172,13 @@ namespace TecWare.PPSn.Controls
 
 	public class PpsWebViewNavigationContentEventArgs : PpsWebViewNavigationCancelEventArgs
 	{
-		public PpsWebViewNavigationContentEventArgs(object uri, HttpContent content)
+		public PpsWebViewNavigationContentEventArgs(object uri, HttpResponseMessage response)
 			: base(PpsWebView.NavigationContentEvent, uri)
 		{
-			Content = content ?? throw new ArgumentNullException(nameof(content));
+			Response = response ?? throw new ArgumentNullException(nameof(response));
 		} // ctor
 
-		public HttpContent Content { get; }
+		public HttpResponseMessage Response { get; }
 	} // class PpsWebViewNavigationContentEventArgs
 
 	public delegate void PpsWebViewNavigationContentHandler(object sender, PpsWebViewNavigationContentEventArgs e);
@@ -287,7 +297,7 @@ namespace TecWare.PPSn.Controls
 			// htmlView.CreationProperties.BrowserExecutableFolder;
 			htmlView.CreationProperties = new CoreWebView2CreationProperties
 			{
-				UserDataFolder = Path.Combine(PpsShell.Current.LocalPath.FullName, "$cache")
+				UserDataFolder = (PpsShell.Current.Info.PerMachine ? PpsShell.Current.EnforceLocalUserPath("$cache") : PpsShell.Current.EnforceLocalPath("$cache")).FullName
 			};
 			htmlView.CoreWebView2InitializationCompleted += HtmlView_CoreWebView2Ready;
 
@@ -429,7 +439,9 @@ namespace TecWare.PPSn.Controls
 
 				if (token.OnStarted(e.Uri, false, true))
 				{
-					if (!cachedAppendToHistory)
+					if (e.Uri == "about:blank")
+						token.NoHistory();
+					else if (!cachedAppendToHistory)
 					{
 						token.NoHistory();
 						cachedAppendToHistory = true;
@@ -568,7 +580,7 @@ namespace TecWare.PPSn.Controls
 			}
 			else // set other response and cancel request
 			{
-				await SetResponseMessageAsync(token, response, false);
+				await SetResponseMessageAsync(token, response, false, true);
 				SetHtmlEmptyResponse(e);
 			}
 		} // proc HtmlViewSetMainResourceAsync
@@ -595,7 +607,7 @@ namespace TecWare.PPSn.Controls
 			catch (Exception ex)
 			{
 				SetHtmlEmptyResponse(e);
-				await SetResponseMessageAsync(currentNavigationToken, new ViewResponseMessage(uri, ex), true);
+				await SetResponseMessageAsync(currentNavigationToken, new ViewResponseMessage(uri, ex), true, true);
 			}
 		} // proc HtmlViewSetMainResourceAsync
 
@@ -738,6 +750,14 @@ namespace TecWare.PPSn.Controls
 				var e = new PpsWebViewNavigationXamlCodeEventArgs(sourceUri);
 				RaiseEvent(e);
 
+				// get default code
+				if (e.Code == null)
+				{
+					var luaShell = shell.Value.GetService<IPpsLuaShell>(false);
+					if (luaShell != null)
+						e.Code = new PpsLuaCodeBehind(luaShell, sourceUri);
+				}
+
 				// create the control
 				var control = await PpsXamlParser.LoadAsync<FrameworkElement>(xml, new PpsXamlReaderSettings { BaseUri = sourceUri, Code = e.Code });
 
@@ -762,6 +782,8 @@ namespace TecWare.PPSn.Controls
 			xamlView.ContentTemplate = template;
 
 			SetValue(sourceUriPropertyKey, sourceUri);
+
+			Title = content is PpsWindowPaneControl pane ? pane.SubTitle : "";
 		} // proc SetXamlAsync
 
 		private void HideXaml()
@@ -776,16 +798,16 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Redirect WebRequest to Shell http ----------------------------------
 
-		private bool TryRedirectToPaneDefault(object uri, HttpContent content)
+		private bool TryRedirectToPaneDefault(object uri, HttpResponseMessage response)
 		{
-			if (content == null)
+			if (response == null || response.Content == null)
 			{
 				return false;
 			}
 			else
 			{
 				// is content marked as attachment
-				if (!content.TryGetExtensionFromContent(true, out var mimeType, out var _))
+				if (!response.Content.TryGetExtensionFromContent(true, out var mimeType, out var _))
 					return false;
 
 				// find pane register
@@ -798,13 +820,17 @@ namespace TecWare.PPSn.Controls
 				if (paneManager == null)
 					return false;
 
-				// find pane type
+				// create pane object
+				// todo: IPpsDataObjectManager
+				var dataInfo = response.ToPpsDataInfoAsync().Await();
+				//dataInfo.OpenPaneAsync()
+
+				// q&d: find pane type
 				var paneType = paneRegistrar.GetPaneTypeMimeType(mimeType, false);
 				if (paneType == null)
 					return false;
 
-				// todo: create IPpsDataObject
-				paneManager.OpenPaneAsync(paneType, arguments: new LuaTable { ["Object"] = content.ReadAsByteArrayAsync().Await() }).Spawn(paneManager);
+				paneManager.OpenPaneAsync(paneType, arguments: new LuaTable { ["Object"] = dataInfo }).Spawn(paneManager);
 				return true;
 			}
 		} // proc TryRedirectToPaneDefault
@@ -909,6 +935,20 @@ namespace TecWare.PPSn.Controls
 		private DataTemplate GetErrorTemplate()
 			=> null;
 
+		private bool TryGetRelativePath(Uri baseUri, Uri absoluteUri, out Uri relativeUri)
+		{
+			if (baseUri == null)
+			{
+				relativeUri = absoluteUri;
+				return false;
+			}
+			else
+			{
+				relativeUri = baseUri.MakeRelativeUri(absoluteUri);
+				return !relativeUri.IsAbsoluteUri;
+			}
+		} // func TryGetRelativePath
+
 		private bool TryGetRelativePath(Uri absoluteUri, out Uri relativeUri)
 		{
 			if (absoluteUri.IsFile)
@@ -918,8 +958,8 @@ namespace TecWare.PPSn.Controls
 			}
 			else if (TryGetHttp(out var http))
 			{
-				relativeUri = http.BaseAddress.MakeRelativeUri(absoluteUri);
-				return !relativeUri.IsAbsoluteUri;
+				return TryGetRelativePath(http.BaseAddress, absoluteUri, out relativeUri)
+					|| TryGetRelativePath(shell.Value.GetRemoteUri(http), absoluteUri, out relativeUri);
 			}
 			else
 			{
@@ -930,6 +970,8 @@ namespace TecWare.PPSn.Controls
 
 		private async Task<HttpResponseMessage> SendCoreAsync(DEHttpClient http, HttpRequestMessage request, bool throwException)
 		{
+			request.Headers.TryAddWithoutValidation("des-ppsn-webview", "true");
+
 			var response = await http.SendAsync(request);
 
 			if (response.StatusCode == HttpStatusCode.Moved
@@ -970,7 +1012,7 @@ namespace TecWare.PPSn.Controls
 			using (var httpRequest = new HttpRequestMessage(new HttpMethod(request.Method), sourceUri))
 			{
 				var httpResponse = await SendCoreAsync(http, httpRequest, true);
-				var e = new PpsWebViewNavigationContentEventArgs(request.Uri, httpResponse.Content);
+				var e = new PpsWebViewNavigationContentEventArgs(request.Uri, httpResponse);
 				OnNavigationContent(e);
 				if (e.Cancel)
 				{
@@ -982,7 +1024,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc SendShellAsync
 
-		private Task SetResponseMessageAsync(ViewNavigationToken token, ViewResponseMessage response, bool enforceContent)
+		private Task SetResponseMessageAsync(ViewNavigationToken token, ViewResponseMessage response, bool enforceContent, bool appendToHistory)
 		{
 			if (!token.IsActive)
 				return Task.CompletedTask;
@@ -994,7 +1036,7 @@ namespace TecWare.PPSn.Controls
 				switch (response.State)
 				{
 					case ViewState.Html:
-						return SetHtmlAsync(response.SourceUri, true, response);
+						return SetHtmlAsync(response.SourceUri, appendToHistory, response);
 					case ViewState.Xaml:
 						return SetXamlAsync(response.SourceUri, response.Content, null);
 					case ViewState.Empty:
@@ -1101,7 +1143,7 @@ namespace TecWare.PPSn.Controls
 		private void OnNavigationContent(PpsWebViewNavigationContentEventArgs e)
 		{
 			RaiseEvent(e);
-			if (!e.Handled && TryRedirectToPaneDefault(e.Uri, e.Content))
+			if (!e.Handled && TryRedirectToPaneDefault(e.Uri, e.Response))
 				e.Cancel = true;
 		} // proc OnRedirectNavigationContent
 
@@ -1214,7 +1256,7 @@ namespace TecWare.PPSn.Controls
 			if (token.IsActive)
 			{
 				using (var response = new ViewResponseMessage(null, ex))
-					await SetResponseMessageAsync(token, response, true);
+					await SetResponseMessageAsync(token, response, true, false);
 			}
 			shell.Value.LogProxy().LogMsg(LogMsgType.Error, ex);
 		} // proc SetExceptionAsync
@@ -1252,7 +1294,7 @@ namespace TecWare.PPSn.Controls
 					try
 					{
 						using (var request = new ViewRequestMessage(HttpMethod.Get.Method, relativeUri, null, null))
-							await SetResponseMessageAsync(token, await SendShellAsync(token, request), false);
+							await SetResponseMessageAsync(token, await SendShellAsync(token, request), false, false);
 					}
 					catch (HttpResponseException e)
 					{
@@ -1276,7 +1318,18 @@ namespace TecWare.PPSn.Controls
 
 		private void LinkCommandExecuted(object sender, ExecutedRoutedEventArgs e)
 		{
-			SetSource(e.Parameter, false, true);
+			if (e.Parameter is PpsWebViewLink lnk && lnk.NewWindow)
+			{
+				// clear NewWindow
+				LinkCommand.Execute(new PpsWebViewLink(lnk.Location) { Source = e.OriginalSource }, this.GetParentInputElement() ?? Keyboard.FocusedElement);
+			}
+			else
+			{
+				if (e.Parameter is string uriString && uriString.Contains("&_newwindow=true"))
+					LinkCommand.Execute(new PpsWebViewLink(new Uri(uriString, UriKind.RelativeOrAbsolute)) { Source = e.OriginalSource, NewWindow = false }, this.GetParentInputElement() ?? Keyboard.FocusedElement);
+				else
+					SetSource(e.Parameter, false, true);
+			}
 			e.Handled = true;
 		} // proc LinkCommandExecuted
 
@@ -1326,7 +1379,7 @@ namespace TecWare.PPSn.Controls
 					SetSource(his.Uri, setAsHome: setAsHome, appendToHistory: false);
 					break;
 				case PpsWebViewLink link:
-					SetUri(link.Location, setAsHome, appendToHistory);
+					SetSource(link.Location, setAsHome, appendToHistory);
 					break;
 				case Exception ex:
 					SetExceptionAsync(ex).Spawn();
@@ -1503,4 +1556,4 @@ namespace TecWare.PPSn.Controls
 }
 /*
  * // CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, )
-*/
+ */

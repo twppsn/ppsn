@@ -40,7 +40,7 @@ namespace TecWare.PPSn.Themes
 			} // ctor
 
 			public override string ToString()
-				=> "PPSn:" + name;
+				=> name;
 
 			public override bool Equals(object obj)
 				=> obj is PpsThemeKey k && k.name == name;
@@ -260,6 +260,8 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey WindowMaximizePathGeometry = new PpsThemeKey("windowMaximize");
 		/// <summary>Restore window geometry</summary>
 		public static readonly ResourceKey WindowRestorePathGeometry = new PpsThemeKey("windowRestore");
+		/// <summary>NewWindow</summary>
+		public static readonly ResourceKey WindowNewPathGeomoetry = new PpsThemeKey("windowNew");
 
 		/// <summary>Connecting geometry</summary>
 		public static readonly ResourceKey ServerConnectingPathGeometry = new PpsThemeKey("serverConnecting");
@@ -267,12 +269,6 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey ServerUnConnectedPathGeometry = new PpsThemeKey("serverUnConnected");
 		/// <summary>Connected geometry</summary>
 		public static readonly ResourceKey ServerConnectedPathGeometry = new PpsThemeKey("serverConnected");
-
-		/// <summary>ScannerActive geometry</summary>
-		public static readonly ResourceKey ScannerActivePathGeometry = new PpsThemeKey("scannerActive");
-		/// <summary>ScannerInActive geometry</summary>
-		public static readonly ResourceKey ScannerInActivePathGeometry = new PpsThemeKey("scannerInActive");
-
 
 		/// <summary>VirtualKeyboard BackSpace geometry</summary>
 		public static readonly ResourceKey VirtKeybBackSpacePathGeometry = new PpsThemeKey("virtKeybBackSpace");
@@ -289,6 +285,100 @@ namespace TecWare.PPSn.Themes
 		
 		/// <summary>Keyboard</summary>
 		public static readonly ResourceKey KeyboardPathGeometry = new PpsThemeKey("keyboard");
+
+		/// <summary>Add</summary>
+		public static readonly ResourceKey AddPathGeometry = new PpsThemeKey("add");
+		/// <summary>Edit</summary>
+		public static readonly ResourceKey EditPathGeometry = new PpsThemeKey("edit");
+		/// <summary>Share</summary>
+		public static readonly ResourceKey SharePathGeometry = new PpsThemeKey("share");
+		/// <summary>Print</summary>
+		public static readonly ResourceKey PrintPathGeometry = new PpsThemeKey("print");
+		/// <summary>Copy</summary>
+		public static readonly ResourceKey CopyPathGeometry = new PpsThemeKey("copy");
+		/// <summary>Paste</summary>
+		public static readonly ResourceKey PastePathGeometry = new PpsThemeKey("paste");
+		/// <summary>Delete</summary>
+		public static readonly ResourceKey DeletePathGeometry = new PpsThemeKey("delete");
+		/// <summary>Search</summary>
+		public static readonly ResourceKey SearchPathGeometry = new PpsThemeKey("search");
+		/// <summary>Refresh</summary>
+		public static readonly ResourceKey RefreshPathGeometry = new PpsThemeKey("refresh");
+
+		/// <summary>Preview</summary>
+		public static readonly ResourceKey PreviewPathGeometry = new PpsThemeKey("preview");
+		/// <summary>Save</summary>
+		public static readonly ResourceKey SavePathGeometry = new PpsThemeKey("save");
+		/// <summary>Mail</summary>
+		public static readonly ResourceKey MailPathGeometry = new PpsThemeKey("mail");
+		/// <summary>Scan</summary>
+		public static readonly ResourceKey ScanPathGeometry = new PpsThemeKey("scan");
+		/// <summary>Send</summary>
+		public static readonly ResourceKey SendPathGeometry = new PpsThemeKey("send");
+		/// <summary>Folder</summary>
+		public static readonly ResourceKey FolderPathGeometry = new PpsThemeKey("folder");
+		/// <summary>OpenFolder</summary>
+		public static readonly ResourceKey OpenFolderPathGeometry = new PpsThemeKey("openFolder");
+
+		/// <summary>Lock</summary>
+		public static readonly ResourceKey LockPathGeometry = new PpsThemeKey("lock");
+		/// <summary>Unlock</summary>
+		public static readonly ResourceKey UnlockPathGeometry = new PpsThemeKey("unlock");
+
+		/// <summary>Global</summary>
+		public static readonly ResourceKey GlobalNaviPathGeometry = new PpsThemeKey("globalNavi");
+		/// <summary>Page</summary>
+		public static readonly ResourceKey PagePathGeometry = new PpsThemeKey("page");
+		/// <summary>Back</summary>
+		public static readonly ResourceKey BackPathGeometry = new PpsThemeKey("back");
+		/// <summary>Forward</summary>
+		public static readonly ResourceKey ForwardPathGeometry = new PpsThemeKey("forward");
+		/// <summary>StartPoint</summary>
+		public static readonly ResourceKey StartPointPathGeometry = new PpsThemeKey("startPoint");
+		/// <summary>EndPoint</summary>
+		public static readonly ResourceKey EndPointPathGeometry = new PpsThemeKey("endPoint");
+
+		/// <summary>Debug</summary>
+		public static readonly ResourceKey DebugPathGeometry = new PpsThemeKey("debug");
+		/// <summary>Robot</summary>
+		public static readonly ResourceKey RobotPathGeometry = new PpsThemeKey("robot");
+
+		/// <summary>Contact</summary>
+		public static readonly ResourceKey ContactPathGeometry = new PpsThemeKey("contact");
+		/// <summary>ContactInfo</summary>
+		public static readonly ResourceKey ContactInfoPathGeometry = new PpsThemeKey("contactInfo");
+		/// <summary>MapLayers</summary>
+		public static readonly ResourceKey MapLayersPathGeometry = new PpsThemeKey("mapLayers");
+		/// <summary>OEM</summary>
+		public static readonly ResourceKey OemPathGeometry = new PpsThemeKey("oem");
+		/// <summary>Camera</summary>
+		public static readonly ResourceKey CameraPathGeometry = new PpsThemeKey("camera");
+		/// <summary>PlaybackRate1x</summary>
+		public static readonly ResourceKey PlaybackRate1xPathGeometry = new PpsThemeKey("playbackRate1x");
+		/// <summary>PlaybackRateOther</summary>
+		public static readonly ResourceKey PlaybackRateOtherPathGeometry = new PpsThemeKey("playbackRateOther");
+		/// <summary>ProvisioningPackage</summary>
+		public static readonly ResourceKey ProvisioningPackagePathGeometry = new PpsThemeKey("provisioningPackage");
+
+		/// <summary>Completed</summary>
+		public static readonly ResourceKey CompletedPathGeometry = new PpsThemeKey("completed");
+		/// <summary>StopWatch</summary>
+		public static readonly ResourceKey StopWatchPathGeometry = new PpsThemeKey("stopWatch");
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey SignOutPathGeometry = new PpsThemeKey("signOut");
+
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey ChevronLeftPathGeometry = new PpsThemeKey("chevronLeft");
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey ChevronRightPathGeometry = new PpsThemeKey("chevronRight");
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey BarcodeScannerPathGeometry = new PpsThemeKey("scannerActive");
+		/// <summary>SignOut</summary>
+		public static readonly ResourceKey BarcodeScannerNoPathGeometry = new PpsThemeKey("scannerInActive");
+		/// <summary>ScannerActive geometry</summary>
+		public static readonly ResourceKey BarcodeActivePathGeometry = new PpsThemeKey("barcodeActive");
+		/// <summary>ScannerInActive geometry</summary>
+		public static readonly ResourceKey BarcodeInActivePathGeometry = new PpsThemeKey("barcodeInActive");
 
 		#endregion
 	} // class PpsTheme

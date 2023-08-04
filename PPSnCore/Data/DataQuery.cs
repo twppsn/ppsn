@@ -1,11 +1,24 @@
-﻿using System;
-using System.Collections;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Web;
-using TecWare.DE.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Core.Data
@@ -27,7 +40,7 @@ namespace TecWare.PPSn.Core.Data
 		/// <param name="filter">combine filter</param>
 		/// <param name="columns"></param>
 		/// <param name="order"></param>
-		public PpsDataQuery(PpsDataQuery copy, PpsDataFilterExpression filter = null, IEnumerable< PpsDataColumnExpression> columns = null, IEnumerable< PpsDataOrderExpression> order = null)
+		public PpsDataQuery(PpsDataQuery copy, PpsDataFilterExpression filter = null, IEnumerable<PpsDataColumnExpression> columns = null, IEnumerable<PpsDataOrderExpression> order = null)
 		{
 			if (copy == null)
 				copy = Empty;

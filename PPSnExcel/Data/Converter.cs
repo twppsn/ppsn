@@ -50,7 +50,7 @@ namespace PPSnExcel.Data
 			if (attributes.TryGetProperty("halign", out tmp))
 				range.HorizontalAlignment = GetAlignment(true, tmp);
 			if (attributes.TryGetProperty("valign", out tmp))
-				range.HorizontalAlignment = GetAlignment(false, tmp);
+				range.VerticalAlignment = GetAlignment(false, tmp);
 
 			//range.Borders
 
@@ -67,7 +67,7 @@ namespace PPSnExcel.Data
 
 		private static object GetAlignment(bool horizontal, string alignment)
 		{
-			switch(alignment)
+			switch (alignment)
 			{
 				case "right":
 				case "bottom":

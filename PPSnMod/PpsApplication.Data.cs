@@ -781,31 +781,27 @@ namespace TecWare.PPSn.Server
 			protected bool IsColumnAllowed(int columnIndex)
 				=> rowAllowed != null && columnIndex >= 0 && columnIndex < rowAllowed.Length && rowAllowed[columnIndex];
 
-			public virtual void Begin(IEnumerable<IDataRow> selector, IDataColumns columns, IDECommonScope scope = null, string attributeSelector = null)
+			public virtual void Begin(IDataColumns columns, IDECommonScope scope = null, string attributeSelector = null, int rowCount = -1)
 			{
 				if (columns != null)
 				{
-					var selectorAccess = selector as PpsDataSelector;
-
 					// create column export rights
 					rowAllowed = new bool[columns.Columns.Count];
 					for (var i = 0; i < rowAllowed.Length; i++)
 					{
 						var col = columns.Columns[i];
-						var fieldDescription = selectorAccess?.GetFieldDescription(col.Name);
 
-						rowAllowed[i] = fieldDescription == null
-							|| scope == null
-							|| !fieldDescription.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
+						rowAllowed[i] = scope == null
+							|| !col.Attributes.TryGetProperty<string>("securityToken", out var securityToken)
 							|| scope.TryDemandToken(securityToken);
 					}
 				}
 
 				// write output
-				BeginCore(selector, columns, attributeSelector);
+				BeginCore(columns, attributeSelector, rowCount);
 			} // proc Begin
 
-			protected virtual void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector) { }
+			protected virtual void BeginCore(IDataColumns columns, string attributeSelector, int rowCount) { }
 
 			public void WriteRow(IDataRow current)
 				=> WriteRowCore(current);
@@ -871,10 +867,8 @@ namespace TecWare.PPSn.Server
 				}
 			} // proc WriteAttributeForViewGet
 
-			private void WriteColumns(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
+			private void WriteColumns(IDataColumns columns, string attributeSelector)
 			{
-				var selectorFields = selector as PpsDataSelector;
-
 				// emit column description
 				columnNames = new string[columns.Columns.Count];
 				columnTypes = new Type[columnNames.Length];
@@ -885,23 +879,15 @@ namespace TecWare.PPSn.Server
 					for (var i = 0; i < columnNames.Length; i++)
 					{
 						var nativeColumnName = columns.Columns[i].Name;
-						var fieldDefinition = selectorFields?.GetFieldDescription(nativeColumnName); // get the field description for the native column
+						var columnInfo = columns.Columns[i]; // get the field description for the native column
 						var isNullable = false;
-						var fieldType = fieldDefinition?.DataType ?? columns.Columns[i].DataType;
+						var fieldType = columnInfo.DataType;
 
 						columnNames[i] = nativeColumnName;
 						xml.WriteStartElement(nativeColumnName);
 						try
 						{
-							if (fieldDefinition == null)
-							{
-								xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
-								xml.WriteAttributeString("field", nativeColumnName);
-
-								WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
-								isNullable = true;
-							}
-							else
+							if (columnInfo is IPpsColumnDescription fieldDefinition)
 							{
 								xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
 
@@ -916,6 +902,14 @@ namespace TecWare.PPSn.Server
 									else
 										WriteAttributeForViewGet(xml, c);
 								}
+							}
+							else
+							{
+								xml.WriteAttributeString("type", LuaType.GetType(fieldType).AliasOrFullName);
+								xml.WriteAttributeString("field", nativeColumnName);
+
+								WriteAttributeForViewGet(xml, new PropertyValue("Nullable", typeof(bool), true));
+								isNullable = true;
 							}
 						}
 						finally
@@ -934,14 +928,17 @@ namespace TecWare.PPSn.Server
 				}
 			} // proc WriteColumns
 
-			protected override void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
+			protected override void BeginCore(IDataColumns columns, string attributeSelector, int rowCount)
 			{
 				xml.WriteStartDocument();
 				xml.WriteStartElement("view");
+				if (rowCount >= 0 && rowCount < Int32.MaxValue)
+					xml.WriteAttributeString("count", rowCount.ToString());
+
 				startIsWritten = true;
 
 				if (columns != null)
-					WriteColumns(selector, columns, attributeSelector);
+					WriteColumns(columns, attributeSelector);
 				else
 				{
 					xml.WriteStartElement("fields");
@@ -1124,7 +1121,7 @@ namespace TecWare.PPSn.Server
 					throw new NotImplementedException();
 			} // func GetBcpDataType
 
-			protected override void BeginCore(IEnumerable<IDataRow> selector, IDataColumns columns, string attributeSelector)
+			protected override void BeginCore(IDataColumns columns, string attributeSelector, int rowCount)
 			{
 				if (columns == null)
 					return;
@@ -1605,6 +1602,22 @@ namespace TecWare.PPSn.Server
 
 		private void ExportViewCore(ViewWriter viewWriter, IEnumerable<IDataRow> selector, int startAt, int count, IDECommonScope scope = null, string attributeSelector = null)
 		{
+			void SetCount(int listCount)
+			{
+				count = listCount;
+				if (startAt > 0)
+					count -= startAt;
+			} // proc SetCount
+
+			// set explicit count if possible
+			if (count == Int32.MaxValue)
+			{
+				if (selector is IReadOnlyCollection<IDataRow> listSelector)
+					SetCount(listSelector.Count);
+				else if (selector is ICollection coll)
+					SetCount(coll.Count);
+			}
+
 			// execute the complete statement
 			using (var enumerator = selector is IDERangeEnumerable<IDataRow> rangeSelector
 				? rangeSelector.GetEnumerator(startAt, count)
@@ -1614,7 +1627,7 @@ namespace TecWare.PPSn.Server
 				var emitCurrentRow = false;
 
 				// extract the columns, optional before the fetch operation
-				var columnDefinition = enumerator as IDataColumns;
+				var columnDefinition = selector as IDataColumns ?? enumerator as IDataColumns;
 				if (columnDefinition == null)
 				{
 					if (enumerator.MoveNext())
@@ -1627,7 +1640,7 @@ namespace TecWare.PPSn.Server
 				}
 
 				// write header
-				viewWriter.Begin(selector, columnDefinition, scope, attributeSelector);
+				viewWriter.Begin(columnDefinition, scope, attributeSelector: attributeSelector, rowCount: count);
 
 				// emit first row
 				if (emitCurrentRow)
@@ -1889,6 +1902,12 @@ namespace TecWare.PPSn.Server
 									xml.WriteEndElement();
 									openElements--;
 								}
+
+								// emit last syncid
+								xml.WriteStartElement("s");
+								openElements++;
+								xml.WriteAttributeString("id", batch.CurrentSyncId.ChangeType<string>());
+								xml.WriteEndElement();
 							}
 
 							xml.WriteEndElement();

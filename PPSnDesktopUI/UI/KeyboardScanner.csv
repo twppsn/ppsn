@@ -25,6 +25,7 @@
 0x09D8;0x0410;;Die SMART Technologies ID GmbH RFID Multiplex Multi125
 0x1D57;0xAC08;;dpm-ident RFID-Reader V2.0 HID
 0x0C2E;0x0961;;Elimicron ES 8023
+0x0C2E;0x0204;;Honeywell Eclipse
 0x060E;0x16C1;;Generic Handheld 2D QR USB
 0x065A;0xA001;;Generic LX-51X
 0x08FF;0x0009;;Generic Generic RFID-Reader (125kHz)
@@ -53,3 +54,4 @@
 0x00010111;1;;Opticon OPN (Bluetooth)
 0x000123A1;0x00001234;;DataLogic QuickScan QBT 2400 (Bluetooth)
 0x6352;0x681B;;EloRFID
+0x000205AC;0x00000239;;Tera Barcode (Bluetooth)

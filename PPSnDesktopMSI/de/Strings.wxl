@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WixLocalization Culture="de-DE" xmlns="http://schemas.microsoft.com/wix/2006/localization">
 	<String Id="ProductName">PPSnDesktop</String>
+	<String Id="ProductNameUser">PPSnDesktop (user)</String>
+	<String Id="ProductNameMachine">PPSnDesktop (machine)</String>
 	<String Id="ProductLanguage">1033</String>
 	<String Id="ProductCompany">TecWare Gesellschaft für Softwareentwicklung mbH</String>
 	<String Id="ArpHelpLink">https://tecware-gmbh.de/</String>

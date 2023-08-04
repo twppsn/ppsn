@@ -29,7 +29,7 @@ namespace TecWare.PPSn.Server.Data
 	#region -- class PpsDataSelector --------------------------------------------------
 
 	/// <summary>Minimal function set for a selector.</summary>
-	public abstract class PpsDataSelector : IDERangeEnumerable<IDataRow>, IDataRowEnumerable, IDataColumns
+	public abstract class PpsDataSelector : IDERangeEnumerable<IDataRow>, IDataRowEnumerable, IPpsColumnDescriptions
 	{
 		#region -- class AliasColumn --------------------------------------------------
 

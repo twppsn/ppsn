@@ -24,6 +24,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
@@ -76,6 +77,8 @@ namespace TecWare.PPSn.Bde
 				WindowStyle = WindowStyle.None;
 				WindowState = WindowState.Maximized;
 				captionLabel.Tag = null;
+
+				SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
 			}
 			// init window settings
 			if (WindowStyle != WindowStyle.None)
@@ -91,6 +94,13 @@ namespace TecWare.PPSn.Bde
 				Services.AddService(typeof(IPpsVirtualKeyboard), virtualKeyboard);
 			}
 		} // ctor
+
+		private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)
+		{
+			Shell.LogProxy().Info("DisplaySettingsChanged. Resize Window.");
+			WindowState = WindowState.Normal;
+			WindowState = WindowState.Maximized;
+		} // event SystemEvents_DisplaySettingsChanged
 
 		protected override void OnClosed(EventArgs e)
 		{
@@ -155,8 +165,24 @@ namespace TecWare.PPSn.Bde
 		private Exception GetPaneStackException()
 			=> new NotSupportedException("Bde uses a pane stack, it is not allowed to changed the stack.");
 
-		private async Task<IPpsWindowPane> PushPaneAsync(Type paneType, LuaTable arguments)
+		private async Task<IPpsWindowPane> PushPaneAsync(Type paneType, LuaTable arguments, bool enforce)
 		{
+			if (!enforce)
+			{
+				var currentPane = TopPaneHost?.Pane;
+				if (currentPane != null && currentPane.GetType() == paneType)
+				{
+					switch (currentPane.CompareArguments(arguments))
+					{
+						case PpsWindowPaneCompareResult.Same:
+							return currentPane;
+						case PpsWindowPaneCompareResult.Reload:
+							await currentPane.LoadAsync(arguments);
+							return currentPane;
+					}
+				}
+			}
+
 			// create the pane 
 			var host = new PpsBdePaneHost();
 
@@ -225,8 +251,9 @@ namespace TecWare.PPSn.Bde
 			switch (newPaneMode)
 			{
 				case PpsOpenPaneMode.Default:
+					return PushPaneAsync(paneType, arguments, false);
 				case PpsOpenPaneMode.NewPane:
-					return PushPaneAsync(paneType, arguments);
+					return PushPaneAsync(paneType, arguments, true);
 
 				case PpsOpenPaneMode.ReplacePane:
 				case PpsOpenPaneMode.NewSingleDialog:
@@ -305,10 +332,21 @@ namespace TecWare.PPSn.Bde
 
 		private static readonly DependencyPropertyKey currentTimeStringPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentTimeString), typeof(string), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty CurrentTimeStringProperty = currentTimeStringPropertyKey.DependencyProperty;
-
+		private static readonly DependencyPropertyKey currentTimeLineHeightPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentTimeLineHeight), typeof(double), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(16.0));
+		public static readonly DependencyProperty CurrentTimeLineHeightProperty = currentTimeLineHeightPropertyKey.DependencyProperty;
+		private static readonly DependencyPropertyKey currentTimeFontSizePropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentTimeFontSize), typeof(double), typeof(PpsBdeWindow), new FrameworkPropertyMetadata(14.0));
+		public static readonly DependencyProperty CurrentTimeFontSizeProperty = currentTimeFontSizePropertyKey.DependencyProperty;
+		
 		private void UpdateDateTimeFormat()
 		{
 			currentDateTimeFormat = Shell.Settings.ClockFormat;
+
+			// passe die Metricen entsprechend der Zeilen an
+			var newLines = currentDateTimeFormat.Count(c => c == '\n') + 1;
+			var lineHeight = 32.0 / newLines;
+			SetValue(currentTimeLineHeightPropertyKey, lineHeight);
+			SetValue(currentTimeFontSizePropertyKey, lineHeight - 2.0);
+			
 			UpdateCurrentTimeString();
 		} // proc UpdateDateTimeFormat
 
@@ -322,7 +360,8 @@ namespace TecWare.PPSn.Bde
 		} // proc UpdateCurrentTimeString
 
 		public string CurrentTimeString => (string)GetValue(CurrentTimeStringProperty);
-
+		public double CurrentTimeLineHeight => (double)GetValue(CurrentTimeLineHeightProperty);
+		public double CurrentTimeFontSize => (double)GetValue(CurrentTimeFontSizeProperty);
 		#endregion
 
 		protected override IEnumerator LogicalChildren

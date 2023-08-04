@@ -247,6 +247,23 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
+	#region -- interface IPpsColumnDescriptions ---------------------------------------
+
+	/// <summary>Description of a set of columns.</summary>
+	public interface IPpsColumnDescriptions : IDataColumns
+	{
+		/// <summary></summary>
+		/// <param name="columnIndex"></param>
+		/// <returns></returns>
+		IPpsColumnDescription GetFieldDescription(int columnIndex);
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		/// <returns></returns>
+		IPpsColumnDescription GetFieldDescription(string columnName);
+	} // interface IPpsColumnDescriptions
+
+	#endregion
+
 	#region -- class PpsColumnDescription ---------------------------------------------
 
 	/// <summary></summary>

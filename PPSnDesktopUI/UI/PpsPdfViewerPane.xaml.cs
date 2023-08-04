@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
@@ -24,6 +25,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -116,9 +118,12 @@ namespace TecWare.PPSn.UI
 				if (r.Content.Headers.ContentType?.MediaType != MimeTypes.Application.Pdf)
 					throw new ArgumentOutOfRangeException("Content-Type", r.Content.Headers.ContentType?.MediaType, "Only pdf supported.");
 
-				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: r.Content.Headers.ContentDisposition?.FileName ?? "a.pdf");
+				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: GetCleanPdfName(r.Content.Headers.ContentDisposition?.FileName));
 			}
 		} // func DownloadDocumentAsync
+
+		private static string GetCleanPdfName(string fileName)
+			=> String.IsNullOrEmpty(fileName) ? "a.pdf" : PpsShell.GetCleanShellName(fileName);
 
 		private async Task LoadDocumentFromObjectAsync()
 		{
@@ -159,6 +164,9 @@ namespace TecWare.PPSn.UI
 				zoomScheduled = true;
 
 			SubTitle = pdf.Name;
+
+			// check bookmarks
+			UpdateBookmarks();
 		} // proc SetLoadedDocument
 
 		private bool ClosePdf()
@@ -167,6 +175,8 @@ namespace TecWare.PPSn.UI
 			pdfViewer.Document = null;
 			// close pdf
 			loadedDocument?.Dispose();
+			loadedDocument = null;
+			UpdateBookmarks();
 			// close object access
 			if (dataAccess != null)
 			{
@@ -179,6 +189,40 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- Bookmarks ----------------------------------------------------------
+
+		private bool canProcessSelectionEvent = true;
+
+		private void UpdateBookmarks()
+		{
+			canProcessSelectionEvent = false;
+			try
+			{
+			if (loadedDocument != null && loadedDocument.Bookmarks.Any())
+			{
+				bookmarkTree.ItemsSource = loadedDocument.Bookmarks;
+				bookmarkTree.Visibility = Visibility.Visible;
+			}
+			else
+			{
+				bookmarkTree.Visibility = Visibility.Collapsed;
+				bookmarkTree.ItemsSource = null;
+			}
+			}
+			finally
+			{
+				canProcessSelectionEvent = true;
+			}
+		} // proc UpdateBookmarks
+
+		private void bookmarkTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+		{
+			if (canProcessSelectionEvent && e.NewValue is PdfBookmark bookmark)
+				pdfViewer.GotoDestination(bookmark.Destination);
+		} // event bookmarkTree_SelectedItemChanged
+
+		#endregion
+
 		#region -- Print --------------------------------------------------------------
 
 		private bool inPrint = false;
@@ -188,11 +232,19 @@ namespace TecWare.PPSn.UI
 
 		private async Task PrintAsync(PpsCommandContext _)
 		{
-			using (var doc = pdfViewer.GetPrintDocument())
+			inPrint = true;
+			try
 			{
-				var job = doc.ShowDialog(this);
-				if (job != null)
-					await job.PrintAsync(this);
+				using (var doc = pdfViewer.GetPrintDocument())
+				{
+					var job = doc.ShowDialog(this);
+					if (job != null)
+						await job.PrintAsync(this);
+				}
+			}
+			finally
+			{
+				inPrint = false;
 			}
 		} // proc PrintAsync
 

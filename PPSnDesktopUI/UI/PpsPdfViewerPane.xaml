@@ -12,28 +12,43 @@ CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
 specific language governing permissions and limitations under the Licence.
 -->
 <pps:PpsWindowPaneControl x:Class="TecWare.PPSn.UI.PpsPdfViewerPane"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-			 xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
-			 xmlns:ui="clr-namespace:TecWare.PPSn.UI"
-			 Title="PDF-Viewer"
-			 Image="pdfViewer"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+						  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+						  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+						  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+						  xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+						  xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
+						  xmlns:ui="clr-namespace:TecWare.PPSn.UI"
+						  xmlns:pdf="clr-namespace:TecWare.PPSn.Data"
+						  Title="PDF-Viewer"
+						  Image="pdfViewer"
+						  mc:Ignorable="d"
+						  d:DesignHeight="450" d:DesignWidth="800">
 	<Grid>
 		<Grid.Resources>
 			<ui:VisibilityMarkConverterParameter x:Key="visibleMark" WaterMark="0.4" />
 		</Grid.Resources>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="*" />
+		</Grid.ColumnDefinitions>
 
-		<pps:PpsScrollViewer x:Name="scrollViewer" IsPanningAllowed="True" IsZoomAllowed="True" PanningMode="Both" MinScaleFactor="0.1" MaxScaleFactor="20.0" CanContentScroll="True" IsManipulationEnabled="True">
+		<pps:PpsTreeListView Grid.Column="0" x:Name="bookmarkTree" SelectedItemChanged="bookmarkTree_SelectedItemChanged" Padding="0,0,5,0">
+			<pps:PpsTreeListView.ItemTemplate>
+				<HierarchicalDataTemplate DataType="{x:Type pdf:PdfBookmark}" ItemsSource="{Binding}">
+					<TextBlock Text="{Binding Title}" />
+				</HierarchicalDataTemplate>
+			</pps:PpsTreeListView.ItemTemplate>
+		</pps:PpsTreeListView>
+		<GridSplitter Grid.Column="0" x:Name="bookmarkSplitter" Width="4" HorizontalAlignment="Right" VerticalAlignment="Stretch" />
+
+		<pps:PpsScrollViewer Grid.Column="1" x:Name="scrollViewer" IsPanningAllowed="True" IsZoomAllowed="True" PanningMode="Both" MinScaleFactor="0.1" MaxScaleFactor="20.0" CanContentScroll="True" IsManipulationEnabled="True">
 			<pps:PpsPdfViewer x:Name="pdfViewer" Zoom="{Binding ElementName=scrollViewer,Path=ScaleFactor,Mode=TwoWay}" />
 		</pps:PpsScrollViewer>
-		<Grid MaxWidth="120" MaxHeight="120" Margin="32" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.8"
+		<Grid Grid.Column="1" MaxWidth="120" MaxHeight="120" Margin="32" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.8"
 			  Visibility="{Binding ElementName=visibleBox,Path=VisibleArea,Converter={x:Static ui:PpsConverter.VisibilityMark},ConverterParameter={StaticResource visibleMark}}">
 			<pps:PpsPdfPageViewer Document="{Binding ElementName=pdfViewer,Path=Document,Mode=OneWay}" 
-								  PageNumber="{Binding ElementName=pdfViewer,Path=CurrentPageNumber,Mode=OneWay}" />
+								  PageNumber="{Binding ElementName=pdfViewer,Path=CurrentPageNumber,Mode=OneWay}"
+								  ShowAnnotations="{Binding ElementName=pdfViewer,Path=ShowAnnotations,Mode=OneWay}"/>
 			<pps:PpsVisibleBox x:Name="visibleBox" Opacity="0.5" BaseRectangle="{Binding ElementName=pdfViewer,Path=CurrentPageArea,Mode=OneWay}" VisibleRectangle="{Binding ElementName=pdfViewer,Path=VisiblePageArea,Mode=OneWay}" />
 		</Grid>
 	</Grid>

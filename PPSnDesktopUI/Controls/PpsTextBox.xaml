@@ -149,7 +149,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter Property="TextWrapping" Value="Wrap"/>
 							<Setter TargetName="ClearButton" Property="VerticalAlignment" Value="Top"/>
 						</Trigger>
-
+					
 						<Trigger Property="IsKeyboardFocusWithin" Value="True">
 							<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 							<Setter Property="Validation.ErrorTemplate" Value="{x:Null}" />
@@ -162,6 +162,7 @@ specific language governing permissions and limitations under the Licence.
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="IsKeyboardFocused" Value="True" />
+								<Condition Property="AcceptsReturn" Value="False" />
 								<Condition SourceName="ClearButton" Property="IsEnabled" Value="True" />
 							</MultiTrigger.Conditions>
 							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible" />

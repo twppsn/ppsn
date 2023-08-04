@@ -135,7 +135,7 @@ namespace TecWare.PPSn.Controls
 			dateTimeControl.PreviewKeyDown += HandleDateTimeControlPreviewKeyDown;
 			popup = new PpsPopup(dateTimeControl);
 			popup.Closed += HandlePopupClosedEvent;
-
+			
 			popup.Show(this);
 		} // proc ShowCalenderControl
 
@@ -327,16 +327,18 @@ namespace TecWare.PPSn.Controls
 			switch (e.KeyChar)
 			{
 				case ':':
-					ShowFieldsControl();
+					if (tbxExpression.TextLength == 0)
+						ShowFieldsControl();
 					break;
 
 				case '#':
-					if (filterColumn.ColumnSourceType == typeof(DateTime))
+					if (tbxExpression.TextLength == 0 && filterColumn.ColumnSourceType == typeof(DateTime))
 						ShowCalenderControl();
 					break;
 
 				case '$':
-					ShowDefinedNameControl();
+					if (tbxExpression.TextLength == 0)
+						ShowDefinedNameControl();
 					break;
 			}
 		}

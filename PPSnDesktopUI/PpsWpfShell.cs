@@ -137,7 +137,7 @@ namespace TecWare.PPSn
 				case FrameworkContentElement fce:
 					return (IPpsShell)fce.TryFindResource(DefaultShellKey) ?? GetShell(null);
 				default:
-					return (IPpsShell)Application.Current.TryFindResource(DefaultShellKey);
+					return (IPpsShell)Application.Current?.TryFindResource(DefaultShellKey);
 			}
 		} // func GetShell	
 
@@ -186,7 +186,7 @@ namespace TecWare.PPSn
 				: GetLogicalParent(current);
 
 			if (parentObject == null) // fallback to shell services
-				r = GetShell(current)?.GetService(serviceType);
+				r = (GetShell(current) ?? PpsShell.Global).GetService(serviceType);
 			else
 				return GetControlService(parentObject, serviceType, throwException, useVisualTree);
 
@@ -346,22 +346,55 @@ namespace TecWare.PPSn
 			);
 		} // func GetVisualParent
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="current"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static T GetVisualParent<T>(this DependencyObject current, string name)
+			where T : DependencyObject
+		{
+			var parent = GetVisualParent(current, name);
+			return parent is T tmp ? tmp : GetVisualParent<T>(GetVisualParent(parent), name);
+		} // func GetVisualParent
+
+		public static IInputElement GetParentInputElement(this DependencyObject current)
+		{
+			do
+			{
+				current = GetVisualParent(current);
+				if (current is null)
+					return null;
+				else if (current is IInputElement ie)
+					return ie;
+			} while (true);
+		} // func GetParentInputElement
+
 		/// <summary>Find a child in the Visual tree.</summary>
 		/// <typeparam name="T">Type of the child</typeparam>
 		/// <param name="current">Current visual element.</param>
 		/// <returns>Child or <c>null</c>.</returns>
 		public static T GetVisualChild<T>(this DependencyObject current)
 			where T : DependencyObject
+			=> GetVisualChild<T>(current, null);
+
+		/// <summary>Find a child in the Visual tree.</summary>
+		/// <typeparam name="T">Type of the child</typeparam>
+		/// <param name="current">Current visual element.</param>
+		/// <param name="name"></param>
+		/// <returns>Child or <c>null</c>.</returns>
+		public static T GetVisualChild<T>(this DependencyObject current, string name)
+			where T : DependencyObject
 		{
 			var c = VisualTreeHelper.GetChildrenCount(current);
 			for (var i = 0; i < c; i++)
 			{
 				var v = VisualTreeHelper.GetChild(current, i);
-				if (v is T child)
+				if (v is T child && (name == null || CompareName(v, name) == 0))
 					return child;
 				else
 				{
-					child = GetVisualChild<T>(v);
+					child = GetVisualChild<T>(v, name);
 					if (child != null)
 						return child;
 				}
@@ -373,7 +406,7 @@ namespace TecWare.PPSn
 		/// <typeparam name="T">Type of the child</typeparam>
 		/// <param name="current">Current visual element.</param>
 		/// <returns>Child or <c>null</c>.</returns>
-		public static IEnumerable< T> GetVisualChildren<T>(this DependencyObject current)
+		public static IEnumerable<T> GetVisualChildren<T>(this DependencyObject current)
 			where T : DependencyObject
 		{
 			var analyzeStack = new Queue<DependencyObject>();
@@ -469,6 +502,19 @@ namespace TecWare.PPSn
 			=> PpsShell.Await(task, GetControlService<IServiceProvider>(dp));
 
 		#endregion
+
+		/// <summary>Get data context from <see cref="FrameworkElement"/> or <see cref="FrameworkContentElement"/>.</summary>
+		/// <param name="e"></param>
+		/// <returns></returns>
+		public static object GetDataContext(object e)
+		{
+			if (e is FrameworkElement fe)
+				return fe.DataContext ?? e;
+			else if (e is FrameworkContentElement fce)
+				return fce.DataContext ?? e;
+			else
+				return e;
+		} // func GetDataSource
 
 		/// <summary>Resource key for the environment.</summary>
 		public static ResourceKey DefaultShellKey { get; } = new InstanceKey<IPpsShell>();
@@ -667,7 +713,7 @@ namespace TecWare.PPSn
 			// initialize theme from server
 			defaultTheme = new PpsColorTheme(nameof(PpsColorTheme.Default), shell.Settings.GetProperties(themeSettingPrefix + "*").Select(ConvertToThemeColor));
 			SetCurrentTheme(defaultTheme, true);
-			
+
 			return Task.CompletedTask;
 		} // proc IPpsShellServiceInit.InitAsync
 
@@ -808,6 +854,9 @@ namespace TecWare.PPSn
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public const string ApplicationModeKey = "PPSn.Application.Mode";
 		public const string ApplicationModulKey = "PPSn.Application.Modul";
+		public const string ApplicationMutexKey = "PPSn.Application.Mutex";
+		public const string AutoLoginUserKey = "PPSn.AutoLogin.UserName";
+		public const string AutoLoginPasswordKey = "PPSn.AutoLogin.Password";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary></summary>
@@ -838,14 +887,16 @@ namespace TecWare.PPSn
 		} // func GetAutoLogin
 
 		/// <summary>Automatic login</summary>
-		public string AutoLoginUser => this.GetProperty("PPSn.AutoLogin.UserName", null);
+		public string AutoLoginUser => this.GetProperty(AutoLoginUserKey, null);
 		/// <summary>Automatic login</summary>
-		public string AutoLoginPassword => this.GetProperty("PPSn.AutoLogin.Password", null);
+		public string AutoLoginPassword => this.GetProperty(AutoLoginPasswordKey, null);
 
 		/// <summary>Application mode</summary>
 		public string ApplicationMode => this.GetProperty(ApplicationModeKey, "main");
 		/// <summary>Initial modul to load.</summary>
 		public string ApplicationModul => this.GetProperty(ApplicationModulKey, null);
+		/// <summary>Mutex for Single-Instanze application</summary>
+		public string ApplicationMutex => this.GetProperty(ApplicationMutexKey, null);
 	} // class PpsWpfShellSettings
 
 	#endregion
@@ -957,7 +1008,7 @@ namespace TecWare.PPSn
 		private readonly DEHttpClient http; // owner, that retrieves a resource
 		private readonly Uri originalUri;
 		private readonly Uri remoteUri;
-		
+
 		private bool aborted = false; // is the request cancelled
 
 		private WebHeaderCollection headers;
@@ -976,7 +1027,7 @@ namespace TecWare.PPSn
 		internal PpsProxyRequest(DEHttpClient http, Uri originalUri, Uri remoteUri)
 		{
 			this.http = http ?? throw new ArgumentNullException(nameof(http));
-		
+
 			this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
 			this.remoteUri = remoteUri ?? throw new ArgumentNullException(nameof(remoteUri));
 

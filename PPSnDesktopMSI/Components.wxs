@@ -3,6 +3,12 @@
 <?define SoftKeyPaths = "Software\TecWare\PPSnDesktop\Components" ?>
 <?define BinDirectory = "..\PPSnDesktop\bin\Release\net48" ?>
 
+<?if $(var.PerUser) = "true"?>
+<?define RootKey = HKCU ?>
+<?else?>
+<?define RootKey = HKLM ?>
+<?endif?>
+
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Fragment>
 		<ComponentGroup Id="PPSnDesktop" Directory="INSTALLFOLDER">
@@ -15,13 +21,21 @@
 				<RemoveFolder Id="INSTALLFOLDER" On="uninstall" />
 
 				<File Id="PPSnDesktopExe" Name="PPSnDesktop.exe" Source="$(var.BinDirectory)\PPSnDesktop.exe">
-					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" />
+					<?if $(var.PerUser) = "true"?>
+					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" Description="PPSnDesktop starten" />
+					<?else?>
+					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" Description="PPSnDesktop starten" Advertise="yes" />
+					<?endif?>
 				</File>
 				<File Id="PPSnDesktopPdb" Name="PPSnDesktop.pdb" Source="$(var.BinDirectory)\PPSnDesktop.pdb" />
 				<File Id="PPSnDesktopExeConfig" Name="PPSnDesktop.exe.config" Source="$(var.BinDirectory)\PPSnDesktop.exe.config" />
 
-				<RegistryKey Root="HKCU" Key="$(var.SoftKeyPaths)">
+				<RegistryKey Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)">
+					<?if $(var.PerUser) = "true"?>
 					<RegistryValue Name="PPSnDesktop" Value="1" Type="integer" KeyPath="yes" />
+					<?else?>
+					<RegistryValue Name="PPSnDesktop" Value="1" Type="integer" KeyPath="no" />
+					<?endif?>
 					<RegistryValue Value="[ProductVersion]" Type="string" />
 				</RegistryKey>
 			</Component>
@@ -30,21 +44,21 @@
 				<File Id="PPSnDesktopUIDll" Name="PPSn.Desktop.UI.dll" Source="$(var.BinDirectory)\PPSn.Desktop.UI.dll" Vital="yes" Checksum="yes" />
 				<File Id="PPSnDesktopUIPdb" Name="PPSn.Desktop.UI.pdb" Source="$(var.BinDirectory)\PPSn.Desktop.UI.pdb" />
 				<File Id="PPSnDesktopUIDllConfig" Name="PPSn.Desktop.UI.dll.config" Source="$(var.BinDirectory)\PPSn.Desktop.UI.dll.config" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="PPSnDesktopUI" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="PPSnDesktopUI" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="PPSnCore" Guid="6c9c4b52-a600-4e05-900d-775746238527">
 				<File Id="PPSnCoreDll" Name="PPSn.Core.dll" Source="$(var.BinDirectory)\PPSn.Core.dll" Vital="yes" Checksum="yes" />
 				<File Id="PPSnCorePdb" Name="PPSn.Core.pdb" Source="$(var.BinDirectory)\PPSn.Core.pdb" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="PPSnCore" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="PPSnCore" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="PPSnUI" Guid="3d4ee8b3-b986-4062-88e7-6e88834e1d6b">
 				<File Id="PPSnUIDll" Name="PPSnUI.dll" Source="$(var.BinDirectory)\PPSnUI.dll" Vital="yes" Checksum="yes" />
 				<File Id="PPSnUIPdb" Name="PPSnUI.pdb" Source="$(var.BinDirectory)\PPSnUI.pdb" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="PPSnUI" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="PPSnUI" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="DESCore" Guid="43fd911a-49a8-405f-b4c8-259caecdddc9">
 				<File Id="DESCoreDll" Name="DES.Core.dll" Source="$(var.BinDirectory)\DES.Core.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="DESCore" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="DESCore" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
 		
@@ -54,52 +68,52 @@
 				<RemoveFolder Id="BinX86" On="uninstall"/>
 
 				<File Id="PdfiumX86Dll" Name="pdfium.dll" Source="$(var.BinDirectory)\x86\pdfium.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="PdfiumX86" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="PdfiumX86" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="PdfiumX64" Guid="ffd753d6-1c9c-48b2-83f6-c5dfb7c90820" Directory="BinX64">
 				<CreateFolder />
 				<RemoveFolder Id="BinX64" On="uninstall"/>
 
 				<File Id="PdfiumX64Dll" Name="pdfium.dll" Source="$(var.BinDirectory)\x64\pdfium.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="PdfiumX64" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="PdfiumX64" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
 
 		<ComponentGroup Id="AForge" Directory="INSTALLFOLDER">
 			<Component Id="AForge" Guid="c6b67ace-f2a7-4ef2-b818-295a84700572">
 				<File Id="AForgeDll" Name="AForge.dll" Source="$(var.BinDirectory)\AForge.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="AForge" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="AForge" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="AForgeVideo" Guid="31479d77-10fb-4582-818b-bbba551df282">
 				<File Id="AForgeVideoDll" Name="AForge.Video.dll" Source="$(var.BinDirectory)\AForge.Video.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="AForgeVideo" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="AForgeVideo" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="AForgeVideoDirectShow" Guid="3d6c3bf9-6164-40a9-9fec-bb797e059b42">
 				<File Id="AForgeVideoDirectShowDll" Name="AForge.Video.DirectShow.dll" Source="$(var.BinDirectory)\AForge.Video.DirectShow.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="VideoDirectShow" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="VideoDirectShow" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
 
 		<ComponentGroup Id="WebView2">
 			<Component Id="MicrosoftWebWebView2Core" Guid="4ee63bae-1dee-4e85-b79b-d34725dd4766" Directory="INSTALLFOLDER">
 				<File Id="MicrosoftWebWebView2CoreDll" Name="Microsoft.Web.WebView2.Core.dll" Source="$(var.BinDirectory)\Microsoft.Web.WebView2.Core.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="MicrosoftWebWebView2Core" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="MicrosoftWebWebView2Core" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="MicrosoftWebWebView2Wpf" Guid="5d1d18cb-9edf-4331-8207-8592d6ade9bc" Directory="INSTALLFOLDER">
 				<File Id="MicrosoftWebWebView2WpfDll" Name="Microsoft.Web.WebView2.Wpf.dll" Source="$(var.BinDirectory)\Microsoft.Web.WebView2.Wpf.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="MicrosoftWebWebView2Wpf" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="MicrosoftWebWebView2Wpf" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="MicrosoftWebWebView2WinForms" Guid="ae1de6df-d5b6-4718-adc0-0c9da4780d43" Directory="INSTALLFOLDER">
 				<File Id="MicrosoftWebWebView2WinFormsDll" Name="Microsoft.Web.WebView2.WinForms.dll" Source="$(var.BinDirectory)\Microsoft.Web.WebView2.WinForms.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="MicrosoftWebWebView2WinForms" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="MicrosoftWebWebView2WinForms" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="WebView2LoaderX86" Guid="0e0cd469-aa85-4379-90f4-b007b3690405" Directory="BinX86">
 				<File Id="WebView2LoaderX86Dll" Name="WebView2Loader.dll" Source="$(var.BinDirectory)\WebView2Loader.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="WebView2LoaderX86" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="WebView2LoaderX86" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="WebView2LoaderX64" Guid="d426e6fc-64eb-486a-88e7-1eb0a8b41418" Directory="BinX64">
 				<File Id="WebView2LoaderX64Dll" Name="WebView2Loader.dll" Source="$(var.BinDirectory)\runtimes\win-x64\native\WebView2Loader.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="WebView2LoaderX64" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="WebView2LoaderX64" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
 
@@ -107,60 +121,60 @@
 			<Component Id="NeoLua" Guid="d3c18455-4127-4dc1-a40d-e9ef20ac50fa" Directory="INSTALLFOLDER">
 				<File Id="NeoLuaDll" Name="Neo.Lua.dll" Source="$(var.BinDirectory)\Neo.Lua.dll" Vital="yes" Checksum="yes" />
 				<!--<File Id="NeoLuaPdb" Name="Neo.Lua.pdb" Source="$(var.BinDirectory)\Neo.Lua.pdb" />-->
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="NeoLua" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="NeoLua" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="NeoLuaDe" Guid="7d2edbf9-57f3-45c7-95b6-fb01b3a68f7e" Directory="BinDe">
 				<CreateFolder />
 				<RemoveFolder Id="BinDe" On="uninstall"/>
 				<File Id="NeoLuaDeDll" Name="Neo.Lua.resources.dll" Source="$(var.BinDirectory)\de\Neo.Lua.resources.dll" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="NeoLuaDe" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="NeoLuaDe" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="NeoLuaDbg" Guid="099ed5ca-016a-4a24-831d-e3709f54c520" Directory="INSTALLFOLDER">
 				<File Id="NeoLuaDbgDll" Name="Neo.Lua.Dbg.dll" Source="$(var.BinDirectory)\Neo.Lua.Dbg.dll" Vital="yes" Checksum="yes" />
 				<!--<File Id="NeoLuaDbgPdb" Name="Neo.Lua.Dbg.pdb" Source="$(var.BinDirectory)\Neo.Lua.Dbg.pdb" />-->
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="NeoLuaDbg" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="NeoLuaDbg" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="MicrosoftDynamic" Guid="60cc9566-5e85-4337-899c-668c77c0c1b5" Directory="INSTALLFOLDER">
 				<File Id="MicrosoftDynamicDll" Name="Microsoft.Dynamic.dll" Source="$(var.BinDirectory)\Microsoft.Dynamic.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="MicrosoftDynamic" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="MicrosoftDynamic" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="MicrosoftScripting" Guid="d1a98d7f-1889-4c8c-840b-a6fdb25ada5e" Directory="INSTALLFOLDER">
 				<File Id="MicrosoftScriptingDll" Name="Microsoft.Scripting.dll" Source="$(var.BinDirectory)\Microsoft.Scripting.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="MicrosoftScripting" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="MicrosoftScripting" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="MicrosoftScriptingMetadata" Guid="27eb8482-f311-4422-af29-fdeb60c7fed6" Directory="INSTALLFOLDER">
 				<File Id="MicrosoftScriptingMetadataDll" Name="Microsoft.Scripting.Metadata.dll" Source="$(var.BinDirectory)\Microsoft.Scripting.Metadata.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="MicrosoftScriptingMetadata" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="MicrosoftScriptingMetadata" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
 
 		<ComponentGroup Id="Markdig" Directory="INSTALLFOLDER">
 			<Component Id="Markdig" Guid="de52c34d-4e9d-41c0-b3e4-76dbe0e8b6d4">
 				<File Id="MarkdigDll" Name="Markdig.dll" Source="$(var.BinDirectory)\Markdig.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="Markdig" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="Markdig" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="NeoMarkdigXaml" Guid="716524e5-b73e-4ac4-a121-ee1c9ba497e9">
 				<File Id="NeoMarkdigXamlDll" Name="Neo.Markdig.Xaml.dll" Source="$(var.BinDirectory)\Neo.Markdig.Xaml.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="NeoMarkdigXaml" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="NeoMarkdigXaml" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
 
 		<ComponentGroup Id="NetCore" Directory="INSTALLFOLDER">
 			<Component Id="SystemBuffers" Guid="9dfab6bc-f270-4465-9c7a-e81b35b3a40f">
 				<File Id="SystemBuffersDll" Name="System.Buffers.dll" Source="$(var.BinDirectory)\System.Buffers.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="SystemBuffers" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="SystemBuffers" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="SystemMemory" Guid="d7a1b404-cb51-4dc5-b197-71b44c820ab5">
 				<File Id="SystemMemoryDll" Name="System.Memory.dll" Source="$(var.BinDirectory)\System.Memory.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="SystemMemory" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="SystemMemory" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="SystemNumericsVectors" Guid="e58e5e79-7386-4fa8-a060-d059d4bc81e5">
 				<File Id="SystemNumericsVectorsDll" Name="System.Numerics.Vectors.dll" Source="$(var.BinDirectory)\System.Numerics.Vectors.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="SystemNumericsVectors" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="SystemNumericsVectors" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 			<Component Id="SystemRuntimeCompilerServicesUnsafe" Guid="34d16230-b79d-475a-82f2-9ae3bd06df26">
 				<File Id="SystemRuntimeCompilerServicesUnsafeDll" Name="System.Runtime.CompilerServices.Unsafe.dll" Source="$(var.BinDirectory)\System.Runtime.CompilerServices.Unsafe.dll" Vital="yes" Checksum="yes" />
-				<RegistryValue Root="HKCU" Key="$(var.SoftKeyPaths)" Name="SystemRuntimeCompilerServicesUnsafe" Value="1" Type="integer" KeyPath="yes" />
+				<RegistryValue Root="$(var.RootKey)" Key="$(var.SoftKeyPaths)" Name="SystemRuntimeCompilerServicesUnsafe" Value="1" Type="integer" KeyPath="yes" />
 			</Component>
 		</ComponentGroup>
 	</Fragment>

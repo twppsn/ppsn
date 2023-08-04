@@ -15,8 +15,15 @@
 #endregion
 using System;
 using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using Neo.IronLua;
+using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Data
@@ -38,7 +45,7 @@ namespace TecWare.PPSn.Data
 	#region -- interface IPpsDataObject -----------------------------------------------
 
 	/// <summary>Defines a data access for UI-Controls.</summary>
-	public interface IPpsDataObject : IDisposable
+	public interface IPpsDataObject : IPropertyReadOnlyDictionary, IDisposable
 	{
 		/// <summary>Gets call if the data was changed.</summary>
 		event EventHandler DataChanged;
@@ -93,6 +100,111 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		PpsDataSetDefinition TryGetDataSetDefinition(string datasetName, bool throwException = false);
 	} // interface IPpsDataSetProvider
+
+	#endregion
+
+	#region -- class PpsDataInfo ------------------------------------------------------
+
+	public static class PpsDataInfo
+	{
+		#region-- class PpsGenericData ------------------------------------------------
+
+		private sealed class PpsGenericData : IPpsDataStream
+		{
+			private readonly byte[] bytes;
+
+			public PpsGenericData(byte[] bytes)
+			{
+				this.bytes = bytes ?? throw new ArgumentNullException(nameof(bytes));
+			} // ctor
+
+			public Stream OpenStream(FileAccess access, long expectedLength = -1)
+				=> new MemoryStream(bytes, false);
+		} // class PpsGenericData
+
+		#endregion
+
+		#region -- class PpsGenericDataObject -----------------------------------------
+
+		private sealed class PpsGenericDataObject : IPpsDataObject, IPpsDataInfo
+		{
+			public event EventHandler DataChanged { add { } remove { } }
+
+			private readonly string name;
+			private readonly string mimeType;
+			private readonly IPropertyReadOnlyDictionary properties;
+			private readonly PpsGenericData data;
+
+			public PpsGenericDataObject(string name, string mimeType, object data, IPropertyReadOnlyDictionary properties)
+			{
+				this.name = name ?? "bytes.dat";
+				this.mimeType = mimeType ?? MimeTypes.Application.OctetStream;
+				this.properties = properties ?? PropertyDictionary.EmptyReadOnly;
+				this.data = new PpsGenericData((byte[])data);
+			} // ctor
+
+			public void Dispose()
+			{
+			} // proc Dispose
+
+			public Task CommitAsync()
+				=> Task.CompletedTask;
+
+			public Task<IPpsDataObject> LoadAsync()
+			{
+				return Task.FromResult<IPpsDataObject>(this);
+			} // func LoadAsync
+
+			public Task<IPpsWindowPane> OpenPaneAsync(IPpsWindowPaneManager paneManager = null, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null) 
+				=> throw new NotImplementedException();
+
+			bool IPropertyReadOnlyDictionary.TryGetProperty(string name, out object value)
+				=> properties.TryGetProperty(name, out value);
+
+			public Func<IDisposable> DisableUI { get => null; set { } }
+
+			public string Name => name;
+			public string MimeType => mimeType;
+
+			public bool IsReadOnly => true;
+			public object Data => data;
+		} // class PpsGenericDataObject
+
+		#endregion
+
+		private static bool TryUnpackObjectInfo(string exInfo, out string objectTyp, out LuaTable t)
+		{
+			t = LuaTable.FromJson(Encoding.UTF8.GetString(Convert.FromBase64String(exInfo)));
+			objectTyp = t.GetOptionalValue<string>("ObjectTyp", null);
+			return objectTyp != null;
+		} // func TryUnpackObjectInfo
+
+		public static async Task<IPpsDataInfo> ToPpsDataInfoAsync(this HttpResponseMessage http)
+		{
+			// in ex codiert
+			if (http.Headers.TryGetValue("x-ppsn-object", out var exInfo)
+				&& TryUnpackObjectInfo(exInfo, out var objectTyp, out var properties)) // object extension gefunden
+			{
+				properties.SetMemberValue("ObjectTyp", objectTyp);
+			}
+			else
+				properties = new LuaTable();
+
+			// in header codiert
+			foreach (var kv in http.Headers)
+			{
+				if (kv.Key.StartsWith("x-ppsn-") && kv.Key != "x-ppsn-object")
+				{
+					var v = kv.Value.FirstOrDefault();
+					if (v != null)
+						properties.SetMemberValue(kv.Key.Substring(7), v);
+				}
+			}
+
+			var bytes = await http.Content.ReadAsByteArrayAsync();
+			return new PpsGenericDataObject(properties.GetOptionalValue<string>("Name", http.Content.Headers.ContentDisposition?.Name), http.Content.Headers.ContentType.MediaType, bytes, properties.ToProperties());
+		} // func ToPpsDataInfoAsync
+	} // class PpsDataInfo
 
 	#endregion
 }

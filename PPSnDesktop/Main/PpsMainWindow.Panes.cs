@@ -32,6 +32,22 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Main
 {
+	#region -- class PpsPaneFindInfoResult --------------------------------------------
+
+	internal readonly struct PpsPaneFindInfoResult
+	{
+		public PpsPaneFindInfoResult(PpsWindowPaneCompareResult result, IPpsWindowPane pane)
+		{
+			Result = result;
+			Pane = pane;
+		} // ctor
+
+		public PpsWindowPaneCompareResult Result { get; }
+		public IPpsWindowPane Pane { get; }
+	} // class PpsPaneFindInfoResult
+
+	#endregion
+
 	#region -- class PpsPaneCollection ------------------------------------------------
 
 	internal sealed class PpsPaneCollection : IList, IReadOnlyList<PpsWindowPaneHost>, INotifyCollectionChanged
@@ -108,7 +124,7 @@ namespace TecWare.PPSn.Main
 		/// <param name="arguments"></param>
 		/// <param name="compatibleAllowed"></param>
 		/// <returns></returns>
-		public Tuple<PpsWindowPaneCompareResult, IPpsWindowPane> FindPaneByArguments(Type paneType, LuaTable arguments, bool compatibleAllowed = false)
+		public PpsPaneFindInfoResult FindPaneByArguments(Type paneType, LuaTable arguments, bool compatibleAllowed = false)
 		{
 			IPpsWindowPane compatiblePane = null;
 
@@ -118,15 +134,15 @@ namespace TecWare.PPSn.Main
 				{
 					var r = p.Pane.CompareArguments(arguments);
 					if (r == PpsWindowPaneCompareResult.Same)
-						return new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(r, p.Pane);
-					else if (r == PpsWindowPaneCompareResult.Reload && compatiblePane == null)
+						return new PpsPaneFindInfoResult(r, p.Pane);
+					else if (compatibleAllowed && r == PpsWindowPaneCompareResult.Reload && compatiblePane == null)
 						compatiblePane = p.Pane;
 				}
 			}
 
 			return compatiblePane == null 
-				? new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(PpsWindowPaneCompareResult.Incompatible, null) 
-				: new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(PpsWindowPaneCompareResult.Reload, compatiblePane);
+				? new PpsPaneFindInfoResult(PpsWindowPaneCompareResult.Incompatible, null) 
+				: new PpsPaneFindInfoResult(PpsWindowPaneCompareResult.Reload, compatiblePane);
 		} // func FindPaneByArguments
 
 		public int Count => panes.Count;
@@ -412,7 +428,7 @@ namespace TecWare.PPSn.Main
 			try
 			{
 				if (newPaneMode == PpsOpenPaneMode.Default)
-					newPaneMode = (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) ? PpsOpenPaneMode.NewMainWindow : this.GetDefaultPaneMode(arguments);
+					newPaneMode = IsCtrlDown() ? PpsOpenPaneMode.NewMainWindow : this.GetDefaultPaneMode(arguments);
 
 				switch (newPaneMode)
 				{
@@ -420,20 +436,30 @@ namespace TecWare.PPSn.Main
 					case PpsOpenPaneMode.NewSingleWindow:
 						return await mainWindowService.OpenPaneAsync(paneType, newPaneMode, arguments);
 					case PpsOpenPaneMode.ReplacePane:
-
 						// replace pane => will close all panes an open an new one
 						if (await UnloadPanesAsync())
 							return await LoadPaneInternAsync(isFirstPane, paneType, arguments);
 						return null;
-
 					default:
-						var pane = FindOpenPane(paneType, arguments);
-						if (pane == null)
-							return await LoadPaneInternAsync(isFirstPane, paneType, arguments);
-						else
+						var findInfo = paneHosts.FindPaneByArguments(paneType, arguments, true);
+						switch(findInfo.Result)
 						{
-							ActivatePane(pane);
-							return pane;
+							case PpsWindowPaneCompareResult.Reload:
+								if (IsShiftDown())
+									goto default;
+								else
+								{
+									var paneHost = FindPaneHost(findInfo.Pane, true);
+									if (await paneHost.UnloadAsync())
+										return await paneHost.LoadAsync(this, paneType, arguments);
+									else
+										return null;
+								}
+							case PpsWindowPaneCompareResult.Same:
+								ActivatePane(findInfo.Pane);
+								return findInfo.Pane;
+							default:
+								return await LoadPaneInternAsync(isFirstPane, paneType, arguments);
 						}
 				}
 			}
@@ -443,6 +469,12 @@ namespace TecWare.PPSn.Main
 				return null;
 			}
 		} // proc OpenPaneAsync
+
+		private static bool IsCtrlDown()
+			=> Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+
+		private static bool IsShiftDown()
+			=> Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
 
 		#endregion
 
@@ -532,9 +564,7 @@ namespace TecWare.PPSn.Main
 		public IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments)
 		{
 			var r = paneHosts.FindPaneByArguments(paneType, arguments, false);
-			return r.Item1 == PpsWindowPaneCompareResult.Same
-				? r.Item2
-				: null;
+			return r.Result == PpsWindowPaneCompareResult.Same ? r.Pane : null;
 		} // func FindOpenPane
 
 		#endregion

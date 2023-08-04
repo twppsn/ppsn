@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -48,28 +49,24 @@ namespace PPSnExcel
 			ActiveWorkBook,
 			ActiveWorkSheet,
 			ActiveListObject,
-			ActiveListObjectLayout,
-			ActiveWorkBookPivotCaches
+			ActiveListObjectLayout
 		} // enum RefreshContext
 
 		#endregion
 
-		#region -- class ExcelApplicationUpdateException ------------------------------
+		#region -- class ExcelApplicationRestartException -----------------------------
 
-		private class ExcelApplicationUpdateException : Exception
+		private class ExcelApplicationRestartException : Exception
 		{
 			private readonly IPpsShell shell;
-			private readonly Uri uri;
 
-			public ExcelApplicationUpdateException(IPpsShell shell, Uri uri)
+			public ExcelApplicationRestartException(IPpsShell shell)
 			{
 				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
-				this.uri = uri;
 			} // ctor
 
 			public IPpsShell Shell => shell;
-			public Uri Uri => uri;
-		} // class ExcelApplicationUpdateException
+		} // class ExcelApplicationRestartException
 
 		#endregion
 
@@ -123,6 +120,7 @@ namespace PPSnExcel
 
 		private WaitForm uiService;
 		private ExcelIdleService idleService;
+		private bool noUpdate = false;
 
 		private IPpsnFunctions modul = null;
 
@@ -158,13 +156,10 @@ namespace PPSnExcel
 
 		private const string applicationId = "PPSnExcel";
 
-		Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri)
+		async Task IPpsShellApplication.RequestUpdateAsync(IPpsShell shell, Uri uri, bool useRunAs)
 		{
-#if DEBUG
-			return Task.CompletedTask;
-#else
-			throw new ExcelApplicationUpdateException(shell, uri);
-#endif
+			if (await UpdateApplicationAsync(shell, uri, useRunAs))
+				throw new ExcelApplicationRestartException(shell);
 		} // proc IPpsShellApplication.RequestUpdateAsync
 
 		Task IPpsShellApplication.RequestRestartAsync(IPpsShell shell)
@@ -172,49 +167,66 @@ namespace PPSnExcel
 #if DEBUG
 			return Task.CompletedTask;
 #else
-			throw new ExcelApplicationUpdateException(shell, null);
+			throw new ExcelApplicationRestartException(shell);
 #endif
 		} // proc IPpsShellApplication.RequestRestartAsync
 
 		string IPpsShellApplication.Name => applicationId;
 
 		Version IPpsShellApplication.AssenblyVersion => PpsShell.GetDefaultAssemblyVersion(this);
-		Version IPpsShellApplication.InstalledVersion
-		{
-			get
-			{
-				using (var reg = Registry.CurrentUser.OpenSubKey(@"Software\TecWare\PPSnExcel\Components", false))
-				{
-					return reg?.GetValue(null) is string v
-						? new Version(v)
-						: new Version(1, 0, 0, 0);
-				}
-			}
-		} // prop IPpsShellApplication.InstalledVersion
+		PpsShellApplicationVersion IPpsShellApplication.InstalledVersion => PpsShellApplicationVersion.GetInstalledVersion(applicationId);
 
 		#endregion
 
 		#region -- Shell Handling -----------------------------------------------------
 
-		private async Task<bool> UpdateApplicationAsync(IPpsShell shell, Uri sourceUri)
+		private async Task<bool> UpdateApplicationAsync(IPpsShell shell, Uri sourceUri, bool useRunAs)
 		{
-			if (PpsWinShell.ShowMessage(this, String.Format("Eine neue Anwendung steht bereit.\nInstallieren und {0} neustarten?", applicationId), MessageBoxIcon.Question, MessageBoxButtons.YesNo) != DialogResult.Yes)
+			if (noUpdate)
 				return false;
 
+			if (PpsWinShell.ShowMessage(this, String.Format("Eine neue Version von {0} steht bereit.\nInstallieren und Microsoft Excel beenden?", applicationId), MessageBoxIcon.Question, MessageBoxButtons.YesNo) != DialogResult.Yes)
+			{
+				noUpdate = true;
+				return false;
+			}
+
+			// Dieser Code funktioniert durch den Defender nicht
 			var msiExe = Path.Combine(Environment.SystemDirectory, "msiexec.exe");
 			var msiLog = Path.Combine(Path.GetTempPath(), applicationId + ".msi.txt");
-			var psi = new ProcessStartInfo(msiExe, "/i " + sourceUri.ToString() + " /q /l*v \"" + msiLog + "\"");
-			using (var bar = uiService.CreateProgress(true))
-			using (var ps = Process.Start(psi))
+			var psi = new ProcessStartInfo(msiExe, "/i " + sourceUri.ToString() + " /qf /l*v \"" + msiLog + "\"");
+			if (useRunAs)
+				psi.Verb = "runas";
+			try
 			{
-				bar.Text = "Installation wird ausgeführt...";
-				await Task.Run(new Action(ps.WaitForExit));
-				// ps.ExitCode
+				using (var bar = uiService.CreateProgress(true))
+				using (var ps = Process.Start(psi))
+				{
+					bar.Text = "Installation wird ausgeführt...";
+					await Task.Run(new Action(ps.WaitForExit));
+					// ps.ExitCode
+				}
+				return true;
 			}
-			return true;
+			catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
+			{
+				noUpdate = true;
+				await shell.GetService<IPpsUIService>(true).RunUI(() =>
+				{
+					if (PpsWinShell.ShowMessage(this, "Installation des Updates ist durch Einstellungen des Virenschutzes oder SmartScreen fehlgeschlagen.\n\nSoll der Befehl zur Ausführung des Updates in der Zwischenablage abegelegt werden?", MessageBoxIcon.Error, MessageBoxButtons.YesNo) == DialogResult.Yes)
+						Clipboard.SetText(psi.FileName + " " + psi.Arguments);
+				});
+				return false;
+			}
+			catch (Exception ex)
+			{
+				noUpdate = true;
+				PpsWinShell.ShowException(this, PpsExceptionShowFlags.None, ex, "Installation des Updates fehlgeschlagen. Der Befehl zur Ausführung des Updates befindet sich in der Zwischenablage.");
+				return false;
+			}
 		} // proc UpdateApplicationAsync
 
-		private static async Task<bool> LoginShellAsync(IWin32Window parent, IPpsShell shell)
+		private static async Task<bool> LoginShellAsync(IWin32Window parent, IPpsShell shell, bool isBackground)
 		{
 			// open trust stroe
 			using (var login = new PpsClientLogin(shell.Info.GetCredentialTarget(), shell.Info.Name, false))
@@ -225,7 +237,9 @@ namespace PPSnExcel
 					// show login dialog
 					if (loginCounter > 0)
 					{
-						if (!login.ShowWindowsLogin(parent.Handle))
+						if (isBackground)
+							return false;
+						else if (!login.ShowWindowsLogin(parent.Handle))
 							return false;
 					}
 
@@ -255,7 +269,7 @@ namespace PPSnExcel
 			}
 		} // proc LoginShellAsync
 
-		private async Task<IPpsShell> CreateShellAsync(IPpsShellInfo info, bool isDefault)
+		private async Task<IPpsShell> CreateShellAsync(IPpsShellInfo info, bool isDefault, bool isBackground)
 		{
 			if (info == null)
 				throw new ArgumentNullException(nameof(info));
@@ -267,7 +281,7 @@ namespace PPSnExcel
 				newShell = await PpsShell.StartAsync(info, isDefault);
 
 				// authentificate shell
-				if (!await LoginShellAsync(this, newShell))
+				if (!await LoginShellAsync(this, newShell, isBackground))
 				{
 					newShell.Dispose();
 					return null;
@@ -275,12 +289,9 @@ namespace PPSnExcel
 
 				return newShell;
 			}
-			catch (ExcelApplicationUpdateException e)
+			catch (ExcelApplicationRestartException)
 			{
-				if (e.Uri != null)
-					UpdateApplicationAsync(e.Shell, e.Uri).Await();
-
-				if (PpsWinShell.ShowMessage(this, String.Format("Die Anwendung muss für eine Aktivierung neugestartet werden.\nNeustart von {0} sofort einleiten?", applicationId), MessageBoxIcon.Question, MessageBoxButtons.YesNo) == DialogResult.Yes)
+				if (PpsWinShell.ShowMessage(this, String.Format("Die Anwendung muss für eine Aktivierung neugestartet werden.\nMicrosoft Excel beenden?", applicationId), MessageBoxIcon.Question, MessageBoxButtons.YesNo) == DialogResult.Yes)
 					Application.Quit();
 				return null;
 			}
@@ -305,17 +316,27 @@ namespace PPSnExcel
 			}
 		} // func CreateShellAsync
 
+		private IPpsShell CreateShellUpdateUI(IPpsShell shell)
+		{
+			if (shell == null)
+				return null;
+
+			shell.Disposed += ShellDestroyed;
+			activatedShells.Add(shell);
+			Globals.Ribbons.PpsMenu.RefreshUserName();
+			return shell;
+		} // func CreateShellUpdateUI
+
+		private void CreateShellInBackground(IPpsShellInfo info)
+		{
+			CreateShellAsync(info, true, true)
+				.ContinueWith(t => CreateShellUpdateUI(t.Result));
+		} // func CreateShellInBackground
+
 		private IPpsShell CreateShell(IPpsShellInfo info, bool isDefault)
 		{
-			// connect to shell			
-			using (var bar = uiService.CreateProgress(progressText: String.Format("Verbinde mit {0}...", info.Name)))
-			{
-				var shell = CreateShellAsync(info, isDefault).Await();
-				shell.Disposed += ShellDestroyed;
-				activatedShells.Add(shell);
-				Globals.Ribbons.PpsMenu.RefreshUserName();
-				return shell;
-			}
+			using (var progress = uiService.CreateProgress(progressText: String.Format("Verbinde mit {0}...", info.Name)))
+				return CreateShellUpdateUI(CreateShellAsync(info, isDefault, false).Await());
 		} // proc CreateShell
 
 		private void ShellDestroyed(object sender, EventArgs e)
@@ -356,7 +377,7 @@ namespace PPSnExcel
 		public IPpsShell GetShellFromInfo(IPpsShellInfo info)
 			=> activatedShells.Find(c => c.Info == info);
 
-		public void ActivateEnvironment(IPpsShellInfo info)
+		public void ActivateEnvironment(IPpsShellInfo info, bool inBackground)
 		{
 			if (info is null)
 				return;
@@ -367,7 +388,10 @@ namespace PPSnExcel
 				return;
 
 			// activate the shell
-			CreateShell(info, true);
+			if (inBackground)
+				CreateShellInBackground(info);
+			else
+				CreateShell(info, true);
 		} // proc ActivateEnvironment
 
 		public void DeactivateShell(IPpsShell shell = null)
@@ -401,7 +425,12 @@ namespace PPSnExcel
 			PpsListObject.New(shell, range, reportId);
 		} // func NewTable
 
-		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, IPpsShell replaceShell = null, bool anonymize = false)
+		/// <summary>Refresh tables</summary>
+		/// <param name="context">Context to refresh</param>
+		/// <param name="replaceShell"></param>
+		/// <param name="anonymize"></param>
+		/// <returns></returns>
+		internal async Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook, IPpsShell replaceShell = null, bool anonymize = false)
 		{
 			using (var progress = PpsShell.Global.CreateProgress())
 			{
@@ -411,41 +440,56 @@ namespace PPSnExcel
 				switch (context)
 				{
 					case RefreshContext.ActiveWorkBook:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook, replaceShell);
+						await RefreshTableAsync(progress, Globals.ThisAddIn.Application.ActiveWorkbook, replaceShell);
+						break;
 					case RefreshContext.ActiveWorkSheet:
-						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet, replaceShell, Globals.ThisAddIn.Application.ActiveWorkbook);
-					case RefreshContext.ActiveWorkBookPivotCaches:
-						return RefreshAllPivotCaches(Globals.ThisAddIn.Application.ActiveWorkbook);
+						await RefreshTableAsync(progress, Globals.ThisAddIn.Application.ActiveSheet, replaceShell, true);
+						break;
 					default:
 						if (Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null))
-							return RefreshTableAsync(r.ListObject, replaceShell, context == RefreshContext.ActiveListObjectLayout, anonymize);
-						return Task.CompletedTask;
+						{
+							await RefreshTableAsync(r.ListObject, replaceShell, context == RefreshContext.ActiveListObjectLayout, anonymize);
+							RefreshPivotTables(progress, r.ListObject);
+						}
+						break;
 				}
 
 			}
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Workbook workbook, IPpsShell replaceShell)
+		internal async Task RefreshTableAsync(IPpsProgress progress, Excel.ListObject xlList, bool refreshLayout)
+		{
+			// refresh table
+			await RefreshTableAsync(xlList, null, refreshLayout, false);
+			// refresh pivot cache
+			RefreshPivotTables(progress, xlList);
+		} // proc RefreshTableAsync
+
+		private async Task RefreshTableAsync(IPpsProgress progress, Excel.Workbook workbook, IPpsShell replaceShell)
 		{
 			for (var i = 1; i <= workbook.Sheets.Count; i++)
 			{
 				if (workbook.Sheets[i] is Excel.Worksheet worksheet)
-					await RefreshTableAsync(worksheet, replaceShell, null);
+					await RefreshTableAsync(null, worksheet, replaceShell, false);
 			}
 
-			RefreshPivotCaches(workbook);
+			RefreshPivotCaches(progress, workbook, null);
 		} // func RefreshTableAsync
 
-		private async Task RefreshTableAsync(Excel.Worksheet worksheet, IPpsShell replaceShell, Excel.Workbook pivotCachesWorkbook)
+		private async Task RefreshTableAsync(IPpsProgress progress, Excel.Worksheet worksheet, IPpsShell replaceShell, bool refreshPivotCache)
 		{
 			for (var i = 1; i <= worksheet.ListObjects.Count; i++)
-				await RefreshTableAsync(worksheet.ListObjects[i], replaceShell, false, false);
+			{
+				var xlList = worksheet.ListObjects[i];
+				progress?.Report($"Aktualisiere {xlList.Name}...");
+				await RefreshTableAsync(xlList, replaceShell, false, false);
+			}
 
-			if (pivotCachesWorkbook != null)
-				RefreshPivotCaches(pivotCachesWorkbook);
+			if (refreshPivotCache && worksheet.Parent is Excel.Workbook wkb)
+				RefreshPivotCaches(progress, wkb, null);
 		} // func RefreshTableAsync
 
-		internal async Task RefreshTableAsync(Excel.ListObject _xlList, IPpsShell replaceShell, bool refreshLayout, bool enableAnonymization)
+		private async Task RefreshTableAsync(Excel.ListObject _xlList, IPpsShell replaceShell, bool refreshLayout, bool enableAnonymization)
 		{
 			using (var progress = PpsShell.Global.CreateProgress())
 			{
@@ -477,26 +521,70 @@ namespace PPSnExcel
 			}
 		} // func RefreshTableAsync
 
-		private async Task RefreshAllPivotCaches(Excel.Workbook workbook)
-		{
-			if (workbook != null)
-				RefreshPivotCaches(workbook);
+		private bool IsSourceDataOfTable(Excel.PivotCache pivotCache, string tableName)
+			=> pivotCache.SourceType == Excel.XlPivotTableSourceType.xlDatabase && pivotCache.SourceData is string sourceName && sourceName == tableName;
 
-			await Task.CompletedTask;
-		}
-
-		private void RefreshPivotCaches(Excel.Workbook workbook)
+		private void RefreshPivotTables(Excel.PivotTables pivotTables, Excel.PivotCache pivotCache)
 		{
+			for (var i = 1; i <= pivotTables.Count; i++)
+			{
+				var pivotTable = pivotTables.Item(i);
+				if (pivotTable.CacheIndex == pivotCache.Index)
+				{
+					try
+					{
+						pivotTable.RefreshTable();
+					}
+					catch (COMException) { }
+				}
+			}
+		} // proc RefreshPivotTables
+
+		private void RefreshPivotTables(Excel.Workbook workbook, Excel.PivotCache pivotCache)
+		{
+			if (workbook.PivotTables is Excel.PivotTables pivotTables)
+				RefreshPivotTables(pivotTables, pivotCache);
+
+			for (var i = 1; i <= workbook.Sheets.Count; i++)
+			{
+				if (workbook.Sheets[i] is Excel.Worksheet wks && wks.PivotTables() is Excel.PivotTables pivotTables2)
+					RefreshPivotTables(pivotTables2, pivotCache);
+			}
+		} // proc RefreshPivotTables
+
+		private void RefreshPivotCaches(IPpsProgress progress, Excel.Workbook workbook, string tableName)
+		{
+			if (workbook == null)
+				return;
+
+			progress?.Report("Aktualisiere Pivot-Cache...");
 			var pivotCaches = workbook.PivotCaches();
 			for (var i = 1; i <= pivotCaches.Count; i++)
 			{
+				var cache = pivotCaches[i];
+				if (tableName != null && !IsSourceDataOfTable(cache, tableName))
+					continue;
+				
 				try
 				{
-					pivotCaches[i].Refresh();
+					cache.Refresh();
+
+					// refresh depended tables
+					RefreshPivotTables(workbook, cache);
 				}
 				catch (COMException) { }
 			}
 		} // proc RefreshPivotCaches
+
+		public void RefreshPivotTables(IPpsProgress progress, Excel.ListObject xlList)
+		{
+			if (xlList != null && xlList.Parent is Excel.Worksheet wks && wks.Parent is Excel.Workbook wkb)
+				RefreshPivotCaches(progress, wkb, xlList.Name);
+		} // proc RefreshPivotTables
+
+		#endregion
+
+		#region -- Download Xlsx Report -----------------------------------------------
 
 		private static readonly DEAction xlsxTemplateAction = DEAction.Create("xlsxtmpl", "bi/", new DEActionParam("id", typeof(string)));
 

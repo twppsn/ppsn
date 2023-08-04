@@ -17,10 +17,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Core.UI;
 
 namespace TecWare.PPSn.UI
 {
@@ -78,22 +78,6 @@ namespace TecWare.PPSn.UI
 		/// <summary>Is the barcode receiver active.</summary>
 		bool IsActive { get; }
 	} // interface IPpsBarcodeReceiver
-
-	#endregion
-
-	#region -- class PpsBarcode -------------------------------------------------------
-
-	/// <summary>Abstract base of the code.</summary>
-	public abstract class PpsBarcode
-	{
-		/// <summary>Is the current code valid, in this implementation always <c>true</c></summary>
-		public virtual bool IsCodeValid => true;
-
-		/// <summary>Name of the parsed code.</summary>
-		public abstract string CodeName { get; }
-		/// <summary>Return the code as data.</summary>
-		public abstract string Code { get; }
-	} // class PpsBarcode
 
 	#endregion
 
@@ -205,7 +189,6 @@ namespace TecWare.PPSn.UI
 
 			public void Dispose()
 				=> refCount--;
-
 
 			protected bool TryGetTargetCore(out T target)
 			{
@@ -358,7 +341,7 @@ namespace TecWare.PPSn.UI
 		{
 			synchronizationContext = SynchronizationContext.Current ?? throw new ArgumentNullException(nameof(SynchronizationContext));
 
-			RegisterDecoder(2000, Barcodes.GS1.TryParse);
+			RegisterDecoder(2000, Core.UI.Barcodes.GS1.TryParse);
 		} // ctor
 
 		/// <summary>Fire collection reset.</summary>
@@ -383,8 +366,8 @@ namespace TecWare.PPSn.UI
 					// move to top
 					token = tokens[idx];
 					token.AddRef();
-					tokens.Add(token);
 					tokens.RemoveAt(idx);
+					tokens.Add(token);
 				}
 				return token;
 			}
@@ -409,7 +392,7 @@ namespace TecWare.PPSn.UI
 				if (idx < 0)
 					defaultReceivers.Insert(~idx, token);
 				else
-					throw new ArgumentException("Already registered.");
+					throw new ArgumentException("Already registered.", nameof(receiver));
 				return token;
 			}
 		} // func RegisterDefaultReceiver
@@ -454,7 +437,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (receivers[i].TryGetTarget(out var r))
 					{
-						if (r != null && r.IsActive)
+						if (r != null && r.IsActive && receiver == null)
 							receiver = r;
 					}
 					else
@@ -530,7 +513,7 @@ namespace TecWare.PPSn.UI
 						return code;
 				}
 			}
-			return new Barcodes.GenericCode(rawCode);
+			return new Core.UI.Barcodes.GenericCode(rawCode);
 		} // func ParseCode
 
 		#endregion

@@ -89,19 +89,32 @@
 								<Run Text="{Binding SubTitle,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}" />
 							</TextBlock>
 						</Grid.ToolTip>
-						<ui:PpsGeometryImage GeometryName="{Binding Image,Mode=OneWay,TargetNullValue='pane'}"
-											 GeometryCircled="False"
-											 Width="19"
-											 Height="19"
+						<ui:PpsGeometryImage GeometryName="{Binding Image,Mode=OneWay,TargetNullValue='page'}"
+											 Width="24"
+											 Height="24"
 											 Margin="6,0,0,0"
 											 HorizontalAlignment="Left"
 											 VerticalAlignment="Center"
 											 SnapsToDevicePixels="True"
 											 Foreground="{DynamicResource PPSnImageBrush}"
 											 Opacity=".75"/>
-						<TextBlock Text="{Binding SubTitle,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
-								   MaxWidth="164" VerticalAlignment="Center" Margin="32,0,6,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+						<TextBlock x:Name="title" Text="{Binding Title,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
+								   FontSize="8" MaxWidth="164" VerticalAlignment="Bottom" Margin="32,0,6,18" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+						<TextBlock x:Name="subtitle" Text="{Binding SubTitle,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
+								   MaxWidth="164" VerticalAlignment="Top" Margin="32,14,6,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+
+						<!--<TextBlock Text="{Binding SubTitle,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
+								   MaxWidth="164" VerticalAlignment="Center" Margin="32,0,6,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />-->
 					</Grid>
+					<DataTemplate.Triggers>
+						<DataTrigger Binding="{Binding SubTitle}" Value="">
+							<Setter TargetName="subtitle" Property="Visibility" Value="Hidden"/>
+							<Setter TargetName="title" Property="VerticalAlignment" Value="Center"/>
+							<Setter TargetName="title" Property="FontSize" Value="12"/>
+							<Setter TargetName="title" Property="Margin" Value="32,0,6,0"/>
+						</DataTrigger>
+					</DataTemplate.Triggers>
+
 				</DataTemplate>
 			</uiL:PpsWindowPaneStrip.ItemTemplate>
 		</uiL:PpsWindowPaneStrip>

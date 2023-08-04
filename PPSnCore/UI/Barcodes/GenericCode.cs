@@ -15,7 +15,7 @@
 #endregion
 using System;
 
-namespace TecWare.PPSn.UI.Barcodes
+namespace TecWare.PPSn.Core.UI.Barcodes
 {
 	#region -- class GenericCode ------------------------------------------------------
 
@@ -24,7 +24,10 @@ namespace TecWare.PPSn.UI.Barcodes
 	{
 		private readonly string code;
 
-		internal GenericCode(string code)
+		/// <summary></summary>
+		/// <param name="code"></param>
+		/// <exception cref="ArgumentNullException"></exception>
+		public GenericCode(string code)
 		{
 			this.code = code ?? throw new ArgumentNullException(nameof(code));
 		} // ctor

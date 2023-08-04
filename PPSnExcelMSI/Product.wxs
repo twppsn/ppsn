@@ -1,27 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?include Version.wxi ?>
 <?define ProductUpgradeCode = "59d50ec7-25af-4684-9681-ea8e4c7c593f" ?>
+
+<?ifndef PerUser?>
+<?error "PerUser not set.?>
+<?endif?>
+
+<?if $(var.PerUser) = "true" ?>
+<?define ProductName = "!(loc.ProductNameUser)" ?>
+<?define PackageScope = "perUser" ?>
+<?define PackagePrivileges = "limited" ?>
+<?else?>
+<?define ProductName = "!(loc.ProductNameMachine)" ?>
+<?define PackageScope = "perMachine" ?>
+<?define PackagePrivileges = "elevated" ?>
+<?endif?>
+
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Product Id="$(var.ProductCode)"
-					 UpgradeCode="$(var.ProductUpgradeCode)"
-					 Name="!(loc.ProductName)"
-					 Language="!(loc.ProductLanguage)"
-					 Version="$(var.ProductVersion)"
-					 Manufacturer="!(loc.ProductCompany)" >
+			 UpgradeCode="$(var.ProductUpgradeCode)"
+			 Name="!(loc.ProductName)"
+			 Language="!(loc.ProductLanguage)"
+			 Version="$(var.ProductVersion)"
+			 Manufacturer="!(loc.ProductCompany)" >
 
-		<Package Description="!(loc.ProductName)"
-						 Comments="!(loc.PackageComments)"
-						 InstallerVersion="200" 
-						 Compressed="yes" 
-						 InstallScope="perUser"
-						 InstallPrivileges="limited" 
+		<Package Description="$(var.ProductName)"
+				 Comments="!(loc.PackageComments)"
+				 InstallerVersion="200" 
+				 Compressed="yes" 
+				 InstallScope="$(var.PackageScope)"
+				 InstallPrivileges="$(var.PackagePrivileges)" 
 		/>
 
 		<WixVariable Id="WixUILicenseRtf" Value="de\License.rtf" />
 
 		<Property Id="ARPHELPLINK" Value="!(loc.ArpHelpLink)" />
 		<Property Id="ARPURLINFOABOUT" Value="!(loc.ArpUrlInfoAbout)" />
+		<?if $(var.PerUser) = "true" ?>
 		<Property Id="ALLUSERS" Secure="yes"/>
+		<Property Id="ProductMode" Value="User" />
+		<?else?>
+		<Property Id="ProductMode" Value="Machine" />
+		<?endif?>
 
 		<Media Id="1" Cabinet="data.cab" EmbedCab="yes" />
 
@@ -35,6 +55,7 @@
 		<CustomAction Id="CA_BlockOlderVersionInstall" Error="!(loc.ConditionLaterVersion)" />
 		
 		<!-- Enforce users -->
+		<?if $(var.PerUser) = "true" ?>
 		<Condition Message="!(loc.ConditionAllUsers)">NOT ALLUSERS</Condition>
 
 		<Directory Id="TARGETDIR" Name="SourceDir">
@@ -44,6 +65,18 @@
 				</Directory>
 			</Directory>
 		</Directory>
+		
+		<?else?>
+		
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder" Name="Programs">
+				<Directory Id="ppsn" Name="ppsn">
+					<Directory Id="INSTALLFOLDER" Name="PPSnExcel" />
+				</Directory>
+			</Directory>
+		</Directory>
+		
+		<?endif?>
 
 		<Feature Id="PPSnExcel" Title="!(loc.ProductName)" Level="1">
 			<ComponentGroupRef Id="PPSnExcel" />

@@ -15,14 +15,11 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Media;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
@@ -151,7 +148,7 @@ namespace TecWare.PPSn.Controls
 					var drawRect = new Rect(part.Left + transform.OffsetX, part.Top + transform.OffsetY, part.Width, part.Height); // move rect to one page coordinates
 					drawRect.Scale(deviceScaleX, deviceScaleY);
 					using (var page = viewer.DocumentUnsafe.OpenPage(pageNumber))
-						newImage = page.Render(drawRect, transform.M11 * deviceScaleX, transform.M22 * deviceScaleY, 0);
+						newImage = page.Render(drawRect, transform.M11 * deviceScaleX, transform.M22 * deviceScaleY, 0, viewer.renderFlags | PdfPageRenderFlag.LCDText);
 
 					newImage.Freeze();
 				}
@@ -252,6 +249,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty VisiblePageAreaProperty = visiblePageAreaPropertyKey.DependencyProperty;
 		private static readonly DependencyPropertyKey currentPageAreaPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPageArea), typeof(Rect), typeof(PpsPdfViewer), new FrameworkPropertyMetadata(Rect.Empty));
 		public static readonly DependencyProperty CurrentPageAreaProperty = currentPageAreaPropertyKey.DependencyProperty;
+		public static readonly DependencyProperty ShowAnnotationsProperty = DependencyProperty.Register(nameof(ShowAnnotations), typeof(bool), typeof(PpsPdfViewer), new FrameworkPropertyMetadata(BooleanBox.True, FrameworkPropertyMetadataOptions.AffectsRender, new PropertyChangedCallback(OnShowAnnotationsChanged)));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private PdfReader pdf = null;
@@ -263,6 +261,7 @@ namespace TecWare.PPSn.Controls
 		private PageLayout[] pageSizes = null; // page layout in the virtual area, page units
 		private Point scaleFactor; // scale factor to screen to wpf screen coordinates (not true pixel)
 		private Point dpiScaleFactor; // scale factor to pixels
+		private PdfPageRenderFlag renderFlags = PdfPageRenderFlag.Annotations;
 
 		private ScrollViewer scrollViewer = null; // attached scroll viewer
 		private bool canVerticallyScroll = true;
@@ -772,6 +771,12 @@ EmptyResult:
 			}
 		} // func OnRender
 
+		private void ChangeRenderFlag(PdfPageRenderFlag flag, bool set)
+			=> renderFlags = set ? renderFlags | flag : renderFlags & ~flag;
+
+		private static void OnShowAnnotationsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsPdfViewer)d).ChangeRenderFlag(PdfPageRenderFlag.Annotations, BooleanBox.GetBool(e.NewValue));
+
 		private void InvalidateView(Size newRenderSize)
 		{
 			viewSize = ToVirtualUnits(newRenderSize);
@@ -851,7 +856,7 @@ EmptyResult:
 		/// <returns><c>true</c>, if operation was successful.</returns>
 		public bool GotoDestination(PdfDestination destination)
 		{
-			if (!IsValidPageNumber(destination.PageNumber))
+			if (destination == null || !IsValidPageNumber(destination.PageNumber))
 				return false;
 
 			ref var pageLayout = ref pageSizes[destination.PageNumber];
@@ -890,8 +895,8 @@ EmptyResult:
 		{
 			private readonly PpsPdfViewer viewer;
 
-			public PpsPdfViewerPrintDocument(PpsPdfViewer viewer)
-				: base((viewer ?? throw new ArgumentNullException(nameof(viewer))).pdf)
+			public PpsPdfViewerPrintDocument(PpsPdfViewer viewer, bool withAnnotations)
+				: base((viewer ?? throw new ArgumentNullException(nameof(viewer))).pdf, withAnnotations)
 			{
 				this.viewer = viewer;
 			} // ctor
@@ -900,9 +905,10 @@ EmptyResult:
 		} //class PpsPdfViewerPrintDocument
 
 		/// <summary>Create print document</summary>
+		/// <param name="withAnnotations">Print user annotations.</param>
 		/// <returns></returns>
-		public IPpsPrintDocument GetPrintDocument()
-			=> new PpsPdfViewerPrintDocument(this);
+		public IPpsPrintDocument GetPrintDocument(bool withAnnotations = true)
+			=> new PpsPdfViewerPrintDocument(this, withAnnotations);
 
 		#endregion
 
@@ -912,6 +918,8 @@ EmptyResult:
 		public bool IsValidDocument => pageSizes != null && pageSizes.Length > 0;
 		/// <summary>Set a pdf source to render.</summary>
 		public PdfReader Document { get => (PdfReader)GetValue(DocumentProperty); set => SetValue(DocumentProperty, value); }
+		/// <summary>Render annotations</summary>
+		public bool ShowAnnotations { get => BooleanBox.GetBool(GetValue(ShowAnnotationsProperty)); set => SetValue(ShowAnnotationsProperty, BooleanBox.GetObject(value)); }
 
 		internal PdfReader DocumentUnsafe => pdf;
 	} // class PpsPdfViewer
@@ -928,6 +936,7 @@ EmptyResult:
 		public static readonly DependencyProperty HasPageProperty = hasPagePropertyKey.DependencyProperty;
 		public static readonly DependencyProperty DocumentProperty = DependencyProperty.Register(nameof(Document), typeof(PdfReader), typeof(PpsPdfPageViewer), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnDocumentChanged)));
 		public static readonly DependencyProperty PageNumberProperty = DependencyProperty.Register(nameof(PageNumber), typeof(int), typeof(PpsPdfPageViewer), new FrameworkPropertyMetadata(-1, new PropertyChangedCallback(OnPageNumberChanged)));
+		public static readonly DependencyProperty ShowAnnotationsProperty = PpsPdfViewer.ShowAnnotationsProperty.AddOwner(typeof(PpsPdfPageViewer), new FrameworkPropertyMetadata(BooleanBox.True, FrameworkPropertyMetadataOptions.AffectsRender, new PropertyChangedCallback(OnShowAnnotationsChanged)));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		#region -- class BackgroundRenderer -------------------------------------------
@@ -1013,7 +1022,7 @@ EmptyResult:
 
 				// start render
 				using (var page = viewer.DocumentUnsafe.OpenPage(drawPageNumber))
-					newImage = page.Render((int)(drawWidth * viewer.dpiScaleFactor.X), (int)(drawHeight * viewer.dpiScaleFactor.Y), false);
+					newImage = page.Render((int)(drawWidth * viewer.dpiScaleFactor.X), (int)(drawHeight * viewer.dpiScaleFactor.Y), false, viewer.renderFlags | PdfPageRenderFlag.LCDText);
 
 				newImage.Freeze();
 
@@ -1056,6 +1065,7 @@ EmptyResult:
 
 		private double currentPageAspect = 1.0;
 		private Point dpiScaleFactor; // scale factor to pixels
+		private PdfPageRenderFlag renderFlags = PdfPageRenderFlag.Annotations;
 		private readonly BackgroundRenderer backgroundRenderer;
 
 		private PdfReader pdf;
@@ -1144,6 +1154,12 @@ EmptyResult:
 		private static void OnPageNumberChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsPdfPageViewer)d).InvalidPage();
 
+		private void ChangeRenderFlag(PdfPageRenderFlag flag, bool set)
+			=> renderFlags = set ? renderFlags | flag : renderFlags & ~flag;
+
+		private static void OnShowAnnotationsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsPdfPageViewer)d).ChangeRenderFlag(PdfPageRenderFlag.Annotations, BooleanBox.GetBool(e.NewValue));
+
 		/// <summary>Pdf document.</summary>
 		public PdfReader Document { get => (PdfReader)GetValue(DocumentProperty); set => SetValue(DocumentProperty, value); }
 
@@ -1153,7 +1169,10 @@ EmptyResult:
 		public int PageNumber { get => (int)GetValue(PageNumberProperty); set => SetValue(PageNumberProperty, value); }
 
 		/// <summary>Has this control a page in view.</summary>
-		public bool HasPage { get => (bool)GetValue(HasPageProperty); private set => SetValue(hasPagePropertyKey, value); }
+		public bool HasPage { get => BooleanBox.GetBool(GetValue(HasPageProperty)); private set => SetValue(hasPagePropertyKey, BooleanBox.GetObject(value)); }
+
+		/// <summary>Render annotations</summary>
+		public bool ShowAnnotations { get => BooleanBox.GetBool(GetValue(ShowAnnotationsProperty)); set => SetValue(ShowAnnotationsProperty, BooleanBox.GetObject(value)); }
 	} // class PpsPdfPageViewer
 
 	#endregion

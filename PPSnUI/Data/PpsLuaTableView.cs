@@ -25,7 +25,7 @@ using TecWare.DE.Stuff;
 namespace TecWare.PPSn.Data
 {
 	/// <summary>Better bindable view for lua tables.</summary>
-	public class PpsLuaTableView : DynamicObject, INotifyPropertyChanged, INotifyCollectionChanged, IList
+	public class PpsLuaTableView : DynamicObject, IPropertyReadOnlyDictionary, INotifyPropertyChanged, INotifyCollectionChanged, IList
 	{
 		/// <summary>Notify</summary>
 		public event PropertyChangedEventHandler PropertyChanged { add => table.PropertyChanged += value; remove => table.PropertyChanged -= value; }
@@ -73,13 +73,13 @@ namespace TecWare.PPSn.Data
 		} // func GetType
 
 		private object GetTypedValue(object v, Type type)
-			=> Procs.ChangeType(v, type);
+			=> v == null ? null : Procs.ChangeType(v, type);
 
 		private bool TryGetType(string name, out Type type, out LuaTable childMetaTable)
 		{
 			if (metaTable != null)
 			{
-				var v = metaTable.GetMemberValue(name, rawGet: true);
+				var v = metaTable.GetMemberValue(name, ignoreCase: true, rawGet: true);
 				if (v is LuaTable t)
 				{
 					type = typeof(LuaTable);
@@ -90,7 +90,13 @@ namespace TecWare.PPSn.Data
 				{
 					type = GetType(v);
 					childMetaTable = null;
-					return true;
+					if (type == null)
+					{
+						type = typeof(object);
+						return false;
+					}
+					else
+						return true;
 				}
 			}
 			type = typeof(object);
@@ -133,7 +139,7 @@ namespace TecWare.PPSn.Data
 
 		private object GetMemberValue(string name)
 		{
-			var v = table.GetMemberValue(name);
+			var v = table.GetMemberValue(name, ignoreCase: true);
 			if (TryGetType(name, out var type, out var childMetaTable))
 			{
 				return type == typeof(LuaTable)
@@ -162,6 +168,16 @@ namespace TecWare.PPSn.Data
 			else
 				return false;
 		} // proc TrySetMemberValue
+
+		#endregion
+
+		#region -- IPropertyReadOnlyDictionary ----------------------------------------
+
+		bool IPropertyReadOnlyDictionary.TryGetProperty(string name, out object value)
+		{
+			value = GetMemberValue(name);
+			return true;
+		} // IPropertyReadOnlyDictionary.TryGetProperty
 
 		#endregion
 
@@ -248,5 +264,8 @@ namespace TecWare.PPSn.Data
 		object IList.this[int index] { get => GetIndexedValue(index); set => throw new NotSupportedException(); }
 
 		#endregion
+
+		/// <summary>Access row table.</summary>
+		public LuaTable RawTable => table;
 	} // class PpsLuaTableView
 }

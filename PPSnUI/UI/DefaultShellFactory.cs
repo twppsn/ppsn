@@ -21,6 +21,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,6 +40,7 @@ namespace TecWare.PPSn.UI
 	{
 		private const string infoFileId = "info.xml";
 
+		private readonly bool perMachine;
 		private readonly string name;
 		private string displayName;
 		private string uriQuery;
@@ -50,13 +53,18 @@ namespace TecWare.PPSn.UI
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public FileShellInfo(string name)
+		public FileShellInfo(string name, bool perMachine)
 		{
 			this.name = name;
 
-			localPath = new DirectoryInfo(Path.GetFullPath(Path.Combine(FileShellFactory.LocalEnvironmentsPath, name)));
+			localPath = new DirectoryInfo(Path.GetFullPath(Path.Combine(perMachine ? FileShellFactory.CommonEnvironmentsPath : FileShellFactory.LocalEnvironmentsPath, name)));
 			if (!localPath.Exists)
+			{
 				localPath.Create();
+				localPath.Refresh();
+				if (perMachine)
+					FileShellFactory.SetAllUserAcl(localPath);
+			}
 
 			infoFile = new FileInfo(Path.Combine(localPath.FullName, infoFileId));
 
@@ -135,6 +143,9 @@ namespace TecWare.PPSn.UI
 			return settings;
 		} // proc LoadSettingsAsync
 
+		public void UpdateLastUsed()
+			=> infoFile.LastAccessTime = DateTime.Now;
+
 		public bool TryGetProperty(string name, out object value)
 		{
 			value = query.Get(name);
@@ -155,12 +166,16 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Uri
 
+		public DateTime LastUsed => infoFile.LastAccessTime;
+
 		public string FullUri => uri.ToString() + "?" + query;
 		public string Query => uriQuery;
 
 		public Version Version { get => version; set => Set(ref version, value, nameof(Version)); }
 		public DirectoryInfo LocalPath => localPath;
 		public FileInfo SettingsInfo => infoFile;
+
+		public bool PerMachine => perMachine;
 
 		/// <summary></summary>
 		/// <param name="a"></param>
@@ -923,15 +938,17 @@ namespace TecWare.PPSn.UI
 	internal sealed class FileShellFactory : IPpsShellFactory
 	{
 		private static readonly string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
+		private static readonly string commonEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ppsn", "env");
 
 		/// <summary>Create a new shell information.</summary>
 		/// <param name="instanceName"></param>
 		/// <param name="displayName"></param>
 		/// <param name="uri"></param>
+		/// <param name="perMachine"></param>
 		/// <returns></returns>
-		public IPpsShellInfo CreateNew(string instanceName, string displayName, Uri uri)
+		public IPpsShellInfo CreateNew(string instanceName, string displayName, Uri uri, bool? perMachine = null)
 		{
-			var shellInfo = new FileShellInfo(instanceName)
+			var shellInfo = new FileShellInfo(instanceName, perMachine ?? PpsShell.GetService<IPpsShellApplication>(true).InstalledVersion.PerMachine)
 			{
 				DisplayName = displayName,
 				Uri = uri
@@ -940,17 +957,17 @@ namespace TecWare.PPSn.UI
 			return shellInfo;
 		} // func CreateEnvironment
 
-		public IEnumerator<IPpsShellInfo> GetEnumerator()
+		private IEnumerable<IPpsShellInfo> GetEnumerator(bool perMachine)
 		{
-			var localEnvironmentsDirectory = new DirectoryInfo(localEnvironmentsPath);
-			if (localEnvironmentsDirectory.Exists)
+			var environmentsDirectory = new DirectoryInfo(perMachine ? commonEnvironmentsPath : localEnvironmentsPath);
+			if (environmentsDirectory.Exists)
 			{
-				foreach (var cur in localEnvironmentsDirectory.EnumerateDirectories())
+				foreach (var cur in environmentsDirectory.EnumerateDirectories())
 				{
 					var localShell = (FileShellInfo)null;
 					try
 					{
-						localShell = new FileShellInfo(cur.Name);
+						localShell = new FileShellInfo(cur.Name, perMachine);
 					}
 					catch (Exception e)
 					{
@@ -962,11 +979,81 @@ namespace TecWare.PPSn.UI
 			}
 		} // func GetEnumerator
 
+		public IEnumerator<IPpsShellInfo> GetEnumerator()
+			=> GetEnumerator(true).Concat(GetEnumerator(false)).GetEnumerator();
+
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
+
+		public static void RestrictControlToUser(DirectoryInfo path, string userName)
+		{
+#if NET48
+			var userId = WindowsIdentity.GetCurrent().Name;
+			if (String.Compare(userId, userName, StringComparison.OrdinalIgnoreCase) != 0)
+				return;
+
+			var dis = path.GetAccessControl();
+
+			// remove all access rules
+			var rules = dis.GetAccessRules(true, false, typeof(NTAccount)).OfType<FileSystemAccessRule>().ToArray();
+			for (var i = 0; i < rules.Length; i++)
+			{
+				var principal = new WindowsPrincipal(new WindowsIdentity(rules[i].IdentityReference.Value));
+				if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
+					dis.RemoveAccessRule(rules[i]);
+			}
+
+			// add new rule for user
+			dis.AddAccessRule(new FileSystemAccessRule(userId,
+				FileSystemRights.FullControl,
+				InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+				PropagationFlags.None,
+				AccessControlType.Allow
+			));
+
+			path.SetAccessControl(dis);
+
+#else
+			throw new NotSupportedException();
+#endif
+		} // proc RestrictControlToUser
+
+		public static void SetAllUserAcl(DirectoryInfo path)
+		{
+#if NET48
+			// get built in "all users"
+			var builtInUsersId = new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null);
+			var usersAccountName = ((NTAccount)builtInUsersId.Translate(typeof(NTAccount))).Value;
+
+			// get rule
+			var dis = path.GetAccessControl();
+			var rule = dis.GetAccessRules(true, true, typeof(SecurityIdentifier)).OfType<FileSystemAccessRule>().FirstOrDefault(c => c.IdentityReference == builtInUsersId);
+
+			var ruleNew = new FileSystemAccessRule(
+				usersAccountName,
+				FileSystemRights.FullControl,
+				InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+				PropagationFlags.None,
+				AccessControlType.Allow
+			);
+			if (rule == null)
+				dis.AddAccessRule(ruleNew);
+			else
+			{
+				if (rule.FileSystemRights != ruleNew.FileSystemRights || rule.InheritanceFlags != ruleNew.InheritanceFlags)
+					dis.ModifyAccessRule(AccessControlModification.Add, ruleNew, out _);
+			}
+			path.SetAccessControl(dis);
+#else
+			throw new NotSupportedException();
+#endif
+		} // proc SetAllUserAcl
+
+
 		/// <summary>Returns the local environment path</summary>
 		public static string LocalEnvironmentsPath => localEnvironmentsPath;
+		public static string CommonEnvironmentsPath => commonEnvironmentsPath;
 	} // class FileShellFactory
 
 	#endregion

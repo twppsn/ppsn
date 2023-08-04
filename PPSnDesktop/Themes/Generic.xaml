@@ -442,8 +442,8 @@
                                           Grid.Column="1"
                                           Command="{x:Static main:PpsMainWindow.ClosePaneCommand}"
                                           CommandParameter="{TemplateBinding Content}"
-                                          Width="29"
-                                          Height="29"
+                                          Width="28"
+                                          Height="28"
                                           Margin="0,0,3,0"
                                           Visibility="Hidden"
                                           Foreground="{DynamicResource PPSnWindowForegroundBrush}"
@@ -527,13 +527,13 @@
                 <ControlTemplate TargetType="uic:PpsBarcodeState">
                     <Grid Background="Transparent" ToolTip="{Binding LastSeenDevice}">
                         <ui:PpsGeometryImage x:Name="image"
-                                             Geometry="{StaticResource {x:Static ui:PpsTheme.ScannerInActivePathGeometry}}"
+                                             Geometry="{StaticResource {x:Static ui:PpsTheme.BarcodeScannerNoPathGeometry}}"
                                              Foreground="{TemplateBinding Foreground}"
                                              Margin="{TemplateBinding Padding}" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <DataTrigger Binding="{Binding IsActive}" Value="True">
-                            <Setter TargetName="image" Property="Geometry" Value="{StaticResource {x:Static ui:PpsTheme.ScannerActivePathGeometry}}" />
+                            <Setter TargetName="image" Property="Geometry" Value="{StaticResource {x:Static ui:PpsTheme.BarcodeScannerPathGeometry}}" />
                         </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

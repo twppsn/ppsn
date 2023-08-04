@@ -14,10 +14,30 @@ namespace TecWare.PPSn.UI
 	]
 	internal class PpsCaptureService : IPpsCaptureService
 	{
-		public Task<object> CaputureAsync(object owner, PpsCaptureDevice device)
+		public Task<object> CaptureAsync(object owner, PpsCaptureDevice device, IPpsCaptureTarget target)
 		{
-			return Task.FromResult<object>(PpsCameraDialog.TakePicture(owner as DependencyObject));
+			switch (device)
+			{
+				case PpsCaptureDevice.Camera:
+					return Task.FromResult(TakePicture(owner, target));
+				default:
+					throw new NotSupportedException();
+			}
 		} // func CaputureAsync
+
+		private object TakePicture(object owner, IPpsCaptureTarget target)
+		{
+			var result = PpsCameraDialog.TakePicture(owner as DependencyObject, target);
+			if (result == null)
+				return null;
+			else if (target != null)
+				return target;
+			else
+				return result;
+		} // func TakePicture
+
+		public bool IsSupported(PpsCaptureDevice device)
+			=> device == PpsCaptureDevice.Camera;
 	} // PpsCaptureService
 
 	#endregion

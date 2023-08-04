@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -249,6 +250,48 @@ namespace TecWare.PPSn.UI
 			=> String.Compare(GetShellEntry(), typeof(App).Assembly.Location, true) == 0;
 
 		public bool IsShellMode => GetIsShellMode();
+
+		#endregion
+
+		#region -- Execute ------------------------------------------------------------
+
+		private static void ExecuteCore(string command, string arguments, bool runasAdministrator = false)
+		{
+			var psi = new ProcessStartInfo
+			{
+				FileName = command,
+				Arguments = arguments,
+				WindowStyle = ProcessWindowStyle.Maximized,
+				WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+			};
+
+			if (runasAdministrator && !PpsWpfShell.IsAdministrator())
+				psi.Verb = "runas";
+
+			Process.Start(psi)?.Dispose();
+		} // proc ExecuteCore
+
+		private static string FindRemoteDebugger()
+		{
+			var fi = new FileInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio 16.0", "Common7", "IDE", "Remote Debugger", "x64", "msvsmon.exe"));
+			return fi.Exists ? fi.FullName : null;
+		} // funcFindRemoteDebugger
+
+		public static void Execute(string command, string args = null, bool runasAdministrator = false)
+		{
+			if (command == null)
+				throw new ArgumentNullException(nameof(command));
+			else if (command == "cmd")
+				command = "cmd.exe";
+			else if (command == "calc")
+				command = "calc.exe";
+			else if (command == "rdbg")
+				command = FindRemoteDebugger();
+			else if (command == "settings")
+				command = "ms-settings:";
+
+			ExecuteCore(command, args, runasAdministrator);
+		} // proc Execute
 
 		#endregion
 

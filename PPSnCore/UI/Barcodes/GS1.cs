@@ -13,11 +13,10 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-
 using System;
 using System.Text;
 
-namespace TecWare.PPSn.UI.Barcodes
+namespace TecWare.PPSn.Core.UI.Barcodes
 {
 	#region -- enum GS1CodeType -------------------------------------------------------
 

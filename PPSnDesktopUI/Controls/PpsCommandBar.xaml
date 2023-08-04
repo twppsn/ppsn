@@ -50,7 +50,6 @@ specific language governing permissions and limitations under the Licence.
 							   Margin="12,0,0,0"
 							   DisplayMode="Transparent" />
 			</DataTemplate>
-			
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUISplitCommandButton}}">
 				<pps:PpsSplitButton Command="{Binding Command}"
 									CommandParameter="{Binding CommandParameter}"
@@ -62,6 +61,10 @@ specific language governing permissions and limitations under the Licence.
 									GeometryName="{Binding Image}"
 									Margin="12,0,0,0"
 									DisplayMode="Transparent" />
+			</DataTemplate>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUICommandPanel}}">
+				<ContentControl Content="{Binding Content}" ContentTemplate="{Binding ContentTemplate}" ContentTemplateSelector="{Binding ContentTemplateSelector}" ContentStringFormat="{Binding ContentStringFormat}"
+							   Margin="12,0,0,0" />
 			</DataTemplate>
 
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Null}}">
@@ -77,6 +80,10 @@ specific language governing permissions and limitations under the Licence.
 							   Height="27"
 							   Margin="12,0,0,0"
 							   DisplayMode="Transparent"/>
+			</DataTemplate>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Type uiO:PpsUICommandPanel}}">
+				<ContentControl Content="{Binding Content}" ContentTemplate="{Binding ContentTemplate}" ContentTemplateSelector="{Binding ContentTemplateSelector}" ContentStringFormat="{Binding ContentStringFormat}"
+							   Margin="12,0,0,0" />
 			</DataTemplate>
 
 
@@ -116,6 +123,10 @@ specific language governing permissions and limitations under the Licence.
 									Focusable="{Binding Focusable}" />
 
 			</DataTemplate>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Mixed,{x:Type uiO:PpsUICommandPanel}}">
+				<ContentControl Content="{Binding Content}" ContentTemplate="{Binding ContentTemplate}" ContentTemplateSelector="{Binding ContentTemplateSelector}" ContentStringFormat="{Binding ContentStringFormat}" />
+			</DataTemplate>
+
 		</Style.Resources>
 	</Style>
 </ResourceDictionary>

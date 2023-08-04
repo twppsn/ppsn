@@ -156,41 +156,25 @@ namespace TecWare.PPSn.UI
 
 			#endregion
 
-			#region -- Exec -----------------------------------------------------------
+			#region -- Open, Exec -----------------------------------------------------
 
-			private void ExecCore(string command, string arguments, bool runasAdministrator = false)
+			[LuaMember]
+			public void Open(string link)
+				=> PpsWebView.LinkCommand.Execute(new PpsWebViewLink(luaShell.Shell.Http.CreateFullUri(link)), pane);
+
+			[LuaMember]
+			public void TakePicture(string path = null)
 			{
-				var psi = new ProcessStartInfo
-				{
-					FileName = command,
-					Arguments = arguments,
-					WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-				};
-
-				if (runasAdministrator && !PpsWpfShell.IsAdministrator())
-					psi.Verb = "runas";
-
-				Process.Start(psi)?.Dispose();
-			} // proc Exec
-
-			private string FindRemoteDebugger()
-			{
-				var fi = new FileInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio 16.0", "Common7", "IDE", "Remote Debugger", "x64", "msvsmon.exe"));
-				return fi.Exists ? fi.FullName : null;
-			} // funcFindRemoteDebugger
+				var captureService = pane.GetControlService<IPpsCaptureService>(true);
+				LuaRunTask(() => captureService.CaptureAsync(pane, PpsCaptureDevice.Camera, path == null ? null : new PpsCapturePathTarget(path, "test")), "Geschlossen.");
+			} // proc TakePicture
 
 			[LuaMember]
 			public void Exec(string command, string pin)
 			{
 				if (command == null)
-					command = "cmd.exe";
-				else if (command == "rdbg")
-					command = FindRemoteDebugger();
-				else if (command == "settings")
-					command = "ms-settings:";
-
-				if (command != null)
-					PinProtected(() => ExecCore(command, null), pin, command + " ausgeführt.");
+					command = "cmd";
+				PinProtected(() => PpsDpcService.Execute(command, null), pin, command + " ausgeführt.");
 			} // proc Exec
 
 			#endregion
@@ -213,8 +197,8 @@ namespace TecWare.PPSn.UI
 			{
 				tw.Write('"');
 				tw.Write(key);
-					tw.Write('"');
-					tw.Write('=');
+				tw.Write('"');
+				tw.Write('=');
 
 				if (value == null)
 					tw.Write('-');
@@ -252,12 +236,12 @@ namespace TecWare.PPSn.UI
 					sw.WriteLine();
 					sw.WriteLine(@"[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon]");
 					WriteRegistryValue(sw, "AutoAdminLogon", password != null ? "1" : "0");
-					WriteRegistryValue(sw, "DefaultDomain", domainName);
-					WriteRegistryValue(sw, "DefaultUserName", String.IsNullOrEmpty(domainName) ? userName : domainName + "\\\\" + userName);
+					WriteRegistryValue(sw, "DefaultDomain", String.Empty);
+					WriteRegistryValue(sw, "DefaultUserName", String.IsNullOrEmpty(domainName) ? userName : domainName + "\\" + userName);
 					WriteRegistryValue(sw, "DefaultPassword", password);
 				}
 
-				ExecCore(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName, true);
+				PpsDpcService.Execute(Path.Combine(Environment.SystemDirectory, "regedit.exe"), fi.FullName, true);
 			} // proc ConfigAutoLogon
 
 			[LuaMember]
@@ -360,7 +344,7 @@ namespace TecWare.PPSn.UI
 
 			public string AppName => shellApplication?.Name;
 			public Version AssemblyVersion => shellApplication?.AssenblyVersion;
-			public Version InstalledVersion => shellApplication?.InstalledVersion;
+			public PpsShellApplicationVersion InstalledVersion => shellApplication?.InstalledVersion ?? PpsShellApplicationVersion.Default;
 
 			public IReadOnlyList<AppAssemblyInfo> AssemblyInfo => assemblyInfo;
 		} // class AppInfoModel
@@ -562,8 +546,17 @@ namespace TecWare.PPSn.UI
 		private void InitResources()
 		{
 			var resourceList = new List<PpsTraceResourceInfoItem>();
+
+			// load theme images
+			GetAllResources(new ResourceDictionary { Source = new Uri("pack://application:,,,/PPSn.Desktop.UI;component/themes/images.xaml", UriKind.Absolute) }, resourceList);
+
+			// load application resources
 			GetAllResources(wpfResources.Resources, resourceList);
+			
+			// source resources
 			resourceList.Sort();
+
+			// create resource view
 			var resourceView = new PpsTypedListCollectionView<PpsTraceResourceInfoItem>(resourceList);
 			resourceView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PpsTraceResourceInfoItem.SourceName), null, StringComparison.OrdinalIgnoreCase));
 
@@ -720,7 +713,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class AppAssemblyInfo ----------------------------------------------
+	#region -- class AppAssemblyInfo --------------------------------------------------
 
 	internal sealed class AppAssemblyInfo
 	{
