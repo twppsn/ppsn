@@ -1196,6 +1196,235 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- class ViewTableWriter ----------------------------------------------
+
+		private abstract class ViewTableWriter : ViewWriter
+		{
+			private readonly TextWriter tw;
+			private readonly bool useIndexColumns;
+			private readonly bool prettyFormatting;
+			private readonly string indent;
+
+			private string[] columnMapping = null;
+
+			protected ViewTableWriter(TextWriter tw, LuaTable settings)
+			{
+				this.tw = tw ?? throw new ArgumentNullException(nameof(tw));
+				
+				useIndexColumns = settings.GetOptionalValue("indexed", false);
+				prettyFormatting = settings.GetOptionalValue("pretty", false);
+				indent = settings.GetOptionalValue("indent", "\t");
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				try
+				{
+					tw.Dispose();
+				}
+				finally
+				{
+					base.Dispose(disposing);
+				}
+			} // proc Dispose
+
+			private void WriteColumns(LuaTable descriptorTable, IDataColumns columns, string attributeSelector)
+			{
+				// emit column description
+				columnMapping = new string[columns.Columns.Count];
+
+				for (var i = 0; i < columnMapping.Length; i++)
+				{
+					var columnAttributes = new LuaTable();
+
+					var nativeColumnName = columns.Columns[i].Name;
+					var columnInfo = columns.Columns[i]; // get the field description for the native column
+					var fieldType = columnInfo.DataType;
+
+					if (useIndexColumns)
+					{
+						columnMapping[i] = "c" + i.ToString();
+						columnAttributes["field"] = nativeColumnName;
+					}
+					else
+						columnMapping[i] = nativeColumnName;
+
+					columnAttributes["index"] = i;
+
+					if (columnInfo is IPpsColumnDescription fieldDefinition)
+					{
+						columnAttributes["type"] = LuaType.GetType(fieldType).AliasOrFullName;
+
+						foreach (var c in fieldDefinition.GetAttributes(attributeSelector))
+							columnAttributes[c.Name] = c.Value;
+					}
+					else
+						columnAttributes["type"] = LuaType.GetType(fieldType).AliasOrFullName;
+
+					descriptorTable[columnMapping[i]] = columnAttributes;
+				}
+			} // proc WriteColumns
+
+			protected sealed override void BeginCore(IDataColumns columns, string attributeSelector, int rowCount)
+			{
+				var descriptorTable = new LuaTable();
+				if (rowCount >= 0 && rowCount < Int32.MaxValue)
+					descriptorTable["count"] = rowCount;
+
+				if (columns != null)
+					WriteColumns(descriptorTable, columns, attributeSelector);
+
+				WriteBeginCore(tw, descriptorTable);
+			} // proc BeginCore
+
+			protected sealed override void WriteRowCore(IDataRow current)
+			{
+				var t = new LuaTable();
+
+				for (var i = 0; i < columnMapping.Length; i++)
+					t[columnMapping[i]] = current[i];
+
+				WriteRowCore(tw, t);
+			} // proc WriteRowCore
+
+			protected sealed override void EndCore()
+				=> WriteEndCore(tw);
+
+			protected abstract void WriteBeginCore(TextWriter tw, LuaTable descriptorTable);
+
+			protected abstract void WriteRowCore(TextWriter tw, LuaTable t);
+
+			protected abstract void WriteEndCore(TextWriter tw);
+
+			public bool PrettyFormatting => prettyFormatting;
+			public string PrettyIndent => indent;
+		} // class ViewTableWriter
+
+		#endregion
+
+		#region -- class ViewLsonWriter ------------------------------------------------
+
+		private sealed class ViewLsonWriter : ViewTableWriter
+		{
+			private bool isFirst = false;
+
+			public ViewLsonWriter(TextWriter tw, LuaTable settings) 
+				: base(tw, settings)
+			{
+			} // ctor
+
+			protected override void WriteBeginCore(TextWriter tw, LuaTable descriptorTable)
+			{
+				var lsonText = descriptorTable.ToLson(prettyFormatting: PrettyFormatting, indent: PrettyIndent);
+				tw.Write(lsonText.Substring(0, lsonText.Length - 1).TrimEnd());
+
+				// write rows
+				isFirst = lsonText.Length == 2; // empty object
+			} // proc WriteBeginCore
+
+			protected override void WriteRowCore(TextWriter tw, LuaTable t)
+			{
+				if (isFirst)
+					isFirst = false;
+				else
+					tw.Write(",");
+				
+				if (PrettyFormatting)
+				{
+					tw.WriteLine();
+					tw.Write(PrettyIndent);
+				}
+
+				ToLsonCore(t, tw, prettyFormatting: PrettyFormatting, indent: PrettyIndent, currentLevel: 2);
+			} // proc WriteRowCore
+
+			protected override void WriteEndCore(TextWriter tw)
+			{
+				if (PrettyFormatting)
+				{
+					tw.WriteLine();
+					tw.WriteLine("}");
+				}
+				else
+					tw.Write("}");
+			} // proc WriteEndCore
+		} // class ViewLsonWriter
+
+		#endregion
+
+		#region -- class ViewJsonWriter -----------------------------------------------
+
+		private sealed class ViewJsonWriter : ViewTableWriter
+		{
+			private bool isFirst = true;
+
+			public ViewJsonWriter(TextWriter tw, LuaTable settings) 
+				: base(tw, settings)
+			{
+			} // ctor
+
+			protected override void WriteBeginCore(TextWriter tw, LuaTable descriptorTable)
+			{
+				var jsonText = descriptorTable.ToJson(prettyFormatting: PrettyFormatting, indent: PrettyIndent);
+
+				// check object layout
+				if (jsonText == null || jsonText.Length == 0 || jsonText[jsonText.Length - 1] != '}')
+					throw new InvalidOperationException("Json format error.");
+
+				tw.Write(jsonText.Substring(0, jsonText.Length - 1).TrimEnd());
+				if (jsonText.Length > 2) // empty object
+					tw.Write(',');
+
+				// row array
+				if (PrettyFormatting)
+				{
+					tw.WriteLine();
+					tw.Write(PrettyIndent);
+				}
+
+				tw.Write("\"rows\": [");
+			} // proc WriteBeginCore
+
+			protected override void WriteRowCore(TextWriter tw, LuaTable t)
+			{
+				if (isFirst)
+					isFirst = false;
+				else
+					tw.Write(",");
+
+				if (PrettyFormatting)
+				{
+					var doubleIndent = PrettyIndent + PrettyIndent;
+					var json = t.ToJson(true, PrettyIndent);
+					var jsonChars = json.ToCharArray();
+
+					foreach (var (startAt, len) in json.SplitNewLinesTokens())
+					{
+						tw.WriteLine();
+						tw.Write(doubleIndent);
+						tw.Write(jsonChars, startAt, len);
+					}
+				}
+				else
+					ToJson(t, tw, prettyFormatting: false);
+			} // proc WriteRowCore
+
+			protected override void WriteEndCore(TextWriter tw)
+			{
+				if(PrettyFormatting)
+				{
+					tw.WriteLine();
+					tw.Write(PrettyIndent);
+					tw.WriteLine("]");
+					tw.WriteLine("}");
+				}
+				else
+				tw.WriteLine("]}");
+			} // proc WriteEndCore
+		} // class ViewJsonWriter
+
+		#endregion
+
 		private PpsSqlExDataSource mainDataSource;
 		private long viewsVersion;
 		private readonly Dictionary<string, PpsFieldDescription> fieldDescription = new Dictionary<string, PpsFieldDescription>(StringComparer.OrdinalIgnoreCase);
@@ -1301,7 +1530,7 @@ namespace TecWare.PPSn.Server
 
 		private (PpsDataSource source, XElement xConfig) GetSingleConfigurationElement(XName cls, string sourceName, string name)
 		{
-			foreach(var xRegister in Config.Elements(xnRegister))
+			foreach (var xRegister in Config.Elements(xnRegister))
 			{
 				// get source name
 				var currentSourceName = xRegister.GetAttribute("source", null);
@@ -1311,7 +1540,7 @@ namespace TecWare.PPSn.Server
 				// find named element
 				foreach (var xConfig in xRegister.Elements(cls))
 				{
-					if (String.Compare(xConfig.GetAttribute("name",String.Empty), name, StringComparison.OrdinalIgnoreCase) == 0)
+					if (String.Compare(xConfig.GetAttribute("name", String.Empty), name, StringComparison.OrdinalIgnoreCase) == 0)
 						return (GetDataSource(currentSourceName), xConfig);
 				}
 			}
@@ -1544,11 +1773,57 @@ namespace TecWare.PPSn.Server
 			}
 		} // func ViewGetCreateWriterXml
 
+		private static bool TryViewGetCreateWriterLson(object lson, LuaTable settings, out ViewWriter writer)
+		{
+			switch (lson)
+			{
+				case string file:
+					writer = new ViewLsonWriter(new StreamWriter(file), settings ?? new LuaTable());
+					return true;
+				case Stream stream:
+					writer = new ViewLsonWriter(new StreamWriter(stream), settings ?? new LuaTable());
+					return true;
+				case TextWriter tw:
+					writer = new ViewLsonWriter(tw, settings ?? new LuaTable());
+					return true;
+				case LuaTable table:
+					return TryViewGetCreateWriterLson(table.GetMemberValue("stream") ?? table.GetMemberValue("file"), table, out writer);
+				default:
+					writer = null;
+					return false;
+			}
+		} // func TryViewGetCreateWriterLson
+
+		private static bool TryViewGetCreateWriterJson(object json, LuaTable settings, out ViewWriter writer)
+		{
+			switch (json)
+			{
+				case string file:
+					writer = new ViewJsonWriter(new StreamWriter(file), settings ?? new LuaTable());
+					return true;
+				case Stream stream:
+					writer = new ViewJsonWriter(new StreamWriter(stream), settings ?? new LuaTable());
+					return true;
+				case TextWriter tw:
+					writer = new ViewJsonWriter(tw, settings ?? new LuaTable());
+					return true;
+				case LuaTable table:
+					return TryViewGetCreateWriterJson(table.GetMemberValue("stream") ?? table.GetMemberValue("file"), table, out writer);
+				default:
+					writer = null;
+					return false;
+			}
+		} // func TryViewGetCreateWriterJson
+
 		private static ViewWriter ViewGetCreateWriter(LuaTable table)
 		{
 			if (TryViewGetCreateWriterCsv(table.GetMemberValue("csv"), out var writer))
 				return writer;
 			else if (TryViewGetCreateWriterXml(table.GetMemberValue("xml"), null, out writer))
+				return writer;
+			else if (TryViewGetCreateWriterLson(table.GetMemberValue("lson"), null, out writer))
+				return writer;
+			else if (TryViewGetCreateWriterJson(table.GetMemberValue("json"), null, out writer))
 				return writer;
 
 			throw new ArgumentNullException("output", "No output is defined.");
@@ -1558,6 +1833,12 @@ namespace TecWare.PPSn.Server
 		{
 			if (r.AcceptType(MimeTypes.Text.Plain))
 				return new ViewCsvWriter(r.GetOutputTextWriter(MimeTypes.Text.Plain), null);
+			else if (r.AcceptType(MimeTypes.Text.Xml))
+				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Xml));
+			else if (r.AcceptType(MimeTypes.Text.Json))
+				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Json));
+			else if (r.AcceptType(MimeTypes.Text.Lson))
+				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Lson));
 			else
 				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Xml));
 		} // func ViewGetCreateWriter
@@ -1599,6 +1880,18 @@ namespace TecWare.PPSn.Server
 					throw new ArgumentNullException(nameof(selector), "No selector found.");
 			}
 		} // proc Export
+
+		/// <summary>Export a view for an selector.</summary>
+		/// <param name="r"></param>
+		/// <param name="rows"></param>
+		/// <param name="startAt"></param>
+		/// <param name="count"></param>
+		/// <param name="attributeSelector"></param>
+		public void ExportView(IDEWebRequestScope r, IEnumerable<IDataRow> rows, int startAt, int count, string attributeSelector = null)
+		{
+			using (var viewWriter = ViewGetCreateWriter(r))
+				ExportViewCore(viewWriter, rows, startAt, count, r, attributeSelector);
+		} // proc ExportView
 
 		private void ExportViewCore(ViewWriter viewWriter, IEnumerable<IDataRow> selector, int startAt, int count, IDECommonScope scope = null, string attributeSelector = null)
 		{
@@ -1710,7 +2003,7 @@ namespace TecWare.PPSn.Server
 		private Dictionary<string, long> ParseSyncGetParameters(IDEWebRequestScope r, out bool enforceCDC)
 		{
 			var syncIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-		
+
 			if (r.HasInputData) // complex sync structure
 			{
 				using (var xml = XmlReader.Create(r.GetInputTextReader(), Procs.XmlReaderSettings))
@@ -1754,7 +2047,7 @@ namespace TecWare.PPSn.Server
 			{
 				// get time stamp of last synchronization
 				var lastSyncTimeStamp = r.GetProperty("_ls", -1L);
-				if(lastSyncTimeStamp > 0)
+				if (lastSyncTimeStamp > 0)
 					syncIds[String.Empty] = lastSyncTimeStamp;
 
 				enforceCDC = false;
@@ -1960,7 +2253,7 @@ namespace TecWare.PPSn.Server
 							// write sync state for the tables
 							foreach (var kv in syncIds)
 								ExecuteSyncAction(r, log, ref openElements, xml, globalLastSyncId, enforceCDC, sessions, kv.Key, kv.Value);
-							
+
 							// finish with sync stamp
 							xml.WriteStartElement("syncStamp");
 							xml.WriteValue(nextSyncStamp);
