@@ -379,7 +379,7 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey BarcodeActivePathGeometry = new PpsThemeKey("barcodeActive");
 		/// <summary>ScannerInActive geometry</summary>
 		public static readonly ResourceKey BarcodeInActivePathGeometry = new PpsThemeKey("barcodeInActive");
-		/// <summary>QuickNote geometry</summary>
+		/// <summary>QuickNote</summary>
 		public static readonly ResourceKey QuickNotePathGeometry = new PpsThemeKey("quickNote");
 
 		#endregion
