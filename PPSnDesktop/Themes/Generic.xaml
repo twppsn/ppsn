@@ -57,7 +57,7 @@
 							</Grid.RowDefinitions>
 							<Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource PPSnSeparatorBrush}" Background="{DynamicResource PPSnSideBarBackgroundBrush}"
 									Height="36" BorderThickness="0,0,0,1" Padding="0,0,0,1" >
-								<ui:PpsCommandBar Name="PART_CommandBar" BasicCommands="{TemplateBinding Commands}" Mode="Mixed" Margin="32,0,0,0" />
+								<ui:PpsCommandBar Name="PART_CommandBar" BasicCommands="{TemplateBinding Commands}" Mode="Mixed" Margin="24,0,0,0" />
 							</Border>
 							<ContentPresenter Grid.Row="1" x:Name="PART_Control" Content="{TemplateBinding Control}" />
 							<uic:PpsWindowPaneCharmBarControl Grid.Column="1" Grid.Row="1" x:Name="PART_CharmBar" Focusable="False"/>
@@ -475,6 +475,10 @@
 						</MultiTrigger>
 						<DataTrigger Binding="{Binding CurrentPane.IsDirty}" Value="True">
 							<Setter TargetName="dirtyText" Property="Visibility" Value="Visible" />
+						</DataTrigger>
+						<!--reduce unused space-->
+						<DataTrigger Binding="{Binding IsFixed}" Value="True">
+							<Setter TargetName="closeButton" Property="Width" Value="8" />
 						</DataTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
