@@ -107,7 +107,7 @@ namespace TecWare.PPSn.Data
 
 	public static class PpsDataInfo
 	{
-		#region-- class PpsGenericData ------------------------------------------------
+		#region -- class PpsGenericData ------------------------------------------------
 
 		private sealed class PpsGenericData : IPpsDataStream
 		{
@@ -124,6 +124,23 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class PpsFileData --------------------------------------------------
+
+		private sealed class PpsFileData : IPpsDataStream
+		{
+			private readonly string fileName;
+
+			public PpsFileData(string fileName)
+			{
+				this.fileName = fileName ?? throw new ArgumentNullException(nameof(fileName));
+			} // ctor
+
+			public Stream OpenStream(FileAccess access, long expectedLength = -1)
+				=> new FileStream(fileName, FileMode.Open);
+		} // class PpsFileData
+
+		#endregion
+
 		#region -- class PpsGenericDataObject -----------------------------------------
 
 		private sealed class PpsGenericDataObject : IPpsDataObject, IPpsDataInfo
@@ -133,14 +150,22 @@ namespace TecWare.PPSn.Data
 			private readonly string name;
 			private readonly string mimeType;
 			private readonly IPropertyReadOnlyDictionary properties;
-			private readonly PpsGenericData data;
+			private readonly IPpsDataStream data;
 
-			public PpsGenericDataObject(string name, string mimeType, object data, IPropertyReadOnlyDictionary properties)
+			public PpsGenericDataObject(string name, string mimeType, byte[] data, IPropertyReadOnlyDictionary properties)
 			{
 				this.name = name ?? "bytes.dat";
 				this.mimeType = mimeType ?? MimeTypes.Application.OctetStream;
 				this.properties = properties ?? PropertyDictionary.EmptyReadOnly;
 				this.data = new PpsGenericData((byte[])data);
+			} // ctor
+
+			public PpsGenericDataObject(string fileName, IPropertyReadOnlyDictionary properties)
+			{
+				this.name = Path.GetFileName(fileName);
+				this.mimeType = MimeTypeMapping.GetMimeTypeFromExtension(Path.GetExtension(fileName)) ?? MimeTypes.Application.OctetStream;
+				this.properties = properties ?? PropertyDictionary.EmptyReadOnly;
+				this.data = new PpsFileData(fileName);
 			} // ctor
 
 			public void Dispose()
@@ -178,6 +203,11 @@ namespace TecWare.PPSn.Data
 			objectTyp = t.GetOptionalValue<string>("ObjectTyp", null);
 			return objectTyp != null;
 		} // func TryUnpackObjectInfo
+
+		public static Task<IPpsDataInfo> ToPpsDataInfoAsync(string fileName)
+		{
+			return Task.FromResult<IPpsDataInfo>(new PpsGenericDataObject(fileName, PropertyDictionary.EmptyReadOnly));
+		} // func ToDataInfoAsync
 
 		public static async Task<IPpsDataInfo> ToPpsDataInfoAsync(this HttpResponseMessage http)
 		{

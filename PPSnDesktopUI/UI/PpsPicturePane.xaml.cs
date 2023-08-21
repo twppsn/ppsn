@@ -406,7 +406,11 @@ namespace TecWare.PPSn.UI
 		private async Task OpenPictureFromSourceAsync(Uri uri)
 		{
 			// todo: ObjectManager
-			if (Shell.Http.TryMakeRelative(uri, out var path))
+			if (uri.IsFile)
+			{
+				await OpenPictureAsync(await PpsDataInfo.ToPpsDataInfoAsync(uri.AbsolutePath));
+			}
+			else if (Shell.Http.TryMakeRelative(uri, out var path))
 			{
 				using (var http = await Shell.Http.GetResponseAsync(path))
 					await OpenPictureAsync(await PpsDataInfo.ToPpsDataInfoAsync(http));

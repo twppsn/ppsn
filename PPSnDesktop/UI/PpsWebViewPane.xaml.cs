@@ -48,7 +48,7 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		private static object GetUriArgument(LuaTable args)
-			=> args["uri"];
+			=> args["uri"] ?? args["Source"];
 
 		protected override PpsWindowPaneCompareResult CompareArguments(LuaTable args)
 		{

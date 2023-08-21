@@ -421,7 +421,7 @@ namespace TecWare.PPSn.Server
 			return true;
 		} // func ProcessSingleGeometryAsSvgAsync
 
-		private async Task<bool> ProcessSingleGeometryAsImageAsync(IDEWebRequestScope r, PpsGeometryInfo geometry, string mimeType, ImageFormat imageFormat )
+		private async Task<bool> ProcessSingleGeometryAsImageAsync(IDEWebRequestScope r, PpsGeometryInfo geometry, string mimeType, ImageFormat imageFormat)
 		{
 			if (TryGetSvgPath(r, geometry, out var pathData, out var pathFill))
 			{

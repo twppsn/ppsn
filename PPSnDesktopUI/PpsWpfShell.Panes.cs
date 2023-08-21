@@ -122,6 +122,18 @@ namespace TecWare.PPSn
 			return paneManager.OpenPaneAsync(paneType, GetDefaultPaneMode(paneManager, table), (table[1] as LuaTable) ?? table);
 		} // func OpenPaneAsync
 
+		/// <summary></summary>
+		/// <param name="paneManager"></param>
+		/// <param name="mimeType"></param>
+		/// <param name="uri"></param>
+		/// <returns></returns>
+		public static Task<IPpsWindowPane> OpenPaneAsync(this IPpsWindowPaneManager paneManager, string mimeType, string uri)
+		{
+			var paneService = paneManager.Shell.GetService<IPpsKnownWindowPanes>(true);
+			var paneType = paneService.GetPaneTypeMimeType(mimeType, false) ?? paneService.GetPaneType("web", true);
+			return paneManager.OpenPaneAsync(paneType, arguments: new LuaTable { ["Source"] = uri });
+		} // func OpenPaneAsync
+
 		#endregion
 
 		#region -- EqualPane ----------------------------------------------------------

@@ -1210,7 +1210,7 @@ namespace TecWare.PPSn.Server
 			protected ViewTableWriter(TextWriter tw, LuaTable settings)
 			{
 				this.tw = tw ?? throw new ArgumentNullException(nameof(tw));
-				
+
 				useIndexColumns = settings.GetOptionalValue("indexed", false);
 				prettyFormatting = settings.GetOptionalValue("pretty", false);
 				indent = settings.GetOptionalValue("indent", "\t");
@@ -1308,7 +1308,7 @@ namespace TecWare.PPSn.Server
 		{
 			private bool isFirst = false;
 
-			public ViewLsonWriter(TextWriter tw, LuaTable settings) 
+			public ViewLsonWriter(TextWriter tw, LuaTable settings)
 				: base(tw, settings)
 			{
 			} // ctor
@@ -1328,7 +1328,7 @@ namespace TecWare.PPSn.Server
 					isFirst = false;
 				else
 					tw.Write(",");
-				
+
 				if (PrettyFormatting)
 				{
 					tw.WriteLine();
@@ -1358,7 +1358,7 @@ namespace TecWare.PPSn.Server
 		{
 			private bool isFirst = true;
 
-			public ViewJsonWriter(TextWriter tw, LuaTable settings) 
+			public ViewJsonWriter(TextWriter tw, LuaTable settings)
 				: base(tw, settings)
 			{
 			} // ctor
@@ -1411,7 +1411,7 @@ namespace TecWare.PPSn.Server
 
 			protected override void WriteEndCore(TextWriter tw)
 			{
-				if(PrettyFormatting)
+				if (PrettyFormatting)
 				{
 					tw.WriteLine();
 					tw.Write(PrettyIndent);
@@ -1419,7 +1419,7 @@ namespace TecWare.PPSn.Server
 					tw.WriteLine("}");
 				}
 				else
-				tw.WriteLine("]}");
+					tw.WriteLine("]}");
 			} // proc WriteEndCore
 		} // class ViewJsonWriter
 
