@@ -332,6 +332,11 @@ namespace TecWare.PPSn
 
 		#region -- ImageSource --------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="width"></param>
+		/// <param name="height"></param>
+		/// <param name="size"></param>
+		/// <returns></returns>
 		public static Size ScaleSize(double width, double height, double size)
 		{
 			var aspect = width / height;
@@ -341,10 +346,18 @@ namespace TecWare.PPSn
 			return sz;
 		} // func ScaleSize
 
+		/// <summary></summary>
+		/// <param name="sz"></param>
+		/// <param name="size"></param>
+		/// <returns></returns>
 		public static Size ScaleSize(this Size sz, double size)
 			=> ScaleSize(sz.Width, sz.Height, size);
 
-		public static ImageSource LoadImage(Stream imageData, bool freeze = false)
+		/// <summary></summary>
+		/// <param name="imageData"></param>
+		/// <param name="freeze"></param>
+		/// <returns></returns>
+		public static BitmapFrame LoadImage(Stream imageData, bool freeze = false)
 		{
 			var bmp = new BmpBitmapDecoder(imageData, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
 			var frame = bmp.Frames[0];
@@ -353,12 +366,17 @@ namespace TecWare.PPSn
 			return frame;
 		} // func LoadIamge
 
-		public static Task<ImageSource> LoadImageAsync(Stream imageData)
+		public static Task<BitmapFrame> LoadImageAsync(Stream imageData)
 			=> Task.Run(() => LoadImage(imageData, true));
 
 		private static PixelFormat GetPixelFormat(ImageSource imageSource, PixelFormat defaultPixelFormat)
 			=> imageSource is BitmapSource bmp ? bmp.Format : defaultPixelFormat;
 
+		/// <summary></summary>
+		/// <param name="imageSource"></param>
+		/// <param name="size"></param>
+		/// <param name="freeze"></param>
+		/// <returns></returns>
 		public static ImageSource CreateScaledImage(ImageSource imageSource, int size, bool freeze = false)
 		{
 			var sz = ScaleSize(imageSource.Width, imageSource.Height, size);
@@ -375,9 +393,17 @@ namespace TecWare.PPSn
 			return f;
 		} // func CreateScaledImage
 
-		public static async Task<ImageSource> CreateScaledImageAsync(ImageSource imageSource, int size)
+		/// <summary></summary>
+		/// <param name="imageSource"></param>
+		/// <param name="size"></param>
+		/// <returns></returns>
+		public static async Task<ImageSource> CreateScaledImageAsync(this ImageSource imageSource, int size)
 			=> await Task.Run(() => CreateScaledImage(imageSource, size, true));
 
+		/// <summary></summary>
+		/// <param name="imageData"></param>
+		/// <param name="size"></param>
+		/// <returns></returns>
 		public static async Task<ImageSource> CreateScaledImageAsync(Stream imageData, int size)
 		{
 			return await Task.Run(() =>
@@ -386,6 +412,41 @@ namespace TecWare.PPSn
 				return CreateScaledImage(imageSource, size, true);
 			});
 		} // func CreateScaledImageAsync
+
+		/// <summary></summary>
+		/// <param name="fileName"></param>
+		/// <param name="size"></param>
+		/// <returns></returns>
+		public static ImageSource LoadImageScaled(string fileName, int size = 300)
+		{
+			using (var src = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+			{
+				var image = LoadImage(src);
+				return CreateScaledImage(image, size, true);
+			}
+		} // func LoadImageScaled
+
+		/// <summary></summary>
+		/// <param name="fileName"></param>
+		/// <param name="size"></param>
+		/// <returns></returns>
+		public static async Task<ImageSource> LoadImageScaledAsync(string fileName, int size = 300)
+			=> await Task.Run(() => LoadImageScaled(fileName, size));
+
+		/// <summary></summary>
+		/// <param name="imageSource"></param>
+		/// <param name="qualityLevel"></param>
+		/// <returns></returns>
+		public static byte[] GetJpegBytes(this BitmapFrame imageSource, int qualityLevel)
+		{
+			var jpg = new JpegBitmapEncoder { QualityLevel = qualityLevel };
+			jpg.Frames.Add(imageSource);
+			using (var dst = new MemoryStream())
+			{
+				jpg.Save(dst);
+				return dst.ToArray();
+			}
+		} // func GetJpegBytes
 
 		#endregion
 	} // class PpsWpfShell
