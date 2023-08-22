@@ -92,14 +92,14 @@ specific language governing permissions and limitations under the Licence.
 						</Border>
 						<RepeatButton x:Name="PreviousButton" Command="{x:Static ComponentCommands.MoveUp}" Margin="1,1,1,0" VerticalAlignment="Top" Visibility="Collapsed">
 							<RepeatButton.Content>
-								<pps:PpsGeometryImage GeometryName="chevronUpThin" GeometryCircled="False"
+								<pps:PpsGeometryImage GeometryName="chevronUp" GeometryCircled="False"
 													  Foreground="{TemplateBinding Foreground}"
 													  Width="16" Height="16" />
 							</RepeatButton.Content>
 						</RepeatButton>
 						<RepeatButton x:Name="NextButton" Command="{x:Static ComponentCommands.MoveDown}" Margin="1,0,1,1" VerticalAlignment="Bottom" Visibility="Collapsed">
 							<RepeatButton.Content>
-								<pps:PpsGeometryImage GeometryName="chevronDownThin" GeometryCircled="False"
+								<pps:PpsGeometryImage GeometryName="chevronDown" GeometryCircled="False"
 													  Foreground="{TemplateBinding Foreground}"
 													  Width="16" Height="16" />
 							</RepeatButton.Content>

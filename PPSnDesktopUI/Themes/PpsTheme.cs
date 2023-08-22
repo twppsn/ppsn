@@ -367,20 +367,30 @@ namespace TecWare.PPSn.Themes
 		/// <summary>SignOut</summary>
 		public static readonly ResourceKey SignOutPathGeometry = new PpsThemeKey("signOut");
 
-		/// <summary>SignOut</summary>
+		/// <summary>ChevronLeft</summary>
 		public static readonly ResourceKey ChevronLeftPathGeometry = new PpsThemeKey("chevronLeft");
-		/// <summary>SignOut</summary>
+		/// <summary>ChevronRight geometry</summary>
 		public static readonly ResourceKey ChevronRightPathGeometry = new PpsThemeKey("chevronRight");
-		/// <summary>SignOut</summary>
-		public static readonly ResourceKey BarcodeScannerPathGeometry = new PpsThemeKey("scannerActive");
-		/// <summary>SignOut</summary>
-		public static readonly ResourceKey BarcodeScannerNoPathGeometry = new PpsThemeKey("scannerInActive");
+		/// <summary>ChevronDown geometry</summary>
+		public static readonly ResourceKey ChevronDownPathGeometry = new PpsThemeKey("chevronDown");
+		/// <summary>ChevronUp geometry</summary>
+		public static readonly ResourceKey ChevronUpPathGeometry = new PpsThemeKey("chevronUp");
+
 		/// <summary>ScannerActive geometry</summary>
-		public static readonly ResourceKey BarcodeActivePathGeometry = new PpsThemeKey("barcodeActive");
-		/// <summary>ScannerInActive geometry</summary>
-		public static readonly ResourceKey BarcodeInActivePathGeometry = new PpsThemeKey("barcodeInActive");
-		/// <summary>QuickNote</summary>
+		public static readonly ResourceKey BarcodeScannerPathGeometry = new PpsThemeKey("scannerActive");
+		/// <summary>ScannerInactive geometry</summary>
+		public static readonly ResourceKey BarcodeScannerNoPathGeometry = new PpsThemeKey("scannerInActive");
+		/// <summary>GenericScan geometry</summary>
+		public static readonly ResourceKey GenericScanPathGeometry = new PpsThemeKey("barcodeScan");
+		/// <summary>BarcodeActive geometry</summary>
+		//public static readonly ResourceKey BarcodeActivePathGeometry = new PpsThemeKey("barcodeActive");
+		/// <summary>BarcodeInActive geometry</summary>
+		//public static readonly ResourceKey BarcodeInActivePathGeometry = new PpsThemeKey("barcodeInActive");
+
+		/// <summary>QuickNote geometry</summary>
 		public static readonly ResourceKey QuickNotePathGeometry = new PpsThemeKey("quickNote");
+		/// <summary>Cancel geometry</summary>
+		public static readonly ResourceKey CancelPathGeometry = new PpsThemeKey("closePane");
 
 		#endregion
 	} // class PpsTheme

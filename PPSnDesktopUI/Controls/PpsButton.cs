@@ -148,7 +148,7 @@ namespace TecWare.PPSn.Controls
 		#region -- ImageOpacity - Property --------------------------------------------
 
 		/// <summary>The Opacity of the image</summary>
-		public static readonly DependencyProperty ImageOpacityProperty = DependencyProperty.Register(nameof(ImageOpacity), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(0.65));
+		public static readonly DependencyProperty ImageOpacityProperty = DependencyProperty.Register(nameof(ImageOpacity), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(1.0));
 
 		/// <summary>The property defines the Opacity of the image</summary>
 		public double ImageOpacity { get => (double)GetValue(ImageOpacityProperty); set => SetValue(ImageOpacityProperty, value); }

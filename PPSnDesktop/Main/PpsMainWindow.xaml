@@ -90,14 +90,12 @@
 							</TextBlock>
 						</Grid.ToolTip>
 						<ui:PpsGeometryImage GeometryName="{Binding Image,Mode=OneWay,TargetNullValue='page'}"
+											 Foreground="{DynamicResource PPSnImageBrush}"
 											 Width="24"
 											 Height="24"
 											 Margin="6,0,0,0"
 											 HorizontalAlignment="Left"
-											 VerticalAlignment="Center"
-											 SnapsToDevicePixels="True"
-											 Foreground="{DynamicResource PPSnImageBrush}"
-											 Opacity=".75"/>
+											 VerticalAlignment="Center" />
 						<TextBlock x:Name="title" Text="{Binding Title,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
 								   FontSize="8" MaxWidth="164" VerticalAlignment="Bottom" Margin="32,0,6,18" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
 						<TextBlock x:Name="subtitle" Text="{Binding SubTitle,Mode=OneWay,TargetNullValue='Unbenannt',FallbackValue='Unbenannt'}"
@@ -175,14 +173,16 @@
 				</Button.Template>
 			</Button>
 
-			<StackPanel Grid.Column="1" Orientation="Horizontal">
-				<ui:PpsGeometryImage GeometryName="account" Foreground="White" Opacity=".8" HorizontalAlignment="Left" Margin="32,3,0,3" />
-				<TextBlock Text="{Binding CurrentUserName}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,3,64,3" MinWidth="96" Foreground="White" />
-				<uic:PpsBarcodeState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="0,3,8,3" />
-				<uic:PpsConnectionState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="0,3,8,3" />
-				<ui:PpsSplitButton Margin="0,3,8,3"
+			<StackPanel Grid.Column="1" Orientation="Horizontal" >
+				<!--imagesize ist 24x24 pxl, gridrow ist 25pxl-->
+				<ui:PpsGeometryImage GeometryName="contact" Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" HorizontalAlignment="Left" Margin="32,1,0,0" />
+				<TextBlock Text="{Binding CurrentUserName}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,1,64,0" Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" />
+				<uic:PpsBarcodeState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="0,1,12,0" />
+				<!--opacity reduzieren, sonst zu dominant weil kein bluring (contact und scanner haben)-->
+				<uic:PpsConnectionState Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}" Margin="0,1,12,0" Opacity=".9" />
+				<ui:PpsSplitButton Margin="0,0,12,1"
                                    Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowBackground}}"
-                                   Mode="Dropdown" DisplayMode="Transparent" GeometryName="barcodeScan" GeometrySize="18" ImageOpacity="1"
+                                   Mode="Dropdown" DisplayMode="Transparent" GeometryName="barcodeScan" GeometrySize="24" ImageOpacity=".9"
                                    Visibility="{Binding IsLocked,Converter={x:Static ui:PpsConverter.Visibility},ConverterParameter={x:Static ui:PpsConverter.VisibilityNotCollapsedParameter}}">
 					<ui:PpsSplitButton.Popup>
 						<uic:PpsBarcodePopup Placement="Top" />

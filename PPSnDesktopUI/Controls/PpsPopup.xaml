@@ -50,11 +50,11 @@ specific language governing permissions and limitations under the Licence.
 							<pps:PpsGeometryImage x:Name="ImageBox"
 												  GeometryName="{TemplateBinding GeometryName}"
 												  GeometryCircled="false"
-												  Margin="6,0,0,0"
-												  Width="20"
-												  Height="20"
+												  Margin="6,3,0,0"
+												  Width="24"
+												  Height="24"
 												  Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-												  Opacity=".75" />
+												  Opacity="1" />
 							<ContentPresenter Grid.Column="1"
 											  Content="{TemplateBinding Header}"
 											  ContentTemplate="{TemplateBinding HeaderTemplate}"

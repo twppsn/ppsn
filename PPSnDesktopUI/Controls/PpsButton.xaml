@@ -51,7 +51,8 @@ specific language governing permissions and limitations under the Licence.
 										  Width="{TemplateBinding GeometrySize}"
 										  Height="{TemplateBinding GeometrySize}"
 										  Margin="0,0,4,0"
-										  Foreground="{TemplateBinding Foreground}" />
+										  Foreground="{TemplateBinding Foreground}"
+										  Opacity="{TemplateBinding ImageOpacity}"/>
 					<ContentPresenter x:Name="ContentSite"
 									  Grid.Column="1"
 									  RecognizesAccessKey="True"

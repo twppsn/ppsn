@@ -106,7 +106,7 @@
 								<TextBlock Text="{Binding Text, Mode=OneWay}" VerticalAlignment="Center" Margin="32,0,16,0"
 										   FontSize="18" Foreground="{DynamicResource PPSnWindowForegroundBrush}" />
 								<ui:PpsButton Command="{x:Static ApplicationCommands.Close}" DisplayMode="Transparent" GeometryName="nextPane" GeometrySize="24"
-											  Foreground="{DynamicResource PPSnWindowForegroundBrush}" ImageOpacity="1" Focusable="False"
+											  Focusable="False"
 											  Grid.Column="1" Width="32" HorizontalAlignment="Left" ToolTip="Schließen" />
 
 								<ContentPresenter Grid.Row="1" Grid.ColumnSpan="2" Content="{Binding Content, Mode=OneWay}" />
@@ -253,12 +253,11 @@
 
                             <!--Noch innerhalb der Border mit den Items, damit die Sichtbarkeit garantiert ist.-->
                             <ui:PpsToggleButton x:Name="showPaneListToggleButton"
-                                                DockPanel.Dock="Left" Width="29" Height="29" Margin="-29,0,0,0" 
+                                                DockPanel.Dock="Left" Width="28" Height="28" Margin="-28,2,0,0" 
                                                 DisplayMode="Transparent"
-                                                GeometryName="chevronDownThin"
-                                                GeometrySize="20"
+                                                GeometryName="chevronDown"
+                                                GeometrySize="22"
 												Focusable="False" />
-
                             <Rectangle Fill="Transparent">
 								<Rectangle.Tag>
 									<ui:PpsWindowHitTest HitTest="2" />
@@ -277,7 +276,6 @@
 									  DisplayMode="Transparent"
 									  GeometryName="windowMinimize"
 									  GeometrySize="24"
-									  ImageOpacity="1"
 									  Grid.Column="2"
 									  Width="34"
 									  Height="26"
@@ -291,7 +289,6 @@
 									  DisplayMode="Transparent"
 									  GeometryName="windowMaximize"
 									  GeometrySize="24"
-									  ImageOpacity="1"
 									  Grid.Column="2"
 									  Width="34"
 									  Height="26"
@@ -304,7 +301,6 @@
 									  DisplayMode="Transparent"
 									  GeometryName="windowClose"
 									  GeometrySize="16"
-									  ImageOpacity="1"
 									  Grid.Column="2"
 									  Width="34"
 									  Height="26"
@@ -380,11 +376,9 @@
                                                                       Width="25"
                                                                       HorizontalAlignment="Right"
                                                                       Margin="0,2,2,2"
-                                                                      Foreground="{DynamicResource PPSnWindowForegroundBrush}"
                                                                       GeometryName="closePane"
                                                                       DisplayMode="Transparent"
                                                                       GeometrySize="24"
-                                                                      ImageOpacity="1"
 																	  Focusable="False">
 															<Button.Triggers>
 																<EventTrigger RoutedEvent="Button.Click">
@@ -446,11 +440,9 @@
                                           Height="28"
                                           Margin="0,0,3,0"
                                           Visibility="Hidden"
-                                          Foreground="{DynamicResource PPSnWindowForegroundBrush}"
                                           GeometryName="closePane"
                                           DisplayMode="Transparent"
                                           GeometrySize="24"
-                                          ImageOpacity="1"
 										  Focusable="False" />
 						</Grid>
 					</Border>
