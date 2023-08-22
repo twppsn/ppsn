@@ -160,9 +160,9 @@ namespace TecWare.PPSn.Data
 				this.data = new PpsGenericData((byte[])data);
 			} // ctor
 
-			public PpsGenericDataObject(string fileName, string mimeType, IPropertyReadOnlyDictionary properties)
+			public PpsGenericDataObject(string name, string fileName, string mimeType, IPropertyReadOnlyDictionary properties)
 			{
-				this.name = Path.GetFileName(fileName);
+				this.name = name ?? Path.GetFileName(fileName);
 				this.mimeType = mimeType ?? MimeTypeMapping.GetMimeTypeFromExtension(Path.GetExtension(fileName)) ?? MimeTypes.Application.OctetStream;
 				this.properties = properties ?? PropertyDictionary.EmptyReadOnly;
 				this.data = new PpsFileData(fileName);
@@ -204,9 +204,9 @@ namespace TecWare.PPSn.Data
 			return objectTyp != null;
 		} // func TryUnpackObjectInfo
 
-		public static Task<IPpsDataInfo> ToPpsDataInfoAsync(string fileName, string mimeType = null)
+		public static Task<IPpsDataInfo> ToPpsDataInfoAsync(string fileName, string mimeType = null, string name = null)
 		{
-			return Task.FromResult<IPpsDataInfo>(new PpsGenericDataObject(fileName, mimeType, PropertyDictionary.EmptyReadOnly));
+			return Task.FromResult<IPpsDataInfo>(new PpsGenericDataObject(name, fileName, mimeType, PropertyDictionary.EmptyReadOnly));
 		} // func ToDataInfoAsync
 
 		public static async Task<IPpsDataInfo> ToPpsDataInfoAsync(this HttpResponseMessage http)

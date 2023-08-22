@@ -359,7 +359,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static BitmapFrame LoadImage(Stream imageData, bool freeze = false)
 		{
-			var bmp = new BmpBitmapDecoder(imageData, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
+			var bmp = BitmapDecoder.Create(imageData, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
 			var frame = bmp.Frames[0];
 			if (freeze)
 				frame.Freeze();
@@ -369,9 +369,6 @@ namespace TecWare.PPSn
 		public static Task<BitmapFrame> LoadImageAsync(Stream imageData)
 			=> Task.Run(() => LoadImage(imageData, true));
 
-		private static PixelFormat GetPixelFormat(ImageSource imageSource, PixelFormat defaultPixelFormat)
-			=> imageSource is BitmapSource bmp ? bmp.Format : defaultPixelFormat;
-
 		/// <summary></summary>
 		/// <param name="imageSource"></param>
 		/// <param name="size"></param>
@@ -380,7 +377,7 @@ namespace TecWare.PPSn
 		public static ImageSource CreateScaledImage(ImageSource imageSource, int size, bool freeze = false)
 		{
 			var sz = ScaleSize(imageSource.Width, imageSource.Height, size);
-			var f = new RenderTargetBitmap((int)sz.Width, (int)sz.Height, 96, 96, GetPixelFormat(imageSource, PixelFormats.Pbgra32));
+			var f = new RenderTargetBitmap((int)sz.Width, (int)sz.Height, 96, 96, PixelFormats.Pbgra32);
 			var d = new DrawingVisual();
 			RenderOptions.SetBitmapScalingMode(d, BitmapScalingMode.HighQuality);
 
