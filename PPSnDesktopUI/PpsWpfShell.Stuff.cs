@@ -18,6 +18,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
@@ -26,6 +27,7 @@ using System.Web;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
@@ -325,6 +327,65 @@ namespace TecWare.PPSn
 			color.ToRgb(out var r, out var g, out var b);
 			return Color.FromArgb(color.Alpha, r, g, b);
 		} // func ToMediaColor
+
+		#endregion
+
+		#region -- ImageSource --------------------------------------------------------
+
+		public static Size ScaleSize(double width, double height, double size)
+		{
+			var aspect = width / height;
+			var sz = aspect < 1.0 // width < height
+				? new Size(size * aspect, size)
+				: new Size(size, size / aspect);
+			return sz;
+		} // func ScaleSize
+
+		public static Size ScaleSize(this Size sz, double size)
+			=> ScaleSize(sz.Width, sz.Height, size);
+
+		public static ImageSource LoadImage(Stream imageData, bool freeze = false)
+		{
+			var bmp = new BmpBitmapDecoder(imageData, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
+			var frame = bmp.Frames[0];
+			if (freeze)
+				frame.Freeze();
+			return frame;
+		} // func LoadIamge
+
+		public static Task<ImageSource> LoadImageAsync(Stream imageData)
+			=> Task.Run(() => LoadImage(imageData, true));
+
+		private static PixelFormat GetPixelFormat(ImageSource imageSource, PixelFormat defaultPixelFormat)
+			=> imageSource is BitmapSource bmp ? bmp.Format : defaultPixelFormat;
+
+		public static ImageSource CreateScaledImage(ImageSource imageSource, int size, bool freeze = false)
+		{
+			var sz = ScaleSize(imageSource.Width, imageSource.Height, size);
+			var f = new RenderTargetBitmap((int)sz.Width, (int)sz.Height, 96, 96, GetPixelFormat(imageSource, PixelFormats.Pbgra32));
+			var d = new DrawingVisual();
+			RenderOptions.SetBitmapScalingMode(d, BitmapScalingMode.HighQuality);
+
+			using (var dc = d.RenderOpen())
+				dc.DrawImage(imageSource, new Rect(0.0, 0.0, sz.Width, sz.Height));
+
+			f.Render(d);
+			if (freeze)
+				f.Freeze();
+			return f;
+		} // func CreateScaledImage
+
+		public static async Task<ImageSource> CreateScaledImageAsync(ImageSource imageSource, int size)
+			=> await Task.Run(() => CreateScaledImage(imageSource, size, true));
+
+		public static async Task<ImageSource> CreateScaledImageAsync(Stream imageData, int size)
+		{
+			return await Task.Run(() =>
+			{
+				var imageSource = LoadImage(imageData);
+				return CreateScaledImage(imageSource, size, true);
+			});
+		} // func CreateScaledImageAsync
 
 		#endregion
 	} // class PpsWpfShell

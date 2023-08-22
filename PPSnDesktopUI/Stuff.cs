@@ -63,7 +63,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class StuffDB ------------------------------------------------------------
+	#region -- class StuffDB ----------------------------------------------------------
 
 	/// <summary>Db-Extensions</summary>
 	public static class StuffDB
@@ -286,7 +286,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class StuffIO ------------------------------------------------------------
+	#region -- class StuffIO ----------------------------------------------------------
 
 	/// <summary></summary>
 	public static class StuffIO

@@ -136,7 +136,7 @@ namespace TecWare.PPSn.Data
 			} // ctor
 
 			public Stream OpenStream(FileAccess access, long expectedLength = -1)
-				=> new FileStream(fileName, FileMode.Open);
+				=> new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
 		} // class PpsFileData
 
 		#endregion
