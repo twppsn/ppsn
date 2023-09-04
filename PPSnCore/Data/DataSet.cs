@@ -778,8 +778,8 @@ namespace TecWare.PPSn.Data
 			this.undoSink = undoSink ?? new PpsUndoManagerBase();
 		} // proc RegisterUndoSink
 
-		private int FindTableIndex(string tableName)
-			=> Array.FindIndex(tables, dt => String.Compare(dt.TableName, tableName, StringComparison.OrdinalIgnoreCase) == 0);
+		//private int FindTableIndex(string tableName)
+		//	=> Array.FindIndex(tables, dt => String.Compare(dt.TableName, tableName, StringComparison.OrdinalIgnoreCase) == 0);
 
 		private void ClearInternal()
 		{

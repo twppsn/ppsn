@@ -626,10 +626,7 @@ namespace TecWare.PPSn.Server
 			public async Task<PpsViewDescription> InitializeAsync()
 			{
 				// create the selector source
-				var sourceDescription = xDefinition.Element(xnSource);
-				if (sourceDescription == null)
-					throw new DEConfigurationException(xDefinition, "source definition is missing.");
-
+				var sourceDescription = xDefinition.Element(xnSource) ?? throw new DEConfigurationException(xDefinition, "source definition is missing.");
 				var selectorToken = await source.CreateSelectorTokenAsync(name, sourceDescription);
 
 				var view = new PpsViewDescription(
@@ -1302,7 +1299,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class ViewLsonWriter ------------------------------------------------
+		#region -- class ViewLsonWriter -----------------------------------------------
 
 		private sealed class ViewLsonWriter : ViewTableWriter
 		{

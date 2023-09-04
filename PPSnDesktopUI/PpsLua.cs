@@ -109,18 +109,15 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsLuaCodeBehind -------------------------------------------------
+	#region -- class PpsLuaCode -------------------------------------------------------
 
 	[DebuggerDisplay("{" + nameof(GetDebuggerDisplay) + "(),nq}")]
-	public class PpsLuaCodeBehind : LuaTable, IPpsLuaCodeBehind
+	public class PpsLuaCode : LuaTable, IPpsLuaCodeSource
 	{
 		private readonly IPpsLuaShell shell;
 		private readonly Uri sourceUri;
 
-		private FrameworkElement control = null;
-		private Task codeCompiledTask = Task.CompletedTask;
-
-		public PpsLuaCodeBehind(IPpsLuaShell shell, Uri sourceUri)
+		public PpsLuaCode(IPpsLuaShell shell, Uri sourceUri)
 		{
 			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 			this.sourceUri = sourceUri ?? throw new ArgumentNullException(nameof(sourceUri));
@@ -130,7 +127,34 @@ namespace TecWare.PPSn
 			=> $"Code: {sourceUri}";
 
 		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? PpsLuaShell.GetXamlElement(control, key) ?? shell.Global.GetValue(key);
+			=> base.OnIndex(key) ?? shell.Global.GetValue(key);
+
+		LuaTable IPpsLuaCodeSource.Target => this;
+
+		public Uri SourceUri => sourceUri;
+		public IPpsLuaShell LuaShell => shell;
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaTable Self => this;
+	} // class PpsLuaCode
+
+	#endregion
+
+	#region -- class PpsLuaCodeBehind -------------------------------------------------
+
+	public class PpsLuaCodeBehind : PpsLuaCode, IPpsLuaCodeBehind
+	{
+		private FrameworkElement control = null;
+		private Task codeCompiledTask = Task.CompletedTask;
+
+		public PpsLuaCodeBehind(IPpsLuaShell shell, Uri sourceUri)
+			: base(shell, sourceUri)
+		{
+		} // ctor
+
+		protected override object OnIndex(object key)
+			=> PpsLuaShell.GetXamlElement(control, key) ?? base.OnIndex(key);
 
 		void IPpsXamlCode.CompileCode(Uri uri, string code)
 		{
@@ -145,8 +169,6 @@ namespace TecWare.PPSn
 				codeCompiledTask = Task.WhenAll(codeCompiledTask, PpsLuaShell.RequireCodeAsync(this, new StringReader(code), uri));
 		} // proc IPpsXamlCode.CompileCode
 
-		LuaTable IPpsLuaCodeSource.Target => this;
-
 		void IPpsLuaCodeBehind.OnControlCreated(FrameworkElement control, LuaTable arguments)
 		{
 			// wait for code
@@ -158,15 +180,9 @@ namespace TecWare.PPSn
 			CallMemberDirect("OnCreated", new object[] { control, arguments }, ignoreNilFunction: true);
 		} // proc IPpsLuaCodeBehind.OnControlCreated
 
-		public Uri SourceUri => sourceUri;
-		public IPpsLuaShell LuaShell => shell;
-
 		/// <summary>Control that is bound to the code</summary>
 		[LuaMember]
 		public FrameworkElement Control => control;
-		/// <summary></summary>
-		[LuaMember]
-		public LuaTable Self => this;
 	} // class PpsLuaCodeBehind
 
 	#endregion
