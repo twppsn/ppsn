@@ -1077,12 +1077,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (cmd.IsVisible)
 					{
-						if (cmd.Order.IsEmpty)
-						{
-							AppendCommandCore(cmd);
-							currentGroup = Int32.MinValue;
-						}
-						else if (lastIndex > 0 && cmd.Order.Group == currentGroup && viewCommands[lastIndex].Order.Order < cmd.Order.Order)
+						if (lastIndex > 0 && cmd.Order.Group == currentGroup && viewCommands[lastIndex].Order.Order < cmd.Order.Order)
 						{
 							viewCommands.Insert(++lastIndex, cmd);
 							AddIsVisibleHandler(cmd);
@@ -1287,7 +1282,7 @@ namespace TecWare.PPSn.UI
 			var count = commands.Count;
 
 			if (cmdOrder.IsEmpty && count > 0)
-				return count - 1; // add at the end
+				return count; // add at the end
 
 			var index = 0;
 

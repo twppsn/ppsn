@@ -241,7 +241,7 @@ namespace TecWare.PPSn
 	public enum PpsImage
 	{
 		/// <summary>No image.</summary>
-		None,
+		None = 0,
 		/// <summary>Information</summary>
 		Information,
 		/// <summary>Warning</summary>

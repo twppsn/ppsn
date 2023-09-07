@@ -588,8 +588,8 @@ namespace TecWare.PPSn
 		{
 			var msg = new PpsMessageDialog(buttons)
 			{
-				Title = image.ToTitle(),
-				ImageName = image.ToGeometryName(),
+				Title = image.ToTitle() ?? PpsImage.Information.ToTitle(),
+				ImageName = image.ToGeometryName() ?? PpsImage.Information.ToGeometryName(),
 				Message = text
 			};
 

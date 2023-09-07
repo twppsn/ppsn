@@ -227,8 +227,13 @@ namespace TecWare.PPSn
 				sourceUri = new Uri(self.SourceUri, sourceUri);
 
 			using (var response = await self.LuaShell.Shell.Http.GetAsync(sourceUri))
-			using (var tr = await response.GetTextReaderAsync())
-				return await RequireCodeAsync(self, tr, sourceUri);
+			{
+				if (!response.IsSuccessStatusCode)
+					throw new HttpResponseException(response);
+
+				using (var tr = await response.GetTextReaderAsync())
+					return await RequireCodeAsync(self, tr, sourceUri);
+			}
 		} // func RequireCodeAsync
 
 		/// <summary>Load code into the table.</summary>
