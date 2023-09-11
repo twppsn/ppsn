@@ -53,9 +53,18 @@ namespace TecWare.PPSn.UI
 			if (buttonInfo == null && buttonInfo.Length == 0)
 				buttonInfo = OkButton;
 
+			// get default button
+			var defaultButtonIndex = Array.FindIndex(buttonInfo, c => !String.IsNullOrEmpty(c) && c[0] == '*');
+			if (defaultButtonIndex < 0)
+				defaultButtonIndex = 0;
+			var cancelButtonIndex = Array.FindIndex(buttonInfo, c => !String.IsNullOrEmpty(c) && c[0] == '-');
+			if (cancelButtonIndex >= 0)
+				closeButton.IsCancel = false;
+
+			// create buttons
 			dialogButtons = new PpsMessageDialogButton[buttonInfo.Length];
 			for (var i = 0; i < dialogButtons.Length; i++)
-				dialogButtons[i] = new PpsMessageDialogButton(this, i, buttonInfo[i]);
+				dialogButtons[i] = new PpsMessageDialogButton(this, i, buttonInfo[i], i == defaultButtonIndex, i == cancelButtonIndex);
 			SetValue(buttonsPropertyKey, dialogButtons);
 		} // proc SetButtons
 
@@ -177,8 +186,10 @@ namespace TecWare.PPSn.UI
 		private readonly int index;
 		private readonly string title;
 		private readonly bool isDetailed;
+		private readonly bool isDefault;
+		private readonly bool isCancel;
 
-		public PpsMessageDialogButton(PpsMessageDialog owner, int index, string title)
+		public PpsMessageDialogButton(PpsMessageDialog owner, int index, string title, bool isDefault, bool isCancel)
 		{
 			this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
 			this.index = index;
@@ -187,6 +198,9 @@ namespace TecWare.PPSn.UI
 			isDetailed = this.title[0] == '.';
 			if (isDetailed)
 				this.title = this.title.Substring(1);
+
+			this.isDefault = isDefault;
+			this.isCancel = isCancel;
 		} // ctor
 
 		public void OnVisibleChanged()
@@ -194,6 +208,8 @@ namespace TecWare.PPSn.UI
 
 		public int Index => index;
 		public string Title => title;
+		public bool IsDefault => isDefault;
+		public bool IsCancel => isCancel;
 		public Visibility Visibility => isDetailed && !owner.IsDetailedVisible ? Visibility.Collapsed : Visibility.Visible;
 	} // class PpsMessageDialogButton
 

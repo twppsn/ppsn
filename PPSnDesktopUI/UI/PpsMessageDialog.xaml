@@ -41,7 +41,8 @@
 				<pps:PpsWindowHitTest HitTest="2" />
 			</Border.Tag>
 		</Border>
-		<pps:PpsButton Command="{x:Static pps:PpsWindow.CloseCommand}"
+		<pps:PpsButton x:Name="closeButton"
+					   Command="{x:Static pps:PpsWindow.CloseCommand}"
 					   Grid.Row="0" Grid.ColumnSpan="2" 
 					   Margin="0,0,12,0"
 					   DisplayMode="Transparent"
@@ -52,6 +53,7 @@
 					   Foreground="{ui:PpsColor {x:Static uiT:PpsTheme.WindowBackground}}"
 					   Width="34"
 					   Height="26"
+					   IsCancel="True"
 					   HorizontalAlignment="Right"
 					   VerticalAlignment="Top"
 					   Visibility="Visible" />
@@ -80,6 +82,8 @@
 								   CommandParameter="{Binding Index}"
 								   MinWidth="110"
 								   Height="23"
+								   IsDefault="{Binding IsDefault}"
+								   IsCancel="{Binding IsCancel}"
 								   Margin="0,0,12,0" />
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
