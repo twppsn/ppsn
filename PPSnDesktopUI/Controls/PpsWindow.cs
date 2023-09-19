@@ -25,7 +25,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {

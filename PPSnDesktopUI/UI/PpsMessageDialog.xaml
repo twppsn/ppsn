@@ -50,6 +50,7 @@
 					   GeometryName="windowClose"
 					   GeometrySize="16"
 					   ImageOpacity="1"
+					   Focusable="False"
 					   Foreground="{ui:PpsColor {x:Static uiT:PpsTheme.WindowBackground}}"
 					   Width="34"
 					   Height="26"

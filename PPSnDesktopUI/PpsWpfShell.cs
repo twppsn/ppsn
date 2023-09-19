@@ -594,11 +594,7 @@ namespace TecWare.PPSn
 			};
 
 			if (PpsWpfShell.ShowModalDialog(null, msg) == true)
-			{
-				if (buttons[msg.ButtonIndex] == OkCancel[1]) // cancel always as -1
-					return -1;
-				return msg.ButtonIndex;
-			}
+				return msg.ButtonIndex; // is might be -1
 			else
 				return -1;
 		} // func MsgBox

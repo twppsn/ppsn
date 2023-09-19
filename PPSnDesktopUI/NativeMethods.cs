@@ -25,6 +25,9 @@ namespace TecWare.PPSn
 	internal enum WinMsg : int
 	{
 		WM_ACTIVATE = 0x0006,
+		WM_GETTEXT = 0x000D,
+		WM_SETCURSOR = 0x0020,
+		WM_ACTIVATEAPP = 0x001C,
 		WM_WINDOWPOSCHANGING = 0x0046,
 		WM_WINDOWPOSCHANGED = 0x0047,
 		WM_NCCALCSIZE = 0x0083,
@@ -627,6 +630,11 @@ namespace TecWare.PPSn
 		public static extern IntPtr GetWindow(IntPtr hwnd, int nCmd);
 		[DllImport(user32, ExactSpelling = true, CharSet = CharSet.Auto)]
 		public static extern IntPtr GetActiveWindow();
+
+		[DllImport(user32, ExactSpelling = true)]
+		public static extern int GetWindowThreadProcessId(IntPtr hWnd, ref int lpdwProcessId);
+		[DllImport(user32, ExactSpelling = true)]
+		public static extern int GetWindowThreadProcessId(IntPtr hWnd, IntPtr lpdwProcessId);
 
 		[DllImport(user32, CharSet = CharSet.Auto, ExactSpelling = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]

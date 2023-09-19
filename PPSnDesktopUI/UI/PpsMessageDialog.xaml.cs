@@ -38,7 +38,7 @@ namespace TecWare.PPSn.UI
 			InitializeComponent();
 
 			AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler(Button_Click));
-
+			
 			buttonBar.ItemContainerGenerator.StatusChanged += ItemContainerGenerator_StatusChanged;
 		} // ctor
 
@@ -50,21 +50,25 @@ namespace TecWare.PPSn.UI
 
 		public void SetButtons(string[] buttonInfo)
 		{
-			if (buttonInfo == null && buttonInfo.Length == 0)
+			if (buttonInfo == null || buttonInfo.Length == 0)
 				buttonInfo = OkButton;
-
-			// get default button
-			var defaultButtonIndex = Array.FindIndex(buttonInfo, c => !String.IsNullOrEmpty(c) && c[0] == '*');
-			if (defaultButtonIndex < 0)
-				defaultButtonIndex = 0;
-			var cancelButtonIndex = Array.FindIndex(buttonInfo, c => !String.IsNullOrEmpty(c) && c[0] == '-');
-			if (cancelButtonIndex >= 0)
-				closeButton.IsCancel = false;
 
 			// create buttons
 			dialogButtons = new PpsMessageDialogButton[buttonInfo.Length];
 			for (var i = 0; i < dialogButtons.Length; i++)
-				dialogButtons[i] = new PpsMessageDialogButton(this, i, buttonInfo[i], i == defaultButtonIndex, i == cancelButtonIndex);
+			{
+				var dlgb = new PpsMessageDialogButton(this, i, buttonInfo[i]);
+
+				// get default button
+				if (dlgb.IsCancel)
+					closeButton.IsCancel = false;
+				if (dlgb.IsDefault)
+					buttonIndex = i;
+				dialogButtons[i] = dlgb;
+			}
+			if (buttonIndex == -1 && buttonInfo.Length > 0)
+				buttonIndex = 0;
+
 			SetValue(buttonsPropertyKey, dialogButtons);
 		} // proc SetButtons
 
@@ -93,11 +97,23 @@ namespace TecWare.PPSn.UI
 
 		private void UpdateFocus()
 		{
-			if (dialogButtons != null && buttonIndex >= 0 && buttonIndex < dialogButtons.Length
-				&& buttonBar.ItemContainerGenerator.ContainerFromItem(dialogButtons[buttonIndex]) is IInputElement ie)
+			if (dialogButtons != null && buttonIndex >= 0 && buttonIndex < dialogButtons.Length)
 			{
-				if (ie.Focusable && !ie.IsKeyboardFocusWithin)
-					FocusManager.SetFocusedElement(this, ie);
+				var container = buttonBar.ItemContainerGenerator.ContainerFromItem(dialogButtons[buttonIndex]);
+				if (container is ContentPresenter p)
+					Dispatcher.BeginInvoke(new Action(() => UpdateFocus(p)));
+			}
+		} // proc UpdateFocus
+
+		private void UpdateFocus(ContentPresenter container)
+		{
+			foreach (var ie in container.GetVisualChildren<ButtonBase>())
+			{
+				if (ie.Focusable)
+				{
+					ie.Focus();
+					break;
+				}
 			}
 		} // proc UpdateFocus
 
@@ -105,8 +121,13 @@ namespace TecWare.PPSn.UI
 		{
 			if (e.OriginalSource is ButtonBase b && b.CommandParameter is int idx)
 			{
-				ButtonIndex = idx;
-				DialogResult = true;
+				if (dialogButtons[idx].IsCancel && !dialogButtons[idx].IsDefault)
+					DialogResult = false;
+				else
+				{
+					ButtonIndex = idx;
+					DialogResult = true;
+				}
 			}
 		} // event Button_Click
 
@@ -171,9 +192,9 @@ namespace TecWare.PPSn.UI
 
 		public static DataTemplateSelector MessageTemplateSelector { get; } = new MessageTemplateSelectorImplementation();
 
-		public static string[] OkButton { get; } = new string[] { "Ok" };
+		public static string[] OkButton { get; } = new string[] { "*Ok" };
 		public static string[] YesNoButtons { get; } = new string[] { "Ja", "Nein" };
-		public static string[] OkCancelButtons { get; } = new string[] { "Ok", "Abbrechen" };
+		public static string[] OkCancelButtons { get; } = new string[] { "*Ok", "-Abbrechen" };
 	} // class PpsMessageDialog
 
 	#region -- class PpsMessageDialogButton -------------------------------------------
@@ -189,19 +210,27 @@ namespace TecWare.PPSn.UI
 		private readonly bool isDefault;
 		private readonly bool isCancel;
 
-		public PpsMessageDialogButton(PpsMessageDialog owner, int index, string title, bool isDefault, bool isCancel)
+		public PpsMessageDialogButton(PpsMessageDialog owner, int index, string title)
 		{
 			this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
 			this.index = index;
 			this.title = title ?? throw new ArgumentNullException(nameof(title));
 
-			isDetailed = this.title[0] == '.';
-			if (isDetailed)
-				this.title = this.title.Substring(1);
-
-			this.isDefault = isDefault;
-			this.isCancel = isCancel;
+			isDetailed = GetButtonFlag(ref this.title, '.');
+			isDefault = GetButtonFlag(ref this.title, '*');
+			isCancel = GetButtonFlag(ref this.title, '-');
 		} // ctor
+
+		private static bool GetButtonFlag(ref string title, char c)
+		{
+			if (title[0] == c)
+			{
+				title = title.Substring(1);
+				return true;
+			}
+			else
+				return false;
+		} // func GetButtonFlag
 
 		public void OnVisibleChanged()
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Visibility)));

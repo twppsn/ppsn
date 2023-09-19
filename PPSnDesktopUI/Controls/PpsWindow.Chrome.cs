@@ -14,6 +14,8 @@
 //
 #endregion
 using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -846,10 +848,40 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Hooking ------------------------------------------------------------
 
-		private IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+		private unsafe IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 		{
 			switch ((WinMsg)msg)
 			{
+				case WinMsg.WM_ACTIVATE:
+					if (wParam == IntPtr.Zero)
+					{
+						if (ComponentDispatcher.IsThreadModal)
+						{
+							var processId = stackalloc int[2];
+							var threadId = stackalloc int[2];
+
+							threadId[0] = NativeMethods.GetWindowThreadProcessId(hWnd, ref processId[0]);
+							threadId[1] = NativeMethods.GetWindowThreadProcessId(lParam, ref processId[1]);
+
+							if (processId[0] == processId[1] && threadId[0] == threadId[1])
+								Dispatcher.BeginInvoke(new Action(() => Activate()));
+							return IntPtr.Zero;
+						}
+						else
+							return IntPtr.Zero;
+					}
+					else
+						return WmWindowPosChanged(hWnd, lParam);
+				case WinMsg.WM_ACTIVATEAPP: // goes to every window
+					if (wParam != IntPtr.Zero)
+					{
+						var lastWindow = Application.Current.Windows.OfType<Window>().Where(c => c.Owner != null && c.OwnedWindows.Count == 0).LastOrDefault();
+						if (ComponentDispatcher.IsThreadModal && this == lastWindow) // thread is currently modal, top dialog needed
+							Dispatcher.BeginInvoke(new Action(() => Activate()));
+						else
+							return WmWindowPosChanged(hWnd, lParam);
+					}
+					return IntPtr.Zero;
 				case WinMsg.WM_WINDOWPOSCHANGED:
 					return WmWindowPosChanged(hWnd, lParam);
 				case WinMsg.WM_NCCALCSIZE:

@@ -214,9 +214,24 @@ namespace TecWare.PPSn.Lua
 		internal void ShowException(Exception exception, string alternateMessage = null)
 			=> ui.ShowException(PpsExceptionShowFlags.None, exception, alternateMessage);
 
+		private string[] GetButtonArray(object buttons)
+		{
+			if (buttons is string[] buttonsArray)
+				return buttonsArray;
+			else if (buttons is LuaTable t)
+				return t.ArrayList.OfType<string>().ToArray();
+			else
+				return ui.Ok;
+		} // func GetButtonArray
+
 		[LuaMember]
-		internal int MsgBox(string text, PpsImage image = PpsImage.None, params string[] buttons)
-			=> ui.MsgBox(text, image, buttons);
+		internal int MsgBox(object text, PpsImage image = PpsImage.None, params string[] buttons)
+		{
+			if (text is LuaTable t && t.GetMemberValue(nameof(text)) is string luaText)
+				return ui.MsgBox(luaText, t.GetOptionalValue(nameof(image), image), GetButtonArray(t.GetMemberValue(nameof(buttons)) ??  buttons));
+			else
+				return ui.MsgBox(text.ToString(), image, buttons);
+		} // func MsgBox
 
 		#endregion
 	} // class PpsLuaUI
@@ -249,7 +264,7 @@ namespace TecWare.PPSn.Lua
 		{
 			var http = self.LuaShell.Shell.Http;
 			var sb = new StringBuilder(GetRelativePath(http, self, path));
-			HttpStuff.MakeUriArguments(sb, false, args.Members.Select(kv => new PropertyValue(kv.Key, kv.Value)));
+			HttpStuff.MakeUriArguments(sb, path.IndexOf('?') >= 0, args.Members.Select(kv => new PropertyValue(kv.Key, kv.Value)));
 			return http.GetTableAsync(sb.ToString());
 		} // proc LuaGetTableAsync
 
