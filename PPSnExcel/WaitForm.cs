@@ -241,7 +241,7 @@ namespace PPSnExcel
 
 		#region -- UI-Service - members -----------------------------------------------
 
-		int IPpsUIService.MsgBox(string text, PpsImage image, params string[] buttons)
+		int IPpsUIService.MsgBox(object text, PpsImage image, params string[] buttons)
 			=> PpsWinShell.ShowMessage(Globals.ThisAddIn, text, image, buttons);
 
 		private Task RunUICore(Action action)

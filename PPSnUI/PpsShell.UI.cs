@@ -564,7 +564,7 @@ namespace TecWare.PPSn
 		/// <param name="image"></param>
 		/// <param name="buttons"></param>
 		/// <returns></returns>
-		int MsgBox(string text, PpsImage image = PpsImage.Information, params string[] buttons);
+		int MsgBox(object text, PpsImage image = PpsImage.Information, params string[] buttons);
 
 		/// <summary>Run this action in ui-thread.</summary>
 		/// <param name="action"></param>

@@ -154,7 +154,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- Message - property -------------------------------------------------
 
-		public readonly static DependencyProperty MessageProperty = DependencyProperty.Register(nameof(Message), typeof(object), typeof(PpsMessageDialog), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty MessageProperty = DependencyProperty.Register(nameof(Message), typeof(object), typeof(PpsMessageDialog), new FrameworkPropertyMetadata(null));
 
 		public object Message { get => GetValue(MessageProperty); set => SetValue(MessageProperty, value); }
 

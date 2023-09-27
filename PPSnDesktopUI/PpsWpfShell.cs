@@ -584,7 +584,7 @@ namespace TecWare.PPSn
 			});
 		} // proc ShowNotificationAsync
 
-		public int MsgBox(string text, PpsImage image = PpsImage.Information, params string[] buttons)
+		public int MsgBox(object text, PpsImage image = PpsImage.Information, params string[] buttons)
 		{
 			var msg = new PpsMessageDialog(buttons)
 			{

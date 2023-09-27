@@ -89,10 +89,10 @@ namespace TecWare.PPSn
 			}
 		} // func GetMessageTitle
 
-		public static DialogResult ShowMessage(this IWin32Window owner, string message, MessageBoxIcon icon = MessageBoxIcon.Information, MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxDefaultButton defaultButton = MessageBoxDefaultButton.Button1)
-			=> MessageBox.Show(owner, message, GetMessageTitle(icon), buttons, icon, defaultButton);
+		public static DialogResult ShowMessage(this IWin32Window owner, object message, MessageBoxIcon icon = MessageBoxIcon.Information, MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxDefaultButton defaultButton = MessageBoxDefaultButton.Button1)
+			=> MessageBox.Show(owner, message.ToString(), GetMessageTitle(icon), buttons, icon, defaultButton);
 
-		public static int ShowMessage(IWin32Window owner, string message, PpsImage image, string[] buttons)
+		public static int ShowMessage(IWin32Window owner, object message, PpsImage image, string[] buttons)
 		{
 			switch (ShowMessage(owner, message, GetIconFromImage(image), GetMessageButtons(buttons)))
 			{
