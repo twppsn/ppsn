@@ -181,7 +181,7 @@ namespace TecWare.PPSn.Main
 		{
 			if (dpcService != null && e.PropertyName == nameof(PpsDpcService.IsLocked))
 				SetValue(isLockedPropertyKey, dpcService.IsLocked);
-			else if (e.PropertyName == nameof(PpsDpcService.IsRestartNeeded))
+			else if (e.PropertyName == nameof(PpsDpcService.IsRestartNeeded)) // background
 			{
 				//App.InvokeRestartAsync(Shell).AwaitUI(this);
 			}

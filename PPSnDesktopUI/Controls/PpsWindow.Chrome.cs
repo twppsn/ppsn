@@ -850,12 +850,15 @@ namespace TecWare.PPSn.Controls
 
 		private unsafe IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 		{
+			bool IsTopWindow()
+				=> this == Application.Current.Windows.OfType<Window>().Where(c => c.Owner != null && c.OwnedWindows.Count == 0).LastOrDefault();
+
 			switch ((WinMsg)msg)
 			{
 				case WinMsg.WM_ACTIVATE:
 					if (wParam == IntPtr.Zero)
 					{
-						if (ComponentDispatcher.IsThreadModal)
+						if (ComponentDispatcher.IsThreadModal && IsTopWindow())
 						{
 							var processId = stackalloc int[2];
 							var threadId = stackalloc int[2];
@@ -875,8 +878,7 @@ namespace TecWare.PPSn.Controls
 				case WinMsg.WM_ACTIVATEAPP: // goes to every window
 					if (wParam != IntPtr.Zero)
 					{
-						var lastWindow = Application.Current.Windows.OfType<Window>().Where(c => c.Owner != null && c.OwnedWindows.Count == 0).LastOrDefault();
-						if (ComponentDispatcher.IsThreadModal && this == lastWindow) // thread is currently modal, top dialog needed
+						if (ComponentDispatcher.IsThreadModal && IsTopWindow()) // thread is currently modal, top dialog needed
 							Dispatcher.BeginInvoke(new Action(() => Activate()));
 						else
 							return WmWindowPosChanged(hWnd, lParam);
