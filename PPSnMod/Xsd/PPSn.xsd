@@ -447,6 +447,8 @@
 					<xs:complexType>
 						<xs:sequence minOccurs="0" maxOccurs="unbounded">
 							<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
+							
+							<!-- obsolete -->
 							<xs:element name="autoTag" minOccurs="0" maxOccurs="unbounded">
 								<xs:complexType>
 									<xs:attribute name="name" type="KeyType" use="required">
@@ -535,11 +537,13 @@
 								<xs:list itemType="xs:string" />
 							</xs:simpleType>
 						</xs:attribute>
+						<!-- obsolete? -->
 						<xs:attribute name="serverScripts" type="ScriptList" use="optional">
 							<xs:annotation>
 								<xs:documentation>Extension for the document.</xs:documentation>
 							</xs:annotation>
 						</xs:attribute>
+						<!-- obsolete? -->
 						<xs:attribute name="clientScripts" type="PathArray" use="optional">
 							<xs:annotation>
 								<xs:documentation>Script files for the local site.</xs:documentation>
@@ -575,6 +579,7 @@
 
 	<xs:element name="objectItem" abstract="true" type="pps:objectItemType" />
 
+	<!-- obsolete -->
 	<xs:element name="attachment" type="pps:objectItemType" substitutionGroup="pps:objectItem">
 		<xs:annotation>
 			<xs:appinfo>
@@ -584,6 +589,7 @@
 		</xs:annotation>
 	</xs:element>
 
+	<!-- obsolete -->
 	<xs:element name="helpkey" type="pps:objectItemType" substitutionGroup="pps:objectItem">
 		<xs:annotation>
 			<xs:appinfo>
@@ -605,6 +611,7 @@
 		</xs:complexContent>
 	</xs:complexType>
 	
+	<!-- obsolete? -->
 	<xs:element name="document" type="pps:documentType" substitutionGroup="pps:objectItem">
 		<xs:annotation>
 			<xs:appinfo>
