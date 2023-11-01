@@ -590,6 +590,7 @@ namespace TecWare.PPSn.Data
 		private readonly Lazy<Type> rowViewType;
 		private readonly Lazy<Type> liveKeyType;
 		private readonly Lazy<Type> tableViewType;
+		private readonly Lazy<Type> tableStaticType;
 
 		private readonly PpsLiveTableAttribute tableAttribute;
 		private readonly PpsLiveDataColumn[] columns;
@@ -652,6 +653,7 @@ namespace TecWare.PPSn.Data
 			keyType = new Lazy<Type>(CreateKeyType);
 			rowViewType = new Lazy<Type>(CreateRowViewType);
 			tableViewType = new Lazy<Type>(CreateTableViewType);
+			tableStaticType = new Lazy<Type>(CreateTableStaticViewType);
 			liveKeyType = new Lazy<Type>(CreateLiveKeyType);
 
 			types.Add(rowType, this);
@@ -728,6 +730,12 @@ namespace TecWare.PPSn.Data
 			var tableViewType = typeof(PpsLiveTableViewImpl<>);
 			return tableViewType.MakeGenericType(rowType);
 		} // func CreateTableViewType
+
+		private Type CreateTableStaticViewType()
+		{
+			var tableViewType = typeof(PpsLiveTableNoFilter<>);
+			return tableViewType.MakeGenericType(rowType);
+		} // func CreateTableStaticViewType
 
 		private Type CreateLiveKeyType()
 		{
@@ -1638,6 +1646,31 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class PpsLiveTableNoFilter -----------------------------------------
+
+		private sealed class PpsLiveTableNoFilter<T> : PpsLiveTableViewBase<T>, IPpsLiveTableView<T>
+			where T : PpsLiveDataRow
+		{
+			public PpsLiveTableNoFilter(PpsLiveDataRowType type, PpsLiveData data, int[] order)
+				: base(type, data, order)
+			{
+			} // ctor
+
+			protected override PpsDataFilterExpression GetFilter() 
+				=> PpsDataFilterExpression.True;
+
+			private IPpsLiveTableView<T> CreateViewCore(PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
+				=> new PpsLiveTableViewImpl<T>(this, filter, Type.CreateOrderArray(order));
+
+			public IPpsLiveTableView<T> CreateView(params PpsDataOrderExpression[] order)
+				=> CreateViewCore(PpsDataFilterExpression.True, order);
+
+			public IPpsLiveTableView<T> CreateView(PpsDataFilterExpression filter, params PpsDataOrderExpression[] order)
+				=> CreateViewCore(filter, order);
+		} // class PpsLiveTableNoFilter
+
+		#endregion
+
 		#region -- class PpsLiveTableViewImpl -----------------------------------------
 
 		private sealed class PpsLiveTableViewImpl<T> : PpsLiveTableViewBase<T>, IPpsLiveTableFilterView<T>, IPpsLiveTableView
@@ -1831,6 +1864,20 @@ namespace TecWare.PPSn.Data
 		public IPpsLiveTableFilterView<T> CreateView<T>(PpsLiveData data, PpsDataFilterExpression filterExpression, params PpsDataOrderExpression[] orderExpressions)
 			where T : PpsLiveDataRow
 			=> new PpsLiveTableViewImpl<T>(this, data, filterExpression, CreateOrderArray(orderExpressions));
+
+		/// <summary>Create a static view, of the full table.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		public IPpsLiveTableView<T> CreateStaticView<T>(PpsLiveData data)
+			where T : PpsLiveDataRow
+			=> new PpsLiveTableNoFilter<T>(this, data, GetPrimaryKeyFields());
+
+		/// <summary>Create a static view, of the full table.</summary>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		public IPpsLiveTableView CreateStaticView(PpsLiveData data)
+			=> (IPpsLiveTableView)Activator.CreateInstance(tableStaticType.Value, this, data, GetPrimaryKeyFields());
 
 		internal IPpsLiveTableView CreateChildView(PpsLiveDataRow parentRow, int[] childFieldIndices)
 		{
@@ -2764,6 +2811,7 @@ namespace TecWare.PPSn.Data
 			public PpsDataFilterExpression GetCurrentViewFilter()
 			{
 				var filterList = new List<PpsDataFilterExpression>();
+				var isTrueFilter = false;
 
 				// build filter and column mapping for server
 				for (var i = views.Count - 1; i >= 0; i--)
@@ -2771,13 +2819,22 @@ namespace TecWare.PPSn.Data
 					var v = views[i];
 					if (!v.IsAlive) // view is dead, remove it
 						RemoveView(i);
-					else // combine filter expression
-						filterList.Add(v.Filter);
+					else if (!isTrueFilter) // combine filter expression
+					{
+						var f = v.Filter;
+						if (f == PpsDataFilterExpression.True)
+						{
+							isTrueFilter = true;
+							filterList.Clear();
+						}
+						else
+							filterList.Add(f);
+					}
 				}
 
-				return filterList.Count == 0
-					? PpsDataFilterExpression.False
-					: new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.Or, filterList.ToArray()).Reduce();
+				return isTrueFilter
+					? PpsDataFilterExpression.True
+					: (filterList.Count == 0 ? PpsDataFilterExpression.False : new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.Or, filterList.ToArray()).Reduce());
 			} // func GetCurrentViewFilter
 
 			private async Task<bool> RefreshRowsAsync(DEHttpClient client, bool touchRow, List<PpsDataColumnExpression> queryFields, PpsDataQuery query, bool isModified)
@@ -3414,7 +3471,7 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public IPpsLiveTableFilterView<T> NewTable<T>()
 			where T : PpsLiveDataRow
-			=> NewTable<T>(PpsDataFilterExpression.True);
+			=> NewTable<T>(PpsDataFilterExpression.False);
 
 		/// <summary>Create view.</summary>
 		/// <typeparam name="T"></typeparam>
@@ -3433,6 +3490,13 @@ namespace TecWare.PPSn.Data
 		public IPpsLiveTableView<T> NewTable<T>(IEnumerable<IDataRow> rows, params PpsDataOrderExpression[] orderExpressions)
 			where T : PpsLiveDataRow
 			=> PpsLiveDataRowType.Get<T>().CreateView<T>(this, rows, orderExpressions);
+
+		/// <summary>Create a full view.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		public IPpsLiveTableView<T> NewStaticTable<T>()
+			where T : PpsLiveDataRow
+			=> PpsLiveDataRowType.Get<T>().CreateStaticView<T>(this);
 
 		#endregion
 

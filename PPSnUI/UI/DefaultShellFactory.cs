@@ -56,6 +56,7 @@ namespace TecWare.PPSn.UI
 		public FileShellInfo(string name, bool perMachine)
 		{
 			this.name = name;
+			this.perMachine = perMachine;
 
 			localPath = new DirectoryInfo(Path.GetFullPath(Path.Combine(perMachine ? FileShellFactory.CommonEnvironmentsPath : FileShellFactory.LocalEnvironmentsPath, name)));
 			if (!localPath.Exists)

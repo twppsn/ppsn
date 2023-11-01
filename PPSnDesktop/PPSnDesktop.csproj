@@ -15,9 +15,11 @@
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 	  <PlatformTarget>x86</PlatformTarget>
+	  <DebugType>full</DebugType>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 	  <PlatformTarget>x86</PlatformTarget>
+	  <DebugType>full</DebugType>
 	</PropertyGroup>
 	<Import Project="..\Common\AssemblyInfo.targets" />
 	<ItemGroup>

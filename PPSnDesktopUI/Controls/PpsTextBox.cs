@@ -882,7 +882,7 @@ namespace TecWare.PPSn.Controls
 		protected override ValidationResult OnPreviewTextChanged(string newText)
 		{
 			var r = TryInsertText(newText, out var text);
-			return r.IsValid ? TryParse(text, true) : r;
+			return r.IsValid ? TryParse(text.Trim(), true) : r;
 		} // func OnPreviewTextChanged
 
 		/// <summary>Handle text change event.</summary>
