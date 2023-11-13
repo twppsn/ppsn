@@ -20,8 +20,11 @@ using System.Linq;
 using System.Reflection;
 using System.Resources;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -74,6 +77,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Return all main resources</summary>
 		ResourceDictionary Resources { get; }
+		/// <summary>Return a template selector for wpf resources</summary>
+		DataTemplateSelector DefaultDataTemplateSelector { get; }
 
 		/// <summary>Change the current theme</summary>
 		PpsColorTheme CurrentTheme { get; set; }
@@ -85,6 +90,20 @@ namespace TecWare.PPSn
 
 	public static partial class PpsWpfShell
 	{
+		#region -- class DefaultStaticDataTemplateSelector ----------------------------
+
+		private sealed class DefaultStaticDataTemplateSelector : DataTemplateSelector
+		{
+			public DefaultStaticDataTemplateSelector()
+			{
+			} // ctor
+
+			public override DataTemplate SelectTemplate(object item, DependencyObject container)
+				=> FindTemplate(container, item);
+		} // class DefaultStaticDataTemplateSelector
+
+		#endregion
+
 		#region -- FindResource, LoadResource -----------------------------------------
 
 		#region -- class FindResourceStackItem ----------------------------------------
@@ -178,6 +197,13 @@ namespace TecWare.PPSn
 			where T : class
 			=> shell.GetService<IPpsWpfResources>(true).FindResource<T>(resourceKey);
 
+		public static bool TryFindResource<T>(this IPpsShell shell, object resourceKey, out T resource)
+			where T : class
+		{
+			resource = FindResource<T>(shell, resourceKey);
+			return resource != null;
+		} // func TryFindResource
+
 		private static bool TryFindResource(FrameworkElement fe, object resourceKey, out object resource)
 		{
 			resource = fe.TryFindResource(resourceKey);
@@ -199,6 +225,31 @@ namespace TecWare.PPSn
 			else
 				return default;
 		} // func FindResource
+
+		public static bool TryFindResource<T>(this DependencyObject d, object resourceKey, out T resource)
+			where T : class
+		{
+			resource = FindResource<T>(d, resourceKey);
+			return resource != null;
+		} // func TryFindResource
+
+		public static DataTemplate FindTemplate(this DependencyObject container, object item)
+		{
+			// find by type
+			if (item is LuaTable t)
+			{
+				var key = t.GetMemberValue("Typ");
+				if (key != null && TryFindResource<DataTemplate>(container, key, out var resource))
+					return resource;
+			}
+			else if (item is PpsLiveDataRow) // && TryFindResource<DataTemplate>(container, new ComponentResourceKey(item.GetType(), item.GetType()), out var resource))
+			{
+				var resource = (DataTemplate)Application.Current.FindResource(item.GetType()) ;
+				return resource;
+			}
+			
+			return null;
+		} // func FindTemplate
 
 		/// <summary>Load a resource dictionary from a xaml-source.</summary>
 		/// <param name="type"></param>
@@ -302,7 +353,11 @@ namespace TecWare.PPSn
 		} // proc ToTitle
 
 		#endregion
+
+		/// <summary>Template selection, that redirects to the GetDataTemplate function.</summary>
+		public static DataTemplateSelector DataTemplateSelector => new DefaultStaticDataTemplateSelector();
 	} // class PpsWpfShell
+	
 
 	#endregion
 }

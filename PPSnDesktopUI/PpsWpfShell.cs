@@ -26,6 +26,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
@@ -33,7 +34,6 @@ using System.Windows.Threading;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Data;
 using TecWare.PPSn.Themes;
 using TecWare.PPSn.UI;
 
@@ -657,6 +657,23 @@ namespace TecWare.PPSn
 	]
 	internal sealed class PpsWpfShellService : ObservableObject, IPpsWpfResources, IPpsShellService, IPpsShellServiceInit
 	{
+		#region -- class DefaultInstanceDataTemplateSelector --------------------------
+
+		private sealed class DefaultInstanceDataTemplateSelector : DataTemplateSelector
+		{
+			private readonly IPpsShell shell;
+
+			public DefaultInstanceDataTemplateSelector(IPpsShell shell)
+			{
+				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
+			} // ctor
+
+			public override DataTemplate SelectTemplate(object item, DependencyObject container)
+				=> PpsWpfShell.FindTemplate(container, item);
+		} // class DefaultInstanceDataTemplateSelector
+
+		#endregion
+
 		#region -- class PpsWebRequestCreate ------------------------------------------
 
 		private class PpsWebRequestCreate : IWebRequestCreate
@@ -682,6 +699,7 @@ namespace TecWare.PPSn
 		private readonly IPpsShell shell;
 		private readonly ResourceDictionary mainResources;    // Application resources
 		private readonly ResourceDictionary defaultResources; // default resource, to register shell
+		private readonly DataTemplateSelector defaultDataTemplateSelector;
 
 		private PpsColorTheme defaultTheme = PpsColorTheme.Default;
 		private PpsColorTheme currentTheme = PpsColorTheme.Default;
@@ -696,6 +714,7 @@ namespace TecWare.PPSn
 
 			mainResources = Application.Current.Resources;
 			defaultResources = PpsWpfShell.CreateDefaultResources(shell);
+			defaultDataTemplateSelector = new DefaultInstanceDataTemplateSelector(shell);
 		} // ctor
 
 		Task IPpsShellServiceInit.InitAsync()
@@ -753,8 +772,12 @@ namespace TecWare.PPSn
 		IEnumerable<T> IPpsWpfResources.FindResourceByKey<TKEY, T>(Predicate<TKEY> predicate)
 			=> mainResources.FindResourceByKey<TKEY, T>(predicate);
 
-		T IPpsWpfResources.FindResource<T>(object resourceKey)
+		private T FindResource<T>(object resourceKey)
+			where T : class
 			=> defaultResources[resourceKey] as T;
+
+		T IPpsWpfResources.FindResource<T>(object resourceKey)
+			=> FindResource<T>(resourceKey);
 
 		ResourceDictionary IPpsWpfResources.Resources => mainResources;
 
@@ -836,6 +859,9 @@ namespace TecWare.PPSn
 		PpsColorTheme IPpsWpfResources.CurrentTheme { get => currentTheme; set => SetCurrentTheme(value, false); }
 
 		#endregion
+
+		/// <summary></summary>
+		public DataTemplateSelector DefaultDataTemplateSelector => defaultDataTemplateSelector;
 
 		public IPpsShell Shell => shell;
 	} // class PpsWpfShellService
@@ -1282,67 +1308,11 @@ namespace TecWare.PPSn
 
 
 
-
-
-
-
 	#region -- class PpsShellWpf ------------------------------------------------------
 
 	///// <summary></summary>
 	//public abstract class PpsShellWpf : _PpsShell, IPpsXamlCode
 	//{
-	//	#region -- class InstanceKey --------------------------------------------------
-
-	//	/// <summary>Special key to select templates.</summary>
-	//	private sealed class InstanceKey<T> : ResourceKey
-	//		where T : class
-	//	{
-	//		public InstanceKey()
-	//		{
-	//		} // ctor
-
-	//		public override int GetHashCode()
-	//			=> typeof(T).GetHashCode();
-
-	//		public override bool Equals(object obj)
-	//			=> obj is T;
-
-	//		public override Assembly Assembly => null;
-	//	} // class DefaultEnvironmentKeyImpl
-
-	//	#endregion
-
-	//	#region -- class DefaultStaticDataTemplateSelector ----------------------------
-
-	//	private sealed class DefaultStaticDataTemplateSelector : DataTemplateSelector
-	//	{
-	//		public DefaultStaticDataTemplateSelector()
-	//		{
-	//		} // ctor
-
-	//		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-	//			=> GetShell<PpsShellWpf>(container)?.GetDataTemplate(item, container);
-	//	} // class DefaultStaticDataTemplateSelector
-
-	//	#endregion
-
-	//	#region -- class DefaultInstanceDataTemplateSelector --------------------------
-
-	//	private sealed class DefaultInstanceDataTemplateSelector : DataTemplateSelector
-	//	{
-	//		private readonly PpsShellWpf shell;
-
-	//		public DefaultInstanceDataTemplateSelector(PpsShellWpf shell)
-	//		{
-	//			this.shell = shell;
-	//		} // ctor
-
-	//		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-	//			=> shell.GetDataTemplate(item, container);
-	//	} // class DefaultInstanceDataTemplateSelector
-
-	//	#endregion
-
 	//	private readonly Dispatcher currentDispatcher;
 	//	private readonly InputManager inputManager;
 	//	private readonly SynchronizationContext synchronizationContext;
@@ -1476,34 +1446,6 @@ namespace TecWare.PPSn
 
 	//	#endregion
 
-	//	#region -- Synchronization ----------------------------------------------------
-
-	//	/// <summary></summary>
-	//	/// <param name="action"></param>
-	//	public sealed override void BeginInvoke(Action action)
-	//		=> Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle); // must be idle, that method is invoked after the current changes
-
-	//	/// <summary></summary>
-	//	/// <param name="action"></param>
-	//	/// <returns></returns>
-	//	public sealed override async Task InvokeAsync(Action action)
-	//		=> await Dispatcher.InvokeAsync(action);
-
-	//	/// <summary></summary>
-	//	/// <typeparam name="T"></typeparam>
-	//	/// <param name="func"></param>
-	//	/// <returns></returns>
-	//	public sealed override async Task<T> InvokeAsync<T>(Func<T> func)
-	//		=> await Dispatcher.InvokeAsync(func);
-
-	//	/// <summary>Return context</summary>
-	//	public sealed override SynchronizationContext Context => synchronizationContext;
-
-	//	/// <summary>Wpf main thread dispatcher.</summary>
-	//	[LuaMember]
-	//	public Dispatcher Dispatcher => currentDispatcher;
-
-	//	#endregion
 
 	//	#region -- UI-Helper ----------------------------------------------------------
 
@@ -1695,11 +1637,6 @@ namespace TecWare.PPSn
 	//	public static ResourceKey DefaultEnvironmentKey { get; } = new InstanceKey<PpsShellWpf>();
 	//	/// <summary>Resource key for the current pane.</summary>
 	//	public static ResourceKey CurrentWindowPaneKey { get; } = new InstanceKey<IPpsWindowPane>();
-	//	/// <summary>Template selection, that redirects to the GetDataTemplate function.</summary>
-	//	public static DataTemplateSelector StaticDataTemplateSelector => new DefaultStaticDataTemplateSelector();
-
-	//	/// <summary></summary>
-	//	public DataTemplateSelector DefaultDataTemplateSelector { get; }
 
 	//	#endregion
 	//} // class PpsShellWpf

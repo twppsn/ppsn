@@ -47,7 +47,6 @@ namespace TecWare.PPSn.Themes
 
 		#endregion
 
-
 		/// <summary></summary>
 		public static ResourceKey ExceptionControlStyle { get; } = new PpsWpfResourceKey(nameof(ExceptionControlStyle));
 	} // class PpsResource

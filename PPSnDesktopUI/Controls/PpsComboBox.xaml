@@ -38,9 +38,10 @@ specific language governing permissions and limitations under the Licence.
 													 BorderThickness="{TemplateBinding BorderThickness}"
 													 BorderBrush="{TemplateBinding BorderBrush}" />
 						<ContentPresenter x:Name="PART_ContentPresenter"
-										  Content="{TemplateBinding ComboBox.SelectionBoxItem}" 
+										  Content="{TemplateBinding SelectedValueItem}" 
 										  ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
 										  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+										  ContentStringFormat="{TemplateBinding ItemStringFormat}"
 										  IsHitTestVisible="False"
 										  Margin="5,1,23,1"
 										  VerticalAlignment="Center" />

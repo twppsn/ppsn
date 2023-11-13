@@ -421,6 +421,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary>Access base enumerable list</summary>
+		public IDataRowEnumerable BaseEnumerable => baseEnumerable;
+
 		/// <summary>Change sort order of the data.</summary>
 		public IEnumerable<PpsDataOrderExpression> Sort
 		{

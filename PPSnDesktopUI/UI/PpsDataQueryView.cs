@@ -154,6 +154,15 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- PrimaryKey - property ----------------------------------------------
+
+		public static readonly DependencyProperty PrimaryKeyProperty = DependencyProperty.Register(nameof(PrimaryKey), typeof(string), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null));
+
+		/// <summary>Primary key for selection proposes.</summary>
+		public string PrimaryKey { get => (string)GetValue(PrimaryKeyProperty); set => SetValue(PrimaryKeyProperty, value); }
+
+		#endregion
+
 		#region -- Columns - property -------------------------------------------------
 
 		public static readonly DependencyProperty ColumnsProperty = DependencyProperty.Register(nameof(Columns), typeof(object), typeof(PpsDataQueryView), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnColumnsChanged)));
@@ -168,6 +177,9 @@ namespace TecWare.PPSn.UI
 		} // proc OnColumnsChanged
 
 		public object Columns { get => GetValue(ColumnsProperty); set => SetValue(ColumnsProperty, value); }
+
+		/// <summary>Return parsed columns.</summary>
+		public PpsDataColumnExpression[] ColumnsCore => columns;
 
 		#endregion
 
@@ -185,6 +197,8 @@ namespace TecWare.PPSn.UI
 		} // proc OnFilterChanged
 
 		public object Filter { get => GetValue(FilterProperty); set => SetValue(FilterProperty, value); }
+
+		public PpsDataFilterExpression FilterCore => filter;
 
 		#endregion
 

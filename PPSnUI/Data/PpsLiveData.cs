@@ -185,6 +185,8 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		Task RefreshAsync();
 
+		/// <summary>Return type</summary>
+		PpsLiveDataRowType Type { get; }
 		/// <summary>Assigend data set.</summary>
 		PpsLiveData Data { get; }
 	} // interface IPpsLiveTableView
@@ -594,6 +596,7 @@ namespace TecWare.PPSn.Data
 
 		private readonly PpsLiveTableAttribute tableAttribute;
 		private readonly PpsLiveDataColumn[] columns;
+		private readonly PpsLiveDataColumn singlePrimaryKey;
 
 		private readonly Dictionary<string, PpsLiveDataRelation> relations = new Dictionary<string, PpsLiveDataRelation>();
 
@@ -625,7 +628,17 @@ namespace TecWare.PPSn.Data
 					if (columnAttribute.IsPrimary)
 						hasPrimaryKeyDefinition = true;
 
-					newColumns.Add(new PpsLiveDataColumn(columnAttribute.Field, pi.PropertyType, pi.Name, columnAttribute.IsPrimary));
+					var newColumn = new PpsLiveDataColumn(columnAttribute.Field, pi.PropertyType, pi.Name, columnAttribute.IsPrimary);
+					newColumns.Add(newColumn);
+
+					// set single primary key
+					if (columnAttribute.IsPrimary)
+					{
+						if (singlePrimaryKey == null)
+							singlePrimaryKey = newColumn;
+						else
+							singlePrimaryKey = null;
+					}
 				}
 
 				// check for relation
@@ -740,7 +753,7 @@ namespace TecWare.PPSn.Data
 		private Type CreateLiveKeyType()
 		{
 			var typeLiveKey = typeof(TypedLiveKey<>);
-			return typeLiveKey.MakeGenericType(rowType, keyType.Value);
+			return typeLiveKey.MakeGenericType(keyType.Value);
 		} // func CreateRowViewType
 
 		private void CheckRowType(Type rowType)
@@ -1609,10 +1622,10 @@ namespace TecWare.PPSn.Data
 				=> throw new NotSupportedException();
 
 			bool IList.Contains(object value)
-				=> Contains((T)value);
+				=> value is T t ? Contains(t) : false;
 
 			int IList.IndexOf(object value)
-				=> IndexOf((T)value);
+				=> value is T t ? IndexOf(t) : -1;
 
 			void ICollection.CopyTo(Array array, int index)
 				=> throw new NotImplementedException();
@@ -1648,18 +1661,19 @@ namespace TecWare.PPSn.Data
 
 		#region -- class PpsLiveTableNoFilter -----------------------------------------
 
-		private sealed class PpsLiveTableNoFilter<T> : PpsLiveTableViewBase<T>, IPpsLiveTableView<T>
+		private sealed class PpsLiveTableNoFilter<T> : PpsLiveTableViewBase<T>, IPpsLiveTableView<T>, IPpsLiveTableView
 			where T : PpsLiveDataRow
 		{
 			public PpsLiveTableNoFilter(PpsLiveDataRowType type, PpsLiveData data, int[] order)
 				: base(type, data, order)
 			{
+				OnFilterChanged();
 			} // ctor
 
-			protected override PpsDataFilterExpression GetFilter() 
+			protected override PpsDataFilterExpression GetFilter()
 				=> PpsDataFilterExpression.True;
 
-			private IPpsLiveTableView<T> CreateViewCore(PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
+			private PpsLiveTableViewImpl<T> CreateViewCore(PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
 				=> new PpsLiveTableViewImpl<T>(this, filter, Type.CreateOrderArray(order));
 
 			public IPpsLiveTableView<T> CreateView(params PpsDataOrderExpression[] order)
@@ -1667,6 +1681,21 @@ namespace TecWare.PPSn.Data
 
 			public IPpsLiveTableView<T> CreateView(PpsDataFilterExpression filter, params PpsDataOrderExpression[] order)
 				=> CreateViewCore(filter, order);
+
+			#region -- IPpsLiveTableView members --------------------------------------
+
+			IPpsLiveTableView IPpsLiveTableView.CreateView(params PpsDataOrderExpression[] order)
+				=> CreateViewCore(PpsDataFilterExpression.True, order);
+
+			IPpsLiveTableView IPpsLiveTableView.CreateView(PpsDataFilterExpression filter, params PpsDataOrderExpression[] order)
+				=> CreateViewCore(filter, order);
+
+			IEnumerable<PpsLiveDataRow> IPpsLiveTableView.FindRows(params object[] values)
+				=> FindRows(values);
+
+			IEnumerable<PpsLiveDataRow> IPpsLiveTableView.Rows => Rows;
+
+			#endregion
 		} // class PpsLiveTableNoFilter
 
 		#endregion
@@ -1711,11 +1740,13 @@ namespace TecWare.PPSn.Data
 			public IPpsLiveTableView<T> CreateView(params PpsDataOrderExpression[] order)
 				=> CreateViewCore(PpsDataFilterExpression.True, order);
 
-			IPpsLiveTableView IPpsLiveTableView.CreateView(params PpsDataOrderExpression[] order)
-				=> CreateViewCore(PpsDataFilterExpression.True, order);
-
 			public IPpsLiveTableView<T> CreateView(PpsDataFilterExpression filter, params PpsDataOrderExpression[] order)
 				=> CreateViewCore(filter, order);
+
+			#region -- IPpsLiveTableView members --------------------------------------
+
+			IPpsLiveTableView IPpsLiveTableView.CreateView(params PpsDataOrderExpression[] order)
+				=> CreateViewCore(PpsDataFilterExpression.True, order);
 
 			IPpsLiveTableView IPpsLiveTableView.CreateView(PpsDataFilterExpression filter, params PpsDataOrderExpression[] order)
 				=> CreateViewCore(filter, order);
@@ -1724,6 +1755,8 @@ namespace TecWare.PPSn.Data
 				=> FindRows(values);
 
 			IEnumerable<PpsLiveDataRow> IPpsLiveTableView.Rows => Rows;
+
+			#endregion
 		} // class PpsLiveTableViewImpl
 
 		#endregion
@@ -1783,11 +1816,13 @@ namespace TecWare.PPSn.Data
 			public IPpsLiveTableView<T> CreateView(params PpsDataOrderExpression[] order)
 				=> CreateViewCore(PpsDataFilterExpression.True, order);
 
-			IPpsLiveTableView IPpsLiveTableView.CreateView(params PpsDataOrderExpression[] order)
-				=> CreateViewCore(PpsDataFilterExpression.True, order);
-
 			public IPpsLiveTableView<T> CreateView(PpsDataFilterExpression filter, params PpsDataOrderExpression[] order)
 				=> CreateViewCore(filter, order);
+
+			#region -- IPpsLiveTableView members --------------------------------------
+
+			IPpsLiveTableView IPpsLiveTableView.CreateView(params PpsDataOrderExpression[] order)
+				=> CreateViewCore(PpsDataFilterExpression.True, order);
 
 			IPpsLiveTableView IPpsLiveTableView.CreateView(PpsDataFilterExpression filter, params PpsDataOrderExpression[] order)
 				=> CreateViewCore(filter, order);
@@ -1796,6 +1831,8 @@ namespace TecWare.PPSn.Data
 				=> FindRows(values);
 
 			IEnumerable<PpsLiveDataRow> IPpsLiveTableView.Rows => Rows;
+
+			#endregion
 		} // class PpsLiveTableParentViewImpl
 
 		#endregion
@@ -1904,6 +1941,16 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Name of the data row.</summary>
 		public string Name => rowType.Name;
+		/// <summary>Type of das data row class.</summary>
+		public Type RowType => rowType;
+
+		/// <summary>One primary key column</summary>
+		public bool IsSinglePrimaryKey => singlePrimaryKey != null;
+		/// <summary>Return primary key column</summary>
+		public PpsLiveDataColumn PrimaryKey => singlePrimaryKey;
+
+		/// <summary>Return primary key columns</summary>
+		public IEnumerable<PpsLiveDataColumn> PrimaryKeys => columns.Where(c => c.IsPrimaryKey);
 
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columns;
 		/// <summary>Live columns of this row type.</summary>
