@@ -26,6 +26,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Threading;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
@@ -216,179 +217,6 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- class SelectedBaseValue --------------------------------------------
-
-		private abstract class SelectedBaseValue
-		{
-			private readonly PpsComboBox comboBox;
-
-			protected SelectedBaseValue(PpsComboBox comboBox)
-			{
-				this.comboBox = comboBox ?? throw new ArgumentNullException(nameof(comboBox));
-			} // ctor
-
-			public virtual object Coerce(object value)
-				=> value;
-
-			public virtual void Set(DependencyPropertyChangedEventArgs e)
-			{
-			}
-
-			public bool IsSelectionPending;
-			public abstract object Value { get; }
-
-			public PpsComboBox ComboBox => comboBox;
-		} // class SelectedBaseValue
-
-		#endregion
-
-		#region -- class SelectedPendingValue -----------------------------------------
-
-		private sealed class SelectedPendingValue : SelectedBaseValue
-		{
-			private object pendingValue;
-
-			public SelectedPendingValue(PpsComboBox comboBox, object pendingValue)
-				: base(comboBox)
-			{
-				this.pendingValue = pendingValue ?? throw new ArgumentNullException(nameof(pendingValue));
-			} // ctor
-
-			public override void Set(DependencyPropertyChangedEventArgs e)
-				=> pendingValue = e.NewValue;
-
-			public override object Value => pendingValue;
-		} // class SelectedPendingValue
-
-		#endregion
-
-		#region -- class SelectedDefaultValue -----------------------------------------
-
-		private sealed class SelectedDefaultValue : SelectedBaseValue
-		{
-			public SelectedDefaultValue(PpsComboBox comboBox)
-				: base(comboBox)
-			{
-			} // ctor
-
-			public override object Coerce(object value)
-				=> SelectedValueProperty.GetMetadata(typeof(ComboBox)).CoerceValueCallback(ComboBox, value);
-
-			public override void Set(DependencyPropertyChangedEventArgs e)
-				=> SelectedValueProperty.GetMetadata(typeof(ComboBox)).PropertyChangedCallback(ComboBox, e);
-
-			public override object Value => ComboBox.SelectedValue;
-		} // class SelectedDefaultValue
-
-		#endregion
-
-		#region -- class SelectedLiveValue --------------------------------------------
-
-		private sealed class SelectedLiveValue : SelectedBaseValue
-		{
-			private readonly PpsLiveDataRowType type;
-			private IPpsLiveRowView row;
-
-			public SelectedLiveValue(PpsComboBox comboBox, PpsLiveDataRowType type)
-				: base(comboBox)
-			{
-				this.type = type ?? throw new ArgumentNullException(nameof(type));
-			} // ctor
-
-			private void Row_PropertyChanged(object sender, PropertyChangedEventArgs e)
-			{
-				if (e.PropertyName == nameof(IPpsLiveRowView.Row))
-					ComboBox.UpdateSelectedValueItem(row.Row);
-			} // event Row_PropertyChanged
-
-			public override object Coerce(object value)
-			{
-				if (value == null)
-					return null;
-				return Procs.ChangeType(value, type.PrimaryKey.DataType);
-			} // func Coerce
-
-			public override void Set(DependencyPropertyChangedEventArgs e)
-			{
-				var data = ComboBox.GetControlService<PpsLiveData>(true);
-				if (e.NewValue == null)
-					ComboBox.UpdateSelectedValueItem(null);
-				else
-				{
-					object keyValue = e.NewValue;
-					if (e.NewValue.GetType() == type.RowType)
-						keyValue = type.RowType.GetProperty(type.PrimaryKey.PropertyName).GetValue(keyValue);
-
-					if (row == null)
-					{
-						row = type.CreateRow(data, keyValue);
-						if (row.Row != null)
-							ComboBox.UpdateSelectedValueItem(row.Row);
-
-						row.PropertyChanged += Row_PropertyChanged;
-					}
-					else
-						row.SetKey(keyValue);
-                }
-			} // proc Set
-
-			public override object Value => row?.Key.FirstOrDefault();
-		} // class SelectedLiveValue
-
-		#endregion
-
-		#region -- class SelectedQueryValue -------------------------------------------
-
-		private sealed class SelectedQueryValue : SelectedBaseValue
-		{
-			private readonly string viewName;
-			private readonly string primaryKey;
-			private readonly PpsDataFilterExpression filter;
-			private readonly PpsDataColumnExpression[] columns;
-
-			private object currentValue;
-
-			public SelectedQueryValue(PpsComboBox comboBox, PpsDataQueryView query)
-				: base(comboBox)
-			{
-				if (query == null)
-					throw new ArgumentNullException(nameof(query));
-
-				// copy usefull attributes
-				viewName = query.ViewName;
-				primaryKey = query.PrimaryKey ?? throw new ArgumentNullException(nameof(PpsDataQueryView.PrimaryKey));
-				filter = query.FilterCore;
-				columns = query.ColumnsCore;
-			} // ctor
-
-			private async Task GetRowAsync(IPpsShell shell, PpsDataQuery query)
-			{
-				var row = await Task.Run(() => shell.GetViewData(query).FirstOrDefault());
-				ComboBox.UpdateSelectedValueItem(row);
-			} // func GeRowAsync
-
-			public override object Coerce(object value) 
-				=> base.Coerce(value);
-
-			public override void Set(DependencyPropertyChangedEventArgs e)
-			{
-				currentValue = e.NewValue;
-
-				var qry = new PpsDataQuery(viewName)
-				{
-					Filter = PpsDataFilterExpression.Combine(filter, PpsDataFilterExpression.Compare(primaryKey, PpsDataFilterCompareOperator.Equal, currentValue)),
-					Columns = columns,
-					Count = 1
-				};
-
-				GetRowAsync(ComboBox.GetShell(), qry).Spawn();
-			} // proc Set
-
-			public override object Value => currentValue;
-		} // class SelectedQueryValue
-
-		#endregion
-
 		private IPpsDataRowViewFilter filterView = null;
 		private PpsTextBox filterBox;
 
@@ -507,7 +335,181 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- SelectedValue ------------------------------------------------------
+		#region -- SelectedValue - property -------------------------------------------
+
+		#region -- class SelectedBaseValue --------------------------------------------
+
+		private abstract class SelectedBaseValue
+		{
+			private readonly PpsComboBox comboBox;
+
+			protected SelectedBaseValue(PpsComboBox comboBox)
+			{
+				this.comboBox = comboBox ?? throw new ArgumentNullException(nameof(comboBox));
+			} // ctor
+
+			public virtual object Coerce(object value)
+				=> value;
+
+			public virtual void Set(DependencyPropertyChangedEventArgs e)
+			{
+			}
+
+			public bool IsSelectionPending;
+			public abstract object Value { get; }
+
+			public PpsComboBox ComboBox => comboBox;
+		} // class SelectedBaseValue
+
+		#endregion
+
+		#region -- class SelectedPendingValue -----------------------------------------
+
+		private sealed class SelectedPendingValue : SelectedBaseValue
+		{
+			private object pendingValue;
+
+			public SelectedPendingValue(PpsComboBox comboBox, object pendingValue)
+				: base(comboBox)
+			{
+				this.pendingValue = pendingValue ?? throw new ArgumentNullException(nameof(pendingValue));
+			} // ctor
+
+			public override void Set(DependencyPropertyChangedEventArgs e)
+				=> pendingValue = e.NewValue;
+
+			public override object Value => pendingValue;
+		} // class SelectedPendingValue
+
+		#endregion
+
+		#region -- class SelectedDefaultValue -----------------------------------------
+
+		private sealed class SelectedDefaultValue : SelectedBaseValue
+		{
+			public SelectedDefaultValue(PpsComboBox comboBox)
+				: base(comboBox)
+			{
+			} // ctor
+
+			public override object Coerce(object value)
+				=> SelectedValueProperty.GetMetadata(typeof(ComboBox)).CoerceValueCallback(ComboBox, value);
+
+			public override void Set(DependencyPropertyChangedEventArgs e)
+				=> SelectedValueProperty.GetMetadata(typeof(ComboBox)).PropertyChangedCallback(ComboBox, e);
+
+			public override object Value => ComboBox.SelectedValue;
+		} // class SelectedDefaultValue
+
+		#endregion
+
+		#region -- class SelectedLiveValue --------------------------------------------
+
+		private sealed class SelectedLiveValue : SelectedBaseValue
+		{
+			private readonly PpsLiveDataRowType type;
+			private IPpsLiveRowView row;
+
+			public SelectedLiveValue(PpsComboBox comboBox, PpsLiveDataRowType type)
+				: base(comboBox)
+			{
+				this.type = type ?? throw new ArgumentNullException(nameof(type));
+			} // ctor
+
+			private void Row_PropertyChanged(object sender, PropertyChangedEventArgs e)
+			{
+				if (e.PropertyName == nameof(IPpsLiveRowView.Row))
+					ComboBox.UpdateSelectedValueItem(row.Row);
+			} // event Row_PropertyChanged
+
+			public override object Coerce(object value)
+			{
+				if (value == null)
+					return null;
+				return Procs.ChangeType(value, type.PrimaryKey.DataType);
+			} // func Coerce
+
+			public override void Set(DependencyPropertyChangedEventArgs e)
+			{
+				var data = ComboBox.GetControlService<PpsLiveData>(true);
+				if (e.NewValue == null)
+					ComboBox.UpdateSelectedValueItem(null);
+				else
+				{
+					object keyValue = e.NewValue;
+					if (e.NewValue.GetType() == type.RowType)
+						keyValue = type.RowType.GetProperty(type.PrimaryKey.PropertyName).GetValue(keyValue);
+
+					if (row == null)
+					{
+						row = type.CreateRow(data, keyValue);
+						if (row.Row != null)
+							ComboBox.UpdateSelectedValueItem(row.Row);
+
+						row.PropertyChanged += Row_PropertyChanged;
+					}
+					else
+						row.SetKey(keyValue);
+				}
+			} // proc Set
+
+			public override object Value => row?.Key.FirstOrDefault();
+		} // class SelectedLiveValue
+
+		#endregion
+
+		#region -- class SelectedQueryValue -------------------------------------------
+
+		private sealed class SelectedQueryValue : SelectedBaseValue
+		{
+			private readonly string viewName;
+			private readonly string primaryKey;
+			private readonly PpsDataFilterExpression filter;
+			private readonly PpsDataColumnExpression[] columns;
+
+			private object currentValue;
+
+			public SelectedQueryValue(PpsComboBox comboBox, PpsDataQueryView query)
+				: base(comboBox)
+			{
+				if (query == null)
+					throw new ArgumentNullException(nameof(query));
+
+				// copy usefull attributes
+				viewName = query.ViewName;
+				primaryKey = query.PrimaryKey ?? throw new ArgumentNullException(nameof(PpsDataQueryView.PrimaryKey));
+				filter = query.FilterCore;
+				columns = query.ColumnsCore;
+			} // ctor
+
+			private async Task GetRowAsync(IPpsShell shell, PpsDataQuery query)
+			{
+				var row = await Task.Run(() => shell.GetViewData(query).FirstOrDefault());
+				ComboBox.UpdateSelectedValueItem(row);
+			} // func GeRowAsync
+
+			public override object Coerce(object value)
+				=> base.Coerce(value);
+
+			public override void Set(DependencyPropertyChangedEventArgs e)
+			{
+				currentValue = e.NewValue;
+
+				var qry = new PpsDataQuery(viewName)
+				{
+					Filter = PpsDataFilterExpression.Combine(filter, PpsDataFilterExpression.Compare(primaryKey, PpsDataFilterCompareOperator.Equal, currentValue)),
+					Columns = columns,
+					Count = 1
+				};
+
+				GetRowAsync(ComboBox.GetShell(), qry).Spawn();
+			} // proc Set
+
+			public override object Value => currentValue;
+		} // class SelectedQueryValue
+
+		#endregion
+
 
 		private static readonly DependencyPropertyKey SelectedValueItemPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedValueItem), typeof(object), typeof(PpsComboBox), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty SelectedValueItemProperty = SelectedValueItemPropertyKey.DependencyProperty;
@@ -685,4 +687,45 @@ namespace TecWare.PPSn.Controls
 	} // class PpsComboBoxToggleButton
 
 	#endregion
+
+	#region -- class PpsComboBoxTemplate ----------------------------------------------
+
+	public sealed class PpsComboBoxTemplateMarkup : MarkupExtension
+	{
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return new PpsComboBoxTemplateSelector
+			{
+				SelectedTemplate = SelectedTemplate,
+				SelectedTemplateSelector = SelectedTemplateSelector,
+				DropDownItemTemplate = DropDownItemTemplate,
+				DropDownItemTemplateSelector = DropDownItemTemplateSelector
+			};
+		} // func ProvideValue
+
+		public DataTemplate SelectedTemplate { get; set; } = null;
+		public DataTemplateSelector SelectedTemplateSelector { get; set; } = null;
+		public DataTemplate DropDownItemTemplate { get; set; } = null;
+		public DataTemplateSelector DropDownItemTemplateSelector { get; set; } = null;
+	} // class PpsComboBoxTemplateMarkup
+
+	public class PpsComboBoxTemplateSelector : DataTemplateSelector
+	{
+		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+		{
+			var isDropItem = container.GetVisualParent<ComboBoxItem>() != null;
+			return isDropItem
+				? (DropDownItemTemplate ?? DropDownItemTemplateSelector?.SelectTemplate(item, container))
+				: (SelectedTemplate ?? SelectedTemplateSelector?.SelectTemplate(item, container));
+		} // func SelectTemplate
+
+		public DataTemplate SelectedTemplate { get; set; } = null;
+		public DataTemplateSelector SelectedTemplateSelector { get; set; } = null;
+		public DataTemplate DropDownItemTemplate { get; set; } = null;
+		public DataTemplateSelector DropDownItemTemplateSelector { get; set; } = null;
+	} // class PpsComboBoxTemplateSelector
+
+
+	#endregion
+
 }
