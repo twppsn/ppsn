@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Resources;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
@@ -351,6 +352,29 @@ namespace TecWare.PPSn
 					return null;
 			}
 		} // proc ToTitle
+
+		#endregion
+
+		#region -- GetWindowRect ------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="w"></param>
+		/// <returns></returns>
+		public static Rect GetWindowRect(this Window w)
+		{
+			var wi = new WINDOWINFO();
+			NativeMethods.GetWindowInfo(new WindowInteropHelper(w).Handle, wi);
+			var source = PresentationSource.FromVisual(w);
+			var pts = new Point[]
+			{
+				new Point(wi.rcWindow.Left, wi.rcWindow.Top),
+				new Point(wi.rcWindow.Right, wi.rcWindow.Bottom)
+			};
+
+			source.CompositionTarget.TransformFromDevice.Transform(pts);
+
+			return new Rect(pts[0], pts[1]);
+		} // func GetWindowRect
 
 		#endregion
 

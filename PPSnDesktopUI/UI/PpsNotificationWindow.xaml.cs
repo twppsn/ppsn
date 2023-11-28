@@ -72,25 +72,7 @@ namespace TecWare.PPSn.UI
 		} // proc OnPropertyChanged
 
 		private Rect GetHoverArea()
-		{
-			if (hoverObject is Window w)
-			{
-				var wi = new WINDOWINFO();
-				NativeMethods.GetWindowInfo(new WindowInteropHelper(w).Handle, wi);
-				var source = PresentationSource.FromVisual(w);
-				var pts = new Point[]
-				{
-					new Point(wi.rcWindow.Left, wi.rcWindow.Top),
-					new Point(wi.rcWindow.Right, wi.rcWindow.Bottom)
-				};
-
-				source.CompositionTarget.TransformFromDevice.Transform(pts);
-
-				return new Rect(pts[0], pts[1]);
-			}
-			else
-				return SystemParameters.WorkArea;
-		} // func GetHoverArea
+			=> hoverObject is Window w ? w.GetWindowRect() : SystemParameters.WorkArea;
 
 		public void RecalcPosition(bool force = false)
 		{
@@ -133,8 +115,7 @@ namespace TecWare.PPSn.UI
 				Topmost = true;
 			}
 
-			if (storyboardEnd != null)
-				storyboardEnd.TrySetResult(new NoneResult());
+			storyboardEnd?.TrySetResult(new NoneResult());
 			storyboardEnd = new TaskCompletionSource<NoneResult>();
 
 			switch (message)

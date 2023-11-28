@@ -754,7 +754,7 @@ namespace TecWare.PPSn
 				remoteUri = uri;
 
 			// create a relative uri
-			return new PpsProxyRequest(shell.Http, uri, remoteUri);
+			return new PpsProxyRequest(shell, uri, remoteUri);
 		} // func CreateWebRequest
 
 		#endregion
@@ -1027,7 +1027,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private readonly DEHttpClient http; // owner, that retrieves a resource
+		private const string ppsnDeviceIdHeaderKey = "x-ppsn-deviceId";
+
+		private readonly IPpsShell shell; // owner, that retrieves a resource
 		private readonly Uri originalUri;
 		private readonly Uri remoteUri;
 
@@ -1046,9 +1048,9 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		internal PpsProxyRequest(DEHttpClient http, Uri originalUri, Uri remoteUri)
+		internal PpsProxyRequest(IPpsShell shell, Uri originalUri, Uri remoteUri)
 		{
-			this.http = http ?? throw new ArgumentNullException(nameof(http));
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 
 			this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
 			this.remoteUri = remoteUri ?? throw new ArgumentNullException(nameof(remoteUri));
@@ -1080,7 +1082,7 @@ namespace TecWare.PPSn
 
 		private HttpRequestMessage CreateHttpRequest()
 		{
-			var request = new HttpRequestMessage(method, http.CreateFullUri(originalUri.ToString()));
+			var request = new HttpRequestMessage(method, shell.Http.CreateFullUri(originalUri.ToString()));
 
 			// update header
 			if (headers != null)
@@ -1089,6 +1091,7 @@ namespace TecWare.PPSn
 				if (!String.IsNullOrEmpty(transferEncoding))
 					request.Headers.TransferEncoding.ParseAdd(transferEncoding);
 			}
+			request.Headers.TryAddWithoutValidation(ppsnDeviceIdHeaderKey, shell.DeviceId);
 
 			// request data, cached POST-Data
 			if (requestStream != null)
@@ -1108,8 +1111,9 @@ namespace TecWare.PPSn
 		private HttpWebRequest CreateWebRequest()
 		{
 			var request = CreateHttp(remoteUri);
-			request.Credentials = http.Credentials; // override the current credentials
+			request.Credentials = shell.Http.Credentials; // override the current credentials
 			request.Headers.Add("des-multiple-authentifications", "true");
+			request.Headers.Add(ppsnDeviceIdHeaderKey, shell.DeviceId);
 			request.Timeout = -1; // 600 * 1000;
 
 			// copy basic request informationen
@@ -1122,7 +1126,7 @@ namespace TecWare.PPSn
 			// copy headers
 			if (headers != null)
 			{
-				headers["ppsn-hostname"] = Environment.MachineName;
+				headers["x-ppsn-hostname"] = Environment.MachineName;
 				foreach (var k in headers.AllKeys)
 				{
 					if (String.Compare(k, "Accept", true) == 0)
@@ -1183,7 +1187,7 @@ namespace TecWare.PPSn
 			try
 			{
 				// execute request
-				response = await http.SendAsync(request, HttpCompletionOption.ResponseContentRead);
+				response = await shell.Http.SendAsync(request, HttpCompletionOption.ResponseContentRead);
 				if (response.Content != null)
 					responseStream = await response.Content.ReadAsStreamAsync();
 

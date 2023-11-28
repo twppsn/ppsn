@@ -725,7 +725,5 @@ namespace TecWare.PPSn.Controls
 		public DataTemplateSelector DropDownItemTemplateSelector { get; set; } = null;
 	} // class PpsComboBoxTemplateSelector
 
-
 	#endregion
-
 }
