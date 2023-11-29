@@ -182,8 +182,27 @@
 						<TextBox.InputBindings>
 							<KeyBinding Command="{x:Static ApplicationCommands.Open}" Key="Return" />
 							<KeyBinding Command="{x:Static ApplicationCommands.Delete}" Key="Esc" />
+							<KeyBinding Command="{x:Static ui:PpsControlCommands.SelectCommand}" Key="F4" />
 						</TextBox.InputBindings>
 					</ui:PpsTextBox>
+					<ui:PpsPopup x:Name="commandTextPopup" PlacementTarget="{x:Reference Name=commandTextBox}" Placement="Top" StaysOpen="False">
+						<ui:PpsMenuControl x:Name="commandTextList" UsesItemContainerTemplate="True" Width="{Binding ElementName=commandTextBox,Path=ActualWidth}">
+							<ui:PpsMenuControl.ItemContainerTemplateSelector>
+								<ui:PpsMenuItemContainerSelector>
+									<ui:PpsMenuItemContainerSelector.MenuItemTemplate>
+										<DataTemplate>
+											<MenuItem Command="{x:Static ui:PpsControlCommands.SelectCommand}" />
+										</DataTemplate>
+									</ui:PpsMenuItemContainerSelector.MenuItemTemplate>
+								</ui:PpsMenuItemContainerSelector>
+							</ui:PpsMenuControl.ItemContainerTemplateSelector>
+							<ui:PpsMenuControl.ItemTemplate>
+								<DataTemplate>
+									<TextBlock Text="{Binding}" />
+								</DataTemplate>
+							</ui:PpsMenuControl.ItemTemplate>
+						</ui:PpsMenuControl>
+					</ui:PpsPopup>
 					<ui:PpsButton Grid.Column="1" Content="Ausführen" Command="{x:Static ApplicationCommands.Open}" />
 				</Grid>
 			</Grid>

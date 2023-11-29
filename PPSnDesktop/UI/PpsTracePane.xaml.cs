@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
+using Microsoft.Scripting.Utils;
 using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
@@ -280,6 +281,14 @@ namespace TecWare.PPSn.UI
 
 			#endregion
 
+			#region -- Clear ----------------------------------------------------------
+
+			[LuaMember("Clear")]
+			public void ClearHistory()
+				=> pane.Dispatcher.BeginInvoke(new Action(pane.ClearHistory));
+
+			#endregion
+
 			public IPpsUIService UI => pane.ui;
 			public IPpsLuaShell Shell => luaShell;
 			public PpsDpcService Dpc => pane.dpcService;
@@ -357,6 +366,8 @@ namespace TecWare.PPSn.UI
 		private readonly PpsDpcService dpcService;
 		private readonly PpsTraceTable traceTable;
 
+		private readonly ObservableCollection<string> recentCommands = new ObservableCollection<string>();
+
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Trace pane constructor</summary>
@@ -379,10 +390,21 @@ namespace TecWare.PPSn.UI
 					ctx => traceTable.Shell != null && !String.IsNullOrEmpty(commandTextBox.Text)
 				)
 			);
+
 			commandTextBox.AddCommandBinding(
 				Shell, ApplicationCommands.Delete,
 				new PpsCommand(ctx => commandTextBox.Clear(), ctx => !String.IsNullOrEmpty(commandTextBox.Text))
 			);
+			commandTextBox.AddCommandBinding(
+				Shell, PpsControlCommands.SelectCommand,
+				new PpsCommand(ShowSelectCommandPopup, ctx => !(ctx.Parameter is null) || recentCommands.Count > 0)
+			);
+			commandTextList.AddCommandBinding(
+				Shell, PpsControlCommands.SelectCommand,
+				new PpsCommand(SelectCommandExecute, CanSelectCommand)
+			);
+			commandTextList.ItemsSource = recentCommands;
+
 			eventPane.AddCommandBinding(Shell, ApplicationCommands.SaveAs,
 				new PpsAsyncCommand(
 					ctx => traceTable.SendLogAsync()
@@ -428,6 +450,8 @@ namespace TecWare.PPSn.UI
 
 			UpdateLockedState();
 
+			LoadCommandHistory();
+
 			return Task.CompletedTask;
 		} // func OnLoadAsync
 
@@ -454,6 +478,66 @@ namespace TecWare.PPSn.UI
 
 		private static readonly string[] statementKeywords = new string[] { "return ", "local ", "do ", "function " };
 
+		private void AppendCommandHistory(string command)
+		{
+			// append command or move
+			var currentPos = recentCommands.IndexOf(command);
+			if (currentPos >= 0)
+				recentCommands.Move(currentPos, 0);
+			else
+				recentCommands.Insert(0, command);
+
+			// remove commands
+			while (recentCommands.Count > 40)
+				recentCommands.RemoveAt(recentCommands.Count - 1);
+
+			// Save changes
+			SaveCommandHistory();
+		} // proc AppendCommandHistory
+
+		private void ClearHistory()
+		{
+			recentCommands.Clear();
+			SaveCommandHistory();
+		} // proc ClearHistory
+
+		private void LoadCommandHistory()
+		{
+			var value = Shell.UserSettings.GetProperty("PPSn.Trace.Commands.Local", null);
+			if (value != null)
+				recentCommands.AddRange(value.SplitNewLines().Where(c => !String.IsNullOrEmpty(c)));
+		} // proc LoadCommandHistory
+
+		private void SaveCommandHistory()
+		{
+			var value = String.Join("\n", recentCommands.Select(c => c.Replace('\n', ' ')));
+			using (var settings = Shell.UserSettings.Edit())
+			{
+				settings.Set("PPSn.Trace.Commands.Local", value);
+				settings.CommitAsync().Spawn();
+			}
+		} // proc SaveCommandHistory
+
+		private void SelectCommandExecute(PpsCommandContext context)
+		{
+			if (context.DataContext is string command)
+			{
+				commandTextBox.Text = command;
+				commandTextBox.Select(command.Length, 0);
+				commandTextPopup.IsOpen = false;
+				commandTextBox.Focus();
+			}
+		} // proc SelectCommandExecute
+
+		private void ShowSelectCommandPopup(PpsCommandContext context)
+		{
+			if (context.Parameter is null)
+				commandTextPopup.IsOpen = true;
+		} // proc ShowSelectCommandPopup
+
+		private bool CanSelectCommand(PpsCommandContext context)
+			=> commandTextBox.IsEnabled;
+
 		private static bool IsLuaStatement(string command)
 		{
 			for (var i = 0; i < statementKeywords.Length; i++)
@@ -471,12 +555,14 @@ namespace TecWare.PPSn.UI
 			try
 			{
 				// compile command
-				if (!IsLuaStatement(command))
-					command = "return " + command;
-				var chunk = await traceTable.Shell.CompileAsync(command, true);
+				var luaCommand = IsLuaStatement(command) ? command : "return " + command;
+				var chunk = await traceTable.Shell.CompileAsync(luaCommand, true);
 
 				// run command
 				var r = chunk.Run(traceTable);
+
+				// add command to history
+				AppendCommandHistory(command);
 
 				// print result
 				for (var i = 0; i < r.Count; i++)
