@@ -753,7 +753,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="throwException"><c>true</c>, if the server is not found. A exception will be thrown.</param>
 		/// <returns><see cref="PrintServer"/> or <c>null</c></returns>
 		public static Task<PrintServer> GetPrintServerAsync(string printServerPath, bool throwException = false)
-			=> Task.Run(() => GetPrintServer(printServerPath, throwException));
+			=> Task.FromResult(GetPrintServer(printServerPath, throwException));
 
 		/// <summary>Get a print queue for the printer name.</summary>
 		/// <param name="printServer">Print server to search.</param>

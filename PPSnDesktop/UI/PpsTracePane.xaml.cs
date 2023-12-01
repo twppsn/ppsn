@@ -397,7 +397,7 @@ namespace TecWare.PPSn.UI
 			);
 			commandTextBox.AddCommandBinding(
 				Shell, PpsControlCommands.SelectCommand,
-				new PpsCommand(ShowSelectCommandPopup, ctx => !(ctx.Parameter is null) || recentCommands.Count > 0)
+				new PpsCommand(ShowSelectCommandPopup, CanShowSelectCommandPopup)
 			);
 			commandTextList.AddCommandBinding(
 				Shell, PpsControlCommands.SelectCommand,
@@ -435,6 +435,9 @@ namespace TecWare.PPSn.UI
 			if (log != null)
 				InitLog();
 		} // ctor
+
+		private bool CanShowSelectCommandPopup(PpsCommandContext ctx)
+			=> !dpcService.IsLocked && (!(ctx.Parameter is null) || recentCommands.Count > 0);
 
 		protected override Task OnLoadAsync(LuaTable args)
 		{
@@ -554,6 +557,8 @@ namespace TecWare.PPSn.UI
 			commandTextBox.IsEnabled = false;
 			try
 			{
+				var useHistory = !dpcService.IsLocked;
+
 				// compile command
 				var luaCommand = IsLuaStatement(command) ? command : "return " + command;
 				var chunk = await traceTable.Shell.CompileAsync(luaCommand, true);
@@ -562,7 +567,8 @@ namespace TecWare.PPSn.UI
 				var r = chunk.Run(traceTable);
 
 				// add command to history
-				AppendCommandHistory(command);
+				if (useHistory)
+					AppendCommandHistory(command);
 
 				// print result
 				for (var i = 0; i < r.Count; i++)
