@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using Microsoft.Office.Tools.Ribbon;
 using TecWare.DE.Stuff;
@@ -237,6 +238,24 @@ namespace PPSnExcel
 			}
 		} // proc InsertTableCore
 
+		private void ShowInfoBox()
+		{
+			var shell = PpsShell.Current;
+			var sb = new StringBuilder();
+
+			sb.AppendLine("PPSnExcel")
+				.Append("- Installiert: ").Append(PpsShell.AppVersion).AppendLine();
+			if (shell != null)
+			{
+				sb.Append("- Angemeldet: ")
+					.Append(shell.Info.Version)
+					.Append(" (").Append(shell.Info.PerMachine ? "machine" : "user").Append(")")
+					.AppendLine();
+			}
+
+			MessageBox.Show(sb.ToString(), "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+		} // func ShowInfoBox
+
 		private void SelectionChanged(object sender, bool activate)
 			=> Refresh();
 
@@ -285,6 +304,9 @@ namespace PPSnExcel
 
 		private void newItemButton_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(CreateEnvironmentCommand);
+
+		private void cmdInfo_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(ShowInfoBox);
 
 		/// <summary>Was Loaded called.</summary>
 		public bool IsMenuLoaded => isMenuLoaded;

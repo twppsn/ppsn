@@ -56,3 +56,4 @@
 0x000123A1;0x00001234;;DataLogic QuickScan QBT 2400 (Bluetooth)
 0x6352;0x681B;;EloRFID
 0x000205AC;0x00000239;;Tera Barcode (Bluetooth)
+0x000101F1;0x00000008;;LS/DS (Bluetooth)
