@@ -510,7 +510,6 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-
 		private static readonly DependencyPropertyKey SelectedValueItemPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedValueItem), typeof(object), typeof(PpsComboBox), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty SelectedValueItemProperty = SelectedValueItemPropertyKey.DependencyProperty;
 
@@ -549,6 +548,12 @@ namespace TecWare.PPSn.Controls
 			else
 				cbb.selectedValueHelper.Set(e);
 		} // proc OnSelectedValueChanged
+
+		private static void OnSelectedItemChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			var cbb = (PpsComboBox)d;
+			cbb.UpdateSelectedValueItem(e.NewValue);
+		} // proc OnSelectedItemChanged
 
 		#endregion
 
@@ -655,8 +660,8 @@ namespace TecWare.PPSn.Controls
 
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsComboBox), new FrameworkPropertyMetadata(typeof(PpsComboBox)));
 
+			SelectedItemProperty.OverrideMetadata(typeof(PpsComboBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSelectedItemChanged)));
 			SelectedValueProperty.OverrideMetadata(typeof(PpsComboBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSelectedValueChanged), new CoerceValueCallback(OnSelectedValueCoerceValue)));
-
 
 			// erzeugt neue collectionviews, da durch den filter ein manipulation eintritt
 			ItemsSourceProperty.OverrideMetadata(typeof(PpsComboBox), new FrameworkPropertyMetadata(null, null, new CoerceValueCallback(ItemsSourceCoerceValue)));

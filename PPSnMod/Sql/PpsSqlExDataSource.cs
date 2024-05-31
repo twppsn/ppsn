@@ -840,8 +840,11 @@ namespace TecWare.PPSn.Server.Sql
 				}
 
 				// database configuration
-				foreach (var m in databaseConfig.Members)
-					yield return new PropertyValue(m.Key, m.Value);
+				if (databaseConfig != null)
+				{
+					foreach (var m in databaseConfig.Members)
+						yield return new PropertyValue(m.Key, m.Value);
+				}
 			} // func GetEnumerator
 
 			IEnumerator IEnumerable.GetEnumerator()

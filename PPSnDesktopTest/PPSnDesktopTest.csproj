@@ -55,6 +55,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Tests\ComboBoxPanel.xaml.cs">
+      <DependentUpon>ComboBoxPanel.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Tests\DataListBoxPanel.xaml.cs">
       <DependentUpon>DataListBoxPanel.xaml</DependentUpon>
     </Compile>
@@ -70,6 +73,10 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Tests\ComboBoxPanel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Tests\DataListBoxPanel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

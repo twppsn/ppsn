@@ -14,8 +14,8 @@ namespace TecWare.PPSn
 		{
 			InitializeComponent();
 
-
-			SetContent(typeof(Tests.DataListBoxPanel));
+			//SetContent(typeof(Tests.DataListBoxPanel));
+			SetContent(typeof(Tests.ComboBoxPanel));
 		}
 
 		public void SetContent(Type textType)
