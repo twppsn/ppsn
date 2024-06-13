@@ -1210,10 +1210,13 @@ namespace TecWare.PPSn.Data
 			for (var i = 0; i < values.Length; i++)
 			{
 				var columnName = Columns[i].Name;
-				var idxValue =columnName ==  record.GetName(i) ? i : FindRecordIndex(columnName);
+				var idxValue = columnName == record.GetName(i) ? i : FindRecordIndex(columnName);
 
 				if (idxValue > -1)
-					values[i] = record.GetValue(idxValue);
+				{
+					var v = record.GetValue(idxValue);
+					values[i] = v is DBNull ? null : v;
+				}
 			}
 			return values;
 		} // func GetDataRowValues
