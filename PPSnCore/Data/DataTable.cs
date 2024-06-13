@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Data;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -689,13 +690,13 @@ namespace TecWare.PPSn.Data
 		/// <summary>Notifies the change of a table property.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private PpsDataTableDefinition tableDefinition;   // definition of this table
-		private PpsDataSet dataset;                       // owner of this table
+		private readonly PpsDataTableDefinition tableDefinition;   // definition of this table
+		private readonly PpsDataSet dataset;                       // owner of this table
 
 		private readonly PpsDataRow emptyRow;
-		private List<PpsDataRow> rows = new List<PpsDataRow>();         // all rows
-		private List<PpsDataRow> originalRows = new List<PpsDataRow>(); // all initial loaded rows
-		private List<PpsDataRow> currentRows = new List<PpsDataRow>();  // all current active rows
+		private readonly List<PpsDataRow> rows = new List<PpsDataRow>();         // all rows
+		private readonly List<PpsDataRow> originalRows = new List<PpsDataRow>(); // all initial loaded rows
+		private readonly List<PpsDataRow> currentRows = new List<PpsDataRow>();  // all current active rows
 
 		private readonly ReadOnlyCollection<PpsDataRow> rowsView;
 		private readonly ReadOnlyCollection<PpsDataRow> rowsOriginal;
@@ -770,7 +771,7 @@ namespace TecWare.PPSn.Data
 				else if (ev is PpsDataTableResetChangedEvent re && re.Table == Table)
 					return true;
 				else
-					return ev is PpsDataRowAddedChangedEvent other ? other.Row == Row : false;
+					return ev is PpsDataRowAddedChangedEvent other && other.Row == Row;
 			} // func Equals
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.RowAdded;
@@ -833,8 +834,7 @@ namespace TecWare.PPSn.Data
 			} // proc InvokeEvent
 
 			public override bool Equals(PpsDataChangedEvent ev)
-				=> ev == this
-					|| (ev is PpsDataRowChangedEvent other ? other.Table == Table : false);
+				=> ev == this || (ev is PpsDataRowChangedEvent other && other.Table == Table);
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.TableReset;
 		} // class PpsDataTableResetChangedEvent
@@ -856,6 +856,9 @@ namespace TecWare.PPSn.Data
 				this.oldValue = oldValue;
 				this.newValue = newValue;
 			} // ctor
+
+			public override string ToString() 
+				=> $"RowModified: {Table.TableName}/[{columnIndex}]: {oldValue} -> {newValue}";
 
 			public override void InvokeEvent()
 			{
@@ -892,6 +895,9 @@ namespace TecWare.PPSn.Data
 				this.table = table;
 			} // ctor
 
+			public override string ToString()
+				=> $"TableChanged: {table}";
+
 			public override void InvokeEvent()
 				=> table.dataset.OnTableChanged(table);
 
@@ -900,12 +906,7 @@ namespace TecWare.PPSn.Data
 				if (ev == this)
 					return true;
 				else
-				{
-					var other = ev as PpsDataTableChangedEvent;
-					return other != null ?
-						other.table == table :
-						false;
-				}
+					return ev is PpsDataTableChangedEvent other && other.table == table;
 			} // func Same
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.TableModifed;
@@ -926,6 +927,9 @@ namespace TecWare.PPSn.Data
 				this.propertyName = propertyName;
 			} // ctor
 
+			public override string ToString() 
+				=> $"TablePropertyChanged: {table.TableName}/{propertyName}";
+
 			public override void InvokeEvent()
 				=> table.InvokePropertyChanged(propertyName);
 
@@ -934,12 +938,7 @@ namespace TecWare.PPSn.Data
 				if (ev == this)
 					return true;
 				else
-				{
-					var other = ev as PpsDataTablePropertyChangedEvent;
-					return other != null ?
-						other.table == table && other.propertyName == propertyName :
-						false;
-				}
+					return ev is PpsDataTablePropertyChangedEvent other && other.table == table && other.propertyName == propertyName;
 			} // func Same
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.TableModifed;
@@ -1192,6 +1191,33 @@ namespace TecWare.PPSn.Data
 			return values;
 		} // func GetDataRowValues
 
+		/// <summary>Create a datarow-value-array from a data record.</summary>
+		/// <param name="record">Member for the datarow.</param>
+		/// <returns>Value array.</returns>
+		public object[] GetDataRowValues(IDataRecord record)
+		{
+			int FindRecordIndex(string name)
+			{
+				for (var i = 0; i < record.FieldCount; i++)
+				{
+					if (record.GetName(i) == name)
+						return i;
+				}
+				return -1;
+			} // func FindRecordIndex
+
+			var values = new object[record.FieldCount];
+			for (var i = 0; i < values.Length; i++)
+			{
+				var columnName = Columns[i].Name;
+				var idxValue =columnName ==  record.GetName(i) ? i : FindRecordIndex(columnName);
+
+				if (idxValue > -1)
+					values[i] = record.GetValue(idxValue);
+			}
+			return values;
+		} // func GetDataRowValues
+
 		/// <summary>Create a datarow-value-array from a value array.</summary>
 		/// <param name="values">Array of values or <c>null</c>.</param>
 		/// <returns>Value array.</returns>
@@ -1225,6 +1251,12 @@ namespace TecWare.PPSn.Data
 		public PpsDataRow Add(IPropertyReadOnlyDictionary properties)
 			=> AddInternal(false, NewRow(GetDataRowValues(properties), null));
 
+		/// <summary></summary>
+		/// <param name="record"></param>
+		/// <returns></returns>
+		public PpsDataRow Add(IDataRecord record)
+			=> AddInternal(false, NewRow(GetDataRowValues(record), null));
+
 		/// <summary>Add a row from a value array.</summary>
 		/// <param name="values">Value array, that will be assigned by index.</param>
 		/// <returns>Added data row.</returns>
@@ -1232,10 +1264,12 @@ namespace TecWare.PPSn.Data
 		{
 			if (values.Length == 1) // some languages may choose the wrong overload.
 			{
-				if (values[0] is LuaTable)
-					return Add((LuaTable)values[0]);
-				else if (values[1] is IPropertyReadOnlyDictionary)
-					return Add((IPropertyReadOnlyDictionary)values[0]);
+				if (values[0] is LuaTable t)
+					return Add(t);
+				else if (values[0] is IPropertyReadOnlyDictionary p)
+					return Add(p);
+				else if (values[0] is IDataRecord r)
+					return Add(r);
 			}
 			return AddInternal(false, NewRow(values, null));
 		} // func Add

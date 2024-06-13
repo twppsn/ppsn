@@ -1123,8 +1123,22 @@ namespace TecWare.PPSn
 						}
 
 						// load shell services
-						foreach (var init in EnumerateShellServiceInit())
-							await init.InitAsync();
+						var lastInitShellServices = new List<IPpsShellServiceInit>();
+						while (true)
+						{
+							var initShellServices = EnumerateShellServiceInit().ToArray();
+							if (lastInitShellServices.Count == initShellServices.Length)
+								break;
+
+							foreach (var init in initShellServices)
+							{
+								if (!lastInitShellServices.Exists(c => ReferenceEquals(init, c)))
+								{
+									await init.InitAsync();
+									lastInitShellServices.Add(init);
+								}
+							}
+						}
 
 						if (notify != null)
 							await notify.OnAfterInitServicesAsync(this);

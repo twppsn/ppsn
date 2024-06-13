@@ -115,9 +115,7 @@ namespace TecWare.PPSn
 		public static Task<IPpsWindowPane> OpenPaneAsync(this IPpsWindowPaneManager paneManager, LuaTable table)
 		{
 			var openType = table.GetMemberValue("open") as string ?? throw new ArgumentNullException("open");
-			var paneType = paneManager.Shell.GetService<IPpsKnownWindowPanes>(false)?.GetPaneType(openType) ?? Type.GetType(openType);
-			if (paneType == null)
-				throw new ArgumentOutOfRangeException("open", String.Format("PaneType unknown: {0}", openType));
+			var paneType = (paneManager.Shell.GetService<IPpsKnownWindowPanes>(false)?.GetPaneType(openType) ?? Type.GetType(openType)) ?? throw new ArgumentOutOfRangeException("open", String.Format("PaneType unknown: {0}", openType));
 
 			return paneManager.OpenPaneAsync(paneType, GetDefaultPaneMode(paneManager, table), (table[1] as LuaTable) ?? table);
 		} // func OpenPaneAsync

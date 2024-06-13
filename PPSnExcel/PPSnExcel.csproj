@@ -237,6 +237,7 @@
     <None Include="..\PPSnDesktopUI\ppsn.licenseheader">
       <Link>ppsn.licenseheader</Link>
     </None>
+    <None Include="CodeSign.pfx" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -296,11 +297,10 @@
     <SignManifests>true</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>
-    </ManifestKeyFile>
+    <ManifestKeyFile>CodeSign.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>2DDD8A77EA1A2CFD86B1DB74FED202172C5560AF</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>8B0E46126A15F1681231C07E8819B9005F13634C</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>

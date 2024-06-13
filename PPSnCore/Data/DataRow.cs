@@ -523,12 +523,12 @@ namespace TecWare.PPSn.Data
 		private PpsDataRowState rowState;
 		private readonly OriginalRowValues orignalValuesProxy;
 		private readonly CurrentRowValues currentValuesProxy;
-		private object[] originalValues;
-		private object[] currentValues;
+		private readonly object[] originalValues;
+		private readonly object[] currentValues;
 
 		private readonly object relationFilterLock = new object();
 		private List<PpsDataRelatedFilter> relationFilter = null;
-		private Dictionary<PpsDataColumnDefinition, PpsDataRow> parentRows = new Dictionary<PpsDataColumnDefinition, PpsDataRow>();
+		private readonly Dictionary<PpsDataColumnDefinition, PpsDataRow> parentRows = new Dictionary<PpsDataColumnDefinition, PpsDataRow>();
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -950,6 +950,9 @@ namespace TecWare.PPSn.Data
 				this.newValue = newValue;
 			} // ctor
 
+			public override string ToString() 
+				=> $"PropertyChanged: {row.table.TableName}/[{propertyName}]: {oldValue} -> {newValue}";
+
 			public override void InvokeEvent()
 			{
 				row.table.DataSet.OnTableColumnValueChanged(row, propertyName, oldValue, newValue);
@@ -961,11 +964,7 @@ namespace TecWare.PPSn.Data
 				if (ev == this)
 					return true;
 				else
-				{
-					return ev is PpsDataRowPropertyChangedEvent other ?
-						other.row == row && other.propertyName == propertyName && Object.Equals(other.newValue, newValue) :
-						false;
-				}
+					return ev is PpsDataRowPropertyChangedEvent other && other.row == row && other.propertyName == propertyName && Object.Equals(other.newValue, newValue);
 			} // func Same
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.PropertyValue;

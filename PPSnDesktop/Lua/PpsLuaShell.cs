@@ -41,6 +41,7 @@ namespace TecWare.PPSn.Lua
 
 	internal sealed class PpsLuaUI : LuaTable
 	{
+		private readonly IPpsLuaShell shell;
 		private readonly IPpsWpfResources resources;
 		private readonly IPpsUIService ui;
 		private readonly LoggerProxy log;
@@ -49,8 +50,7 @@ namespace TecWare.PPSn.Lua
 
 		public PpsLuaUI(IPpsLuaShell shell)
 		{
-			if (shell == null)
-				throw new ArgumentNullException(nameof(shell));
+			this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 
 			resources = shell.Shell.GetService<IPpsWpfResources>(true);
 			ui = shell.Shell.GetService<IPpsUIService>(true);
@@ -68,7 +68,7 @@ namespace TecWare.PPSn.Lua
 		[LuaMember]
 		public object GetResource(object key, DependencyObject dependencyObject = null)
 			=> PpsWpfShell.FindResource<object>(dependencyObject, key) ?? resources.FindResource<object>(key);
-		
+
 		/// <summary>Create a PpsCommand object.</summary>
 		/// <param name="command"></param>
 		/// <param name="canExecute"></param>
@@ -104,7 +104,7 @@ namespace TecWare.PPSn.Lua
 			// get containted list
 			if (collection is IListSource listSource)
 				collection = listSource.GetList();
-			
+
 			// function views
 			if (!(collection is IEnumerable) && LLua.RtInvokeable(collection))
 				collection = new LuaFunctionEnumerator(collection);
@@ -204,7 +204,7 @@ namespace TecWare.PPSn.Lua
 
 		#endregion
 
-		#region -- MsgBox, ShowNotification -------------------------------------------
+		#region -- MsgBox, ShowNotification, OpenPane ---------------------------------
 
 		[LuaMember]
 		internal void ShowNotification(string message, PpsImage image = PpsImage.None)
@@ -228,10 +228,39 @@ namespace TecWare.PPSn.Lua
 		internal int MsgBox(object text, PpsImage image = PpsImage.None, params string[] buttons)
 		{
 			if (text is LuaTable t && t.GetMemberValue(nameof(text)) is string luaText)
-				return ui.MsgBox(luaText, t.GetOptionalValue(nameof(image), image), GetButtonArray(t.GetMemberValue(nameof(buttons)) ??  buttons));
+				return ui.MsgBox(luaText, t.GetOptionalValue(nameof(image), image), GetButtonArray(t.GetMemberValue(nameof(buttons)) ?? buttons));
 			else
 				return ui.MsgBox(text.ToString(), image, buttons);
 		} // func MsgBox
+
+		[LuaMember]
+		internal IPpsWindowPaneManager GetPaneManager(LuaTable self, bool throwException = true)
+		{
+			IPpsWindowPaneManager paneManager = null;
+
+			if (self != null)
+			{
+				// get pane manager from member
+				paneManager = self.GetOptionalValue<IPpsWindowPaneManager>("PaneManager", null);
+				// get pane manager from control
+				if (self is IPpsLuaCodeBehind code)
+					paneManager = code.Control.GetControlService<IPpsWindowPaneManager>(false, true);
+			}
+
+			// get from active pane
+			if (paneManager is null)
+				paneManager = PpsWpfShell.GetActivePane(shell.Shell)?.PaneHost.PaneManager;
+
+			// exception of no pane
+			if (paneManager is null && throwException)
+				throw new ArgumentException("No panemanager found.");
+
+			return paneManager;
+		} // func GetPaneManager
+
+		[LuaMember]
+		internal IPpsWindowPane OpenPane(LuaTable self, LuaTable args)
+			=> GetPaneManager(self).OpenPaneAsync(args).Await();
 
 		#endregion
 	} // class PpsLuaUI

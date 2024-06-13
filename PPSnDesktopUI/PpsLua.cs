@@ -71,6 +71,8 @@ namespace TecWare.PPSn
 		/// <param name="control"></param>
 		/// <param name="arguments"></param>
 		void OnControlCreated(FrameworkElement control, LuaTable arguments);
+		/// <summary>Control</summary>
+		FrameworkElement Control { get; }
 	} // interface IPpsLuaCodeBehind
 
 	#endregion

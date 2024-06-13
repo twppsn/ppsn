@@ -761,8 +761,8 @@ namespace TecWare.PPSn.Controls
 				// create the control
 				var control = await PpsXamlParser.LoadAsync<FrameworkElement>(xml, new PpsXamlReaderSettings { BaseUri = sourceUri, Code = e.Code });
 
-				if (e.Code != null) // mark control as created
-					e.Code.OnControlCreated(control, sourceUri.GetArgumentsAsTable());
+				// mark control as created
+				e.Code?.OnControlCreated(control, sourceUri.GetArgumentsAsTable());
 
 				return control;
 			}
@@ -811,8 +811,8 @@ namespace TecWare.PPSn.Controls
 					return false;
 
 				// find pane register
-				var paneRegistrar = this.GetControlService<IPpsKnownWindowPanes>(false);
-				if (paneRegistrar == null)
+				var paneRegister = this.GetControlService<IPpsKnownWindowPanes>(false);
+				if (paneRegister == null)
 					return false;
 
 				// find pane managar
@@ -826,7 +826,7 @@ namespace TecWare.PPSn.Controls
 				//dataInfo.OpenPaneAsync()
 
 				// q&d: find pane type
-				var paneType = paneRegistrar.GetPaneTypeMimeType(mimeType, false);
+				var paneType = paneRegister.GetPaneTypeMimeType(mimeType, false);
 				if (paneType == null)
 					return false;
 

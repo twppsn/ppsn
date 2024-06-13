@@ -344,7 +344,9 @@ namespace TecWare.PPSn.Data
 		/// <summary>Table was modified.</summary>
 		TableModifed = 5,
 		/// <summary>Dataset was modified.</summary>
-		DataSetModified = 6
+		DataSetModified = 6,
+		/// <summary>Hightest change level.</summary>
+		LastLevel = DataSetModified
 	} // enum PpsDataChangeLevel
 
 	#endregion
@@ -677,7 +679,7 @@ namespace TecWare.PPSn.Data
 		private long lastPrimaryId = 1;
 		private readonly object nextPrimaryLock = new object();
 
-		private LuaTable properties; // local properties and states, that are not persisted
+		private readonly LuaTable properties; // local properties and states, that are not persisted
 		private readonly List<LuaTable> eventSinks;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
@@ -951,8 +953,120 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class PpsDataChangedItem -------------------------------------------
+
+		private sealed class PpsDataChangedItem
+		{
+			private readonly PpsDataChangedEvent item;
+			private PpsDataChangedItem next = null;
+
+			public PpsDataChangedItem(PpsDataChangedEvent item)
+			{
+				this.item = item ?? throw new ArgumentNullException(nameof(item));
+			} // ctor
+
+			public override string ToString()
+				=> $"[{item}] => {(next is null ? "is last" : "has next")}";
+
+			public PpsDataChangedEvent Item => item;
+			public PpsDataChangedItem Next { get => next; set => next = value; }
+		} // class PpsDataChangedItem
+
+		#endregion
+
+		#region -- class PpsDataChangedCollection -------------------------------------
+
+		private sealed class PpsDataChangedCollection
+		{
+			#region -- struct BucketItem ----------------------------------------------
+
+			private struct BucketItem
+			{
+				private int count;
+				private PpsDataChangedItem first;
+				private PpsDataChangedItem last;
+
+				public void Clear()
+				{
+					first = null;
+					last = null;
+					count = 0;
+				} // proc Clear
+
+				public void Push(PpsDataChangedItem item)
+				{
+					if (first is null)
+						first = item;
+					else
+					{
+						if (count < 1024) // performance on bulk load
+						{
+							var cur = first;
+							while (cur != null)
+							{
+								if (cur.Item.Equals(item.Item))
+									return;
+								cur = cur.Next;
+							}
+						}
+						last.Next = item;
+					}
+					last = item;
+					count++;
+				} // proc Push
+
+				public PpsDataChangedItem Pop()
+				{
+					if (first is null)
+						return null;
+					var cur = first;
+					if (cur.Next is null)
+						last = null;
+					first = cur.Next;
+					count--;
+					return cur;
+				} // proc Pop
+			} // struct BucketItem
+
+			#endregion
+
+			private readonly BucketItem[] buckets = new BucketItem[(int)PpsDataChangeLevel.LastLevel];
+
+			public PpsDataChangedCollection()
+			{
+				for (var i = 0; i < buckets.Length; i++)
+					buckets[i].Clear();
+			} // ctor
+			
+			public void Push(PpsDataChangedEvent ev)
+			{
+				var bucketIndex = (int)ev.Level - 1;
+				buckets[bucketIndex].Push(new PpsDataChangedItem(ev));
+			} // proc Push
+
+			public PpsDataChangedEvent Pop()
+			{
+				for (var i = 0; i < buckets.Length; i++)
+				{
+					var cur = buckets[i].Pop();
+					if (!(cur is null))
+						return cur.Item;
+				}
+				return null;
+			} // proc Pop
+
+			public void Clear()
+			{
+				for (var i = 0; i < buckets.Length; i++)
+					buckets[i].Clear();
+			} // proc Clear
+		} // class PpsDataChangedCollection
+
+		#endregion
+
 		private bool inChanged = false;
-		private List<PpsDataChangedEvent> changedEvents = new List<PpsDataChangedEvent>();
+		private readonly PpsDataChangedCollection changedEvents = new PpsDataChangedCollection();
+
 		/*
 		 * Sortierte Liste der Ereignisse. Idee:
 		 * Zuerst werden die Properties ausgelöst, wenn diese sich beruhigt haben started die nächste Ebene.
@@ -987,17 +1101,7 @@ namespace TecWare.PPSn.Data
 		{
 			if (inChanged)
 			{
-				var i = 0;
-				var length = changedEvents.Count;
-				PpsDataChangedEvent cur;
-				while (i < length && (cur = changedEvents[i]).Level <= ev.Level)
-				{
-					if (cur.Equals(ev))
-						return; // same event, no add needed
-					i++;
-				}
-
-				changedEvents.Insert(i, ev);
+				changedEvents.Push(ev);
 			}
 			else if (undoSink != null && undoSink.InTransaction && !undoSink.InUndoRedoOperation)
 			{
@@ -1041,10 +1145,11 @@ namespace TecWare.PPSn.Data
 		private void ExecuteQueuedEventsUnsafe()
 		{
 			var sw = Stopwatch.StartNew();
-			while (changedEvents.Count > 0)
+			while (true)
 			{
-				var cur = changedEvents[0];
-				changedEvents.RemoveAt(0);
+				var cur = changedEvents.Pop();
+				if (cur is null)
+					break;
 
 				cur.InvokeEvent();
 
@@ -1071,6 +1176,9 @@ namespace TecWare.PPSn.Data
 			{
 				this.dataset = dataset;
 			} // ctor
+
+			public override string ToString() 
+				=> $"DataSet Changed";
 
 			public override void InvokeEvent()
 				=> dataset.OnDataChanged();
