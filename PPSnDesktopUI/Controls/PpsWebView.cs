@@ -738,9 +738,7 @@ namespace TecWare.PPSn.Controls
 		#region -- Xaml - view --------------------------------------------------------
 
 		private void ShowXaml()
-		{
-			AddVisualChild(xamlView);
-		} // proc ShowXaml
+			=> AddVisualChild(xamlView);
 
 		private async Task<FrameworkElement> GetXamlControlAsync(Uri sourceUri, HttpContent content)
 		{

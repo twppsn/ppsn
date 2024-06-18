@@ -263,6 +263,29 @@ namespace TecWare.PPSn.Lua
 			=> GetPaneManager(self).OpenPaneAsync(args).Await();
 
 		#endregion
+
+		#region -- GetService ---------------------------------------------------------
+
+		private Type GetType(object service)
+		{
+			if (service is Type t)
+				return t;
+			else if (service is LuaType tt)
+				return tt.Type;
+			else
+				throw new ArgumentOutOfRangeException();
+		} // func GetType
+
+		[LuaMember]
+		internal object GetService(object source, object service)
+		{
+			if (source is DependencyObject d)
+				return d.GetControlService(GetType(service), true, true);
+			else
+				return shell.Shell.GetService(GetType(service));
+		} // func GetService
+
+		#endregion
 	} // class PpsLuaUI
 
 	#endregion
@@ -461,6 +484,15 @@ namespace TecWare.PPSn.Lua
 
 		#region -- CompileAsync -------------------------------------------------------
 
+		private ILuaDebug GetDebugEngine()
+		{
+#if DEBUG__
+			return LuaStackTraceDebugger.Default; // potential memory leak
+#else
+			return new PpsLuaDebugger(); // no stack trace
+#endif
+		} // func GetDebugEngine
+
 		private async Task<LuaChunk> CompileCoreAsync(TextReader code, string source, bool throwException, KeyValuePair<string, Type>[] arguments)
 		{
 			var name = source ?? "cmd.lua";
@@ -468,7 +500,7 @@ namespace TecWare.PPSn.Lua
 			{
 				var compileOptions = String.IsNullOrEmpty(source)
 					? new LuaCompileOptions { }
-					: new LuaCompileOptions { DebugEngine = new PpsLuaDebugger() };
+					: new LuaCompileOptions { DebugEngine = GetDebugEngine() };
 				return await Task.Run(() => Lua.CompileChunk(code, name, null, arguments));
 			}
 			catch (LuaParseException e)
@@ -520,7 +552,7 @@ namespace TecWare.PPSn.Lua
 
 		public IPpsShell Shell => shell;
 		LLua IPpsLuaShell.Lua => Lua;
-		
+
 		LuaTable IPpsLuaShell.Global => this;
 		Uri IPpsLuaCodeSource.SourceUri => shell.Http.BaseAddress;
 		LuaTable IPpsLuaCodeSource.Target => this;

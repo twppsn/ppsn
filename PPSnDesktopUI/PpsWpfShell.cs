@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -28,6 +29,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
@@ -617,29 +619,45 @@ namespace TecWare.PPSn
 
 		#region -- Async Service ------------------------------------------------------
 
+		private static readonly Stack<DispatcherFrame> frameStack = new Stack<DispatcherFrame>();
+
+		private static void SetFrameFinish(DispatcherFrame frame)
+		{
+			frame.Continue = false;
+			if (!ReferenceEquals(frame, frameStack.Peek()))
+				throw new InvalidOperationException("Await Deadlock, frame finished before nested frame is finished.");
+		} // proc SetFrameFinish
+
 		void IPpsAsyncService.Await(IServiceProvider sp, Task task)
 		{
 			if (task.IsCompleted)
 				return;
 
-			if (SynchronizationContext.Current is DispatcherSynchronizationContext)
+			if (SynchronizationContext.Current is DispatcherSynchronizationContext oldCtx)
 			{
 				var frame = new DispatcherFrame();
-
-				// get the awaiter
-				task.GetAwaiter().OnCompleted(() => frame.Continue = false);
-
-				// block ui for the task
-				Thread.Sleep(1); // force context change
-				if (frame.Continue)
+				frameStack.Push(frame);
+				try
 				{
-					using (sp?.CreateProgress())
-						Dispatcher.PushFrame(frame);
-				}
+					task.GetAwaiter().OnCompleted(() => SetFrameFinish(frame));
 
-				// thread is cancelled, do not wait for finish
-				if (!task.IsCompleted)
-					throw new OperationCanceledException();
+					// block ui for the task
+					Thread.Sleep(1); // force context change
+					if (frame.Continue)
+					{
+						using (sp?.CreateProgress())
+							Dispatcher.PushFrame(frame);
+					}
+
+					// thread is cancelled, do not wait for finish
+					if (!task.IsCompleted)
+						throw new OperationCanceledException();
+				}
+				finally
+				{
+					if (!ReferenceEquals(frame, frameStack.Pop()))
+						throw new InvalidOperationException($"Await Deadlock, frame is popped in wrong order (task: {task.Id}).");
+				}
 			}
 			else if (SynchronizationContext.Current is IPpsProcessMessageLoop ctx)
 				ctx.ProcessMessageLoop(task);

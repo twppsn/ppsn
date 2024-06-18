@@ -985,12 +985,39 @@ namespace TecWare.PPSn.UI
 				var callInfo = new CallInfo(sourceParameterInfo.Length); // , argumentNames Lua uses Expression.GetDelegateType to create a call-type, this function does not respect parameter names.
 
 				// bind code to target
+				var eventHandlerExpression = (LExpression)LExpression.Dynamic(
+					new XamlInvokeMemberBinder(memberName, false, callInfo),
+					typeof(object),
+					dynamicParameterExpressions
+				);
+
+				// optional Exception-Handler
+				if (eventTarget is IPpsLuaCodeBehind)
+				{
+					var exceptionVariable = LExpression.Variable(typeof(Exception), "e");
+
+					eventHandlerExpression = LExpression.TryCatch(
+						eventHandlerExpression,
+						LExpression.Catch(
+							exceptionVariable,
+							LExpression.Block(typeof(object),
+								LExpression.Condition(
+									LExpression.Not(LExpression.Call(
+										LExpression.Convert(LExpression.Constant(eventTarget), typeof(IPpsLuaCodeBehind)),
+										onConnectorExceptionMethodInfo,
+										exceptionVariable, LExpression.Constant(memberName)
+									)),
+									LExpression.Rethrow(typeof(object)),
+									LExpression.Default(typeof(object)),
+									typeof(object)
+								)
+							)
+						)
+					);
+				}
+
 				var eventHandler = LExpression.Lambda(handler,
-					LExpression.Dynamic(
-						new XamlInvokeMemberBinder(memberName, false, callInfo),
-						typeof(object),
-						dynamicParameterExpressions
-					),
+					eventHandlerExpression,
 					parameterExpressions
 				).Compile();
 
@@ -1016,9 +1043,7 @@ namespace TecWare.PPSn.UI
 						return false;
 				} // func FindSignatureSimple
 
-				var mi = eventTarget.GetType().GetRuntimeMethods().FirstOrDefault(FindSignatureSimple);
-				if (mi == null)
-					throw new MissingMethodException(eventTarget.GetType().Name, memberName);
+				var mi = eventTarget.GetType().GetRuntimeMethods().FirstOrDefault(FindSignatureSimple) ?? throw new MissingMethodException(eventTarget.GetType().Name, memberName);
 
 				var parameterExpressions = new ParameterExpression[sourceParameterInfo.Length];
 				var argumentExpressions = new LExpression[sourceParameterInfo.Length];
@@ -1426,6 +1451,8 @@ namespace TecWare.PPSn.UI
 		private static readonly Lazy<XamlMember> codeMultiValueConvertMember;
 		private static readonly Lazy<XamlMember> codeMultiValueConvertBackMember;
 
+		private static readonly MethodInfo onConnectorExceptionMethodInfo;
+
 		static PpsXamlReader()
 		{
 			bindingType = new Lazy<XamlType>(() => PpsXamlSchemaContext.Default.GetXamlType(typeof(Binding)));
@@ -1438,7 +1465,9 @@ namespace TecWare.PPSn.UI
 			codeMultiValueConverterType = new Lazy<XamlType>(() => PpsXamlSchemaContext.Default.GetXamlType(typeof(CodeMultiValueConverter)));
 			codeMultiValueConvertMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeMultiValueConverter.Convert)));
 			codeMultiValueConvertBackMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeMultiValueConverter.ConvertBack)));
-		}
+
+			onConnectorExceptionMethodInfo = typeof(IPpsLuaCodeBehind).GetMethod(nameof(IPpsLuaCodeBehind.OnConnectorException), BindingFlags.Instance | BindingFlags.Public | BindingFlags.InvokeMethod, null, new Type[] { typeof(Exception), typeof(string) }, null) ?? throw new ArgumentNullException(nameof(IPpsLuaCodeBehind.OnConnectorException), "Method IPpsLuaCodeBehind.OnConnectorException not found.");
+		} // sctor
 	} // class PpsXamlReader
 
 	#endregion

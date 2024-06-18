@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Neo.IronLua;
 using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -71,6 +72,13 @@ namespace TecWare.PPSn
 		/// <param name="control"></param>
 		/// <param name="arguments"></param>
 		void OnControlCreated(FrameworkElement control, LuaTable arguments);
+
+		/// <summary>Is called on a connector exception.</summary>
+		/// <param name="e">Exception, that is raised.</param>
+		/// <param name="connectorName">Name of the connector/event.</param>
+		/// <returns><c>false</c>, exception is rethrown. <c>true</c>, exception is handled.</returns>
+		bool OnConnectorException(Exception e, string connectorName);
+
 		/// <summary>Control</summary>
 		FrameworkElement Control { get; }
 	} // interface IPpsLuaCodeBehind
@@ -148,7 +156,6 @@ namespace TecWare.PPSn
 	public class PpsLuaCodeBehind : PpsLuaCode, IPpsLuaCodeBehind
 	{
 		private FrameworkElement control = null;
-		private Task codeCompiledTask = Task.CompletedTask;
 
 		public PpsLuaCodeBehind(IPpsLuaShell shell, Uri sourceUri)
 			: base(shell, sourceUri)
@@ -165,17 +172,18 @@ namespace TecWare.PPSn
 			if (uri == null)
 				throw new ArgumentNullException(nameof(uri));
 
-			if (codeCompiledTask == null || codeCompiledTask.IsCompleted)
-				codeCompiledTask = PpsLuaShell.RequireCodeAsync(this, new StringReader(code), uri);
-			else
-				codeCompiledTask = Task.WhenAll(codeCompiledTask, PpsLuaShell.RequireCodeAsync(this, new StringReader(code), uri));
+			PpsLuaShell.RequireCodeAsync(this, new StringReader(code), uri).Await();
 		} // proc IPpsXamlCode.CompileCode
+
+		bool IPpsLuaCodeBehind.OnConnectorException(Exception e, string connectorName)
+		{
+			// var data = LuaExceptionData.GetData(e);
+			PpsShell.Current.GetService<IPpsUIService>(true).ShowException(e, $"{connectorName} failed.");
+			return true;
+		} // func IPpsLuaCodeBehind.OnConnectorException
 
 		void IPpsLuaCodeBehind.OnControlCreated(FrameworkElement control, LuaTable arguments)
 		{
-			// wait for code
-			codeCompiledTask.Await();
-
 			// execute method
 			this.control = control;
 
