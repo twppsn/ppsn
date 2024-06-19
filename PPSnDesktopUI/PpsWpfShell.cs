@@ -174,7 +174,11 @@ namespace TecWare.PPSn
 				if (serviceType == typeof(IServiceProvider))
 					r = current;
 				else
+				{
 					r = sp.GetService(serviceType);
+					if (r is null && serviceType.IsAssignableFrom(current.GetType()))
+						r = current;
+				}
 			}
 			else if (serviceType.IsAssignableFrom(current.GetType()))
 				r = current;
