@@ -13,6 +13,7 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -37,7 +38,8 @@ namespace TecWare.PPSn.Controls
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty CommandsProperty = DependencyProperty.Register(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsDataListItem), new FrameworkPropertyMetadata(new PropertyChangedCallback(OnCommandsChanged), new CoerceValueCallback(OnCoerceCommands)));
-
+		private static readonly DependencyPropertyKey filteredCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredCommands), typeof(ICollectionView), typeof(PpsDataListItem), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty FilteredCommandsProperty = filteredCommandsPropertyKey.DependencyProperty;
 		private static readonly DependencyPropertyKey hasCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasCommands), typeof(bool), typeof(PpsDataListItem), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasCommandsProperty = hasCommandsPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
@@ -66,20 +68,41 @@ namespace TecWare.PPSn.Controls
 
 		private void UpdateCommands()
 		{
+			// raw commands list
 			var commands = Commands;
-			SetValue(hasCommandsPropertyKey, commands != null && commands.Count > 0);
 
-			if (commands == null || commands.Count == 0)
+			// filter context-menü commands
+			var commandView = new PpsUICommandsView(commands)
+			{
+				Filter = CommandFilter
+			};
+
+			SetValue(filteredCommandsPropertyKey, commandView);
+			SetValue(hasCommandsPropertyKey, commandView != null && commandView.Count > 0);
+
+			if (commands == null || commandView.Count == 0)
 				SetValue(hasCommandsPropertyKey, false);
 			else
 				SetValue(hasCommandsPropertyKey, true);
 		} // func UpdateHasCommands
+
+		private bool CommandFilter(object obj)
+		{
+			if (obj is PpsUISplitCommandButton split)
+				return split.Mode == PpsSplitButtonType.SplitButton && (split.IsVisible & PpsUICommandVisible.ContextMenu) != 0;
+			else if(obj is PpsUICommandButton button)
+				return (button.IsVisible & PpsUICommandVisible.ContextMenu) != 0;
+			else
+				return false;
+		} // func CommandFilter
 
 		private PpsUICommandButton GetDefaultCommand()
 			=> Commands?.OfType<PpsUICommandButton>().FirstOrDefault(PpsUICommand.IsDefaultCommand);
 
 		/// <summary>Current commands for the item.</summary>
 		public PpsUICommandCollection Commands { get => (PpsUICommandCollection)GetValue(CommandsProperty); set => SetValue(CommandsProperty, value); }
+		/// <summary>Current filtered commands for context.</summary>
+		public PpsUICommandsView FilteredCommands => (PpsUICommandsView)GetValue(FilteredCommandsProperty);
 		/// <summary>Are there commands in the collection.</summary>
 		public bool HasCommands => BooleanBox.GetBool(GetValue(HasCommandsProperty));
 
@@ -189,14 +212,14 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey itemCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(ItemCommands), typeof(PpsUICommandCollection), typeof(PpsDataListBox), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty ItemCommandsProperty = itemCommandsPropertyKey.DependencyProperty;
-		private static readonly DependencyPropertyKey selectedItemCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedItemCommands), typeof(PpsUICommandCollection), typeof(PpsDataListBox), new FrameworkPropertyMetadata(null));
+		private static readonly DependencyPropertyKey selectedItemCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedItemCommands), typeof(PpsUICommandsView), typeof(PpsDataListBox), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty SelectedItemCommandsProperty = selectedItemCommandsPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>Set commands for items.</summary>
 		public PpsUICommandCollection ItemCommands => (PpsUICommandCollection)GetValue(ItemCommandsProperty);
 		/// <summary>Commands of the the selected item.</summary>
-		public PpsUICommandCollection SelectedItemCommands => (PpsUICommandCollection)GetValue(SelectedItemCommandsProperty);
+		public PpsUICommandsView SelectedItemCommands => (PpsUICommandsView)GetValue(SelectedItemCommandsProperty);
 
 		#endregion
 

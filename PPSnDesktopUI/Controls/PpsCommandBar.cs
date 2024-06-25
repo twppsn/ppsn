@@ -223,11 +223,14 @@ namespace TecWare.PPSn.Controls
 				RemoveLogicalChildHandler = RemoveLogicalChild
 			});
 
-			SetValue(commandsViewPropertyKey, new PpsUICommandsView(Commands));
+			SetValue(commandsViewPropertyKey, new PpsUICommandsView(Commands) { Filter = GetToolbarFilter });
 
 			KeyboardNavigation.SetTabNavigation(this, KeyboardNavigationMode.Once);
 			KeyboardNavigation.SetDirectionalNavigation(this, KeyboardNavigationMode.Cycle);
 		} // ctor
+
+		private bool GetToolbarFilter(object obj)
+			=> obj is PpsUICommand cmd && (cmd.IsVisible & PpsUICommandVisible.Toolbar) != 0;
 
 		static PpsCommandBar()
 		{

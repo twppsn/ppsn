@@ -34,8 +34,8 @@ namespace TecWare.PPSn.UI
 
 			if (paneHost.PaneManager is Bde.IPpsBdeManager)
 			{
-				goBackButton.IsVisible = false;
-				goForwardButton.IsVisible = false;
+				goBackButton.IsVisible = PpsUICommandVisible.Hidden;
+				goForwardButton.IsVisible = PpsUICommandVisible.Hidden;
 			}
 
 			var shell = paneHost.PaneManager.Shell;

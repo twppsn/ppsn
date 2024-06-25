@@ -61,7 +61,7 @@
 				</Border>
 				<ContentPresenter x:Name="IconBox" ContentSource="Icon" VerticalAlignment="Center" Height="24" Width="24" Margin="0,0,0,1"/>
 				<ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True" />
-				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" VerticalAlignment="Center" />
+				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="24,0,0,0" />
 			</Grid>
 		</Border>
 		<ControlTemplate.Triggers>
@@ -100,7 +100,7 @@
 				</Grid.ColumnDefinitions>
 				<ContentPresenter x:Name="IconBox" ContentSource="Icon" VerticalAlignment="Center" Height="24" Width="24" Margin="0,0,0,1"/>
 				<ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" />
-				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" VerticalAlignment="Center" Margin="24,0,0,0" />
+				<TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="24,0,0,0" />
 				<Path Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 0 7 L 4 3.5 Z" Fill="{DynamicResource PPSnWindowForegroundBrush}" />
 				<Popup x:Name="Popup" IsOpen="{TemplateBinding IsSubmenuOpen}" PopupAnimation="Fade" Placement="Left" HorizontalOffset="4" Focusable="False" AllowsTransparency="True">
 					<Border x:Name="SubmenuBorder" SnapsToDevicePixels="True" MinWidth="132" Padding="2,2,2,2" Margin="0,0,6,6"

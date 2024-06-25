@@ -308,13 +308,13 @@ namespace TecWare.PPSn.UI
 			if (galeryInfo != null)
 			{
 				imageGaleryInfo.Content = new Tuple<int, int>(galeryInfo.CurrentIndex + 1, galeryInfo.Count);
-				nextImage.IsVisible = true;
-				prevImage.IsVisible = true;
+				nextImage.IsVisible = PpsUICommandVisible.Visible;
+				prevImage.IsVisible = PpsUICommandVisible.Visible;
 			}
 			else
 			{
-				nextImage.IsVisible = false;
-				prevImage.IsVisible = false;
+				nextImage.IsVisible = PpsUICommandVisible.Hidden;
+				prevImage.IsVisible = PpsUICommandVisible.Hidden;
 			}
 		} // proc RefreshGaleryInfo
 

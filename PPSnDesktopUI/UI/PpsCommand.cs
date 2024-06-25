@@ -751,13 +751,28 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- enum PpsUICommandVisible -----------------------------------------------
+
+	[Flags]
+	public enum PpsUICommandVisible
+	{
+		Hidden = 0,
+
+		Toolbar = 1,
+		ContextMenu = 2,
+
+		Visible = Toolbar | ContextMenu
+	} // enum PpsUICommandVisible
+
+	#endregion
+
 	#region -- class PpsUICommand -----------------------------------------------------
 
 	/// <summary>Baseclass for a UI-Command implementation.</summary>
 	public abstract class PpsUICommand : FrameworkContentElement
 	{
 		/// <summary>Is this ui-command visible</summary>
-		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register(nameof(IsVisible), typeof(bool), typeof(PpsUICommand), new FrameworkPropertyMetadata(BooleanBox.True));
+		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register(nameof(IsVisible), typeof(PpsUICommandVisible), typeof(PpsUICommand), new FrameworkPropertyMetadata(PpsUICommandVisible.Visible));
 		/// <summary></summary>
 		public event EventHandler OrderChanged;
 		/// <summary></summary>
@@ -787,7 +802,7 @@ namespace TecWare.PPSn.UI
 		} // prop Order
 
 		/// <summary>Is the command currently visible.</summary>
-		public bool IsVisible { get => (bool)GetValue(IsVisibleProperty); set => SetValue(IsVisibleProperty, value); }
+		public PpsUICommandVisible IsVisible { get => (PpsUICommandVisible)GetValue(IsVisibleProperty); set => SetValue(IsVisibleProperty, value); }
 
 		/// <summary>Check is this command an default command.</summary>
 		/// <param name="command"></param>
@@ -1007,7 +1022,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (sender is PpsUICommand cmd)
 			{
-				if (cmd.IsVisible)
+				if ((Filter ?? GetVisibleDefault)(cmd))
 					AppendCommand(cmd);
 				else
 					RemoveCommand(cmd);
@@ -1062,6 +1077,9 @@ namespace TecWare.PPSn.UI
 
 		#region -- CollectionView -----------------------------------------------------
 
+		private static bool GetVisibleDefault(object obj)
+			=> obj is PpsUICommand cmd && cmd.IsVisible != PpsUICommandVisible.Hidden;
+
 		/// <summary>Refresh data</summary>
 		protected override void RefreshOverride()
 		{
@@ -1069,13 +1087,15 @@ namespace TecWare.PPSn.UI
 			viewCommands.ForEach(RemoveIsVisibleHandler);
 			viewCommands.Clear();
 
+			var filter = Filter ?? GetVisibleDefault;
+
 			foreach (var cmds in commandCollections)
 			{
 				var currentGroup = 0;
 				var lastIndex = -1;
 				foreach (var cmd in cmds)
 				{
-					if (cmd.IsVisible)
+					if (filter(cmd))
 					{
 						if (lastIndex > 0 && cmd.Order.Group == currentGroup && viewCommands[lastIndex].Order.Order < cmd.Order.Order)
 						{

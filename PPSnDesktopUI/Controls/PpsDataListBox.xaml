@@ -135,7 +135,7 @@ specific language governing permissions and limitations under the Licence.
 						<Rectangle Grid.Row="1" Margin="6,0" StrokeThickness="0" Fill="Transparent" />
 
 						<Grid.ContextMenu>
-							<ContextMenu ItemsSource="{TemplateBinding Commands}" UsesItemContainerTemplate="True">
+							<ContextMenu ItemsSource="{TemplateBinding FilteredCommands}" UsesItemContainerTemplate="True">
 								<ContextMenu.Resources>
 									<ItemContainerTemplate x:Key="{ItemContainerTemplateKey {x:Type uiO:PpsUICommandButton}}">
 										<!-- Bug: https://github.com/dotnet/wpf/issues/2404 -->
