@@ -99,7 +99,7 @@ specific language governing permissions and limitations under the Licence.
 				</uiC:PpsPopup>
 			</ui:PpsUISplitCommandButton.Popup>
 		</ui:PpsUISplitCommandButton>-->
-		<ui:PpsUICommandButton x:Name="prevImage" Order="300;200" Description="Vorheriges Bild" Image="prevPane" IsVisible="True" Command="{x:Static MediaCommands.PreviousTrack}" />
+		<ui:PpsUICommandButton x:Name="prevImage" Order="300;200" Description="Vorheriges Bild" Image="prevPane" IsVisible="Visible" Command="{x:Static MediaCommands.PreviousTrack}" />
 		<ui:PpsUICommandPanel x:Name="imageGaleryInfo" Order="300;210">
 			<ui:PpsUICommandPanel.ContentTemplate>
 				<DataTemplate>
@@ -110,7 +110,7 @@ specific language governing permissions and limitations under the Licence.
 			</ui:PpsUICommandPanel.ContentTemplate>
 		</ui:PpsUICommandPanel>
 		
-		<ui:PpsUICommandButton x:Name="nextImage" Order="300;220" Description="Nächstes Bild" Image="nextPane" IsVisible="True" Command="{x:Static MediaCommands.NextTrack}" />
+		<ui:PpsUICommandButton x:Name="nextImage" Order="300;220" Description="Nächstes Bild" Image="nextPane" IsVisible="Visible" Command="{x:Static MediaCommands.NextTrack}" />
 	</uiC:PpsWindowPaneControl.Commands>
 
 	<uiC:PpsScrollViewer x:Name="scrollViewer" IsZoomAllowed="True" IsPanningAllowed="True" PanningMode="Both" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsManipulationEnabled="True">
