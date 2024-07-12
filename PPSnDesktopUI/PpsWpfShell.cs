@@ -628,20 +628,20 @@ namespace TecWare.PPSn
 		private static void AppendFrameInfo(StringBuilder sb, Tuple<DispatcherFrame, string> frameInfo, DispatcherFrame currentFrame, int index)
 		{
 			sb.AppendLine().AppendLine($"-- {index} - is current: {ReferenceEquals(frameInfo.Item1, currentFrame)} ---------------------------------------------");
-			sb.AppendLine(frameInfo.Item2);
+			sb.AppendLine(frameInfo.Item2 ?? "<null>");
 		} // proc AppendFrameInfo
 
 		private static string GetFrameInfo(DispatcherFrame currentFrame, Tuple<DispatcherFrame, string> topFrame)
 		{
 			var sb = new StringBuilder("FrameStack:").AppendLine();
 
-			var i = 0;
+			var i = frameStack.Count;
 
 			foreach (var c in frameStack)
-				AppendFrameInfo(sb, c, currentFrame, i++);
+				AppendFrameInfo(sb, c, currentFrame, i--);
 
 			if (topFrame != null)
-				AppendFrameInfo(sb, topFrame, currentFrame, i++);
+				AppendFrameInfo(sb, topFrame, currentFrame, i--);
 
 			return sb.ToString();
 		} // func GetFrameInfo
@@ -649,8 +649,10 @@ namespace TecWare.PPSn
 		private static void SetFrameFinish(DispatcherFrame frame)
 		{
 			frame.Continue = false;
+#if MONITOR_FRAMES
 			if (!ReferenceEquals(frame, frameStack.Peek().Item1))
 				throw new InvalidOperationException($"Await Deadlock, frame finished before nested frame is finished.", new Exception(GetFrameInfo(frame, null)));
+#endif
 		} // proc SetFrameFinish
 
 		void IPpsAsyncService.Await(IServiceProvider sp, Task task)
@@ -661,7 +663,11 @@ namespace TecWare.PPSn
 			if (SynchronizationContext.Current is DispatcherSynchronizationContext oldCtx)
 			{
 				var frame = new DispatcherFrame();
+#if MONITOR_FRAMES
 				frameStack.Push(new Tuple<DispatcherFrame, string>(frame, Environment.StackTrace));
+#else
+				frameStack.Push(new Tuple<DispatcherFrame, string>(frame, null));
+#endif
 				try
 				{
 					task.GetAwaiter().OnCompleted(() => SetFrameFinish(frame));
