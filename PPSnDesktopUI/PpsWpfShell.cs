@@ -623,13 +623,34 @@ namespace TecWare.PPSn
 
 		#region -- Async Service ------------------------------------------------------
 
-		private static readonly Stack<DispatcherFrame> frameStack = new Stack<DispatcherFrame>();
+		private static readonly Stack<Tuple<DispatcherFrame, string>> frameStack = new Stack<Tuple<DispatcherFrame, string>>();
+
+		private static void AppendFrameInfo(StringBuilder sb, Tuple<DispatcherFrame, string> frameInfo, DispatcherFrame currentFrame, int index)
+		{
+			sb.AppendLine().AppendLine($"-- {index} - is current: {ReferenceEquals(frameInfo.Item1, currentFrame)} ---------------------------------------------");
+			sb.AppendLine(frameInfo.Item2);
+		} // proc AppendFrameInfo
+
+		private static string GetFrameInfo(DispatcherFrame currentFrame, Tuple<DispatcherFrame, string> topFrame)
+		{
+			var sb = new StringBuilder("FrameStack:").AppendLine();
+
+			var i = 0;
+
+			foreach (var c in frameStack)
+				AppendFrameInfo(sb, c, currentFrame, i++);
+
+			if (topFrame != null)
+				AppendFrameInfo(sb, topFrame, currentFrame, i++);
+
+			return sb.ToString();
+		} // func GetFrameInfo
 
 		private static void SetFrameFinish(DispatcherFrame frame)
 		{
 			frame.Continue = false;
-			if (!ReferenceEquals(frame, frameStack.Peek()))
-				throw new InvalidOperationException("Await Deadlock, frame finished before nested frame is finished.");
+			if (!ReferenceEquals(frame, frameStack.Peek().Item1))
+				throw new InvalidOperationException($"Await Deadlock, frame finished before nested frame is finished.\n{GetFrameInfo(frame, null)}");
 		} // proc SetFrameFinish
 
 		void IPpsAsyncService.Await(IServiceProvider sp, Task task)
@@ -640,7 +661,7 @@ namespace TecWare.PPSn
 			if (SynchronizationContext.Current is DispatcherSynchronizationContext oldCtx)
 			{
 				var frame = new DispatcherFrame();
-				frameStack.Push(frame);
+				frameStack.Push(new Tuple<DispatcherFrame, string>(frame, Environment.StackTrace));
 				try
 				{
 					task.GetAwaiter().OnCompleted(() => SetFrameFinish(frame));
@@ -659,8 +680,9 @@ namespace TecWare.PPSn
 				}
 				finally
 				{
-					if (!ReferenceEquals(frame, frameStack.Pop()))
-						throw new InvalidOperationException($"Await Deadlock, frame is popped in wrong order (task: {task.Id}).");
+					var topFrame = frameStack.Pop();
+					if (!ReferenceEquals(frame, topFrame.Item1))
+						throw new InvalidOperationException($"Await Deadlock, frame is popped in wrong order.\n {GetFrameInfo(frame, topFrame)}");
 				}
 			}
 			else if (SynchronizationContext.Current is IPpsProcessMessageLoop ctx)

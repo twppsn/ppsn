@@ -212,14 +212,14 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		private static readonly DependencyPropertyKey itemCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(ItemCommands), typeof(PpsUICommandCollection), typeof(PpsDataListBox), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty ItemCommandsProperty = itemCommandsPropertyKey.DependencyProperty;
-		private static readonly DependencyPropertyKey selectedItemCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedItemCommands), typeof(PpsUICommandsView), typeof(PpsDataListBox), new FrameworkPropertyMetadata(null));
+		private static readonly DependencyPropertyKey selectedItemCommandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedItemCommands), typeof(PpsUICommandCollection), typeof(PpsDataListBox), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty SelectedItemCommandsProperty = selectedItemCommandsPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>Set commands for items.</summary>
 		public PpsUICommandCollection ItemCommands => (PpsUICommandCollection)GetValue(ItemCommandsProperty);
 		/// <summary>Commands of the the selected item.</summary>
-		public PpsUICommandsView SelectedItemCommands => (PpsUICommandsView)GetValue(SelectedItemCommandsProperty);
+		public PpsUICommandCollection SelectedItemCommands => (PpsUICommandCollection)GetValue(SelectedItemCommandsProperty);
 
 		#endregion
 
@@ -398,7 +398,9 @@ namespace TecWare.PPSn.Controls
 			base.OnSelectionChanged(e);
 
 			var selectedItem = SelectedItem;
-			SetValue(selectedItemCommandsPropertyKey, selectedItem == null ? null : GetItemCommands(this, selectedItem));
+
+			var commands = selectedItem == null ? null : GetItemCommands(this, selectedItem);
+			SetValue(selectedItemCommandsPropertyKey, commands);
 		} // proc OnSelectionChanged
 
 		private PpsUICommandCollection GetItemCommands(DependencyObject element, object item)
