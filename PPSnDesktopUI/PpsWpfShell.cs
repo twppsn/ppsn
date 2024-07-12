@@ -650,7 +650,7 @@ namespace TecWare.PPSn
 		{
 			frame.Continue = false;
 			if (!ReferenceEquals(frame, frameStack.Peek().Item1))
-				throw new InvalidOperationException($"Await Deadlock, frame finished before nested frame is finished.\n{GetFrameInfo(frame, null)}");
+				throw new InvalidOperationException($"Await Deadlock, frame finished before nested frame is finished.", new Exception(GetFrameInfo(frame, null)));
 		} // proc SetFrameFinish
 
 		void IPpsAsyncService.Await(IServiceProvider sp, Task task)
@@ -682,7 +682,7 @@ namespace TecWare.PPSn
 				{
 					var topFrame = frameStack.Pop();
 					if (!ReferenceEquals(frame, topFrame.Item1))
-						throw new InvalidOperationException($"Await Deadlock, frame is popped in wrong order.\n {GetFrameInfo(frame, topFrame)}");
+						throw new InvalidOperationException($"Await Deadlock, frame is popped in wrong order.", new Exception(GetFrameInfo(frame, topFrame)));
 				}
 			}
 			else if (SynchronizationContext.Current is IPpsProcessMessageLoop ctx)
