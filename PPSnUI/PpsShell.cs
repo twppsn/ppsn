@@ -458,7 +458,7 @@ namespace TecWare.PPSn
 	#region -- interface IPpsShellLoadNotify ------------------------------------------
 
 	/// <summary>Interface that notifies states during shell initialization.</summary>
-	public interface IPpsShellLoadNotify
+	public interface IPpsShellLoadNotify : IProgress<string>
 	{
 		/// <summary>First notify during load, after the cache instance information are loaded.</summary>
 		/// <param name="shell"></param>
@@ -1093,6 +1093,14 @@ namespace TecWare.PPSn
 				instanceSettingsInfo = new PpsShellSettings(settingsService);
 				info.PropertyChanged += Info_PropertyChanged;
 
+				var retryCounter = 0;
+
+retryLoadSettings:
+				if (retryCounter > 0)
+					await Task.Delay(retryCounter * 1000);
+				else
+					notify.Report("Lade Konfiguration...");
+
 				try
 				{
 					// create a none user context for the initialization
@@ -1103,7 +1111,28 @@ namespace TecWare.PPSn
 						// load settings from server
 						lastSettingsVersion = await LoadSettingsFromServerAsync(settingsService, this, instanceSettingsInfo.DpcDeviceId, lastSettingsVersion);
 					}
+				}
+				catch (HttpRequestException ex)
+				{
+					if (ex.InnerException is WebException webException
+						&& (webException.Status == WebExceptionStatus.NameResolutionFailure
+							|| webException.Status == WebExceptionStatus.ConnectFailure
+							|| webException.Status == WebExceptionStatus.ProtocolError
+							|| webException.Status == WebExceptionStatus.Timeout)
+					)
+					{
+						if (retryCounter++ < 10)
+						{
+							notify.Report($"Verbindung fehlgeschlagen ({retryCounter}): {webException.Status}");
+							goto retryLoadSettings;
+						}
+					}
+					throw;
+				}
 
+				notify.Report("Aktiviere Konfiguration...");
+				try 
+				{
 					using (var dpcHttp = CreateHttpCore(CreateProxyUri(shellId), info.Uri, Settings.GetDpcCredentials()))
 					{
 						http = dpcHttp;

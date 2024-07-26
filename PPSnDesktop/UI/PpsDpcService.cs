@@ -288,7 +288,7 @@ namespace TecWare.PPSn.UI
 			else if (command == "rdbg")
 				command = FindRemoteDebugger();
 			else if (command == "settings")
-				command = "ms-settings:";
+				command = "ms-settings:about";
 
 			ExecuteCore(command, args, runasAdministrator);
 		} // proc Execute

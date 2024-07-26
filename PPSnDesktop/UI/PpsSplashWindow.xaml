@@ -158,13 +158,25 @@
 							</DataTrigger>
 						</Style.Triggers>
 					</Style>
+					<!--<Style TargetType="{x:Type ContentControl}">
+						<Setter Property="Focusable" Value="False" />
+						<Setter Property="Template">
+							<Setter.Value>
+								<ControlTemplate TargetType="ContentControl">
+									<Border></Border>
+								</ControlTemplate>
+							</Setter.Value>
+						</Setter>
+					</Style>-->
 				</Grid.Style>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="64"/>
 					<RowDefinition/>
 				</Grid.RowDefinitions>
 				<TextBlock Grid.Row="0" Text="Status" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0,8,0,0"/>
-				<TextBlock Grid.Row="1" Text="{Binding StatusText, Mode=OneWay}" TextWrapping="Wrap" Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowForeground}}" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="20"/>
+				<TextBlock Grid.Row="1" Text="{Binding StatusText, Mode=OneWay}" TextWrapping="NoWrap" Foreground="{ui:PpsColor {x:Static ui:PpsTheme.WindowForeground}}" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="14"/>
+				
+				<!-- todo: progress auf "StatusValue" -->
 			</Grid>
 			
 			<!-- Select Shell -->

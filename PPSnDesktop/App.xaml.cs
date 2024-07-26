@@ -585,6 +585,9 @@ namespace TecWare.PPSn
 					await Task.Run(new Action(p.WaitForExit));
 			} // proc ExecuteMissingRuntimeBatchAsync
 
+			void IProgress<string>.Report(string value)
+				=> splashWindow.SetProgressText(value);
+
 			public IReadOnlyList<object> MissingRuntimes => missingRuntimes;
 		} // class ShellLoadNotify
 
