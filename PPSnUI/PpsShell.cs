@@ -1098,7 +1098,7 @@ namespace TecWare.PPSn
 retryLoadSettings:
 				if (retryCounter > 0)
 					await Task.Delay(retryCounter * 1000);
-				else
+				else if (notify != null)
 					notify.Report("Lade Konfiguration...");
 
 				try
@@ -1123,14 +1123,16 @@ retryLoadSettings:
 					{
 						if (retryCounter++ < 10)
 						{
-							notify.Report($"Verbindung fehlgeschlagen ({retryCounter}): {webException.Status}");
+							if (notify != null)
+								notify.Report($"Verbindung fehlgeschlagen ({retryCounter}): {webException.Status}");
 							goto retryLoadSettings;
 						}
 					}
 					throw;
 				}
 
-				notify.Report("Aktiviere Konfiguration...");
+				if (notify != null)
+					notify.Report("Aktiviere Konfiguration...");
 				try 
 				{
 					using (var dpcHttp = CreateHttpCore(CreateProxyUri(shellId), info.Uri, Settings.GetDpcCredentials()))

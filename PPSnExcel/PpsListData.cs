@@ -147,7 +147,7 @@ namespace PPSnExcel
 				this.xmlType = xmlType;
 				this.isNullable = isNullable;
 			} // ctor
-			
+
 			public PpsDataColumnExpression ToColumnExpression()
 				=> selectColumnName == null ? null : new PpsDataColumnExpression(selectColumnName);
 
@@ -202,7 +202,7 @@ namespace PPSnExcel
 					throw new ArgumentNullException(nameof(enumerable));
 
 				randomGen = new Random(DateTime.Now.Millisecond);
-				
+
 				enumerator = enumerable.GetEnumerator();
 				try
 				{
@@ -266,7 +266,7 @@ namespace PPSnExcel
 			#endregion
 
 			#region -- Data Anonymization ---------------------------------------------
-			
+
 			private object AnonymizeData(object value, Type valueType, int key)
 			{
 				try
@@ -290,11 +290,11 @@ namespace PPSnExcel
 
 						case TypeCode.Boolean:
 							return !((bool)value);
-							
+
 						case TypeCode.Char:
 							var cstr = CaesarCipher.Encrypt(value.ToString(), key);
 							return cstr[0];
-							
+
 						case TypeCode.SByte:
 						case TypeCode.Byte:
 						case TypeCode.Int16:
@@ -325,13 +325,13 @@ namespace PPSnExcel
 							break;
 					}
 				}
-				catch(Exception xp)
+				catch (Exception xp)
 				{
 					Debug.WriteLine(xp);
 				}
 				return value;
 			}
-			
+
 			private static byte[] NumericValueToBytes(object value)
 			{
 				byte[] bytes = null;
@@ -422,7 +422,7 @@ namespace PPSnExcel
 				if (bytes != null)
 				{
 					byte xk = (byte)key;
-					for(int i=0; i<bytes.Length; i++)
+					for (int i = 0; i < bytes.Length; i++)
 					{
 						// dont change Decimal flags part  
 						bytes[i] = (i < 12) ? (byte)(bytes[i] ^ xk) : bytes[i];
@@ -434,7 +434,7 @@ namespace PPSnExcel
 				}
 				return value;
 			}
-			
+
 			#endregion
 
 			#region -- GetNextBlockAsync ----------------------------------------------
@@ -625,7 +625,7 @@ namespace PPSnExcel
 				if (range.Rows.Count > 1)
 				{
 					var values = new List<PpsDataFilterValue>();
-					for (var i = 1; i <= range.Row; i++)
+					for (var i = 1; i <= range.Rows.Count; i++)
 					{
 						var c = GetRangeValue(range.Cells[i, 1]);
 						if (c is PpsDataFilterValue & c != PpsDataFilterNullValue.Default)
@@ -782,7 +782,7 @@ namespace PPSnExcel
 			=> new WorksheetPropertyDictionary(worksheet);
 
 		internal IPpsViewResult GetViewData(PpsDataOrderExpression[] order, Worksheet current)
-			=> new PpsViewResult(this, listSource.GetData(DataColumnExpressions, order, PpsListMapping.GetVariables(current)));
+			=> new PpsViewResult(this, listSource.GetData(DataColumnExpressions, order, GetVariables(current)));
 
 		internal IPpsViewResult GetEmptyData()
 			=> new PpsViewResult(this, new PpsEmptyResult(this));
@@ -1699,7 +1699,7 @@ namespace PPSnExcel
 			if (workbook != null)
 			{
 				for (var i = 1; i <= workbook.Names.Count; i++)
-					yield return GetVariableName( workbook.Names.Item(i));
+					yield return GetVariableName(workbook.Names.Item(i));
 			}
 		} // func EnumerateDefinedNames
 
