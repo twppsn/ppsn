@@ -316,7 +316,7 @@ namespace TecWare.PPSn.Data
 
 		private void CloseEnumerator(Exception innerException = null)
 		{
-			try { currentEnumerator.Dispose(); }
+			try { currentEnumerator?.Dispose(); }
 			catch { }
 			currentEnumerator = null;
 			currentEnumeratorState = CurrentEnumeratorState.Closed;

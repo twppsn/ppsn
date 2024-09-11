@@ -20,6 +20,7 @@
 0x05F9;0x2220;00020409;DataLogic Heron HD3430
 0x05F9;0x2601;;DataLogic Magellan 1000i
 0x05F9;0x2602;;DataLogic Magellan 1100i
+0x05F9;0x223A;;Datalogic QW2500
 0x080C;0x0300;;DataLogic Heron D130
 0x0E8F;0x0020;;DataLogic Gryphon D
 0x09D8;0x0310;;Die SMART Technologies ID GmbH RFID Multiplex Multi125

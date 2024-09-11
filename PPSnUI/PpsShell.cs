@@ -1121,10 +1121,10 @@ retryLoadSettings:
 							|| webException.Status == WebExceptionStatus.Timeout)
 					)
 					{
-						if (retryCounter++ < 10)
+						if (notify != null && retryCounter < 10)
 						{
-							if (notify != null)
-								notify.Report($"Verbindung fehlgeschlagen ({retryCounter}): {webException.Status}");
+							retryCounter++;
+							notify.Report($"Verbindung fehlgeschlagen ({retryCounter}): {webException.Status}");
 							goto retryLoadSettings;
 						}
 					}
