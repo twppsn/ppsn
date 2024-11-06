@@ -2434,13 +2434,13 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary>Add trailing sql notations</summary>
 			/// <param name="parameterName"></param>
 			/// <returns></returns>
-			protected virtual string FormatParameterName(string parameterName)
+			public virtual string FormatParameterName(string parameterName)
 				=> String.IsNullOrEmpty(parameterName) ? "?" : "@" + UnformatParameterName(parameterName);
 
 			/// <summary>Remove trailing sql notations.</summary>
 			/// <param name="parameterName"></param>
 			/// <returns></returns>
-			protected virtual string UnformatParameterName(string parameterName)
+			public virtual string UnformatParameterName(string parameterName)
 			{
 				if (String.IsNullOrEmpty(parameterName))
 					throw new ArgumentNullException(nameof(parameterName));

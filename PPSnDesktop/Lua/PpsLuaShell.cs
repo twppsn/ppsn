@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Threading;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -257,6 +258,41 @@ namespace TecWare.PPSn.Lua
 
 			return paneManager;
 		} // func GetPaneManager
+
+		[LuaMember]
+		internal object SetTimer(int milliseconds, object action)
+		{
+			var timer = new DispatcherTimer(DispatcherPriority.Normal)
+			{
+				Interval = TimeSpan.FromMilliseconds(milliseconds),
+			};
+			timer.Tick += Timer_Tick;
+			timer.Tag = action;
+			timer.IsEnabled = true;
+			return timer;
+		} // proc SetTimer
+
+		private static void Timer_Tick(object sender, EventArgs e)
+		{
+			if (sender is DispatcherTimer timer)
+			{
+				if (LLua.RtInvokeable(timer.Tag))
+				{
+					try
+					{
+						var r = new LuaResult(LLua.RtInvoke(timer.Tag, timer));
+						if (r.ToBoolean()) // is timer handled
+							return;
+					}
+					catch (Exception ex)
+					{
+						PpsShell.Current.ShowException(ex);
+					}
+				}
+				// default, will stop the timer
+				timer.Stop();
+			}
+		} // event Timer_Tick
 
 		[LuaMember]
 		internal IPpsWindowPane OpenPane(LuaTable self, LuaTable args)
