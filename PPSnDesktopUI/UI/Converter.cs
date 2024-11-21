@@ -468,7 +468,7 @@ namespace TecWare.PPSn.UI
 		public PpsUICommandVisible FalseValue { get; set; } = PpsUICommandVisible.Hidden;
 
 		/// <summary>Singelton for the default Parameter.</summary>
-		public static VisibilityConverterParameter Default { get; } = new VisibilityConverterParameter();
+		public static CommandVisibilityConverterParameter Default { get; } = new CommandVisibilityConverterParameter();
 	} // class VisibilityConverterParameter
 
 	internal sealed class CommandVisibilityConverter : IValueConverter
@@ -477,8 +477,8 @@ namespace TecWare.PPSn.UI
 		{
 		} // ctor
 
-		private static VisibilityConverterParameter GetParameter(object parameter)
-			=> parameter is VisibilityConverterParameter p ? p : VisibilityConverterParameter.Default;
+		private static CommandVisibilityConverterParameter GetParameter(object parameter)
+			=> parameter is CommandVisibilityConverterParameter p ? p : CommandVisibilityConverterParameter.Default;
 
 		private static bool GetBoolValue(object value, bool hasValue)
 		{
@@ -504,7 +504,7 @@ namespace TecWare.PPSn.UI
 			var p = GetParameter(parameter);
 			switch (value)
 			{
-				case Visibility v:
+				case PpsUICommandVisible v:
 					return v == p.TrueValue;
 				default:
 					return DependencyProperty.UnsetValue;
