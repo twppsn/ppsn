@@ -148,7 +148,7 @@ namespace TecWare.PPSn.Data
 			if (!properties.TryGetProperty<Uri>(EnvironmentUriTag, out var shellUri))
 				return false;
 
-			var env = findShell(shellName, shellUri);
+			var env = findShell(shellName, shellUri) ?? PpsShell.Current;
 			if (env == null)
 				return false;
 

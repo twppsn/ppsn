@@ -41,6 +41,8 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter DateValue => DateValueConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static IValueConverter Visibility => VisibilityConverter.Default;
+		/// <summary>Convert between Visibility and bool.</summary>
+		public static IValueConverter CommandVisibility => CommandVisibilityConverter.Default;
 		/// <summary>Convert decimal values to an visibility.</summary>
 		public static IValueConverter VisibilityMark => VisibilityMarkConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
@@ -450,6 +452,67 @@ namespace TecWare.PPSn.UI
 
 		public static IValueConverter Default { get; } = new VisibilityConverter();
 	} // class VisibilityConverter
+
+	#endregion
+
+	#region -- class CommandVisibilityConverter ---------------------------------------
+
+	/// <summary>Parameter for the Visibility Convert.</summary>
+	public sealed class CommandVisibilityConverterParameter
+	{
+		/// <summary>Check only is there value unequal <c>null</c>.</summary>
+		public bool HasValue { get; set; } = false;
+		/// <summary>Convert value for <c>true</c>.</summary>
+		public PpsUICommandVisible TrueValue { get; set; } = PpsUICommandVisible.Visible;
+		/// <summary>Convert value for <c>false</c>.</summary>
+		public PpsUICommandVisible FalseValue { get; set; } = PpsUICommandVisible.Hidden;
+
+		/// <summary>Singelton for the default Parameter.</summary>
+		public static VisibilityConverterParameter Default { get; } = new VisibilityConverterParameter();
+	} // class VisibilityConverterParameter
+
+	internal sealed class CommandVisibilityConverter : IValueConverter
+	{
+		private CommandVisibilityConverter()
+		{
+		} // ctor
+
+		private static VisibilityConverterParameter GetParameter(object parameter)
+			=> parameter is VisibilityConverterParameter p ? p : VisibilityConverterParameter.Default;
+
+		private static bool GetBoolValue(object value, bool hasValue)
+		{
+			switch (value)
+			{
+				case bool b:
+					return b;
+				case string s when !hasValue:
+					return String.Compare(s, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0;
+				default:
+					return value != null;
+			}
+		} // func GetBoolValue
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var p = GetParameter(parameter);
+			return GetBoolValue(value, p.HasValue) ? p.TrueValue : p.FalseValue;
+		} // func Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var p = GetParameter(parameter);
+			switch (value)
+			{
+				case Visibility v:
+					return v == p.TrueValue;
+				default:
+					return DependencyProperty.UnsetValue;
+			}
+		} // func ConvertBack
+
+		public static IValueConverter Default { get; } = new CommandVisibilityConverter();
+	} // class CommandVisibilityConverter
 
 	#endregion
 

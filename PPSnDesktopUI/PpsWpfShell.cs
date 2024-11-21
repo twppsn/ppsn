@@ -555,19 +555,24 @@ namespace TecWare.PPSn
 
 			if ((flags & PpsExceptionShowFlags.Background) != PpsExceptionShowFlags.Background)
 			{
+				// Check for user friendly message
+				var innerException = exception.GetInnerException();
+				if (innerException is HttpUserResponseException userException)
+					alternativeMessage = userException.Message;
+
 				// show message simple
 				var isShutdown = (flags & PpsExceptionShowFlags.Shutown) == PpsExceptionShowFlags.Shutown;
 				var msg = new PpsMessageDialog(".Details", isShutdown ? "Beenden" : "Schließen")
 				{
 					Title = PpsImage.Error.ToTitle(),
 					ImageName = PpsImage.Error.ToGeometryName(),
-					Message = alternativeMessage ?? exception.GetInnerException().Message
+					Message = alternativeMessage ?? innerException.Message
 				};
 
 				if (PpsWpfShell.ShowModalDialog(null, msg))
 				{
 					if (msg.ButtonIndex == 0)
-						MsgBox(exception.GetInnerException().ToString(), PpsImage.Error, Ok);
+						MsgBox(innerException.ToString(), PpsImage.Error, Ok);
 				}
 
 				// shutdown application
