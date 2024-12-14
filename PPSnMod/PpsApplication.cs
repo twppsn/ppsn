@@ -14,7 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -403,181 +402,6 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class PpsSeenClient ------------------------------------------------
-
-		/// <summary>Currently known client.</summary>
-		public sealed class PpsSeenClient
-		{
-			private readonly string clientId;
-
-			private DateTime lastUpdate = DateTime.MinValue;
-			private string version;
-			private double lastLng = Double.NaN;
-			private double lastLat = Double.NaN;
-			private long lastGpsTimeStamp = 0;
-			private string lastWifi = null;
-			private string lastAddress = null;
-
-			private bool sendLogFlag = false;
-			private bool dumpAppStateFlag = false;
-			private int alarmRepeat = 0;
-
-			internal PpsSeenClient(string deviceId, IDEWebRequestScope r)
-			{
-				this.clientId = deviceId ?? throw new ArgumentNullException(nameof(deviceId));
-
-				Update(r);
-			} // ctor
-
-			internal PpsSeenClient(string clientId, XElement x)
-			{
-				this.clientId = clientId ?? throw new ArgumentNullException(nameof(clientId));
-
-				var lastUpdate = x.GetAttribute("last", 0L);
-				this.lastUpdate = lastUpdate > 0 ? DateTime.FromFileTimeUtc(lastUpdate) : DateTime.MinValue;
-
-				version = x.GetAttribute("v", null);
-
-				lastLng = x.GetAttribute("lng", Double.NaN);
-				lastLat = x.GetAttribute("lat", Double.NaN);
-				lastGpsTimeStamp = x.GetAttribute("gpsts", 0L);
-
-				lastWifi = x.GetAttribute("wifi", null);
-				lastAddress = x.GetAttribute("addr", null);
-			} // ctor
-
-			/// <summary>Create a xml of the data.</summary>
-			/// <returns></returns>
-			public XElement ToXml()
-			{
-				return new XElement("client",
-					new XAttribute("id", clientId),
-					Procs.XAttributeCreate("v", version, null),
-					Procs.XAttributeCreate("last", lastUpdate == DateTime.MinValue ? 0L : lastUpdate.ToFileTimeUtc(), 0L),
-					Procs.XAttributeCreate("lng", lastLng, Double.NaN),
-					Procs.XAttributeCreate("lat", lastLat, Double.NaN),
-					Procs.XAttributeCreate("gpsts", lastGpsTimeStamp, 0L),
-
-					Procs.XAttributeCreate("wifi", lastWifi, null),
-					Procs.XAttributeCreate("addr", lastAddress, null)
-				);
-			} // func ToXml
-
-			/// <summary>Update information from request</summary>
-			/// <param name="r"></param>
-			public void Update(IDEWebRequestScope r)
-			{
-				version = r.GetProperty("x-ppsn-version", version);
-				lastLng = r.GetProperty("x-ppsn-lng", lastLng);
-				lastLat = r.GetProperty("x-ppsn-lat", lastLat);
-				lastGpsTimeStamp = r.GetProperty("x-ppsn-ltm", lastGpsTimeStamp);
-				lastWifi = r.GetProperty("x-ppsn-wifi", lastWifi);
-				lastAddress = r.RemoteEndPoint?.Address.ToString();
-
-				lastUpdate = DateTime.Now;
-			} // proc Update
-
-			private bool SwitchFlag(ref bool flag)
-			{
-				if (flag)
-				{
-					flag = false;
-					return true;
-				}
-				return false;
-			} // func SwitchFlag
-
-			/// <summary>Request a log from the client.</summary>
-			/// <returns></returns>
-			public bool SetSendLogFlag()
-				=> sendLogFlag = true;
-
-			/// <summary>Get flag, and reset the state.</summary>
-			/// <returns></returns>
-			public bool GetSendLogFlag()
-				=> SwitchFlag(ref sendLogFlag);
-
-			/// <summary>Request a application dump from the client.</summary>
-			/// <returns></returns>
-			public bool SetDumpAppStateFlag()
-				=> sendLogFlag = true;
-
-			/// <summary>Get flag, and reset the state.</summary>
-			/// <returns></returns>
-			public bool GetDumpAppStateFlag()
-				=> SwitchFlag(ref dumpAppStateFlag);
-
-			/// <summary>Identity the client.</summary>
-			/// <param name="repeat"></param>
-			public void SetAlarmRepeatFlag(int repeat)
-				=> alarmRepeat = repeat;
-
-			/// <summary>Get flag, and reset the state.</summary>
-			/// <param name="value"></param>
-			/// <returns></returns>
-			public bool TryGetAlarmRepeatFlag(out int value)
-			{
-				if (alarmRepeat != 0)
-				{
-					value = alarmRepeat;
-					alarmRepeat = 0;
-					return true;
-				}
-				else
-				{
-					value = 0;
-					return false;
-				}
-			} // func TryGetAlarmRepeatFlag
-
-			/// <summary>Id of the device.</summary>
-			[DEListTypeProperty("@id")]
-			public string ClientId => clientId;
-			/// <summary>Current version.</summary>
-			[DEListTypeProperty("@version")]
-			public string Version => version;
-
-			/// <summary>Last time the information where updated.</summary>
-			[DEListTypeProperty("@lastTimeSeen")]
-			public DateTime LastTimeSeen => lastUpdate > DateTime.MinValue ? lastUpdate.ToLocalTime() : lastUpdate;
-			/// <summary>Gps position of the device.</summary>
-			[DEListTypeProperty("@lat")]
-			public double Latitude => lastLat;
-			/// <summary>Gps position of the device.</summary>
-			[DEListTypeProperty("@lng")]
-			public double Longtitude => lastLng;
-			/// <summary>Last seen gps update.</summary>
-			[DEListTypeProperty("@time")]
-			public DateTime GpsTimeStamp => new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(lastGpsTimeStamp).ToLocalTime();
-
-			/// <summary>Current wifi of the device.</summary>
-			[DEListTypeProperty("@wifi")]
-			public string Wifi => lastWifi;
-			/// <summary>Last ip-address of the device.</summary>
-			[DEListTypeProperty("@addr")]
-			public string Address => lastAddress;
-
-			/// <summary>Show pending request flags.</summary>
-			[DEListTypeProperty("@pending")]
-			public string Pending
-			{
-				get
-				{
-					return String.Join(",",
-						new string[]
-						{
-							sendLogFlag ? "LogRequest" : null,
-							dumpAppStateFlag ? "AppState" : null,
-							alarmRepeat != 0 ? $"R({alarmRepeat})" : null
-						}.Where(c => c != null)
-					);
-				}
-
-			}
-		} // class PpsSeenClient
-
-		#endregion
-
 		#region -- struct ClientOptionHook --------------------------------------------
 
 		private struct ClientOptionHook
@@ -619,10 +443,8 @@ namespace TecWare.PPSn.Server
 		private readonly SimpleConfigItemProperty<DateTime> lastAppChangeProperty;
 		private readonly SimpleConfigItemProperty<DateTime> lastAppScanProperty;
 
-		private readonly DEList<PpsSeenClient> seenClients;
-		private readonly Action saveSeenClientsAction;
+		private readonly PpsSeenClientList seenClients;
 		private readonly List<ClientOptionHook> clientOptionHooks = new List<ClientOptionHook>();
-		private long lastSeenClientsChange = DateTime.Now.ToFileTime();
 
 		private DateTime lastConfigurationTimeStamp = DateTime.MinValue;
 
@@ -643,8 +465,6 @@ namespace TecWare.PPSn.Server
 			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 			LuaType.RegisterTypeAlias("geography", typeof(Microsoft.SqlServer.Types.SqlGeography));
-
-			saveSeenClientsAction = new Action(SaveSeenClients);
 
 			clientOptionHooks.AddRange(new ClientOptionHook[]
 			{
@@ -671,7 +491,7 @@ namespace TecWare.PPSn.Server
 			lastAppChangeProperty = RegisterProperty("tw_ppsn_lastchange", "LastChange", propertyCategory, "Last time, application files where modified.", "G", DateTime.MinValue);
 			lastAppScanProperty = RegisterProperty("tw_ppsn_lastscan", "LastScan", propertyCategory, "Last time, it was scanned for application files.", "G", DateTime.MinValue);
 
-			PublishItem(seenClients = new DEList<PpsSeenClient>(this, "tw_ppsn_clients", "Last seen clients"));
+			PublishItem(seenClients = new PpsSeenClientList(this));
 			PublishItem(clientApplicationTypes = new DEList<PpsClientApplicationType>(this, "tw_ppsn_client_types", "Client types"));
 			PublishItem(clientApplicationInfos = DEDictionary<string, PpsClientApplicationFile>.CreateSortedList(this, "tw_ppsn_client_infos", "Client applications"));
 
@@ -742,7 +562,7 @@ namespace TecWare.PPSn.Server
 			initializationProcess = Task.Run(new Action(InitializeApplication));
 
 			// start application info
-			ReadSeenClients();
+			seenClients.Load();
 
 			// wait for configuration
 			Server.Queue.RegisterCommand(() => StartRefreshApplications(false), 4000);
@@ -1247,71 +1067,6 @@ namespace TecWare.PPSn.Server
 
 		#region -- Seen Client Client -------------------------------------------------
 
-		private FileInfo GetSeenClientHistoryFileInfo()
-			=> new FileInfo(Path.ChangeExtension(LogFileName, ".clients.xml"));
-
-		private void ReadSeenClients()
-		{
-			using (seenClients.EnterWriteLock())
-			{
-				try
-				{
-					var fi = GetSeenClientHistoryFileInfo();
-					if (fi.Exists)
-					{
-						var xDoc = XDocument.Load(fi.FullName);
-						foreach (var x in xDoc.Root.Elements("client"))
-						{
-							var clientId = x.GetAttribute("id", null);
-							if (String.IsNullOrEmpty(clientId))
-								continue;
-
-							var idx = FindSeenClientIndex(clientId);
-							if (idx == -1)
-								seenClients.Add(new PpsSeenClient(clientId, x));
-						}
-					}
-				}
-				catch (Exception e)
-				{
-					Log.Except(e);
-				}
-			}
-		} // proc ReadSeenClients
-
-		private void SaveSeenClients()
-		{
-			using (seenClients.EnterReadLock())
-			{
-				try
-				{
-					new XDocument(
-						new XElement("clients",
-							seenClients.Select(d => d.ToXml())
-						)
-					).Save(GetSeenClientHistoryFileInfo().FullName);
-				}
-				catch (Exception e)
-				{
-					Log.Except(e);
-				}
-			}
-		} // proc SaveSeenClients
-
-		private void EnqueueSaveSeenClients()
-		{
-			lastSeenClientsChange = DateTime.Now.ToFileTime();
-
-			var queue = Server.Queue;
-			if (queue.IsQueueRunning)
-			{
-				queue.CancelCommand(saveSeenClientsAction);
-				queue.RegisterCommand(saveSeenClientsAction, 10000);
-			}
-			else
-				SaveSeenClients();
-		} // proc EnqueueSaveSeenClients
-
 		/// <summary></summary>
 		/// <param name="clientFilter"></param>
 		/// <returns></returns>
@@ -1321,7 +1076,7 @@ namespace TecWare.PPSn.Server
 			using (seenClients.EnterReadLock())
 			{
 				var filterExpr = Procs.GetFilterFunction(clientFilter, true);
-				foreach (var c in seenClients)
+				foreach (var c in seenClients.UnsafeClients)
 				{
 					if (filterExpr(c.ClientId))
 						yield return c;
@@ -1336,33 +1091,20 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public PpsSeenClient GetSeenClient(string clientId, bool throwException = true)
 		{
-			using (seenClients.EnterReadLock())
-			{
-				var idx = FindSeenClientIndex(clientId);
-				if (idx >= 0)
-					return seenClients[idx];
-				else if (throwException)
-					throw new ArgumentOutOfRangeException(nameof(clientId), clientId, $"Client '{clientId}' not seen.");
-				else
-					return null;
-			}
+			var r = seenClients.Find(clientId);
+			if (r != null)
+				return r;
+			else if (throwException)
+				throw new ArgumentOutOfRangeException(nameof(clientId), clientId, $"Client '{clientId}' not seen.");
+			else
+				return null;
 		} // func GetSeenClient
 
 		/// <summary>Remove a device from the list.</summary>
 		/// <param name="clientId"></param>
 		[LuaMember]
 		public void RemoveSeenClient(string clientId)
-		{
-			using (seenClients.EnterWriteLock())
-			{
-				var idx = FindSeenClientIndex(clientId);
-				if (idx >= 0)
-				{
-					seenClients.RemoveAt(idx);
-					EnqueueSaveSeenClients();
-				}
-			}
-		} // proc RemoveSeenClient
+			=> seenClients.Remove(clientId);
 
 		/// <summary>Set the log request for the device id.</summary>
 		/// <param name="clientFilter"></param>
@@ -1393,7 +1135,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
 		public PpsDataSelector CreateSeenClientsSelector(PpsSysDataSource dataSource)
-			=> new PpsGenericSelector<PpsSeenClient>(dataSource.SystemConnection, "sys.clients", lastSeenClientsChange, seenClients);
+			=> new PpsGenericSelector<PpsSeenClient>(dataSource.SystemConnection, "sys.clients", seenClients.LastChange, seenClients.UnsafeClients);
 
 		#endregion
 
@@ -1457,9 +1199,6 @@ namespace TecWare.PPSn.Server
 
 		#region -- Client Options -----------------------------------------------------
 
-		private int FindSeenClientIndex(string clientId)
-			=> seenClients.FindIndex(c => String.Compare(c.ClientId, clientId, StringComparison.OrdinalIgnoreCase) == 0);
-
 		/// <summary>Return the client information for the request.</summary>
 		/// <param name="r"></param>
 		/// <param name="throwException"></param>
@@ -1467,30 +1206,10 @@ namespace TecWare.PPSn.Server
 		/// <exception cref="HttpResponseException"></exception>
 		public PpsSeenClient GetSeenClient(IDEWebRequestScope r, bool throwException = true)
 		{
-			var clientId = r.GetProperty("id", null);
-
-			// device id is needed
-			if (String.IsNullOrEmpty(clientId))
-			{
-				if (throwException)
-					throw new HttpResponseException(HttpStatusCode.BadRequest, "Parameter missing.", new ArgumentNullException(nameof(clientId)));
-				return null;
-			}
-
-			var clientIdx = FindSeenClientIndex(clientId);
-			if (clientIdx == -1)
-			{
-				using (seenClients.EnterWriteLock())
-				{
-					clientIdx = seenClients.Count;
-					seenClients.Add(new PpsSeenClient(clientId, r));
-				}
-			}
-			else
-				seenClients[clientIdx].Update(r);
-			EnqueueSaveSeenClients();
-
-			return seenClients[clientIdx];
+			var seenClient = seenClients.Update(r);
+			if (seenClient is null && throwException)
+				throw new HttpResponseException(HttpStatusCode.BadRequest, "Parameter missing.", new ArgumentNullException("clientId"));
+			return seenClient;
 		} // func GetSeenClient
 
 		private XElement GetClientOptionsByDevId(string clientId)

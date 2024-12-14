@@ -330,25 +330,8 @@ namespace TecWare.PPSn.UI
 			{
 				shellApplication = shell.GetService<IPpsShellApplication>(false);
 
-				assemblyInfo = (
-					from c in
-						from cur in shell.Settings.GetGroups("PPSn.Application.Files", true, "Path", "Version", "Load")
-						where cur.GetProperty("Load", null) == "net"
-						select CreateAssemblyInfo(cur)
-					where c != null
-					orderby c.Name
-					select c
-				).ToArray();
+				assemblyInfo = shell.EnumerateDynamicModuls().Select(c => AppAssemblyInfo.Create(c.Item1, c.Item2)).ToArray();
 			} // ctor
-
-			private static AppAssemblyInfo CreateAssemblyInfo(PpsSettingsGroup setting)
-			{
-				var name = Path.GetFileNameWithoutExtension(setting.GetProperty("Path", null));
-				var asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(c => c.GetName().Name == name);
-				return asm != null && Version.TryParse(setting.GetProperty("Version", "0.0.0.0"), out var serverVersion)
-					? AppAssemblyInfo.Create(asm, serverVersion)
-					: null;
-			} // func CreateAssemblyInfo
 
 			public string AppName => shellApplication?.Name;
 			public Version AssemblyVersion => shellApplication?.AssenblyVersion;

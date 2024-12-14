@@ -1098,8 +1098,8 @@ namespace TecWare.PPSn
 retryLoadSettings:
 				if (retryCounter > 0)
 					await Task.Delay(retryCounter * 1000);
-				else if (notify != null)
-					notify.Report("Lade Konfiguration...");
+				else
+					notify?.Report("Lade Konfiguration...");
 
 				try
 				{
@@ -1836,6 +1836,8 @@ retryLoadSettings:
 
 		#region -- Start --------------------------------------------------------------
 
+		private static Tuple<IPpsShell, string[]> dynamicModulInfo = null;
+
 		private static void SetCurrent(PpsShellImplementation value)
 		{
 			if (currentShell != value)
@@ -1885,6 +1887,22 @@ retryLoadSettings:
 			yield return new PropertyValue("last", lastRefreshTick);
 		} // func GetLoadSettingsArguments
 
+		private static string CreateModulVersionTag(Tuple<Assembly, Version> dynamicModulInfo)
+		{
+			var name = dynamicModulInfo.Item1.GetName();
+			var fileVersion = dynamicModulInfo.Item1.GetCustomAttribute<AssemblyFileVersionAttribute>();
+			if (!Version.TryParse(fileVersion.Version, out var loadedVersion))
+				loadedVersion = name.Version;
+			return name.Name + "=" + loadedVersion.ToString();
+		} // func CreateModulVersionTag
+
+		private static string[] GetDynamicModulInfo(IPpsShell shell)
+		{
+			if (dynamicModulInfo is null || !ReferenceEquals(shell, dynamicModulInfo.Item1))
+				dynamicModulInfo = new Tuple<IPpsShell, string[]>(shell, shell.EnumerateDynamicModuls().Select(CreateModulVersionTag).ToArray());
+			return dynamicModulInfo.Item2;
+		} // func GetDynamicModulInfo
+
 		/// <summary></summary>
 		/// <param name="settingsService"></param>
 		/// <param name="shell"></param>
@@ -1913,6 +1931,7 @@ retryLoadSettings:
 				request.Headers.Add("x-ppsn-ltm", ltm.ChangeType<string>());
 			}
 			request.Headers.Add("x-ppsn-wifi", Environment.MachineName + "/" + Environment.UserName);
+			request.Headers.Add("x-ppsn-versions", GetDynamicModulInfo(shell));
 
 			// send request
 			using (var r = await http.SendAsync(request))
@@ -2052,6 +2071,32 @@ retryLoadSettings:
 		public static T GetSettings<T>(this IServiceProvider sp)
 			where T : PpsSettingsInfoBase
 			=> (T)Activator.CreateInstance(typeof(T), sp.GetService<IPpsSettingsService>(true));
+
+		private static Tuple<string, Version, Assembly> CreateSettingsInfo(PpsSettingsGroup group)
+		{
+			var name = Path.GetFileNameWithoutExtension(group.GetProperty("Path", null));
+			var asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(c => c.GetName().Name == name);
+			return asm != null && Version.TryParse(group.GetProperty("Version", "0.0.0.0"), out var serverVersion)
+				? new Tuple<string, Version, Assembly>(name, serverVersion, asm)
+				: null;
+		} // func CreateSettingsInfo
+
+		/// <summary>Parse information of dynamic moduls</summary>
+		/// <param name="shell"></param>
+		/// <returns></returns>
+		public static IEnumerable<Tuple<Assembly, Version>> EnumerateDynamicModuls(this IPpsShell shell)
+		{
+			return
+				from c in (
+					from cur in shell.Settings.GetGroups("PPSn.Application.Files", true, "Path", "Version", "Load")
+					where cur.GetProperty("Load", null) == "net"
+					select CreateSettingsInfo(cur)
+				)
+				where c != null
+				orderby c.Item1
+				select new Tuple<Assembly, Version>(c.Item3, c.Item2)
+			;
+		} // func EnumerateDynamicModuls
 
 		#endregion
 
