@@ -491,7 +491,7 @@ namespace TecWare.PPSn.Server
 			lastAppChangeProperty = RegisterProperty("tw_ppsn_lastchange", "LastChange", propertyCategory, "Last time, application files where modified.", "G", DateTime.MinValue);
 			lastAppScanProperty = RegisterProperty("tw_ppsn_lastscan", "LastScan", propertyCategory, "Last time, it was scanned for application files.", "G", DateTime.MinValue);
 
-			PublishItem(seenClients = new PpsSeenClientList(this));
+			PublishItem(seenClients = new PpsSeenClientList(this, "tw_ppsn_clients"));
 			PublishItem(clientApplicationTypes = new DEList<PpsClientApplicationType>(this, "tw_ppsn_client_types", "Client types"));
 			PublishItem(clientApplicationInfos = DEDictionary<string, PpsClientApplicationFile>.CreateSortedList(this, "tw_ppsn_client_infos", "Client applications"));
 

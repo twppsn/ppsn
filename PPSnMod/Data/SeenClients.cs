@@ -51,7 +51,6 @@ namespace TecWare.PPSn.Server.Data
 		internal PpsSeenClient(string deviceId, IDEWebRequestScope r)
 		{
 			this.clientId = deviceId ?? throw new ArgumentNullException(nameof(deviceId));
-
 			Update(r, out _);
 		} // ctor
 
@@ -309,6 +308,7 @@ namespace TecWare.PPSn.Server.Data
 
 		private const string typeName = nameof(PpsSeenClient);
 
+		private readonly string id;
 		private readonly DEConfigLogItem configItem;
 		private readonly Action saveAction;
 		private readonly List<PpsSeenClient> clients;
@@ -320,14 +320,17 @@ namespace TecWare.PPSn.Server.Data
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsSeenClientList(DEConfigLogItem configItem)
+		public PpsSeenClientList(DEConfigLogItem configItem, string id)
 		{
+			this.id = id ?? throw new ArgumentNullException(nameof(id));
 			this.configItem = configItem ?? throw new ArgumentNullException(nameof(configItem));
 
 			saveAction = new Action(Save);
 
 			clients = new List<PpsSeenClient>();
 			listLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+
+			configItem.RegisterList(id, this);
 		} // ctor
 
 		~PpsSeenClientList()
@@ -539,7 +542,8 @@ namespace TecWare.PPSn.Server.Data
 			}
 			else
 				Save();
-		} // proc EnqueueSaveSeenClients
+		} // proc EnqueueSave
+
 		#endregion
 
 		private int FindIndex(string clientId)
@@ -556,7 +560,7 @@ namespace TecWare.PPSn.Server.Data
 			var idx = -1;
 			using (EnterWriteLock())
 				idx = FindIndex(clientId);
-			
+
 			if (idx == -1)
 			{
 				using (EnterWriteLock())
@@ -575,7 +579,7 @@ namespace TecWare.PPSn.Server.Data
 
 			return clients[idx];
 		} // proc Update
-		
+
 		public void Remove(string clientId)
 		{
 			using (EnterWriteLock())
@@ -601,7 +605,7 @@ namespace TecWare.PPSn.Server.Data
 
 		void IDEListController.OnBeforeList() { }
 
-		public string Id => "tw_ppsn_clients";
+		public string Id => id;
 		public string DisplayName => "Last Seen Clients";
 		public string SecurityToken => DEConfigItem.SecuritySys;
 
@@ -613,5 +617,4 @@ namespace TecWare.PPSn.Server.Data
 	} // class PpsSeenClientList
 
 	#endregion
-
 }
