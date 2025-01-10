@@ -110,7 +110,7 @@ namespace TecWare.PPSn.Server.Data
 			lastWifi = r.GetProperty("x-ppsn-wifi", lastWifi);
 			lastAddress = r.RemoteEndPoint?.Address.ToString();
 
-			var newModulInfo = Procs.SplitPropertyList(r.GetProperty("x-ppsn-versions", null)).Select(c => new Tuple<string, string>(c.Key, c.Value)).ToArray();
+			var newModulInfo = Procs.SplitPropertyList(r.GetProperty("x-ppsn-versions", null)?.Replace(';', ','), ',').Select(c => new Tuple<string, string>(c.Key, c.Value)).ToArray();
 			if (newModulInfo.Length == lastModulInfo.Length)
 			{
 				columnsChanged = false;
