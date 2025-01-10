@@ -1898,7 +1898,9 @@ retryLoadSettings:
 
 		private static string[] GetDynamicModulInfo(IPpsShell shell)
 		{
-			if (dynamicModulInfo is null || !ReferenceEquals(shell, dynamicModulInfo.Item1))
+			if (!shell.IsInitialized)
+				return Array.Empty<string>();
+			else if (dynamicModulInfo is null || !ReferenceEquals(shell, dynamicModulInfo.Item1))
 				dynamicModulInfo = new Tuple<IPpsShell, string[]>(shell, shell.EnumerateDynamicModuls().Select(CreateModulVersionTag).ToArray());
 			return dynamicModulInfo.Item2;
 		} // func GetDynamicModulInfo

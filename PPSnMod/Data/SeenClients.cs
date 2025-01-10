@@ -434,7 +434,7 @@ namespace TecWare.PPSn.Server.Data
 
 			var columns = GetExtraColumns();
 			for (var i = 0; i < columns.Length; i++)
-				xml.WriteProperty(columns[i].Attribute, typeof(string));
+				xml.WriteProperty("@" + columns[i].Attribute, typeof(string));
 
 			xml.WriteProperty("@lastTimeSeen", typeof(DateTime));
 			xml.WriteProperty("@lat", typeof(double));
@@ -461,7 +461,7 @@ namespace TecWare.PPSn.Server.Data
 				{
 					var value = cur.GetModulInfoValue(columns[i].Key);
 					if (value != null)
-						xml.WriteProperty(columns[i].Attribute, value);
+						xml.WriteProperty("@" + columns[i].Attribute, value);
 				}
 			}
 
