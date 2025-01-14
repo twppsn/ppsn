@@ -271,24 +271,18 @@ namespace TecWare.PPSn.Server.Data
 				var c = new char[20];
 				for (var i = 0; i < name.Length; i++)
 				{
-					if (j > 20)
+					if (j >= 20)
 						break;
 
 					if (j == 0)
 					{
 						if (Char.IsLetter(name[i]))
-						{
-							c[j] = name[i];
-							j++;
-						}
+							c[j++] = name[i];
 					}
 					else
 					{
 						if (Char.IsLetterOrDigit(name[i]))
-						{
-							c[j] = name[i];
-							j++;
-						}
+							c[j++] = name[i];
 					}
 				}
 
