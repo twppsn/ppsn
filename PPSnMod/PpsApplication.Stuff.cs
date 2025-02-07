@@ -567,7 +567,7 @@ namespace TecWare.PPSn.Server
 				offset++;
 			}
 
-			return GetOrCreateTable(tablePath.Substring(lastDot + 1));
+			return GetOrCreateTable(tablePath.Substring(lastDot + 1, count - lastDot - 1));
 		} // func GetTableFromPathCore
 
 		private static LuaTable GetTableFromPathCore(LuaTable table, string tablePath, bool writable)

@@ -1082,8 +1082,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private const string ppsnDeviceIdHeaderKey = "x-ppsn-deviceId";
-
 		private readonly IPpsShell shell; // owner, that retrieves a resource
 		private readonly Uri originalUri;
 		private readonly Uri remoteUri;
@@ -1146,7 +1144,8 @@ namespace TecWare.PPSn
 				if (!String.IsNullOrEmpty(transferEncoding))
 					request.Headers.TransferEncoding.ParseAdd(transferEncoding);
 			}
-			request.Headers.TryAddWithoutValidation(ppsnDeviceIdHeaderKey, shell.DeviceId);
+			request.Headers.TryAddWithoutValidation(PpsShell.HostNameHeaderKey, Environment.MachineName);
+			request.Headers.TryAddWithoutValidation(PpsShell.DeviceIdHeaderKey, shell.DeviceId);
 
 			// request data, cached POST-Data
 			if (requestStream != null)
@@ -1168,7 +1167,7 @@ namespace TecWare.PPSn
 			var request = CreateHttp(remoteUri);
 			request.Credentials = shell.Http.Credentials; // override the current credentials
 			request.Headers.Add("des-multiple-authentifications", "true");
-			request.Headers.Add(ppsnDeviceIdHeaderKey, shell.DeviceId);
+			request.Headers.Add(PpsShell.DeviceIdHeaderKey, shell.DeviceId);
 			request.Timeout = -1; // 600 * 1000;
 
 			// copy basic request informationen
@@ -1181,7 +1180,7 @@ namespace TecWare.PPSn
 			// copy headers
 			if (headers != null)
 			{
-				headers["x-ppsn-hostname"] = Environment.MachineName;
+				headers[PpsShell.HostNameHeaderKey] = Environment.MachineName;
 				foreach (var k in headers.AllKeys)
 				{
 					if (String.Compare(k, "Accept", true) == 0)

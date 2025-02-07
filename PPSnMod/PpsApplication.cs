@@ -897,7 +897,7 @@ namespace TecWare.PPSn.Server
 			});
 		} // proc StartRefreshApplications
 
-		private void AddApplicationInfoFromSource(LogMessageScopeProxy log, PpsClientApplicationSource source)
+		private void AddApplicationInfoFromSource(LogMessageScopeProxy log, PpsClientApplicationSource source, ref bool isChanged)
 		{
 			GetApplicationType(source, out var type, out var info);
 			string logLine;
@@ -905,7 +905,10 @@ namespace TecWare.PPSn.Server
 			if (clientApplicationInfos.TryGetValue(key, out var file))
 			{
 				if (file.Update(source, type, info))
+				{
 					logLine = "{0}: updated with version 0x{1:X16} ({2}) / {3}";
+					isChanged = true;
+				}
 				else
 					logLine = "{0}: not updated with version 0x{1:X16} ({2}) / {3}";
 			}
@@ -913,6 +916,7 @@ namespace TecWare.PPSn.Server
 			{
 				clientApplicationInfos.Add(key, file = new PpsClientApplicationFile(type, source, info));
 				logLine = "{0}: create with version 0x{1:X16} ({2}) - {3}";
+				isChanged = true;
 			}
 			log.WriteLine(logLine, key, file.VersionCode, file.Version, source.Uri);
 		} // proc AddApplicationInfoFromSource
@@ -1019,7 +1023,7 @@ namespace TecWare.PPSn.Server
 													fiLink,
 													CreateRelativePath(relativeUriPath, path.FullName, fi, fiLink.Name),
 													mimeType: fileWorker.GetFileContentType(fiLink.Name)
-												));
+												), ref isChanged);
 											}
 											else
 												log.SetType(LogMsgType.Warning).WriteLine("{0}: could not found.", fiLink.FullName);
@@ -1027,7 +1031,7 @@ namespace TecWare.PPSn.Server
 									}
 								}
 								else
-									AddApplicationInfoFromSource(log, new PpsClientApplicationSource(fi, CreateRelativePath(relativeUriPath, path.FullName, fi)));
+									AddApplicationInfoFromSource(log, new PpsClientApplicationSource(fi, CreateRelativePath(relativeUriPath, path.FullName, fi)), ref isChanged);
 							} // foreach files
 						} // foreach fileWorker
 					}

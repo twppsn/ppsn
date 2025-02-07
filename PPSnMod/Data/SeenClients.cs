@@ -16,8 +16,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Xml.Linq;
 using TecWare.DE.Server;
@@ -303,7 +305,7 @@ namespace TecWare.PPSn.Server.Data
 		private const string typeName = nameof(PpsSeenClient);
 
 		private readonly string id;
-		private readonly DEConfigLogItem configItem;
+		private readonly DEConfigItem configItem;
 		private readonly Action saveAction;
 		private readonly List<PpsSeenClient> clients;
 		private readonly ReaderWriterLockSlim listLock;
@@ -314,7 +316,7 @@ namespace TecWare.PPSn.Server.Data
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		public PpsSeenClientList(DEConfigLogItem configItem, string id)
+		public PpsSeenClientList(DEConfigItem configItem, string id)
 		{
 			this.id = id ?? throw new ArgumentNullException(nameof(id));
 			this.configItem = configItem ?? throw new ArgumentNullException(nameof(configItem));
@@ -473,8 +475,20 @@ namespace TecWare.PPSn.Server.Data
 
 		#region -- Load/Save ------------------------------------------------------
 
+		private static string GetHistoryFileName(object n)
+		{
+			if (n is DEConfigLogItem log)
+				return Path.Combine(Path.GetDirectoryName(log.LogFileName), Path.GetFileNameWithoutExtension(log.LogFileName));
+			else if (n is DEConfigItem item)
+				return Path.Combine(GetHistoryFileName(item.Owner), item.Name);
+			else if (n is IServiceProvider sp)
+				return GetHistoryFileName(sp.GetService<DEConfigLogItem>(true));
+			else
+				throw new ArgumentException();
+		} // func GetHistoryFileName
+
 		private FileInfo GetHistoryFileInfo()
-			=> new FileInfo(Path.ChangeExtension(configItem.LogFileName, ".clients.xml"));
+			=> new FileInfo(GetHistoryFileName(configItem) + ".clients.xml");
 
 		public void Load()
 		{

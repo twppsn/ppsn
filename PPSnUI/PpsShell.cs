@@ -638,6 +638,9 @@ namespace TecWare.PPSn
 	[PpsStaticService]
 	public static partial class PpsShell
 	{
+		public const string DeviceIdHeaderKey = "x-ppsn-deviceId";
+		public const string HostNameHeaderKey = "x-ppsn-hostname";
+
 		#region -- class TypeComparer -------------------------------------------------
 
 		private sealed class TypeComparer : IEqualityComparer<Type>
@@ -713,7 +716,13 @@ namespace TecWare.PPSn
 
 				// exchange proxy uri to real one
 				if (TryGetRemoteUri(request.RequestUri, out var uri))
+				{
 					request.RequestUri = uri;
+
+					// add header for local requests
+					request.Headers.TryAddWithoutValidation(HostNameHeaderKey, Environment.MachineName);
+					request.Headers.TryAddWithoutValidation(DeviceIdHeaderKey, shell.DeviceId);
+				}
 
 				return base.SendAsync(request, cancellationToken)
 					.ContinueWith(SendFinish, TaskContinuationOptions.ExecuteSynchronously);

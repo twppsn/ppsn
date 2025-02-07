@@ -13,7 +13,9 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using Markdig.Parsers;
 using Neo.IronLua;
+using Neo.Markdig.Xaml;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -21,6 +23,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Markup;
 using System.Windows.Media;
 using TecWare.DE.Stuff;
@@ -73,6 +76,8 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter DefaultColor => DefaultColorConverter.Default;
 		/// <summary>Replaces a brush with the givven resource.</summary>
 		public static IValueConverter DefaultBrush => DefaultBrushConverter.Default;
+		/// <summary>Convert a text string to an flowdocument</summary>
+		public static IValueConverter Markdown => MarkdownConverter.Default;
 	} // class PpsConverter
 
 	#endregion
@@ -1140,6 +1145,26 @@ namespace TecWare.PPSn.UI
 
 		public static IValueConverter Default { get; } = new DefaultBrushConverter();
 	} //class DefaultBrushConverter
+
+	#endregion
+
+	#region -- class MarkdownConverter --------------------------------------------
+
+	internal class MarkdownConverter : IValueConverter
+	{
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+
+			if (value  is string md && md.Length > 0 && targetType == typeof(FlowDocument))
+				return MarkdownXaml.ToFlowDocument(md);
+			return null;
+		} // func IValueConverter.Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static IValueConverter Default { get; } = new MarkdownConverter();
+	} //class MarkdownConverter
 
 	#endregion
 }
