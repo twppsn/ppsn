@@ -1105,7 +1105,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- class AliasColumnExpression ------------------------------------
 
-			private sealed class AliasColumnExpression : IPpsSqlAliasColumn
+			private sealed class AliasColumnExpression : IPpsSqlAliasColumn, IPpsColumnDescription
 			{
 				private readonly PpsTableExpression table;
 				private readonly IPpsColumnDescription column;
@@ -1115,6 +1115,10 @@ namespace TecWare.PPSn.Server.Sql
 					this.table = table ?? throw new ArgumentNullException(nameof(table));
 					this.column = column ?? throw new ArgumentNullException(nameof(column));
 				} // ctor
+
+				T IPpsColumnDescription.GetColumnDescription<T>() => column.GetColumnDescription<T>();
+				string IDataColumn.Name => column.Name;
+				IPropertyEnumerableDictionary IDataColumn.Attributes => column.Attributes;
 
 				public string Alias => table.Alias;
 				public string Expression => GetColumnExpression(table, column);

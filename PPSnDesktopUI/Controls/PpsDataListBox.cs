@@ -21,6 +21,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.DE.Stuff;
@@ -294,7 +295,7 @@ namespace TecWare.PPSn.Controls
 			{
 				var expr = PpsDataFilterExpression.Combine(FilterExpression, GetUserFilterExpression());
 				filterView.FilterExpression = expr;
-				SetValue(isFilteredPropertyKey, expr == PpsDataFilterExpression.True);
+				SetValue(isFilteredPropertyKey, expr != PpsDataFilterExpression.True);
 			}
 			else
 			{
@@ -430,8 +431,10 @@ namespace TecWare.PPSn.Controls
 				if ((e.Key >= Key.A && e.Key <= Key.Z)
 					|| (e.Key >= Key.D0 && e.Key <= Key.D9))
 				{
-					if (!filterBox.IsKeyboardFocusWithin
-						&& IsKeyboardFocusWithin) // move focus to textbox
+					var txt = e.OriginalSource is DependencyObject d ? (d as TextBoxBase ?? d.GetVisualParent<TextBoxBase>()) : null;
+					if (filterBox.IsKeyboardFocusWithin || !(txt is null))
+						return;
+					if (IsKeyboardFocusWithin) // move focus to textbox
 						filterBox.Focus();
 				}
 			}

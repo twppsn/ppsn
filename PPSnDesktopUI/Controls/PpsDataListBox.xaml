@@ -80,7 +80,7 @@ specific language governing permissions and limitations under the Licence.
 												Grid.ColumnSpan="2"
 												Margin="{TemplateBinding Padding}"
 												Focusable="False"
-												CanContentScroll="False"
+												CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
 												HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
 												VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
 								<ItemsPresenter KeyboardNavigation.TabNavigation="Once" KeyboardNavigation.DirectionalNavigation="Contained" />
