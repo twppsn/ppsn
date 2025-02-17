@@ -54,6 +54,7 @@
 0x13BA;0x0018;;TaoTronics TT-BS014
 0x1D57;0x001C;;TaoTronics TT-BS003
 0x1447;0x8047;;Cognex DM8600
+0x1A86;0x5453;;Netum C750
 0x00010111;1;;Opticon OPN (Bluetooth)
 0x000123A1;0x00001234;;DataLogic QuickScan QBT 2400 (Bluetooth)
 0x6352;0x681B;;EloRFID

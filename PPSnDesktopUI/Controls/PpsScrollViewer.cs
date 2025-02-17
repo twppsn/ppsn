@@ -13,8 +13,10 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using TecWare.PPSn.UI;
@@ -300,8 +302,20 @@ namespace TecWare.PPSn.Controls
 		static PpsScrollViewer()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsScrollViewer), new FrameworkPropertyMetadata(typeof(PpsScrollViewer)));
+
+			// CommandManager.RegisterClassCommandBinding(typeof(PpsScrollViewer), new CommandBinding(ScrollBar.ScrollToEndCommand, OnScrollToEndCommand, CanScrollToEndCommand)
 		} // sctor
 
+		private static void OnScrollToEndCommand(object sender, ExecutedRoutedEventArgs e)
+		{
+			e.Handled = true;
+
+		}
+		private static void CanScrollToEndCommand(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.CanExecute = false;
+			e.Handled = true;
+		}
 	} // class PpsScrollViewer
 
 	#endregion
