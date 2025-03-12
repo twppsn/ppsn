@@ -313,12 +313,12 @@ namespace TecWare.PPSn.Lua
 		} // func GetType
 
 		[LuaMember]
-		internal object GetService(object source, object service)
+		internal object GetService(object source, object service, bool throwException = false)
 		{
 			if (source is DependencyObject d)
-				return d.GetControlService(GetType(service), true, true);
+				return d.GetControlService(GetType(service), throwException: throwException, useVisualTree: true);
 			else
-				return shell.Shell.GetService(GetType(service));
+				return shell.Shell.GetService<object>(GetType(service), throwException);
 		} // func GetService
 
 		#endregion

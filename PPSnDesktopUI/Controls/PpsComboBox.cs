@@ -530,7 +530,14 @@ namespace TecWare.PPSn.Controls
 		} // proc OnPropertyChanged
 
 		private void UpdateSelectedValueItem(object value)
-			=> SetValue(SelectedValueItemPropertyKey, value);
+		{
+			//var da = SelectionBoxItemTemplate;
+			//// Update templates
+			//var miUpdate = typeof(ComboBox).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic);
+			//miUpdate?.Invoke(this, Array.Empty<object>());
+
+			SetValue(SelectedValueItemPropertyKey, value);
+		} // proc UpdateSelectedValueItem
 
 		public object SelectedValueItem => GetValue(SelectedValueItemProperty);
 
