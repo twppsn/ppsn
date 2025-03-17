@@ -66,18 +66,44 @@ namespace TecWare.PPSn.UI
 
 		#region -- Load, Close --------------------------------------------------------
 
+		private static Task<PdfReader> LoadDocumentFromFileNameAsync(string fileName)
+			=> Task.Run(() => PdfReader.Open(fileName));
+
+		internal static async Task<PdfReader> DownloadDocumentAsync(DEHttpClient http, Uri uri)
+		{
+			using (var r = await http.GetAsync(uri))
+			{
+				if (!r.IsSuccessStatusCode)
+					throw new HttpResponseException(r);
+				if (r.Content == null)
+					throw new HttpResponseException(HttpStatusCode.NoContent);
+				if (r.Content.Headers.ContentType?.MediaType != MimeTypes.Application.Pdf)
+					throw new ArgumentOutOfRangeException("Content-Type", r.Content.Headers.ContentType?.MediaType, "Only pdf supported.");
+
+				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: GetCleanPdfName(r.Content.Headers.ContentDisposition?.FileName));
+			}
+		} // func DownloadDocumentAsync
+
+		private async Task LoadDocumentFromSourceAsync(string source)
+		{
+			using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Datei ({0})...", source)))
+			{
+				if (source.StartsWith("http://") || source.StartsWith("https://"))
+					SetLoadedDocument(await DownloadDocumentAsync(PaneHost.PaneManager.Shell.Http, new Uri(source)));
+				else
+					SetLoadedDocument(await LoadDocumentFromFileNameAsync(source)); // parse pdf in background
+			}
+		} // func LoadDocumentFromSourceAsync
+
 		private async Task OpenPdfAsync(object data)
 		{
 			switch (data)
 			{
+				case Uri uri:
+					await LoadDocumentFromSourceAsync(uri.ToString());
+					break;
 				case string fileName: // open a file from disk
-					using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Datei ({0})...", fileName)))
-					{
-						if (fileName.StartsWith("http://") || fileName.StartsWith("https://"))
-							SetLoadedDocument(await DownloadDocumentAsync(PaneHost.PaneManager.Shell.Http, new Uri(fileName)));
-						else
-							SetLoadedDocument(await LoadDocumentFromFileNameAsync(fileName)); // parse pdf in background
-					}
+					await LoadDocumentFromSourceAsync(fileName);
 					break;
 				case byte[] bytes:
 					using (var bar = this.CreateProgress(progressText: "Lade Pdf-Datei..."))
@@ -103,24 +129,6 @@ namespace TecWare.PPSn.UI
 					throw new ArgumentException($"Invalid pdf-data container {data.GetType().Name}.", nameof(data));
 			}
 		} // proc OpenPdfAsync
-
-		private static Task<PdfReader> LoadDocumentFromFileNameAsync(string fileName)
-			=> Task.Run(() => PdfReader.Open(fileName));
-
-		internal static async Task<PdfReader> DownloadDocumentAsync(DEHttpClient http, Uri uri)
-		{
-			using (var r = await http.GetAsync(uri))
-			{
-				if (!r.IsSuccessStatusCode)
-					throw new HttpResponseException(r);
-				if (r.Content == null)
-					throw new HttpResponseException(HttpStatusCode.NoContent);
-				if (r.Content.Headers.ContentType?.MediaType != MimeTypes.Application.Pdf)
-					throw new ArgumentOutOfRangeException("Content-Type", r.Content.Headers.ContentType?.MediaType, "Only pdf supported.");
-
-				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: GetCleanPdfName(r.Content.Headers.ContentDisposition?.FileName));
-			}
-		} // func DownloadDocumentAsync
 
 		private static string GetCleanPdfName(string fileName)
 			=> String.IsNullOrEmpty(fileName) ? "a.pdf" : PpsShell.GetCleanShellName(fileName);
@@ -262,10 +270,12 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		/// <param name="args"></param>
 		/// <returns></returns>
-		protected override Task OnLoadAsync(LuaTable args)
+		protected override async Task OnLoadAsync(LuaTable args)
 		{
+			await base.OnLoadAsync(args);
+
 			ClosePdf();
-			return OpenPdfAsync(args.GetMemberValue("Object") ?? args.GetMemberValue("FileName"));
+			await OpenPdfAsync(args.GetMemberValue("Object") ?? args.GetMemberValue("Source") ?? args.GetMemberValue("FileName"));
 		} // proc OnLoadAsync
 
 		/// <summary></summary>

@@ -265,8 +265,8 @@ namespace TecWare.PPSn
 
 		private static bool ShowModalDialog(Window ownerWindow, Func<bool?> showDialog)
 		{
-			var oldWindow = Application.Current.MainWindow;
-			if (ownerWindow != null)
+			var oldWindow = Application.Current?.MainWindow;
+			if (ownerWindow != null && Application.Current != null)
 				Application.Current.MainWindow = ownerWindow;
 			try
 			{
@@ -275,10 +275,11 @@ namespace TecWare.PPSn
 			finally
 			{
 #pragma warning disable CA2219 // Do not raise exceptions in finally clauses
-				if (ownerWindow != null && Application.Current.MainWindow != ownerWindow)
+				if (ownerWindow != null && Application.Current != null && Application.Current.MainWindow != ownerWindow)
 					throw new InvalidOperationException();
 #pragma warning restore CA2219 // Do not raise exceptions in finally clauses
-				Application.Current.MainWindow = oldWindow;
+				if (oldWindow != null)
+					Application.Current.MainWindow = oldWindow;
 			}
 		} // proc ShowModalDialog
 
