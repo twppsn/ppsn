@@ -34,7 +34,7 @@ namespace TecWare.PPSn.Tests
 		{
 			InitializeComponent();
 
-			var items = new TestItem[100];
+			var items = new TestItem[10000];
 			var r = new Random();
 			for (var i = 0; i < items.Length; i++)
 				items[i] = new TestItem { Nr = i, Name = $"Eintrag {i}", Text = $"Todo for a nice text {i}", Wert = r.NextDouble() };

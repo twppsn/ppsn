@@ -12,15 +12,15 @@
 			<RowDefinition />
 			<RowDefinition Height="100" />
 		</Grid.RowDefinitions>
-		<ui:PpsDataListBox x:Name="listBox" UseAutoView="True">
-			<ui:PpsListColumns.Columns>
+		<ui:PpsDataListBox x:Name="listBox" ScrollViewer.CanContentScroll="True" UseAutoView="True">
+			<!--<ui:PpsListColumns.Columns>
 				<ui:PpsListColumns d:DataContext="{x:Type local:TestItem}">
 					<ui:PpsListColumn x:Name="testNr" Header="Nr" Width="100" DisplayMemberBinding="{Binding Nr}" HorizontalAlignment="Center" />
 					<ui:PpsListColumn Header="Name" Width="200" DisplayMemberBinding="{Binding Name}" />
 					<ui:PpsListColumn Header="Text" Width="*" DisplayMemberBinding="{Binding Text}" />
 					<ui:PpsListColumn Header="Wert" Width="100" DisplayMemberBinding="{Binding Wert}" />
 				</ui:PpsListColumns>
-			</ui:PpsListColumns.Columns>
+			</ui:PpsListColumns.Columns>-->
 			<ui:PpsDataListBox.ListCommands>
 				<ui:PpsUICommandButton Order="100,100" DisplayText="Test" Command="{x:Static ApplicationCommands.Find}" />
 				<ui:PpsUICommandPanel Order="100,110" Content="{Binding}">
@@ -37,6 +37,11 @@
 				<ui:PpsUICommandButton DisplayText="Item1" Command="{x:Static ApplicationCommands.Copy}" />
 				<ui:PpsUICommandButton DisplayText="Item2" Command="{x:Static ApplicationCommands.Paste}" />
 			</ui:PpsDataListBox.ItemCommands>
+			<ui:PpsDataListBox.ItemsPanel>
+				<ItemsPanelTemplate>
+					<ui:PpsVirtualizationStackPanel />
+				</ItemsPanelTemplate>
+			</ui:PpsDataListBox.ItemsPanel>
 		</ui:PpsDataListBox>
 
 		<WrapPanel Grid.Row="1" Margin="10">
