@@ -1208,6 +1208,8 @@ namespace TecWare.PPSn.Server
 			{
 				this.tw = tw ?? throw new ArgumentNullException(nameof(tw));
 
+				if (settings == null)
+					settings = new LuaTable();
 				useIndexColumns = settings.GetOptionalValue("indexed", false);
 				prettyFormatting = settings.GetOptionalValue("pretty", false);
 				indent = settings.GetOptionalValue("indent", "\t");
@@ -1305,7 +1307,7 @@ namespace TecWare.PPSn.Server
 		{
 			private bool isFirst = false;
 
-			public ViewLsonWriter(TextWriter tw, LuaTable settings)
+			public ViewLsonWriter(TextWriter tw, LuaTable settings = null)
 				: base(tw, settings)
 			{
 			} // ctor
@@ -1355,7 +1357,7 @@ namespace TecWare.PPSn.Server
 		{
 			private bool isFirst = true;
 
-			public ViewJsonWriter(TextWriter tw, LuaTable settings)
+			public ViewJsonWriter(TextWriter tw, LuaTable settings = null)
 				: base(tw, settings)
 			{
 			} // ctor
@@ -1833,9 +1835,9 @@ namespace TecWare.PPSn.Server
 			else if (r.AcceptType(MimeTypes.Text.Xml))
 				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Xml));
 			else if (r.AcceptType(MimeTypes.Text.Json))
-				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Json));
+				return new ViewJsonWriter(r.GetOutputTextWriter(MimeTypes.Text.Json));
 			else if (r.AcceptType(MimeTypes.Text.Lson))
-				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Lson));
+				return new ViewLsonWriter(r.GetOutputTextWriter(MimeTypes.Text.Lson));
 			else
 				return new ViewXmlWriter(r.GetOutputTextWriter(MimeTypes.Text.Xml));
 		} // func ViewGetCreateWriter
