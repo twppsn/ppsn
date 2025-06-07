@@ -431,8 +431,14 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsPrintService --------------------------------------------------
 
 	/// <summary>Shell service to manage printer settings.</summary>
-	[PpsLazyService, PpsService(typeof(PpsPrintService))]
-	public class PpsPrintService : IPpsShellService
+	public interface IPpsPrintService
+	{
+		Task<IPpsPrintSettings> GetPrintSettingsAsync(string printKey);
+	} // interface IPpsPrintService
+
+	/// <summary>Shell service to manage printer settings.</summary>
+	[PpsLazyService, PpsService(typeof(IPpsPrintService))]
+	internal sealed class PpsPrintService : IPpsShellService, IPpsPrintService
 	{
 		private readonly IPpsShell shell;
 
@@ -953,7 +959,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="printService"></param>
 		/// <param name="printRange"></param>
 		/// <returns></returns>
-		public static async Task<IPpsPrintJob> GetPrintJobAsync(this IPpsPrintDocument document, PpsPrintService printService, IPpsPrintRange printRange = null)
+		public static async Task<IPpsPrintJob> GetPrintJobAsync(this IPpsPrintDocument document, IPpsPrintService printService, IPpsPrintRange printRange = null)
 		{
 			if (document == null)
 				throw new ArgumentNullException(nameof(document));
@@ -976,7 +982,7 @@ namespace TecWare.PPSn.UI
 			if (dp == null)
 				throw new ArgumentNullException(nameof(dp));
 
-			var printService = dp.GetControlService<PpsPrintService>(false);
+			var printService = dp.GetControlService<IPpsPrintService>(false);
 			return printService == null
 				? Task.FromResult(document.GetPrintJob(GetDefaultPrintSettings(), printRange))
 				: GetPrintJobAsync(document, printService, printRange);
@@ -1035,7 +1041,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="dp"></param>
 		/// <param name="printService"></param>
 		/// <returns></returns>
-		public static async Task<IPpsPrintJob> ShowDialogAsync(this IPpsPrintDocument document, DependencyObject dp, PpsPrintService printService)
+		public static async Task<IPpsPrintJob> ShowDialogAsync(this IPpsPrintDocument document, DependencyObject dp, IPpsPrintService printService)
 		{
 			if (document == null)
 				throw new ArgumentNullException(nameof(document));
@@ -1068,7 +1074,7 @@ namespace TecWare.PPSn.UI
 			if (dp == null)
 				throw new ArgumentNullException(nameof(dp));
 
-			var printService = dp.GetControlService<PpsPrintService>(false);
+			var printService = dp.GetControlService<IPpsPrintService>(false);
 			return printService == null
 				? Task.FromResult(ShowDialog(document, dp))
 				: ShowDialogAsync(document, dp, printService);
@@ -1088,7 +1094,7 @@ namespace TecWare.PPSn.UI
 				throw new ArgumentNullException(nameof(dp));
 
 			// load settings
-			var printService = dp.GetControlService<PpsPrintService>(false);
+			var printService = dp.GetControlService<IPpsPrintService>(false);
 			if (printService != null && settings == null)
 				settings = await printService.GetPrintSettingsAsync(document.PrintKey);
 
