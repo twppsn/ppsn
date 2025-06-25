@@ -218,7 +218,7 @@ namespace TecWare.PPSn.Data
 				Columns = columnExpressions.ToArray(),
 				Filter = PpsDataFilterExpression.Parse(filter, CultureInfo.CurrentUICulture, PpsDataFilterParseOption.AllowFields | PpsDataFilterParseOption.AllowVariables).Reduce(variables),
 				Order = order,
-				AttributeSelector = "*,V.*,Xl.*"
+				AttributeSelector = "*,V.*,Xl.*,Bi.*"
 			};
 			return Shell.GetViewData(request);
 		} // func GetEnumerator

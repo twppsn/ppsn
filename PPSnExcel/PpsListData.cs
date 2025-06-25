@@ -1332,8 +1332,7 @@ namespace PPSnExcel
 			var dataColumn = result.FindColumnFromExpression(columnExpression);
 			if (dataColumn == null)
 			{
-				if (targetColumn.XPath != null)
-					targetColumn.XPath.Clear(); // remove current binding
+				targetColumn.XPath?.Clear(); // remove current binding
 				return false;
 			}
 
@@ -1437,8 +1436,7 @@ namespace PPSnExcel
 				else // remove only data connections
 				{
 					var col = xlList.ListColumns[lastColumnIndex];
-					if (col.XPath != null)
-						col.XPath.Clear();
+					col.XPath?.Clear();
 					lastColumnIndex++;
 				}
 			}

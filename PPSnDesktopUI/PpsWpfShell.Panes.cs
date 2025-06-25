@@ -278,7 +278,7 @@ namespace TecWare.PPSn
 				if (ownerWindow != null && Application.Current != null && Application.Current.MainWindow != ownerWindow)
 					throw new InvalidOperationException();
 #pragma warning restore CA2219 // Do not raise exceptions in finally clauses
-				if (oldWindow != null)
+				if (oldWindow != null && Application.Current != null)
 					Application.Current.MainWindow = oldWindow;
 			}
 		} // proc ShowModalDialog
