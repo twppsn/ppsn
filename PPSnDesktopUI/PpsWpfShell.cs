@@ -411,8 +411,9 @@ namespace TecWare.PPSn
 		/// <summary>Find a children in the Visual tree.</summary>
 		/// <typeparam name="T">Type of the child</typeparam>
 		/// <param name="current">Current visual element.</param>
+		/// <param name="name"></param>
 		/// <returns>Child or <c>null</c>.</returns>
-		public static IEnumerable<T> GetVisualChildren<T>(this DependencyObject current)
+		public static IEnumerable<T> GetVisualChildren<T>(this DependencyObject current, string name = null)
 			where T : DependencyObject
 		{
 			var analyzeStack = new Queue<DependencyObject>();
@@ -425,7 +426,7 @@ namespace TecWare.PPSn
 				for (var i = 0; i < c; i++)
 				{
 					var v = VisualTreeHelper.GetChild(cur, i);
-					if (v is T child)
+					if (v is T child && (name is null || v.GetName() == name))
 						yield return child;
 					else
 						analyzeStack.Enqueue(v);

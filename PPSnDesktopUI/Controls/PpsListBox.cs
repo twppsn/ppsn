@@ -21,7 +21,9 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
 using TecWare.PPSn.UI;
@@ -109,9 +111,29 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
+	#region -- class PpsListCommandCell -----------------------------------------------
+
+	public sealed class PpsListCommandCell : ContentControl, ICommandSource
+	{
+		public static readonly DependencyProperty CommandProperty = ButtonBase.CommandProperty.AddOwner(typeof(PpsListCommandCell));
+		public static readonly DependencyProperty CommandParameterProperty = ButtonBase.CommandParameterProperty.AddOwner(typeof(PpsListCommandCell));
+		public static readonly DependencyProperty CommandTargetProperty = ButtonBase.CommandTargetProperty.AddOwner(typeof(PpsListCommandCell));
+
+		public ICommand Command { get => (ICommand)GetValue(CommandProperty); set => SetValue(CommandProperty, value); }
+		public object CommandParameter { get => GetValue(CommandParameterProperty); set => SetValue(CommandParameterProperty, value); }
+		public IInputElement CommandTarget { get => (IInputElement)GetValue(CommandTargetProperty); set => SetValue(CommandTargetProperty, value); }
+
+		static PpsListCommandCell()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsListCommandCell), new FrameworkPropertyMetadata(typeof(PpsListCommandCell)));
+		}
+	} // class PpsListCommandCell
+
+	#endregion
+
 	#region -- class PpsListColumn ----------------------------------------------------
 
-	public class PpsListColumn : FrameworkContentElement, INotifyPropertyChanged
+	public class PpsListColumn : FrameworkContentElement, INotifyPropertyChanged, ICommandSource
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
 
@@ -173,7 +195,8 @@ namespace TecWare.PPSn.Controls
 		public BindingBase DisplayMemberBinding
 		{
 			get => displayMemberBinding;
-			set {
+			set
+			{
 				if (displayMemberBinding != value)
 				{
 					displayMemberBinding = value;
@@ -181,6 +204,18 @@ namespace TecWare.PPSn.Controls
 				}
 			}
 		} // prop DisplayMemberBinding
+
+		#endregion
+
+		#region -- ICommandSource - members -------------------------------------------
+
+		public static readonly DependencyProperty CommandProperty = ButtonBase.CommandProperty.AddOwner(typeof(PpsListColumn));
+		public static readonly DependencyProperty CommandParameterProperty = ButtonBase.CommandParameterProperty.AddOwner(typeof(PpsListColumn));
+		public static readonly DependencyProperty CommandTargetProperty = ButtonBase.CommandTargetProperty.AddOwner(typeof(PpsListColumn));
+
+		public ICommand Command { get => (ICommand)GetValue(CommandProperty); set => SetValue(CommandProperty, value); }
+		public object CommandParameter { get => GetValue(CommandParameterProperty); set => SetValue(CommandParameterProperty, value); }
+		public IInputElement CommandTarget { get => (IInputElement)GetValue(CommandTargetProperty); set => SetValue(CommandTargetProperty, value); }
 
 		#endregion
 	} // class PpsListColumn
@@ -725,27 +760,61 @@ namespace TecWare.PPSn.Controls
 
 	public class PpsListColumnRow : PpsListColumnCells
 	{
+		private UIElement CreateTextControl(PpsListColumn column)
+		{
+			var text = new TextBlock
+			{
+				Padding = new Thickness(2)
+			};
+
+			text.SetBinding(TextBlock.TextProperty, column.DisplayMemberBinding);
+
+			return text;
+		} // func CreateTextControl
+
+		private UIElement CreateCommandControl(PpsListColumn column)
+		{
+			var control = new PpsListCommandCell()
+			{
+				ContentTemplate = column.CellTemplate,
+				Command = column.Command,
+				CommandParameter = column.CommandParameter,
+				CommandTarget = column.CommandTarget
+			};
+
+			if (column.DisplayMemberBinding != null)
+				control.Content = CreateTextControl(column);
+			else
+				control.Content = DataContext;
+
+			return control;
+		} // proc CreateCommandControl
+
+		private UIElement CreateTemplateControl(PpsListColumn column)
+		{
+			var control = new ContentPresenter() { ContentTemplate = column.CellTemplate };
+
+			if (column.DisplayMemberBinding != null)
+				control.SetBinding(ContentPresenter.ContentProperty, column.DisplayMemberBinding);
+			else
+				control.Content = DataContext;
+
+			return control;
+		} // func CreateTemplateControl
+
 		protected override UIElement CreateElement(int i, PpsListColumn column)
 		{
-			if (column.CellTemplate != null)
-			{
-				var contentPresenter = new ContentPresenter
-				{
-					Content = DataContext,
-					ContentTemplate = column.CellTemplate
-				};
-				return contentPresenter;
+			// look for default cell template
+			//if (column.DisplayMemberBinding is Binding b)
+			//	b.Path;
 
-			}
+			// create controls
+			if (column.Command != null)
+				return CreateCommandControl(column);
+			else if (column.CellTemplate != null)
+				return CreateTemplateControl(column);
 			else if (column.DisplayMemberBinding != null)
-			{
-				var text = new TextBlock
-				{
-					Padding = new Thickness(2)
-				};
-				text.SetBinding(TextBlock.TextProperty, column.DisplayMemberBinding);
-				return text;
-			}
+				return CreateTextControl(column);
 			else
 				return null;
 		} // func CreateElement
@@ -753,8 +822,12 @@ namespace TecWare.PPSn.Controls
 		protected override void SetStyleForCell(PpsListColumn column, FrameworkElement fe)
 		{
 			base.SetStyleForCell(column, fe);
-			fe.SetBinding(HorizontalAlignmentProperty, new Binding(nameof(PpsListColumn.HorizontalAlignment)) { Source = column });
-			fe.SetBinding(VerticalAlignmentProperty, new Binding(nameof(PpsListColumn.VerticalAlignment)) { Source = column });
+
+			var horizontalProperty = fe is ContentControl ? Control.HorizontalContentAlignmentProperty : HorizontalAlignmentProperty;
+			var verticalProperty = fe is ContentControl ? Control.VerticalContentAlignmentProperty : VerticalAlignmentProperty;
+
+			fe.SetBinding(horizontalProperty, new Binding(nameof(PpsListColumn.HorizontalAlignment)) { Source = column });
+			fe.SetBinding(verticalProperty, new Binding(nameof(PpsListColumn.VerticalAlignment)) { Source = column });
 		} // proc SetStyleForCell
 
 		protected override void InvalidateArrangeFromCellGenerator()

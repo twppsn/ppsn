@@ -123,4 +123,21 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style TargetType="{x:Type uiC:PpsListCommandCell}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type uiC:PpsListCommandCell}">
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="26" />
+						</Grid.ColumnDefinitions>
+						<ContentPresenter />
+						<uiC:PpsButton Margin="10,0,0,0" Padding="2" Grid.Column="1" Width="15" Height="15" Command="{TemplateBinding Command}" CommandParameter="{TemplateBinding CommandParameter}" CommandTarget="{TemplateBinding CommandTarget}" />
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>

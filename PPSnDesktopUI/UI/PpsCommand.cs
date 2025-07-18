@@ -819,8 +819,14 @@ namespace TecWare.PPSn.UI
 	public class PpsUICommandButton : PpsUICommand, ICommandSource
 	{
 		/// <summary>Text to be shown on the Button</summary>
-		public static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register(nameof(DisplayText), typeof(string), typeof(PpsUICommandButton));
-		/// <summary>meaningful explanation of the Button, may be shown in ToolTip</summary>
+		public static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register(nameof(DisplayText), typeof(string), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(new PropertyChangedCallback(OnDisplayTextChanged)));
+		/// <summary>Text to be shown on the MenuItem</summary>
+		public static readonly DependencyProperty MenuTextProperty = DependencyProperty.Register(nameof(MenuText), typeof(string), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(new PropertyChangedCallback(OnMenuTextChanged)));
+
+		private static readonly DependencyPropertyKey menuDisplayTextPropertyKey = DependencyProperty.RegisterReadOnly(nameof(MenuDisplayText), typeof(string), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(null));
+		/// <summary>DisplayText or MenuText</summary>
+		public static readonly DependencyProperty MenuDisplayTextProperty = menuDisplayTextPropertyKey.DependencyProperty;
+		/// <summary>Meaningful explanation of the Button, may be shown in ToolTip</summary>
 		public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register(nameof(Description), typeof(string), typeof(PpsUICommandButton));
 		/// <summary>Name of the Image for the Button</summary>
 		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(string), typeof(PpsUICommandButton));
@@ -831,8 +837,21 @@ namespace TecWare.PPSn.UI
 		/// <summary>The Command the Button schould execute</summary>
 		public static readonly DependencyProperty CommandTargetProperty = ButtonBase.CommandTargetProperty.AddOwner(typeof(PpsUICommandButton));
 
+		private static void UpdateMenuDisplayText(DependencyObject d, object displayText, object menuText)
+			=> d.SetValue(menuDisplayTextPropertyKey, menuText ?? displayText);
+
+		private static void OnDisplayTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> UpdateMenuDisplayText(d, e.NewValue, d.GetValue(MenuTextProperty));
+
+		private static void OnMenuTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> UpdateMenuDisplayText(d, d.GetValue(DisplayTextProperty), e.NewValue);
+
 		/// <summary>Text to be shown on the Button</summary>
 		public string DisplayText { get => (string)GetValue(DisplayTextProperty); set => SetValue(DisplayTextProperty, value); }
+		/// <summary>Text to be shown on the MenuItem</summary>
+		public string MenuText { get => (string)GetValue(MenuTextProperty); set => SetValue(MenuTextProperty, value); }
+		/// <summary>DisplayText or MenuText</summary>
+		public string MenuDisplayText =>(string)GetValue(MenuDisplayTextProperty);
 		/// <summary>meaningful explanation of the Button, may be shown in ToolTip</summary>
 		public string Description { get => (string)GetValue(DescriptionProperty); set => SetValue(DescriptionProperty, value); }
 		/// <summary>Name of the Image for the Button</summary>
