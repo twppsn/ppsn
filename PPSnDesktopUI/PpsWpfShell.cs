@@ -389,7 +389,7 @@ namespace TecWare.PPSn
 		/// <param name="current">Current visual element.</param>
 		/// <param name="name"></param>
 		/// <returns>Child or <c>null</c>.</returns>
-		public static T GetVisualChild<T>(this DependencyObject current, string name)
+		public static T GetVisualChild<T>(this DependencyObject current, string name, bool throwException = true)
 			where T : DependencyObject
 		{
 			var c = VisualTreeHelper.GetChildrenCount(current);
@@ -405,6 +405,10 @@ namespace TecWare.PPSn
 						return child;
 				}
 			}
+
+			if (throwException)
+				throw new ArgumentException($"Control {name} not found.");
+			
 			return default;
 		} // func GetVisualChild
 
@@ -426,7 +430,7 @@ namespace TecWare.PPSn
 				for (var i = 0; i < c; i++)
 				{
 					var v = VisualTreeHelper.GetChild(cur, i);
-					if (v is T child && (name is null || v.GetName() == name))
+					if (v is T child && (name is null || CompareName(v,name) == 0))
 						yield return child;
 					else
 						analyzeStack.Enqueue(v);

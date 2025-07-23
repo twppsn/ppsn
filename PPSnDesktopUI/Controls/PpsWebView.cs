@@ -729,8 +729,7 @@ namespace TecWare.PPSn.Controls
 
 		private void HideHtml()
 		{
-			if (htmlView.CoreWebView2 != null)
-				htmlView.CoreWebView2.Navigate("about:blank");
+			htmlView.CoreWebView2?.Navigate("about:blank");
 			RemoveVisualChild(htmlView);
 		} // proc HideHtml
 
@@ -741,7 +740,7 @@ namespace TecWare.PPSn.Controls
 		private void ShowXaml()
 			=> AddVisualChild(xamlView);
 
-		private async Task<FrameworkElement> GetXamlControlAsync(Uri sourceUri, HttpContent content)
+		private async Task<(FrameworkElement, IPpsLuaCodeBehind)> GetXamlControlAsync(Uri sourceUri, HttpContent content)
 		{
 			using (var xml = XmlReader.Create(await content.ReadAsStreamAsync(), Procs.XmlReaderSettings))
 			{
@@ -763,15 +762,15 @@ namespace TecWare.PPSn.Controls
 				// mark control as created
 				e.Code?.OnControlCreated(control, sourceUri.GetArgumentsAsTable());
 
-				return control;
+				return (control, e.Code);
 			}
 		} // func GetXamlControlAsync
 
-		private async Task SetXamlAsync(Uri sourceUri, object content, DataTemplate template)
+		private async Task SetXamlAsync(Uri sourceUri, object content, DataTemplate template, object tag = null)
 		{
 			if (content is HttpContent httpContent)
 			{
-				content = await GetXamlControlAsync(sourceUri, httpContent);
+				(content, tag) = await GetXamlControlAsync(sourceUri, httpContent);
 				template = null;
 			}
 
@@ -779,6 +778,7 @@ namespace TecWare.PPSn.Controls
 
 			xamlView.Content = content;
 			xamlView.ContentTemplate = template;
+			xamlView.Tag = tag;
 
 			SetValue(sourceUriPropertyKey, sourceUri);
 
@@ -1337,6 +1337,26 @@ namespace TecWare.PPSn.Controls
 			e.CanExecute = e.Parameter is string || e.Parameter is Uri || e.Parameter is PpsWebViewHistoryItem || e.Parameter is PpsWebViewLink;
 			e.Handled = true;
 		} // proc CanLinkCommandExecute
+
+		#endregion
+
+		#region -- Script - management ------------------------------------------------
+
+		public async Task<object> ExecuteScriptAsync(string script)
+		{
+			if (viewState == ViewState.Html)
+				return await htmlView.ExecuteScriptAsync(script);
+			else if (viewState == ViewState.Xaml && xamlView.Tag is IPpsLuaCodeBehind code)
+			{
+				var chunk = await code.LuaShell.CompileAsync(script, true);
+				return chunk.Run(code.Target);
+			}
+			else
+				throw new ArgumentException("No script context.");
+		} // func ExecuteScriptAsync
+
+		public bool CanExecuteScript()
+			=> viewState == ViewState.Html || viewState == ViewState.Xaml;
 
 		#endregion
 
