@@ -783,6 +783,7 @@ namespace TecWare.PPSn.Controls
 			SetValue(sourceUriPropertyKey, sourceUri);
 
 			Title = content is PpsWindowPaneControl pane ? pane.SubTitle : "";
+			HasContent = true;
 		} // proc SetXamlAsync
 
 		private void HideXaml()
