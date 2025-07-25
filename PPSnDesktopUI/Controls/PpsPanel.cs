@@ -21,6 +21,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -35,7 +36,7 @@ namespace TecWare.PPSn.Controls
 			CommandBindings.Add(new CommandBinding(SelectDefaultCommand, SelectDefaultExecuted, SelectDefaultCanExecute));
 		} // ctor
 
-		private object GetDefaultItem()
+		protected virtual object GetDefaultItem()
 			=> Items.Count > 0 ? Items[0] : null;
 
 		private void SelectDefaultCanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -44,14 +45,17 @@ namespace TecWare.PPSn.Controls
 			e.Handled = true;
 		} // proc SelectDefaultCanExecute
 
+		public virtual void SelectDefaultPanel()
+			=> SelectedItem = GetDefaultItem();
+
 		private void SelectDefaultExecuted(object sender, ExecutedRoutedEventArgs e)
 		{
-			SelectedItem = GetDefaultItem();
+			SelectDefaultPanel();
 			e.Handled = true;
 		} // proc SelectDefaultExecuted
 
 		/// <summary>Select default item</summary>
-		public static readonly RoutedCommand SelectDefaultCommand = new RoutedCommand();
+		public static readonly RoutedCommand SelectDefaultCommand = PpsRoutedCommand.Create(typeof(PpsPanelSelector), "SelectedDefault");
 
 		static PpsPanelSelector()
 		{
