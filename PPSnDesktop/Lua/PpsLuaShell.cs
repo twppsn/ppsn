@@ -350,7 +350,7 @@ namespace TecWare.PPSn.Lua
 
 		private Task<LuaTable> LuaGetTableAsync(IPpsLuaCodeSource self, string path, LuaTable args)
 		{
-			var http = self.LuaShell.Shell.GetHttp(true);
+			var http = self.LuaShell.Shell.GetHttp();
 			var sb = new StringBuilder(GetRelativePath(http, self, path));
 			HttpStuff.MakeUriArguments(sb, path.IndexOf('?') >= 0, args.Members.Select(kv => new PropertyValue(kv.Key, kv.Value)));
 			return http.GetTableAsync(sb.ToString());
@@ -358,7 +358,7 @@ namespace TecWare.PPSn.Lua
 
 		private Task<LuaTable> LuaPostTableAsync(IPpsLuaCodeSource self, string path, LuaTable args)
 		{
-			var http = self.LuaShell.Shell.GetHttp(true);
+			var http = self.LuaShell.Shell.GetHttp();
 			return http.PutTableAsync(GetRelativePath(http, self, path), args);
 		} // func LuaPostTableAsync
 
@@ -590,7 +590,7 @@ namespace TecWare.PPSn.Lua
 		LLua IPpsLuaShell.Lua => Lua;
 
 		LuaTable IPpsLuaShell.Global => this;
-		Uri IPpsLuaCodeSource.SourceUri => shell.GetHttp(true).BaseAddress;
+		Uri IPpsLuaCodeSource.SourceUri => shell.GetHttp().BaseAddress;
 		LuaTable IPpsLuaCodeSource.Target => this;
 		IPpsLuaShell IPpsLuaCodeSource.LuaShell => this;
 	} // class PpsLuaShellService

@@ -595,6 +595,22 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- interface IPpsImagePropertyEditor --------------------------------------
+
+	/// <summary>Edit image properties.</summary>
+	public interface IPpsImagePropertyEditor : IPropertyReadOnlyDictionary
+	{
+		/// <summary>Change property of an image</summary>
+		/// <param name="propertyName"></param>
+		/// <param name="propertyValue"></param>
+		void SetProperty(string propertyName, string propertyValue);
+		/// <summary>Persist changes to the image.</summary>
+		/// <returns></returns>
+		Task CommitAsync();
+	} // interface IPpsImagePropertyEditor
+
+	#endregion
+
 	#region -- interface IPpsCaptureTarget --------------------------------------------
 
 	/// <summary>Multi capture support.</summary>
@@ -621,6 +637,11 @@ namespace TecWare.PPSn
 		Task<object> CaptureAsync(object owner, PpsCaptureDevice device, IPpsCaptureTarget target = null);
 		/// <param name="device">Is teh device supported.</param>
 		bool IsSupported(PpsCaptureDevice device);
+
+		/// <summary>Changes the picture properties.</summary>
+		/// <param name="fileName"></param>
+		/// <returns></returns>
+		Task<IPpsImagePropertyEditor> ImagePropertyEditorAsync(string fileName);
 	} // interface IPpsCaptureService
 
 	#endregion

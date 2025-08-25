@@ -24,19 +24,30 @@ using TecWare.PPSn.Core.UI;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- interface IPpsBarcodeResult --------------------------------------------
+	#region -- interface PpsBarcodeResult ---------------------------------------------
 
 	/// <summary>Result of an barcode dialog</summary>
-	public interface IPpsBarcodeResult
+	public sealed class PpsBarcodeResult
 	{
-		/// <summary>Emit barcode via dispatch</summary>
-		void Dispatch();
+		/// <summary></summary>
+		/// <param name="provider"></param>
+		/// <param name="text"></param>
+		/// <param name="format"></param>
+		/// <exception cref="ArgumentNullException"></exception>
+		public PpsBarcodeResult(IPpsBarcodeProvider provider, string text, string format)
+		{
+			Provider = provider ?? PpsBarcodeService.Program;
+			Text = text ?? throw new ArgumentNullException(nameof(text));
+			Format = format;
+		} // ctor
 
+		/// <summary>Source of the barcode</summary>
+		public IPpsBarcodeProvider Provider {  get; }
 		/// <summary>Barcode</summary>
-		string Text { get; }
+		public string Text { get; }
 		/// <summary>Barcode format.</summary>
-		string Format { get; }
-	} // interface IPpsBarcodeResult
+		public string Format { get; }
+	} // interface PpsBarcodeResult
 
 	#endregion
 
@@ -56,11 +67,11 @@ namespace TecWare.PPSn.UI
 	#region -- interface IPpsBarcodeDialogProvider ------------------------------------
 
 	/// <summary>Provider that is invoked with an user dialog.</summary>
-	public interface IBarcodeDialogProvider : IPpsBarcodeProvider
+	public interface IPpsBarcodeDialogProvider : IPpsBarcodeProvider
 	{
 		/// <summary>Start user dialog.</summary>
 		/// <returns></returns>
-		Task<IPpsBarcodeResult> GetBarcodeAsync();
+		Task<PpsBarcodeResult> GetBarcodeAsync();
 	} // interface IPpsBarcodeDialogProvider
 
 	#endregion
@@ -401,7 +412,12 @@ namespace TecWare.PPSn.UI
 		/// <param name="provider"></param>
 		/// <returns></returns>
 		public IDisposable RegisterProvider(IPpsBarcodeProvider provider)
-			=> Register(providers, provider);
+		{
+			var providerToken = Register(providers, provider);
+			if (providerToken != null)
+				FireProvidersChanged();
+			return providerToken;
+		} // proc RegisterProvider
 
 		/// <summary>Register a new barcode decoder.</summary>
 		/// <param name="decoder"></param>
@@ -459,6 +475,11 @@ namespace TecWare.PPSn.UI
 			var info = PpsBarcodeInfo.Create(this, provider, text, format);
 			synchronizationContext.Post(state => barcodeProcessQueue.Enqueue(() => DisposeBarcodeUIAsync(info)), null);
 		} // func DispatchBarcode
+
+		/// <summary>Dispatch a barcode to an receiver.</summary>
+		/// <param name="result"></param>
+		public void DispatchBarcode(PpsBarcodeResult result)
+			=> DispatchBarcode(result.Provider, result.Text, result.Format);
 
 		/// <summary>Dispatch a barcode within the ui-thread.</summary>
 		/// <param name="barcode"></param>

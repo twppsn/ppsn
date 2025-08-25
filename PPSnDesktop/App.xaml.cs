@@ -994,7 +994,7 @@ namespace TecWare.PPSn
 			await Current.Dispatcher.InvokeAsync(
 				() =>
 				{
-					InvokeRestartCore(shell.Info, reason, shell.GetHttp(true).Credentials, false);
+					InvokeRestartCore(shell.Info, reason, shell.GetHttp().Credentials, false);
 
 					var app = (App)Current;
 					if (app.isProcessProtected)
@@ -1378,7 +1378,7 @@ namespace TecWare.PPSn
 			var dpc = shell.GetService<PpsDpcService>(false);
 			if (dpc == null)
 			{
-				var http = shell.GetHttp(true);
+				var http = shell.GetHttp();
 				throw new ExitApplicationException("DpcRequest", true, shell.Info, http.Credentials.GetUserNameFromCredentials() != "dpc" ? http.Credentials : null);
 			}
 			else

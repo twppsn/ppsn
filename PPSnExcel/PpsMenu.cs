@@ -21,6 +21,7 @@ using Microsoft.Office.Tools.Ribbon;
 using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Networking;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
@@ -121,6 +122,7 @@ namespace PPSnExcel
 			foreach (var cur in shellFactory.OrderBy(c => c.DisplayName))
 			{
 				var shell = Globals.ThisAddIn.GetShellFromInfo(cur);
+				var http = shell.GetService<IPpsCommunicationService>(false);
 
 				var ribbonButton = Factory.CreateRibbonDropDownItem();
 				ribbonButton.Label = cur.Name ?? cur.DisplayName;
@@ -128,9 +130,9 @@ namespace PPSnExcel
 				ribbonButton.SuperTip =
 					shell == null
 						? String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString())
-						: String.Format("Angemeldet: {2}\nVersion {0}\nUri: {1}", cur.Version, cur.Uri.ToString(), PpsShell.GetUserNameFromCredentials(shell.Http?.Credentials));
+						: String.Format("Angemeldet: {2}\nVersion {0}\nUri: {1}", cur.Version, cur.Uri.ToString(), PpsShell.GetUserNameFromCredentials(http?.Http.Credentials));
 				ribbonButton.Tag = cur;
-				ribbonButton.Image = shell != null && shell.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
+				ribbonButton.Image = http != null && http.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
 				loginGalery.Items.Add(ribbonButton);
 				isShellAdded = true;
 
