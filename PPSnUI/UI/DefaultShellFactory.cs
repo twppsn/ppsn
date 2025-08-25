@@ -348,7 +348,7 @@ namespace TecWare.PPSn.UI
 
 			protected override Task LoadSettingsFromServerAsync()
 			{
-				if (shell == null || shell.Http == null)
+				if (shell == null || shell.GetHttp(false) == null)
 					throw new InvalidOperationException();
 
 				return PpsShell.LoadSettingsFromServerAsync(this, shell, deviceId.Value, 0);
@@ -371,10 +371,10 @@ namespace TecWare.PPSn.UI
 
 			protected override Task LoadSettingsFromServerAsync()
 			{
-				if (Shell == null || shell.Http == null)
+				if (shell == null || shell.GetHttp(false) == null)
 					throw new InvalidOperationException();
 
-				return PpsShell.LoadUserSettingsFromServerAsync(this, shell.Http);
+				return PpsShell.LoadUserSettingsFromServerAsync(this, shell.GetHttp(true));
 			} // proc LoadSettingsFromServerAsync
 
 			protected override IReadOnlyList<Tuple<XName, string>> TranslateProperties => translateUserProperties;

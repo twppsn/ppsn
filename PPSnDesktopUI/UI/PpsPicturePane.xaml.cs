@@ -370,14 +370,15 @@ namespace TecWare.PPSn.UI
 			currentPicture.DataChanged += CurrentImage_DataChanged;
 
 			// image galerie
+			var http = Shell.GetHttp(true);
 			if (currentPicture.TryGetProperty<string>("zusa-group", out var groupUrl)
 				&& Uri.TryCreate(groupUrl, UriKind.RelativeOrAbsolute, out var groupUri)
-				&& Shell.Http.TryMakeRelative(groupUri, out var galeryPath))
+				&& http.TryMakeRelative(groupUri, out var galeryPath))
 			{
 				var currentId = currentPicture.GetProperty("Id", -1);
 
 				if (galeryInfo == null || !galeryInfo.IsSameGalery(galeryPath))
-					galeryInfo = await GaleryInfo.LoadAsync(Shell.Http, galeryPath);
+					galeryInfo = await GaleryInfo.LoadAsync(http, galeryPath);
 
 				if (galeryInfo.Update(currentId))
 					RefreshGaleryInfo();
@@ -410,13 +411,17 @@ namespace TecWare.PPSn.UI
 			{
 				await OpenPictureAsync(await PpsDataInfo.ToPpsDataInfoAsync(uri.AbsolutePath));
 			}
-			else if (Shell.Http.TryMakeRelative(uri, out var path))
-			{
-				using (var http = await Shell.Http.GetResponseAsync(path))
-					await OpenPictureAsync(await PpsDataInfo.ToPpsDataInfoAsync(http));
-			}
 			else
-				throw new NotSupportedException();
+			{
+				var http = Shell.GetHttp();
+				if (http.TryMakeRelative(uri, out var path))
+				{
+					using (var r = await http.GetResponseAsync(path))
+						await OpenPictureAsync(await PpsDataInfo.ToPpsDataInfoAsync(r));
+				}
+				else
+					throw new NotSupportedException();
+			}
 		} // proc OpenPictureFromSourceAsync
 
 		private void FitToImage()

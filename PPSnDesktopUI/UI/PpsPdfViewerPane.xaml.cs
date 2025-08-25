@@ -89,7 +89,7 @@ namespace TecWare.PPSn.UI
 			using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Datei ({0})...", source)))
 			{
 				if (source.StartsWith("http://") || source.StartsWith("https://"))
-					SetLoadedDocument(await DownloadDocumentAsync(PaneHost.PaneManager.Shell.Http, new Uri(source)));
+					SetLoadedDocument(await DownloadDocumentAsync(PaneHost.PaneManager.Shell.GetHttp(true), new Uri(source)));
 				else
 					SetLoadedDocument(await LoadDocumentFromFileNameAsync(source)); // parse pdf in background
 			}

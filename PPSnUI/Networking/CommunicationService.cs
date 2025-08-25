@@ -15,9 +15,11 @@
 #endregion
 using System;
 using System.ComponentModel;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading.Tasks;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 
@@ -43,13 +45,42 @@ namespace TecWare.PPSn.Networking
 	/// <summary>Access the communication service.</summary>
 	public interface IPpsCommunicationService : INotifyPropertyChanged
 	{
-		/// <summary>Current communication class.</summary>
+		/// <summary>User login to shell to authentificate a user. can only be called if <c>IsAuthentificated</c> is <c>false</c></summary>
+		/// <param name="userInfo"></param>
+		/// <returns>Raises exception on failures.</returns>
+		Task LoginAsync(ICredentials userInfo);
+
+		/// <summary>Current communication class, that is used.</summary>
 		DEHttpClient Http { get; }
 		/// <summary>Is a user attached to the http-context.</summary>
 		bool IsAuthentificated { get; }
+
 		/// <summary>Is the connection alive</summary>
 		PpsCommunicationState ConnectionState { get; }
 	} // interface IPpsCommunicationService
+
+	#endregion
+
+	#region -- interface IPpsHttpService -------------------------------------
+
+	/// <summary>Service to create and process http handlers.</summary>
+	public interface IPpsHttpService
+	{
+		/// <summary>Create a new http request for the uri.</summary>
+		/// <param name="uri"></param>
+		/// <returns>HttpClient for the application</returns>
+		DEHttpClient CreateHttp(Uri uri = null);
+
+		/// <summary>Returns the real uri.</summary>
+		/// <param name="http"></param>
+		/// <returns></returns>
+		Uri GetRemoteUri(DEHttpClient http);
+		/// <summary>Translate the uri to an remote uri.</summary>
+		/// <param name="uri"></param>
+		/// <param name="remoteUri"></param>
+		/// <returns></returns>
+		bool TryGetRemoteUri(Uri uri, out Uri remoteUri);
+	} // interface IPpsHttpService
 
 	#endregion
 

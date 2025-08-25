@@ -38,6 +38,7 @@ using TecWare.PPSn.Core.Data;
 using TecWare.PPSn.Core.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Main;
+using TecWare.PPSn.Networking;
 using TecWare.PPSn.Properties;
 using TecWare.PPSn.Themes;
 using TecWare.PPSn.UI;
@@ -477,7 +478,7 @@ namespace TecWare.PPSn
 						foreach (var cur in extendedFiles.Where(c => c.NeedsUpdate))
 						{
 							// copy file
-							await DownloadFileAsync(progress, shell.Http, cur.Uri, cur.FileInfo, cur.Length, cur.LastWriteTime,
+							await DownloadFileAsync(progress, shell.GetHttp(), cur.Uri, cur.FileInfo, cur.Length, cur.LastWriteTime,
 								totalCopiedFileLength * 1000 / totalBytesToUpdate,
 								cur.Length * 1000 / totalBytesToUpdate
 							);
@@ -891,7 +892,7 @@ namespace TecWare.PPSn
 							return false;
 
 						autoLogin = false;
-						await newShell.LoginAsync(userInfo);
+						await ((IPpsCommunicationService)newShell).LoginAsync(userInfo);
 
 						// start up main window manager
 						var mw = GetMainWindowPaneManager(newShell, settings.ApplicationMode);
@@ -993,7 +994,7 @@ namespace TecWare.PPSn
 			await Current.Dispatcher.InvokeAsync(
 				() =>
 				{
-					InvokeRestartCore(shell.Info, reason, shell.Http.Credentials, false);
+					InvokeRestartCore(shell.Info, reason, shell.GetHttp(true).Credentials, false);
 
 					var app = (App)Current;
 					if (app.isProcessProtected)
@@ -1376,7 +1377,10 @@ namespace TecWare.PPSn
 
 			var dpc = shell.GetService<PpsDpcService>(false);
 			if (dpc == null)
-				throw new ExitApplicationException("DpcRequest", true, shell.Info, shell.Http.Credentials.GetUserNameFromCredentials() != "dpc" ? shell.Http.Credentials : null);
+			{
+				var http = shell.GetHttp(true);
+				throw new ExitApplicationException("DpcRequest", true, shell.Info, http.Credentials.GetUserNameFromCredentials() != "dpc" ? http.Credentials : null);
+			}
 			else
 			{
 				dpc.ScheduleRestart("Missmatch of application version.");

@@ -54,7 +54,7 @@ namespace TecWare.PPSn
 	/// <summary>Progress stack implementation.</summary>
 	public abstract class PpsProgressStack : ObservableObject, IPpsProgressFactory
 	{
-		#region -- class PpsWindowPaneControlProgressStub -----------------------------
+		#region -- class PpsProgressStub ----------------------------------------------
 
 		private sealed class PpsProgressStub : IPpsProgress
 		{

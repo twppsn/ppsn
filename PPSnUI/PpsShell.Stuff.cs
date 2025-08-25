@@ -122,7 +122,7 @@ namespace TecWare.PPSn
 		/// <param name="shell"></param>
 		/// <returns></returns>
 		public static string GetUserName(this IPpsShell shell)
-			=> shell.UserSettings?.UserName ?? GetUserNameFromCredentials(shell.Http?.Credentials);
+			=> shell.UserSettings?.UserName ?? GetUserNameFromCredentials(shell.GetHttp(false)?.Credentials);
 
 		#endregion
 

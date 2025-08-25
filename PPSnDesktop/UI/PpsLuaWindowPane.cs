@@ -63,13 +63,14 @@ namespace TecWare.PPSn.UI
 				throw new ArgumentNullException("uri");
 
 			// build base uri
-			var baseUri = Shell.Http.CreateFullUri(path);
+			var http = Shell.GetHttp(true);
+			var baseUri = http.CreateFullUri(path);
 
 			// create code
 			code = new PpsLuaWindowPaneCode(this, baseUri);
 
 			// load layout
-			using (var response = await Shell.Http.GetAsync(baseUri))
+			using (var response = await http.GetAsync(baseUri))
 			using (var tr = await response.GetTextReaderAsync(MimeTypes.Application.Xaml))
 			{
 				await PpsXamlParser.LoadAsync<PpsWindowPaneControl>(tr,

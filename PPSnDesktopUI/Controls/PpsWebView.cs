@@ -516,10 +516,9 @@ namespace TecWare.PPSn.Controls
 
 		private void UpdateResourceRequest(IPpsShell shell)
 		{
-			if (shell != null && shell.Http != null && htmlView.CoreWebView2 != null)
+			var http = shell.GetHttp(false);
+			if (http != null && htmlView.CoreWebView2 != null)
 			{
-				var http = shell.Http;
-
 				if (currentFilterUri != null)
 					htmlView.CoreWebView2.RemoveWebResourceRequestedFilter(currentFilterUri + "*", CoreWebView2WebResourceContext.All);
 
@@ -1180,7 +1179,7 @@ namespace TecWare.PPSn.Controls
 
 		private bool TryGetHttp(out DEHttpClient http)
 		{
-			http = shell.Value.Http;
+			http = shell.Value.GetHttp(false);
 			return http != null;
 		} // func TryGetHttp
 

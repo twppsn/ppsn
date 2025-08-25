@@ -122,7 +122,7 @@ namespace TecWare.PPSn.Bde
 				App.InvokeRestartAsync(Shell, "DpcRequest").AwaitUI(this);
 			else if (e.PropertyName == nameof(IPpsCommunicationService.ConnectionState))
 			{
-				if (Shell.ConnectionState == PpsCommunicationState.Connected)
+				if (((IPpsCommunicationService)Shell).ConnectionState == PpsCommunicationState.Connected)
 				{
 					paneContent.IsEnabled = true;
 					disconnectProgress.Visibility = Visibility.Hidden;

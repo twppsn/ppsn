@@ -160,7 +160,7 @@ namespace TecWare.PPSn.UI
 
 			[LuaMember]
 			public void Open(string link)
-				=> PpsWebView.LinkCommand.Execute(new PpsWebViewLink(luaShell.Shell.Http.CreateFullUri(link)), pane);
+				=> PpsWebView.LinkCommand.Execute(new PpsWebViewLink(luaShell.Shell.GetHttp(true).CreateFullUri(link)), pane);
 
 			[LuaMember]
 			public void TakePicture(string path = null)

@@ -32,14 +32,14 @@ namespace TecWare.PPSn
 		/// <param name="arguments"></param>
 		/// <returns></returns>
 		public static IEnumerable<IDataRow> GetViewData(this IPpsShell shell, PpsDataQuery arguments)
-			=> shell.Http.CreateViewDataReader(arguments.ToQuery());
+			=> shell.GetHttp().CreateViewDataReader(arguments.ToQuery());
 
 		/// <summary></summary>
 		/// <param name="shell"></param>
 		/// <param name="uri"></param>
 		/// <returns></returns>
 		public static Task<XElement> GetXmlDataAsync(this IPpsShell shell, string uri)
-			=> shell.Http.GetXmlAsync(uri);
+			=> shell.GetHttp().GetXmlAsync(uri);
 
 		#endregion
 	} // class PpsShell

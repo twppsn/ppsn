@@ -782,7 +782,7 @@ namespace TecWare.PPSn
 			mainResources.MergedDictionaries.Add(defaultResources);
 
 			// try load additional resources from the server
-			defaultResources.Source = shell.Http.CreateFullUri("wpf/styles.xaml");
+			defaultResources.Source = shell.GetHttp(true).CreateFullUri("wpf/styles.xaml");
 			PpsWpfShell.FixDefaultKey(defaultResources); // Source clears all keys
 
 			// initialize theme from server
@@ -1140,7 +1140,7 @@ namespace TecWare.PPSn
 
 		private HttpRequestMessage CreateHttpRequest()
 		{
-			var request = new HttpRequestMessage(method, shell.Http.CreateFullUri(originalUri.ToString()));
+			var request = new HttpRequestMessage(method, shell.GetHttp(true).CreateFullUri(originalUri.ToString()));
 
 			// update header
 			if (headers != null)
@@ -1170,7 +1170,7 @@ namespace TecWare.PPSn
 		private HttpWebRequest CreateWebRequest()
 		{
 			var request = CreateHttp(remoteUri);
-			request.Credentials = shell.Http.Credentials; // override the current credentials
+			request.Credentials = shell.GetHttp(true).Credentials; // override the current credentials
 			request.Headers.Add("des-multiple-authentifications", "true");
 			request.Headers.Add(PpsShell.DeviceIdHeaderKey, shell.DeviceId);
 			request.Timeout = -1; // 600 * 1000;
@@ -1246,7 +1246,7 @@ namespace TecWare.PPSn
 			try
 			{
 				// execute request
-				response = await shell.Http.SendAsync(request, HttpCompletionOption.ResponseContentRead);
+				response = await shell.GetHttp(true).SendAsync(request, HttpCompletionOption.ResponseContentRead);
 				if (response.Content != null)
 					responseStream = await response.Content.ReadAsStreamAsync();
 

@@ -352,30 +352,10 @@ namespace TecWare.PPSn
 	#region -- interface IPpsShell ----------------------------------------------------
 
 	/// <summary>Active shell for services.</summary>
-	public interface IPpsShell : IServiceContainer, IPpsCommunicationService, IServiceProvider, INotifyPropertyChanged, IDisposable
+	public interface IPpsShell : IServiceContainer, IServiceProvider, INotifyPropertyChanged, IDisposable
 	{
 		/// <summary>Gets called on the dispose of a shell.</summary>
 		event EventHandler Disposed;
-
-		/// <summary>Create a new http request for the uri.</summary>
-		/// <param name="uri"></param>
-		/// <returns></returns>
-		DEHttpClient CreateHttp(Uri uri = null);
-
-		/// <summary>Returns the real uri.</summary>
-		/// <param name="http"></param>
-		/// <returns></returns>
-		Uri GetRemoteUri(DEHttpClient http);
-		/// <summary>Translate the uri to an remote uri.</summary>
-		/// <param name="uri"></param>
-		/// <param name="remoteUri"></param>
-		/// <returns></returns>
-		bool TryGetRemoteUri(Uri uri, out Uri remoteUri);
-
-		/// <summary>User login to shell</summary>
-		/// <param name="userInfo"></param>
-		/// <returns></returns>
-		Task LoginAsync(ICredentials userInfo);
 
 		/// <summary>Register a new background task.</summary>
 		/// <param name="taskAction"></param>
@@ -638,7 +618,9 @@ namespace TecWare.PPSn
 	[PpsStaticService]
 	public static partial class PpsShell
 	{
+		/// <summary>DeviceId header tag</summary>
 		public const string DeviceIdHeaderKey = "x-ppsn-deviceId";
+		/// <summary>HostName header tag</summary>
 		public const string HostNameHeaderKey = "x-ppsn-hostname";
 
 		#region -- class TypeComparer -------------------------------------------------
@@ -1003,7 +985,7 @@ namespace TecWare.PPSn
 
 		#region -- class PpsShellImplementation ---------------------------------------
 
-		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, ILogger, IPpsLogService, IDisposable
+		private sealed class PpsShellImplementation : IServiceContainer, IPpsShell, IPpsSettingsService, IPpsCommunicationService, IPpsHttpService, ILogger, IPpsLogService, IDisposable
 		{
 			private readonly WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs> propertyChangedList = new WeakEventList<PropertyChangedEventHandler, PropertyChangedEventArgs>();
 			private readonly WeakEventList<EventHandler, EventArgs> disposedList = new WeakEventList<EventHandler, EventArgs>();
@@ -1052,6 +1034,7 @@ namespace TecWare.PPSn
 				AddService(typeof(IServiceProvider), this);
 				AddService(typeof(IPpsShell), this);
 				AddService(typeof(IPpsCommunicationService), this);
+				AddService(typeof(IPpsHttpService), this);
 				AddService(typeof(ILogger), this);
 				AddService(typeof(IPpsLogService), this);
 
@@ -1691,6 +1674,9 @@ retryLoadSettings:
 			private void OnPropertyChanged(PropertyChangedEventArgs e)
 				=> propertyChangedList.Invoke(this, e);
 
+			Task IPpsCommunicationService.LoginAsync(ICredentials userInfo)
+				=> currentShell?.LoginAsync(userInfo) ?? throw new InvalidOperationException("Login is not allowed.");
+
 			public DEHttpClient Http => currentShell?.Http;
 
 			public bool IsAuthentificated => currentShell?.IsAuthentificated ?? false;
@@ -1923,7 +1909,7 @@ retryLoadSettings:
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		public static async Task<long> LoadSettingsFromServerAsync(IPpsSettingsService settingsService, IPpsShell shell, string clientId, long lastRefreshTick)
 		{
-			var http = shell.Http;
+			var http = shell.GetHttp();
 			var application = Global.GetService<IPpsShellApplication>(false);
 
 			// refresh properties from server
@@ -2162,6 +2148,59 @@ retryLoadSettings:
 			}
 			return sb.ToString();
 		} // func GetCleanShellName
+
+		#endregion
+
+		#region -- http ---------------------------------------------------------------
+
+		/// <summary>Get the current http client.</summary>
+		/// <param name="shell"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		public static DEHttpClient GetHttp(this IPpsShell shell, bool throwException = true)
+		{
+			var http = shell is IPpsCommunicationService cs ? cs.Http : shell?.GetService<IPpsCommunicationService>(throwException)?.Http;
+			if (throwException && http == null)
+				throw new ArgumentException("Http-Service not found.");
+			return http;
+		} // func GetHttp
+
+		/// <summary>Create a new http request for the uri.</summary>
+		/// <param name="shell"></param>
+		/// <param name="uri"></param>
+		/// <returns>HttpClient for the application</returns>
+		public static DEHttpClient CreateHttp(this IPpsShell shell, Uri uri = null)
+		{
+			var httpService = shell.GetService<IPpsHttpService>(false);
+			return httpService == null ? DEHttpClient.Create(uri) : httpService.CreateHttp(uri);
+		} // func CreateHttp
+
+		/// <summary>Returns the real uri.</summary>
+		/// <param name="shell"></param>
+		/// <param name="http"></param>
+		/// <returns></returns>
+		public static Uri GetRemoteUri(this IPpsShell shell, DEHttpClient http)
+		{
+			var httpService = shell.GetService<IPpsHttpService>(false);
+			return httpService == null ? http.BaseAddress : httpService.GetRemoteUri(http);
+		} // func GetRemoteUri
+
+		/// <summary>Translate the uri to an remote uri.</summary>
+		/// <param name="shell"></param>
+		/// <param name="uri"></param>
+		/// <param name="remoteUri"></param>
+		/// <returns></returns>
+		public static bool TryGetRemoteUri(this IPpsShell shell, Uri uri, out Uri remoteUri)
+		{
+			var httpService = shell.GetService<IPpsHttpService>(false);
+			if (httpService == null)
+			{
+				remoteUri = uri;
+				return false;
+			}
+			else
+				return httpService.TryGetRemoteUri(uri, out remoteUri);
+		} // func TryGetRemoteUri
 
 		#endregion
 
