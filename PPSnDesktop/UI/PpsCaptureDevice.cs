@@ -38,6 +38,9 @@ namespace TecWare.PPSn.UI
 
 		public bool IsSupported(PpsCaptureDevice device)
 			=> device == PpsCaptureDevice.Camera;
+
+		Task<IPpsImagePropertyEditor> IPpsCaptureService.ImagePropertyEditorAsync(string fileName)
+			=> throw new NotSupportedException();
 	} // PpsCaptureService
 
 	#endregion

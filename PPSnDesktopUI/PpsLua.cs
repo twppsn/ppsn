@@ -236,7 +236,7 @@ namespace TecWare.PPSn
 			if (!sourceUri.IsAbsoluteUri)
 				sourceUri = new Uri(self.SourceUri, sourceUri);
 
-			using (var response = await self.LuaShell.Shell.GetHttp(true).GetAsync(sourceUri))
+			using (var response = await self.LuaShell.Shell.GetHttp().GetAsync(sourceUri))
 			{
 				if (!response.IsSuccessStatusCode)
 					throw new HttpResponseException(response);

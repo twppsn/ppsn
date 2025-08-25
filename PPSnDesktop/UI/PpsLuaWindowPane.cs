@@ -63,7 +63,7 @@ namespace TecWare.PPSn.UI
 				throw new ArgumentNullException("uri");
 
 			// build base uri
-			var http = Shell.GetHttp(true);
+			var http = Shell.GetHttp();
 			var baseUri = http.CreateFullUri(path);
 
 			// create code

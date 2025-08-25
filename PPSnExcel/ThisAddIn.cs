@@ -30,6 +30,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Networking;
 using Action = System.Action;
 using Excel = Microsoft.Office.Interop.Excel;
 
@@ -249,7 +250,7 @@ namespace PPSnExcel
 					// try login with user
 					try
 					{
-						await shell.LoginAsync(login.GetCredentials(true));
+						await ((IPpsCommunicationService)shell).LoginAsync(login.GetCredentials(true));
 						login.Commit();
 						return true;
 					}
@@ -607,7 +608,7 @@ namespace PPSnExcel
 
 		internal void LoadXlsxReport(IPpsShell shell, string reportId, string reportName)
 		{
-			var http = shell.Http;
+			var http = shell.GetHttp(true);
 
 			using (var p = PpsShell.Global.CreateProgress())
 			{

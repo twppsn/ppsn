@@ -370,7 +370,7 @@ namespace TecWare.PPSn.UI
 			currentPicture.DataChanged += CurrentImage_DataChanged;
 
 			// image galerie
-			var http = Shell.GetHttp(true);
+			var http = Shell.GetHttp();
 			if (currentPicture.TryGetProperty<string>("zusa-group", out var groupUrl)
 				&& Uri.TryCreate(groupUrl, UriKind.RelativeOrAbsolute, out var groupUri)
 				&& http.TryMakeRelative(groupUri, out var galeryPath))
