@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TecWare.DE.Stuff;
@@ -536,6 +537,34 @@ namespace TecWare.PPSn.UI
 			}
 			return new Core.UI.Barcodes.GenericCode(rawCode);
 		} // func ParseCode
+
+		#endregion
+
+		#region -- Dialog Provider ----------------------------------------------------
+
+		/// <summary>Invoke a barcode dialog.</summary>
+		/// <returns></returns>
+		public Task<PpsBarcodeResult> InvokeDialogProviderAsync()
+		{
+			var p = this.OfType<IPpsBarcodeDialogProvider>().FirstOrDefault();
+			if (p == null)
+				return Task.FromResult<PpsBarcodeResult>(null);
+			else
+				return p.GetBarcodeAsync();
+		} // func InvokeDialogProviderAsync
+
+		/// <summary>Start first barcode provider dialog.</summary>
+		public void StartDialogProvider()
+		{
+			var p = this.OfType<IPpsBarcodeDialogProvider>().FirstOrDefault();
+			if (p == null)
+				return;
+			else
+				p.GetBarcodeAsync().ContinueWith(t => DispatchBarcode(t.Result));
+		} // func InvokeDialogProviderAsync
+
+		/// <summary>Has the barode service a dialog provider.</summary>
+		public bool HasDialogProvider => this.OfType<IPpsBarcodeDialogProvider>().Any();
 
 		#endregion
 
