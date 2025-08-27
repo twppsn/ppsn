@@ -1600,19 +1600,30 @@ retryLoadSettings:
 					currentSettingsService.PropertyChanged += CurrentSettingsService_PropertyChanged;
 			} // proc ConnectSettingsService
 
-			private void ConnectSettingsService(IPpsShell current)
-				=> ConnectSettingsService(current is PpsShellImplementation s ? s.SettingsService : null);
+			private void ConnectSettingsServiceForShell(IPpsShell current)
+			{
+				if (current is PpsShellImplementation shell)
+					ConnectSettingsService(shell.SettingsService);
+				else
+				{
+					var currentService = current.GetService<IPpsSettingsService>(false);
+					if (ReferenceEquals(this, currentService))
+						ConnectSettingsService((IPpsSettingsService)null);
+					else
+						ConnectSettingsService(currentService);
+				}
+			} // proc ConnectSettingsServiceForShell
 
 			protected override void OnCurrentChanged(IPpsShell current, IPpsShell old)
 			{
 				base.OnCurrentChanged(current, old);
-				ConnectSettingsService(current);
+				ConnectSettingsServiceForShell(current);
 			} // proc OnCurrentChanged
 
 			protected override void OnCurrentPropertyChanged(PropertyChangedEventArgs e)
 			{
-				if (e.PropertyName == nameof(PpsShellImplementation.Settings)) // Settings service might also changed
-					ConnectSettingsService(currentShell?.SettingsService);
+				if (e.PropertyName == nameof(IPpsShell.Settings)) // Settings service might also changed
+					ConnectSettingsServiceForShell(currentShell);
 				base.OnCurrentPropertyChanged(e);
 			} // proc OnCurrentPropertyChanged
 
@@ -1643,18 +1654,48 @@ retryLoadSettings:
 				remove => propertyChangedList.Remove(value);
 			} // event PropertyChanged
 
+			private IPpsCommunicationService currentCommunicationService = null;
+
 			public PpsCommunicationProxy()
 			{
 			} // ctor
+
+			private void SetCurrentCommunicationService(IPpsCommunicationService communicationService)
+			{
+				if (currentCommunicationService != null)
+					currentCommunicationService.PropertyChanged -= OnPropertyChanged;
+
+				currentCommunicationService = communicationService;
+
+				if (currentCommunicationService != null)
+					currentCommunicationService.PropertyChanged += OnPropertyChanged;
+			} // proc SetCurrentCommunicationService
 
 			protected override void OnCurrentChanged(IPpsShell current, IPpsShell old)
 			{
 				base.OnCurrentChanged(current, old);
 
-				OnPropertyChanged(new PropertyChangedEventArgs(nameof(Http)));
-				OnPropertyChanged(new PropertyChangedEventArgs(nameof(IsAuthentificated)));
-				OnPropertyChanged(new PropertyChangedEventArgs(nameof(ConnectionState)));
+				if ((current is IPpsCommunicationService newCommunicationService))
+				{
+					SetCurrentCommunicationService(newCommunicationService);
+
+					OnPropertyChanged(new PropertyChangedEventArgs(nameof(Http)));
+					OnPropertyChanged(new PropertyChangedEventArgs(nameof(IsAuthentificated)));
+					OnPropertyChanged(new PropertyChangedEventArgs(nameof(ConnectionState)));
+				}
+				else
+				{
+					newCommunicationService = current.GetService<IPpsCommunicationService>(false);
+
+					if (!ReferenceEquals(newCommunicationService, currentCommunicationService))
+						SetCurrentCommunicationService(newCommunicationService);
+					else
+						SetCurrentCommunicationService(null);
+				}
 			} // proc OnCurrentChanged
+
+			private void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
+				=> OnCurrentPropertyChanged(e);
 
 			protected override void OnCurrentPropertyChanged(PropertyChangedEventArgs e)
 			{
@@ -1675,12 +1716,12 @@ retryLoadSettings:
 				=> propertyChangedList.Invoke(this, e);
 
 			Task IPpsCommunicationService.LoginAsync(ICredentials userInfo)
-				=> currentShell?.LoginAsync(userInfo) ?? throw new InvalidOperationException("Login is not allowed.");
+				=> currentCommunicationService?.LoginAsync(userInfo) ?? throw new InvalidOperationException("Login is not allowed.");
 
-			public DEHttpClient Http => currentShell?.Http;
+			public DEHttpClient Http => currentCommunicationService?.Http;
 
-			public bool IsAuthentificated => currentShell?.IsAuthentificated ?? false;
-			public PpsCommunicationState ConnectionState => currentShell?.ConnectionState ?? PpsCommunicationState.Disconnected;
+			public bool IsAuthentificated => currentCommunicationService?.IsAuthentificated ?? false;
+			public PpsCommunicationState ConnectionState => currentCommunicationService?.ConnectionState ?? PpsCommunicationState.Disconnected;
 		} // class PpsCommunicationProxy
 
 		#endregion
@@ -1743,7 +1784,7 @@ retryLoadSettings:
 		private static readonly ServiceContainer global = new ServiceContainer();
 		private static readonly Lazy<Version> appVersion = new Lazy<Version>(GetAppVersion);
 		private static readonly List<Type> shellServices = new List<Type>();
-		private static PpsShellImplementation currentShell = null;
+		private static IPpsShell currentShell = null;
 
 		#region -- Ctor ---------------------------------------------------------------
 
@@ -1833,9 +1874,12 @@ retryLoadSettings:
 
 		private static Tuple<IPpsShell, string[]> dynamicModulInfo = null;
 
-		private static void SetCurrent(PpsShellImplementation value)
+		/// <summary>Set the current shell.</summary>
+		/// <param name="value"></param>
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		public static void SetCurrent(IPpsShell value)
 		{
-			if (currentShell != value)
+			if (!ReferenceEquals(currentShell, value))
 			{
 				currentShell = value;
 				currentChangedList.Invoke(null, EventArgs.Empty);
