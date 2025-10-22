@@ -202,6 +202,8 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary>Id of the device.</summary>
 		public string ClientId => clientId;
+		/// <summary>Id for use as file name.</summary>
+		public string CleanClientId => FilterClientId(clientId);
 		/// <summary>Current version.</summary>
 		public string Version => version;
 
@@ -237,6 +239,33 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary>Modul version information</summary>
 		public IReadOnlyList<Tuple<string, string>> ModulVersionInfo => lastModulInfo;
+
+		private static string FilterClientId(string deviceId)
+		{
+			var invalidChars = Path.GetInvalidFileNameChars();
+			var sb = new StringBuilder(deviceId.Length);
+			var lastWasPoint = false;
+			foreach (var c in deviceId)
+			{
+				if (Array.IndexOf(invalidChars, c) == -1)
+				{
+					if (c == '.')
+					{
+						if (!lastWasPoint)
+						{
+							lastWasPoint = true;
+							sb.Append('.');
+						}
+					}
+					else
+					{
+						lastWasPoint = false;
+						sb.Append(c);
+					}
+				}
+			}
+			return sb.ToString();
+		} // func FilterClientId
 	} // class PpsSeenClient
 
 	#endregion

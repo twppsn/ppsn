@@ -970,6 +970,8 @@ namespace TecWare.PPSn.Controls
 		private async Task<HttpResponseMessage> SendCoreAsync(DEHttpClient http, HttpRequestMessage request, bool throwException)
 		{
 			request.Headers.TryAddWithoutValidation("des-ppsn-webview", "true");
+			if (!request.Headers.Contains(PpsShell.DeviceIdHeaderKey) && shell.Value != null)
+				request.Headers.TryAddWithoutValidation(PpsShell.DeviceIdHeaderKey, shell.Value.DeviceId);
 
 			var response = await http.SendAsync(request);
 
