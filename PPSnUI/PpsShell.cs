@@ -702,8 +702,11 @@ namespace TecWare.PPSn
 					request.RequestUri = uri;
 
 					// add header for local requests
+					request.Headers.Remove(HostNameHeaderKey);
+					request.Headers.Remove(DeviceIdHeaderKey);
 					request.Headers.TryAddWithoutValidation(HostNameHeaderKey, Environment.MachineName);
 					request.Headers.TryAddWithoutValidation(DeviceIdHeaderKey, shell.DeviceId);
+
 				}
 
 				return base.SendAsync(request, cancellationToken)

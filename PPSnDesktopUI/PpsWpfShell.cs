@@ -400,7 +400,7 @@ namespace TecWare.PPSn
 					return child;
 				else
 				{
-					child = GetVisualChild<T>(v, name);
+					child = GetVisualChild<T>(v, name, throwException);
 					if (child != null)
 						return child;
 				}
@@ -1149,6 +1149,9 @@ namespace TecWare.PPSn
 				if (!String.IsNullOrEmpty(transferEncoding))
 					request.Headers.TransferEncoding.ParseAdd(transferEncoding);
 			}
+
+			request.Headers.Remove(PpsShell.HostNameHeaderKey);
+			request.Headers.Remove(PpsShell.DeviceIdHeaderKey);
 			request.Headers.TryAddWithoutValidation(PpsShell.HostNameHeaderKey, Environment.MachineName);
 			request.Headers.TryAddWithoutValidation(PpsShell.DeviceIdHeaderKey, shell.DeviceId);
 

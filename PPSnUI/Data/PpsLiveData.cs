@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -3588,6 +3589,32 @@ namespace TecWare.PPSn.Data
 			return exceptions.ToArray();
 		} // func ApplyMergeAsync
 
+		private async Task<XElement> RequestLiveDataAsync(DEHttpClient http, XElement xRequest)
+		{
+			var endTime = DateTime.Now+TimeSpan.FromMinutes(30);
+			Exception lastException = null;
+			while (DateTime.Now < endTime)
+			{
+				if (!(lastException is null)) // retry wait
+					await Task.Delay(10000);
+
+				try
+				{
+					using (var response = await http.PutResponseXmlAsync("?action=syncget", new XDocument(xRequest), MimeTypes.Text.Xml, MimeTypes.Text.Xml))
+						return await HttpStuff.GetXmlAsync(response);
+				}
+				catch (HttpRequestException ex)
+				{
+					lastException = ex;
+				}
+				catch (HttpResponseException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+				{
+					lastException = ex;
+				}
+			}
+			throw lastException;
+		} // func RequestLiveDataAsync
+
 		private async Task RefreshLiveDataFromServerAsync()
 		{
 			var com = shell.GetService<IPpsCommunicationService>(true);
@@ -3629,24 +3656,20 @@ namespace TecWare.PPSn.Data
 
 					// do request and process result
 					var http = com.Http;
-					// todo: wirft eine ObjectDisposedException
-					using (var response = await http.PutResponseXmlAsync("?action=syncget", new XDocument(xRequest), MimeTypes.Text.Xml, MimeTypes.Text.Xml))
+					var xResult = await RequestLiveDataAsync(http, xRequest);
+
+					// process result
+					foreach (var xTable in xResult.Elements())
 					{
-						var xResult = await HttpStuff.GetXmlAsync(response);
-
-						// process result
-						foreach (var xTable in xResult.Elements())
+						if (xTable.Name.LocalName == "table")
 						{
-							if (xTable.Name.LocalName == "table")
-							{
-								if (!TryFindMergeItem(mergeList, xTable, out var mergeItem))
-									continue;
+							if (!TryFindMergeItem(mergeList, xTable, out var mergeItem))
+								continue;
 
-								mergeItem.ParseMerge(xTable);
-							}
-							else if (xTable.Name.LocalName == "syncStamp") // update global stamp
-								globalSyncId = xTable.Value.ChangeType<long>();
+							mergeItem.ParseMerge(xTable);
 						}
+						else if (xTable.Name.LocalName == "syncStamp") // update global stamp
+							globalSyncId = xTable.Value.ChangeType<long>();
 					}
 
 					if (Notify != null)
