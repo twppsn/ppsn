@@ -17,21 +17,11 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:ui="clr-namespace:TecWare.PPSn.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
-	<Style TargetType="{x:Type pps:PpsCalendar}">
-		<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}"/>
-		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
-		<Setter Property="Background" Value="{DynamicResource PPSnControlBackgroundBrush}" />
-		<Setter Property="BorderThickness" Value="1"/>
-
-		<Setter Property="CalendarItemStyle" Value="{StaticResource PpsCalendarItemStyle}"/>
-		<Setter Property="CalendarDayButtonStyle" Value="{StaticResource PpsCalendarDayButtonStyle}"/>
-	</Style>
-
-	<Style x:Key="PpsCalendarDayButtonStyle" TargetType="CalendarDayButton">
+	<Style x:Key="PpsCalendarDayButtonStyle" TargetType="{x:Type CalendarDayButton}">
 		<Setter Property="IsHitTestVisible" Value="False"/>
 		<Setter Property="MinWidth" Value="5"/>
 		<Setter Property="MinHeight" Value="5"/>
-		<Setter Property="FontSize" Value="14"/>
+		<Setter Property="FontSize" Value="28"/>
 		<Setter Property="FontFamily" Value="Segoe UI"/>
 		<Setter Property="HorizontalContentAlignment" Value="Center"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -108,16 +98,118 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
-	<Style x:Key="PpsCalendarItemStyle" TargetType="CalendarItem">
+	<Style x:Key="PpsCalendarButtonStyle" TargetType="CalendarButton">
+		<Setter Property="Background" Value="#FFBADDE9"/>
+		<Setter Property="MinWidth" Value="40"/>
+		<Setter Property="MinHeight" Value="42"/>
+		<Setter Property="FontSize" Value="10"/>
+		<Setter Property="HorizontalContentAlignment" Value="Center"/>
+		<Setter Property="VerticalContentAlignment" Value="Center"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="CalendarButton">
+					<Grid>
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup Name="CommonStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0:0:0.1" />
+								</VisualStateGroup.Transitions>
+								<VisualState Name="Normal" />
+								<VisualState Name="MouseOver">
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="Background" Storyboard.TargetProperty="Opacity" To=".5" Duration="0" />
+									</Storyboard>
+								</VisualState>
+								<VisualState Name="Pressed">
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="Background" Storyboard.TargetProperty="Opacity" To=".5" Duration="0" />
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup Name="SelectionStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0" />
+								</VisualStateGroup.Transitions>
+								<VisualState Name="Unselected" />
+								<VisualState Name="Selected">
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="SelectedBackground" Storyboard.TargetProperty="Opacity" To=".75" Duration="0" />
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup Name="ActiveStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0" />
+								</VisualStateGroup.Transitions>
+								<VisualState Name="Active" />
+								<VisualState Name="Inactive">
+									<Storyboard>
+										<ColorAnimation Duration="0" Storyboard.TargetName="NormalText" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)" To="#FF777777"></ColorAnimation>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+							<VisualStateGroup Name="CalendarButtonFocusStates">
+								<VisualStateGroup.Transitions>
+									<VisualTransition GeneratedDuration="0" />
+								</VisualStateGroup.Transitions>
+								<VisualState Name="CalendarButtonFocused">
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetName="CalendarButtonFocusVisual" Storyboard.TargetProperty="Visibility" Duration="0">
+											<DiscreteObjectKeyFrame KeyTime="0">
+												<DiscreteObjectKeyFrame.Value>
+													<Visibility>Visible</Visibility>
+												</DiscreteObjectKeyFrame.Value>
+											</DiscreteObjectKeyFrame>
+										</ObjectAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+								<VisualState Name="CalendarButtonUnfocused">
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetName="CalendarButtonFocusVisual" Storyboard.TargetProperty="Visibility" Duration="0">
+											<DiscreteObjectKeyFrame KeyTime="0">
+												<DiscreteObjectKeyFrame.Value>
+													<Visibility>Collapsed</Visibility>
+												</DiscreteObjectKeyFrame.Value>
+											</DiscreteObjectKeyFrame>
+										</ObjectAnimationUsingKeyFrames>
+									</Storyboard>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+						<Rectangle x:Name="SelectedBackground" RadiusX="1" RadiusY="1" Opacity="0" Fill="{TemplateBinding Background}"/>
+						<Rectangle x:Name="Background" RadiusX="1" RadiusY="1" Opacity="0" Fill="{TemplateBinding Background}"/>
+						<ContentPresenter
+                                x:Name="NormalText"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Margin="1,0,1,1"
+								TextElement.FontSize="28">
+							<TextElement.Foreground>
+								<SolidColorBrush Color="#FF333333"/>
+							</TextElement.Foreground>
+						</ContentPresenter>
+						<Rectangle x:Name="CalendarButtonFocusVisual" Visibility="Collapsed" IsHitTestVisible="false" RadiusX="1" RadiusY="1" Stroke="#FF45D6FA"/>
+					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsFocused" Value="True">
+							<Setter TargetName="CalendarButtonFocusVisual" Property="Visibility" Value="Visible" />
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="PpsCalendarItemStyle" TargetType="{x:Type CalendarItem}">
 		<Setter Property="Margin" Value="0,3,0,3" />
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="CalendarItem">
+				<ControlTemplate TargetType="{x:Type CalendarItem}">
 					<ControlTemplate.Resources>
 						<DataTemplate x:Key="{x:Static CalendarItem.DayTitleTemplateResourceKey}">
 							<TextBlock
 							FontWeight="Bold" 
-							FontSize="9.5" 
+							FontSize="28" 
 							Foreground="#FF333333" 
 							HorizontalAlignment="Center"
 							Text="{Binding}"
@@ -125,6 +217,7 @@ specific language governing permissions and limitations under the Licence.
 							VerticalAlignment="Center"/>
 						</DataTemplate>
 					</ControlTemplate.Resources>
+					
 					<Grid Name="PART_Root" Background="{DynamicResource PPSnControlBackgroundBrush}">
 						<VisualStateManager.VisualStateGroups>
 							<VisualStateGroup Name="CommonStates">
@@ -143,6 +236,7 @@ specific language governing permissions and limitations under the Licence.
 						CornerRadius="0" Padding="1">
 							<Grid>
 								<Grid.Resources>
+									
 									<!-- Start: Header button template -->
 									<ControlTemplate x:Key="HeaderButtonTemplate" TargetType="Button">
 										<Grid Cursor="Hand" Background="{DynamicResource PPSnButtonBackgroundBrush}">
@@ -167,7 +261,8 @@ specific language governing permissions and limitations under the Licence.
 											ContentTemplate="{TemplateBinding ContentTemplate}"
 											Margin="1,1,1,1"
 											HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-											VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+											VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+											TextElement.FontSize="36">
 												<TextElement.Foreground>
 													<SolidColorBrush Color="#FF333333"/>
 												</TextElement.Foreground>
@@ -179,13 +274,13 @@ specific language governing permissions and limitations under the Licence.
 								</Grid.Resources>
 
 								<Grid.RowDefinitions>
-									<RowDefinition Height="Auto"/>
-									<RowDefinition/>
+									<RowDefinition Height="1*"/>
+									<RowDefinition Height="4*"/>
 								</Grid.RowDefinitions>
 								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="Auto"/>
-									<ColumnDefinition Width="Auto"/>
-									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="1*"/>
+									<ColumnDefinition Width="1*"/>
+									<ColumnDefinition Width="1*"/>
 								</Grid.ColumnDefinitions>
 
 								<Rectangle Grid.ColumnSpan="3" Grid.Row="0" Fill="{DynamicResource PPSnButtonBackgroundBrush}"/>
@@ -223,43 +318,44 @@ specific language governing permissions and limitations under the Licence.
 								</pps:PpsButton>
 
 
-								<Grid x:Name="PART_MonthView" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Visible" Margin="6,-1,6,6" HorizontalAlignment="Center">
+								<Grid x:Name="PART_MonthView" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Visible" Margin="6,-1,6,6" HorizontalAlignment="Stretch">
 									<Grid.RowDefinitions>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
+										<RowDefinition Height="*"/>
+										<RowDefinition Height="*"/>
+										<RowDefinition Height="*"/>
+										<RowDefinition Height="*"/>
+										<RowDefinition Height="*"/>
+										<RowDefinition Height="*"/>
+										<RowDefinition Height="*"/>
 									</Grid.RowDefinitions>
 									<Grid.ColumnDefinitions>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
 									</Grid.ColumnDefinitions>
 								</Grid>
 
-								<Grid x:Name="PART_YearView" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Hidden" Margin="6,4,7,6" HorizontalAlignment="Center">
+								<Grid x:Name="PART_YearView" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Hidden" Margin="6,4,7,6" HorizontalAlignment="Stretch">
 									<Grid.RowDefinitions>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
+										<RowDefinition Height="*"/>
+										<RowDefinition Height="*"/>
+										<RowDefinition Height="*"/>
 									</Grid.RowDefinitions>
 									<Grid.ColumnDefinitions>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
-										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="*"/>
 									</Grid.ColumnDefinitions>
 								</Grid>
 							</Grid>
 						</Border>
-						<Rectangle x:Name="PART_DisabledVisual" Opacity="0" Visibility="Collapsed" Stretch="Fill" StrokeThickness="1" RadiusX="2" RadiusY="2" Stroke="{StaticResource PPSnWindowDisabledForegroundBrush}" Fill="{StaticResource PPSnWindowDisabledForegroundBrush}" />
+						<Rectangle x:Name="PART_DisabledVisual" Opacity="0" Visibility="Collapsed" Stretch="Fill" StrokeThickness="1" RadiusX="2" RadiusY="2" 
+								   Stroke="{DynamicResource PPSnWindowDisabledForegroundBrush}" Fill="{DynamicResource PPSnWindowDisabledForegroundBrush}" />
 					</Grid>
 
 					<ControlTemplate.Triggers>
@@ -292,5 +388,31 @@ specific language governing permissions and limitations under the Licence.
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
+	</Style>
+
+	<Style TargetType="{x:Type pps:PpsCalendar}">
+		<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}"/>
+		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
+		<Setter Property="Background" Value="{DynamicResource PPSnControlBackgroundBrush}" />
+		<Setter Property="CalendarItemStyle" Value="{StaticResource PpsCalendarItemStyle}"/>
+		<Setter Property="CalendarButtonStyle" Value="{StaticResource PpsCalendarButtonStyle}"/>
+		<Setter Property="CalendarDayButtonStyle" Value="{StaticResource PpsCalendarDayButtonStyle}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type pps:PpsCalendar}">
+					<Grid Name="PART_Root">
+						<CalendarItem
+							Name="PART_CalendarItem"
+							Style="{TemplateBinding CalendarItemStyle}"
+							Background="{TemplateBinding Background}"
+							BorderBrush="{TemplateBinding BorderBrush}"
+							BorderThickness="{TemplateBinding BorderThickness}"
+							/>
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+
 	</Style>
 </ResourceDictionary>

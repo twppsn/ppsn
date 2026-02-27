@@ -391,6 +391,8 @@ namespace TecWare.PPSn.Themes
 		public static readonly ResourceKey QuickNotePathGeometry = new PpsThemeKey("quickNote");
 		/// <summary>Cancel geometry</summary>
 		public static readonly ResourceKey CancelPathGeometry = new PpsThemeKey("closePane");
+		/// <summary>Vacation geometry</summary>
+		public static readonly ResourceKey VacationPathGeometry = new PpsThemeKey("vacation");
 
 		#endregion
 	} // class PpsTheme

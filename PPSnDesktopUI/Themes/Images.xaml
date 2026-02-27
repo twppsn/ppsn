@@ -80,6 +80,6 @@
 	<PathGeometry x:Key="{x:Static ui:PpsTheme.QuickNotePathGeometry}" Figures="M 19,5L 19,19L 9,19L 5,15L 5,5M 9,17.584L 9,15L 6.41733,15M 18,6L 6,6L 6,14L 10,14L 10,18L 18,18" />
 	<PathGeometry x:Key="{x:Static ui:PpsTheme.CancelPathGeometry}" Figures="M 12.708,12L 18.104,17.396L 17.396,18.104L 12,12.708L 6.604,18.104L 5.896,17.396L 11.292,12L 5.896,6.604L 6.604,5.896L 12,11.292L 17.396,5.896L 18.104,6.604" />
 
-	
+	<PathGeometry x:Key="{x:Static ui:PpsTheme.VacationPathGeometry}" Figures="M19.2 21l-9.6-9.6.8-.8 9.6 9.6-.8.8M16.4 4.6l-12.8 12.8Q-2.4 11.4 4 5 10-1 16.4 4.6M12.8 7l2.4-2.4Q10 1.36 5.2 5 8.48 3.84 12.8 7M6.4 13.4l6-6Q7.6 4.6 4.6 5.6 3.6 8.6 6.4 13.4M3.6 16.2l2.4-2.4Q2.68 9.32 4 6.2.08 11.56 3.6 16.2"/>
 
 </ResourceDictionary>
