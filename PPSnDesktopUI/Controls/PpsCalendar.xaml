@@ -87,11 +87,11 @@ specific language governing permissions and limitations under the Licence.
 							</VisualStateGroup>
 						</VisualStateManager.VisualStateGroups>
 						<Rectangle x:Name="TodayBackground" RadiusX="1" RadiusY="1" Opacity="0" Fill="{DynamicResource PPSnMarkerBrush}"/>
-						<Rectangle x:Name="SelectedBackground" RadiusX="1" RadiusY="1" Opacity="0" Fill="{DynamicResource PPSnSelectionBarBrush}"/>
+						<Rectangle x:Name="SelectedBackground" RadiusX="1" RadiusY="1" Opacity="0" Fill="{DynamicResource PPSnWindowActiveBrush}"/>
 						<Rectangle x:Name="HighlightBackground" RadiusX="1" RadiusY="1" Opacity="0" Fill="{DynamicResource PPSnHighlightedBrush}"/>
 						<Rectangle x:Name="BlackoutBackground" RadiusX="1" RadiusY="1" Opacity="0" Fill="{DynamicResource PPSnAccentBrush}"/>
 						<ContentPresenter x:Name="NormalText" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-									  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Margin="5,1,5,1" TextElement.Foreground="Black"/>
+									  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Margin="5,1,5,1" TextElement.Foreground="{DynamicResource PPSnBlackBrush}"/>
 					</Grid>
 				</ControlTemplate>
 			</Setter.Value>
@@ -99,7 +99,7 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style x:Key="PpsCalendarButtonStyle" TargetType="CalendarButton">
-		<Setter Property="Background" Value="#FFBADDE9"/>
+		<Setter Property="Background" Value="{DynamicResource PPSnAccentBrush}"/>
 		<Setter Property="MinWidth" Value="40"/>
 		<Setter Property="MinHeight" Value="42"/>
 		<Setter Property="FontSize" Value="10"/>
@@ -133,7 +133,7 @@ specific language governing permissions and limitations under the Licence.
 								<VisualState Name="Unselected" />
 								<VisualState Name="Selected">
 									<Storyboard>
-										<DoubleAnimation Storyboard.TargetName="SelectedBackground" Storyboard.TargetProperty="Opacity" To=".75" Duration="0" />
+										<DoubleAnimation Storyboard.TargetName="SelectedBackground" Storyboard.TargetProperty="Opacity" To="0.75" Duration="0" />
 									</Storyboard>
 								</VisualState>
 							</VisualStateGroup>
@@ -185,7 +185,7 @@ specific language governing permissions and limitations under the Licence.
                                 Margin="1,0,1,1"
 								TextElement.FontSize="28">
 							<TextElement.Foreground>
-								<SolidColorBrush Color="#FF333333"/>
+								<SolidColorBrush Color="{DynamicResource PPSnBlackColor}"/>
 							</TextElement.Foreground>
 						</ContentPresenter>
 						<Rectangle x:Name="CalendarButtonFocusVisual" Visibility="Collapsed" IsHitTestVisible="false" RadiusX="1" RadiusY="1" Stroke="#FF45D6FA"/>
@@ -210,7 +210,7 @@ specific language governing permissions and limitations under the Licence.
 							<TextBlock
 							FontWeight="Bold" 
 							FontSize="28" 
-							Foreground="#FF333333" 
+							Foreground="{DynamicResource PPSnBlackBrush}" 
 							HorizontalAlignment="Center"
 							Text="{Binding}"
 							Margin="0,6,0,6"
@@ -264,7 +264,7 @@ specific language governing permissions and limitations under the Licence.
 											VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
 											TextElement.FontSize="36">
 												<TextElement.Foreground>
-													<SolidColorBrush Color="#FF333333"/>
+													<SolidColorBrush Color="{DynamicResource PPSnBlackColor}"/>
 												</TextElement.Foreground>
 											</ContentPresenter>
 										</Grid>
