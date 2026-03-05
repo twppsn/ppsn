@@ -570,7 +570,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- Svg ----------------------------------------------------------------------
+		#region -- Svg ----------------------------------------------------------------
 
 		private static readonly XNamespace svgNameSpace = "http://www.w3.org/2000/svg";
 		private static readonly XName xSvg = svgNameSpace + "svg";
