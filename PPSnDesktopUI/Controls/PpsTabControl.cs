@@ -32,65 +32,85 @@ namespace TecWare.PPSn.Controls
 			if (GetTemplateChild("PART_SelectionMarker") is Rectangle rc)
 			{
 				selectionMarker = rc;
-				Loaded += OnLoaded;
+				UpdateSelectionMarker(false);
 			}
 		} // proc OnApplyTemplate
 
 		protected override void OnSelectionChanged(SelectionChangedEventArgs e)
 		{
 			base.OnSelectionChanged(e);
-			SetSelectionMarker(false);
+			UpdateSelectionMarker(true);
 		} // proc OnSelectionChanged
 
 		#region -- Mark selection -----------------------------------------------------------
 
-		private void OnLoaded(object sender, RoutedEventArgs e)
-			=> SetSelectionMarker(true);
-
-		private void SetSelectionMarker(bool isOnLoad)
+		private bool TryGetTabItem(object value, out TabItem ti)
 		{
-			if (selectionMarker != null && SelectedItem is TabItem ti)
-				SetSelectionMarker(ti, isOnLoad);
-		} // proc UpdateSelectionMarker
+			if (value is TabItem t)
+			{
+				ti = t;
+				return true;
+			}
+			ti = ItemContainerGenerator.ContainerFromItem(value) as TabItem;
+			return ti != null;
+		} // func TryGetTabItem
 
-		private void SetSelectionMarker(TabItem ti, bool isOnLoad)
+		public void UpdateSelectionMarker(bool doAnimate)
 		{
-			var currentWidth = selectionMarker.Width;
-			var newWidth = ti.ActualWidth - ItemSpacing;
+			// find tab
+			if (selectionMarker == null || !TryGetTabItem(SelectedItem, out var tabItem))
+				return;
+
+			var currentWidth = selectionMarker.ActualWidth;
+			var targetWidth = tabItem.ActualWidth - ItemSpacing;
 			var currentMargin = selectionMarker.Margin;
-			var newMargin = new Thickness(
-				ti.TransformToAncestor(this).Transform(new Point(0, 0)).X + ItemSpacing,
-				currentMargin.Top,
-				currentMargin.Right,
-				currentMargin.Bottom);
-			var duration = new Duration(TimeSpan.FromMilliseconds(isOnLoad ? 0 : 150));
+			var targetMargin = new Thickness(tabItem.TransformToAncestor(this).Transform(new Point(0.0, 0.0)).X + ItemSpacing, currentMargin.Top, currentMargin.Right, currentMargin.Bottom);
 
-			var easingFunction = new ExponentialEase
+			// position changed?
+			if (currentWidth == targetWidth && currentMargin == targetMargin)
+				return;
+
+			if (targetWidth <= 0.001)
 			{
-				EasingMode = EasingMode.EaseOut
-			};
-
-			var ta = new ThicknessAnimation
+				selectionMarker.Visibility = Visibility.Collapsed;
+			}
+			else
 			{
-				From = currentMargin,
-				To = newMargin,
-				Duration = duration,
-				FillBehavior = FillBehavior.HoldEnd,
-				EasingFunction = easingFunction
-			};
+				selectionMarker.Visibility = Visibility.Visible;
 
-			var wa = new DoubleAnimation
-			{
-				From = currentWidth,
-				To = newWidth,
-				Duration = duration,
-				FillBehavior = FillBehavior.HoldEnd,
-				EasingFunction = easingFunction
-			};
+				if (doAnimate)
+				{
+					var duration = new Duration(TimeSpan.FromMilliseconds(150));
+					var easingFunction = new ExponentialEase { EasingMode = EasingMode.EaseOut };
 
-			selectionMarker.BeginAnimation(Shape.MarginProperty, ta);
-			selectionMarker.BeginAnimation(Shape.WidthProperty, wa);
-		} // proc SetSelectionMarker
+					selectionMarker.BeginAnimation(Shape.MarginProperty,
+						new ThicknessAnimation
+						{
+							From = currentMargin,
+							To = targetMargin,
+							Duration = duration,
+							FillBehavior = FillBehavior.HoldEnd,
+							EasingFunction = easingFunction
+						}
+					);
+					selectionMarker.BeginAnimation(Shape.WidthProperty,
+						new DoubleAnimation
+						{
+							From = currentWidth,
+							To = targetWidth,
+							Duration = duration,
+							FillBehavior = FillBehavior.HoldEnd,
+							EasingFunction = easingFunction
+						}
+					);
+				}
+				else
+				{
+					selectionMarker.Margin = targetMargin;
+					selectionMarker.Width = targetWidth;
+				}
+			}
+		} // proc UpdateSelectionMarker
 
 		#endregion
 
@@ -132,6 +152,14 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		private Border outerBorder;
+
+		public PpsTabItem()
+		{
+			this.LayoutUpdated += PpsTabItem_LayoutUpdated;
+		}
+
+		private void PpsTabItem_LayoutUpdated(object sender, EventArgs e)
+			=> this.GetVisualParent<PpsTabControl>()?.UpdateSelectionMarker(true);
 
 		public override void OnApplyTemplate()
 		{
