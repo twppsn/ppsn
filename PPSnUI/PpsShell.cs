@@ -219,7 +219,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-#if NET48
+#if WINDOWS
 		/// <summary></summary>
 		/// <param name="registryKey"></param>
 		/// <param name="applicationId"></param>
@@ -1968,11 +1968,11 @@ retryLoadSettings:
 			// add location info
 			request.Headers.Add("x-ppsn-version", AppVersion.ToString());
 			var gps = GetService<IPpsGpsService>(false);
-			if (gps != null && gps.TryGetGeoCoordinate(out var lng, out var lat, out var ltm))
+			if (gps != null && gps.TryGetGeoCoordinate(out var location))
 			{
-				request.Headers.Add("x-ppsn-lng", lng.ChangeType<string>());
-				request.Headers.Add("x-ppsn-lat", lat.ChangeType<string>());
-				request.Headers.Add("x-ppsn-ltm", ltm.ChangeType<string>());
+				request.Headers.Add("x-ppsn-lng", location.Longitude.ChangeType<string>());
+				request.Headers.Add("x-ppsn-lat", location.Latitude.ChangeType<string>());
+				request.Headers.Add("x-ppsn-ltm", location.UnixTimeStamp.ChangeType<string>());
 			}
 			request.Headers.Add("x-ppsn-wifi", Environment.MachineName + "/" + Environment.UserName);
 			request.Headers.Add("x-ppsn-versions", GetDynamicModulInfo(shell));

@@ -16,20 +16,74 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- struct PpsGpsLocation --------------------------------------------------
+
+	/// <summary>Represents a position with a timestamp.</summary>
+	public readonly struct PpsGpsLocation : IEquatable<PpsGpsLocation>
+	{
+		/// <summary>Public Constructor.</summary>
+		/// <param name="latitude"></param>
+		/// <param name="longitude"></param>
+		/// <param name="unixTimeStamp"></param>
+		public PpsGpsLocation(double latitude, double longitude, long unixTimeStamp)
+		{
+			Latitude = latitude;
+			Longitude = longitude;
+			UnixTimeStamp = unixTimeStamp;
+		} // ctor
+
+		/// <summary></summary>
+		public override bool Equals(object obj)
+			=> obj is PpsGpsLocation && Equals((PpsGpsLocation)obj);
+
+		/// <summary></summary>
+		public override int GetHashCode()
+			=> Latitude.GetHashCode() ^ Longitude.GetHashCode();
+
+		/// <summary></summary>
+		public bool Equals(PpsGpsLocation other)
+			=> EqualsWithEpsilon(other.Latitude, Latitude) && EqualsWithEpsilon(other.Longitude, Longitude);
+
+		private static bool EqualsWithEpsilon(double a, double b)
+		{
+			if(Math.Abs(a - b) < double.Epsilon)
+			{ 
+				return true;
+			}
+
+			return false; 
+		} // func EqualsWithEpsilon
+
+		/// <summary>Latitude.</summary>
+		public double Latitude { get; }
+		/// <summary>Longitude.</summary>
+		public double Longitude{ get; }
+		/// <summary>Timestamp of position measurement.</summary>
+		public long UnixTimeStamp { get; }
+
+		/// <summary>Empty state.</summary>
+		public static PpsGpsLocation Empty { get; } = new PpsGpsLocation(Double.NaN, Double.NaN, 0);
+	} // struct PpsGpsLocation
+
+	#endregion
+
 	#region -- interface IPpsGpsService -----------------------------------------------
 
 	/// <summary>Get the location of the current device.</summary>
 	public interface IPpsGpsService
 	{
 		/// <summary>Last known location of the device.</summary>
-		/// <param name="longitude"></param>
-		/// <param name="latitude"></param>
-		/// <param name="timestamp"></param>
+		/// <param name="location"></param>
 		/// <returns></returns>
-		bool TryGetGeoCoordinate(out double longitude, out double latitude, out long timestamp);
+		bool TryGetGeoCoordinate(out PpsGpsLocation location);
+		
+		/// <summary>Last known location of the device.</summary>
+		/// <returns></returns>
+		Task<PpsGpsLocation> RequestGeoCoordinateAsync();
 	} // interface IPpsGpsService
 
 	#endregion
