@@ -295,8 +295,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static string GetHashPrefix(HashAlgorithm algorithm)
 		{
-			if (algorithm is SHA256
-				|| algorithm is SHA256Managed)
+			if (algorithm is SHA256)
 				return "sha256";
 			else
 				throw new ArgumentOutOfRangeException(nameof(algorithm), "Only sha256 is allowed.");

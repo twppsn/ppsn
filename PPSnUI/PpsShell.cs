@@ -219,7 +219,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-#if WINDOWS
+#if WINDOWS10_0_19041_0_OR_GREATER
 		/// <summary></summary>
 		/// <param name="registryKey"></param>
 		/// <param name="applicationId"></param>
