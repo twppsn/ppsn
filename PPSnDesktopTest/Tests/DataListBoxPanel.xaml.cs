@@ -25,6 +25,12 @@ namespace TecWare.PPSn.Tests
 		public string Name { get; set; }
 		public string Text { get; set; }
 		public double Wert { get; set; }
+
+		public override string ToString()
+		{
+			return $"Name: {Name}, Wert: {Wert}";
+		} // proc ToString
+
 	} // class TestItem
 
 	[DisplayName("DataListBox")]

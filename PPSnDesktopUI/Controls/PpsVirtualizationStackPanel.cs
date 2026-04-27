@@ -55,8 +55,8 @@ namespace TecWare.PPSn.Controls
 			extent = new Size(200, 30000);
 			viewPort = availableSize;
 			var generator = GetItemContainerGenerator();
-			var p = generator.GeneratorPositionFromIndex(0);
-			using (generator.StartAt(p, GeneratorDirection.Forward))
+			var startingPosition = generator.GeneratorPositionFromIndex(0);
+			using (generator.StartAt(startingPosition, GeneratorDirection.Forward, true))
 			{
 				var t = generator.GenerateNext(out var isNew);
 				if (t is FrameworkElement m)
@@ -130,20 +130,99 @@ namespace TecWare.PPSn.Controls
 		double IScrollInfo.ExtentWidth => extent.Width;
 		double IScrollInfo.ExtentHeight => extent.Height;
 
-		void IScrollInfo.LineDown() => throw new NotImplementedException();
-		void IScrollInfo.LineLeft() => throw new NotImplementedException();
-		void IScrollInfo.LineRight() => throw new NotImplementedException();
-		void IScrollInfo.LineUp() => throw new NotImplementedException();
+		void IScrollInfo.LineDown()
+		{
+			SetVerticalOffsetCore(offset.Y + ScrollVelocity);
+		} // proc IScrollInfo.LineDown()
+
+		void IScrollInfo.LineLeft()
+		{
+			SetHorizontalOffsetCore(offset.X - ScrollVelocity);
+		} // proc IScrollInfo.LineLeft()
+
+		void IScrollInfo.LineRight()
+		{
+			SetHorizontalOffsetCore(offset.X + ScrollVelocity);
+		} // proc IScrollInfo.LineRight()
+
+		void IScrollInfo.LineUp()
+		{
+			SetVerticalOffsetCore(offset.Y - ScrollVelocity);
+		} // proc IScrollInfo.LineUp
 		Rect IScrollInfo.MakeVisible(Visual visual, Rect rectangle) => new Rect(0, 0, 0, 0);
-		void IScrollInfo.MouseWheelDown() => throw new NotImplementedException();
-		void IScrollInfo.MouseWheelLeft() => throw new NotImplementedException();
-		void IScrollInfo.MouseWheelRight() => throw new NotImplementedException();
-		void IScrollInfo.MouseWheelUp() => throw new NotImplementedException();
-		void IScrollInfo.PageDown() => throw new NotImplementedException();
-		void IScrollInfo.PageLeft() => throw new NotImplementedException();
-		void IScrollInfo.PageRight() => throw new NotImplementedException();
-		void IScrollInfo.PageUp() => throw new NotImplementedException();
-		void IScrollInfo.SetHorizontalOffset(double offset) => throw new NotImplementedException();
-		void IScrollInfo.SetVerticalOffset(double offset) => throw new NotImplementedException();
+
+		void IScrollInfo.MouseWheelDown()
+		{
+			SetVerticalOffsetCore(offset.Y + ScrollVelocity);
+		} // proc IScrollInfo.MouseWheelDown
+
+		void IScrollInfo.MouseWheelLeft()
+		{
+			SetHorizontalOffsetCore(offset.X - ScrollVelocity);
+		} // proc IScrollInfo.MouseWheelLeft
+
+		void IScrollInfo.MouseWheelRight()
+		{
+			SetHorizontalOffsetCore(offset.X + ScrollVelocity);
+		} // proc IScrollInfo.MouseWheelRight
+
+		void IScrollInfo.MouseWheelUp()
+		{
+			SetVerticalOffsetCore(offset.Y - ScrollVelocity);
+		} // proc IScrollInfo.MouseWheelUp()
+
+		void IScrollInfo.PageDown()
+		{
+			SetVerticalOffsetCore(offset.Y + viewPort.Height);
+		} // proc IScrollInfo.PageDown
+
+		void IScrollInfo.PageLeft()
+		{
+			SetHorizontalOffsetCore(offset.X - viewPort.Width);
+		} // proc IScrollInfo.PageLeft
+
+		void IScrollInfo.PageRight()
+		{
+			SetHorizontalOffsetCore(offset.X + viewPort.Width);
+		} // proc IScrollInfo.PageRight
+
+		void IScrollInfo.PageUp()
+		{
+			SetVerticalOffsetCore(offset.Y - viewPort.Height);
+		} // proc IScrollInfo.PageUp
+
+		void IScrollInfo.SetHorizontalOffset(double offset)
+		{
+			SetHorizontalOffsetCore(offset);
+		} // proc IScrollInfo.SetHorizontalOffset
+
+		void IScrollInfo.SetVerticalOffset(double offset)
+		{
+			SetVerticalOffsetCore(offset);
+		} // proc IScrollInfo.SetVerticalOffset
+
+		#region --- Core Methods ------------------------------------------------------
+
+		private void SetVerticalOffsetCore(double offset) 
+		{
+			this.offset.Y = Math.Max(0, Math.Min(offset, extent.Height - viewPort.Height));
+
+			// Notify that layout has changed
+			scrollViewer.InvalidateScrollInfo();
+			InvalidateMeasure();
+		} // proc SetVerticalOffsetCore
+
+		private void SetHorizontalOffsetCore(double offset)
+		{
+			this.offset.X = Math.Max(0, Math.Min(offset, extent.Width - viewPort.Width));
+
+			// Notify that layout has changed
+			scrollViewer.InvalidateScrollInfo();
+			InvalidateMeasure();
+		} // proc SetHorizontalOffsetCore
+
+		#endregion
+
+		private const int ScrollVelocity = 10;
 	} // class PpsVirtualizationStackPanel
 }
