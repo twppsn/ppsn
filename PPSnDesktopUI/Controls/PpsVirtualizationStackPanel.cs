@@ -35,7 +35,16 @@ namespace TecWare.PPSn.Controls
 		private Size extent;
 		private Size viewPort;
 
+		private Size itemSize = new Size(100, 30);
+
 		private ItemContainerGenerator generator = null;
+
+		#region --- ctor --------------------------------------------------------------
+		public PpsVirtualizationStackPanel() 
+		{ 
+			
+		}
+		#endregion
 
 		private IItemContainerGenerator GetItemContainerGenerator()
 		{
@@ -52,24 +61,39 @@ namespace TecWare.PPSn.Controls
 
 		protected override Size MeasureOverride(Size availableSize)
 		{
-			extent = new Size(200, 30000);
+			// Wir wollen die vorhandene Fläche ausfüllen
+
+			ItemsControl c = ItemsControl.GetItemsOwner(this);
+			if (c == null) return availableSize;
+
+			extent = new Size(itemSize.Width, c.Items.Count * itemSize.Height); // TODO: ItemSize dynamisch berechnen 
 			viewPort = availableSize;
+
+			int firstVisibleIndex = GetFirstVisibleIndex(); 
+			int visibleCount = (int)Math.Ceiling(availableSize.Height / itemSize.Height); // Anzahl der sichtbaren Elemente
+
 			var generator = GetItemContainerGenerator();
-			var startingPosition = generator.GeneratorPositionFromIndex(0);
+			var startingPosition = generator.GeneratorPositionFromIndex(firstVisibleIndex); // Wir rendern erst ab dem ersten sichtbaren Index
+
+
 			using (generator.StartAt(startingPosition, GeneratorDirection.Forward, true))
 			{
-				var t = generator.GenerateNext(out var isNew);
-				if (t is FrameworkElement m)
+				for (int i = firstVisibleIndex; i < Math.Min(firstVisibleIndex + visibleCount, c.Items.Count); i++) // Nur sichbare Elemente bearbeiten 
 				{
-					if (isNew)
+					UIElement child;
+					if (i < InternalChildren.Count)
+						child = InternalChildren[i]; // Möglicherweise existiert das Kindelement bereits 
+					else
 					{
-						generator.PrepareItemContainer(m);
-						AddInternalChild(m);
+						child = (UIElement)generator.GenerateNext(out var isNew);
+						if(isNew)
+						{
+							AddInternalChild(child); // Neu erstellten Container hinzufügen 
+							generator.PrepareItemContainer(child); // Container Vorbereiten
+						}
 					}
-					m.Measure(availableSize);
-					var sz = m.DesiredSize;
-					return availableSize; // m.DesiredSize;
 
+					child.Measure(availableSize); // Gewünschte Größe des Elements wird ermittelt 
 				}
 			}
 			return availableSize; // new Size(0, 0);
@@ -80,35 +104,19 @@ namespace TecWare.PPSn.Controls
 
 		protected override Size ArrangeOverride(Size finalSize)
 		{
-				var generator = GetItemContainerGenerator();
-			var p = generator.GeneratorPositionFromIndex(0);
-			var rc = new Rect(0, 0, finalSize.Width, 30);
-			using (generator.StartAt(p, GeneratorDirection.Forward))
+			double y = 0;
+			foreach(UIElement child in InternalChildren) // Für jedes interne Kindelement
 			{
-				while (true)
-				{
-					var t = generator.GenerateNext(out var isNew);
-					if (t is FrameworkElement m)
-					{
-						if (isNew)
-						{
-							generator.PrepareItemContainer(m);
-							AddInternalChild(m);
-						}
-						m.Arrange(rc);
-						rc.Y += 30;
-					}
-					else
-						break;
-				}
+				child.Arrange(new Rect(new Point(0, y), child.DesiredSize)); // Positioniert das Kindelement
+				y += child.DesiredSize.Height; // y um Höhe des Kindelementes erhöhen
 			}
 			
 			viewPort = finalSize;
-			return base.ArrangeOverride(finalSize);
+			return finalSize;
 		}
 
-		//protected override double GetItemOffsetCore(UIElement child) 
-		//	=> base.GetItemOffsetCore(child);
+		protected override double GetItemOffsetCore(UIElement child) 
+			=> base.GetItemOffsetCore(child);
 
 		//protected override void OnItemsChanged(object sender, ItemsChangedEventArgs args) 
 		//	=> base.OnItemsChanged(sender, args);
@@ -221,8 +229,16 @@ namespace TecWare.PPSn.Controls
 			InvalidateMeasure();
 		} // proc SetHorizontalOffsetCore
 
+		private int GetFirstVisibleIndex() 
+		{
+			int index = (int)Math.Floor(offset.Y / itemSize.Height);
+			return Math.Max(0, index);
+		} // proc GetFirstVisibleIndex
+
 		#endregion
 
-		private const int ScrollVelocity = 10;
+		private const int ScrollVelocity = 60;
+
+
 	} // class PpsVirtualizationStackPanel
 }
