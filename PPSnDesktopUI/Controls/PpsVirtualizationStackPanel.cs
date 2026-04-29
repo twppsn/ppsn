@@ -46,7 +46,7 @@ namespace TecWare.PPSn.Controls
 		}
 		#endregion
 
-		private IItemContainerGenerator GetItemContainerGenerator()
+		private IRecyclingItemContainerGenerator GetItemContainerGenerator()
 		{
 			if (generator is null)
 			{
@@ -72,34 +72,31 @@ namespace TecWare.PPSn.Controls
 			int firstVisibleIndex = GetFirstVisibleIndex(); 
 			int visibleCount = (int)Math.Ceiling(availableSize.Height / itemSize.Height); // Anzahl der sichtbaren Elemente
 
+			int lastVisibleIndex = Math.Min(firstVisibleIndex + visibleCount, c.Items.Count) -1;
+
 			var generator = GetItemContainerGenerator();
 			var startingPosition = generator.GeneratorPositionFromIndex(firstVisibleIndex); // Wir rendern erst ab dem ersten sichtbaren Index
 
 
 			using (generator.StartAt(startingPosition, GeneratorDirection.Forward, true))
 			{
-				for (int i = firstVisibleIndex; i < Math.Min(firstVisibleIndex + visibleCount, c.Items.Count); i++) // Nur sichbare Elemente bearbeiten 
+				for (int i = firstVisibleIndex; i <= lastVisibleIndex; i++) // Nur sichbare Elemente bearbeiten 
 				{
 					UIElement child;
-					if (i < InternalChildren.Count)
-						child = InternalChildren[i]; // Möglicherweise existiert das Kindelement bereits 
-					else
+
+					child = (UIElement)generator.GenerateNext(out var isNew);
+					if(isNew)
 					{
-						child = (UIElement)generator.GenerateNext(out var isNew);
-						if(isNew)
-						{
-							AddInternalChild(child); // Neu erstellten Container hinzufügen 
-							generator.PrepareItemContainer(child); // Container Vorbereiten
-						}
+						AddInternalChild(child); // Neu erstellten Container hinzufügen 
+						generator.PrepareItemContainer(child); // Container Vorbereiten
 					}
 
 					child.Measure(availableSize); // Gewünschte Größe des Elements wird ermittelt 
 				}
 			}
-			return availableSize; // new Size(0, 0);
-			
-			//else
-			//	return base.MeasureOverride(availableSize);
+			CleanupItems(firstVisibleIndex, lastVisibleIndex);
+
+			return new Size(double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width, double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height);
 		} // func
 
 		protected override Size ArrangeOverride(Size finalSize)
@@ -107,8 +104,8 @@ namespace TecWare.PPSn.Controls
 			double y = 0;
 			foreach(UIElement child in InternalChildren) // Für jedes interne Kindelement
 			{
+				y = ((GetItemIndexFromChild(child) * itemSize.Height) - offset.Y);
 				child.Arrange(new Rect(new Point(0, y), child.DesiredSize)); // Positioniert das Kindelement
-				y += child.DesiredSize.Height; // y um Höhe des Kindelementes erhöhen
 			}
 			
 			viewPort = finalSize;
@@ -234,6 +231,30 @@ namespace TecWare.PPSn.Controls
 			int index = (int)Math.Floor(offset.Y / itemSize.Height);
 			return Math.Max(0, index);
 		} // proc GetFirstVisibleIndex
+
+		private int GetItemIndexFromChild(UIElement child) 
+		{
+			ItemsControl c = ItemsControl.GetItemsOwner(this);
+			return c.ItemContainerGenerator.IndexFromContainer(child);
+		} // proc GetItemIndexFromChild
+
+		private void CleanupItems(int minVisibleIndex, int maxVisibleIndex)
+		{
+			var generator = (IRecyclingItemContainerGenerator)ItemContainerGenerator;
+
+			for (int i = InternalChildren.Count -1; i >= 0; i--)
+			{
+				GeneratorPosition childPos = new GeneratorPosition(i, 0);
+				int itemIndex = generator.IndexFromGeneratorPosition(childPos);
+
+				if(itemIndex < minVisibleIndex || itemIndex > maxVisibleIndex)
+				{
+					generator.Remove(childPos, 1);
+					RemoveInternalChildRange(i, 1);
+				}
+			}
+
+		} // proc CleanupItems
 
 		#endregion
 
