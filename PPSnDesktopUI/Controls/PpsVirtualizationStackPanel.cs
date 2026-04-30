@@ -14,14 +14,11 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using Windows.Devices.PointOfService;
 
 namespace TecWare.PPSn.Controls
 {
@@ -42,7 +39,6 @@ namespace TecWare.PPSn.Controls
 		#region --- ctor --------------------------------------------------------------
 		public PpsVirtualizationStackPanel() 
 		{ 
-			
 		}
 		#endregion
 
@@ -69,14 +65,13 @@ namespace TecWare.PPSn.Controls
 			extent = new Size(itemSize.Width, c.Items.Count * itemSize.Height); // TODO: ItemSize dynamisch berechnen 
 			viewPort = availableSize;
 
-			int firstVisibleIndex = GetFirstVisibleIndex(); 
 			int visibleCount = (int)Math.Ceiling(availableSize.Height / itemSize.Height); // Anzahl der sichtbaren Elemente
 
+			int firstVisibleIndex = GetFirstVisibleIndex(); 
 			int lastVisibleIndex = Math.Min(firstVisibleIndex + visibleCount, c.Items.Count) -1;
 
 			var generator = GetItemContainerGenerator();
 			var startingPosition = generator.GeneratorPositionFromIndex(firstVisibleIndex); // Wir rendern erst ab dem ersten sichtbaren Index
-
 
 			using (generator.StartAt(startingPosition, GeneratorDirection.Forward, true))
 			{
@@ -87,16 +82,20 @@ namespace TecWare.PPSn.Controls
 					child = (UIElement)generator.GenerateNext(out var isNew);
 					if(isNew)
 					{
-						AddInternalChild(child); // Neu erstellten Container hinzufügen 
+						AddInternalChild(child); // Neu erstellten Container hinzufügen
 						generator.PrepareItemContainer(child); // Container Vorbereiten
+						
 					}
 
 					child.Measure(availableSize); // Gewünschte Größe des Elements wird ermittelt 
 				}
+				CleanupItems(firstVisibleIndex, lastVisibleIndex);
 			}
-			CleanupItems(firstVisibleIndex, lastVisibleIndex);
 
-			return new Size(double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width, double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height);
+			return new Size(
+				double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width, 
+				double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height
+				);
 		} // func
 
 		protected override Size ArrangeOverride(Size finalSize)
@@ -104,7 +103,7 @@ namespace TecWare.PPSn.Controls
 			double y = 0;
 			foreach(UIElement child in InternalChildren) // Für jedes interne Kindelement
 			{
-				y = ((GetItemIndexFromChild(child) * itemSize.Height) - offset.Y);
+				y = (GetItemIndexFromChild(child) * itemSize.Height) - offset.Y;
 				child.Arrange(new Rect(new Point(0, y), child.DesiredSize)); // Positioniert das Kindelement
 			}
 			
@@ -242,12 +241,12 @@ namespace TecWare.PPSn.Controls
 		{
 			var generator = (IRecyclingItemContainerGenerator)ItemContainerGenerator;
 
-			for (int i = InternalChildren.Count -1; i >= 0; i--)
+			for (int i = InternalChildren.Count - 1; i >= 0; i--)
 			{
 				GeneratorPosition childPos = new GeneratorPosition(i, 0);
 				int itemIndex = generator.IndexFromGeneratorPosition(childPos);
 
-				if(itemIndex < minVisibleIndex || itemIndex > maxVisibleIndex)
+				if (itemIndex < minVisibleIndex || itemIndex > maxVisibleIndex)
 				{
 					generator.Remove(childPos, 1);
 					RemoveInternalChildRange(i, 1);
