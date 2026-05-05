@@ -84,7 +84,6 @@ namespace TecWare.PPSn.Controls
 					{
 						AddInternalChild(child); // Neu erstellten Container hinzufügen
 						generator.PrepareItemContainer(child); // Container Vorbereiten
-						
 					}
 
 					child.Measure(availableSize); // Gewünschte Größe des Elements wird ermittelt 
