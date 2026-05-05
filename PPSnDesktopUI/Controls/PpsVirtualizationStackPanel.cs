@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -72,24 +73,37 @@ namespace TecWare.PPSn.Controls
 
 			var generator = GetItemContainerGenerator();
 			var startingPosition = generator.GeneratorPositionFromIndex(firstVisibleIndex); // Wir rendern erst ab dem ersten sichtbaren Index
+			int iChildIndex = (startingPosition.Offset == 0) ? startingPosition.Index : startingPosition.Index + 1;
 
 			using (generator.StartAt(startingPosition, GeneratorDirection.Forward, true))
 			{
-				for (int i = firstVisibleIndex; i <= lastVisibleIndex; i++) // Nur sichbare Elemente bearbeiten 
+
+				for (int i = firstVisibleIndex; i <= lastVisibleIndex; i++, iChildIndex ++) // Nur sichbare Elemente bearbeiten 
 				{
 					UIElement child;
 
 					child = (UIElement)generator.GenerateNext(out var isNew);
-					if(isNew)
+					if (isNew)
 					{
-						AddInternalChild(child); // Neu erstellten Container hinzufügen
-						generator.PrepareItemContainer(child); // Container Vorbereiten
+						if (iChildIndex >= InternalChildren.Count)
+							AddInternalChild(child); // Neu erstellten Container hinzufügen
+						else
+							InsertInternalChild(iChildIndex, child); // Neu erstellten Container hinzufügen
+
+						ItemContainerGenerator.PrepareItemContainer(child); // Container Vorbereiten
+					}
+					else if (!InternalChildren.Contains(child))
+					{
+						InsertInternalChild(iChildIndex, child);
+						generator.PrepareItemContainer(child);
 					}
 
 					child.Measure(availableSize); // Gewünschte Größe des Elements wird ermittelt 
 				}
-				CleanupItems(firstVisibleIndex, lastVisibleIndex);
+
 			}
+
+			CleanupItems(firstVisibleIndex, lastVisibleIndex);
 
 			return new Size(
 				double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width, 
@@ -247,7 +261,7 @@ namespace TecWare.PPSn.Controls
 
 				if (itemIndex < minVisibleIndex || itemIndex > maxVisibleIndex)
 				{
-					generator.Remove(childPos, 1);
+					generator.Recycle(childPos, 1);
 					RemoveInternalChildRange(i, 1);
 				}
 			}
