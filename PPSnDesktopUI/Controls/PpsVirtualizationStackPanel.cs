@@ -14,12 +14,10 @@
 //
 #endregion
 using System;
-using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
-using Windows.Devices.PointOfService;
 
 namespace TecWare.PPSn.Controls
 {
@@ -33,13 +31,14 @@ namespace TecWare.PPSn.Controls
 		private Size extent;
 		private Size viewPort;
 
-		private Size itemSize = new Size(100, 30);
+		private Size itemSize = new(100, 30);
 
 		private ItemContainerGenerator generator = null;
 
 		#region --- ctor --------------------------------------------------------------
 		public PpsVirtualizationStackPanel() 
-		{ 
+		{
+			ScrollVelocity = (int)Math.Floor(itemSize.Height);
 		}
 		#endregion
 
@@ -270,8 +269,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		private const int ScrollVelocity = 60;
-
+		private int ScrollVelocity = 0;
 
 	} // class PpsVirtualizationStackPanel
 }
