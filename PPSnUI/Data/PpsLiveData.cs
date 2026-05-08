@@ -3591,7 +3591,7 @@ namespace TecWare.PPSn.Data
 
 		private async Task<XElement> RequestLiveDataAsync(DEHttpClient http, XElement xRequest)
 		{
-			var endTime = DateTime.Now+TimeSpan.FromMinutes(30);
+			var endTime = DateTime.Now + TimeSpan.FromMinutes(30);
 			Exception lastException = null;
 			while (DateTime.Now < endTime)
 			{

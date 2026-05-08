@@ -73,7 +73,7 @@ namespace TecWare.PPSn.Server
 			private readonly PpsFieldDescription field;
 			private int state = 0;
 
-			private readonly Stack<IPpsColumnDescription> nativeColumnDescriptors = new Stack<IPpsColumnDescription>();
+			private readonly Queue<IPpsColumnDescription> nativeColumnDescriptors = new Queue<IPpsColumnDescription>();
 			private PpsFieldDescription currentField = null;
 			private Queue<PpsFieldDescription> backFields = new Queue<PpsFieldDescription>();
 			private IEnumerator<XElement> currentFieldEnumerator = null;
@@ -124,7 +124,7 @@ namespace TecWare.PPSn.Server
 						else
 						{
 							if (currentField.nativeColumnDescription != null)
-								nativeColumnDescriptors.Push(currentField.nativeColumnDescription);
+								nativeColumnDescriptors.Enqueue(currentField.nativeColumnDescription);
 
 							currentFieldEnumerator = currentField.xDefinition.Elements(xnFieldAttribute).GetEnumerator();
 							goto case 1;
@@ -174,7 +174,7 @@ namespace TecWare.PPSn.Server
 						}
 						else
 						{
-							var nativeColumnDescription = nativeColumnDescriptors.Pop();
+							var nativeColumnDescription = nativeColumnDescriptors.Dequeue();
 							currentAttributesEnumerator = nativeColumnDescription.Attributes.GetEnumerator();
 							state = 6;
 							goto case 6;
@@ -226,9 +226,19 @@ namespace TecWare.PPSn.Server
 				this.field = field ?? throw new ArgumentNullException(nameof(field));
 			} // ctor
 
+			private PropertyValue GetCachedProperty(string name)
+			{
+				if (String.Compare(name, DisplayNameAttributeName, StringComparison.OrdinalIgnoreCase) == 0)
+					return field.displayName.Value;
+				else if (String.Compare(name, DisplayNameAttributeName, StringComparison.OrdinalIgnoreCase) == 0)
+					return field.maxLength.Value;
+				else
+					return null;
+			} // func GetCachedProperty
+
 			public bool TryGetProperty(string name, out object value)
 			{
-				var p = field.GetProperty(name, new List<PpsFieldDescription>());
+				var p = GetCachedProperty(name) ?? field.GetProperty(name, new List<PpsFieldDescription>());
 				if (p != null)
 				{
 					value = p.Value;
@@ -256,8 +266,8 @@ namespace TecWare.PPSn.Server
 		private IPpsColumnDescription nativeColumnDescription = null; // assign field description of the datasource
 		private PpsFieldDescription[] inheritedDefinitions = null; // inherited field description
 
-		private readonly Lazy<string> displayName;
-		private readonly Lazy<int> maxLength;
+		private readonly Lazy<PropertyValue> displayName;
+		private readonly Lazy<PropertyValue> maxLength;
 		private readonly Lazy<Type> dataType;
 
 		private bool isInitialzed = false;
@@ -277,8 +287,8 @@ namespace TecWare.PPSn.Server
 
 			inheritedFieldNames = Procs.GetStrings(xDefinition.Attribute(inheritedAttributeString)?.Value, false);
 
-			displayName = new Lazy<string>(() => Attributes.GetProperty(DisplayNameAttributeName, null));
-			maxLength = new Lazy<int>(() => Attributes.GetProperty(MaxLengthAttributeName, Int32.MaxValue));
+			displayName = new Lazy<PropertyValue>(() => GetProperty(DisplayNameAttributeName, new List<PpsFieldDescription>()));
+			maxLength = new Lazy<PropertyValue>(() => GetProperty(MaxLengthAttributeName, new List<PpsFieldDescription>()));
 
 			var xDataType = xDefinition.Attribute(DataTypeAttributeName);
 
@@ -375,6 +385,7 @@ namespace TecWare.PPSn.Server
 			CheckInitialized();
 
 			// recursion detection
+			var isRoot = fetchedFields.Count == 0;
 			if (fetchedFields.Contains(this))
 				return null;
 			fetchedFields.Add(this);
@@ -397,9 +408,18 @@ namespace TecWare.PPSn.Server
 			if (ret != null)
 				return ret;
 
-			object v = null;
-			if (nativeColumnDescription?.Attributes.TryGetProperty(propertyName, out v) ?? false)
-				return new PropertyValue(propertyName, v);
+			// look up native column attributes
+			if (isRoot)
+			{
+				foreach (var field in fetchedFields)
+				{
+					if (field.nativeColumnDescription is null)
+						continue;
+
+					if (field.nativeColumnDescription.Attributes.TryGetProperty(propertyName, out var v))
+						return new PropertyValue(propertyName, v);
+				}
+			}
 
 			return null;
 		} // func GetProperty
@@ -429,10 +449,10 @@ namespace TecWare.PPSn.Server
 		public string Name { get; }
 
 		/// <summary>Displayname of the field.</summary>
-		public string DisplayName => displayName.Value;
+		public string DisplayName => displayName.Value?.Value as string;
 
 		/// <summary>Max length of the field.</summary>
-		public int MaxLength => Attributes.GetPropertyLate("MaxLength", () => maxLength.Value);
+		public int MaxLength => maxLength.Value?.Value is int i ? i : Int32.MaxValue;
 		/// <summary>DataType of the field.</summary>
 		public Type DataType => dataType?.Value ?? (nativeColumnDescription?.DataType ?? typeof(string));
 

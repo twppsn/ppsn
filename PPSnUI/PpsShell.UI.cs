@@ -710,8 +710,14 @@ namespace TecWare.PPSn
 		/// <param name="sp"></param>
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
-		public static void ShowException(this IServiceProvider sp, Exception exception, string alternativeMessage = null)
-			=> ShowException(sp.GetService<IPpsUIService>(true), exception, alternativeMessage);
+		public static bool ShowException(this IServiceProvider sp, Exception exception, string alternativeMessage = null)
+		{
+			var ui = sp.GetService<IPpsUIService>(false);
+			if (ui == null)
+				return false; // ohne ui-Service kann nichts angezeigt werden
+			ShowException(ui, exception, alternativeMessage);
+			return true;
+		} // proc ShowException
 
 		/// <summary>Show a exception.</summary>
 		/// <param name="ui"></param>
@@ -728,8 +734,14 @@ namespace TecWare.PPSn
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
 		/// <returns></returns>
-		public static Task ShowExceptionAsync(this IServiceProvider sp, bool background, Exception exception, string alternativeMessage = null)
-			=> ShowExceptionAsync(sp.GetService<IPpsUIService>(true), background, exception, alternativeMessage);
+		public static async Task<bool> ShowExceptionAsync(this IServiceProvider sp, bool background, Exception exception, string alternativeMessage = null)
+		{
+			var ui = sp.GetService<IPpsUIService>(false);
+			if (ui is null)
+				return false; // ohne ui-Service kann nichts angezeigt werden
+			await ShowExceptionAsync(ui, background, exception, alternativeMessage);
+			return true;
+		} // func ShowExceptionAsync
 
 		#endregion
 
