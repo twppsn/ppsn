@@ -233,7 +233,7 @@ namespace TecWare.PPSn
 					var cachedPropertyNames = cachedSettings.Keys.ToArray();
 					foreach (var kv in settingsService.Query(cachedPropertyNames))
 					{
-						if (cachedSettings[kv.Key] != kv.Value)
+						if (!cachedSettings.TryGetValue(kv.Key, out var v) || v != kv.Value)
 						{
 							dirtyProperties.Add(kv.Key);
 							cachedSettings[kv.Key] = kv.Value;
