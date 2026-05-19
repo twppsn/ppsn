@@ -85,16 +85,19 @@ namespace TecWare.PPSn.Controls
 		#endregion
 	} // class PpsBrowserWindowPane
 
-	#region --- PpsBrowserTabInfo -----------------------------------------------------
+	#region --- class PpsBrowserTabInfo -----------------------------------------------
+	/// <summary>Information about the browser tab to be created.</summary>
 	public sealed class PpsBrowserTabInfo
 	{
 		private readonly int listId;
+		private readonly PpsBrowserTabType tabType;
 		private readonly Type maskType;
 		private readonly int maskParameterColumnIndex; // Which Column in the luaTable holds the id parameter for our mask? 
 
-		public PpsBrowserTabInfo(int listId, string maskType, int paramColumnIndex)
+		public PpsBrowserTabInfo(int listId, bool isComplexTab, string maskType, int paramColumnIndex)
 		{
 			this.listId = listId;
+			this.tabType = isComplexTab ? PpsBrowserTabType.Double : PpsBrowserTabType.Single;
 
 			var type = Type.GetType(maskType) ?? throw new TypeLoadException("Could not find Type: '" + maskType + "'.");
 			this.maskType = type;
@@ -103,8 +106,26 @@ namespace TecWare.PPSn.Controls
 		} // ctor
 
 		public int ListId => listId;
+
+		public PpsBrowserTabType TabType => tabType;
+
 		public Type MaskType => maskType;
+
 		public int MaskParameterColumnIndex => maskParameterColumnIndex;
+
 	} // class PpsBrowserTabInfo
+	#endregion
+
+	#region --- enum PpsBrowserTabType ------------------------------------------------
+
+	/// <summary>Type of the BrowserTab.</summary>
+	public enum PpsBrowserTabType 
+	{
+		/// <summary>Tab with single DataListBox</summary>
+		Single,
+		/// <summary>Tab with additional secondary DataListBox</summary>
+		Double
+	} // enum PpsBrowserTabType
+
 	#endregion
 }
