@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using Neo.IronLua;
+using TecWare.PPSn.Core.Data;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
@@ -29,17 +33,48 @@ namespace TecWare.PPSn.Controls
 			foreach(var info in tabInfos)
 			{
 				var tabItem = CreateTabItem(info);
-				
+				browserTabs.Items.Add(tabItem);
 			}
 		} // proc CreateTabs
 
 		private PpsTabItem CreateTabItem(PpsBrowserTabInfo info) 
 		{
-			var tabItem = new PpsTabItem();
 			//1. LIST abfragen
+
 			//2. TabItem erstellen
-			//3. TabItemHeader erstellen
+			var tabItem = new PpsTabItem
+			{
+				//3. TabItemHeader erstellen
+				Header = info.ListId.ToString() // TODO Set this more accurate
+			};
+
 			//4. Browser erstellen
+			var listBox = CreateBrowser("", info.MaskType);
+
+			// Sets the values of the attached properties on the listBox-Element
+			Grid.SetRow(listBox, 0);
+			Grid.SetColumn(listBox, 0);
+
+			// Grid to organize our browser around
+			var grid = new Grid
+			{
+				Margin = new Thickness(4, 4, 4, 4)
+			};
+
+			RowDefinition first = new RowDefinition
+			{
+				Height = new GridLength(3, GridUnitType.Star)
+			};
+
+			grid.RowDefinitions.Add(first);
+			grid.Children.Add(listBox);
+
+			if (info.TabType == PpsBrowserTabType.Warenkorb)
+			{
+				// Warenkorb erzeugen
+			}
+			
+			tabItem.Content = grid;
 			return tabItem;
 		} // proc CreateTabItem
 
@@ -60,23 +95,26 @@ namespace TecWare.PPSn.Controls
 			}
 
 			// Set Our Columns as the listbox' columns
-			PpsListColumns.SetColumns(listBox, columns); 
+			PpsListColumns.SetColumns(listBox, columns);
+			
 			//3. OnClick-Handler zum öffnen der Maske erstellen - 
 			return listBox;
 		} // proc CreateBrowser
 		#endregion
 
 		private PpsListColumn CreateListColumn(string key)
-		{  
-			var column = new PpsListColumn();
-			var header = new PpsListColumnHeader();
-			var template = new DataTemplate(typeof(PpsListColumn));
+		{
+			var column = new PpsListColumn
+			{
+				Header = key
+			};
 
-			//1. key decodieren 
-			//2. Darstellungsnamen abfragen 
+			var binding = new Binding(key)
+			{
+				Mode = BindingMode.OneWay
+			};
 
-			column.Header = header;
-			column.CellTemplate = template;
+			column.DisplayMemberBinding = binding;
 
 			return column;
 		} // proc CreateListColumn
@@ -97,12 +135,12 @@ namespace TecWare.PPSn.Controls
 		public PpsBrowserTabInfo(int listId, bool isComplexTab, string maskType, int paramColumnIndex)
 		{
 			this.listId = listId;
-			this.tabType = isComplexTab ? PpsBrowserTabType.Double : PpsBrowserTabType.Single;
+			tabType = isComplexTab ? PpsBrowserTabType.Warenkorb : PpsBrowserTabType.Einfach;
 
 			var type = Type.GetType(maskType) ?? throw new TypeLoadException("Could not find Type: '" + maskType + "'.");
 			this.maskType = type;
 
-			this.maskParameterColumnIndex = paramColumnIndex;
+			maskParameterColumnIndex = paramColumnIndex;
 		} // ctor
 
 		public int ListId => listId;
@@ -122,9 +160,9 @@ namespace TecWare.PPSn.Controls
 	public enum PpsBrowserTabType 
 	{
 		/// <summary>Tab with single DataListBox</summary>
-		Single,
+		Einfach,
 		/// <summary>Tab with additional secondary DataListBox</summary>
-		Double
+		Warenkorb
 	} // enum PpsBrowserTabType
 
 	#endregion
