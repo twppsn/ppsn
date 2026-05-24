@@ -178,7 +178,7 @@ namespace TecWare.PPSn.Controls
 					else
 					{
 						// white background
-						dc.DrawRectangle(Brushes.White, null, pagePosition);
+						dc.DrawRectangle(viewer.PageBackground, null, pagePosition);
 
 						// use current page
 						dc.PushClip(new RectangleGeometry(pagePosition)); // clip area
@@ -205,7 +205,7 @@ namespace TecWare.PPSn.Controls
 				else
 				{
 					// white page
-					dc.DrawRectangle(Brushes.White, null, pagePosition);
+					dc.DrawRectangle(viewer.PageBackground, null, pagePosition);
 					// start render
 					EnqueueRender(pagePart, pageMatrix);
 				}
@@ -238,6 +238,7 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty DocumentProperty = DependencyProperty.Register(nameof(Document), typeof(PdfReader), typeof(PpsPdfViewer), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnPdfSourceChanged)));
 		public static readonly DependencyProperty BackgroundProperty = Control.BackgroundProperty.AddOwner(typeof(PpsPdfViewer), new FrameworkPropertyMetadata(SystemColors.ControlBrush, new PropertyChangedCallback(OnBackgroundChanged)));
+		public static readonly DependencyProperty PageBackgroundProperty = DependencyProperty.Register(nameof(PageBackground), typeof(Brush), typeof(PpsPdfViewer), new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
 
 		public static readonly DependencyProperty CurrentPageNumberProperty = DependencyProperty.Register(nameof(CurrentPageNumber), typeof(int), typeof(PpsPdfViewer), new FrameworkPropertyMetadata(-1, new PropertyChangedCallback(OnCurrentPageNumberChanged), new CoerceValueCallback(OnCurrentPageNumberCoerce)));
 		private static readonly DependencyPropertyKey pageCountPropertyKey = DependencyProperty.RegisterReadOnly(nameof(PageCount), typeof(int), typeof(PpsPdfViewer), new PropertyMetadata(-1));
@@ -914,6 +915,8 @@ EmptyResult:
 
 		/// <summary>Pdf control background.</summary>
 		public Brush Background { get => (Brush)GetValue(BackgroundProperty); set => SetValue(BackgroundProperty, value); }
+		/// <summary>Background brush for the page</summary>
+		public Brush PageBackground { get => (Brush)GetValue(PageBackgroundProperty); set => SetValue(PageBackgroundProperty, value); }
 		/// <summary>Is a valid document setted.</summary>
 		public bool IsValidDocument => pageSizes != null && pageSizes.Length > 0;
 		/// <summary>Set a pdf source to render.</summary>

@@ -578,6 +578,48 @@ namespace TecWare.PPSn.Lua
 			return r;
 		} // func GetViewAsTable
 
+		[LuaMember("await")]
+		public LuaResult LuaAwait(object func)
+		{
+			int GetTaskType()
+			{
+				var t = func.GetType();
+				if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Task<>) && t.GetGenericArguments()[0].IsPublic)
+					return 0;
+				else if (typeof(Task).IsAssignableFrom(t))
+					return 1;
+				else
+					return -1;
+			}
+			;
+
+			switch (func)
+			{
+				case null:
+					throw new ArgumentNullException(nameof(func));
+				case Task t:
+					t.Await();
+					switch (GetTaskType())
+					{
+						case 0:
+							var genericArguments = t.GetType().GetGenericArguments();
+							if (genericArguments[0] == typeof(LuaResult))
+								return ((Task<LuaResult>)t).Result;
+							else
+							{
+								dynamic d = t;
+								return new LuaResult(d.Result);
+							}
+						case 1:
+							return LuaResult.Empty;
+						default:
+							throw new NotSupportedException($"Could not await for task ({func.GetType().Name}).");
+					}
+				default:
+					throw new ArgumentException($"The type '{func.GetType().Name}' is not awaitable.");
+			}
+		} // func LuaAwait
+
 		protected override void OnPrint(string text)
 			=> shell.LogProxy().Debug(text);
 
@@ -585,7 +627,8 @@ namespace TecWare.PPSn.Lua
 		public LuaTable Http => http;
 		[LuaMember]
 		public LuaTable UI => ui;
-
+		
+		[LuaMember]
 		public IPpsShell Shell => shell;
 		LLua IPpsLuaShell.Lua => Lua;
 

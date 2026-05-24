@@ -66,8 +66,8 @@ namespace TecWare.PPSn.Controls
 
 			var visibleCount = (int)Math.Ceiling(availableSize.Height / itemSize.Height); // Anzahl der sichtbaren Elemente
 
-			var firstVisibleIndex = GetFirstVisibleIndex(); 
-			var lastVisibleIndex = Math.Min(firstVisibleIndex + visibleCount, c.Items.Count) -1;
+			var firstVisibleIndex = GetFirstVisibleIndex();
+			var lastVisibleIndex = Math.Min(firstVisibleIndex + visibleCount, c.Items.Count) - 1;
 
 			var generator = GetItemContainerGenerator();
 			var startingPosition = generator.GeneratorPositionFromIndex(firstVisibleIndex); // Wir rendern erst ab dem ersten sichtbaren Index
@@ -76,9 +76,12 @@ namespace TecWare.PPSn.Controls
 			using (generator.StartAt(startingPosition, GeneratorDirection.Forward, true))
 			{
 
-				for (var i = firstVisibleIndex; i <= lastVisibleIndex; i++, iChildIndex ++) // Nur sichbare Elemente bearbeiten 
+				for (var i = firstVisibleIndex; i <= lastVisibleIndex; i++, iChildIndex++) // Nur sichbare Elemente bearbeiten 
 				{
 					var child = (UIElement)generator.GenerateNext(out var isNew);
+					if (child == null)
+						break; // keine weiteren Items > EoL
+
 					if (isNew)
 					{
 						if (iChildIndex >= InternalChildren.Count)
@@ -96,7 +99,7 @@ namespace TecWare.PPSn.Controls
 
 					child.Measure(availableSize); // Gewünschte Größe des Elements wird ermittelt 
 
-					if( i == firstVisibleIndex )
+					if (i == firstVisibleIndex)
 					{
 						itemSize = child.DesiredSize; // Die erwünschte Größe unseres Kindelementes ist ab jetzt unsere Itemgröße 
 						ScrollVelocity = (int)Math.Ceiling(child.DesiredSize.Height); // Die aufgerundete Höhe unseres ersten Kindelements ist unsere Scrollgeschwindigkeit
@@ -108,10 +111,10 @@ namespace TecWare.PPSn.Controls
 			CleanupItems(firstVisibleIndex, lastVisibleIndex); // Nicht sichtbares Zeug aufräumen
 
 			return new Size(
-				double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width, 
+				double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width,
 				double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height
 			);
-		} // func
+		} // func MeasureOverride
 
 		protected override Size ArrangeOverride(Size finalSize)
 		{
