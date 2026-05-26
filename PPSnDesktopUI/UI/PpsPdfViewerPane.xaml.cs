@@ -69,7 +69,7 @@ namespace TecWare.PPSn.UI
 		private static Task<PdfReader> LoadDocumentFromFileNameAsync(string fileName)
 			=> Task.Run(() => PdfReader.Open(fileName));
 
-		internal static async Task<PdfReader> DownloadDocumentAsync(DEHttpClient http, Uri uri)
+		internal static async Task<PdfReader> DownloadDocumentAsync(DEHttpClient http, Uri uri, string name = null)
 		{
 			using (var r = await http.GetAsync(uri))
 			{
@@ -80,19 +80,31 @@ namespace TecWare.PPSn.UI
 				if (r.Content.Headers.ContentType?.MediaType != MimeTypes.Application.Pdf)
 					throw new ArgumentOutOfRangeException("Content-Type", r.Content.Headers.ContentType?.MediaType, "Only pdf supported.");
 
-				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: GetCleanPdfName(r.Content.Headers.ContentDisposition?.FileName));
+				return PdfReader.Open(await r.Content.ReadAsByteArrayAsync(), name: name ?? GetCleanPdfName(r.Content.Headers.ContentDisposition?.FileName));
 			}
 		} // func DownloadDocumentAsync
+
+		public static Task<PdfReader> OpenDocumentFromSourceAsync(IPpsShell shell, string source, string name = null)
+		{
+			if (String.IsNullOrEmpty(source))
+				return Task.FromResult<PdfReader>(null);
+
+			if (source[0] == '/' || source.StartsWith("http://") || source.StartsWith("https://"))
+			{
+				var uri = source[0] == '/'
+					? shell.GetHttp().CreateFullUri(source)  // relative path
+					: new Uri(source);
+
+				return DownloadDocumentAsync(shell.GetHttp(), uri, name);
+			}
+			else
+				return LoadDocumentFromFileNameAsync(source); // parse pdf in background
+		} // func OpenDocumentFromSourceAsync
 
 		private async Task LoadDocumentFromSourceAsync(string source)
 		{
 			using (var bar = this.CreateProgress(progressText: String.Format("Lade Pdf-Datei ({0})...", source)))
-			{
-				if (source.StartsWith("http://") || source.StartsWith("https://"))
-					SetLoadedDocument(await DownloadDocumentAsync(PaneHost.PaneManager.Shell.GetHttp(), new Uri(source)));
-				else
-					SetLoadedDocument(await LoadDocumentFromFileNameAsync(source)); // parse pdf in background
-			}
+				SetLoadedDocument(await OpenDocumentFromSourceAsync(this.Shell, source));
 		} // func LoadDocumentFromSourceAsync
 
 		private async Task OpenPdfAsync(object data)
