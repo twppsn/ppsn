@@ -79,6 +79,7 @@ namespace TecWare.PPSn.Controls
 				for (var i = firstVisibleIndex; i <= lastVisibleIndex; i++, iChildIndex ++) // Nur sichbare Elemente bearbeiten 
 				{
 					var child = (UIElement)generator.GenerateNext(out var isNew);
+
 					if (isNew)
 					{
 						if (iChildIndex >= InternalChildren.Count)
@@ -96,7 +97,7 @@ namespace TecWare.PPSn.Controls
 
 					child.Measure(availableSize); // Gewünschte Größe des Elements wird ermittelt 
 
-					if( i == firstVisibleIndex )
+					if (i == firstVisibleIndex)
 					{
 						itemSize = child.DesiredSize; // Die erwünschte Größe unseres Kindelementes ist ab jetzt unsere Itemgröße 
 						ScrollVelocity = (int)Math.Ceiling(child.DesiredSize.Height); // Die aufgerundete Höhe unseres ersten Kindelements ist unsere Scrollgeschwindigkeit
