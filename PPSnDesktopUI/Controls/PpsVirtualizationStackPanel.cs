@@ -67,7 +67,7 @@ namespace TecWare.PPSn.Controls
 			var visibleCount = (int)Math.Ceiling(availableSize.Height / itemSize.Height); // Anzahl der sichtbaren Elemente
 
 			var firstVisibleIndex = GetFirstVisibleIndex();
-			var lastVisibleIndex = Math.Min(firstVisibleIndex + visibleCount, c.Items.Count) - 1;
+			var lastVisibleIndex = Math.Max(0, Math.Min(firstVisibleIndex + visibleCount, c.Items.Count) - 1);
 
 			var generator = GetItemContainerGenerator();
 			var startingPosition = generator.GeneratorPositionFromIndex(firstVisibleIndex); // Wir rendern erst ab dem ersten sichtbaren Index
@@ -137,6 +137,9 @@ namespace TecWare.PPSn.Controls
 			{
 				var childPos = new GeneratorPosition(i, 0);
 				var itemIndex = generator.IndexFromGeneratorPosition(childPos);
+
+				if (itemIndex < 0)
+					continue; // GeneratorPosition ist ungültig oder oder das Element existiert nicht bzw. wurde nicht erzeugt
 
 				if (itemIndex < minVisibleIndex || itemIndex > maxVisibleIndex)
 				{
