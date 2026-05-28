@@ -31,7 +31,7 @@ namespace TecWare.PPSn.Controls
 		private Size extent;
 		private Size viewPort;
 
-		private Size itemSize = new Size (100, 30);
+		private double itemHeight = 30; // initialer Wert
 
 		private ItemContainerGenerator generator = null;
 
@@ -59,12 +59,13 @@ namespace TecWare.PPSn.Controls
 			// Wir wollen die vorhandene Fläche ausfüllen
 
 			var c = ItemsControl.GetItemsOwner(this);
-			if (c == null) return availableSize;
+			if (c == null)
+				return availableSize;
 
-			extent = new Size(itemSize.Width, c.Items.Count * itemSize.Height); // TODO: ItemSize dynamisch berechnen 
+			extent = new Size(availableSize.Width, c.Items.Count * itemHeight); // TODO: ItemSize dynamisch berechnen 
 			viewPort = availableSize;
 
-			var visibleCount = (int)Math.Ceiling(availableSize.Height / itemSize.Height); // Anzahl der sichtbaren Elemente
+			var visibleCount = (int)Math.Ceiling(availableSize.Height / itemHeight); // Anzahl der sichtbaren Elemente
 
 			var firstVisibleIndex = GetFirstVisibleIndex();
 			var lastVisibleIndex = Math.Max(0, Math.Min(firstVisibleIndex + visibleCount, c.Items.Count) - 1);
@@ -101,7 +102,7 @@ namespace TecWare.PPSn.Controls
 
 					if (i == firstVisibleIndex)
 					{
-						itemSize = child.DesiredSize; // Die erwünschte Größe unseres Kindelementes ist ab jetzt unsere Itemgröße 
+						itemHeight = child.DesiredSize.Height; // Die erwünschte Größe unseres Kindelementes ist ab jetzt unsere Itemgröße 
 						ScrollVelocity = (int)Math.Ceiling(child.DesiredSize.Height); // Die aufgerundete Höhe unseres ersten Kindelements ist unsere Scrollgeschwindigkeit
 					}
 				}
@@ -118,16 +119,16 @@ namespace TecWare.PPSn.Controls
 
 		protected override Size ArrangeOverride(Size finalSize)
 		{
-			double y = 0;
-			foreach(UIElement child in InternalChildren) // Für jedes interne Kindelement
+			var y = 0.0;
+			foreach(var child in InternalChildren) // Für jedes interne Kindelement
 			{
-				y = (GetItemIndexFromChild(child) * itemSize.Height) - offset.Y;
-				child.Arrange(new Rect(new Point(0, y), child.DesiredSize)); // Positioniert das Kindelement
+				y = (GetItemIndexFromChild(child) * itemHeight) - offset.Y;
+				child.Arrange(new Rect(0, y, finalSize.Width,  itemHeight)); // Positioniert das Kindelement
 			}
 			
 			viewPort = finalSize;
 			return finalSize;
-		}
+		} // func ArrangeOverride
 
 		private void CleanupItems(int minVisibleIndex, int maxVisibleIndex)
 		{
@@ -265,7 +266,7 @@ namespace TecWare.PPSn.Controls
 
 		private int GetFirstVisibleIndex() 
 		{
-			var index = (int)Math.Floor(offset.Y / itemSize.Height);
+			var index = (int)Math.Floor(offset.Y / itemHeight);
 			return Math.Max(0, index);
 		} // proc GetFirstVisibleIndex
 
