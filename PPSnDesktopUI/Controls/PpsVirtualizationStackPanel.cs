@@ -122,8 +122,8 @@ namespace TecWare.PPSn.Controls
 			var y = 0.0;
 			foreach(var child in InternalChildren) // Für jedes interne Kindelement
 			{
-				y = (GetItemIndexFromChild(child) * itemHeight) - offset.Y;
-				child.Arrange(new Rect(0, y, finalSize.Width,  itemHeight)); // Positioniert das Kindelement
+				y = (GetItemIndexFromChild((UIElement)child) * itemHeight) - offset.Y;
+				((UIElement)child).Arrange(new Rect(0, y, finalSize.Width,  itemHeight)); // Positioniert das Kindelement
 			}
 			
 			viewPort = finalSize;
