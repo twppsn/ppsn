@@ -1066,16 +1066,6 @@ namespace TecWare.PPSn
 				services.Clear();
 			} // proc Dispose
 
-			internal object CreateShellService(Type serviceInstanceType)
-			{
-				var ciNone = serviceInstanceType.GetConstructor(Array.Empty<Type>());
-				var ciShell = serviceInstanceType.GetConstructor(new Type[] { typeof(IPpsShell) });
-				if (ciShell == null && ciNone == null)
-					throw new ArgumentException($"Invalid constructor for type {serviceInstanceType.Name}. Expected: ctor(), ctor({nameof(IPpsShell)})");
-
-				return ciShell?.Invoke(new object[] { this }) ?? ciNone.Invoke(Array.Empty<object>());
-			} // func CreateShellService
-
 			public async Task LoadAsync(IPpsShellLoadNotify notify)
 			{
 				// first create settings
@@ -1140,13 +1130,7 @@ retryLoadSettings:
 							await notify.OnAfterLoadSettingsAsync(this);
 
 						// init all shell services
-						foreach (var sv in shellServices)
-						{
-							if (sv.GetCustomAttribute<PpsLazyServiceAttribute>() != null)
-								AddServices(this, sv, new LazyShellServiceCreator(this, sv).CreateService);
-							else
-								AddServices(this, sv, CreateShellService(sv));
-						}
+						CreateShellServices(this, this);
 
 						// load shell services
 						var lastInitShellServices = new List<IPpsShellServiceInit>();
@@ -1755,11 +1739,11 @@ retryLoadSettings:
 
 		private sealed class LazyShellServiceCreator
 		{
-			private readonly PpsShellImplementation shell;
+			private readonly IPpsShell shell;
 			private readonly Type instanceType;
 			private object instance = null;
 
-			public LazyShellServiceCreator(PpsShellImplementation shell, Type instanceType)
+			public LazyShellServiceCreator(IPpsShell shell, Type instanceType)
 			{
 				this.shell = shell ?? throw new ArgumentNullException(nameof(shell));
 				this.instanceType = instanceType ?? throw new ArgumentNullException(nameof(instanceType));
@@ -1768,7 +1752,7 @@ retryLoadSettings:
 			public object CreateService(IServiceContainer serviceContainer, Type serviceType)
 			{
 				if (instance == null)
-					instance = shell.CreateShellService(instanceType);
+					instance = CreateShellService(shell, instanceType);
 				return instance;
 			} // func CreateService
 		} // class LazyServiceCreator
@@ -2248,6 +2232,34 @@ retryLoadSettings:
 			else
 				return httpService.TryGetRemoteUri(uri, out remoteUri);
 		} // func TryGetRemoteUri
+
+		#endregion
+
+		#region -- Shell Services -----------------------------------------------------
+
+		private static object CreateShellService(IPpsShell shell, Type serviceInstanceType)
+		{
+			var ciNone = serviceInstanceType.GetConstructor(Array.Empty<Type>());
+			var ciShell = serviceInstanceType.GetConstructor(new Type[] { typeof(IPpsShell) });
+			if (ciShell == null && ciNone == null)
+				throw new ArgumentException($"Invalid constructor for type {serviceInstanceType.Name}. Expected: ctor(), ctor({nameof(IPpsShell)})");
+
+			return ciShell?.Invoke(new object[] { shell }) ?? ciNone.Invoke(Array.Empty<object>());
+		} // func CreateShellService
+
+		/// <summary>Create all shell services</summary>
+		/// <param name="container"></param>
+		/// <param name="shell"></param>
+		public static void CreateShellServices(IServiceContainer container, IPpsShell shell)
+		{
+			foreach (var sv in shellServices)
+			{
+				if (sv.GetCustomAttribute<PpsLazyServiceAttribute>() != null)
+					AddServices(container, sv, new LazyShellServiceCreator(shell, sv).CreateService);
+				else
+					AddServices(container, sv, CreateShellService(shell, sv));
+			}
+		} // proc CreateShellServices
 
 		#endregion
 

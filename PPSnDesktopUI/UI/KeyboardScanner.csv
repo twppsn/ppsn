@@ -42,6 +42,7 @@
 0x0483;0x5751;;Inateck BCST-60
 0x0483;0x5752;;Inateck BCST-60
 0x0519;0x2017;;Inateck BCST-60
+0x3373;0x5752;;Inateck BCST-60
 0x0801;0x067E;;Intermec SG20T
 0x040B;0x6510;;Jarltech Glancetron 2009
 0x0C2E;0x9A6C;;Metrologic MS1690
@@ -59,5 +60,6 @@
 0x00010111;1;;Opticon OPN (Bluetooth)
 0x000123A1;0x00001234;;DataLogic QuickScan QBT 2400 (Bluetooth)
 0x6352;0x681B;;EloRFID
+0xFFFF;0x0035;;RFID-Leser
 0x000205AC;0x00000239;;Tera Barcode (Bluetooth)
 0x000101F1;0x00000008;;LS/DS (Bluetooth)
