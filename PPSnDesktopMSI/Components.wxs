@@ -23,8 +23,8 @@
 				<File Id="PPSnDesktopExe" Name="PPSnDesktop.exe" Source="$(var.BinDirectory)\PPSnDesktop.exe">
 					<?if $(var.PerUser) = "true"?>
 					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" Description="PPSnDesktop starten" />
-					<?else?>
-					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" Description="PPSnDesktop starten" Advertise="yes" />
+					<!--<?else?>
+					<Shortcut Id="PPSnDesktopLnk" Directory="DesktopFolder" Name="PPSnDesktop" WorkingDirectory="INSTALLFOLDER" Description="PPSnDesktop starten" Advertise="yes" />-->
 					<?endif?>
 				</File>
 				<File Id="PPSnDesktopPdb" Name="PPSnDesktop.pdb" Source="$(var.BinDirectory)\PPSnDesktop.pdb" />

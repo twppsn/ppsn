@@ -400,7 +400,7 @@ namespace TecWare.PPSn
 					return child;
 				else
 				{
-					child = GetVisualChild<T>(v, name, throwException);
+					child = GetVisualChild<T>(v, name, false);
 					if (child != null)
 						return child;
 				}
