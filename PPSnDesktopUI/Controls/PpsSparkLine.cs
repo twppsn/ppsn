@@ -49,22 +49,29 @@ namespace TecWare.PPSn.Controls
 
 			// collect segments
 			var segments = new List<LineSegment>();
-			var firstPoint = new Point(0.0, 0.0);
+			Point? firstPoint = null;
 			var count = lineSource.Count;
 			for (var i = 0; i < count; i++)
 			{
 				var x = width * i / (count - 1);
 				var y = height - lineSource.GetPoint(i, height);
+
+				if (Double.IsNaN(y))
+					continue;
+
 				if (y < 0.0)
 					y = 0.0;
 				if (y > height)
 					y = height;
 
-				if (i == 0)
-					firstPoint = new Point(x, y);
-				else
+				if (firstPoint.HasValue)
 					segments.Add(new LineSegment(new Point(x, y), true));
+				else
+					firstPoint = new Point(x, y);
 			}
+
+			if (segments.Count == 0)
+				return;
 
 			// draw background
 			if (Fill != null && !Fill.Equals(Brushes.Transparent))
@@ -74,7 +81,7 @@ namespace TecWare.PPSn.Controls
 					StartPoint = new Point(0, height),
 					IsClosed = true
 				};
-				figure.Segments.Add(new LineSegment(firstPoint, true));
+				figure.Segments.Add(new LineSegment(firstPoint.Value, true));
 				foreach (var s in segments)
 					figure.Segments.Add(s);
 				figure.Segments.Add(new LineSegment(new Point(width, height), true));
@@ -85,7 +92,7 @@ namespace TecWare.PPSn.Controls
 			// draw line
 			if (Foreground != null)
 			{
-				dc.DrawGeometry(null, Foreground, new PathGeometry(new PathFigure[] { new PathFigure(firstPoint, segments, false) }));
+				dc.DrawGeometry(null, Foreground, new PathGeometry(new PathFigure[] { new PathFigure(firstPoint.Value, segments, false) }));
 			}
 		} // proc OnRender
 
@@ -98,7 +105,6 @@ namespace TecWare.PPSn.Controls
 
 		private void LineSource_Changed(object sender, EventArgs e)
 			=> InvalidateVisual();
-
 
 		private void OnLineSourceChanged(IPpsSparkLineSource newValue, IPpsSparkLineSource oldValue)
 		{
