@@ -59,7 +59,13 @@ namespace TecWare.PPSn.Controls
 		{
 			// find tab
 			if (selectionMarker == null || !TryGetTabItem(SelectedItem, out var tabItem))
+			{
+				// No tab, no visible marker
+				selectionMarker.Visibility = Visibility.Collapsed;
 				return;
+			}
+				
+			selectionMarker.Visibility = Visibility.Visible;
 
 			var currentWidth = selectionMarker.ActualWidth;
 			var targetWidth = tabItem.ActualWidth - ItemSpacing;
