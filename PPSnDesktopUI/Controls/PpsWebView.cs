@@ -1012,6 +1012,7 @@ namespace TecWare.PPSn.Controls
 			var sourceUri = new Uri(http.BaseAddress, request.Uri);
 			using (var httpRequest = new HttpRequestMessage(new HttpMethod(request.Method), sourceUri))
 			{
+				httpRequest.Content = request.Content;
 				var httpResponse = await SendCoreAsync(http, httpRequest, true);
 				var e = new PpsWebViewNavigationContentEventArgs(request.Uri, httpResponse);
 				OnNavigationContent(e);
@@ -1276,7 +1277,7 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc SetExceptionAsync
 
-		public async Task SetUriAsync(Uri newUri, bool setAsHome = true, bool appendToHistory = true)
+		public async Task SetUriAsync(Uri newUri, bool setAsHome = true, bool appendToHistory = true, string method = "GET", HttpContent content = null)
 		{
 			if (setAsHome)
 				ClearHistory();
@@ -1294,7 +1295,7 @@ namespace TecWare.PPSn.Controls
 
 					try
 					{
-						using (var request = new ViewRequestMessage(HttpMethod.Get.Method, relativeUri, null, null))
+						using (var request = new ViewRequestMessage(method, relativeUri, content, null))
 							await SetResponseMessageAsync(token, await SendShellAsync(token, request), false, false);
 					}
 					catch (HttpResponseException e)
