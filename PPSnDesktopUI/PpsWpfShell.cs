@@ -286,6 +286,9 @@ namespace TecWare.PPSn
 			where T : DependencyObject
 		{
 			var parent = GetLogicalParent(current);
+			if (parent is null)
+				return null;
+
 			return parent is T r
 				? r
 				: GetLogicalParent<T>(parent);

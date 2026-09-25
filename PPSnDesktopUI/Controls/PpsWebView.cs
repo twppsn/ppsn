@@ -79,11 +79,15 @@ namespace TecWare.PPSn.Controls
 
 		private readonly Uri uri;
 		private string title;
+		private readonly HttpMethod method;
+		private readonly HttpContent content;
 
-		internal PpsWebViewHistoryItem(Uri uri, string title = null)
+		internal PpsWebViewHistoryItem(Uri uri, string title = null, HttpMethod method = null, HttpContent content = null)
 		{
 			this.uri = uri ?? throw new ArgumentNullException(nameof(uri));
 			this.title = title ?? uri.ToString();
+			this.method = method;
+			this.content = content;
 		} // ctor
 
 		/// <summary>Uri</summary>
@@ -102,6 +106,11 @@ namespace TecWare.PPSn.Controls
 				}
 			}
 		} // prop Title
+
+		internal HttpMethod Method => method;
+		internal HttpContent Content => content;
+
+		public bool HasContent => content != null;
 	} // class PpsWebViewHistoryItem
 
 	#endregion
@@ -438,7 +447,7 @@ namespace TecWare.PPSn.Controls
 			{
 				htmlTokens[e.NavigationId] = token;
 
-				if (token.OnStarted(e.Uri, false, true))
+				if (token.OnStarted(e.Uri, false, true, null, null))
 				{
 					if (e.Uri == "about:blank")
 						token.NoHistory();
@@ -593,7 +602,7 @@ namespace TecWare.PPSn.Controls
 					await HtmlViewSetMainResourceAsync(token, e, cachedResponseMessage);
 				else
 				{
-					using (var request = new ViewRequestMessage(e.Request.Method, relativeUri, null, null))
+					using (var request = new ViewRequestMessage(new HttpMethod(e.Request.Method), relativeUri, null, null))
 					{
 						// send the shell request
 						var response = await SendShellAsync(token, request); // todo: check Dispose
@@ -842,12 +851,12 @@ namespace TecWare.PPSn.Controls
 
 		private sealed class ViewRequestMessage : IDisposable
 		{
-			private readonly string method;
+			private readonly HttpMethod method;
 			private readonly Uri relativeUri;
 			private readonly HttpContent content;
 			private readonly KeyValuePair<string, string>[] headers;
 
-			public ViewRequestMessage(string method, Uri relativeUri, HttpContent content, IEnumerable<KeyValuePair<string, string>> headers)
+			public ViewRequestMessage(HttpMethod method, Uri relativeUri, HttpContent content, IEnumerable<KeyValuePair<string, string>> headers)
 			{
 				this.method = method ?? throw new ArgumentNullException(nameof(method));
 				this.relativeUri = relativeUri ?? throw new ArgumentNullException(nameof(relativeUri));
@@ -862,7 +871,7 @@ namespace TecWare.PPSn.Controls
 			public void Dispose()
 				=> content?.Dispose();
 
-			public string Method => method;
+			public HttpMethod Method => method;
 			public Uri Uri => relativeUri;
 			public HttpContent Content => content;
 			public IReadOnlyList<KeyValuePair<string, string>> Headers => headers;
@@ -1010,7 +1019,7 @@ namespace TecWare.PPSn.Controls
 				throw new InvalidOperationException();
 
 			var sourceUri = new Uri(http.BaseAddress, request.Uri);
-			using (var httpRequest = new HttpRequestMessage(new HttpMethod(request.Method), sourceUri))
+			using (var httpRequest = new HttpRequestMessage(request.Method, sourceUri))
 			{
 				httpRequest.Content = request.Content;
 				var httpResponse = await SendCoreAsync(http, httpRequest, true);
@@ -1065,6 +1074,8 @@ namespace TecWare.PPSn.Controls
 		{
 			private readonly PpsWebView webView;
 			private object uri = null;
+			private HttpMethod method = null;
+			private HttpContent content = null;
 			private bool addToHistory = false;
 
 			private ViewNavigationToken()
@@ -1084,7 +1095,7 @@ namespace TecWare.PPSn.Controls
 					OnCompleted(false);
 			} // proc Dispose
 
-			public bool OnStarted(object uri, bool newWindow, bool appendHistory)
+			public bool OnStarted(object uri, bool newWindow, bool appendHistory, HttpMethod method, HttpContent content)
 			{
 				var e = new PpsWebViewNavigationStartedEventArgs(uri, newWindow);
 				if (IsActive)
@@ -1097,6 +1108,8 @@ namespace TecWare.PPSn.Controls
 						addToHistory = appendHistory && !newWindow;
 
 						this.uri = uri;
+						this.method = method;
+						this.content = content;
 						return !e.Cancel;
 					}
 				}
@@ -1108,7 +1121,7 @@ namespace TecWare.PPSn.Controls
 			{
 				webView.OnNavigationCompleted(new PpsWebViewNavigationCompletedEventArgs(uri, isCanceled));
 				if (addToHistory && !isCanceled && Uri.TryCreate(uri.ToString(), UriKind.Absolute, out var sourceUri))
-					webView.AppendHistory(sourceUri);
+					webView.AppendHistory(sourceUri, method, content);
 			} // proc OnCompleted
 
 			public void Cancel()
@@ -1174,7 +1187,12 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Reload the last request.</summary>
 		/// <returns></returns>
 		public Task ReloadAsync()
-			=> CurrentHistoryItem != null ? SetUriAsync(CurrentHistoryItem.Uri, false, false) : Task.CompletedTask;
+		{
+			var currentHistoryItem = CurrentHistoryItem;
+			return currentHistoryItem != null 
+				? SetUriAsync(currentHistoryItem.Uri, false, false, currentHistoryItem.Method, currentHistoryItem.Content)
+				: Task.CompletedTask;
+		} // func ReloadAsync
 
 		#endregion
 
@@ -1186,7 +1204,7 @@ namespace TecWare.PPSn.Controls
 			return http != null;
 		} // func TryGetHttp
 
-		private void AppendHistory(Uri sourceUri)
+		private void AppendHistory(Uri sourceUri, HttpMethod method, HttpContent content)
 		{
 			// cut history
 			var newHistoryIndex = CurrentHistoryIndex + 1;
@@ -1194,7 +1212,7 @@ namespace TecWare.PPSn.Controls
 				history.RemoveAt(newHistoryIndex);
 
 			// add new item
-			history.Add(new PpsWebViewHistoryItem(sourceUri));
+			history.Add(new PpsWebViewHistoryItem(sourceUri, method: method, content: content));
 			UpdateHistroyIndex(newHistoryIndex, history[newHistoryIndex]);
 		} // proc AppendHistory
 
@@ -1270,14 +1288,14 @@ namespace TecWare.PPSn.Controls
 		{
 			using (var token = EnforceNavigationToken())
 			{
-				if (!token.OnStarted(new Uri("xaml://exception/", UriKind.Absolute), false, false))
+				if (!token.OnStarted(new Uri("xaml://exception/", UriKind.Absolute), false, false, null, null))
 					return;
 
 				await SetExceptionCoreAsync(token, ex);
 			}
 		} // proc SetExceptionAsync
 
-		public async Task SetUriAsync(Uri newUri, bool setAsHome = true, bool appendToHistory = true, string method = "GET", HttpContent content = null)
+		public async Task SetUriAsync(Uri newUri, bool setAsHome = true, bool appendToHistory = true, HttpMethod method = null, HttpContent content = null)
 		{
 			if (setAsHome)
 				ClearHistory();
@@ -1290,12 +1308,12 @@ namespace TecWare.PPSn.Controls
 			{
 				using (var token = EnforceNavigationToken())
 				{
-					if (!token.OnStarted(newUri, false, appendToHistory))
+					if (!token.OnStarted(newUri, false, appendToHistory, method, content))
 						return;
 
 					try
 					{
-						using (var request = new ViewRequestMessage(method, relativeUri, content, null))
+						using (var request = new ViewRequestMessage(method ?? HttpMethod.Get, relativeUri, content, null))
 							await SetResponseMessageAsync(token, await SendShellAsync(token, request), false, false);
 					}
 					catch (HttpResponseException e)
@@ -1312,9 +1330,9 @@ namespace TecWare.PPSn.Controls
 				await SetHtmlAsync(newUri, appendToHistory, null);
 		} // proc SetUriAsync
 
-		private void SetUri(Uri uri, bool setAsHome, bool appendToHistory)
+		private void SetUri(Uri uri, bool setAsHome, bool appendToHistory, HttpMethod method = null, HttpContent content = null)
 		{
-			SetUriAsync(uri, setAsHome: setAsHome, appendToHistory: appendToHistory)
+			SetUriAsync(uri, setAsHome: setAsHome, appendToHistory: appendToHistory, method: method, content: content)
 				.ContinueWith(t => Source = t.Exception.InnerException, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted);
 		} // proc SetUri
 

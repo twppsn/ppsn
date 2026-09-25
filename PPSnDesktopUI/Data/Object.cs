@@ -107,7 +107,7 @@ namespace TecWare.PPSn.Data
 
 	public static class PpsDataInfo
 	{
-		#region -- class PpsGenericData ------------------------------------------------
+		#region -- class PpsGenericData -----------------------------------------------
 
 		private sealed class PpsGenericData : IPpsDataStream
 		{
