@@ -80,7 +80,7 @@ namespace TecWare.PPSn.Controls
 		private readonly Uri uri;
 		private string title;
 		private readonly HttpMethod method;
-		private readonly HttpContent content;
+		private readonly HttpContent content; // fixme: wird bei erster Verwendung disposed!
 
 		internal PpsWebViewHistoryItem(Uri uri, string title = null, HttpMethod method = null, HttpContent content = null)
 		{
