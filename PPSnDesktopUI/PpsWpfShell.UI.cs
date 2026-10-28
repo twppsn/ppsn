@@ -381,7 +381,7 @@ namespace TecWare.PPSn
 
 		#region -- Bindings -----------------------------------------------------------
 
-		private static void UpdateBindingSource(BindingExpression expr)
+		private static void UpdateBindingSource(BindingExpressionBase expr)
 		{
 			if (!expr.HasError && expr.IsDirty)
 				expr.UpdateSource();
