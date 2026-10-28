@@ -17,6 +17,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
@@ -59,13 +61,15 @@ namespace TecWare.PPSn
 		private sealed class PpsProgressStub : IPpsProgress
 		{
 			private readonly PpsProgressStack stack;
+			private readonly bool isBlocking;
 
 			private int currentValue = -1;
 			private string currentText = String.Empty;
 
-			public PpsProgressStub(PpsProgressStack stack)
+			public PpsProgressStub(PpsProgressStack stack, bool isBlocking)
 			{
 				this.stack = stack;
+				this.isBlocking = isBlocking;
 
 				stack.RegisterProgress(this);
 			} // ctor
@@ -100,7 +104,9 @@ namespace TecWare.PPSn
 						stack.NotifyProgressValue(this);
 					}
 				}
-			} // prop Progress
+			} // prop Value
+
+			public bool IsBlocking => isBlocking;
 		} // class PpsProgressStub
 
 		#endregion
@@ -128,7 +134,7 @@ namespace TecWare.PPSn
 		/// <param name="blockUI">Should the ui be blocked.</param>
 		/// <returns></returns>
 		public IPpsProgress CreateProgress(bool blockUI)
-			=> new PpsProgressStub(this);
+			=> new PpsProgressStub(this, blockUI);
 
 		/// <summary>Register progress bar, is call from PpsProgressStub:ctor.</summary>
 		/// <param name="stub"></param>
@@ -143,8 +149,12 @@ namespace TecWare.PPSn
 		private void RegisterProgressUI(PpsProgressStub stub)
 		{
 			var oldCount = -1;
+			var updateBlocking = false;
 			lock (progressStack)
 			{
+				if (stub.IsBlocking != IsBlocked)
+					updateBlocking = true;
+
 				oldCount = progressStack.Count;
 				var index = progressStack.IndexOf(stub);
 				if (index >= 0)
@@ -154,6 +164,8 @@ namespace TecWare.PPSn
 
 			if (oldCount == 0)
 				OnPropertyChanged(nameof(IsActive));
+			if (updateBlocking)
+				OnPropertyChanged(nameof(IsBlocked));
 
 			OnPropertyChanged(nameof(CurrentText));
 			OnPropertyChanged(nameof(CurrentProgress));
@@ -163,8 +175,12 @@ namespace TecWare.PPSn
 		{
 			var updateUI = false;
 			var updateEnabled = false;
+			var updateBlocking = false;
 			lock (progressStack)
 			{
+				if (stub.IsBlocking != IsBlocked)
+					updateBlocking = true;
+
 				if (progressStack.Remove(stub))
 				{
 					updateUI = true;
@@ -174,6 +190,8 @@ namespace TecWare.PPSn
 
 			if (updateEnabled)
 				OnPropertyChanged(nameof(IsActive));
+			if (updateBlocking)
+				OnPropertyChanged(nameof(IsBlocked));
 			if (updateUI)
 			{
 				OnPropertyChanged(nameof(CurrentText));
@@ -206,6 +224,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Is the ui useable.</summary>
 		public bool IsActive => progressStack.Count > 0;
+		/// <summary>Block commands of the whole panel.</summary>
+		public bool IsBlocked => progressStack.OfType<PpsProgressStub>().Any(c => c.IsBlocking);
 
 		/// <summary>Text that should present the user.</summary>
 		/// <remarks>This member should not return any exception. Dispatching to the UI is done by caller.</remarks>

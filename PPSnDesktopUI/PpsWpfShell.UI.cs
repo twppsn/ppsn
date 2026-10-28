@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Resources;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Neo.IronLua;
@@ -375,6 +376,30 @@ namespace TecWare.PPSn
 
 			return new Rect(pts[0], pts[1]);
 		} // func GetWindowRect
+
+		#endregion
+
+		#region -- Bindings -----------------------------------------------------------
+
+		private static void UpdateBindingSource(BindingExpression expr)
+		{
+			if (!expr.HasError && expr.IsDirty)
+				expr.UpdateSource();
+		} // proc UpdateBindingSource
+
+		/// <summary></summary>
+		/// <param name="dp"></param>
+		/// <param name="property"></param>
+		public static void UpdateBindingSource(this DependencyObject dp, DependencyProperty property)
+			=> UpdateBindingSource(BindingOperations.GetBindingExpression(dp, property));
+
+		/// <summary></summary>
+		/// <param name="root"></param>
+		public static void UpdateBindingSources(this DependencyObject root)
+		{
+			foreach (var expr in BindingOperations.GetSourceUpdatingBindings(root))
+				UpdateBindingSource(expr);
+		} // func UpdateSource
 
 		#endregion
 
