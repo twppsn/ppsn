@@ -28,6 +28,7 @@
 				 Comments="!(loc.PackageComments)"
 				 InstallerVersion="200" 
 				 Compressed="yes" 
+				 Platform="$(var.Platform)"
 				 InstallScope="$(var.PackageScope)"
 				 InstallPrivileges="$(var.PackagePrivileges)" 
 		/>
@@ -69,7 +70,7 @@
 		<?else?>
 		
 		<Directory Id="TARGETDIR" Name="SourceDir">
-			<Directory Id="ProgramFilesFolder" Name="Programs">
+		   <Directory Id="$(var.ProgramFilesFolderId)" Name="Programs">
 				<Directory Id="ppsn" Name="ppsn">
 					<Directory Id="INSTALLFOLDER" Name="PPSnExcel" />
 				</Directory>

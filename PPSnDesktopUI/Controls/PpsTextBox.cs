@@ -157,6 +157,21 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region -- SelectAllOnFocus Property ------------------------------------------
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible member
+		public static readonly DependencyProperty SelectAllOnFocusProperty = DependencyProperty.Register(nameof(OnFocusSelectAll), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(BooleanBox.True));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible member
+
+		/// <summary>Determines whether all text is selected when the control receives keyboard focus.</summary>
+		public bool OnFocusSelectAll
+		{
+			get => BooleanBox.GetBool(GetValue(SelectAllOnFocusProperty));
+			set => SetValue(SelectAllOnFocusProperty, BooleanBox.GetObject(value));
+		}
+
+		#endregion
+
 		#region -- FormattedValue Property --------------------------------------------
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -528,14 +543,22 @@ namespace TecWare.PPSn.Controls
 		static PpsTextBox()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsTextBox), new FrameworkPropertyMetadata(typeof(PpsTextBox)));
+			EventManager.RegisterClassHandler(typeof(PpsTextBox), GotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(TextBox_GotKeyboardFocus), false);
 			PpsControlCommands.RegisterClearCommand(typeof(PpsTextBox));
-
+			
+				
 			textEditorPropertyInfo = typeof(TextBox).GetProperty("TextEditor", BindingFlags.NonPublic | BindingFlags.Instance)
 				?? throw new ArgumentNullException("TextEditor");
 
 			overwriteModePropertyInfo = textEditorPropertyInfo.PropertyType.GetProperty("_OvertypeMode", BindingFlags.NonPublic | BindingFlags.Instance)
 				?? throw new ArgumentNullException("_OvertypeMode");
 		} // sctor
+
+		private static void TextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+		{
+			if (e.OriginalSource is PpsTextBox txt && !txt.IsReadOnly && txt.OnFocusSelectAll)
+				txt.SelectAll();
+		} // proc TextBox_GotKeyboardFocus
 	} // class PpsTextBox
 
 	#endregion

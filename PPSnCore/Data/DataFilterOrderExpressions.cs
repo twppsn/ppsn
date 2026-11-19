@@ -793,8 +793,14 @@ namespace TecWare.PPSn.Data
 			if (expr.Value == null)
 				return null;
 
-			if (expr.Value is LuaTable t && t.Members.Count == 0 && t.ArrayList.Count > 0) // create in filter
-				return CompareIn(expr.Key, t.ArrayList.ToArray());
+			if (expr.Value is LuaTable t && t.Members.Count == 0) // create in filter
+			{
+				if (t.ArrayList.Count > 0)
+					return CompareIn(expr.Key, t.ArrayList.ToArray());
+				return False; // 0 element können nicht enthalten sein, nil für nicht verwenden
+			}
+			else if (expr.Value is string[] || expr.Value is int[] || expr.Value is long[] || expr.Value is object[])
+				return CompareIn(expr.Key, expr.Value);
 			else // create compare filter
 				return Compare(expr.Key, PpsDataFilterCompareOperator.Equal, expr.Value);
 		} // func GetExpressionFromObject

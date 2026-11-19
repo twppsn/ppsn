@@ -265,7 +265,20 @@ namespace TecWare.PPSn
 				public string RuntimeArguments => installArguments;
 
 				public bool NeedsUpdate => !fi.Exists || fi.Length != expectedLength || expectedLastWriteTime > fi.LastWriteTime;
-				// bei .config stimmt die länge nie?
+				public string NeedsUpdateInfo
+				{
+					get
+					{
+						return !fi.Exists
+							? "File does not exist"
+							: fi.Length != expectedLength
+								? "File length mismatch"
+								: expectedLastWriteTime > fi.LastWriteTime
+									? "File is outdated" 
+									: null;
+					}
+				} // prop NeedsUpdateInfo
+				  // bei .config stimmt die länge nie?
 
 				// -- Static --------------------------------------------------
 
@@ -446,7 +459,7 @@ namespace TecWare.PPSn
 						// check outdated file
 						if (cur.NeedsUpdate)
 						{
-							log.Debug($"Schedule {cur.FileInfo} for update: {cur.Uri}");
+							log.Debug($"Schedule {cur.FileInfo} for update: {cur.Uri} (reason: {cur.NeedsUpdateInfo})");
 							totalBytesToUpdate += cur.Length;
 						}
 

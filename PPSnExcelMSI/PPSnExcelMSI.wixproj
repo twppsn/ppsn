@@ -12,7 +12,7 @@
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
 		<OutputPath>bin\$(Configuration)\</OutputPath>
 		<IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
-		<DefineConstants>Debug;PerUser=true</DefineConstants>
+		<DefineConstants>Debug;PerUser=true;ProgramFilesFolderId=ProgramFilesFolder;ComponentWin64=no</DefineConstants>
 		<SuppressValidation>False</SuppressValidation>
 		<SuppressIces>ICE91</SuppressIces>
 		<WixVariables>
@@ -20,15 +20,27 @@
 		<Cultures>de-DE</Cultures>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Machine|x86' ">
-		<OutputPath>bin\$(Configuration)\</OutputPath>
-		<IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
-		<DefineConstants>Debug;PerUser=false</DefineConstants>
+		<OutputPath>bin\Release\$(Platform)-machine</OutputPath>
+		<IntermediateOutputPath>obj\$(Configuration)\$(Platform)</IntermediateOutputPath>
+		<DefineConstants>PerUser=false;ProgramFilesFolderId=ProgramFilesFolder;ComponentWin64=no</DefineConstants>
+		<SuppressIces>ICE91</SuppressIces>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Machine|x64' ">
+		<OutputPath>bin\Release\$(Platform)-machine</OutputPath>
+		<IntermediateOutputPath>obj\$(Configuration)\$(Platform)</IntermediateOutputPath>
+		<DefineConstants>PerUser=false;ProgramFilesFolderId=ProgramFiles64Folder;ComponentWin64=yes</DefineConstants>
 		<SuppressIces>ICE91</SuppressIces>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-		<OutputPath>bin\$(Configuration)\</OutputPath>
-		<IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
-		<DefineConstants>Debug;PerUser=true</DefineConstants>
+		<OutputPath>bin\$(Configuration)\$(Platform)</OutputPath>
+		<IntermediateOutputPath>obj\$(Configuration)\$(Platform)</IntermediateOutputPath>
+		<DefineConstants>PerUser=true;ProgramFilesFolderId=ProgramFilesFolder;ComponentWin64=no</DefineConstants>
+		<SuppressIces>ICE91</SuppressIces>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+		<OutputPath>bin\$(Configuration)\$(Platform)</OutputPath>
+		<IntermediateOutputPath>obj\$(Configuration)\$(Platform)</IntermediateOutputPath>
+		<DefineConstants>PerUser=true;ProgramFilesFolderId=ProgramFiles64Folder;ComponentWin64=yes</DefineConstants>
 		<SuppressIces>ICE91</SuppressIces>
 	</PropertyGroup>
 	<ItemGroup>
