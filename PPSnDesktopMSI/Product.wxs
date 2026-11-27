@@ -7,10 +7,12 @@
 <?endif?>
 
 <?if $(var.PerUser) = "true" ?>
+<?define ProductCode = $(var.ProductCodeUser)?>
 <?define ProductName = "!(loc.ProductNameUser)" ?>
 <?define PackageScope = "perUser" ?>
 <?define PackagePrivileges = "limited" ?>
 <?else?>
+<?define ProductCode = $(var.ProductCodeMachine)?>
 <?define ProductName = "!(loc.ProductNameMachine)" ?>
 <?define PackageScope = "perMachine" ?>
 <?define PackagePrivileges = "elevated" ?>

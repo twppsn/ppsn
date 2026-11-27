@@ -3,6 +3,7 @@
 	<String Id="ProductName">PPSnExcel</String>
 	<String Id="ProductNameUser">PPSnExcel (user)</String>
 	<String Id="ProductNameMachine">PPSnExcel (machine)</String>
+	<String Id="ProductNameMachine64">PPSnExcel (machine x64)</String>
 	<String Id="ProductLanguage">1033</String>
 	<String Id="ProductCompany">TecWare Gesellschaft für Softwareentwicklung mbH</String>
 	<String Id="ArpHelpLink">https://tecware-gmbh.de/</String>

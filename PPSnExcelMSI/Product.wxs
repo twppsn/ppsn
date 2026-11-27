@@ -10,16 +10,25 @@
 <?define ProductName = "!(loc.ProductNameUser)" ?>
 <?define PackageScope = "perUser" ?>
 <?define PackagePrivileges = "limited" ?>
+<?define ProgramFilesFolderId = "ProgramFilesFolder" ?>
+<?define ProductCode = $(var.ProductCodeUser)?>
 <?else?>
-<?define ProductName = "!(loc.ProductNameMachine)" ?>
 <?define PackageScope = "perMachine" ?>
 <?define PackagePrivileges = "elevated" ?>
+<?define ProductCode = $(var.ProductCodeMachine)?>
+<?if $(var.Platform) = "x64" ?>
+<?define ProductName = "!(loc.ProductNameMachine64)" ?>
+<?define ProgramFilesFolderId = "ProgramFiles64Folder" ?>
+<?else?>
+<?define ProductName = "!(loc.ProductNameMachine)" ?>
+<?define ProgramFilesFolderId = "ProgramFilesFolder" ?>
+<?endif?>
 <?endif?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Product Id="$(var.ProductCode)"
 			 UpgradeCode="$(var.ProductUpgradeCode)"
-			 Name="!(loc.ProductName)"
+			 Name="$(var.ProductName)"
 			 Language="!(loc.ProductLanguage)"
 			 Version="$(var.ProductVersion)"
 			 Manufacturer="!(loc.ProductCompany)" >
